@@ -334,14 +334,15 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
                                         Consumer<Throwable> actionOnNotTimedOut) {
 
-            TimeoutScheduler responseTimeoutScheduler = null;
+            TimeoutScheduler responseCancellationScheduler = null;
             if (ctx instanceof DefaultClientRequestContext) {
-                responseTimeoutScheduler = ((DefaultClientRequestContext) ctx).responseTimeoutScheduler();
+                responseCancellationScheduler =
+                        ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
             }
 
-            if (responseTimeoutScheduler == null || !responseTimeoutScheduler.isTimedOut()) {
-                if (responseTimeoutScheduler != null) {
-                    responseTimeoutScheduler.clearTimeout(false);
+            if (responseCancellationScheduler == null || !responseCancellationScheduler.isFinished()) {
+                if (responseCancellationScheduler != null) {
+                    responseCancellationScheduler.clearTimeout(false);
                 }
                 // There's no timeout or the response has not been timed out.
                 actionOnNotTimedOut.accept(cause);
@@ -375,9 +376,9 @@ abstract class HttpResponseDecoder {
 
         void initTimeout() {
             if (ctx instanceof DefaultClientRequestContext) {
-                final TimeoutScheduler responseTimeoutScheduler =
-                        ((DefaultClientRequestContext) ctx).responseTimeoutScheduler();
-                responseTimeoutScheduler.init(ctx.eventLoop(), newTimeoutTask(),
+                final TimeoutScheduler responseCancellationScheduler =
+                        ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
+                responseCancellationScheduler.init(ctx.eventLoop(), newTimeoutTask(),
                                       TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
             }
         }
@@ -392,8 +393,7 @@ abstract class HttpResponseDecoder {
                 @Override
                 public void run() {
                     assert ctx != null;
-                    final RuntimeException cause = ctx.isTimedOut() ? ResponseTimeoutException.get()
-                                                                    : RequestCancellationException.get();
+                    final Throwable cause = ctx.cancellationCause();
                     delegate.close(cause);
                     ctx.request().abort(cause);
                     ctx.logBuilder().endResponse(cause);

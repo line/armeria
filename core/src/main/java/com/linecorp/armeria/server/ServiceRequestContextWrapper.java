@@ -144,8 +144,28 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public void cancel(Throwable cause) {
+        delegate().cancel(cause);
+    }
+
+    @Override
+    public void cancel() {
+        delegate().cancel();
+    }
+
+    @Override
     public void timeoutNow() {
         delegate().timeoutNow();
+    }
+
+    @Override
+    public Throwable cancellationCause() {
+        return delegate().cancellationCause();
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return delegate().isCancelled();
     }
 
     @Override

@@ -442,16 +442,6 @@ public interface ClientRequestContext extends RequestContext {
     CompletableFuture<Void> whenResponseTimedOut();
 
     /**
-     * Cancels the request. Similar to {@link #timeoutNow()}, but throws a {@link RequestCancellationException}.
-     */
-    void cancel();
-
-    /**
-     * Returns whether this {@link ClientRequestContext} has been cancelled.
-     */
-    boolean isCancelled();
-
-    /**
      * Returns the maximum length of the received {@link Response}.
      * This value is initially set from {@link ClientOptions#MAX_RESPONSE_LENGTH}.
      *

@@ -54,7 +54,6 @@ public final class TimeoutScheduler {
     private static final Runnable initializedPendingTimeoutTask = () -> {};
 
     private static final TimeoutFuture COMPLETED_FUTURE;
-
     private static final TimeoutFuture CANCELLED_FUTURE;
 
     static {
@@ -68,8 +67,7 @@ public final class TimeoutScheduler {
         INIT,
         INACTIVE,
         SCHEDULED,
-        TIMED_OUT,
-        CANCELLED
+        FINISHED
     }
 
     private long timeoutNanos;
@@ -125,7 +123,7 @@ public final class TimeoutScheduler {
 
         if (timeoutNanos != 0) {
             state = State.SCHEDULED;
-            timeoutFuture = eventLoop.schedule(() -> invokeTimeoutTask(true), timeoutNanos,
+            timeoutFuture = eventLoop.schedule(() -> invokeTimeoutTask(false), timeoutNanos,
                                                TimeUnit.NANOSECONDS);
         } else {
             state = State.INACTIVE;
@@ -167,14 +165,10 @@ public final class TimeoutScheduler {
     }
 
     private boolean clearTimeout0(boolean resetTimeout) {
-        assert eventLoop.inEventLoop();
+        assert eventLoop != null && eventLoop.inEventLoop();
 
-        switch (state) {
-            case INIT:
-            case INACTIVE:
-            case TIMED_OUT:
-            case CANCELLED:
-                return true;
+        if (state != State.SCHEDULED) {
+            return true;
         }
 
         if (resetTimeout) {
@@ -208,6 +202,7 @@ public final class TimeoutScheduler {
 
     private void setTimeoutNanosFromStart(long timeoutNanos) {
         checkArgument(timeoutNanos >= 0, "timeoutNanos: %s (expected: >= 0)", timeoutNanos);
+
         if (timeoutNanos == 0) {
             clearTimeout();
             return;
@@ -226,11 +221,13 @@ public final class TimeoutScheduler {
     }
 
     private void setTimeoutNanosFromStart0(long timeoutNanos) {
-        final long passedTimeoutNanos = System.nanoTime() - firstExecutionTimeNanos;
-        final long newTimeoutNanos = LongMath.saturatedSubtract(timeoutNanos, passedTimeoutNanos);
+        assert eventLoop != null && eventLoop.inEventLoop();
+
+        final long passedTimeNanos = System.nanoTime() - firstExecutionTimeNanos;
+        final long newTimeoutNanos = LongMath.saturatedSubtract(timeoutNanos, passedTimeNanos);
 
         if (newTimeoutNanos <= 0) {
-            invokeTimeoutTask(true);
+            invokeTimeoutTask(false);
             return;
         }
 
@@ -239,7 +236,7 @@ public final class TimeoutScheduler {
         this.timeoutNanos = timeoutNanos;
 
         state = State.SCHEDULED;
-        timeoutFuture = eventLoop.schedule(() -> invokeTimeoutTask(true), newTimeoutNanos,
+        timeoutFuture = eventLoop.schedule(() -> invokeTimeoutTask(false), newTimeoutNanos,
                                            TimeUnit.NANOSECONDS);
     }
 
@@ -260,15 +257,11 @@ public final class TimeoutScheduler {
         }
     }
 
-    private boolean extendTimeoutNanos0(long adjustmentNanos) {
-        assert eventLoop.inEventLoop();
+    private void extendTimeoutNanos0(long adjustmentNanos) {
+        assert eventLoop != null && eventLoop.inEventLoop() && timeoutTask != null;
 
         if (state != State.SCHEDULED || !timeoutTask.canSchedule()) {
-            return false;
-        }
-
-        if (adjustmentNanos == 0) {
-            return true;
+            return;
         }
 
         final long timeoutNanos = this.timeoutNanos;
@@ -278,14 +271,13 @@ public final class TimeoutScheduler {
         this.timeoutNanos = LongMath.saturatedAdd(timeoutNanos, adjustmentNanos);
 
         if (timeoutNanos <= 0) {
-            invokeTimeoutTask(true);
-            return true;
+            invokeTimeoutTask(false);
+            return;
         }
 
         state = State.SCHEDULED;
-        timeoutFuture = eventLoop.schedule(() -> invokeTimeoutTask(true), this.timeoutNanos,
+        timeoutFuture = eventLoop.schedule(() -> invokeTimeoutTask(false), this.timeoutNanos,
                                            TimeUnit.NANOSECONDS);
-        return true;
     }
 
     private void setTimeoutNanosFromNow(long timeoutNanos) {
@@ -308,11 +300,11 @@ public final class TimeoutScheduler {
         }
     }
 
-    private boolean setTimeoutNanosFromNow0(long newTimeoutNanos) {
-        assert eventLoop.inEventLoop();
+    private void setTimeoutNanosFromNow0(long newTimeoutNanos) {
+        assert eventLoop != null && eventLoop.inEventLoop() && timeoutTask != null;
 
-        if (state == State.TIMED_OUT || state == State.CANCELLED || !timeoutTask.canSchedule()) {
-            return false;
+        if (state == State.FINISHED || !timeoutTask.canSchedule()) {
+            return;
         }
 
         // Cancel the previously scheduled timeout, if exists.
@@ -322,53 +314,47 @@ public final class TimeoutScheduler {
         timeoutNanos = LongMath.saturatedAdd(newTimeoutNanos, passedTimeNanos);
 
         if (newTimeoutNanos <= 0) {
-            return true;
+            return;
         }
 
         state = State.SCHEDULED;
-        timeoutFuture = eventLoop.schedule(() -> invokeTimeoutTask(true), newTimeoutNanos,
+        timeoutFuture = eventLoop.schedule(() -> invokeTimeoutTask(false), newTimeoutNanos,
                                            TimeUnit.NANOSECONDS);
-        return true;
     }
 
-    public void timeoutNow() {
-        invokeImmediately(true);
+    public void finishNow() {
+        finishNow(false);
     }
 
-    public void cancel() {
-        invokeImmediately(false);
-    }
-
-    private void invokeImmediately(boolean isTimedOut) {
+    public void finishNow(boolean cancelHandlers) {
         if (isInitialized()) {
             if (eventLoop.inEventLoop()) {
-                invokeImmediately0(isTimedOut);
+                finishNow0(cancelHandlers);
             } else {
-                eventLoop.execute(() -> invokeImmediately0(isTimedOut));
+                eventLoop.execute(() -> finishNow0(cancelHandlers));
             }
         } else {
-            addPendingTimeoutTask(() -> invokeImmediately0(isTimedOut));
+            addPendingTimeoutTask(() -> finishNow0(cancelHandlers));
         }
     }
 
-    private void invokeImmediately0(boolean isTimedOut) {
-        assert eventLoop.inEventLoop();
+    private void finishNow0(boolean cancelHandlers) {
+        assert eventLoop != null && eventLoop.inEventLoop() && timeoutTask != null;
 
         if (!timeoutTask.canSchedule()) {
             return;
         }
 
         switch (state) {
-            case CANCELLED:
-            case TIMED_OUT:
+            case FINISHED:
                 return;
             case INIT:
             case INACTIVE:
-                invokeTimeoutTask(isTimedOut);
+                invokeTimeoutTask(cancelHandlers);
                 return;
             case SCHEDULED:
                 if (clearTimeout0(false)) {
-                    invokeTimeoutTask(isTimedOut);
+                    invokeTimeoutTask(cancelHandlers);
                 }
                 return;
             default:
@@ -411,8 +397,8 @@ public final class TimeoutScheduler {
     private void addPendingTimeoutNanos(long pendingTimeoutNanos) {
         for (;;) {
             final long oldPendingTimeoutNanos = this.pendingTimeoutNanos;
-            final long newPendingTimeoutNanos =
-                    LongMath.saturatedAdd(oldPendingTimeoutNanos, pendingTimeoutNanos);
+            final long newPendingTimeoutNanos = LongMath.saturatedAdd(oldPendingTimeoutNanos,
+                                                                      pendingTimeoutNanos);
             if (pendingTimeoutNanosUpdater.compareAndSet(this, oldPendingTimeoutNanos,
                                                          newPendingTimeoutNanos)) {
                 break;
@@ -420,50 +406,41 @@ public final class TimeoutScheduler {
         }
     }
 
-    private void invokeTimeoutTask(boolean isTimedOut) {
+    private void invokeTimeoutTask(boolean cancelHandlers) {
         if (timeoutTask == null) {
             return;
         }
 
-        if (isTimedOut) {
+        if (cancelHandlers) {
+            if (!whenTimingOutUpdater.compareAndSet(this, null, CANCELLED_FUTURE)) {
+                whenTimingOut.doCancel();
+            }
+            // Set state first to prevent duplicate execution
+            state = State.FINISHED;
+            timeoutTask.run();
+            if (!whenTimedOutUpdater.compareAndSet(this, null, CANCELLED_FUTURE)) {
+                whenTimedOut.doCancel();
+            }
+        } else {
             if (!whenTimingOutUpdater.compareAndSet(this, null, COMPLETED_FUTURE)) {
                 if (timeoutTask.canSchedule()) {
                     whenTimingOut.doComplete();
                 }
             }
-
-            // Set TIMED_OUT flag first to prevent duplicate execution
-            state = State.TIMED_OUT;
-
+            // Set state first to prevent duplicate execution
+            state = State.FINISHED;
             // The returned value of `canSchedule()` could've been changed by the callbacks of `whenTimingOut`
             if (timeoutTask.canSchedule()) {
                 timeoutTask.run();
             }
-
             if (!whenTimedOutUpdater.compareAndSet(this, null, COMPLETED_FUTURE)) {
                 whenTimedOut.doComplete();
-            }
-        } else {
-            if (!whenTimingOutUpdater.compareAndSet(this, null, CANCELLED_FUTURE)) {
-                whenTimingOut.doCancel();
-            }
-
-            // Set CANCELLED flag first to prevent duplicate execution
-            state = State.CANCELLED;
-            timeoutTask.run();
-
-            if (!whenTimedOutUpdater.compareAndSet(this, null, CANCELLED_FUTURE)) {
-                whenTimedOut.doCancel();
             }
         }
     }
 
-    public boolean isTimedOut() {
-        return state == State.TIMED_OUT;
-    }
-
-    public boolean isCancelled() {
-        return state == State.CANCELLED;
+    public boolean isFinished() {
+        return state == State.FINISHED;
     }
 
     public long timeoutNanos() {
@@ -471,7 +448,7 @@ public final class TimeoutScheduler {
     }
 
     private boolean isInitialized() {
-        return pendingTimeoutTask == initializedPendingTimeoutTask;
+        return pendingTimeoutTask == initializedPendingTimeoutTask && eventLoop != null;
     }
 
     public CompletableFuture<Void> whenTimingOut() {

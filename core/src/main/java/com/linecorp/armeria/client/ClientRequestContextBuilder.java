@@ -61,11 +61,11 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     /**
      * A timeout scheduler that has been timed-out.
      */
-    private static final TimeoutScheduler noopResponseTimeoutScheduler = new TimeoutScheduler(0);
+    private static final TimeoutScheduler noopResponseCancellationScheduler = new TimeoutScheduler(0);
 
     static {
-        noopResponseTimeoutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
-        noopResponseTimeoutScheduler.timeoutNow();
+        noopResponseCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
+        noopResponseCancellationScheduler.finishNow();
     }
 
     @Nullable
@@ -127,14 +127,14 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             endpoint = Endpoint.parse(authority());
         }
 
-        final TimeoutScheduler responseTimeoutScheduler;
+        final TimeoutScheduler responseCancellationScheduler;
         if (timedOut()) {
-            responseTimeoutScheduler = noopResponseTimeoutScheduler;
+            responseCancellationScheduler = noopResponseCancellationScheduler;
         } else {
-            responseTimeoutScheduler = new TimeoutScheduler(0);
+            responseCancellationScheduler = new TimeoutScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                responseTimeoutScheduler.init(eventLoop(), noopTimeoutTask, 0);
+                responseCancellationScheduler.init(eventLoop(), noopTimeoutTask, 0);
                 latch.countDown();
             });
 
@@ -147,7 +147,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
                 id(), method(), path(), query(), fragment, options, request(), rpcRequest(),
-                responseTimeoutScheduler,
+                responseCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 

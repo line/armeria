@@ -136,13 +136,8 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public void timeoutNow() {
-        delegate().timeoutNow();
-    }
-
-    @Override
-    public boolean isTimedOut() {
-        return delegate().isTimedOut();
+    public void cancel(Throwable cause) {
+        delegate().cancel(cause);
     }
 
     @Override
@@ -151,8 +146,23 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public void timeoutNow() {
+        delegate().timeoutNow();
+    }
+
+    @Override
+    public Throwable cancellationCause() {
+        return delegate().cancellationCause();
+    }
+
+    @Override
     public boolean isCancelled() {
         return delegate().isCancelled();
+    }
+
+    @Override
+    public boolean isTimedOut() {
+        return delegate().isTimedOut();
     }
 
     @Override

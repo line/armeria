@@ -14,9 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
-
-import com.linecorp.armeria.common.Flags;
+package com.linecorp.armeria.common;
 
 /**
  * A {@link RuntimeException} raised when a request is cancelled by the user.

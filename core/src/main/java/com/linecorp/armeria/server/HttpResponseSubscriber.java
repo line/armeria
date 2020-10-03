@@ -111,7 +111,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         }
 
         // Schedule the initial request timeout with the timeoutNanos in the TimeoutScheduler
-        reqCtx.requestTimeoutScheduler().init(reqCtx.eventLoop(), newTimeoutTask(), 0);
+        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newTimeoutTask(), 0);
 
         // Start consuming.
         subscription.request(1);
@@ -256,7 +256,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         if (cancel && subscription != null) {
             subscription.cancel();
         }
-        reqCtx.requestTimeoutScheduler().clearTimeout(false);
+        reqCtx.requestCancellationScheduler().clearTimeout(false);
         final State oldState = state;
         state = State.DONE;
         return oldState;
@@ -295,7 +295,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
     @Override
     public void onComplete() {
-        if (reqCtx.requestTimeoutScheduler().isTimedOut()) {
+        if (reqCtx.requestCancellationScheduler().isFinished()) {
             // We have already returned a failed response due to a timeout.
             return;
         }
@@ -411,7 +411,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 // This method will be invoked only when `canSchedule()` returns true.
                 assert state != State.DONE;
 
-                failAndRespond(RequestTimeoutException.get(), serviceUnavailableResponse,
+                failAndRespond(reqCtx.cancellationCause(), serviceUnavailableResponse,
                                Http2Error.INTERNAL_ERROR, true);
             }
         };

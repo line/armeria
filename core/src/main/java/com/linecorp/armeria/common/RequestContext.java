@@ -365,15 +365,34 @@ public interface RequestContext {
     MeterRegistry meterRegistry();
 
     /**
-     * Triggers the current timeout immediately if a timeout was scheduled before.
-     * Otherwise, the current {@link Request} will be timed-out immediately after a timeout scheduler is
-     * initialized.
+     * Cancels the current {@link Request} with a {@link Throwable}.
+     */
+    void cancel(Throwable cause);
+
+    /**
+     * Shortcut for {@code cancel(RequestCancellationException.get())}.
+     */
+    void cancel();
+
+    /**
+     * Shortcut for {@code cancel(RequestTimeoutException.get())} or
+     * {@code cancel(ResponseTimeoutException.get())}.
      */
     void timeoutNow();
 
     /**
-     * Returns whether this {@link RequestContext} has been timed-out (e.g., when the
-     * corresponding request passes a deadline).
+     * Returns the cause of cancellation.
+     */
+    Throwable cancellationCause();
+
+    /**
+     * Returns whether this {@link RequestContext} has been cancelled.
+     */
+    boolean isCancelled();
+
+    /**
+     * Returns whether this {@link RequestContext} has been timed-out, that is the cancellation cause is an
+     * instance of {@link TimeoutException}.
      */
     boolean isTimedOut();
 

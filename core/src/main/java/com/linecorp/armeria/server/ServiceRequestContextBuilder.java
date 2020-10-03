@@ -83,11 +83,11 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     /**
      * A timeout scheduler that has been timed-out.
      */
-    private static final TimeoutScheduler noopRequestTimeoutScheduler = new TimeoutScheduler(0);
+    private static final TimeoutScheduler noopRequestCancellationScheduler = new TimeoutScheduler(0);
 
     static {
-        noopRequestTimeoutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
-        noopRequestTimeoutScheduler.timeoutNow();
+        noopRequestCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
+        noopRequestCancellationScheduler.finishNow();
     }
 
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
@@ -233,14 +233,14 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
-        final TimeoutScheduler requestTimeoutScheduler;
+        final TimeoutScheduler requestCancellationScheduler;
         if (timedOut()) {
-            requestTimeoutScheduler = noopRequestTimeoutScheduler;
+            requestCancellationScheduler = noopRequestCancellationScheduler;
         } else {
-            requestTimeoutScheduler = new TimeoutScheduler(0);
+            requestCancellationScheduler = new TimeoutScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                requestTimeoutScheduler.init(eventLoop(), noopTimeoutTask, 0);
+                requestCancellationScheduler.init(eventLoop(), noopTimeoutTask, 0);
                 latch.countDown();
             });
 
@@ -254,7 +254,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         return new DefaultServiceRequestContext(
                 serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
                 routingResult, req, sslSession(), proxiedAddresses, clientAddress,
-                requestTimeoutScheduler,
+                requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
                 HttpHeaders.of(), HttpHeaders.of());
