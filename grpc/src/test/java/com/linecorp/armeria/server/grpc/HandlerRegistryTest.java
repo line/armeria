@@ -35,8 +35,8 @@ class HandlerRegistryTest {
     void normalizePath(String path1, String path2, String expected1, String expected2) {
         final HandlerRegistry.Builder builder = new HandlerRegistry.Builder();
         final TestServiceImplBase testService = new TestServiceImplBase() {};
-        final HandlerRegistry handlerRegistry = builder.addService(path1, testService.bindService())
-                                                       .addService(path2, testService.bindService())
+        final HandlerRegistry handlerRegistry = builder.addService(path1, testService.bindService(), null)
+                                                       .addService(path2, testService.bindService(), null)
                                                        .build();
 
         assertThat(handlerRegistry.services().get(expected1)).isNotNull();

@@ -114,8 +114,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
         methods = registry.methods().entrySet().stream()
-                         .collect(toImmutableMap(Entry::getKey,
-                                                 entry -> entry.getValue().getMethodDescriptor()));
+                          .collect(toImmutableMap(Entry::getKey,
+                                                  entry -> entry.getValue().getMethodDescriptor()));
         this.routes = requireNonNull(routes, "routes");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");

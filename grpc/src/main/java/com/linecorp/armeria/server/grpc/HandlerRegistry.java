@@ -97,13 +97,8 @@ final class HandlerRegistry {
             return this;
         }
 
-        Builder addService(String path, ServerServiceDefinition service) {
-            entries.add(new Entry(normalizePath(path), service, null));
-            return this;
-        }
-
         Builder addService(String path, ServerServiceDefinition service,
-                            MethodDescriptor<?, ?> methodDescriptor) {
+                           @Nullable MethodDescriptor<?, ?> methodDescriptor) {
             entries.add(new Entry(normalizePath(path), service, methodDescriptor));
             return this;
         }

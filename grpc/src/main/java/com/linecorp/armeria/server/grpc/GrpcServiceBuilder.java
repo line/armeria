@@ -140,12 +140,13 @@ public final class GrpcServiceBuilder {
      * service HelloService {
      *   rpc Hello (HelloRequest) returns (HelloReply) {}
      * }}</pre>
-     * The normal gRPC service path for the {@code Hello} method is {@code "/example.grpc.hello/Hello"}.
+     * The normal gRPC service path for the {@code Hello} method is
+     * {@code "/example.grpc.hello.HelloService/Hello"}.
      * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service) {
-        registryBuilder.addService(requireNonNull(path, "path"), requireNonNull(service, "service"));
+        registryBuilder.addService(requireNonNull(path, "path"), requireNonNull(service, "service"), null);
         return this;
     }
 
@@ -162,7 +163,8 @@ public final class GrpcServiceBuilder {
      * service HelloService {
      *   rpc Hello (HelloRequest) returns (HelloReply) {}
      * }}</pre>
-     * The normal gRPC service path for the {@code Hello} method is {@code "/example.grpc.hello/Hello"}.
+     * The normal gRPC service path for the {@code Hello} method is
+     * {@code "/example.grpc.hello.HelloService/Hello"}.
      * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
      * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
@@ -199,7 +201,8 @@ public final class GrpcServiceBuilder {
      * service HelloService {
      *   rpc Hello (HelloRequest) returns (HelloReply) {}
      * }}</pre>
-     * The normal gRPC service path for the {@code Hello} method is {@code "/example.grpc.hello/Hello"}.
+     * The normal gRPC service path for the {@code Hello} method is
+     * {@code "/example.grpc.hello.HelloService/Hello"}.
      * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
@@ -225,7 +228,8 @@ public final class GrpcServiceBuilder {
      * service HelloService {
      *   rpc Hello (HelloRequest) returns (HelloReply) {}
      * }}</pre>
-     * The normal gRPC service path for the {@code Hello} method is {@code "/example.grpc.hello/Hello"}.
+     * The normal gRPC service path for the {@code Hello} method is
+     * {@code "/example.grpc.hello.HelloService/Hello"}.
      * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
      * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
@@ -456,11 +460,7 @@ public final class GrpcServiceBuilder {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
                         ServerInterceptors.intercept(entry.service(), coroutineContextInterceptor);
-                if (methodDescriptor != null) {
-                    newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
-                } else {
-                    newRegistryBuilder.addService(entry.path(), intercepted);
-                }
+                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
             }
             handlerRegistry = newRegistryBuilder.build();
         } else {
