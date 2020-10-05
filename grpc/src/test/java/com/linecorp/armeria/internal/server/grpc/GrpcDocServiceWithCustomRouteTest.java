@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
+import org.assertj.core.util.Streams;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -125,9 +126,8 @@ class GrpcDocServiceWithCustomRouteTest {
     }
 
     private static boolean validateEndpointMimeType(JsonNode endpoint, MediaType mediaType) {
-        return ImmutableList
-                       .copyOf(endpoint.elements()).stream()
-                       .flatMap(n -> ImmutableList.copyOf(n.get("availableMimeTypes").elements()).stream())
+        return Streams.stream(endpoint.elements())
+                       .flatMap(n -> Streams.stream(n.get("availableMimeTypes").elements()))
                        .filter(n -> n.textValue().equals(mediaType.toString()))
                        .count() == 1;
     }

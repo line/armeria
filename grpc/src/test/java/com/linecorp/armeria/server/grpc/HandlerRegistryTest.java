@@ -26,19 +26,20 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 class HandlerRegistryTest {
 
     @CsvSource({
-            "/foo, /bar",
-            "foo, bar",
-            "foo/, bar/",
+            "/foo/, /bar/, foo/, bar/",
+            "/foo, /bar, foo, bar",
+            "foo, bar, foo, bar",
+            "foo/, bar/, foo/, bar/",
     })
     @ParameterizedTest
-    void normalizePath(String path1, String path2) {
+    void normalizePath(String path1, String path2, String expected1, String expected2) {
         final HandlerRegistry.Builder builder = new HandlerRegistry.Builder();
         final TestServiceImplBase testService = new TestServiceImplBase() {};
         final HandlerRegistry handlerRegistry = builder.addService(path1, testService.bindService())
                                                        .addService(path2, testService.bindService())
                                                        .build();
 
-        assertThat(handlerRegistry.services().get("foo")).isNotNull();
-        assertThat(handlerRegistry.services().get("bar")).isNotNull();
+        assertThat(handlerRegistry.services().get(expected1)).isNotNull();
+        assertThat(handlerRegistry.services().get(expected2)).isNotNull();
     }
 }

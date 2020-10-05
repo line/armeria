@@ -117,16 +117,7 @@ final class HandlerRegistry {
                 path = path.substring(1);
             }
 
-            if (path.isEmpty()) {
-                return path;
-            }
-
-            final int lastCharIndex = path.length() - 1;
-            if (path.charAt(lastCharIndex) == '/') {
-                return path.substring(0, lastCharIndex);
-            } else {
-                return path;
-            }
+            return path;
         }
 
         List<Entry> entries() {

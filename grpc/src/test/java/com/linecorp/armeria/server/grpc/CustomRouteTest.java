@@ -72,14 +72,18 @@ class CustomRouteTest {
                                   .addService("bar", testService)
                                   .addService("/v1/tests/empty", testService,
                                               TestServiceGrpc.getEmptyCallMethod())
+                                  .addService("/v1/tests/empty/", testService,
+                                              TestServiceGrpc.getEmptyCallMethod())
                                   .addService("/v1/tests/unary", testService,
+                                              TestServiceGrpc.getUnaryCallMethod())
+                                  .addService("/v1/tests/unary/", testService,
                                               TestServiceGrpc.getUnaryCallMethod())
                                   .enableUnframedRequests(true)
                                   .build());
         }
     };
 
-    @CsvSource({ "/foo/EmptyCall", "/v1/tests/empty" })
+    @CsvSource({ "/foo/EmptyCall", "/v1/tests/empty", "/v1/tests/empty/"  })
     @ParameterizedTest
     void unframedJsonRequestWithCustomPath(String path) throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
@@ -90,7 +94,7 @@ class CustomRouteTest {
         assertThat(response.headers().getInt(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(0);
     }
 
-    @CsvSource({ "/bar/UnaryCall", "/v1/tests/unary" })
+    @CsvSource({ "/bar/UnaryCall", "/v1/tests/unary", "/v1/tests/unary/" })
     @ParameterizedTest
     void unframedProtobufRequestWithCustomPath(String path) throws InvalidProtocolBufferException {
         final WebClient client = WebClient.of(server.httpUri());

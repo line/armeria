@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -83,6 +82,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
 
     private final HandlerRegistry registry;
+    private final Map<String, MethodDescriptor<?, ?>> methods;
     private final Set<Route> routes;
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
@@ -113,6 +113,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useClientTimeoutHeader,
                       int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
+        methods = registry.methods().entrySet().stream()
+                         .collect(toImmutableMap(Entry::getKey,
+                                                 entry -> entry.getValue().getMethodDescriptor()));
         this.routes = requireNonNull(routes, "routes");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
@@ -121,12 +124,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
             jsonMarshallers = ImmutableMap.of();
         } else {
-            jsonMarshallers = new HashMap<>();
-            registry.services().values().stream()
-                    .map(ServerServiceDefinition::getServiceDescriptor)
-                    .forEach(descriptor -> {
-                        jsonMarshallers.put(descriptor.getName(), jsonMarshallerFactory.apply(descriptor));
-                    });
+            jsonMarshallers =
+                    registry.services().values().stream()
+                            .map(ServerServiceDefinition::getServiceDescriptor)
+                            .distinct()
+                            .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
         }
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
@@ -350,10 +352,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public Map<String, MethodDescriptor<?, ?>> methods() {
-        return registry.methods().entrySet()
-                       .stream()
-                       .collect(toImmutableMap(Entry::getKey,
-                                               entry -> entry.getValue().getMethodDescriptor()));
+        return methods;
     }
 
     @Override
