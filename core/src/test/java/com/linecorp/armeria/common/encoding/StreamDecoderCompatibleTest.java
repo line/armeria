@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -58,12 +57,9 @@ class StreamDecoderCompatibleTest {
         }
     };
 
-    private static final ClientFactory clientFactory = ClientFactory.ofDefault();
-
     @Test
     void httpDecodingWithNewDecoder() throws Exception {
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .factory(clientFactory)
                                           .decorator(DecodingClient.newDecorator(
                                                   StreamDecoderFactory.gzip()))
                                           .build();
@@ -78,7 +74,6 @@ class StreamDecoderCompatibleTest {
     @Test
     void httpDecodingWithOldDecoder() throws Exception {
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .factory(clientFactory)
                                           .decorator(DecodingClient.newDecorator(
                                                   com.linecorp.armeria.client.encoding.StreamDecoderFactory
                                                           .gzip()))
