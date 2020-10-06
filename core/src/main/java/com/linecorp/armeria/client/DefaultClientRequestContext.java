@@ -103,7 +103,6 @@ public final class DefaultClientRequestContext
     private final ClientOptions options;
     private final RequestLogBuilder log;
     private final TimeoutScheduler responseCancellationScheduler;
-    private Throwable cancellationCause;
     private long writeTimeoutMillis;
     @Nullable
     private Runnable responseTimeoutHandler;
@@ -193,7 +192,6 @@ public final class DefaultClientRequestContext
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
-        cancellationCause = ResponseTimeoutException.get();
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
         additionalRequestHeaders = options.get(ClientOptions.HEADERS);
@@ -375,7 +373,6 @@ public final class DefaultClientRequestContext
         log = RequestLog.builder(this);
         responseCancellationScheduler =
                 new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
-        cancellationCause = ResponseTimeoutException.get();
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
@@ -517,9 +514,9 @@ public final class DefaultClientRequestContext
 
     @Override
     public void setResponseTimeout(TimeoutMode mode, Duration responseTimeout) {
-        responseCancellationScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                                      requireNonNull(responseTimeout, "responseTimeout")
-                                                              .toNanos());
+        responseCancellationScheduler.setTimeoutNanos(
+                requireNonNull(mode, "mode"),
+                requireNonNull(responseTimeout, "responseTimeout").toNanos());
     }
 
     @Override
@@ -582,9 +579,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void cancel(Throwable cause) {
-        cancellationCause = cause;
-        final boolean cancelHandlers = !(cancellationCause instanceof TimeoutException);
-        responseCancellationScheduler.finishNow(cancelHandlers);
+        responseCancellationScheduler.finishNow(cause);
     }
 
     @Override
@@ -597,19 +592,20 @@ public final class DefaultClientRequestContext
         cancel(ResponseTimeoutException.get());
     }
 
+    @Nullable
     @Override
     public Throwable cancellationCause() {
-        return cancellationCause;
+        return responseCancellationScheduler.cause();
     }
 
     @Override
     public boolean isCancelled() {
-        return responseCancellationScheduler.isFinished();
+        return cancellationCause() != null;
     }
 
     @Override
     public boolean isTimedOut() {
-        return responseCancellationScheduler.isFinished() && cancellationCause instanceof TimeoutException;
+        return cancellationCause() instanceof TimeoutException;
     }
 
     @Override

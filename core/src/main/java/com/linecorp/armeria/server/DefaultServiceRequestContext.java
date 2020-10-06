@@ -87,7 +87,6 @@ public final class DefaultServiceRequestContext
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
     private final TimeoutScheduler requestCancellationScheduler;
-    private Throwable cancellationCause;
     @Nullable
     private final SSLSession sslSession;
 
@@ -166,7 +165,6 @@ public final class DefaultServiceRequestContext
             this.requestCancellationScheduler =
                     new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
         }
-        cancellationCause = RequestTimeoutException.get();
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
@@ -314,9 +312,7 @@ public final class DefaultServiceRequestContext
 
     @Override
     public void cancel(Throwable cause) {
-        cancellationCause = cause;
-        final boolean cancelHandlers = !(cancellationCause instanceof TimeoutException);
-        requestCancellationScheduler.finishNow(cancelHandlers);
+        requestCancellationScheduler.finishNow(cause);
     }
 
     @Override
@@ -329,19 +325,20 @@ public final class DefaultServiceRequestContext
         cancel(RequestTimeoutException.get());
     }
 
+    @Nullable
     @Override
     public Throwable cancellationCause() {
-        return cancellationCause;
+        return requestCancellationScheduler.cause();
     }
 
     @Override
     public boolean isCancelled() {
-        return requestCancellationScheduler.isFinished();
+        return cancellationCause() != null;
     }
 
     @Override
     public boolean isTimedOut() {
-        return requestCancellationScheduler.isFinished() && cancellationCause instanceof TimeoutException;
+        return cancellationCause() instanceof TimeoutException;
     }
 
     @Override

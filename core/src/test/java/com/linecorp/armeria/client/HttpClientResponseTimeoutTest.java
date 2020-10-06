@@ -67,8 +67,7 @@ class HttpClientResponseTimeoutTest {
                 })
                 .build();
         await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
-            assertThatThrownBy(() -> client.get("/no-timeout")
-                                           .aggregate().join())
+            assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ResponseTimeoutException.class);
         });
@@ -87,8 +86,7 @@ class HttpClientResponseTimeoutTest {
                 })
                 .build();
         await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
-            assertThatThrownBy(() -> client.get("/no-timeout")
-                                           .aggregate().join())
+            assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ResponseTimeoutException.class);
         });
@@ -121,18 +119,23 @@ class HttpClientResponseTimeoutTest {
 
     @Test
     void timeoutWithContext() {
-        final WebClient client = WebClient
-                .builder(server.httpUri())
-                .build();
+        final WebClient client = WebClient.of(server.httpUri());
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             final CompletableFuture<AggregatedHttpResponse> response = client.get("/no-timeout").aggregate();
             final ClientRequestContext cctx = ctxCaptor.get();
-            cctx.timeoutNow();
+
             assertThat(cctx.isTimedOut()).isFalse();
-            assertThatThrownBy(response::join)
-                    .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(ResponseTimeoutException.class);
+            assertThat(cctx.cancellationCause()).isNull();
+
+            cctx.timeoutNow();
+            await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
+                assertThatThrownBy(response::join)
+                        .isInstanceOf(CompletionException.class)
+                        .hasCauseInstanceOf(ResponseTimeoutException.class);
+            });
+
             assertThat(cctx.isTimedOut()).isTrue();
+            assertThat(cctx.cancellationCause()).isInstanceOf(ResponseTimeoutException.class);
         }
     }
 
@@ -152,25 +155,50 @@ class HttpClientResponseTimeoutTest {
 
     @Test
     void cancelWithContext() {
-        final WebClient client = WebClient
-                .builder(server.httpUri())
-                .build();
+        final WebClient client = WebClient.of(server.httpUri());
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             final CompletableFuture<AggregatedHttpResponse> response = client.get("/no-timeout").aggregate();
             final ClientRequestContext cctx = ctxCaptor.get();
-            cctx.cancel();
+
             assertThat(cctx.isCancelled()).isFalse();
-            assertThatThrownBy(response::join)
-                    .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(RequestCancellationException.class);
+            assertThat(cctx.cancellationCause()).isNull();
+
+            cctx.cancel();
+            await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
+                assertThatThrownBy(response::join)
+                        .isInstanceOf(CompletionException.class)
+                        .hasCauseInstanceOf(RequestCancellationException.class);
+            });
+
             assertThat(cctx.isCancelled()).isTrue();
+            assertThat(cctx.cancellationCause()).isInstanceOf(RequestCancellationException.class);
+        }
+    }
+
+    @Test
+    void cancelWithException() {
+        final WebClient client = WebClient.of(server.httpUri());
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            final CompletableFuture<AggregatedHttpResponse> response = client.get("/no-timeout").aggregate();
+            final ClientRequestContext cctx = ctxCaptor.get();
+
+            assertThat(cctx.isCancelled()).isFalse();
+            cctx.cancel(new IllegalStateException());
+
+            await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
+                assertThatThrownBy(response::join)
+                        .isInstanceOf(CompletionException.class)
+                        .hasCauseInstanceOf(IllegalStateException.class);
+            });
+
+            assertThat(cctx.isCancelled()).isTrue();
+            assertThat(cctx.cancellationCause()).isInstanceOf(IllegalStateException.class);
         }
     }
 
     private static class TimeoutDecoratorSource implements ArgumentsProvider {
         @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext)
-                throws Exception {
+        public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) {
             final Stream<Consumer<? super ClientRequestContext>> timeoutCustomizers = Stream.of(
                     ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, 1000),
                     ctx -> ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000),

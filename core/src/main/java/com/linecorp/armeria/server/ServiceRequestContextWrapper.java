@@ -158,6 +158,7 @@ public class ServiceRequestContextWrapper
         delegate().timeoutNow();
     }
 
+    @Nullable
     @Override
     public Throwable cancellationCause() {
         return delegate().cancellationCause();

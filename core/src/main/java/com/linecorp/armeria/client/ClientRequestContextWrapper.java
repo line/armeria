@@ -150,6 +150,7 @@ public class ClientRequestContextWrapper
         delegate().timeoutNow();
     }
 
+    @Nullable
     @Override
     public Throwable cancellationCause() {
         return delegate().cancellationCause();

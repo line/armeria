@@ -381,8 +381,9 @@ public interface RequestContext {
     void timeoutNow();
 
     /**
-     * Returns the cause of cancellation.
+     * Returns the cause of cancellation, {@code null} if the request has not been cancelled.
      */
+    @Nullable
     Throwable cancellationCause();
 
     /**

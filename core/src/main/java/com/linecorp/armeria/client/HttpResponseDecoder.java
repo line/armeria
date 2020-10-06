@@ -379,7 +379,8 @@ abstract class HttpResponseDecoder {
                 final TimeoutScheduler responseCancellationScheduler =
                         ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
                 responseCancellationScheduler.init(ctx.eventLoop(), newTimeoutTask(),
-                                      TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                                                   TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis),
+                                                   ResponseTimeoutException.get());
             }
         }
 
@@ -391,9 +392,9 @@ abstract class HttpResponseDecoder {
                 }
 
                 @Override
-                public void run() {
+                public void run(Throwable cause) {
                     assert ctx != null;
-                    final Throwable cause = ctx.cancellationCause();
+
                     delegate.close(cause);
                     ctx.request().abort(cause);
                     ctx.logBuilder().endResponse(cause);

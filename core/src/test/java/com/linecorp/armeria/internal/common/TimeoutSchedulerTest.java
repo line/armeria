@@ -34,6 +34,7 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.internal.common.TimeoutScheduler.State;
 import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 
@@ -43,6 +44,8 @@ class TimeoutSchedulerTest {
 
     private static final EventExecutor eventExecutor = CommonPools.workerGroup().next();
 
+    private static final TimeoutException timeoutCause = new TimeoutException();
+
     private static final TimeoutTask noopTimeoutTask = new TimeoutTask() {
         @Override
         public boolean canSchedule() {
@@ -50,14 +53,14 @@ class TimeoutSchedulerTest {
         }
 
         @Override
-        public void run() {}
+        public void run(Throwable cause) {}
     };
 
     private static void executeInEventLoop(long initTimeoutNanos, Consumer<TimeoutScheduler> task) {
         final AtomicBoolean completed = new AtomicBoolean();
         eventExecutor.execute(() -> {
             final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(0);
-            timeoutScheduler.init(eventExecutor, noopTimeoutTask, initTimeoutNanos);
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, initTimeoutNanos, timeoutCause);
             task.accept(timeoutScheduler);
             completed.set(true);
         });
@@ -249,14 +252,14 @@ class TimeoutSchedulerTest {
                 }
 
                 @Override
-                public void run() {
+                public void run(Throwable cause) {
                     assertThat(timeoutScheduler.whenTimingOut()).isDone();
                     assertThat(timeoutScheduler.isFinished()).isTrue();
                     assertThat(timeoutScheduler.whenTimedOut()).isNotDone();
                     passed.set(true);
                 }
             };
-            timeoutScheduler.init(eventExecutor, timeoutTask, 0);
+            timeoutScheduler.init(eventExecutor, timeoutTask, 0, timeoutCause);
 
             assertThat(timeoutScheduler.isFinished()).isFalse();
 
@@ -294,7 +297,7 @@ class TimeoutSchedulerTest {
         executeInEventLoop(0, timeoutScheduler -> {
             whenTimingOutFutureRef.set(timeoutScheduler.whenTimingOut());
             whenTimedOutFutureRef.set(timeoutScheduler.whenTimedOut());
-            timeoutScheduler.finishNow(true);
+            timeoutScheduler.finishNow(new RuntimeException());
             assertThat(timeoutScheduler.isFinished()).isTrue();
             completed.set(true);
         });
@@ -326,30 +329,30 @@ class TimeoutSchedulerTest {
         eventExecutor.execute(() -> {
             TimeoutScheduler timeoutScheduler = new TimeoutScheduler(MILLISECONDS.toNanos(1000));
             timeoutScheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(1000));
-            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0);
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0, timeoutCause);
             assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(2000));
 
             timeoutScheduler = new TimeoutScheduler(MILLISECONDS.toNanos(1000));
             timeoutScheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(2000));
             timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
-            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0);
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0, timeoutCause);
             assertTimeoutWithTolerance(timeoutScheduler.timeoutNanos(), MILLISECONDS.toNanos(1000));
 
             timeoutScheduler = new TimeoutScheduler(MILLISECONDS.toNanos(1000));
             timeoutScheduler.clearTimeout(false);
-            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0);
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0, timeoutCause);
             assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(1000));
 
             timeoutScheduler = new TimeoutScheduler(MILLISECONDS.toNanos(1000));
             timeoutScheduler.clearTimeout();
-            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0);
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0, timeoutCause);
             assertThat(timeoutScheduler.timeoutNanos()).isZero();
 
             timeoutScheduler = new TimeoutScheduler(MILLISECONDS.toNanos(1000));
             timeoutScheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(2000));
             timeoutScheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
             timeoutScheduler.setTimeoutNanos(SET_FROM_START, MILLISECONDS.toNanos(10000));
-            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0);
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, 0, timeoutCause);
             assertTimeoutWithTolerance(timeoutScheduler.timeoutNanos(), MILLISECONDS.toNanos(10000));
             completed.set(true);
         });
@@ -361,10 +364,10 @@ class TimeoutSchedulerTest {
         final AtomicBoolean completed = new AtomicBoolean();
         final TimeoutScheduler timeoutScheduler = new TimeoutScheduler(0);
         eventExecutor.execute(() -> {
-            timeoutScheduler.init(eventExecutor, noopTimeoutTask, MILLISECONDS.toNanos(100));
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, MILLISECONDS.toNanos(100), timeoutCause);
             assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
 
-            timeoutScheduler.init(eventExecutor, noopTimeoutTask, MILLISECONDS.toNanos(1000));
+            timeoutScheduler.init(eventExecutor, noopTimeoutTask, MILLISECONDS.toNanos(1000), timeoutCause);
             assertThat(timeoutScheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
             completed.set(true);
         });
