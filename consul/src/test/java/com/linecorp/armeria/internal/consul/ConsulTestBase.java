@@ -66,7 +66,7 @@ public abstract class ConsulTestBase {
     static void start() throws Throwable {
         // Initialize Consul embedded server for testing
         consul = ConsulStarterBuilder.consulStarter()
-                                     .withConsulVersion("1.8.3")
+                                     .withConsulVersion("1.8.4")
                                      .build().start();
         // Initialize Consul client
         consulClient = ConsulClient.builder().consulPort(consul.getHttpPort()).buildClient();
