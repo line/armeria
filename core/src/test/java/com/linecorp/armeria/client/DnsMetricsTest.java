@@ -56,6 +56,7 @@ import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.prometheus.client.CollectorRegistry;
 
 public class DnsMetricsTest {
 
@@ -144,15 +145,13 @@ public class DnsMetricsTest {
                             .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
 
                     final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) pm1;
-                    final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
-                            .metricFamilySamples()).iterator();
-                    while (var4.hasNext()) {
-                        System.out.println(var4.next());
-                    }
-                    final double count1 = registry.getPrometheusRegistry()
+                    final CollectorRegistry collectorRegistry = registry.getPrometheusRegistry();
+                    final Double count0 = collectorRegistry
                             .getSampleValue("armeria_client_dns_queries_written_total",
-                                    new String[] {"name","server"},
-                                    new String[] {"foo.com.", "0:0:0:0:0:0:0:1"});
+                                    new String[]{"name", "server"},
+                                    new String[]{"foo.com.", "0:0:0:0:0:0:0:1"});
+                    System.err.println(count0);
+                    final double count1 = count0;
                     assertThat(count1 > 1.0).isTrue();
                 }
             }
@@ -237,17 +236,12 @@ public class DnsMetricsTest {
 
             client2.execute(RequestHeaders.of(HttpMethod.GET, "http://google.com")).aggregate().get();
             final PrometheusMeterRegistry registry = (PrometheusMeterRegistry) pm1;
-            final Iterator var4 = Collections.list(registry.getPrometheusRegistry()
-                    .metricFamilySamples()).iterator();
-            while (var4.hasNext()) {
-                System.out.println(var4.next());
-            }
             final double count = registry.getPrometheusRegistry()
                     .getSampleValue("armeria_client_dns_queries_total",
                             new String[] {"cause","name","result"},
                             new String[] {"none",
                                     "google.com.", "success"});
-            assertThat(count > 1.0).isTrue();
+            assertThat(count).isGreaterThan(1.0);
         }
     }
 
