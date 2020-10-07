@@ -42,7 +42,7 @@ import io.netty.util.concurrent.EventExecutor;
  *   <li>{@link #abort()}</li>
  * </ul>
  *
- * <h3>When is a {@link StreamMessage} fully consumed?</h3>
+ * <h2>When is a {@link StreamMessage} fully consumed?</h2>
  *
  * <p>A {@link StreamMessage} is <em>complete</em> (or 'fully consumed') when:
  * <ul>
@@ -56,7 +56,7 @@ import io.netty.util.concurrent.EventExecutor;
  * will complete, which you may find useful because {@link Subscriber} does not notify you when a stream is
  * {@linkplain Subscription#cancel() cancelled}.
  *
- * <h3>Publication and Consumption of pooled {@link HttpData} objects</h3>
+ * <h2>Publication and Consumption of pooled {@link HttpData} objects</h2>
  *
  * <p>{@link StreamMessage} will discard the publication request of a pooled {@link HttpData} silently and
  * release it automatically when the publication is attempted after the stream is closed.

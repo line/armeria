@@ -41,7 +41,7 @@ import io.netty.buffer.ByteBufAllocator;
  * <a href="https://netty.io/wiki/reference-counted-objects.html">Reference counted objects</a>
  * for more information on pooled objects.</p>
  *
- * <h3>What is a pooled {@link HttpData}?</h3>
+ * <h2>What is a pooled {@link HttpData}?</h2>
  *
  * <p>A pooled {@link HttpData} is a special variant of {@link HttpData} whose {@link HttpData#isPooled()}
  * returns {@code true}. It's usually created via {@link HttpData#wrap(ByteBuf)} by wrapping an existing
@@ -52,7 +52,7 @@ import io.netty.buffer.ByteBufAllocator;
  *   <li>{@link HttpRequest#aggregateWithPooledObjects(ByteBufAllocator)}</li>
  *   <li>{@link HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}</li>
  *   <li>{@link HttpFile#aggregateWithPooledObjects(Executor, ByteBufAllocator)}</li>
- * </ul></p>
+ * </ul>
  *
  * <p>To put it another way, you'll <b>never</b> see a pooled {@link HttpData} if you did not use such
  * operations. You can ignore the rest of this section if that's the case.</p>
@@ -78,7 +78,7 @@ import io.netty.buffer.ByteBufAllocator;
  *            }
  *        }
  *    });
- * }</pre></p>
+ * }</pre>
  *
  * <p>In the above example, it is the initial {@code try (HttpData content = ...)} that ensures the data
  * is released. Calls to methods on {@link HttpData} will all work and can be called any number of times within

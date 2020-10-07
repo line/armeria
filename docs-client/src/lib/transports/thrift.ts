@@ -44,11 +44,12 @@ export default class ThriftTransport extends Transport {
     method: Method,
     headers: { [name: string]: string },
     bodyJson?: string,
+    endpointPath?: string,
   ): Promise<string> {
     if (!bodyJson) {
       throw new Error('A Thrift request must have body.');
     }
-    const endpoint = this.findDebugMimeTypeEndpoint(method);
+    const endpoint = this.getDebugMimeTypeEndpoint(method, endpointPath);
 
     const thriftMethod = ThriftTransport.thriftMethod(endpoint, method);
 

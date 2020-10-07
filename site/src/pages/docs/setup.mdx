@@ -31,6 +31,9 @@ the list of major Armeria artifacts which might interest you:
 | `armeria-dropwizard2`                       | Provides a Dropwizard 2 Bundle around `armeria-jetty9`.                         |
 |                                             | See [Using Armeria with Dropwizard](/docs/advanced-dropwizard-integration).     |
 +---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-eureka`                            | Eureka based service discovery.                                                 |
+|                                             | See [Eureka service discovery] and [Eureka service registration].               |
++---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-grpc`                              | gRPC client and server support.                                                 |
 |                                             | See [Running a gRPC service](/docs/server-grpc)                                 |
 |                                             | and [Calling a gRPC service](/docs/client-grpc).                                |
@@ -41,7 +44,7 @@ the list of major Armeria artifacts which might interest you:
 | `armeria-kafka`                             | Enables sending access logs to Kafka                                            |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-kotlin`                            | Kotlin support.                                                                 |
-|                                             | See [Kotlin coroutines support][kotlin-coroutines-support].                     |
+|                                             | See [Kotlin coroutines support].                                                |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-logback`                           | Provides Logback `Appender` implementation that adds                            |
 |                                             | request information.                                                            |
@@ -68,10 +71,14 @@ the list of major Armeria artifacts which might interest you:
 |                                             |  See [Embedding a servlet container](/docs/server-servlet).                     |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-zookeeper3`                        | ZooKeeper 3 based service discovery.                                            |
-|                                             | See [Service discovery with ZooKeeper](/docs/advanced-zookeeper).               |
+|                                             | See [ZooKeeper service discovery] and [ZooKeeper service registration].         |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 
-[kotlin-coroutines-support]: /docs/server-annotated-service#kotlin-coroutines-support
+[Kotlin coroutines support]: /docs/server-annotated-service#kotlin-coroutines-support
+[ZooKeeper service discovery]: /docs/client-service-discovery#zookeeper-based-service-discovery-with-zookeeperendpointgroup
+[ZooKeeper service registration]: /docs/server-service-registration#zookeeper-based-service-registration-with-zookeeperupdatinglistener
+[Eureka service discovery]: /docs/client-service-discovery#eureka-based-service-discovery-with-eurekaendpointgroup
+[Eureka service registration]: /docs/server-service-registration#eureka-based-service-registration-with-eurekaupdatinglistener
 
 ## Setting up with a build system
 
