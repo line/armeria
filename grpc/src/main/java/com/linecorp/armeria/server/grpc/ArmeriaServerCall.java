@@ -431,6 +431,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onHalfClose();
+            listener.onReady();
         } catch (Throwable t) {
             close(GrpcStatus.fromThrowable(t), new Metadata());
         }
@@ -544,6 +545,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     void setListener(Listener<I> listener) {
         checkState(this.listener == null, "listener already set");
         this.listener = requireNonNull(listener, "listener");
+        invokeOnReady();
     }
 
     @Nullable
