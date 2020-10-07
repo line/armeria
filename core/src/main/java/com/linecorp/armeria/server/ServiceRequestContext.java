@@ -430,6 +430,11 @@ public interface ServiceRequestContext extends RequestContext {
     CompletableFuture<Void> whenRequestTimedOut();
 
     /**
+     * Times out the request. Shortcut for {@code cancel(RequestTimeoutException.get())}.
+     */
+    void timeoutNow();
+
+    /**
      * Returns the maximum length of the current {@link Request}.
      * This value is initially set from {@link ServiceConfig#maxRequestLength()}.
      * If 0, there is no limit on the request size.

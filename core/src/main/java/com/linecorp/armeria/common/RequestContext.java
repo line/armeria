@@ -365,18 +365,17 @@ public interface RequestContext {
     MeterRegistry meterRegistry();
 
     /**
-     * Cancels the current {@link Request} with a {@link Throwable}.
+     * Cancels the request with a {@link Throwable}.
      */
     void cancel(Throwable cause);
 
     /**
-     * Shortcut for {@code cancel(RequestCancellationException.get())}.
+     * Cancels the request. Shortcut for {@code cancel(RequestCancellationException.get())}.
      */
     void cancel();
 
     /**
-     * Shortcut for {@code cancel(RequestTimeoutException.get())} or
-     * {@code cancel(ResponseTimeoutException.get())}.
+     * Times out the request.
      */
     void timeoutNow();
 

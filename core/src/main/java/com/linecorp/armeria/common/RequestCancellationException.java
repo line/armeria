@@ -23,7 +23,7 @@ public final class RequestCancellationException extends RuntimeException {
 
     private static final long serialVersionUID = -8891853443874862294L;
 
-    private static final RequestCancellationException INSTANCE = new RequestCancellationException();
+    private static final RequestCancellationException INSTANCE = new RequestCancellationException(false);
 
     /**
      * Returns a singleton {@link RequestCancellationException}.
@@ -34,4 +34,8 @@ public final class RequestCancellationException extends RuntimeException {
     }
 
     private RequestCancellationException() {}
+
+    private RequestCancellationException(@SuppressWarnings("unused") boolean dummy) {
+        super(null, null, false, false);
+    }
 }

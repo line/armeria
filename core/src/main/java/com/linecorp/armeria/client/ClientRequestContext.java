@@ -442,6 +442,11 @@ public interface ClientRequestContext extends RequestContext {
     CompletableFuture<Void> whenResponseTimedOut();
 
     /**
+     * Times out the request. Shortcut for {@code cancel(ResponseTimeoutException.get())}.
+     */
+    void timeoutNow();
+
+    /**
      * Returns the maximum length of the received {@link Response}.
      * This value is initially set from {@link ClientOptions#MAX_RESPONSE_LENGTH}.
      *
