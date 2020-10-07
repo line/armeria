@@ -196,13 +196,72 @@ class BraveClientTest {
         assertThat(collector.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
+    @Test
+    void httpRequestResponseParsersAreOverriddenIfDefault() throws Exception {
+        final SpanCollector collector = new SpanCollector();
+
+        final Tracing tracing = Tracing.newBuilder()
+                                       .localServiceName(TEST_SERVICE)
+                                       .addSpanHandler(collector)
+                                       .sampler(Sampler.create(1.0f))
+                                       .build();
+
+        final HttpTracing httpTracing = HttpTracing.create(tracing);
+
+        // httpTracing.clientRequestParser() and httpTracing.clientResponseParser() are overridden.
+        testRemoteInvocation(httpTracing, null);
+
+        // check span name
+        final MutableSpan span = collector.spans().take();
+        assertThat(span).isNotNull();
+        // check span name
+        assertThat(span.name()).isEqualTo(TEST_SPAN);
+
+        // check tags
+        assertThat(span.tags()).containsEntry("http.host", "foo.com")
+                               .containsEntry("http.method", "POST")
+                               .containsEntry("http.path", "/hello/armeria")
+                               .containsEntry("http.url", "http://foo.com/hello/armeria")
+                               .containsEntry("http.protocol", "h2c");
+    }
+
+    @Test
+    void onlyHttpResponseParsersIsOverridden() throws Exception {
+        final SpanCollector collector = new SpanCollector();
+
+        final Tracing tracing = Tracing.newBuilder()
+                                       .localServiceName(TEST_SERVICE)
+                                       .addSpanHandler(collector)
+                                       .sampler(Sampler.create(1.0f))
+                                       .build();
+
+        final HttpTracing httpTracing = HttpTracing.newBuilder(tracing).clientRequestParser(
+                (request, context, span) -> span.tag("customized", "true")).build();
+
+        // only httpTracing.clientResponseParser() is overridden.
+        testRemoteInvocation(httpTracing, null);
+
+        // check span name
+        final MutableSpan span = collector.spans().take();
+        assertThat(span).isNotNull();
+
+        assertThat(span.tag("customized")).isEqualTo("true");
+        assertThat(span.tags()).doesNotContainKey("http.method");
+        assertThat(span.tags()).containsEntry("http.protocol", "h2c");
+    }
+
     private static RequestLog testRemoteInvocation(Tracing tracing, @Nullable String remoteServiceName)
             throws Exception {
 
-        HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
-                                             .clientRequestParser(ArmeriaHttpClientParser.get())
-                                             .clientResponseParser(ArmeriaHttpClientParser.get())
-                                             .build();
+        final HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
+                                                   .clientRequestParser(ArmeriaHttpClientParser.get())
+                                                   .clientResponseParser(ArmeriaHttpClientParser.get())
+                                                   .build();
+        return testRemoteInvocation(httpTracing, remoteServiceName);
+    }
+
+    private static RequestLog testRemoteInvocation(HttpTracing httpTracing,
+                                                   @Nullable String remoteServiceName) throws Exception {
         if (remoteServiceName != null) {
             httpTracing = httpTracing.clientOf(remoteServiceName);
         }

@@ -218,8 +218,12 @@ public final class GrpcStatus {
             builder.setOriginalMessage(Strings.nullToEmpty(t.getMessage()));
         }
 
-        for (StackTraceElement element : t.getStackTrace()) {
-            builder.addStackTrace(serializeStackTraceElement(element));
+        // In order not to exceed max headers size, max stack trace elements is limited to 10
+        final StackTraceElement[] stackTraceElements = t.getStackTrace();
+        // TODO(ikhoon): Provide a way to configure maxStackTraceElements
+        final int maxStackTraceElements = Math.min(10, stackTraceElements.length);
+        for (int i = 0; i < maxStackTraceElements; i++) {
+            builder.addStackTrace(serializeStackTraceElement(stackTraceElements[i]));
         }
 
         if (t.getCause() != null) {

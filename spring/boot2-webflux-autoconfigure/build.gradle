@@ -19,6 +19,7 @@ dependencies {
 
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
+    testImplementation project(':spring:boot2-actuator-autoconfigure')
     testImplementation project(':thrift0.13')
     testImplementation "io.projectreactor:reactor-test"
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -28,22 +29,27 @@ dependencies {
 task generateSources(type: Copy) {
     from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
-    include '**/*ArmeriaBeanPostProcessor.java'
+
+    // Copy from /internal/spring package.
+    include '**/ArmeriaConfigurationNetUtil.java'
+    include '**/ArmeriaConfigurationUtil.java'
+    include '**/CustomAlias*KeyManager*.java'
+    include '**/DropwizardSupport.java'
+    include '**/PrometheusSupport.java'
+    include '**/ThriftServiceUtils.java'
+
+    // Copy from /spring package.
+    include '**/*ArmeriaBeanPostProcessor*.java'
     include '**/*ExampleHeaders.java'
     include '**/*ExampleRequest.java'
     include '**/*RegistrationBean.java'
-    include '**/ArmeriaConfigurationNetUtil.java'
-    include '**/ArmeriaConfigurationUtil.java'
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
-    include '**/CustomAlias*KeyManager*.java'
-    include '**/DropwizardSupport.java'
+    include '**/DocServiceConfigurator.java'
     include '**/LocalArmeriaPort.java'
     include '**/LocalArmeriaPorts.java'
     include '**/*MeterIdPrefixFunctionFactory.java'
-    include '**/PrometheusSupport.java'
     include '**/Ssl.java'
-    include '**/ThriftServiceUtils.java'
 }
 
 tasks.compileJava.dependsOn(generateSources)

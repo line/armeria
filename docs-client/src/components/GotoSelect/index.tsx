@@ -41,9 +41,8 @@ import { ControlProps } from 'react-select/src/components/Control';
 import { IndicatorProps } from 'react-select/src/components/indicators';
 import { MenuProps, NoticeProps } from 'react-select/src/components/Menu';
 import { OptionProps } from 'react-select/src/components/Option';
-import { PlaceholderProps } from 'react-select/src/components/Placeholder';
 import { SingleValueProps } from 'react-select/src/components/SingleValue';
-import { ValueType } from 'react-select/src/types';
+import { CommonProps, ValueType } from 'react-select/src/types';
 import { Specification } from '../../lib/specification';
 
 interface OptionType {
@@ -53,6 +52,7 @@ interface OptionType {
 
 interface GroupType {
   label: string;
+  value: string;
   options: OptionType[];
 }
 
@@ -190,12 +190,11 @@ function Option(props: OptionProps<OptionType>) {
   );
 }
 
-function Placeholder(props: PlaceholderProps<OptionType>) {
+function Placeholder(props: CommonProps<OptionType>) {
   return (
     <Typography
       color="textSecondary"
       className={props.selectProps.classes.placeholder}
-      {...props.innerProps}
     >
       Go to ...
     </Typography>
@@ -206,6 +205,9 @@ function SingleValue(props: SingleValueProps<OptionType>) {
   return (
     <Typography
       className={props.selectProps.classes.singleValue}
+      style={{
+        display: props.selectProps.menuIsOpen ? 'none' : 'block',
+      }}
       noWrap
       {...props.innerProps}
     >
@@ -215,8 +217,12 @@ function SingleValue(props: SingleValueProps<OptionType>) {
 }
 
 function ValueContainer(props: ValueContainerProps<OptionType>) {
+  const { inputValue, menuIsOpen } = props.selectProps;
+  const showPlaceholder = props.hasValue && !inputValue && menuIsOpen;
+
   return (
     <div className={props.selectProps.classes.valueContainer}>
+      {showPlaceholder && Placeholder(props)}
       {props.children}
     </div>
   );
@@ -288,6 +294,7 @@ function makeSuggestions(
   if (specification.getServices().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Services',
+      value: 'group:services',
       options: specification.getServices().flatMap((service) => {
         return service.methods
           .map((method) => {
@@ -304,6 +311,7 @@ function makeSuggestions(
   if (specification.getEnums().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Enums',
+      value: 'group:enums',
       options: specification
         .getEnums()
         .map((enm) => {
@@ -319,6 +327,7 @@ function makeSuggestions(
   if (specification.getStructs().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Structs',
+      value: 'group:structs',
       options: specification
         .getStructs()
         .map((struct) => {
@@ -334,6 +343,7 @@ function makeSuggestions(
   if (specification.getExceptions().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Exceptions',
+      value: 'group:exceptions',
       options: specification
         .getExceptions()
         .map((exception) => {

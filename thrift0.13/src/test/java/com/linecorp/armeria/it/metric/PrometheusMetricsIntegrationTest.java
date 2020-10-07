@@ -97,7 +97,7 @@ public class PrometheusMetricsIntegrationTest {
 
     @AfterClass
     public static void closeClientFactory() {
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Rule

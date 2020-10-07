@@ -32,14 +32,15 @@ object Main {
                 localAddress.address.isLoopbackAddress
             logger.info(
                 "Server has been started. Serving DocService at http://{}:{}/docs",
-                if (isLocalAddress) "127.0.0.1" else localAddress.hostString, localAddress.port
+                if (isLocalAddress) "127.0.0.1" else localAddress.hostString,
+                localAddress.port
             )
         }
     }
 
     private val logger = LoggerFactory.getLogger(Main::class.java)
 
-    fun newServer(httpPort: Int, httpsPort: Int): Server {
+    fun newServer(httpPort: Int, httpsPort: Int, useBlockingTaskExecutor: Boolean = false): Server {
         val exampleRequest: HelloRequest = HelloRequest.newBuilder().setName("Armeria").build()
         val grpcService = GrpcService.builder()
             .addService(HelloServiceImpl())
@@ -49,7 +50,7 @@ object Main {
             .enableUnframedRequests(true)
             // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
             // methods in the blockingTaskExecutor thread pool.
-            // .useBlockingTaskExecutor(true)
+            .useBlockingTaskExecutor(useBlockingTaskExecutor)
             .build()
         return Server.builder()
             .http(httpPort)
@@ -60,17 +61,20 @@ object Main {
             .serviceUnder(
                 "/docs",
                 DocService.builder()
-                    .exampleRequestForMethod(
+                    .exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
-                        "Hello", exampleRequest
+                        "Hello",
+                        exampleRequest
                     )
-                    .exampleRequestForMethod(
+                    .exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
-                        "LazyHello", exampleRequest
+                        "LazyHello",
+                        exampleRequest
                     )
-                    .exampleRequestForMethod(
+                    .exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
-                        "BlockingHello", exampleRequest
+                        "BlockingHello",
+                        exampleRequest
                     )
                     .exclude(
                         DocServiceFilter.ofServiceName(

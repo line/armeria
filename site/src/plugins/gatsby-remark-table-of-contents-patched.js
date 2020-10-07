@@ -1,84 +1,113 @@
 /* eslint-disable import/no-extraneous-dependencies */
 const util = require('mdast-util-toc');
 /* eslint-enable import/no-extraneous-dependencies */
+const dayjs = require('dayjs');
+const advancedFormat = require('dayjs/plugin/advancedFormat');
 
-const transformer = (markdownAST) => {
+dayjs.extend(advancedFormat);
+
+const transformer = (props) => {
+  const { frontmatter } = props.markdownNode;
+  const { markdownAST } = props;
   // Find the first heading at the first level.
   // We will insert the ToC right next to it.
   const index = markdownAST.children.findIndex(
     (node) => node.type === 'heading' && node.depth === 1,
   );
 
-  // we have no TOC
-  if (index === -1) {
-    return;
-  }
+  const hasTopHeading = index >= 0;
 
-  // Generate the document title from the first heading.
+  // Generate the document title from the frontmatter or first heading.
   let pageTitle;
-  try {
-    pageTitle = util({
-      ...markdownAST,
-      children: [markdownAST.children[index]],
-    }).map.children[0].children[0].children[0].children[0].value;
-  } catch (e) {
-    pageTitle = undefined;
+  if (hasTopHeading) {
+    try {
+      pageTitle =
+        frontmatter.title ||
+        util({
+          ...markdownAST,
+          children: [markdownAST.children[index]],
+        }).map.children[0].children[0].children[0].children[0].value;
+      frontmatter.title = pageTitle;
+    } catch (e) {
+      // Ignore.
+    }
+  } else {
+    pageTitle = frontmatter.title;
   }
 
   // Generate ToC from the non-first headings.
-  const result = util(
-    {
-      ...markdownAST,
-      children: markdownAST.children.flatMap((node) => {
-        if (node.type === 'heading' && node.depth >= 2) {
-          return [node];
-        }
-        return [];
-      }),
-    },
-    {
-      maxDepth: 4,
-    },
-  );
-
-  if (!result.map) {
-    // Insert the pageTitle only.
-    // eslint-disable-next-line no-param-reassign
-    markdownAST.children = [].concat(
-      {
-        type: 'export',
-        value: `export const pageTitle = ${JSON.stringify(pageTitle)}`,
-      },
-      markdownAST.children,
-    );
-  } else {
-    // Insert the pageTitle and ToC.
-    // eslint-disable-next-line no-param-reassign
-    markdownAST.children = [].concat(
-      {
-        type: 'export',
-        value: `export const pageTitle = ${JSON.stringify(pageTitle)}`,
-      },
-      markdownAST.children.slice(0, index + 1),
-      {
-        type: 'heading',
-        depth: 6, // Use the level ignored by Tocbot.
-        children: [
-          {
-            type: 'text',
-            value: 'Table of contents',
-          },
-        ],
-        data: {
-          hProperties: { className: 'inlinePageToc', role: 'navigation' },
+  const toc = hasTopHeading
+    ? util(
+        {
+          ...markdownAST,
+          children: markdownAST.children.flatMap((node) => {
+            if (node.type === 'heading' && node.depth >= 2) {
+              return [node];
+            }
+            return [];
+          }),
         },
-      },
-      result.map,
-      markdownAST.children.slice(index + 1),
-    );
+        {
+          maxDepth: 4,
+        },
+      ).map
+    : undefined;
+
+  let oldChildren = markdownAST.children;
+  const newChildren = [];
+
+  // Export the page title as a property.
+  if (pageTitle) {
+    newChildren.push({
+      type: 'export',
+      value: `export const pageTitle = ${JSON.stringify(pageTitle)}`,
+    });
   }
+
+  // Insert the top heading.
+  if (hasTopHeading) {
+    newChildren.push(...oldChildren.slice(0, index + 1));
+    oldChildren = oldChildren.slice(index + 1);
+  }
+
+  // Insert date.
+  if (frontmatter.date) {
+    newChildren.push({
+      type: 'paragraph',
+      children: [
+        {
+          type: 'text',
+          value: `${dayjs(frontmatter.date).format('Do MMMM YYYY')}`,
+        },
+      ],
+      data: {
+        hProperties: { className: 'date' },
+      },
+    });
+  }
+
+  // Insert ToC.
+  if (toc) {
+    newChildren.push({
+      type: 'heading',
+      depth: 6, // Use the level ignored by Tocbot.
+      children: [
+        {
+          type: 'text',
+          value: 'Table of contents',
+        },
+      ],
+      data: {
+        hProperties: { className: 'inlinePageToc', role: 'navigation' },
+      },
+    });
+    newChildren.push(toc);
+  }
+
+  newChildren.push(...oldChildren);
+  markdownAST.children = newChildren;
 };
 
-module.exports = ({ markdownAST }, pluginOptions) => {
-  return transformer(markdownAST, pluginOptions);
+module.exports = (props, pluginOptions) => {
+  return transformer(props, pluginOptions);
 };

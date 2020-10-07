@@ -35,6 +35,9 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -73,7 +76,7 @@ import com.linecorp.armeria.server.file.HttpVfs;
  * {@link Server}. It does not require any configuration besides adding it to a {@link VirtualHost}; it
  * discovers all the eligible {@link Service}s automatically.
  *
- * <h3>How is the documentation generated?</h3>
+ * <h2>How is the documentation generated?</h2>
  *
  * <p>{@link DocService} looks up the {@link DocServicePlugin}s available in the current JVM
  * using Java SPI (Service Provider Interface). The {@link DocServicePlugin} implementations will
@@ -84,11 +87,17 @@ import com.linecorp.armeria.server.file.HttpVfs;
  */
 public final class DocService extends SimpleDecoratingHttpService {
 
+    private static final Logger logger = LoggerFactory.getLogger(DocService.class);
+
     private static final ObjectMapper jsonMapper = new ObjectMapper()
             .setSerializationInclusion(Include.NON_ABSENT);
 
-    static final List<DocServicePlugin> plugins = Streams.stream(ServiceLoader.load(
-            DocServicePlugin.class, DocService.class.getClassLoader())).collect(toImmutableList());
+    static final List<DocServicePlugin> plugins = ImmutableList.copyOf(ServiceLoader.load(
+            DocServicePlugin.class, DocService.class.getClassLoader()));
+
+    static {
+        logger.info("Loaded {}: {}", DocServicePlugin.class.getSimpleName(), plugins);
+    }
 
     /**
      * Returns a new {@link DocServiceBuilder}.
@@ -97,7 +106,7 @@ public final class DocService extends SimpleDecoratingHttpService {
         return new DocServiceBuilder();
     }
 
-    private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders;
+    private final Map<String, ListMultimap<String, HttpHeaders>> exampleHeaders;
     private final Map<String, ListMultimap<String, String>> exampleRequests;
     private final Map<String, ListMultimap<String, String>> examplePaths;
     private final Map<String, ListMultimap<String, String>> exampleQueries;
@@ -111,7 +120,7 @@ public final class DocService extends SimpleDecoratingHttpService {
      * Creates a new instance.
      */
     public DocService() {
-        this(/* exampleHttpHeaders */ ImmutableMap.of(), /* exampleRequests */ ImmutableMap.of(),
+        this(/* exampleHeaders */ ImmutableMap.of(), /* exampleRequests */ ImmutableMap.of(),
              /* examplePaths */ ImmutableMap.of(), /* exampleQueries */ ImmutableMap.of(),
              /* injectedScriptSuppliers */ ImmutableList.of(), DocServiceBuilder.ALL_SERVICES);
     }
@@ -119,7 +128,7 @@ public final class DocService extends SimpleDecoratingHttpService {
     /**
      * Creates a new instance with example HTTP headers and example requests and injected scripts.
      */
-    DocService(Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders,
+    DocService(Map<String, ListMultimap<String, HttpHeaders>> exampleHeaders,
                Map<String, ListMultimap<String, String>> exampleRequests,
                Map<String, ListMultimap<String, String>> examplePaths,
                Map<String, ListMultimap<String, String>> exampleQueries,
@@ -128,7 +137,7 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         super(FileService.of(new DocServiceVfs()));
 
-        this.exampleHttpHeaders = immutableCopyOf(exampleHttpHeaders, "exampleHttpHeaders");
+        this.exampleHeaders = immutableCopyOf(exampleHeaders, "exampleHeaders");
         this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
         this.examplePaths = immutableCopyOf(examplePaths, "examplePaths");
         this.exampleQueries = immutableCopyOf(exampleQueries, "exampleQueries");
@@ -214,7 +223,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                 spec.exceptions().stream()
                     .map(e -> addExceptionDocStrings(e, docStrings))
                     .collect(toImmutableList()),
-                spec.exampleHttpHeaders());
+                spec.exampleHeaders());
     }
 
     private static ServiceInfo addServiceDocStrings(ServiceInfo service, Map<String, String> docStrings) {
@@ -223,7 +232,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                 service.methods().stream()
                        .map(method -> addMethodDocStrings(service, method, docStrings))
                        .collect(toImmutableList()),
-                service.exampleHttpHeaders(),
+                service.exampleHeaders(),
                 docString(service.name(), service.docString(), docStrings));
     }
 
@@ -236,7 +245,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                                     .collect(toImmutableList()),
                               method.exceptionTypeSignatures(),
                               method.endpoints(),
-                              method.exampleHttpHeaders(),
+                              method.exampleHeaders(),
                               method.exampleRequests(),
                               method.examplePaths(),
                               method.exampleQueries(),
@@ -308,13 +317,13 @@ public final class DocService extends SimpleDecoratingHttpService {
                     .map(this::addServiceExamples)
                     .collect(toImmutableList()),
                 spec.enums(), spec.structs(), spec.exceptions(),
-                Iterables.concat(spec.exampleHttpHeaders(),
-                                 exampleHttpHeaders.getOrDefault("", ImmutableListMultimap.of()).get("")));
+                Iterables.concat(spec.exampleHeaders(),
+                                 exampleHeaders.getOrDefault("", ImmutableListMultimap.of()).get("")));
     }
 
     private ServiceInfo addServiceExamples(ServiceInfo service) {
-        final ListMultimap<String, HttpHeaders> exampleHttpHeaders =
-                this.exampleHttpHeaders.getOrDefault(service.name(), ImmutableListMultimap.of());
+        final ListMultimap<String, HttpHeaders> exampleHeaders =
+                this.exampleHeaders.getOrDefault(service.name(), ImmutableListMultimap.of());
         final ListMultimap<String, String> exampleRequests =
                 this.exampleRequests.getOrDefault(service.name(), ImmutableListMultimap.of());
         final ListMultimap<String, String> examplePaths =
@@ -331,18 +340,18 @@ public final class DocService extends SimpleDecoratingHttpService {
                         m.endpoints(),
                         // Show the examples added via `DocServiceBuilder` before the examples
                         // generated by the plugin.
-                        concatAndDedup(exampleHttpHeaders.get(m.name()), m.exampleHttpHeaders()),
+                        concatAndDedup(exampleHeaders.get(m.name()), m.exampleHeaders()),
                         concatAndDedup(exampleRequests.get(m.name()), m.exampleRequests()),
-                        examplePaths.get(m.name()),
-                        exampleQueries.get(m.name()),
+                        concatAndDedup(examplePaths.get(m.name()), m.examplePaths()),
+                        concatAndDedup(exampleQueries.get(m.name()), m.exampleQueries()),
                         m.httpMethod(), m.docString()))::iterator,
-                Iterables.concat(service.exampleHttpHeaders(),
-                                 exampleHttpHeaders.get("")),
+                Iterables.concat(service.exampleHeaders(), exampleHeaders.get("")),
                 service.docString());
     }
 
     private static <T> Iterable<T> concatAndDedup(Iterable<T> first, Iterable<T> second) {
-        return Stream.concat(Streams.stream(first), Streams.stream(second)).distinct()::iterator;
+        return Stream.concat(Streams.stream(first), Streams.stream(second)).distinct()
+                     .collect(toImmutableList());
     }
 
     private DocServiceVfs vfs() {

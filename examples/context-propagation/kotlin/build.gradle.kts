@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
+    runtimeOnly("org.slf4j:slf4j-simple")
 
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
@@ -12,5 +13,5 @@ dependencies {
 }
 
 application {
-    mainClassName = "example.armeria.contextpropagation.kotlin.Main"
+    mainClassName = "example.armeria.contextpropagation.kotlin.MainKt"
 }

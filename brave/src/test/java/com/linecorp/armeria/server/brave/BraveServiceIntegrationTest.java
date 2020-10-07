@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.HttpStatus.BAD_REQUEST;
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
+import brave.http.HttpResponseParser;
 import brave.propagation.CurrentTraceContext;
 import brave.test.http.ITHttpServer;
 
@@ -142,6 +144,20 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     public void httpStatusCodeSettable_onUncaughtException_async() {
         throw new AssumptionViolatedException(
             "Can't currently control the HTTP status code on uncaught exception. #2656");
+    }
+
+    @Test
+    @Override
+    public void httpRoute() throws IOException {
+        httpTracing = httpTracing.toBuilder().serverResponseParser(HttpResponseParser.DEFAULT::parse).build();
+        super.httpRoute();
+    }
+
+    @Test
+    @Override
+    public void httpRoute_async() throws IOException {
+        httpTracing = httpTracing.toBuilder().serverResponseParser(HttpResponseParser.DEFAULT::parse).build();
+        super.httpRoute_async();
     }
 
     @After

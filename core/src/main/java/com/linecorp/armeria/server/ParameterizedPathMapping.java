@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.server.RouteUtil.newLoggerName;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -54,6 +53,8 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      */
     private final String pathPattern;
 
+    private final String nomalizedPathPattern;
+
     /**
      * Regex form of given path, which will be used for matching or extracting.
      *
@@ -81,8 +82,6 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      */
     private final Set<String> paramNames;
 
-    private final String loggerName;
-
     /**
      * Create a {@link ParameterizedPathMapping} instance from given {@code pathPattern}.
      *
@@ -103,13 +102,16 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         }
 
         final StringJoiner patternJoiner = new StringJoiner("/");
+        final StringJoiner normalizedPatternJoiner = new StringJoiner("/");
         final StringJoiner skeletonJoiner = new StringJoiner("/");
+
         final List<String> paramNames = new ArrayList<>();
         for (String token : PATH_SPLITTER.split(pathPattern)) {
             final String paramName = paramName(token);
             if (paramName == null) {
                 // If the given token is a constant, do not manipulate it.
                 patternJoiner.add(token);
+                normalizedPatternJoiner.add(token);
                 skeletonJoiner.add(token);
                 continue;
             }
@@ -125,17 +127,18 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
                 // in regex.
                 patternJoiner.add("\\" + (paramNameIdx + 1));
             }
+
+            normalizedPatternJoiner.add(':' + paramName);
             skeletonJoiner.add(":");
         }
 
         this.pathPattern = pathPattern;
         pattern = Pattern.compile(patternJoiner.toString());
+        nomalizedPathPattern = normalizedPatternJoiner.toString();
         skeleton = skeletonJoiner.toString();
         paths = ImmutableList.of(skeleton, skeleton);
         paramNameArray = paramNames.toArray(EMPTY_NAMES);
         this.paramNames = ImmutableSet.copyOf(paramNames);
-
-        loggerName = newLoggerName(pathPattern);
     }
 
     /**
@@ -173,13 +176,8 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String loggerName() {
-        return loggerName;
-    }
-
-    @Override
-    public String meterTag() {
-        return pathPattern;
+    public String patternString() {
+        return nomalizedPathPattern;
     }
 
     @Override

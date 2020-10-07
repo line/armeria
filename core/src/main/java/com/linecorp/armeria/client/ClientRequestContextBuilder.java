@@ -17,13 +17,13 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URI;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
-
-import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
 import com.linecorp.armeria.common.HttpMethod;
@@ -33,8 +33,8 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.DefaultTimeoutController;
-import com.linecorp.armeria.internal.common.DefaultTimeoutController.TimeoutTask;
+import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -59,13 +59,13 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     };
 
     /**
-     * A timeout controller that has been timed-out.
+     * A timeout scheduler that has been timed-out.
      */
-    private static final DefaultTimeoutController noopTimedOutController =
-            new DefaultTimeoutController(noopTimeoutTask, ImmediateEventExecutor.INSTANCE);
+    private static final TimeoutScheduler noopResponseTimeoutScheduler = new TimeoutScheduler(0);
 
     static {
-        noopTimedOutController.timeoutNow();
+        noopResponseTimeoutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
+        noopResponseTimeoutScheduler.timeoutNow();
     }
 
     @Nullable
@@ -75,8 +75,6 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     private ClientOptions options = ClientOptions.of();
     @Nullable
     private ClientConnectionTimings connectionTimings;
-
-    private boolean initTimeoutController = true;
 
     ClientRequestContextBuilder(HttpRequest request) {
         super(false, request);
@@ -118,12 +116,6 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         return this;
     }
 
-    @VisibleForTesting
-    ClientRequestContextBuilder noTimeoutController() {
-        initTimeoutController = false;
-        return this;
-    }
-
     /**
      * Returns a new {@link ClientRequestContext} created with the properties of this builder.
      */
@@ -135,9 +127,27 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             endpoint = Endpoint.parse(authority());
         }
 
+        final TimeoutScheduler responseTimeoutScheduler;
+        if (timedOut()) {
+            responseTimeoutScheduler = noopResponseTimeoutScheduler;
+        } else {
+            responseTimeoutScheduler = new TimeoutScheduler(0);
+            final CountDownLatch latch = new CountDownLatch(1);
+            eventLoop().execute(() -> {
+                responseTimeoutScheduler.init(eventLoop(), noopTimeoutTask, 0);
+                latch.countDown();
+            });
+
+            try {
+                latch.await(1000, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException ignored) {
+            }
+        }
+
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
                 id(), method(), path(), query(), fragment, options, request(), rpcRequest(),
+                responseTimeoutScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 
@@ -150,16 +160,6 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         if (rpcRequest() != null) {
             ctx.logBuilder().requestContent(rpcRequest(), null);
-        }
-
-        if (initTimeoutController) {
-            final DefaultTimeoutController timeoutController;
-            if (timedOut()) {
-                timeoutController = noopTimedOutController;
-            } else {
-                timeoutController = new DefaultTimeoutController(noopTimeoutTask, eventLoop());
-            }
-            ctx.setResponseTimeoutController(timeoutController);
         }
 
         return ctx;
@@ -193,12 +193,12 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     @Override
-    public ClientRequestContextBuilder remoteAddress(InetSocketAddress remoteAddress) {
+    public ClientRequestContextBuilder remoteAddress(SocketAddress remoteAddress) {
         return (ClientRequestContextBuilder) super.remoteAddress(remoteAddress);
     }
 
     @Override
-    public ClientRequestContextBuilder localAddress(InetSocketAddress localAddress) {
+    public ClientRequestContextBuilder localAddress(SocketAddress localAddress) {
         return (ClientRequestContextBuilder) super.localAddress(localAddress);
     }
 

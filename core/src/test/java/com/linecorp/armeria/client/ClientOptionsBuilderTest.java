@@ -93,7 +93,7 @@ class ClientOptionsBuilderTest {
         b.option(ClientOptions.DECORATION.newValue(ClientDecoration.builder()
                                                                    .add(decorator2)
                                                                    .build()));
-        assertThat(b.build().decoration().decorators()).containsExactly(decorator, decorator2);
+        assertThat(b.build().decoration().decorators()).containsSequence(decorator, decorator2);
 
         // Add an RPC decorator.
         final Function<? super RpcClient, ? extends RpcClient> rpcDecorator =
@@ -102,60 +102,73 @@ class ClientOptionsBuilderTest {
                                                                    .addRpc(rpcDecorator)
                                                                    .build()));
 
-        assertThat(b.build().decoration().decorators()).containsExactly(decorator, decorator2);
+        assertThat(b.build().decoration().decorators()).containsSequence(decorator, decorator2);
         assertThat(b.build().decoration().rpcDecorators()).containsExactly(rpcDecorator);
+
+        final Function<? super HttpClient, ? extends HttpClient> decorator3 =
+                DecodingClient.newDecorator();
+        // Insert decorator at first.
+        final ClientDecoration decoration = b.build().decoration();
+        b.clearDecorators();
+        assertThat(b.build().decoration().decorators()).isEmpty();
+        assertThat(b.build().decoration().rpcDecorators()).isEmpty();
+
+        b.decorator(decorator3);
+        decoration.decorators().forEach(b::decorator);
+        assertThat(b.build().decoration().decorators()).containsSequence(decorator3, decorator, decorator2);
+        assertThat(b.build().decoration().rpcDecorators()).isEmpty();
     }
 
     @Test
-    void testHttpHeaders() {
+    void testHeaders() {
         final ClientOptionsBuilder b = ClientOptions.builder();
 
-        b.option(ClientOptions.HTTP_HEADERS.newValue(HttpHeaders.of(HttpHeaderNames.ACCEPT, "*/*")));
+        b.option(ClientOptions.HEADERS.newValue(HttpHeaders.of(HttpHeaderNames.ACCEPT, "*/*")));
 
         // Add another header to ensure that the builder does not replace the previous one.
-        b.option(ClientOptions.HTTP_HEADERS.newValue(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "foo")));
+        b.option(ClientOptions.HEADERS.newValue(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "foo")));
 
-        final HttpHeaders mergedHeaders = b.build().httpHeaders();
+        final HttpHeaders mergedHeaders = b.build().headers();
         assertThat(mergedHeaders.get(HttpHeaderNames.ACCEPT)).isEqualTo("*/*");
         assertThat(mergedHeaders.get(HttpHeaderNames.USER_AGENT)).isEqualTo("foo");
     }
 
     @Test
-    void testSetHttpHeaders() {
+    void testSetHeaders() {
         final ClientOptionsBuilder b = ClientOptions.builder();
-        b.setHttpHeaders(HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l"));
+        b.setHeaders(HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l"));
 
-        assertThat(b.build().httpHeaders().get(HttpHeaderNames.AUTHORIZATION))
+        assertThat(b.build().headers().get(HttpHeaderNames.AUTHORIZATION))
                 .isEqualTo("Basic QWxhZGRpbjpPcGVuU2VzYW1l");
     }
 
     @Test
-    void testSetHttpHeader() {
+    void testSetHeader() {
         final ClientOptionsBuilder b = ClientOptions.builder();
         // Ensure setHttpHeader replaces instead of adding.
-        b.setHttpHeader(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l");
-        b.setHttpHeader(HttpHeaderNames.AUTHORIZATION, "Lost token");
+        b.setHeader(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l");
+        b.setHeader(HttpHeaderNames.AUTHORIZATION, "Lost token");
 
-        assertThat(b.build().httpHeaders().get(HttpHeaderNames.AUTHORIZATION)).isEqualTo("Lost token");
+        assertThat(b.build().headers().get(HttpHeaderNames.AUTHORIZATION)).isEqualTo("Lost token");
     }
 
     @Test
-    void testAddHttpHeaders() {
+    void testAddHeaders() {
         final ClientOptionsBuilder b = ClientOptions.builder();
-        b.addHttpHeaders(HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l"));
+        b.addHeaders(HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l"));
 
-        assertThat(b.build().httpHeaders().get(HttpHeaderNames.AUTHORIZATION))
+        assertThat(b.build().headers().get(HttpHeaderNames.AUTHORIZATION))
                 .isEqualTo("Basic QWxhZGRpbjpPcGVuU2VzYW1l");
     }
 
     @Test
-    void testAddHttpHeader() {
+    void testAddHeader() {
         final ClientOptionsBuilder b = ClientOptions.builder();
         // Ensure addHttpHeader does not replace.
-        b.addHttpHeader(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l");
-        b.addHttpHeader(HttpHeaderNames.AUTHORIZATION, "Lost token");
+        b.addHeader(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l");
+        b.addHeader(HttpHeaderNames.AUTHORIZATION, "Lost token");
 
-        assertThat(b.build().httpHeaders().getAll(HttpHeaderNames.AUTHORIZATION)).containsExactly(
+        assertThat(b.build().headers().getAll(HttpHeaderNames.AUTHORIZATION)).containsExactly(
                 "Basic QWxhZGRpbjpPcGVuU2VzYW1l", "Lost token");
     }
 

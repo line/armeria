@@ -17,14 +17,11 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.common.util.BiPredicateUtil.toBiPredicateForSecond;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -60,18 +57,6 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
     }
 
     /**
-     * Returns a newly created {@link CircuitBreakerRuleWithContent} that will report a {@link Response} as
-     * a failure if the specified {@code responseFilter} completes with {@code true}.
-     *
-     * @deprecated Use {@link #onResponse(BiFunction)}.
-     */
-    @Deprecated
-    static <T extends Response> CircuitBreakerRuleWithContent<T> onResponse(
-            Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {
-        return onResponse((unused, res) -> responseFilter.apply(res));
-    }
-
-    /**
      * Returns a newly created {@link CircuitBreakerRuleWithContentBuilder}.
      */
     static <T extends Response> CircuitBreakerRuleWithContentBuilder<T> builder() {
@@ -95,19 +80,6 @@ public interface CircuitBreakerRuleWithContent<T extends Response> {
         checkArgument(!Iterables.isEmpty(methods), "methods can't be empty.");
         final ImmutableSet<HttpMethod> httpMethods = Sets.immutableEnumSet(methods);
         return builder((unused, headers) -> httpMethods.contains(headers.method()));
-    }
-
-    /**
-     * Returns a newly created {@link CircuitBreakerRuleWithContentBuilder} with the specified
-     * {@code requestHeadersFilter}.
-     *
-     * @deprecated Use {@link #builder(BiPredicate)}.
-     */
-    @Deprecated
-    static <T extends Response> CircuitBreakerRuleWithContentBuilder<T> builder(
-            Predicate<? super RequestHeaders> requestHeadersFilter) {
-        requireNonNull(requestHeadersFilter, "requestHeadersFilter");
-        return builder(toBiPredicateForSecond(requestHeadersFilter));
     }
 
     /**

@@ -311,8 +311,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public EurekaEndpointGroupBuilder rpcDecorator(
-            Function<? super RpcClient, ? extends RpcClient> decorator) {
+    public EurekaEndpointGroupBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
         return (EurekaEndpointGroupBuilder) super.rpcDecorator(decorator);
     }
 
@@ -322,25 +321,30 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public EurekaEndpointGroupBuilder addHttpHeader(CharSequence name, Object value) {
-        return (EurekaEndpointGroupBuilder) super.addHttpHeader(name, value);
+    public EurekaEndpointGroupBuilder clearDecorators() {
+        return (EurekaEndpointGroupBuilder) super.clearDecorators();
     }
 
     @Override
-    public EurekaEndpointGroupBuilder addHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (EurekaEndpointGroupBuilder) super.addHttpHeaders(httpHeaders);
+    public EurekaEndpointGroupBuilder addHeader(CharSequence name, Object value) {
+        return (EurekaEndpointGroupBuilder) super.addHeader(name, value);
     }
 
     @Override
-    public EurekaEndpointGroupBuilder setHttpHeader(CharSequence name, Object value) {
-        return (EurekaEndpointGroupBuilder) super.setHttpHeader(name, value);
+    public EurekaEndpointGroupBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (EurekaEndpointGroupBuilder) super.addHeaders(headers);
     }
 
     @Override
-    public EurekaEndpointGroupBuilder setHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (EurekaEndpointGroupBuilder) super.setHttpHeaders(httpHeaders);
+    public EurekaEndpointGroupBuilder setHeader(CharSequence name, Object value) {
+        return (EurekaEndpointGroupBuilder) super.setHeader(name, value);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (EurekaEndpointGroupBuilder) super.setHeaders(headers);
     }
 
     @Override

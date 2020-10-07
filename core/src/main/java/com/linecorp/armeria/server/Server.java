@@ -56,7 +56,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -124,9 +123,7 @@ public final class Server implements ListenableAsyncCloseable {
         config.setServer(this);
 
         // Server-wide cache metrics.
-        final MeterIdPrefix idPrefix =
-                new MeterIdPrefix(Flags.useLegacyMeterNames() ? "armeria.server.parsedPathCache"
-                                                              : "armeria.server.parsed.path.cache");
+        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsed.path.cache");
         PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
 
         setupVersionMetrics();
@@ -383,9 +380,7 @@ public final class Server implements ListenableAsyncCloseable {
         final String repositoryStatus = versionInfo.repositoryStatus();
         final List<Tag> tags = ImmutableList.of(Tag.of("version", version),
                                                 Tag.of("commit", commit),
-                                                Tag.of(Flags.useLegacyMeterNames() ? "repoStatus"
-                                                                                   : "repo.status",
-                                                       repositoryStatus));
+                                                Tag.of("repo.status", repositoryStatus));
         Gauge.builder("armeria.build.info", () -> 1)
              .tags(tags)
              .description("A metric with a constant '1' value labeled by version and commit hash" +
@@ -486,9 +481,8 @@ public final class Server implements ListenableAsyncCloseable {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
-            meterRegistry.gauge(Flags.useLegacyMeterNames() ? "armeria.server.pendingResponses"
-                                                            : "armeria.server.pending.responses",
-                                gracefulShutdownSupport, GracefulShutdownSupport::pendingResponses);
+            meterRegistry.gauge("armeria.server.pending.responses", gracefulShutdownSupport,
+                                GracefulShutdownSupport::pendingResponses);
             meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
                                 ConnectionLimitingHandler::numConnections);
         }

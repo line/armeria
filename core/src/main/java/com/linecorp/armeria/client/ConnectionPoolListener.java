@@ -17,7 +17,6 @@ package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
 
-import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Ticker;
 import com.linecorp.armeria.common.util.Unwrappable;

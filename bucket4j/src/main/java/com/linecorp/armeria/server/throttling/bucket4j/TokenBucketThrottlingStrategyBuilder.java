@@ -59,7 +59,7 @@ public final class TokenBucketThrottlingStrategyBuilder<T extends Request> {
      * Optional {@link Duration} that defines a minimum backoff period for throttled requests.
      * By default, it will be set to 0 seconds.
      */
-    public TokenBucketThrottlingStrategyBuilder<T> withMinimumBackoff(Duration minimumBackoff) {
+    public TokenBucketThrottlingStrategyBuilder<T> minimumBackoff(Duration minimumBackoff) {
         requireNonNull(minimumBackoff, "minimumBackoff");
         checkArgument(!minimumBackoff.isNegative(), "minimumBackoff: %s (expected: >= 0)", minimumBackoff);
         this.minimumBackoff = minimumBackoff;
@@ -73,8 +73,8 @@ public final class TokenBucketThrottlingStrategyBuilder<T extends Request> {
      * @param headersScheme defines specific RateLimit Header Scheme for HTTP.
      * @param sendQuota indicates whether to use quota header for the scheme, like {@code X-RateLimit-Limit}.
      */
-    public TokenBucketThrottlingStrategyBuilder<T> withHeadersScheme(ThrottlingHeaders headersScheme,
-                                                                     boolean sendQuota) {
+    public TokenBucketThrottlingStrategyBuilder<T> headersScheme(ThrottlingHeaders headersScheme,
+                                                                 boolean sendQuota) {
         this.headersScheme = requireNonNull(headersScheme, "headersScheme");
         this.sendQuota = sendQuota;
         return this;
@@ -87,8 +87,8 @@ public final class TokenBucketThrottlingStrategyBuilder<T extends Request> {
      * @param headersScheme defines specific RateLimit Header Scheme for HTTP. By default, the quota header
      *                      will not be used for the scheme.
      */
-    public TokenBucketThrottlingStrategyBuilder<T> withHeadersScheme(ThrottlingHeaders headersScheme) {
-        return withHeadersScheme(headersScheme, false);
+    public TokenBucketThrottlingStrategyBuilder<T> headersScheme(ThrottlingHeaders headersScheme) {
+        return headersScheme(headersScheme, false);
     }
 
     /**

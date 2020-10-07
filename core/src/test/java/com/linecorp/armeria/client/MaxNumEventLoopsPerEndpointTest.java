@@ -16,10 +16,8 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.client.DefaultEventLoopSchedulerTest.acquireEntry;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.fail;
 
 import java.util.List;
 import java.util.function.ToIntFunction;
@@ -27,7 +25,6 @@ import java.util.function.ToIntFunction;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -204,6 +201,8 @@ class MaxNumEventLoopsPerEndpointTest {
     }
 
     /**
+     * This illustrates when the eventLoop at 0 index is selected from the first acquireEntry(s, endpointA)
+     * call.
      * eventLoops idx:   [   0,   1,   2,   3,   4,   5,   6]
      *    - endpointA:       A    A
      *    - endpointB:                 B    B    B
@@ -232,6 +231,8 @@ class MaxNumEventLoopsPerEndpointTest {
     }
 
     /**
+     * This illustrates when the eventLoop at 0 index is selected from the first acquireEntry(s, endpointA)
+     * call.
      * eventLoops idx:   [   0,   1,   2,   3,   4,   5,   6]
      *    - endpointA:       A    A
      *    - endpointB:                 B    B    B
@@ -259,66 +260,36 @@ class MaxNumEventLoopsPerEndpointTest {
     private static void checkEventLoopAssignedSequentially(
             List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions, int maxNumEventLoops) {
         final EventLoopGroup group = new DefaultEventLoopGroup(7);
-        final List<EventLoop> eventLoops = Streams.stream(group)
-                                                  .map(EventLoop.class::cast)
-                                                  .collect(toImmutableList());
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, maxNumEventLoops,
                                                                           maxNumEventLoops,
                                                                           maxNumEventLoopsFunctions);
 
         // endpointA
 
-        EventLoop firstEventLoop = acquireEntry(s, endpointA).get();
-        int firstEventLoopIdx = findIndex(eventLoops, firstEventLoop);
-        assertThat(firstEventLoopIdx).isIn(0, 1);
-        checkNextEventLoopIdx(s, eventLoops, endpointA, firstEventLoopIdx, 0, 2);
+        final EventLoop firstEventLoopA = acquireEntry(s, endpointA).get();
+        acquireEntries(1, s, endpointA, firstEventLoopA);
         // After one circle, the next event loop is the first one.
-        assertThat(firstEventLoop).isSameAs(acquireEntry(s, endpointA).get());
+        assertThat(firstEventLoopA).isSameAs(acquireEntry(s, endpointA).get());
 
         // endpointB
 
-        firstEventLoop = acquireEntry(s, endpointB).get();
-        firstEventLoopIdx = findIndex(eventLoops, firstEventLoop);
-        assertThat(firstEventLoopIdx).isIn(2, 3, 4);
-        checkNextEventLoopIdx(s, eventLoops, endpointB, firstEventLoopIdx, 2, 3);
+        final EventLoop firstEventLoopB = acquireEntry(s, endpointB).get();
+        acquireEntries(2, s, endpointB, firstEventLoopB);
         // After one circle, the next event loop is the first one.
-        assertThat(firstEventLoop).isSameAs(acquireEntry(s, endpointB).get());
+        assertThat(firstEventLoopB).isSameAs(acquireEntry(s, endpointB).get());
 
         // endpointC
 
-        firstEventLoop = acquireEntry(s, endpointC).get();
-        firstEventLoopIdx = findIndex(eventLoops, firstEventLoop);
-        assertThat(firstEventLoopIdx).isIn(0, 1, 2, 5, 6);
-        checkNextEventLoopIdx(s, eventLoops, endpointC, firstEventLoopIdx, 5, 5);
+        final EventLoop firstEventLoopC = acquireEntry(s, endpointC).get();
+        acquireEntries(4, s, endpointC, firstEventLoopC);
         // After one circle, the next event loop is the first one.
-        assertThat(firstEventLoop).isSameAs(acquireEntry(s, endpointC).get());
+        assertThat(firstEventLoopC).isSameAs(acquireEntry(s, endpointC).get());
     }
 
-    private static int findIndex(List<EventLoop> eventLoops, EventLoop eventLoop) {
-        for (int i = 0; i < eventLoops.size(); i++) {
-            if (eventLoops.get(i) == eventLoop) {
-                return i;
-            }
-        }
-
-        // Should never reach here.
-        fail("Could not find the eventLoop.");
-        return -1;
-    }
-
-    private static void checkNextEventLoopIdx(DefaultEventLoopScheduler s, List<EventLoop> eventLoops,
-                                              Endpoint endpoint, int firstEventLoopIdx, int startIdx,
-                                              int sizeLimit) {
-        int nextOffset = ((firstEventLoopIdx + eventLoops.size()) - startIdx) % eventLoops.size();
-        for (int i = 1; i < sizeLimit; i++) {
-            nextOffset++;
-            if (nextOffset == sizeLimit) {
-                nextOffset = 0;
-            }
-            final int nextIdx = (startIdx + nextOffset) % eventLoops.size();
-
-            final EventLoop nextEventLoop = acquireEntry(s, endpoint).get();
-            assertThat(nextEventLoop).isSameAs(eventLoops.get(nextIdx));
+    private static void acquireEntries(int times, DefaultEventLoopScheduler s, Endpoint endpoint,
+                                       EventLoop firstEventLoop) {
+        for (int i = 0; i < times; i++) {
+            assertThat(acquireEntry(s, endpoint).get()).isNotSameAs(firstEventLoop);
         }
     }
 }

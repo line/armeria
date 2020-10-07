@@ -35,11 +35,14 @@ import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
@@ -51,6 +54,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Status;
 import io.grpc.StatusException;
+import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 
 class GrpcWebRetryTest {
@@ -63,7 +67,6 @@ class GrpcWebRetryTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(GrpcService.builder()
                                   .addService(new TestServiceImpl())
-                                  .supportedSerializationFormats(GrpcSerializationFormats.values())
                                   .build());
         }
     };
@@ -81,7 +84,7 @@ class GrpcWebRetryTest {
                             return grpcStatus != null && grpcStatus != 0;
                         })
                         .onResponse((ctx, res) -> res.aggregate().thenApply(aggregatedRes -> {
-                            final HttpHeaders trailers = GrpcWebUtil.parseTrailers(aggregatedRes.content());
+                            final HttpHeaders trailers = GrpcWebTrailers.get(ctx);
                             return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0;
                         }))
                         .thenBackoff();
@@ -90,17 +93,33 @@ class GrpcWebRetryTest {
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
     @ParameterizedTest
     void unaryCall(SerializationFormat serializationFormat) {
+        unaryCall(serializationFormat, SimpleRequest.getDefaultInstance());
+    }
+
+    private void unaryCall(SerializationFormat serializationFormat, SimpleRequest request) {
         final TestServiceBlockingStub client =
                 Clients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
                        .decorator(RetryingClient.newDecorator(ruleWithContent))
                        .build(TestServiceBlockingStub.class);
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final SimpleResponse result = client.unaryCall(SimpleRequest.newBuilder().build());
+            final SimpleResponse result = client.unaryCall(request);
             assertThat(result.getUsername()).isEqualTo("my name");
             final RequestLog log = captor.get().log().whenComplete().join();
             assertThat(log.children()).hasSize(3);
+            log.children().forEach(child -> {
+                final ResponseHeaders responseHeaders = child.ensureComplete().responseHeaders();
+                assertThat(responseHeaders.contentType()).isSameAs(serializationFormat.mediaType());
+            });
         }
+    }
+
+    @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
+    @ParameterizedTest
+    void unaryCallCompressedResponse(SerializationFormat serializationFormat) {
+        unaryCall(serializationFormat, SimpleRequest.newBuilder()
+                                                    .setResponseCompression(CompressionType.GZIP)
+                                                    .build());
     }
 
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
@@ -116,6 +135,10 @@ class GrpcWebRetryTest {
             assertThat(result).isEqualTo(Empty.getDefaultInstance());
             final RequestLog log = captor.get().log().whenComplete().join();
             assertThat(log.children()).hasSize(3);
+            log.children().forEach(child -> {
+                final ResponseHeaders responseHeaders = child.ensureComplete().responseHeaders();
+                assertThat(responseHeaders.contentType()).isSameAs(serializationFormat.mediaType());
+            });
         }
     }
 
@@ -148,17 +171,22 @@ class GrpcWebRetryTest {
 
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            final ServerCallStreamObserver<SimpleResponse> serverCallStreamObserver =
+                    (ServerCallStreamObserver<SimpleResponse>) responseObserver;
+            if (request.getResponseCompression() == CompressionType.GZIP) {
+                serverCallStreamObserver.setCompression("gzip");
+            }
             switch (retryCounter.getAndIncrement()) {
                 case 0:
-                    responseObserver.onError(new StatusException(Status.INTERNAL));
+                    serverCallStreamObserver.onError(new StatusException(Status.INTERNAL));
                     break;
                 case 1:
-                    responseObserver.onNext(SimpleResponse.newBuilder().setUsername("my name").build());
-                    responseObserver.onError(new StatusException(Status.INTERNAL));
+                    serverCallStreamObserver.onNext(SimpleResponse.newBuilder().setUsername("my name").build());
+                    serverCallStreamObserver.onError(new StatusException(Status.INTERNAL));
                     break;
                 default:
-                    responseObserver.onNext(SimpleResponse.newBuilder().setUsername("my name").build());
-                    responseObserver.onCompleted();
+                    serverCallStreamObserver.onNext(SimpleResponse.newBuilder().setUsername("my name").build());
+                    serverCallStreamObserver.onCompleted();
                     break;
             }
         }

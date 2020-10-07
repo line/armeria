@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.ToIntFunction;
@@ -81,6 +82,8 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
                             .map(EventLoop.class::cast)
                             .collect(toImmutableList());
         final int eventLoopSize = eventLoops.size();
+        acquisitionStartIndex = ThreadLocalRandom.current().nextInt(eventLoopSize);
+
         if (maxNumEventLoopsPerEndpoint <= 0) {
             this.maxNumEventLoopsPerEndpoint = DEFAULT_MAX_NUM_EVENT_LOOPS;
         } else {

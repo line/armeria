@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.ServerBuilder.MIN_PING_INTERVAL_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -90,7 +91,7 @@ class ServerBuilderTest {
 
     @AfterAll
     static void destroy() {
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     private static Server newServerWithKeepAlive(long idleTimeoutMillis, long pingIntervalMillis) {
@@ -515,26 +516,26 @@ class ServerBuilderTest {
     }
 
     @Test
-    void positivePingIntervalShouldBeGreaterThan10seconds() {
+    void positivePingIntervalShouldBeGreaterThan1Second() {
         final ServerConfig config1 = newServerWithKeepAlive(15000, 0).config();
         assertThat(config1.idleTimeoutMillis()).isEqualTo(15000);
         assertThat(config1.pingIntervalMillis()).isEqualTo(0);
 
-        assertThatThrownBy(() -> newServerWithKeepAlive(10000, 5000))
+        assertThatThrownBy(() -> newServerWithKeepAlive(10000, MIN_PING_INTERVAL_MILLIS - 1))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("(expected: >= " + ServerBuilder.MIN_PING_INTERVAL_MILLIS + " or == 0)");
+                .hasMessageContaining("(expected: >= " + MIN_PING_INTERVAL_MILLIS + " or == 0)");
 
-        final ServerConfig config2 = newServerWithKeepAlive(15000, 20000).config();
+        final ServerConfig config2 = newServerWithKeepAlive(15000, 15000).config();
         assertThat(config2.idleTimeoutMillis()).isEqualTo(15000);
         assertThat(config2.pingIntervalMillis()).isEqualTo(0);
 
-        final ServerConfig config3 = newServerWithKeepAlive(15000, 10000).config();
+        final ServerConfig config3 = newServerWithKeepAlive(15000, MIN_PING_INTERVAL_MILLIS).config();
         assertThat(config3.idleTimeoutMillis()).isEqualTo(15000);
-        assertThat(config3.pingIntervalMillis()).isEqualTo(10000);
+        assertThat(config3.pingIntervalMillis()).isEqualTo(MIN_PING_INTERVAL_MILLIS);
 
-        final ServerConfig config4 = newServerWithKeepAlive(20000, 15000).config();
+        final ServerConfig config4 = newServerWithKeepAlive(20000, 19999).config();
         assertThat(config4.idleTimeoutMillis()).isEqualTo(20000);
-        assertThat(config4.pingIntervalMillis()).isEqualTo(15000);
+        assertThat(config4.pingIntervalMillis()).isEqualTo(19999);
     }
 
     @CsvSource({

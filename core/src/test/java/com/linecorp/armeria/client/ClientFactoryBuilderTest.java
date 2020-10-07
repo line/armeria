@@ -68,6 +68,23 @@ class ClientFactoryBuilderTest {
     }
 
     @Test
+    void tlsNoVerifyAndTlsNoVerifyHostsAreMutuallyExclusive() {
+        final ClientFactoryBuilder builder1 = ClientFactory.builder();
+        builder1.tlsNoVerify();
+
+        assertThatThrownBy(() -> builder1.tlsNoVerifyHosts("localhost"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("mutually exclusive");
+
+        final ClientFactoryBuilder builder2 = ClientFactory.builder();
+        builder2.tlsNoVerifyHosts("localhost");
+
+        assertThatThrownBy(builder2::tlsNoVerify)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("mutually exclusive");
+    }
+
+    @Test
     void shouldInheritClientFactoryOptions() {
         try (ClientFactory factory1 = ClientFactory.builder()
                                                    .maxNumEventLoopsPerEndpoint(2)
@@ -130,7 +147,7 @@ class ClientFactoryBuilderTest {
     }
 
     @Test
-    void positivePingIntervalShouldBeGreaterThan10seconds() {
+    void positivePingIntervalShouldBeGreaterThan1Second() {
         try (ClientFactory factory1 = ClientFactory.builder()
                                                    .idleTimeoutMillis(10000)
                                                    .pingIntervalMillis(0)
@@ -141,7 +158,7 @@ class ClientFactoryBuilderTest {
             assertThatThrownBy(() -> {
                 ClientFactory.builder()
                              .idleTimeoutMillis(10000)
-                             .pingIntervalMillis(5000)
+                             .pingIntervalMillis(MIN_PING_INTERVAL_MILLIS - 1)
                              .build();
             }).isInstanceOf(IllegalArgumentException.class)
               .hasMessageContaining("(expected: >= " + MIN_PING_INTERVAL_MILLIS + " or == 0)");
@@ -149,7 +166,7 @@ class ClientFactoryBuilderTest {
 
         try (ClientFactory factory2 = ClientFactory.builder()
                                                    .idleTimeoutMillis(10000)
-                                                   .pingIntervalMillis(15000)
+                                                   .pingIntervalMillis(10000)
                                                    .build()) {
             assertThat(factory2.options().idleTimeoutMillis()).isEqualTo(10000);
             assertThat(factory2.options().pingIntervalMillis()).isEqualTo(0);
@@ -157,18 +174,18 @@ class ClientFactoryBuilderTest {
 
         try (ClientFactory factory3 = ClientFactory.builder()
                                                    .idleTimeoutMillis(15000)
-                                                   .pingIntervalMillis(10000)
+                                                   .pingIntervalMillis(MIN_PING_INTERVAL_MILLIS)
                                                    .build()) {
             assertThat(factory3.options().idleTimeoutMillis()).isEqualTo(15000);
-            assertThat(factory3.options().pingIntervalMillis()).isEqualTo(10000);
+            assertThat(factory3.options().pingIntervalMillis()).isEqualTo(MIN_PING_INTERVAL_MILLIS);
         }
 
         try (ClientFactory factory4 = ClientFactory.builder()
                                                    .idleTimeoutMillis(15000)
-                                                   .pingIntervalMillis(12000)
+                                                   .pingIntervalMillis(14999)
                                                    .build()) {
             assertThat(factory4.options().idleTimeoutMillis()).isEqualTo(15000);
-            assertThat(factory4.options().pingIntervalMillis()).isEqualTo(12000);
+            assertThat(factory4.options().pingIntervalMillis()).isEqualTo(14999);
         }
     }
 

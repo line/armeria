@@ -107,14 +107,14 @@ class AnnotatedDocServiceTest {
             sb.annotatedService("/service", new MyService());
             sb.serviceUnder("/docs",
                     DocService.builder()
-                              .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
-                              .exampleHttpHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
-                              .exampleHttpHeaders(MyService.class, "pathParams", EXAMPLE_HEADERS_METHOD)
+                              .exampleHeaders(EXAMPLE_HEADERS_ALL)
+                              .exampleHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
+                              .exampleHeaders(MyService.class, "pathParams", EXAMPLE_HEADERS_METHOD)
                               .examplePaths(MyService.class, "pathParams",
                                             "/service/hello1/foo/hello3/bar")
                               .exampleQueries(MyService.class, "foo", "query=10", "query=20")
-                              .exampleRequestForMethod(MyService.class, "pathParams",
-                                             ImmutableList.of(mapper.readTree("{\"hello\":\"armeria\"}")))
+                              .exampleRequests(MyService.class, "pathParams",
+                                               ImmutableList.of(mapper.readTree("{\"hello\":\"armeria\"}")))
                               .examplePaths(MyService.class, "pathParamsWithQueries",
                                             "/service/hello1/foo", "/service/hello1/bar")
                               .exampleQueries(MyService.class, "pathParamsWithQueries", "hello3=hello4")
@@ -324,22 +324,22 @@ class AnnotatedDocServiceTest {
 
     private static void addExamples(JsonNode json) {
         // Add the global example.
-        ((ArrayNode) json.get("exampleHttpHeaders")).add(mapper.valueToTree(EXAMPLE_HEADERS_ALL));
+        ((ArrayNode) json.get("exampleHeaders")).add(mapper.valueToTree(EXAMPLE_HEADERS_ALL));
 
         json.get("services").forEach(service -> {
             // Add the service-wide examples.
             final String serviceName = service.get("name").textValue();
-            final ArrayNode serviceExampleHttpHeaders = (ArrayNode) service.get("exampleHttpHeaders");
+            final ArrayNode serviceExampleHeaders = (ArrayNode) service.get("exampleHeaders");
             if (MyService.class.getName().equals(serviceName)) {
-                serviceExampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_SERVICE));
+                serviceExampleHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_SERVICE));
             }
 
             // Add the method-specific examples.
             service.get("methods").forEach(method -> {
                 final String methodName = method.get("name").textValue();
-                final ArrayNode exampleHttpHeaders = (ArrayNode) method.get("exampleHttpHeaders");
+                final ArrayNode exampleHeaders = (ArrayNode) method.get("exampleHeaders");
                 if (MyService.class.getName().equals(serviceName) && "pathParams".equals(methodName)) {
-                    exampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_METHOD));
+                    exampleHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_METHOD));
                     final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
                     exampleRequests.add('{' + System.lineSeparator() +
                                         "  \"hello\" : \"armeria\"" + System.lineSeparator() +

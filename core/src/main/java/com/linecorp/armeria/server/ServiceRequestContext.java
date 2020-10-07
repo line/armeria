@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -39,8 +40,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
@@ -90,14 +89,7 @@ public interface ServiceRequestContext extends RequestContext {
             return null;
         }
 
-        final ServiceRequestContext root = ctx.root();
-        if (root != null) {
-            return root;
-        }
-
-        throw new IllegalStateException(
-                "The current context is not a server-side context and does not have a root " +
-                "which means that the context is not invoked by a server request. ctx: " + ctx);
+        return ctx.root();
     }
 
     /**
@@ -116,6 +108,14 @@ public interface ServiceRequestContext extends RequestContext {
         final ServiceRequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
+        }
+
+        final ClientRequestContext clientRequestContext = ClientRequestContext.currentOrNull();
+        if (clientRequestContext != null) {
+            throw new IllegalStateException(
+                    "The current context is not a server-side context and does not have a root " +
+                    "which means that the context is not invoked by a server request. ctx: " +
+                    clientRequestContext);
         }
 
         if (defaultValueSupplier != null) {
@@ -324,6 +324,7 @@ public interface ServiceRequestContext extends RequestContext {
      * and the specified {@code requestTimeoutMillis}.
      *
      * <table>
+     * <caption>timeout mode description</caption>
      * <tr><th>Timeout mode</th><th>description</th></tr>
      * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
      *     <td>Sets a given amount of timeout from the current time.</td></tr>
@@ -382,6 +383,7 @@ public interface ServiceRequestContext extends RequestContext {
      * and the specified {@code requestTimeout}.
      *
      * <table>
+     * <caption>timeout mode description</caption>
      * <tr><th>Timeout mode</th><th>description</th></tr>
      * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
      *     <td>Sets a given amount of timeout from the current time.</td></tr>
@@ -414,31 +416,18 @@ public interface ServiceRequestContext extends RequestContext {
     void setRequestTimeout(TimeoutMode mode, Duration requestTimeout);
 
     /**
-     * Returns {@link Request} timeout handler which is executed when
-     * receiving the current {@link Request} and sending the corresponding {@link Response}
-     * is not completely received within the allowed {@link #requestTimeoutMillis()}.
+     * Returns a {@link CompletableFuture} which is completed when {@link ServiceRequestContext} is about to
+     * get timed out.
      */
-    @Nullable
-    Runnable requestTimeoutHandler();
+    CompletableFuture<Void> whenRequestTimingOut();
 
     /**
-     * Sets a handler to run when the request times out. {@code requestTimeoutHandler} must close the response,
-     * e.g., by calling {@link HttpResponseWriter#close()}. If not set, the response will be closed with
-     * {@link HttpStatus#SERVICE_UNAVAILABLE}.
-     *
-     * <p>For example,
-     * <pre>{@code
-     *   HttpResponseWriter res = HttpResponse.streaming();
-     *   ctx.setRequestTimeoutHandler(() -> {
-     *      res.write(ResponseHeaders.of(HttpStatus.OK,
-     *                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
-     *      res.write(HttpData.ofUtf8("Request timed out."));
-     *      res.close();
-     *   });
-     *   ...
-     * }</pre>
+     * Returns a {@link CompletableFuture} which is completed after {@link ServiceRequestContext} has been
+     * timed out (e.g., when the corresponding request passes a deadline).
+     * {@link #isTimedOut()} will always return {@code true} when the returned
+     * {@link CompletableFuture} is completed.
      */
-    void setRequestTimeoutHandler(Runnable requestTimeoutHandler);
+    CompletableFuture<Void> whenRequestTimedOut();
 
     /**
      * Returns the maximum length of the current {@link Request}.

@@ -1,5 +1,5 @@
 final def SPRING_BOOT_VERSION = '1.5.22.RELEASE'
-final def MICROMETER_VERSION = '1.3.10'
+final def MICROMETER_VERSION = '1.3.12'
 
 dependencies {
     // To let a user choose between thrift and thrift0.9.
@@ -27,6 +27,12 @@ dependencies {
     api 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
     api("org.springframework.boot:spring-boot-starter") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly SPRING_BOOT_VERSION
+        }
+    }
+    api("org.springframework.boot:spring-boot-autoconfigure") {
         version {
             // Will fail the build if the override doesn't work
             strictly SPRING_BOOT_VERSION
@@ -64,7 +70,8 @@ task generateSources(type: Copy) {
 }
 
 tasks.compileJava.dependsOn(generateSources)
-tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java",
+tasks.compileTestJava.source "${projectDir}/src/test/java",
+        "${autoconfigureProjectDir}/src/test/java",
         "${autoconfigureProjectDir}/gen-src/test/grpc",
         "${autoconfigureProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"

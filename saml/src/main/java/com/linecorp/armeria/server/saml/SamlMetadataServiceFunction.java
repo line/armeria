@@ -67,7 +67,7 @@ final class SamlMetadataServiceFunction implements SamlServiceFunction {
     @VisibleForTesting
     static final MediaType CONTENT_TYPE_SAML_METADATA = MediaType.parse("application/samlmetadata+xml");
 
-    private static final ResponseHeaders HTTP_HEADERS =
+    private static final ResponseHeaders RESPONSE_HEADERS =
             ResponseHeaders.of(HttpStatus.OK,
                                HttpHeaderNames.CONTENT_TYPE, CONTENT_TYPE_SAML_METADATA,
                                HttpHeaderNames.CONTENT_DISPOSITION,
@@ -113,7 +113,7 @@ final class SamlMetadataServiceFunction implements SamlServiceFunction {
         });
 
         if (metadata != HttpData.empty()) {
-            return HttpResponse.of(HTTP_HEADERS, metadata);
+            return HttpResponse.of(RESPONSE_HEADERS, metadata);
         } else {
             return HttpResponse.of(HttpStatus.NOT_FOUND);
         }

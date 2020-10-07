@@ -1,17 +1,25 @@
 # Armeria examples
 
-- `annotated-http-service` <a href="https://gitpod.io/#project=annotated-http-service/https://github.com/ikhoon/armeria-examples/tree/master/annotated-http-service/src/main/java/example/armeria/server/annotated/Main.java">
+- `annotated-http-service` <a href="https://gitpod.io/#project=annotated-http-service/https://github.com/line/armeria-examples/tree/master/annotated-http-service/src/main/java/example/armeria/server/annotated/Main.java">
                              <img align="absmiddle" height="20" src="https://gitpod.io/button/open-in-gitpod.svg"/>
                            </a> 
   - Learn how to write an HTTP service using annotations.
   - See [Annotated services](https://armeria.dev/docs/server-annotated-service).
+
+- `annotated-http-service-kotlin` <a href="https://gitpod.io/#project=annotated-http-service-kotlin/https://github.com/line/armeria-examples/tree/master/annotated-http-service-kotlin/src/main/kotlin/example/armeria/server/annotated/kotlin/Main.kt">
+                                    <img align="absmiddle" height="20" src="https://gitpod.io/button/open-in-gitpod.svg"/>
+                                  </a>
+  - Learn how to write an HTTP service using annotations with Kotlin Coroutines.
+  - See [Kotlin coroutines support](https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support).
 
 - `context-propagation`
   - Learn how to propagate Armeria's `RequestContext` for use in scenarios like tracing.
   - [`dagger`](https://dagger.dev/producers) provides an example using the Dagger asynchronous framework for
   automatic propagation.
   - `manual` provides an example manually propagating the context with Java's standard `CompletableFuture`.
-  - [`rxjava`](https://github.com/ReactiveX/RxJava/tree/2.x) provides an example using the RxJava2 asynchronous
+  - [`reactor`](https://github.com/reactor/reactor-core/tree/3.3.x) provides an example using the Reactor
+  asynchronous framework for automatic propagation.
+  - [`rxjava`](https://github.com/ReactiveX/RxJava/tree/3.x) provides an example using the RxJava3 asynchronous
   framework for automatic propagation.
 
 - `grpc` <a href="https://gitpod.io/#project=grpc/https://github.com/line/armeria-examples/tree/master/grpc/src/main/java/example/armeria/grpc/Main.java">
@@ -84,6 +92,15 @@
                  </a> 
   - Learn how to serve static files.
   - See [Serving static files](https://armeria.dev/docs/server-http-file).
+  
+- `thrift` <a href="https://gitpod.io/#project=grpc/https://github.com/line/armeria-examples/tree/master/thrift/src/main/java/example/armeria/thrift/Main.java">
+             <img align="absmiddle" height="20" src="https://gitpod.io/button/open-in-gitpod.svg"/>
+           </a> 
+  - Learn how to write a Thrift service with Armeria Thrift module.
+  - See [Running a Thrift service](https://armeria.dev/docs/server-thrift) and
+    [Calling a Thrift service](https://armeria.dev/docs/client-thrift).
+  - Install Thrift compiler locally before generating Thrift services.
+    - Use `brew install thrift` for macOS.
 
 ## Configure `-parameters` javac option 
 

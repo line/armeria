@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
  * You have to specify a template or a {@link Function} that generates the value of the {@code "Location"}
  * header.
  *
- * <h3>Using a location template</h3>
+ * <h2>Using a location template</h2>
  *
  * <p>You can choose one of the following template styles where the path parameters are substituted with
  * the values retrieved from {@link ServiceRequestContext#pathParam(String)}:</p>
@@ -83,7 +83,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
  *   </li>
  * </ul>
  *
- * <h3>Using a location function</h3>
+ * <h2>Using a location function</h2>
  *
  * <p>You can also specify a custom function to generate a location which cannot be generated with a location
  * template:</p>
@@ -97,13 +97,13 @@ import com.linecorp.armeria.common.ResponseHeaders;
  * });
  * }</pre>
  *
- * <h3>Specifying an alternative status code</h3>
+ * <h2>Specifying an alternative status code</h2>
  *
  * <p>By default, {@link RedirectService} responds with {@link HttpStatus#TEMPORARY_REDIRECT 307 Temporary
  * Redirect} status. You can specify alternative status such as {@link HttpStatus#MOVED_PERMANENTLY 301 Moved
  * Permanently} when calling the constructor.</p>
  *
- * <h3>Preserving a query string (or not)</h3>
+ * <h2>Preserving a query string (or not)</h2>
  *
  * <p>By default, {@link RedirectService} preserves the query string in the request URI when generating
  * a new location. For example, if you bound {@code new RedirectService("/new")} at {@code "/old"},

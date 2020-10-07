@@ -40,22 +40,30 @@ configure(projectsWithFlags('java')) {
                     }
                     if (project.ext.hasFlag('kotlin-grpc')) {
                         kotlinGrpc {
-                            artifact = "io.grpc:protoc-gen-grpc-kotlin:${managedVersions['io.grpc:protoc-gen-grpc-kotlin']}"
+                            artifact = "io.grpc:protoc-gen-grpc-kotlin:${managedVersions['io.grpc:protoc-gen-grpc-kotlin']}:jdk7@jar"
                         }
                     }
 
                     def isWindows = OperatingSystem.current() == OperatingSystem.WINDOWS
-                    if (project.ext.hasFlag('scala-grpc')) {
+                    if (project.ext.hasFlag('scala-grpc_2.13')) {
                         def artifactName = "com.thesamet.scalapb:protoc-gen-scala:${managedVersions['com.thesamet.scalapb:scalapb-runtime_2.13']}:"
                         artifactName += isWindows ? "windows@bat" : "unix@sh"
                         scalapb {
                             artifact = artifactName
                         }
                     }
+
+                    if (project.ext.hasFlag('akka-grpc_2.13')) {
+                        def artifactName = "com.lightbend.akka.grpc:akka-grpc-codegen_2.13:${managedVersions['com.lightbend.akka.grpc:akka-grpc-runtime_2.13']}:"
+                        artifactName += isWindows ? "bat@bat" : "assembly@jar"
+                        akkaGrpc {
+                            artifact = artifactName
+                        }
+                    }
                 }
                 generateProtoTasks {
                     all()*.plugins {
-                        if (project.ext.hasFlag('scala-grpc') && managedVersions.containsKey('com.thesamet.scalapb:scalapb-runtime_2.13')) {
+                        if (project.ext.hasFlag('scala-grpc_2.13') && managedVersions.containsKey('com.thesamet.scalapb:scalapb-runtime_2.13')) {
                             scalapb {
                                 option 'grpc'
                             }
@@ -71,6 +79,9 @@ configure(projectsWithFlags('java')) {
                             }
                             if (project.ext.hasFlag('kotlin-grpc') && managedVersions.containsKey('io.grpc:grpc-kotlin-stub')) {
                                 kotlinGrpc {}
+                            }
+                            if (project.ext.hasFlag('akka-grpc_2.13') && managedVersions.containsKey('com.lightbend.akka.grpc:akka-grpc-runtime_2.13')) {
+                                akkaGrpc {}
                             }
                         }
                     }

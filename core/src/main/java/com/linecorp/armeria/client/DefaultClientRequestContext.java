@@ -58,7 +58,6 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.TimeoutController;
 import com.linecorp.armeria.internal.common.TimeoutScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -88,7 +87,6 @@ public final class DefaultClientRequestContext
     private boolean initialized;
     @Nullable
     private EventLoop eventLoop;
-    private final ClientOptions options;
     @Nullable
     private EndpointGroup endpointGroup;
     @Nullable
@@ -100,8 +98,9 @@ public final class DefaultClientRequestContext
     @Nullable
     private final ServiceRequestContext root;
 
+    private final ClientOptions options;
     private final RequestLogBuilder log;
-    private final TimeoutScheduler timeoutScheduler;
+    private final TimeoutScheduler responseTimeoutScheduler;
 
     private long writeTimeoutMillis;
     @Nullable
@@ -138,10 +137,11 @@ public final class DefaultClientRequestContext
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+            TimeoutScheduler responseTimeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
-             requestStartTimeNanos, requestStartTimeMicros);
+             responseTimeoutScheduler, requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -163,7 +163,8 @@ public final class DefaultClientRequestContext
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
+             id, method, path, query, fragment, options, req, rpcReq,
+             serviceRequestContext(), /* responseTimeoutScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros);
     }
 
@@ -172,7 +173,7 @@ public final class DefaultClientRequestContext
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable ServiceRequestContext root,
+            @Nullable ServiceRequestContext root, @Nullable TimeoutScheduler responseTimeoutScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
 
@@ -183,11 +184,16 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
-        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
 
+        if (responseTimeoutScheduler == null) {
+            this.responseTimeoutScheduler =
+                    new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
+        } else {
+            this.responseTimeoutScheduler = responseTimeoutScheduler;
+        }
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
-        additionalRequestHeaders = options.get(ClientOptions.HTTP_HEADERS);
+        additionalRequestHeaders = options.get(ClientOptions.HEADERS);
         customizers = copyThreadLocalCustomizers();
     }
 
@@ -364,7 +370,8 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
-        timeoutScheduler = new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+        responseTimeoutScheduler =
+                new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
 
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
@@ -491,46 +498,24 @@ public final class DefaultClientRequestContext
 
     @Override
     public long responseTimeoutMillis() {
-        return TimeUnit.NANOSECONDS.toMillis(timeoutScheduler.timeoutNanos());
+        return TimeUnit.NANOSECONDS.toMillis(responseTimeoutScheduler.timeoutNanos());
     }
 
     @Override
     public void clearResponseTimeout() {
-        timeoutScheduler.clearTimeout();
+        responseTimeoutScheduler.clearTimeout();
     }
 
     @Override
     public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
-        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                         TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+        responseTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                 TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
     }
 
     @Override
     public void setResponseTimeout(TimeoutMode mode, Duration responseTimeout) {
-        timeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                         requireNonNull(responseTimeout, "responseTimeout").toNanos());
-    }
-
-    @Override
-    @Nullable
-    public Runnable responseTimeoutHandler() {
-        return responseTimeoutHandler;
-    }
-
-    @Override
-    public void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
-        this.responseTimeoutHandler = requireNonNull(responseTimeoutHandler, "responseTimeoutHandler");
-    }
-
-    /**
-     * Sets the {@code responseTimeoutController} that is set to a new timeout when
-     * the {@linkplain #responseTimeoutMillis()} response timeout} setting is changed.
-     *
-     * <p>Note: This method is meant for internal use by client-side protocol implementation to reschedule
-     * a timeout task when a user updates the response timeout configuration.
-     */
-    void setResponseTimeoutController(TimeoutController responseTimeoutController) {
-        timeoutScheduler.setTimeoutController(responseTimeoutController, eventLoop());
+        responseTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                 requireNonNull(responseTimeout, "responseTimeout").toNanos());
     }
 
     @Override
@@ -587,14 +572,28 @@ public final class DefaultClientRequestContext
         return log;
     }
 
+    TimeoutScheduler responseTimeoutScheduler() {
+        return responseTimeoutScheduler;
+    }
+
     @Override
     public void timeoutNow() {
-        timeoutScheduler.timeoutNow();
+        responseTimeoutScheduler.timeoutNow();
     }
 
     @Override
     public boolean isTimedOut() {
-        return timeoutScheduler.isTimedOut();
+        return responseTimeoutScheduler.isTimedOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenResponseTimingOut() {
+        return responseTimeoutScheduler.whenTimingOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenResponseTimedOut() {
+        return responseTimeoutScheduler.whenTimedOut();
     }
 
     @Override

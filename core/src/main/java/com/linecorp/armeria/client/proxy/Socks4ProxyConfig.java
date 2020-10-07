@@ -76,7 +76,7 @@ public final class Socks4ProxyConfig extends ProxyConfig {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("proxyType", proxyType())
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())

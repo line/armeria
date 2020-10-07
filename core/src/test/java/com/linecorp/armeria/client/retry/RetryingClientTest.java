@@ -99,7 +99,7 @@ class RetryingClientTest {
 
     @AfterAll
     static void afterAll() {
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     private final AtomicInteger responseAbortServiceCallCounter = new AtomicInteger();

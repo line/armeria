@@ -158,11 +158,19 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
         return ClientBuilderParams.of(scheme, endpointGroup, path, WebClient.class, options);
     }
 
+    /**
+     * Raises an {@link UnsupportedOperationException} because this builder doesn't support RPC-level but only
+     * HTTP-level decorators.
+     */
     @Override
     public AbstractWebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
     }
 
+    /**
+     * Raises an {@link UnsupportedOperationException} because this builder doesn't support RPC-level but only
+     * HTTP-level decorators.
+     */
     @Override
     public AbstractWebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");

@@ -17,12 +17,10 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.common.util.BiPredicateUtil.toBiPredicateForSecond;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -66,7 +64,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
  *                           .thenSuccess(),
  *         // Everything else is reported as a failure
  *         ClientBreakerRule.builder().thenFailure());
- * }</pre></p>
+ * }</pre>
  */
 @FunctionalInterface
 public interface CircuitBreakerRule {
@@ -122,18 +120,6 @@ public interface CircuitBreakerRule {
 
     /**
      * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
-     * if the specified {@code statusFilter} returns {@code true}.
-     *
-     * @deprecated Use {@link #onStatus(BiPredicate)}.
-     */
-    @Deprecated
-    static CircuitBreakerRule onStatus(Predicate<? super HttpStatus> statusFilter) {
-        requireNonNull(statusFilter, "statusFilter");
-        return onStatus(toBiPredicateForSecond(statusFilter));
-    }
-
-    /**
-     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
      * if an {@link Exception} is raised and it is an instance of the specified {@code exception}.
      */
     static CircuitBreakerRule onException(Class<? extends Throwable> exception) {
@@ -147,17 +133,6 @@ public interface CircuitBreakerRule {
     static CircuitBreakerRule onException(
             BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
         return builder().onException(exceptionFilter).thenFailure();
-    }
-
-    /**
-     * Returns a newly created {@link CircuitBreakerRule} that will report a {@link Response} as a failure,
-     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
-     *
-     * @deprecated Use {@link #onException(BiPredicate)}.
-     */
-    @Deprecated
-    static CircuitBreakerRule onException(Predicate<? super Throwable> exceptionFilter) {
-        return onException(toBiPredicateForSecond(exceptionFilter));
     }
 
     /**
@@ -200,18 +175,6 @@ public interface CircuitBreakerRule {
     static CircuitBreakerRuleBuilder builder(
             BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         return new CircuitBreakerRuleBuilder(requireNonNull(requestHeadersFilter, "requestHeadersFilter"));
-    }
-
-    /**
-     * Returns a newly created {@link CircuitBreakerRuleBuilder} with the specified
-     * {@code requestHeadersFilter}.
-     *
-     * @deprecated Use {@link #builder(BiPredicate)}.
-     */
-    @Deprecated
-    static CircuitBreakerRuleBuilder builder(Predicate<? super RequestHeaders> requestHeadersFilter) {
-        requireNonNull(requestHeadersFilter, "requestHeadersFilter");
-        return builder(toBiPredicateForSecond(requestHeadersFilter));
     }
 
     /**
@@ -280,7 +243,7 @@ public interface CircuitBreakerRule {
      * >     ...
      * >     return CompletableFuture.completedFuture(CircuitBreakerDecision.success())
      * > }
-     * }</pre></p>
+     * }</pre>
      *
      * @param ctx the {@link ClientRequestContext} of this request
      * @param cause the {@link Throwable} which is raised while sending a request. {@code null} if there's no

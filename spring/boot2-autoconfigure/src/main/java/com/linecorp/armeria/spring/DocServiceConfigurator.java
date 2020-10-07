@@ -21,11 +21,10 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.annotation.Order;
 
-import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 
 /**
- * Configures a {@link DocService} built by {@link ArmeriaAutoConfiguration}.
+ * Configures a {@code DocService} built by Armeria auto configuration.
  */
 @FunctionalInterface
 public interface DocServiceConfigurator extends Ordered {

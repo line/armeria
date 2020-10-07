@@ -14,7 +14,7 @@
  * under the License.
  */
 
-import { Method } from '../specification';
+import { Endpoint, Method } from '../specification';
 import prettify from '../json-prettify';
 
 import Transport from './transport';
@@ -30,6 +30,58 @@ export default class AnnotatedHttpTransport extends Transport {
     return ANNOTATED_HTTP_MIME_TYPE;
   }
 
+  protected validatePath(endpoint: Endpoint, path: string): { error?: string } {
+    const regexPathPrefix = endpoint.regexPathPrefix;
+    const originalPath = endpoint.pathMapping;
+
+    if (originalPath.startsWith(`exact:`)) {
+      const exact = originalPath.substring('exact:'.length);
+      if (path !== exact) {
+        return {
+          error: `The path: '${path}' must be equal to: ${exact}`,
+        };
+      }
+    }
+
+    if (originalPath.startsWith('prefix:')) {
+      // Prefix path mapping.
+      const prefix = originalPath.substring('prefix:'.length);
+      if (!path.startsWith(prefix)) {
+        return {
+          error: `The path: '${path}' should start with the prefix: ${prefix}`,
+        };
+      }
+    }
+
+    if (originalPath.startsWith('regex:')) {
+      let regexPart;
+      if (regexPathPrefix) {
+        // Prefix adding path mapping.
+        const prefix = regexPathPrefix.substring('prefix:'.length);
+        if (!path.startsWith(prefix)) {
+          return {
+            error: `The path: '${path}' should start with the prefix: ${prefix}`,
+          };
+        }
+
+        // Remove the prefix from the endpointPath so that we can test the regex.
+        regexPart = path.substring(prefix.length - 1);
+      } else {
+        regexPart = path;
+      }
+      const regExp = new RegExp(originalPath.substring('regex:'.length));
+      if (!regExp.test(regexPart)) {
+        const expectedPath = regexPathPrefix
+          ? `${regexPathPrefix} ${originalPath}`
+          : originalPath;
+        return {
+          error: `Endpoint path: ${path} (expected: ${expectedPath})`,
+        };
+      }
+    }
+    return {};
+  }
+
   protected async doSend(
     method: Method,
     headers: { [name: string]: string },
@@ -37,7 +89,7 @@ export default class AnnotatedHttpTransport extends Transport {
     endpointPath?: string,
     queries?: string,
   ): Promise<string> {
-    const endpoint = this.findDebugMimeTypeEndpoint(method);
+    const endpoint = this.getDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
     hdrs.set('content-type', ANNOTATED_HTTP_MIME_TYPE);

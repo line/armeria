@@ -50,7 +50,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * A built-in property exported by {@link RequestContextExporter}.
  *
- * @see RequestContextExporterBuilder#addBuiltIn(BuiltInProperty)
+ * @see RequestContextExporterBuilder#builtIn(BuiltInProperty)
  */
 public enum BuiltInProperty {
     /**
@@ -179,7 +179,7 @@ public enum BuiltInProperty {
      */
     REQ_NAME("req.name", log -> log.isAvailable(RequestLogProperty.NAME) ? log.name() : null),
     /**
-     * {@code "req.serviceName"} - the human-readable name of the service that served the request, such as:
+     * {@code "req.service_name"} - the human-readable name of the service that served the request, such as:
      * <ul>
      *   <li>gRPC - a service name (e.g, {@code com.foo.GrpcService})</li>
      *   <li>Thrift - a service type (e.g, {@code com.foo.ThriftService$AsyncIface} or
@@ -188,7 +188,7 @@ public enum BuiltInProperty {
      * </ul>
      * This property is often used as a meter tag or distributed trace's span name.
      */
-    REQ_SERVICE_NAME("req.serviceName",
+    REQ_SERVICE_NAME("req.service_name",
                      log -> log.isAvailable(RequestLogProperty.NAME) ? log.serviceName() : null),
 
     /**
@@ -206,6 +206,7 @@ public enum BuiltInProperty {
      * {@code "req.content"} - the content of the request. The content may have one of the following:
      *
      * <table>
+     * <caption>the content of the request</caption>
      * <tr><th>request type</th><th>description</th></tr>
      *
      * <tr><td>RPC</td>
@@ -254,9 +255,10 @@ public enum BuiltInProperty {
     }),
 
     /**
-     * {@code "res.content"} - the content of the request. The content may have one of the following:
+     * {@code "res.content"} - the content of the response. The content may have one of the following:
      *
      * <table>
+     * <caption>the content of the response</caption>
      * <tr><th>response type</th><th>description</th></tr>
      *
      * <tr><td>RPC</td>

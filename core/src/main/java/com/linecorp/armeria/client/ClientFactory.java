@@ -53,7 +53,7 @@ import reactor.core.scheduler.NonBlocking;
 /**
  * Creates and manages clients.
  *
- * <h3>Life cycle of the default {@link ClientFactory}</h3>
+ * <h2>Life cycle of the default {@link ClientFactory}</h2>
  * <p>
  * {@link Clients} or {@link ClientBuilder} uses the default {@link ClientFactory} returned by
  * {@link #ofDefault()}, unless you specified a {@link ClientFactory} explicitly. Calling {@link #close()}

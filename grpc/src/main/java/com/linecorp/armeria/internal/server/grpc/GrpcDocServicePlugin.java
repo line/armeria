@@ -276,6 +276,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                          return builder.availableMimeTypes(e.availableMimeTypes()).build();
                                      })
                                      .collect(toImmutableSet());
+
         return new MethodInfo(
                 method.getName(),
                 namedMessageSignature(method.getOutputType()),
@@ -284,7 +285,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                           .requirement(FieldRequirement.REQUIRED).build()),
                 /* exceptionTypeSignatures */ ImmutableList.of(),
                 methodEndpoints,
-                /* exampleHttpHeaders */ ImmutableList.of(),
+                /* exampleHeaders */ ImmutableList.of(),
                 defaultExamples(method),
                 /* examplePaths */ ImmutableList.of(),
                 /* exampleQueries */ ImmutableList.of(),

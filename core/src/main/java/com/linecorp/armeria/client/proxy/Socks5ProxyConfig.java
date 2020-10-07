@@ -90,12 +90,11 @@ public final class Socks5ProxyConfig extends ProxyConfig {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("proxyType", proxyType())
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
                           .add("password", maskPassword(username(), password()))
-                          .omitNullValues()
                           .toString();
     }
 }

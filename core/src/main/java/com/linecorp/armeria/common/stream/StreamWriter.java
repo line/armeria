@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.HttpData;
 /**
  * Produces the objects to be published by a {@link StreamMessage}.
  *
- * <h3 id="reference-counted">Life cycle of reference-counted objects</h3>
+ * <h2 id="reference-counted">Life cycle of reference-counted objects</h2>
  *
  * <p>When the following methods are given with a pooled {@link HttpData} or the {@link Supplier} that
  * provides such an object:

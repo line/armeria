@@ -20,6 +20,7 @@ const CommunityLayout: React.FC<CommunityLayoutProps> = (props) => {
       ) {
         nodes {
           tableOfContents(maxDepth: 1)
+          excerpt(pruneLength: 256, truncate: true)
           parent {
             ... on File {
               sourceInstanceName

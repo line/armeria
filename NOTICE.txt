@@ -113,6 +113,11 @@ This product contains a modified part of Twitter Commons, distributed by Twitter
   * License: license/LICENSE.twitter.al20.txt (Apache License v2.0)
   * Homepage: https://twitter.github.io/commons/
 
+This product contains a modified part of OkHttp, distributed by Square, Inc:
+
+  * License: license/LICENSE.okhttp.al20.txt (Apache License v2.0)
+  * Homepage: https://square.github.io/okhttp
+
 
 Dependencies
 ============

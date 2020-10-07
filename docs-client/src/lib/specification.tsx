@@ -47,7 +47,7 @@ export interface Method {
   parameters: Parameter[];
   exceptionTypeSignatures: string[];
   endpoints: Endpoint[];
-  exampleHttpHeaders: { [name: string]: string }[];
+  exampleHeaders: { [name: string]: string }[];
   exampleRequests: string[];
   examplePaths: string[];
   exampleQueries: string[];
@@ -58,7 +58,7 @@ export interface Method {
 export interface Service {
   name: string;
   methods: Method[];
-  exampleHttpHeaders: { [name: string]: string }[];
+  exampleHeaders: { [name: string]: string }[];
   docString?: DocString;
 }
 
@@ -92,7 +92,7 @@ export interface SpecificationData {
   enums: Enum[];
   structs: Struct[];
   exceptions: Struct[];
-  exampleHttpHeaders: { [name: string]: string }[];
+  exampleHeaders: { [name: string]: string }[];
 }
 
 export function simpleName(fullName: string): string {
@@ -151,8 +151,8 @@ export class Specification {
     return this.data.structs;
   }
 
-  public getExampleHttpHeaders(): { [name: string]: string }[] {
-    return this.data.exampleHttpHeaders;
+  public getExampleHeaders(): { [name: string]: string }[] {
+    return this.data.exampleHeaders;
   }
 
   public getEnumByName(name: string): Enum | undefined {

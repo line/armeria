@@ -1,5 +1,3 @@
-import versions from '../../../gen-src/versions.json';
-
 # SAML Single Sign-On
 
 <Tip>
@@ -23,24 +21,12 @@ provider's point of view.
 
 The first step to configure a service provider is adding `armeria-saml` to your dependencies.
 
-<Tabs>
-  <TabPane tab="Gradle" key="gradle">
-    <CodeBlock language="groovy">{`
-    dependencies {
-        compile 'com.linecorp.armeria:saml:${versions['com.linecorp.armeria:armeria-bom']}'
-    }
-    `}</CodeBlock>
-  </TabPane>
-  <TabPane tab="Maven" key="maven">
-    <CodeBlock language="xml">{`
-    <dependency>
-        <groupId>com.linecorp.armeria</groupId>
-        <artifactId>saml</artifactId>
-        <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
-    </dependency>
-    `}</CodeBlock>
-  </TabPane>
-</Tabs>
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-saml' },
+  ]}
+/>
 
 After that, you need to prepare your keystore file which contains a key pair for signing and encryption
 of a SAML message. Also, you need to import the certificate of your identity provider into the keystore

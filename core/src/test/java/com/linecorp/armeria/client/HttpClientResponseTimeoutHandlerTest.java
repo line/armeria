@@ -72,7 +72,7 @@ class HttpClientResponseTimeoutHandlerTest {
                                           .responseTimeout(Duration.ofSeconds(2))
                                           .decorator((delegate, ctx, req) -> {
                                               if (useResponseTimeoutHandler) {
-                                                  ctx.setResponseTimeoutHandler(() -> {
+                                                  ctx.whenResponseTimingOut().thenRun(() -> {
                                                       ctx.request().abort(reqCause);
                                                       invokeResponseTimeoutHandler.set(true);
                                                   });
@@ -107,7 +107,7 @@ class HttpClientResponseTimeoutHandlerTest {
         final WebClient client = WebClient.builder(server.uri(protocol))
                                           .responseTimeout(Duration.ofSeconds(2))
                                           .decorator((delegate, ctx, req) -> {
-                                              ctx.setResponseTimeoutHandler(() -> {
+                                              ctx.whenResponseTimingOut().thenRun(() -> {
                                                   ctx.request().abort(reqCause);
                                               });
                                               logHolder.set(ctx.log());
@@ -136,7 +136,7 @@ class HttpClientResponseTimeoutHandlerTest {
                 .responseTimeout(Duration.ofSeconds(2))
                 .decorator((delegate, ctx, req) -> {
                     final HttpResponse response = delegate.execute(ctx, req);
-                    ctx.setResponseTimeoutHandler(() -> {
+                    ctx.whenResponseTimingOut().thenRun(() -> {
                         invokeResponseTimeoutHandler.set(true);
                         response.abort(resCause);
                     });

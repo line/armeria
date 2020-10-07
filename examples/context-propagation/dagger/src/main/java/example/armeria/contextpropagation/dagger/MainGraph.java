@@ -108,7 +108,7 @@ public abstract class MainGraph {
         return Futures.allAsList(
                 nums.build()
                     .map(num -> toListenableFuture(backendClient.get("/square/" + num).aggregate()))
-                .collect(toImmutableList()));
+                    .collect(toImmutableList()));
     }
 
     @Produces

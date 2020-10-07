@@ -32,6 +32,8 @@ import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -65,6 +67,13 @@ class ThriftServiceLogNameTest {
             sb.service("/thrift", THttpService.builder()
                                               .addService(HELLO_SERVICE_HANDLER)
                                               .build());
+            sb.route()
+              .path("/default-names")
+              .defaultServiceName("HelloService")
+              .defaultLogName("defaultName")
+              .build(THttpService.builder()
+                                 .addService(HELLO_SERVICE_HANDLER)
+                                 .build());
         }
     };
 
@@ -97,6 +106,19 @@ class ThriftServiceLogNameTest {
     }
 
     @Test
+    void defaultNames() throws TException {
+        final HelloService.Iface client =
+                Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/default-names"))
+                       .build(HelloService.Iface.class);
+        client.hello("hello");
+
+        final RequestLog log = capturedCtx.log().partial();
+        assertThat(log.serviceName()).isEqualTo("HelloService");
+        assertThat(log.name()).isEqualTo("defaultName");
+        assertThat(log.fullName()).isEqualTo("HelloService/defaultName");
+    }
+
+    @Test
     void logNameInAccessLog() throws TException {
         final HelloService.Iface client =
                 Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/thrift"))
@@ -109,5 +131,34 @@ class ThriftServiceLogNameTest {
                 return evt.getMessage().contains("POST /thrift#HelloService$AsyncIface/hello h2c");
             });
         });
+    }
+
+    @Test
+    void defaultNamesInAccessLog() throws TException {
+        final HelloService.Iface client =
+                Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/default-names"))
+                       .build(HelloService.Iface.class);
+        client.hello("hello");
+
+        await().untilAsserted(() -> {
+            verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
+            assertThat(eventCaptor.getAllValues()).anyMatch(evt -> {
+                return evt.getMessage().contains("POST /default-names#HelloService/defaultName h2c");
+            });
+        });
+    }
+
+    @Test
+    void logNameOfClientSide() throws TException {
+        final HelloService.Iface client =
+                Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/thrift"))
+                       .build(HelloService.Iface.class);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.hello("hello");
+            final ClientRequestContext ctx = captor.get();
+            final RequestLog requestLog = ctx.log().whenComplete().join();
+            assertThat(requestLog.serviceName()).isEqualTo(HelloService.Iface.class.getName());
+            assertThat(requestLog.name()).isEqualTo("hello");
+        }
     }
 }

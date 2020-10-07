@@ -175,6 +175,11 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
         client.post(pathIncludingQuery, body).aggregate().join();
     }
 
+    @Override
+    protected void options(WebClient client, String path) {
+        client.options(path).aggregate().join();
+    }
+
     static ServiceRequestContext serverContext() {
         return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
     }

@@ -84,7 +84,7 @@ public final class RequestContextExportingAppender
      */
     public void addBuiltIn(BuiltInProperty property) {
         ensureNotStarted();
-        builder.addBuiltIn(property);
+        builder.builtIn(property);
     }
 
     /**
@@ -95,7 +95,7 @@ public final class RequestContextExportingAppender
      */
     public void addAttribute(String alias, AttributeKey<?> attrKey) {
         ensureNotStarted();
-        builder.addAttribute(alias, attrKey);
+        builder.attr(alias, attrKey);
     }
 
     /**
@@ -110,7 +110,7 @@ public final class RequestContextExportingAppender
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         requireNonNull(stringifier, "stringifier");
-        builder.addAttribute(alias, attrKey, stringifier);
+        builder.attr(alias, attrKey, stringifier);
     }
 
     /**
@@ -119,7 +119,7 @@ public final class RequestContextExportingAppender
     public void addRequestHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        builder.addRequestHeader(name);
+        builder.requestHeader(name);
     }
 
     /**
@@ -128,7 +128,7 @@ public final class RequestContextExportingAppender
     public void addResponseHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        builder.addResponseHeader(name);
+        builder.responseHeader(name);
     }
 
     /**
@@ -139,7 +139,7 @@ public final class RequestContextExportingAppender
     public void setExport(String mdcKey) {
         requireNonNull(mdcKey, "mdcKey");
         checkArgument(!mdcKey.isEmpty(), "mdcKey must not be empty");
-        builder.addKeyPattern(mdcKey);
+        builder.keyPattern(mdcKey);
     }
 
     /**
@@ -152,7 +152,7 @@ public final class RequestContextExportingAppender
         KEY_SPLITTER.split(mdcKeys)
                     .forEach(mdcKey -> {
                         checkArgument(!mdcKey.isEmpty(), "comma-separated MDC key must not be empty");
-                        builder.addKeyPattern(mdcKey);
+                        builder.keyPattern(mdcKey);
                     });
     }
 

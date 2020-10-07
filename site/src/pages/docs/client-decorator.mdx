@@ -49,7 +49,7 @@ public class AuditClient extends SimpleDecoratingHttpClient {
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         auditRequest(req);
-        return delegate().execute(ctx, req);
+        return unwrap().execute(ctx, req);
     }
 }
 

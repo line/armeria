@@ -50,15 +50,15 @@ public final class RequestContextExporterBuilder {
      * Adds the specified {@link BuiltInProperty} to the export list.
      * The {@link BuiltInProperty#key} will be used for the export key.
      */
-    public RequestContextExporterBuilder addBuiltIn(BuiltInProperty property) {
-        return addBuiltIn(property, property.key);
+    public RequestContextExporterBuilder builtIn(BuiltInProperty property) {
+        return builtIn(property, property.key);
     }
 
     /**
      * Adds the specified {@link BuiltInProperty} to the export list.
      * The specified {@code alias} will be used for the export key.
      */
-    public RequestContextExporterBuilder addBuiltIn(BuiltInProperty property, String alias) {
+    public RequestContextExporterBuilder builtIn(BuiltInProperty property, String alias) {
         requireNonNull(property, "property");
         requireNonNull(alias, "alias");
         builtIns.add(new ExportEntry<>(property, alias));
@@ -72,7 +72,7 @@ public final class RequestContextExporterBuilder {
      * @param alias the alias of the attribute to export
      * @param attrKey the key of the attribute to export
      */
-    public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey) {
+    public RequestContextExporterBuilder attr(String alias, AttributeKey<?> attrKey) {
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         attrs.add(new ExportEntry<>(attrKey, alias));
@@ -87,8 +87,8 @@ public final class RequestContextExporterBuilder {
      * @param attrKey the key of the attribute to export
      * @param stringifier the {@link Function} that converts the attribute value into a {@link String}
      */
-    public RequestContextExporterBuilder addAttribute(String alias, AttributeKey<?> attrKey,
-                                                      Function<?, String> stringifier) {
+    public RequestContextExporterBuilder attr(String alias, AttributeKey<?> attrKey,
+                                              Function<?, String> stringifier) {
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         requireNonNull(stringifier, "stringifier");
@@ -99,22 +99,22 @@ public final class RequestContextExporterBuilder {
     /**
      * Adds the specified HTTP request header name to the export list.
      */
-    public RequestContextExporterBuilder addRequestHeader(CharSequence headerName) {
+    public RequestContextExporterBuilder requestHeader(CharSequence headerName) {
         final AsciiString key = toHeaderName(requireNonNull(headerName, "headerName"));
-        return addRequestHeader0(key, PREFIX_REQ_HEADERS + key);
+        return addRequestHeader(key, PREFIX_REQ_HEADERS + key);
     }
 
     /**
      * Adds the specified HTTP request header name to the export list.
      * The specified {@code alias} is used for the export key.
      */
-    public RequestContextExporterBuilder addRequestHeader(CharSequence headerName, String alias) {
+    public RequestContextExporterBuilder requestHeader(CharSequence headerName, String alias) {
         requireNonNull(headerName, "headerName");
         requireNonNull(alias, "alias");
-        return addRequestHeader0(toHeaderName(headerName), alias);
+        return addRequestHeader(toHeaderName(headerName), alias);
     }
 
-    private RequestContextExporterBuilder addRequestHeader0(AsciiString headerKey, String alias) {
+    private RequestContextExporterBuilder addRequestHeader(AsciiString headerKey, String alias) {
         reqHeaders.add(new ExportEntry<>(headerKey, alias));
         return this;
     }
@@ -122,22 +122,22 @@ public final class RequestContextExporterBuilder {
     /**
      * Adds the specified HTTP response header name to the export list.
      */
-    public RequestContextExporterBuilder addResponseHeader(CharSequence headerName) {
+    public RequestContextExporterBuilder responseHeader(CharSequence headerName) {
         final AsciiString key = toHeaderName(requireNonNull(headerName, "headerName"));
-        return addResponseHeader0(key, PREFIX_RES_HEADERS + key);
+        return addResponseHeader(key, PREFIX_RES_HEADERS + key);
     }
 
     /**
      * Adds the specified HTTP response header name to the export list.
      * The specified {@code alias} is used for the export key.
      */
-    public RequestContextExporterBuilder addResponseHeader(CharSequence headerName, String alias) {
+    public RequestContextExporterBuilder responseHeader(CharSequence headerName, String alias) {
         requireNonNull(headerName, "headerName");
         requireNonNull(alias, "alias");
-        return addResponseHeader0(toHeaderName(headerName), alias);
+        return addResponseHeader(toHeaderName(headerName), alias);
     }
 
-    private RequestContextExporterBuilder addResponseHeader0(AsciiString headerKey, String alias) {
+    private RequestContextExporterBuilder addResponseHeader(AsciiString headerKey, String alias) {
         resHeaders.add(new ExportEntry<>(headerKey, alias));
         return this;
     }
@@ -151,7 +151,7 @@ public final class RequestContextExporterBuilder {
      * <a href="https://armeria.dev/docs/advanced-logging">Logging contextual information</a>
      * in order to learn how to specify a key pattern.
      */
-    public RequestContextExporterBuilder addKeyPattern(String keyPattern) {
+    public RequestContextExporterBuilder keyPattern(String keyPattern) {
         requireNonNull(keyPattern, "keyPattern");
 
         final int exportKeyPos = keyPattern.indexOf('=');
@@ -187,18 +187,18 @@ public final class RequestContextExporterBuilder {
 
         if (keyPattern.startsWith(PREFIX_REQ_HEADERS)) {
             if (exportKey == null) {
-                addRequestHeader(keyPattern.substring(PREFIX_REQ_HEADERS.length()));
+                requestHeader(keyPattern.substring(PREFIX_REQ_HEADERS.length()));
             } else {
-                addRequestHeader(keyPattern.substring(PREFIX_REQ_HEADERS.length()), exportKey);
+                requestHeader(keyPattern.substring(PREFIX_REQ_HEADERS.length()), exportKey);
             }
             return this;
         }
 
         if (keyPattern.startsWith(PREFIX_RES_HEADERS)) {
             if (exportKey == null) {
-                addResponseHeader(keyPattern.substring(PREFIX_RES_HEADERS.length()));
+                responseHeader(keyPattern.substring(PREFIX_RES_HEADERS.length()));
             } else {
-                addResponseHeader(keyPattern.substring(PREFIX_RES_HEADERS.length()), exportKey);
+                responseHeader(keyPattern.substring(PREFIX_RES_HEADERS.length()), exportKey);
             }
             return this;
         }

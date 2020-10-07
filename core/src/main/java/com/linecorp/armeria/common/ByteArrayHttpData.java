@@ -91,19 +91,20 @@ final class ByteArrayHttpData implements HttpData {
             buf.append("B, ");
         }
 
-        return appendPreviews(buf, array, Math.min(16, array.length)).append('}').toString();
+        return appendPreviews(buf, array, 0, Math.min(16, array.length)).append('}').toString();
     }
 
-    static StringBuilder appendPreviews(StringBuilder buf, byte[] array, int previewLength) {
+    static StringBuilder appendPreviews(StringBuilder buf, byte[] array, int offset, int previewLength) {
         // Append the hex preview if contains non-ASCII chars.
-        for (int i = 0; i < previewLength; i++) {
+        final int endOffset = offset + previewLength;
+        for (int i = offset; i < endOffset; i++) {
             if (SAFE_OCTETS[array[i] & 0xFF] == 0) {
-                return buf.append("hex=").append(ByteBufUtil.hexDump(array, 0, previewLength));
+                return buf.append("hex=").append(ByteBufUtil.hexDump(array, offset, previewLength));
             }
         }
 
         // Append the text preview otherwise.
-        return buf.append("text=").append(new String(array, 0, 0, previewLength));
+        return buf.append("text=").append(new String(array, 0, offset, previewLength));
     }
 
     @Override

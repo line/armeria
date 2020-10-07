@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.brave;
 
-import java.util.List;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -26,7 +24,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
-import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Span;
@@ -74,21 +71,8 @@ final class ServiceRequestContextAdapter {
         }
 
         @Override
-        @Nullable
         public String route() {
-            final Route route = ctx.config().route();
-            final List<String> paths = route.paths();
-            switch (route.pathType()) {
-                case EXACT:
-                case PREFIX:
-                case PARAMETERIZED:
-                    return paths.get(1);
-                case REGEX:
-                    return paths.get(paths.size() - 1);
-                case REGEX_WITH_PREFIX:
-                    return paths.get(1) + paths.get(0);
-            }
-            return null;
+            return ctx.config().route().patternString();
         }
 
         @Override

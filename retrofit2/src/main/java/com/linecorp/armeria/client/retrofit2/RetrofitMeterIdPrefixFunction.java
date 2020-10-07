@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
+import static com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction.addHttpStatus;
+import static java.util.Objects.requireNonNull;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -32,7 +35,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
@@ -70,7 +72,7 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
 
     private static final Map<Method, String> pathCache = new MapMaker().weakKeys().makeMap();
 
-    private static final String UNKNOWN = "UNKNOWN";
+    private static final String NONE = "none";
 
     /**
      * Returns a newly created {@link RetrofitMeterIdPrefixFunction} with the specified {@code name}.
@@ -81,30 +83,37 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
 
     private final String name;
 
-    RetrofitMeterIdPrefixFunction(String name) {
-        this.name = name;
+    private RetrofitMeterIdPrefixFunction(String name) {
+        this.name = requireNonNull(name, "name");
     }
 
     @Override
     public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestOnlyLog log) {
-        final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
-        buildTags(tagListBuilder, log);
+        /* http.method, method, path, service */
+        final Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
+        final RequestHeaders requestHeaders = log.requestHeaders();
+        final String httpMethod = requestHeaders.method().name();
+        tagListBuilder.add(Tag.of("http.method", httpMethod));
+        addMethodPathAndService(tagListBuilder, log, requestHeaders);
         return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
     @Override
     public MeterIdPrefix completeRequestPrefix(MeterRegistry registry, RequestLog log) {
-        final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(5);
-        buildTags(tagListBuilder, log);
-        RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
+        /* http.method, http.status, method, path, service */
+        final Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(5);
+        final RequestHeaders requestHeaders = log.requestHeaders();
+        final String httpMethod = requestHeaders.method().name();
+        tagListBuilder.add(Tag.of("http.method", httpMethod));
+        addHttpStatus(tagListBuilder, log);
+        addMethodPathAndService(tagListBuilder, log, requestHeaders);
         return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
-    private static void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestOnlyLog log) {
-        final RequestHeaders requestHeaders = log.requestHeaders();
-        final String httpMethod = requestHeaders.method().name();
-        final String serviceName;
+    private static void addMethodPathAndService(Builder<Tag> tagListBuilder, RequestOnlyLog log,
+                                                RequestHeaders requestHeaders) {
         final String methodName;
+        final String serviceName;
         final String path;
 
         final Invocation invocation = InvocationUtil.getInvocation(log);
@@ -115,16 +124,10 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
             path = getPathFromMethod(method);
         } else {
             methodName = requestHeaders.method().name();
-            serviceName = UNKNOWN;
+            serviceName = NONE;
             path = requestHeaders.path();
         }
 
-        buildTags(tagListBuilder, serviceName, methodName, httpMethod, path);
-    }
-
-    private static void buildTags(Builder<Tag> tagListBuilder, String serviceName, String methodName,
-                                  String httpMethod, String path) {
-        tagListBuilder.add(Tag.of("http.method", httpMethod));
         tagListBuilder.add(Tag.of("method", methodName));
         tagListBuilder.add(Tag.of("path", path));
         tagListBuilder.add(Tag.of("service", serviceName));
@@ -158,7 +161,7 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
                 }
             }
             // Should never reach here.
-            return UNKNOWN;
+            return NONE;
         });
     }
 }

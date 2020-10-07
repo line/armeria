@@ -286,8 +286,8 @@ public final class Clients {
      * <pre>{@code
      * WebClient derivedWebClient = Clients.newDerivedClient(webClient, options -> {
      *     ClientOptionsBuilder builder = options.toBuilder();
-     *     builder.decorator(...);     // Add a decorator.
-     *     builder.addHttpHeader(...); // Add an HTTP header.
+     *     builder.decorator(...); // Add a decorator.
+     *     builder.addHeader(...); // Add an HTTP header.
      *     return builder.build();
      * });
      * }</pre>
@@ -369,7 +369,7 @@ public final class Clients {
      * <pre>{@code
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      *
-     * try (SafeCloseable ignored = withHttpHeader(AUTHORIZATION, myCredential)) {
+     * try (SafeCloseable ignored = withHeader(AUTHORIZATION, myCredential)) {
      *     client.executeSomething(..);
      * }
      * }</pre>
@@ -378,9 +378,9 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
-     * try (SafeCloseable ignored = withHttpHeader(USER_AGENT, myAgent)) {
+     * try (SafeCloseable ignored = withHeader(USER_AGENT, myAgent)) {
      *     for (String secret : secrets) {
-     *         try (SafeCloseable ignored2 = withHttpHeader(AUTHORIZATION, secret)) {
+     *         try (SafeCloseable ignored2 = withHeader(AUTHORIZATION, secret)) {
      *             // Both USER_AGENT and AUTHORIZATION will be set.
      *             client.executeSomething(..);
      *         }
@@ -388,13 +388,13 @@ public final class Clients {
      * }
      * }</pre>
      *
-     * @see #withHttpHeaders(Consumer)
+     * @see #withHeaders(Consumer)
      */
     @MustBeClosed
-    public static SafeCloseable withHttpHeader(CharSequence name, String value) {
+    public static SafeCloseable withHeader(CharSequence name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        return withHttpHeaders(headersBuilder -> {
+        return withHeaders(headersBuilder -> {
             headersBuilder.set(name, value);
         });
     }
@@ -407,7 +407,7 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
      * import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
      *
-     * try (SafeCloseable ignored = withHttpHeader(CONTENT_TYPE, JSON_UTF_8)) {
+     * try (SafeCloseable ignored = withHeader(CONTENT_TYPE, JSON_UTF_8)) {
      *     client.executeSomething(..);
      * }
      * }</pre>
@@ -417,9 +417,9 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
      * import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
      *
-     * try (SafeCloseable ignored = withHttpHeader(CONTENT_TYPE, JSON_UTF_8)) {
+     * try (SafeCloseable ignored = withHeader(CONTENT_TYPE, JSON_UTF_8)) {
      *     for (String secret : secrets) {
-     *         try (SafeCloseable ignored2 = withHttpHeader(AUTHORIZATION, secret)) {
+     *         try (SafeCloseable ignored2 = withHeader(AUTHORIZATION, secret)) {
      *             // Both CONTENT_TYPE and AUTHORIZATION will be set.
      *             client.executeSomething(..);
      *         }
@@ -427,13 +427,13 @@ public final class Clients {
      * }
      * }</pre>
      *
-     * @see #withHttpHeaders(Consumer)
+     * @see #withHeaders(Consumer)
      */
     @MustBeClosed
-    public static SafeCloseable withHttpHeader(CharSequence name, Object value) {
+    public static SafeCloseable withHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        return withHttpHeaders(headersBuilder -> {
+        return withHeaders(headersBuilder -> {
             headersBuilder.setObject(name, value);
         });
     }
@@ -447,7 +447,7 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
-     * try (SafeCloseable ignored = withHttpHeaders(builder -> {
+     * try (SafeCloseable ignored = withHeaders(builder -> {
      *     builder.set(HttpHeaders.AUTHORIZATION, myCredential)
      *            .set(HttpHeaders.USER_AGENT, myAgent);
      * })) {
@@ -459,11 +459,11 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
-     * try (SafeCloseable ignored = withHttpHeaders(builder -> {
+     * try (SafeCloseable ignored = withHeaders(builder -> {
      *          builder.set(USER_AGENT, myAgent);
      *      })) {
      *     for (String secret : secrets) {
-     *         try (SafeCloseable ignored2 = withHttpHeaders(builder -> {
+     *         try (SafeCloseable ignored2 = withHeaders(builder -> {
      *                  builder.set(AUTHORIZATION, secret);
      *              })) {
      *             // Both USER_AGENT and AUTHORIZATION will be set.
@@ -473,10 +473,10 @@ public final class Clients {
      * }
      * }</pre>
      *
-     * @see #withHttpHeader(CharSequence, String)
+     * @see #withHeader(CharSequence, String)
      */
     @MustBeClosed
-    public static SafeCloseable withHttpHeaders(Consumer<HttpHeadersBuilder> headerMutator) {
+    public static SafeCloseable withHeaders(Consumer<HttpHeadersBuilder> headerMutator) {
         requireNonNull(headerMutator, "headerMutator");
         return withContextCustomizer(ctx -> {
             ctx.mutateAdditionalRequestHeaders(headerMutator);
@@ -515,7 +515,7 @@ public final class Clients {
      * may be {@code null} while the customizer function runs, because the target host of the {@link Request}
      * is not determined yet.
      *
-     * @see #withHttpHeaders(Consumer)
+     * @see #withHeaders(Consumer)
      */
     @MustBeClosed
     public static SafeCloseable withContextCustomizer(

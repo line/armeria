@@ -1,10 +1,13 @@
 import { RouteComponentProps } from '@reach/router';
+import { Typography } from 'antd';
 import React from 'react';
 
 import recentNews from '../../gen-src/news-recent.json';
 import recentReleases from '../../gen-src/release-notes-recent.json';
 import MdxLayout from './mdx';
 import getPagePath from './page-path';
+
+const { Title } = Typography;
 
 interface ReleaseNotesLayoutProps extends RouteComponentProps {
   pageContext: any;
@@ -53,7 +56,7 @@ const ReleaseNotesLayout: React.FC<ReleaseNotesLayoutProps> = (props) => {
       pageTitleSuffix="Armeria release notes"
     >
       {currentVersion ? (
-        <h1 id="release-notes">
+        <Title id="release-notes" level={1}>
           <a
             href="#release-notes"
             aria-label="release notes permalink"
@@ -74,7 +77,7 @@ const ReleaseNotesLayout: React.FC<ReleaseNotesLayoutProps> = (props) => {
             </svg>
           </a>
           {currentVersion} release notes
-        </h1>
+        </Title>
       ) : (
         ''
       )}

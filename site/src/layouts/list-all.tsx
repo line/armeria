@@ -1,8 +1,11 @@
 import { RouteComponentProps } from '@reach/router';
+import { Typography } from 'antd';
 import { Link } from 'gatsby';
 import React from 'react';
 
 import styles from './list-all.module.less';
+
+const { Title } = Typography;
 
 interface ListAllLayoutProps extends RouteComponentProps {
   pageContext: any;
@@ -29,10 +32,12 @@ const ListAllLayout: React.FC<ListAllLayoutProps> = (props) => {
 
   return (
     <Layout {...props}>
-      <h1>{props.pageTitle}</h1>
+      <Title level={1}>{props.pageTitle}</Title>
       {Object.entries(groupedItems).map(([groupName, items]) => (
         <span key={groupName}>
-          <h2 id={groupName}>{groupName}</h2>
+          <Title id={groupName} level={2}>
+            {groupName}
+          </Title>
           <ul className={styles.itemList}>
             {Object.entries(items).map(([pagePath, pageTitle]) => (
               <li key={pagePath}>

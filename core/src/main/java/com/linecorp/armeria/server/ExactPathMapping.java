@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.server.RouteUtil.EXACT;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
-import static com.linecorp.armeria.internal.server.RouteUtil.newLoggerName;
 
 import java.util.List;
 import java.util.Set;
@@ -31,15 +29,11 @@ import com.google.common.collect.ImmutableSet;
 final class ExactPathMapping extends AbstractPathMapping {
 
     private final String exactPath;
-    private final String loggerName;
-    private final String meterTag;
     private final List<String> paths;
 
     ExactPathMapping(String exactPath) {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         paths = ImmutableList.of(exactPath, exactPath);
-        loggerName = newLoggerName(exactPath);
-        meterTag = EXACT + exactPath;
     }
 
     @Nullable
@@ -57,13 +51,8 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public String loggerName() {
-        return loggerName;
-    }
-
-    @Override
-    public String meterTag() {
-        return meterTag;
+    public String patternString() {
+        return exactPath;
     }
 
     @Override
@@ -78,17 +67,12 @@ final class ExactPathMapping extends AbstractPathMapping {
 
     @Override
     public int hashCode() {
-        return meterTag.hashCode();
+        return exactPath.hashCode();
     }
 
     @Override
     public boolean equals(@Nullable Object obj) {
         return obj instanceof ExactPathMapping &&
                (this == obj || exactPath.equals(((ExactPathMapping) obj).exactPath));
-    }
-
-    @Override
-    public String toString() {
-        return meterTag;
     }
 }

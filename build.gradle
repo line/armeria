@@ -1,10 +1,12 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 plugins {
     id 'com.google.osdetector' version '1.6.2' apply false
     // If you want to change `org.jetbrains.kotlin.jvm` version,
     // you also need to change `org.jetbrains.kotlin:kotlin-allopen` version in `dependencies.yml`.
-    id 'org.jetbrains.kotlin.jvm' version '1.3.72' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.4.10' apply false
 
     id 'net.ltgt.errorprone' version '1.2.1' apply false
 }
@@ -26,6 +28,17 @@ def javaTestHome = System.env.JAVA_TEST_HOME
 if (javaTestHome) {
     logger.quiet("Overriding JVM for tests with ${javaTestHome}")
 }
+
+// Fail the build if the console contains 'LEAK:'.
+def hasLeak = new AtomicBoolean()
+gradle.buildFinished({ result ->
+    if (hasLeak.get()) {
+        throw new TestExecutionException('Found a leak while testing. ' +
+                "Specify '-Pleak' option to record the detail and " +
+                'find it using the following command: \n\n' +
+                "    find . -type f -name 'TEST-*.xml' -exec grep -Fl 'LEAK: ' {} ';'\n")
+    }
+})
 
 allprojects {
     // Add common JVM options such as max memory and leak detection.
@@ -56,6 +69,16 @@ allprojects {
         // Parallelize if --parallel is on.
         if (gradle.startParameter.parallelProjectExecutionEnabled) {
             maxParallelForks = gradle.startParameter.maxWorkerCount
+        }
+
+        // Fail the build at the end if there was any leak.
+        // We do not fail immediately so that we collect as many leaks as possible.
+        doFirst {
+            addTestOutputListener({ descriptor, event ->
+                if (event.message.contains('LEAK: ')) {
+                    hasLeak.set(true)
+                }
+            })
         }
     }
 }
@@ -161,6 +184,7 @@ configure(projectsWithFlags('java')) {
     tasks.withType(KotlinCompile) {
         kotlinOptions {
             jvmTarget = "1.8"
+            freeCompilerArgs = ["-Xjsr305=strict"]
         }
     }
 }
@@ -183,9 +207,9 @@ allprojects {
     }
 }
 
-// Require to use JDK 13 when releasing.
+// Require to use JDK 14 when releasing.
 tasks.release.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_13) {
-        throw new IllegalStateException("You must release using JDK 13.");
+    if (JavaVersion.current() != JavaVersion.VERSION_14) {
+        throw new IllegalStateException("You must release using JDK 14.");
     }
 }

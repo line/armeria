@@ -151,6 +151,11 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
         }
     }
 
+    final void cancel() {
+        assert subscription != null;
+        subscription.cancel();
+    }
+
     final void request(long n) {
         assert subscription != null;
         subscription.request(n);

@@ -63,14 +63,14 @@ public class TokenBucketThrottlingStrategyTest {
                        SERVICE.decorate(
                                ThrottlingService.newDecorator(
                                        TokenBucketThrottlingStrategy.<HttpRequest>builder(tokenBucket)
-                                               .withHeadersScheme(ThrottlingHeaders.X_RATELIMIT)
+                                               .headersScheme(ThrottlingHeaders.X_RATELIMIT)
                                                .build())));
             sb.service("/http-throttle2",
                        SERVICE.decorate(
                                ThrottlingService.newDecorator(
                                        TokenBucketThrottlingStrategy.<HttpRequest>builder(tokenBucket)
-                                               .withMinimumBackoff(Duration.ofSeconds(15L))
-                                               .withHeadersScheme(ThrottlingHeaders.X_RATELIMIT, true)
+                                               .minimumBackoff(Duration.ofSeconds(15L))
+                                               .headersScheme(ThrottlingHeaders.X_RATELIMIT, true)
                                                .build())));
             sb.service("/http-throttle3",
                        SERVICE.decorate(
@@ -81,7 +81,7 @@ public class TokenBucketThrottlingStrategyTest {
                        SERVICE.decorate(
                                ThrottlingService.newDecorator(
                                        TokenBucketThrottlingStrategy.<HttpRequest>builder(tokenBucket)
-                                               .withMinimumBackoff(Duration.ofSeconds(5L))
+                                               .minimumBackoff(Duration.ofSeconds(5L))
                                                .build(),
                                        (delegate, ctx, req, cause) ->
                                                HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE))));

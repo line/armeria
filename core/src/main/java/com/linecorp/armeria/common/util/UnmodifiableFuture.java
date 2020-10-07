@@ -17,6 +17,7 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -32,7 +33,7 @@ import javax.annotation.Nullable;
  * </ul>
  * Also, {@link #cancel(boolean)} will do nothing but returning whether cancelled or not.
  */
-public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
+public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
 
     private static final UnmodifiableFuture<?> NIL;
     private static final UnmodifiableFuture<Boolean> TRUE;
@@ -103,7 +104,10 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         return unmodifiable;
     }
 
-    private UnmodifiableFuture() {}
+    /**
+     * Creates a new {@link UnmodifiableFuture}.
+     */
+    protected UnmodifiableFuture() {}
 
     /**
      * Throws an {@link UnsupportedOperationException}.
@@ -113,7 +117,10 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         throw new UnsupportedOperationException();
     }
 
-    private void doComplete(@Nullable T value) {
+    /**
+     * Completes with a non-exceptional @{code value}, unless already completed.
+     */
+    protected void doComplete(@Nullable T value) {
         super.complete(value);
     }
 
@@ -125,7 +132,10 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
         throw new UnsupportedOperationException();
     }
 
-    private void doCompleteExceptionally(Throwable cause) {
+    /**
+     * Completes with the specified {@link Throwable}, unless already completed.
+     */
+    protected void doCompleteExceptionally(Throwable cause) {
         super.completeExceptionally(cause);
     }
 
@@ -135,6 +145,13 @@ public final class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         return isCancelled();
+    }
+
+    /**
+     * Completes this {@link CompletableFuture} with a {@link CancellationException}, unless already completed.
+     */
+    protected boolean doCancel() {
+        return super.cancel(false);
     }
 
     /**

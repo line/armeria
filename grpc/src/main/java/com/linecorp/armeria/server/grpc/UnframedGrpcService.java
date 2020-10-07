@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -186,7 +187,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             CompletableFuture<HttpResponse> res) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE)) {
+                ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
             final HttpData content = clientRequest.content();
             final HttpData frame;
             boolean success = false;
@@ -244,15 +245,17 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                 message.append(", ").append(grpcMessage);
             }
 
-            res.complete(HttpResponse.of(
-                    httpStatus,
-                    MediaType.PLAIN_TEXT_UTF_8,
-                    message.toString()));
+            final ResponseHeaders headers = ResponseHeaders.builder(httpStatus)
+                                                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                                           .add(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode)
+                                                           .build();
+            res.complete(HttpResponse.of(headers, HttpData.ofUtf8(message.toString())));
             return;
         }
 
         final MediaType grpcMediaType = grpcResponse.contentType();
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
+        unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
         if (grpcMediaType != null) {
             if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
                 unframedHeaders.contentType(MediaType.PROTOBUF);
@@ -282,7 +285,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                 },
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE,
-                ctx.alloc())) {
+                ctx.alloc(), false)) {
             deframer.request(1);
             deframer.deframe(grpcResponse.content(), true);
         }

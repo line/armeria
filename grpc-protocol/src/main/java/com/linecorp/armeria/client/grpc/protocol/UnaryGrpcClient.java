@@ -139,7 +139,7 @@ public final class UnaryGrpcClient {
                                    final ByteBuf buf = msg.content().byteBuf();
                                    final HttpData framed;
                                    try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                                           ctx.alloc(), Integer.MAX_VALUE)) {
+                                           ctx.alloc(), Integer.MAX_VALUE, false)) {
                                        framed = framer.writePayload(buf);
                                    }
 
@@ -179,7 +179,7 @@ public final class UnaryGrpcClient {
                                                                                msg.trailers()));
                                    }
                                }
-                           }, Integer.MAX_VALUE, ctx.alloc())) {
+                           }, Integer.MAX_VALUE, ctx.alloc(), false)) {
                                deframer.request(1);
                                deframer.deframe(msg.content(), true);
                            }

@@ -62,9 +62,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
-import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.config.NamingConvention;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -369,8 +366,6 @@ public final class Flags {
             getBoolean("reportBlockedEventLoop", true);
 
     private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
-
-    private static final boolean USE_LEGACY_METER_NAMES = getBoolean("useLegacyMeterNames", false);
 
     static {
         if (!isEpollAvailable()) {
@@ -771,7 +766,7 @@ public final class Flags {
      * Returns the default value for the PING interval.
      * A <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame
      * is sent for HTTP/2 server and client or
-     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1 client.
      *
      * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
@@ -1071,20 +1066,6 @@ public final class Flags {
      */
     public static boolean validateHeaders() {
         return VALIDATE_HEADERS;
-    }
-
-    /**
-     * Returns whether to switch back to Armeria's legacy {@link Meter} and {@link Tag} naming convention
-     * that is not compliant with Micrometer's default {@link NamingConvention}.
-     *
-     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.useLegacyMeterNames=true}
-     * JVM option to enable it.</p>
-     *
-     * @deprecated This property will be removed without a replacement.
-     */
-    @Deprecated
-    public static boolean useLegacyMeterNames() {
-        return USE_LEGACY_METER_NAMES;
     }
 
     @Nullable

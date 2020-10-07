@@ -30,6 +30,8 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -54,6 +56,7 @@ import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
@@ -65,7 +68,24 @@ import io.grpc.protobuf.services.ProtoReflectionService;
 public final class GrpcServiceBuilder {
 
     private static final Set<SerializationFormat> DEFAULT_SUPPORTED_SERIALIZATION_FORMATS =
-            ImmutableSet.of(GrpcSerializationFormats.PROTO, GrpcSerializationFormats.PROTO_WEB);
+            GrpcSerializationFormats.values();
+
+    private static final Logger logger = LoggerFactory.getLogger(GrpcServiceBuilder.class);
+
+    private static final boolean USE_COROUTINE_CONTEXT_INTERCEPTOR;
+
+    static {
+        boolean useCoroutineContextInterceptor;
+        final String className = "io.grpc.kotlin.CoroutineContextServerInterceptor";
+        try {
+            Class.forName(className, false, GrpcServiceBuilder.class.getClassLoader());
+            useCoroutineContextInterceptor = true;
+        } catch (Throwable ignored) {
+            useCoroutineContextInterceptor = false;
+        }
+        logger.debug("{}: {}", className, useCoroutineContextInterceptor ? "available" : "unavailable");
+        USE_COROUTINE_CONTEXT_INTERCEPTOR = useCoroutineContextInterceptor;
+    }
 
     private final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
 
@@ -160,16 +180,16 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to supporting binary
-     * protobuf formats. Enabling JSON can be useful, e.g., when migrating existing JSON services to gRPC.
+     * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to support
+     * all {@link GrpcSerializationFormats#values()}.
      */
     public GrpcServiceBuilder supportedSerializationFormats(SerializationFormat... formats) {
         return supportedSerializationFormats(ImmutableSet.copyOf(requireNonNull(formats, "formats")));
     }
 
     /**
-     * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to supporting binary
-     * protobuf formats.
+     * Sets the {@link SerializationFormat}s supported by this server. If not set, defaults to support
+     * all {@link GrpcSerializationFormats#values()}.
      */
     public GrpcServiceBuilder supportedSerializationFormats(Iterable<SerializationFormat> formats) {
         requireNonNull(formats, "formats");
@@ -259,6 +279,9 @@ public final class GrpcServiceBuilder {
      * reference as what was passed to the service stub - a message with the same contents will not
      * work. If {@link GrpcUnsafeBufferUtil#releaseBuffer(Object, RequestContext)} is not called, the memory
      * will be leaked.
+     *
+     * <p>Note that this isn't working if the payloads are compressed or the {@link SerializationFormat} is
+     * {@link GrpcSerializationFormats#PROTO_WEB_TEXT}.
      */
     public GrpcServiceBuilder unsafeWrapRequestBuffers(boolean unsafeWrapRequestBuffers) {
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
@@ -302,7 +325,7 @@ public final class GrpcServiceBuilder {
      * processing. If disabled, the request timeout will be the one configured for the Armeria server, e.g.,
      * using {@link ServerBuilder#requestTimeout(Duration)}.
      *
-     * <p>It is recommended to disable this when clients are not trusted code, e.g., for grpc-web clients that
+     * <p>It is recommended to disable this when clients are not trusted code, e.g., for gRPC-Web clients that
      * can come from arbitrary browsers.
      */
     public GrpcServiceBuilder useClientTimeoutHeader(boolean useClientTimeoutHeader) {
@@ -318,7 +341,20 @@ public final class GrpcServiceBuilder {
      * without interfering with other services.
      */
     public GrpcService build() {
-        final HandlerRegistry handlerRegistry = registryBuilder.build();
+        final HandlerRegistry handlerRegistry;
+        if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
+            final HandlerRegistry registry = registryBuilder.build();
+            final ServerInterceptor coroutineContextInterceptor =
+                    new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
+            final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
+            for (ServerServiceDefinition serviceDefinition : registry.services()) {
+                registryBuilder.addService(ServerInterceptors.intercept(serviceDefinition,
+                                                                        coroutineContextInterceptor));
+            }
+            handlerRegistry = registryBuilder.build();
+        } else {
+            handlerRegistry = registryBuilder.build();
+        }
 
         final GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,

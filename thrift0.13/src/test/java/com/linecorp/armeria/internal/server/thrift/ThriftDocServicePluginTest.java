@@ -84,10 +84,10 @@ class ThriftDocServicePluginTest {
 
         // Ensure each service contains the endpoint and does not have example HTTP headers.
         final ServiceInfo helloServiceInfo = services.get(HELLO_NAME);
-        assertThat(helloServiceInfo.exampleHttpHeaders()).isEmpty();
+        assertThat(helloServiceInfo.exampleHeaders()).isEmpty();
 
         final ServiceInfo fooServiceInfo = services.get(FOO_NAME);
-        assertThat(fooServiceInfo.exampleHttpHeaders()).isEmpty();
+        assertThat(fooServiceInfo.exampleHeaders()).isEmpty();
 
         // Ensure the example request is empty as well.
         final Map<String, MethodInfo> methods =
@@ -100,6 +100,41 @@ class ThriftDocServicePluginTest {
         assertThat(bar4.endpoints())
                 .containsExactly(EndpointInfo.builder("*", "/foo")
                                              .defaultFormat(ThriftSerializationFormats.COMPACT).build());
+    }
+
+    @Test
+    public void multiplePaths() {
+        final Server server =
+                Server.builder()
+                      .service(Route.builder()
+                                    .exact("/foo1")
+                                    .build(),
+                               THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                      ThriftSerializationFormats.COMPACT))
+                      .service(Route.builder()
+                                    .exact("/foo2")
+                                    .build(),
+                               THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                      ThriftSerializationFormats.COMPACT))
+                      .build();
+        final ServiceSpecification specification = generator.generateSpecification(
+                ImmutableSet.copyOf(server.serviceConfigs()),
+                unifyFilter((plugin, service, method) -> true,
+                            (plugin, service, method) -> false));
+
+        final ServiceInfo fooServiceInfo = specification.services().iterator().next();
+        final Map<String, MethodInfo> methods =
+                fooServiceInfo.methods().stream()
+                              .collect(toImmutableMap(MethodInfo::name, Function.identity()));
+        final MethodInfo bar4 = methods.get("bar4");
+        assertThat(bar4.endpoints())
+                .containsExactlyInAnyOrder(
+                        EndpointInfo.builder("*", "/foo1")
+                                    .defaultFormat(ThriftSerializationFormats.COMPACT)
+                                    .build(),
+                        EndpointInfo.builder("*", "/foo2")
+                                    .defaultFormat(ThriftSerializationFormats.COMPACT)
+                                    .build());
     }
 
     @Test
@@ -290,8 +325,8 @@ class ThriftDocServicePluginTest {
         assertThat(bar6.exceptionTypeSignatures()).isEmpty();
         assertThat(bar6.exampleRequests()).isEmpty();
 
-        final List<HttpHeaders> exampleHttpHeaders = service.exampleHttpHeaders();
-        assertThat(exampleHttpHeaders).isEmpty();
+        final List<HttpHeaders> exampleHeaders = service.exampleHeaders();
+        assertThat(exampleHeaders).isEmpty();
     }
 
     @Test

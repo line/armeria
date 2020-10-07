@@ -91,6 +91,15 @@ implements <type://HttpServiceWithRoutes>, which dynamically provides <typeplura
 
 </Tip>
 
+<Tip>
+
+<type://GrpcService> supports [gRPC][gRPC], [gRPC-Web][gRPC-Web] and [Protobuf-JSON][Protobuf-JSON] by default.
+If you don't want your <type://GrpcService> support all those formats, specify the formats you want
+using <type://GrpcServiceBuilder#supportedSerializationFormats(Iterable)>.
+
+</Tip>
+
+
 ## Decorating a `GrpcService`
 
 Unlike a usual Armeria service, <type://GrpcService> implements a special interface called
@@ -116,26 +125,8 @@ See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewi
 
 <type://GrpcService> supports the [gRPC-Web][gRPC-Web] protocol,
 a small modification to the [gRPC][gRPC] wire format that can be used from a browser.
-To enable it for a <type://GrpcService>, add the web formats from
-<type://GrpcSerializationFormats> to the <type://GrpcServiceBuilder>. It is usually convenient
-to just pass <type://GrpcSerializationFormats#values()>.
-
-```java
-import com.linecorp.armeria.server.grpc.GrpcSerializationFormats;
-
-ServerBuilder sb = Server.builder();
-...
-sb.service(GrpcService.builder()
-                      .addService(new MyHelloService())
-                      .supportedSerializationFormats(GrpcSerializationFormats.values())
-                      .build());
-...
-Server server = sb.build();
-server.start();
-```
-The server will support both native [gRPC][gRPC] and [gRPC-Web][gRPC-Web] from the same endpoint. Use the unofficial
-[gRPC-Web-Client][gRPC-Web-Client] to access the service from a browser. [gRPC-Web][gRPC-Web] does not support RPC methods with streaming
-requests.
+Use the [gRPC-Web-Client][gRPC-Web-Client] to access the service from a browser.
+[gRPC-Web][gRPC-Web] does not support RPC methods with streaming requests.
 
 If the origin of the Javascript and API server are different, [gRPC-Web-Client][gRPC-Web-Client] first sends `preflight`
 requests by the HTTP `OPTIONS` method, in order to determine whether the actual request is safe to send
@@ -162,7 +153,6 @@ final CorsServiceBuilder corsBuilder =
 
 sb.service(GrpcService.builder()
                       .addService(new MyHelloService())
-                      .supportedSerializationFormats(GrpcSerializationFormats.values())
                       .build(),
            corsBuilder.newDecorator(),
            LoggingService.newDecorator());
@@ -185,9 +175,6 @@ ServerBuilder sb = Server.builder();
 sb.service(GrpcService.builder()
                       .addService(new MyHelloService())
                       .enableUnframedRequests(true)
-                      // Needed to support JSON in addition to binary
-                      .supportedSerializationFormats(GrpcSerializationFormats.PROTO,
-                                                     GrpcSerializationFormats.JSON)
                       .build());
 ...
 Server server = sb.build();
@@ -284,6 +271,6 @@ For more information, see the official [gRPC Server Reflection tutorial](https:/
 
 [gRPC]: https://grpc.io/
 [gRPC-Web]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
-[gRPC-Web-Client]: https://github.com/improbable-eng/grpc-web
+[gRPC-Web-Client]: https://grpc.io/docs/languages/web/quickstart/
 [Protobuf-JSON]: https://developers.google.com/protocol-buffers/docs/proto3#json
 [the gRPC-Java README]: https://github.com/grpc/grpc-java/blob/master/README.md#download

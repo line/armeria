@@ -32,8 +32,8 @@ import com.linecorp.armeria.internal.common.util.TransportType;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -59,7 +59,8 @@ public final class TestDnsServer implements AutoCloseable {
     public static DnsRecord newAddressRecord(String name, String ipAddr, long ttl) {
         return new DefaultDnsRawRecord(
                 name, NetUtil.isValidIpV4Address(ipAddr) ? A : AAAA,
-                ttl, Unpooled.wrappedBuffer(NetUtil.createByteArrayFromIpAddressString(ipAddr)));
+                ttl, Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(
+                NetUtil.createByteArrayFromIpAddressString(ipAddr))));
     }
 
     private final Channel channel;
@@ -70,13 +71,13 @@ public final class TestDnsServer implements AutoCloseable {
     }
 
     public TestDnsServer(Map<DnsQuestion, DnsResponse> responses,
-                         @Nullable ChannelInboundHandlerAdapter beforeDnsServerHandler) {
+                         @Nullable ChannelHandler beforeDnsServerHandler) {
         this.responses = ImmutableMap.copyOf(responses);
 
         final Bootstrap b = new Bootstrap();
         b.channel(TransportType.datagramChannelType(CommonPools.workerGroup()));
         b.group(CommonPools.workerGroup());
-        b.handler(new ChannelInitializer() {
+        b.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
                 final ChannelPipeline p = ch.pipeline();

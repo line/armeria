@@ -1,5 +1,3 @@
-import versions from '../../../gen-src/versions.json';
-
 # Using Armeria with Spring WebFlux
 
 <Tip>
@@ -20,51 +18,21 @@ with Armeria, you can leverage the following:
   interoperability with load balancers such as [HAProxy](https://www.haproxy.org/) and
   [AWS ELB](https://aws.amazon.com/elasticloadbalancing/)
 
-Armeria can be plugged in as the underlying HTTP server for a Spring WebFlux application by adding
+Armeria can be plugged in as the underlying HTTP server for a Spring Boot 2 WebFlux application by adding
 the following dependency:
-- For Maven:
 
-  <CodeBlock language="xml">{`
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>com.linecorp.armeria</groupId>
-        <artifactId>armeria-bom</artifactId>
-        <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty-bom</artifactId>
-        <version>${versions['io.netty:netty-bom']}</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>\n
-  <dependency>
-      <groupId>com.linecorp.armeria</groupId>
-      <artifactId>armeria-spring-boot-webflux-starter</artifactId>
-  </dependency>
-  `}</CodeBlock>
-
-- For Gradle:
-
-  <CodeBlock language="groovy">{`
-  plugins {
-      id "org.springframework.boot" version "${versions['org.springframework.boot:spring-boot-starter']}"
-  }\n
-  dependencyManagement {
-      imports {
-          mavenBom 'com.linecorp.armeria:armeria-bom:${versions['com.linecorp.armeria:armeria-bom']}'
-          mavenBom 'io.netty:netty-bom:${versions['io.netty:netty-bom']}'
-      }
-  }\n
-  dependencies {
-      compile 'com.linecorp.armeria:armeria-spring-boot-webflux-starter'
-  }
-  `}</CodeBlock>
+<RequiredDependencies
+  boms={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' },
+    { groupId: 'io.netty', artifactId: 'netty-bom' },
+  ]}
+  dependencies={[
+    {
+      groupId: 'com.linecorp.armeria',
+      artifactId: 'armeria-spring-boot2-webflux-starter',
+    },
+  ]}
+/>
 
 The above starter configures Armeria as the HTTP server for WebFlux to run on by referring to `application.yml`
 when the application starts up. A user can customize the server configuration with the same properties
@@ -132,9 +100,9 @@ public class ArmeriaConfiguration {
         // Customize the client using the given WebClientBuilder. For example:
         return builder -> {
             // Use a circuit breaker for each remote host.
-            final CircuitBreakerStrategy strategy =
-                    CircuitBreakerStrategy.onServerErrorStatus();
-            builder.decorator(CircuitBreakerClient.builder(strategy)
+            final CircuitBreakerRule rule =
+                    CircuitBreakerRule.onServerErrorStatus();
+            builder.decorator(CircuitBreakerClient.builder(rule)
                                                   .newDecorator());
 
             // Set a custom client factory.

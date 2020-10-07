@@ -22,11 +22,8 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 
@@ -41,33 +38,21 @@ import io.netty.util.AsciiString;
 public final class GrpcTrailersUtil {
 
     /**
-     * Converts the given gRPC status code, and optionally an error message, to headers. The headers will be
-     * either trailers-only or normal trailers based on {@code headersSent}, whether leading headers have
-     * already been sent to the client.
+     * Adds the given gRPC status code, and optionally an error message, to the specified
+     * {@link HttpHeadersBuilder}. This will also set the {@code endOfStream} of the {@link HttpHeadersBuilder}
+     * as {@code true}.
      */
-    public static HttpHeadersBuilder statusToTrailers(int code, @Nullable String message, boolean headersSent) {
-        final HttpHeadersBuilder trailers;
-        if (headersSent) {
-            // Normal trailers.
-            trailers = HttpHeaders.builder();
-        } else {
-            // Trailers only response
-            trailers = ResponseHeaders.builder()
-                                      .endOfStream(true)
-                                      .add(HttpHeaderNames.STATUS, HttpStatus.OK.codeAsText())
-                                      .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto");
-        }
-        trailers.add(GrpcHeaderNames.GRPC_STATUS, Integer.toString(code));
-
+    public static void addStatusMessageToTrailers(
+            HttpHeadersBuilder trailersBuilder, int code, @Nullable String message) {
+        trailersBuilder.endOfStream(true);
+        trailersBuilder.add(GrpcHeaderNames.GRPC_STATUS, Integer.toString(code));
         if (message != null) {
-            trailers.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(message));
+            trailersBuilder.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(message));
         }
-
-        return trailers;
     }
 
     /**
-     * Serializes the specified {@link HttpHeaders} to send as a body in grpc-web.
+     * Serializes the specified {@link HttpHeaders} to send as a body in gRPC-Web.
      */
     public static ByteBuf serializeTrailersAsMessage(ByteBufAllocator alloc, HttpHeaders trailers) {
         final ByteBuf serialized = alloc.buffer();

@@ -48,7 +48,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AsyncCloseable;
@@ -231,9 +230,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * {@link HealthCheckedEndpointGroup} with the default meter names.
      */
     public MeterBinder newMeterBinder(String groupName) {
-        return newMeterBinder(new MeterIdPrefix(Flags.useLegacyMeterNames() ? "armeria.client.endpointGroup"
-                                                                            : "armeria.client.endpoint.group",
-                                                "name", groupName));
+        return newMeterBinder(new MeterIdPrefix("armeria.client.endpoint.group", "name", groupName));
     }
 
     /**

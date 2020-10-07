@@ -73,6 +73,12 @@ const IndexPage: React.FC<RouteComponentProps> = (props) => {
     <BaseLayout
       location={props.location}
       pageTitle="Armeria &ndash; Your go-to microservice framework"
+      pageDescription={
+        'Armeria is your go-to microservice framework for any situation. ' +
+        'You can build any type of microservice leveraging your favorite technologies, ' +
+        'including gRPC, Thrift, Kotlin, Retrofit, Reactive Streams, Spring Boot and Dropwizard. ' +
+        'Brought to you by the creator of Netty and his colleagues at LINE.'
+      }
       contentClassName={styles.wrapper}
     >
       <Marketing className={styles.slogan}>
@@ -154,7 +160,7 @@ const IndexPage: React.FC<RouteComponentProps> = (props) => {
                 .build())
               .service(
                 "/api/thrift",
-                ThriftService.of(myThriftServiceImpl));
+                ThriftService.of(myThriftServiceImpl))
               .service(
                 "prefix:/files",
                 FileService.of(new File("/var/www")))
@@ -256,7 +262,7 @@ const IndexPage: React.FC<RouteComponentProps> = (props) => {
             {`
             Server
               .builder()
-              .service((ctx, req) -> ...);
+              .service((ctx, req) -> ...)
               .decorator(
                 MetricCollectingService.newDecorator(...))
               .decorator(

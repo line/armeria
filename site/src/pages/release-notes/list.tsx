@@ -1,3 +1,4 @@
+import { Typography } from 'antd';
 import React, { useCallback } from 'react';
 
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
@@ -5,6 +6,8 @@ import ListAllLayout from '../../layouts/list-all';
 import ReleaseNotesLayout from '../../layouts/release-notes';
 
 import allReleases from '../../../gen-src/release-notes-all.json';
+
+const { Title, Paragraph } = Typography;
 
 export default (props: any) => {
   const allPaths = Object.keys(allReleases);
@@ -30,8 +33,10 @@ export default (props: any) => {
         return `Version ${majorVersion}`;
       }, [])}
     >
-      <h2 id="even-older-versions">Even older versions</h2>
-      <p>
+      <Title id="even-older-versions" level={2}>
+        Even older versions
+      </Title>
+      <Paragraph>
         See{' '}
         <OutboundLink
           href={`https://github.com/line/armeria/releases?after=armeria-${pagePathToVersion(
@@ -41,7 +46,7 @@ export default (props: any) => {
           Github releases page
         </OutboundLink>
         .
-      </p>
+      </Paragraph>
     </ListAllLayout>
   );
 };

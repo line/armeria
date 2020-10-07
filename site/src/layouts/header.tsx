@@ -6,7 +6,7 @@ import {
   SlackOutlined,
 } from '@ant-design/icons';
 import { RouteComponentProps } from '@reach/router';
-import { Layout, Menu, Drawer, Button } from 'antd';
+import { Layout, Menu, Drawer, Button, Typography } from 'antd';
 import Link from 'gatsby-link';
 import { OutboundLink } from 'gatsby-plugin-google-analytics';
 import React, { useState, useCallback, useLayoutEffect } from 'react';
@@ -18,6 +18,7 @@ import Mailchimp from '../components/mailchimp';
 import styles from './header.module.less';
 
 const { Header } = Layout;
+const { Paragraph } = Typography;
 
 const selectableKeysAndRegexes = {
   news: /\/news(\/|$)/,
@@ -163,7 +164,7 @@ const HeaderComponent: React.FC<HeaderComponentProps> = (props) => {
                   </OutboundLink>
                 </div>
                 <div className={styles.sidebarNewsletter}>
-                  <p>Like what we&apos;re doing?</p>
+                  <Paragraph>Like what we&apos;re doing?</Paragraph>
                   <Mailchimp />
                 </div>
                 {props.extraSidebarContent ? (

@@ -39,23 +39,23 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
  * {@link WebClient}, it is recommended to use the {@link WebClientBuilder} or
  * factory methods in {@link WebClient}.
  *
- * <h3>How are decorators and HTTP headers configured?</h3>
+ * <h2>How are decorators and HTTP headers configured?</h2>
  *
  * <p>Unlike other options, when a user calls {@link #option(ClientOption, Object)} or {@code options()} with
- * a {@link ClientOptions#DECORATION} or a {@link ClientOptions#HTTP_HEADERS}, this builder will not simply
+ * a {@link ClientOptions#DECORATION} or a {@link ClientOptions#HEADERS}, this builder will not simply
  * replace the old option but <em>merge</em> the specified option into the previous option value. For example:
  * <pre>{@code
  * ClientOptionsBuilder b = ClientOptions.builder();
- * b.option(ClientOption.HTTP_HEADERS, headersA);
- * b.option(ClientOption.HTTP_HEADERS, headersB);
+ * b.option(ClientOption.HEADERS, headersA);
+ * b.option(ClientOption.HEADERS, headersB);
  * b.option(ClientOption.DECORATION, decorationA);
  * b.option(ClientOption.DECORATION, decorationB);
  *
  * ClientOptions opts = b.build();
- * HttpHeaders httpHeaders = opts.httpHeaders();
+ * HttpHeaders headers = opts.headers();
  * ClientDecoration decorations = opts.decoration();
  * }</pre>
- * {@code httpHeaders} will contain all HTTP headers of {@code headersA} and {@code headersB}.
+ * {@code headers} will contain all HTTP headers of {@code headersA} and {@code headersB}.
  * If {@code headersA} and {@code headersB} have the headers with the same name, the duplicate header in
  * {@code headerB} will replace the one with the same name in {@code headerA}.
  * Similarly, {@code decorations} will contain all decorators of {@code decorationA} and {@code decorationB},
@@ -198,6 +198,11 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientBuilder clearDecorators() {
+        return (ClientBuilder) super.clearDecorators();
+    }
+
+    @Override
     public ClientBuilder rpcDecorator(
             Function<? super RpcClient, ? extends RpcClient> decorator) {
         return (ClientBuilder) super.rpcDecorator(decorator);
@@ -209,25 +214,25 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public ClientBuilder addHttpHeader(CharSequence name, Object value) {
-        return (ClientBuilder) super.addHttpHeader(name, value);
+    public ClientBuilder addHeader(CharSequence name, Object value) {
+        return (ClientBuilder) super.addHeader(name, value);
     }
 
     @Override
-    public ClientBuilder addHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (ClientBuilder) super.addHttpHeaders(httpHeaders);
+    public ClientBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (ClientBuilder) super.addHeaders(headers);
     }
 
     @Override
-    public ClientBuilder setHttpHeader(CharSequence name, Object value) {
-        return (ClientBuilder) super.setHttpHeader(name, value);
+    public ClientBuilder setHeader(CharSequence name, Object value) {
+        return (ClientBuilder) super.setHeader(name, value);
     }
 
     @Override
-    public ClientBuilder setHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (ClientBuilder) super.setHttpHeaders(httpHeaders);
+    public ClientBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (ClientBuilder) super.setHeaders(headers);
     }
 
     @Override

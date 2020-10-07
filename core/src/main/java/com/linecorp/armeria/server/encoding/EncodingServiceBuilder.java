@@ -80,14 +80,14 @@ public final class EncodingServiceBuilder {
      */
     public EncodingServiceBuilder encodableContentTypes(Iterable<MediaType> contentTypes) {
         final List<MediaType> snapshot = ImmutableList.copyOf(requireNonNull(contentTypes, "contentTypes"));
-        return encodableContentTypePredicate(mediaType -> snapshot.stream().anyMatch(mediaType::belongsTo));
+        return encodableContentTypes(mediaType -> snapshot.stream().anyMatch(mediaType::belongsTo));
     }
 
     /**
      * Sets the specified {@link Predicate} to evaluate whether the content type of the {@link HttpResponse} is
      * encodable or not.
      */
-    public EncodingServiceBuilder encodableContentTypePredicate(
+    public EncodingServiceBuilder encodableContentTypes(
             Predicate<MediaType> encodableContentTypePredicate) {
         requireNonNull(encodableContentTypePredicate, "encodableContentTypePredicate");
         this.encodableContentTypePredicate = encodableContentTypePredicate;
@@ -99,7 +99,7 @@ public final class EncodingServiceBuilder {
      * {@link HttpRequest} whose {@link RequestHeaders} is the input of the {@link Predicate}
      * is encodable or not.
      */
-    public EncodingServiceBuilder encodableRequestHeadersPredicate(
+    public EncodingServiceBuilder encodableRequestHeaders(
             Predicate<? super RequestHeaders> encodableRequestHeadersPredicate) {
         requireNonNull(encodableRequestHeadersPredicate, "encodableRequestHeadersPredicate");
         this.encodableRequestHeadersPredicate = encodableRequestHeadersPredicate;

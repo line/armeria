@@ -75,9 +75,7 @@ class ServiceRequestContextTest {
         assertCurrentCtx(null);
 
         try (SafeCloseable unused = clientRequestContext().push()) {
-            assertThatThrownBy(ServiceRequestContext::currentOrNull)
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("not a server-side context");
+            assertThat(ServiceRequestContext.currentOrNull()).isNull();
         }
     }
 

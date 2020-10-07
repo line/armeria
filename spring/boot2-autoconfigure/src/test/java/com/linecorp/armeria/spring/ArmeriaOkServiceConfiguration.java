@@ -19,8 +19,6 @@ package com.linecorp.armeria.spring;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -31,12 +29,12 @@ import com.linecorp.armeria.server.logging.LoggingService;
 @Configuration
 class ArmeriaOkServiceConfiguration {
     @Bean
-    public HttpServiceRegistrationBean okService() {
-        return new HttpServiceRegistrationBean()
-                .setServiceName("okService")
-                .setService(new OkService())
-                .setRoute(Route.builder().path("/ok").build())
-                .setDecorators(ImmutableList.of(LoggingService.newDecorator()));
+    public ArmeriaServerConfigurator okService() {
+        return sb -> sb.route()
+                       .addRoute(Route.builder().path("/ok").build())
+                       .defaultServiceName("okService")
+                       .decorators(LoggingService.newDecorator())
+                       .build(new OkService());
     }
 
     public static class OkService extends AbstractHttpService {

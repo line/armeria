@@ -22,8 +22,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -42,6 +46,7 @@ class WebClientBuilderTest {
                 }
                 return HttpResponse.of(pathAndQuery);
             });
+            sb.service("/head", (ctx, req) -> HttpResponse.of("Hello Armeria"));
         }
     };
 
@@ -69,6 +74,26 @@ class WebClientBuilderTest {
         final WebClient client = WebClient.builder("http", Endpoint.of("127.0.0.1"), "/foo")
                                           .build();
         assertThat(client.uri().toString()).isEqualTo("http://127.0.0.1/foo");
+    }
+
+    @Test
+    void headWithHttp1() {
+        final WebClient webClient = WebClient.of("h1c://127.0.0.1:" + server.httpPort());
+        final AggregatedHttpResponse res = webClient.head("/head").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualTo("13");
+        assertThat(res.content().isEmpty()).isTrue();
+    }
+
+    @Test
+    void headWithHttp2() {
+        final WebClient webClient = WebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = webClient.head("/head").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentType()).isSameAs(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isEqualTo("13");
+        assertThat(res.content().isEmpty()).isTrue();
     }
 
     @Test

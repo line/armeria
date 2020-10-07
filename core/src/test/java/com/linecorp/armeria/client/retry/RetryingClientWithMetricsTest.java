@@ -118,10 +118,14 @@ class RetryingClientWithMetricsTest {
         // wait until 3 calls are recorded.
         await().untilAsserted(() -> {
             assertThat(MoreMeters.measureAll(meterRegistry))
-                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=success}", 1.0)
-                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=failure}", 0.0)
-                    .containsEntry("foo.requests#count{http.status=500,method=GET,result=success}", 0.0)
-                    .containsEntry("foo.requests#count{http.status=500,method=GET,result=failure}", 2.0);
+                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=success,service=none}",
+                                   1.0)
+                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=failure,service=none}",
+                                   0.0)
+                    .containsEntry("foo.requests#count{http.status=500,method=GET,result=success,service=none}",
+                                   0.0)
+                    .containsEntry("foo.requests#count{http.status=500,method=GET,result=failure,service=none}",
+                                   2.0);
         });
     }
 
@@ -142,10 +146,14 @@ class RetryingClientWithMetricsTest {
         // wait until 2 calls are recorded.
         await().untilAsserted(() -> {
             assertThat(MoreMeters.measureAll(meterRegistry))
-                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=success}", 1.0)
-                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=failure}", 0.0)
-                    .containsEntry("foo.requests#count{http.status=0,method=GET,result=success}", 0.0)
-                    .containsEntry("foo.requests#count{http.status=0,method=GET,result=failure}", 1.0);
+                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=success,service=none}",
+                                   1.0)
+                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=failure,service=none}",
+                                   0.0)
+                    .containsEntry("foo.requests#count{http.status=0,method=GET,result=success,service=none}",
+                                   0.0)
+                    .containsEntry("foo.requests#count{http.status=0,method=GET,result=failure,service=none}",
+                                   1.0);
         });
     }
 
@@ -165,8 +173,10 @@ class RetryingClientWithMetricsTest {
         // wait until 1 call is recorded.
         await().untilAsserted(() -> {
             assertThat(MoreMeters.measureAll(meterRegistry))
-                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=success}", 1.0)
-                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=failure}", 0.0);
+                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=success,service=none}",
+                                   1.0)
+                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=failure,service=none}",
+                                   0.0);
         });
     }
 
@@ -188,8 +198,10 @@ class RetryingClientWithMetricsTest {
         // wait until 1 call is recorded.
         await().untilAsserted(() -> {
             assertThat(MoreMeters.measureAll(meterRegistry))
-                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=success}", 1.0)
-                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=failure}", 0.0);
+                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=success,service=none}",
+                                   1.0)
+                    .containsEntry("foo.requests#count{http.status=200,method=GET,result=failure,service=none}",
+                                   0.0);
         });
     }
 }

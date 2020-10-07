@@ -19,8 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.timeout;
-import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
 import java.util.Iterator;
@@ -29,6 +27,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +42,7 @@ import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.TimeoutController;
+import com.linecorp.armeria.internal.common.TimeoutScheduler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
@@ -218,7 +217,7 @@ class DefaultClientRequestContextTest {
                         HttpMethod.POST, "/foo",
                         HttpHeaderNames.SCHEME, "http",
                         HttpHeaderNames.AUTHORITY, "example.com:8080")),
-                null, System.nanoTime(), SystemInfo.currentTimeMicros());
+                null, new TimeoutScheduler(0), System.nanoTime(), SystemInfo.currentTimeMicros());
         ctx.init(Endpoint.of("example.com", 8080));
         return ctx;
     }
@@ -228,23 +227,22 @@ class DefaultClientRequestContextTest {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext ctx = ClientRequestContext.of(req);
 
-        final long oldResponseTimeout1 = ctx.responseTimeoutMillis();
-        ctx.setResponseTimeoutMillis(TimeoutMode.EXTEND, 1000);
-        await().untilAsserted(() -> {
+        ctx.eventLoop().execute(() -> {
+            ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW, 1000);
+            final long oldResponseTimeout1 = ctx.responseTimeoutMillis();
+            ctx.setResponseTimeoutMillis(TimeoutMode.EXTEND, 1000);
             assertThat(ctx.responseTimeoutMillis()).isEqualTo(oldResponseTimeout1 + 1000);
-        });
 
-        final long oldResponseTimeout2 = ctx.responseTimeoutMillis();
-        ctx.setResponseTimeout(TimeoutMode.EXTEND, Duration.ofSeconds(-2));
-        await().untilAsserted(() -> {
+            final long oldResponseTimeout2 = ctx.responseTimeoutMillis();
+            ctx.setResponseTimeout(TimeoutMode.EXTEND, Duration.ofSeconds(-2));
             assertThat(ctx.responseTimeoutMillis()).isEqualTo(oldResponseTimeout2 - 2000);
-        });
 
-        final long oldResponseTimeout3 = ctx.responseTimeoutMillis();
-        ctx.setResponseTimeoutMillis(TimeoutMode.EXTEND, 0);
-        await().untilAsserted(() -> {
+            final long oldResponseTimeout3 = ctx.responseTimeoutMillis();
+            ctx.setResponseTimeoutMillis(TimeoutMode.EXTEND, 0);
             assertThat(ctx.responseTimeoutMillis()).isEqualTo(oldResponseTimeout3);
+            finished.set(true);
         });
+        await().untilTrue(finished);
     }
 
     @Test
@@ -313,45 +311,20 @@ class DefaultClientRequestContextTest {
     }
 
     @Test
-    void clearResponseTimeoutWithPendingTask() {
-        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final DefaultClientRequestContext ctx =
-                (DefaultClientRequestContext) ClientRequestContext.builder(req)
-                                                                  .noTimeoutController()
-                                                                  .build();
-
-        ctx.clearResponseTimeout();
-        final TimeoutController timeoutController = mock(TimeoutController.class);
-        ctx.setResponseTimeoutController(timeoutController);
-
-        verify(timeoutController, timeout(1000)).cancelTimeout();
-        assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
-    }
-
-    @Test
     void setResponseTimeoutFromStart() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext ctx = ClientRequestContext.of(req);
 
         ctx.eventLoop().execute(() -> {
             ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 1000);
-            assertThat(ctx.responseTimeoutMillis()).isEqualTo(1000);
+            assertThat(ctx.responseTimeoutMillis()).isCloseTo(1000, Offset.offset(200L));
             ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 2000);
-            assertThat(ctx.responseTimeoutMillis()).isEqualTo(2000);
+            assertThat(ctx.responseTimeoutMillis()).isCloseTo(2000, Offset.offset(200L));
             ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 0);
             assertThat(ctx.responseTimeoutMillis()).isEqualTo(0);
             finished.set(true);
         });
         await().untilTrue(finished);
-    }
-
-    @Test
-    void setResponseTimeoutZeroFromStart() {
-        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
-
-        ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_START, 0);
-        await().untilAsserted(() -> assertThat(ctx.responseTimeoutMillis()).isEqualTo(0));
     }
 
     @Test

@@ -128,6 +128,8 @@ import io.grpc.reflection.v1alpha.ServerReflectionRequest;
 import io.grpc.reflection.v1alpha.ServerReflectionResponse;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
@@ -992,6 +994,45 @@ class GrpcServiceServerTest {
                         GrpcTestUtil.uncompressedFrame(
                                 GrpcTestUtil.protoByteBuf(RESPONSE_MESSAGE)),
                         serializedTrailers));
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+            assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+        });
+    }
+
+    @Test
+    void grpcWebText() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri());
+        final byte[] body = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
+        final HttpResponse httpResponse = client.execute(
+                RequestHeaders.of(HttpMethod.POST,
+                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc-web-text"),
+                Base64.getEncoder().encode(body));
+        final AggregatedHttpResponse response = new FilteredHttpResponse(httpResponse) {
+            @Override
+            protected HttpObject filter(HttpObject obj) {
+                if (obj instanceof HttpData) {
+                    final HttpData data = (HttpData) obj;
+                    final ByteBuf buf = data.byteBuf();
+                    final ByteBuf decoded = Unpooled.wrappedBuffer(
+                            Base64.getDecoder().decode(buf.nioBuffer()));
+                    buf.release();
+                    return HttpData.wrap(decoded);
+                }
+                return obj;
+            }
+        }.aggregate().join();
+        final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
+        final byte[] serializedTrailers = Bytes.concat(
+                new byte[] { TRAILERS_FRAME_HEADER },
+                Ints.toByteArray(serializedStatusHeader.length),
+                serializedStatusHeader);
+        assertThat(response.content().array()).containsExactly(
+                Bytes.concat(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.protoByteBuf(RESPONSE_MESSAGE)),
+                             serializedTrailers));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");

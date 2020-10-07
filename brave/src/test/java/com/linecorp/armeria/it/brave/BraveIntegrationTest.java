@@ -260,30 +260,31 @@ class BraveIntegrationTest {
     @Test
     void testTimingAnnotations() {
         // Use separate client factory to make sure connection is created.
-        final ClientFactory clientFactory = ClientFactory.builder().build();
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .factory(clientFactory)
-                                          .decorator(BraveClient.newDecorator(newTracing("timed-client")))
-                                          .build();
-        assertThat(client.get("/http").aggregate().join().status()).isEqualTo(HttpStatus.OK);
-        final MutableSpan[] initialConnectSpans = spanHandler.take(1);
-        assertThat(initialConnectSpans[0].annotations())
-                .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
-                "connection-acquire.start",
-                "socket-connect.start",
-                "socket-connect.end",
-                "connection-acquire.end",
-                "ws",
-                "wr");
+        try (ClientFactory clientFactory = ClientFactory.builder().build()) {
+            final WebClient client = WebClient.builder(server.httpUri())
+                                              .factory(clientFactory)
+                                              .decorator(BraveClient.newDecorator(newTracing("timed-client")))
+                                              .build();
+            assertThat(client.get("/http").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+            final MutableSpan[] initialConnectSpans = spanHandler.take(1);
+            assertThat(initialConnectSpans[0].annotations())
+                    .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
+                    "connection-acquire.start",
+                    "socket-connect.start",
+                    "socket-connect.end",
+                    "connection-acquire.end",
+                    "ws",
+                    "wr");
 
-        // Make another request which will reuse the connection so no connection timing.
-        assertThat(client.get("/http").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+            // Make another request which will reuse the connection so no connection timing.
+            assertThat(client.get("/http").aggregate().join().status()).isEqualTo(HttpStatus.OK);
 
-        final MutableSpan[] secondConnectSpans = spanHandler.take(1);
-        assertThat(secondConnectSpans[0].annotations())
-                .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
-                "ws",
-                "wr");
+            final MutableSpan[] secondConnectSpans = spanHandler.take(1);
+            assertThat(secondConnectSpans[0].annotations())
+                    .extracting(Map.Entry::getValue).containsExactlyInAnyOrder(
+                    "ws",
+                    "wr");
+        }
     }
 
     @Test
@@ -291,6 +292,10 @@ class BraveIntegrationTest {
         assertThat(zipClient.hello("Lee")).isEqualTo("Hello, Lee!, and Hello, Lee!");
 
         final MutableSpan[] spans = spanHandler.take(6);
+        for (MutableSpan span : spans) {
+            assertThat(span.name()).isEqualTo("hello");
+        }
+
         final String traceId = spans[0].traceId();
         assertThat(spans).allMatch(s -> s.traceId().equals(traceId));
     }

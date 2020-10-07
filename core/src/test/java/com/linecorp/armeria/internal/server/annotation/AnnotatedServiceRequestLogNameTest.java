@@ -32,10 +32,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ServiceName;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -56,6 +54,12 @@ class AnnotatedServiceRequestLogNameTest {
                     return delegate.serve(ctx, req);
                 });
             });
+
+            sb.annotatedService()
+              .pathPrefix("/configured")
+              .defaultServiceName("ConfiguredService")
+              .defaultLogName("ConfiguredLog")
+              .build(new BarService());
 
             sb.decorator((delegate, ctx, req) -> {
                 logs.add(ctx.log());
@@ -134,11 +138,28 @@ class AnnotatedServiceRequestLogNameTest {
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
     }
 
+    @Test
+    void customServiceNameWithConfiguration() throws Exception {
+        AggregatedHttpResponse response = client.get("/configured/foo").aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo("OK");
+
+        RequestLog log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo("ConfiguredService");
+        assertThat(log.name()).isEqualTo("ConfiguredLog");
+        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
+
+        response = client.get("/configured/bar").aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo("OK");
+
+        log = logs.take().whenComplete().join();
+        assertThat(log.serviceName()).isEqualTo("ConfiguredService");
+        assertThat(log.name()).isEqualTo("ConfiguredLog");
+        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.OK);
+    }
+
     private static class FooService {
         @Get("/ok")
-        public String foo(ServiceRequestContext ctx) {
-            assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
-                    .isEqualTo(FooService.class.getName());
+        public String foo() {
             return "OK";
         }
 
@@ -157,9 +178,7 @@ class AnnotatedServiceRequestLogNameTest {
 
         @ServiceName("SecuredBarService")
         @Get("/bar")
-        public String secured(ServiceRequestContext ctx) {
-            assertThat(ctx.log().ensureAvailable(RequestLogProperty.NAME).serviceName())
-                    .isEqualTo("SecuredBarService");
+        public String secured() {
             return "OK";
         }
     }

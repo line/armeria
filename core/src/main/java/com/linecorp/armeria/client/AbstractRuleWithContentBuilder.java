@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -50,16 +48,6 @@ public abstract class AbstractRuleWithContentBuilder<T extends Response> extends
      */
     protected AbstractRuleWithContentBuilder(
             BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
-        super(requestHeadersFilter);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code requestHeadersFilter}.
-     *
-     * @deprecated Use {@link #AbstractRuleWithContentBuilder(BiPredicate)}.
-     */
-    @Deprecated
-    protected AbstractRuleWithContentBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
     }
 
@@ -102,18 +90,6 @@ public abstract class AbstractRuleWithContentBuilder<T extends Response> extends
             };
         }
         return this;
-    }
-
-    /**
-     * Adds the specified {@code responseFilter}.
-     *
-     * @deprecated Use {@link #onResponse(BiFunction)}.
-     */
-    @Deprecated
-    public AbstractRuleWithContentBuilder<T> onResponse(
-            Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {
-        requireNonNull(responseFilter, "responseFilter");
-        return onResponse((unused, res) -> responseFilter.apply(res));
     }
 
     /**

@@ -150,7 +150,7 @@ public final class ServerBuilder {
             EpollChannelOption.EPOLL_MODE);
 
     @VisibleForTesting
-    static final long MIN_PING_INTERVAL_MILLIS = 10_000L;
+    static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
 
     static {
@@ -931,8 +931,8 @@ public final class ServerBuilder {
             checkNotNull(decorated, "A decorator returned null: %s", d);
         }
 
-        final HttpService decorator = decorated;
-        serviceWithRoutes.routes().forEach(route -> service(route, decorator));
+        final HttpService finalDecorated = decorated;
+        serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
         return this;
     }
 

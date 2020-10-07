@@ -28,16 +28,6 @@ public interface Cookies extends Set<Cookie> {
 
     /**
      * Returns an immutable empty {@link Set} of {@link Cookie}s.
-     *
-     * @deprecated Use {@link #of()}.
-     */
-    @Deprecated
-    static Cookies empty() {
-        return of();
-    }
-
-    /**
-     * Returns an immutable empty {@link Set} of {@link Cookie}s.
      */
     static Cookies of() {
         return DefaultCookies.EMPTY;

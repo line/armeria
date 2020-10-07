@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -36,7 +37,6 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
@@ -73,17 +73,14 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the client-side context of the {@link Request} that is being handled in the current thread.
      *
      * @return the {@link ClientRequestContext} available in the current thread, or {@code null} if unavailable.
-     * @throws IllegalStateException if the current context is not a {@link ClientRequestContext}.
      */
     @Nullable
     static ClientRequestContext currentOrNull() {
         final RequestContext ctx = RequestContext.currentOrNull();
-        if (ctx == null) {
-            return null;
+        if (ctx instanceof ClientRequestContext) {
+            return (ClientRequestContext) ctx;
         }
-        checkState(ctx instanceof ClientRequestContext,
-                   "The current context is not a client-side context: %s", ctx);
-        return (ClientRequestContext) ctx;
+        return null;
     }
 
     /**
@@ -102,6 +99,12 @@ public interface ClientRequestContext extends RequestContext {
         final ClientRequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
+        }
+
+        final ServiceRequestContext serviceRequestContext = ServiceRequestContext.currentOrNull();
+        if (serviceRequestContext != null) {
+            throw new IllegalStateException("The current context is not a client-side context: " +
+                                            serviceRequestContext);
         }
 
         if (defaultValueSupplier != null) {
@@ -293,8 +296,8 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Returns the amount of time allowed until receiving the {@link Response} completely
-     * since the transfer of the {@link Response} started. This value is initially set from
-     * {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
+     * since the transfer of the {@link Response} started or the {@link Request} was fully sent. This value is
+     * initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      */
     long responseTimeoutMillis();
 
@@ -311,6 +314,7 @@ public interface ClientRequestContext extends RequestContext {
      * This value is initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <table>
+     * <caption>timeout mode description</caption>
      * <tr><th>Timeout mode</th><th>description</th></tr>
      * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
      *     <td>Sets a given amount of timeout from the current time.</td></tr>
@@ -370,6 +374,7 @@ public interface ClientRequestContext extends RequestContext {
      * This value is initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <table>
+     * <caption>timeout mode description</caption>
      * <tr><th>Timeout mode</th><th>description</th></tr>
      * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
      *     <td>Sets a given amount of timeout from the current time.</td></tr>
@@ -423,28 +428,18 @@ public interface ClientRequestContext extends RequestContext {
     }
 
     /**
-     * Returns {@link Response} timeout handler which is executed when
-     * the {@link Response} is not completely received within the allowed {@link #responseTimeoutMillis()}
-     * or the default {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
+     * Returns a {@link CompletableFuture} which is completed when {@link ClientRequestContext} is about to
+     * get timed out.
      */
-    @Nullable
-    Runnable responseTimeoutHandler();
+    CompletableFuture<Void> whenResponseTimingOut();
 
     /**
-     * Sets a handler to run when the response times out. {@code responseTimeoutHandler} must abort
-     * the response, e.g., by calling {@link HttpResponseWriter#abort(Throwable)}.
-     * If not set, the response will be closed with {@link ResponseTimeoutException}.
-     *
-     * <p>For example,
-     * <pre>{@code
-     * HttpResponseWriter res = HttpResponse.streaming();
-     * ctx.setResponseTimeoutHandler(() -> {
-     *    res.abort(new IllegalStateException("Server is in a bad state."));
-     * });
-     * ...
-     * }</pre>
+     * Returns a {@link CompletableFuture} which is completed after {@link ClientRequestContext} has been
+     * timed out (e.g., when the corresponding request passes a deadline).
+     * {@link #isTimedOut()} will always return {@code true} when the returned
+     * {@link CompletableFuture} is completed.
      */
-    void setResponseTimeoutHandler(Runnable responseTimeoutHandler);
+    CompletableFuture<Void> whenResponseTimedOut();
 
     /**
      * Returns the maximum length of the received {@link Response}.

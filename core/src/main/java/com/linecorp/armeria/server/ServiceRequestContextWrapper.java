@@ -20,6 +20,7 @@ import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
@@ -44,6 +45,11 @@ public class ServiceRequestContextWrapper
      */
     protected ServiceRequestContextWrapper(ServiceRequestContext delegate) {
         super(delegate);
+    }
+
+    @Override
+    public ServiceRequestContext root() {
+        return delegate().root();
     }
 
     @Nonnull
@@ -127,15 +133,14 @@ public class ServiceRequestContextWrapper
         delegate().setRequestTimeout(mode, requestTimeout);
     }
 
-    @Nullable
     @Override
-    public Runnable requestTimeoutHandler() {
-        return delegate().requestTimeoutHandler();
+    public CompletableFuture<Void> whenRequestTimingOut() {
+        return delegate().whenRequestTimingOut();
     }
 
     @Override
-    public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
-        delegate().setRequestTimeoutHandler(requestTimeoutHandler);
+    public CompletableFuture<Void> whenRequestTimedOut() {
+        return delegate().whenRequestTimedOut();
     }
 
     @Override

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -105,17 +106,6 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    @Nullable
-    public Runnable responseTimeoutHandler() {
-        return delegate().responseTimeoutHandler();
-    }
-
-    @Override
-    public void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
-        delegate().setResponseTimeoutHandler(responseTimeoutHandler);
-    }
-
-    @Override
     public long maxResponseLength() {
         return delegate().maxResponseLength();
     }
@@ -153,5 +143,15 @@ public class ClientRequestContextWrapper
     @Override
     public boolean isTimedOut() {
         return delegate().isTimedOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenResponseTimingOut() {
+        return delegate().whenResponseTimingOut();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenResponseTimedOut() {
+        return delegate().whenResponseTimedOut();
     }
 }

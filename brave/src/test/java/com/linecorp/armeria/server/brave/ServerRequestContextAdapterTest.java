@@ -135,10 +135,15 @@ class ServerRequestContextAdapterTest {
 
     @Test
     void route() {
-        final HttpServerRequest res = newRouteRequest(Route.builder()
+        final HttpServerRequest res1 = newRouteRequest(Route.builder()
                                                            .path("/foo/:bar/hoge")
                                                            .build());
-        assertThat(res.route()).isEqualTo("/foo/:/hoge");
+        assertThat(res1.route()).isEqualTo("/foo/:bar/hoge");
+
+        final HttpServerRequest res2 = newRouteRequest(Route.builder()
+                                                           .path("/foo/{bar}/hoge")
+                                                           .build());
+        assertThat(res2.route()).isEqualTo("/foo/:bar/hoge");
     }
 
     @Test

@@ -101,13 +101,12 @@ public final class ConnectProxyConfig extends ProxyConfig {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("proxyType", proxyType())
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
                           .add("password", maskPassword(username(), password()))
                           .add("useTls", useTls())
-                          .omitNullValues()
                           .toString();
     }
 }

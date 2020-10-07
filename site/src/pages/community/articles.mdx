@@ -1,14 +1,443 @@
-import loadable from '@loadable/component';
-export const ArticleList = loadable(() => import('../../components/article-list'));
+import Article from '../../components/article';
 
 # Articles and slides
 
 <Tip>
 
 Got some articles or slides to share? 😊
-[Edit this JSON file](https://github.com/line/armeria/blob/master/site/src/pages/community/articles.json)
-to send a pull request.
+Send a pull request by editing [this page](https://github.com/line/armeria/edit/master/site/src/pages/community/articles.mdx).
 
 </Tip>
 
-<ArticleList dataSource={props.pageContext.companion} />
+## English
+
+### Slides and videos
+
+<Article
+  title="Armeria at talk-server"
+  url="https://speakerdeck.com/delegacy/armeria-at-talk-server"
+  author="YoungTae Seok"
+  date="20191118"
+  type="slides"
+  description="
+    Learn how the core platform of LINE messenger uses Armeria and how they made improvements
+    on push notification using Armeria client.
+  "
+/>
+
+<Article
+  title="LINE Bot API with Armeria"
+  url="https://sookiwi.com/resources/LINE-Bot-API-with-Armeria.pdf"
+  author="Soo Kim"
+  date="20191117"
+  type="slides"
+/>
+
+<Article
+  title="Armeria: A microservice framework well-suited everywhere"
+  url="https://youtu.be/Vr-0GKUmzo8"
+  author="Trustin Lee"
+  date="20191026"
+  type={['video', 'slides']}
+/>
+
+<Article
+  title="Lesson learned from the adoption of Armeria to LINE's authentication system"
+  url="https://speakerdeck.com/line_developers/lesson-learned-from-the-adoption-of-armeria-to-lines-authentication-system"
+  author="Masahiro Ide"
+  date="20190815"
+  type="slides"
+/>
+
+<Article
+  title="gRPC for the Thrifty: gRPC at Slack"
+  url="https://static.sched.com/hosted_files/grpconf19/ff/gRPC%20for%20the%20Thrifty.pdf"
+  author="Josh Wills"
+  date="20190321"
+  type="slides"
+/>
+
+<Article
+  title="Armeria: LINE's next generation RPC layer"
+  url="https://speakerdeck.com/trustin/armeria-lines-next-generation-rpc-layer"
+  author="Trustin Lee"
+  date="20160216"
+  type="slides"
+/>
+
+### Articles
+
+<Article
+  title="Effective gRPC"
+  url="https://medium.com/dev-genius/effective-grpc-9152bea2cf50"
+  author="Viktor Taranenko"
+  date="20200718"
+  description="
+    Learn the best practices for working with gRPC and find out how Armeria simplifies your setup with its
+    out-of-the-box gRPC-Web support and auto-generated online debug tool, removing the needs for proxy servers
+    such as Envoy.
+  "
+/>
+
+<Article
+  title="Using Circuit Breakers with Armeria"
+  url="https://engineering.linecorp.com/en/blog/circuit-breakers-armeria/"
+  author="Seung-hwan Joo"
+  date="20200708"
+/>
+
+<Article
+  title="Using Reactive Streams with Armeria - Part 2"
+  url="https://engineering.linecorp.com/en/blog/reactive-streams-armeria-2/"
+  author="Ik-hoon Um"
+  date="20200703"
+/>
+
+<Article
+  title="Using Reactive Streams with Armeria - Part 1"
+  url="https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/"
+  author="Ik-hoon Um"
+  date="20200506"
+/>
+
+<Article
+  title="Monitoring a Spring Boot app in Kubernetes – What I learned from Devoxx Belgium 2019"
+  url="https://engineering.linecorp.com/en/blog/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019/"
+  author="Teodor Vasilev"
+  date="20191223"
+/>
+
+<Article
+  title="Make your GitHub contributions calendar greener (featuring Armeria Sprint)!"
+  url="https://engineering.linecorp.com/en/blog/armeria-sprint-1/"
+  author="Seo-yeon Lee"
+  date="20190514"
+/>
+
+<Article
+  title="Thank you for contributing to Armeria!"
+  url="https://engineering.linecorp.com/en/blog/thank-you-for-contributing-to-armeria/"
+  author="Seo-yeon Lee"
+  date="20190416"
+/>
+
+<Article
+  title="Making a basic web server with Java &amp; Armeria"
+  url="https://engineering.linecorp.com/en/blog/making-a-basic-server-with-java-armeria/"
+  author="In-seong Yoon"
+  date="20180817"
+/>
+
+<Article
+  title="Applying CircuitBreaker to Channel Gateway"
+  url="https://engineering.linecorp.com/en/blog/applying-circuitbreaker-to-channel-gateway/"
+  author="Jong-hun Shin"
+  date="20160805"
+/>
+
+<Article
+  title="Circuit breakers for distributed services"
+  url="https://engineering.linecorp.com/en/blog/circuit-breakers-for-distributed-services/"
+  author="Yuichi Ono"
+  date="20160725"
+/>
+
+<Article
+  title="Open-sourcing Armeria"
+  url="https://engineering.linecorp.com/en/blog/open-sourcing-armeria/"
+  author="Trustin Lee"
+  date="20160414"
+/>
+
+## Japanese
+
+### Slides and videos
+
+<Article
+  title="Spring BootユーザのためのArmeria入門"
+  url="https://matsumana.info/blog/2020/07/30/introduce-to-armeria-for-spring-users/"
+  author="松﨑学"
+  date="20200730"
+  type={['slides', 'video', 'article']}
+  description="
+    Spring Bootユーザ向けに、以下の内容について説明されています。
+    <ul>
+      <li>Armeriaが提供する機能、その中でもSREの観点で特に嬉しい機能</li>
+      <li>ArmeriaをSpring BootとIntegrationして使う場合のコード例</li>
+      <li>Spring Bootで実装されている既存のサービスへのArmeria導入シナリオ例</li>
+    </ul>
+  "
+/>
+
+<Article
+  title="gRPC at OA Dev team (LINE Developer Meetup #66)"
+  url="https://youtu.be/eLPWgw45QyY?t=953"
+  author="奥山裕也"
+  date="20200729"
+  type={['video', 'slides']}
+  description="
+    LINE Official Account 開発室での gRPC サーバー開発について紹介するセッションの中で,
+    gRPC フレームワークとして Armeria を選定した理由や Armeria であれば gRPC
+    サーバーで欲しい機能が簡単に実装できることが取り上げられています.
+  "
+/>
+
+<Article
+  title="ArmeriaとCentral Dogmaから学ぶ、マイクロサービスに必要な機能"
+  url="https://matsumana.info/blog/2019/07/31/learn-from-armeria-and-central-dogma/"
+  author="松﨑学"
+  date="20190731"
+  type={['slides', 'article']}
+/>
+
+<Article
+  title="LINE スタンプショップにおける Zipkin 利用事例"
+  url="https://www.slideshare.net/linecorp/line-zipkin"
+  author="林康司, 川田裕貴"
+  date="20180523"
+  type="slides"
+/>
+
+### Articles
+
+<Article
+  title="Reactive Streamsでマイクロサービスを繋ぐ (gRPC, RSocket)"
+  url="https://blog.aanrii.me/entry/2020/08/30/210000"
+  author="小林杏理"
+  date="20200830"
+  description="
+    Reactive Streamsで相互に繋がり、双方向通信するアプリケーションの実装をしてみます.
+    gRPCとRSocket、それぞれで実装し、Backpressureによる流速制御を試します.
+  "
+/>
+
+<Article
+  title="Let’s play Reactive Streams with Armeria vol.2"
+  url="https://engineering.linecorp.com/ja/blog/reactive-streams-with-armeria-2/"
+  author="Ik-hoon Um"
+  date="20200703"
+/>
+
+<Article
+  title="Let’s play Reactive Streams with Armeria vol.1"
+  url="https://engineering.linecorp.com/ja/blog/reactive-streams-with-armeria-1/"
+  author="Ik-hoon Um"
+  date="20200506"
+/>
+
+<Article
+  title="Devoxx Belgiumで学んだ方法でKubernetes上のSpring Bootをモニタリングする"
+  url="https://engineering.linecorp.com/ja/blog/monitoring-a-spring-boot-app-in-kubernetes-what-i-learned-from-devoxx-belgium-2019/"
+  author="Teodor Vasilev"
+  date="20191223"
+/>
+
+<Article
+  title="Spring BootとArmeriaでHTTP/2のh2cを試す"
+  url="https://hirakida29.hatenablog.com/entry/2019/11/30/231927"
+  author="開田陽介"
+  date="20191130"
+/>
+
+<Article
+  title="Armeriaで始めるDNSのSRV Recordを使った クライアントサイドロードバランシング"
+  url="https://progret.hatenadiary.com/entry/2019/06/26/144923"
+  author="wreulicke"
+  date="20190626"
+/>
+
+<Article
+  title="GitHub Contributions グラフを緑豊かにしてみましょう (feat. Armeria Sprint)"
+  url="https://engineering.linecorp.com/ja/blog/armeria-sprint-1/"
+  author="Seo-yeon Lee"
+  date="20190514"
+/>
+
+<Article
+  title="オープンソース「Armeria」のコントリビュータのためのイベントを開催しました"
+  url="https://engineering.linecorp.com/ja/blog/thank-you-for-contributing-to-armeria/"
+  author="Seo-yeon Lee"
+  date="20190416"
+/>
+
+<Article
+  title="ArmeriaアプリをCentral Dogmaと連携させてKubernetes上で動かす"
+  url="https://matsumana.info/blog/2018/11/12/armeria-with-centraldogma-on-k8s/"
+  author="松﨑学"
+  date="20181112"
+/>
+
+<Article
+  title="実践マイクロサービス — コンポーネント分割やトラブル回避の考え方をLINEの導入事例に学ぶ"
+  url="https://employment.en-japan.com/engineerhub/entry/2018/10/09/110000"
+  author="佐藤春旗"
+  date="20181019"
+/>
+
+<Article
+  title="ArmeriaのCircuit Breaker"
+  url="https://matsumana.info/blog/2018/09/29/armeria-circuit-breaker/"
+  author="松﨑学"
+  date="20180929"
+/>
+
+<Article
+  title="Armeria w/ Zipkin"
+  url="https://matsumana.info/blog/2018/09/04/armeria-with-zipkin/"
+  author="松﨑学"
+  date="20180904"
+/>
+
+<Article
+  title="Getting started Armeria w/ Spring Boot"
+  url="https://matsumana.info/blog/2018/08/20/getting-started-armeria-with-spring-boot/"
+  author="松﨑学"
+  date="20180820"
+/>
+
+<Article
+  title="マイクロサービスフレームワークArmeriaを始める"
+  url="https://nowokay.hatenablog.com/entry/20180409/1523306612"
+  author="岸田哉生"
+  date="20180409"
+/>
+
+<Article
+  title="RxJava 2とArmeriaでマイクロサービスを非同期化してみた"
+  url="https://engineering.linecorp.com/ja/blog/asynchronous-micro-service-in-rxjava-2-armeria/"
+  author="川田裕貴"
+  date="20171202"
+/>
+
+<Article
+  title="チャネルゲートウェイへのCircuit Breakerの適用"
+  url="https://engineering.linecorp.com/ja/blog/applying-circuitbreaker-to-channel-gateway/"
+  author="Jong-hun Shin"
+  date="20160805"
+/>
+
+<Article
+  title="分散サービス環境へのCircuit Breakerの適用"
+  url="https://engineering.linecorp.com/ja/blog/circuit-breakers-for-distributed-services/"
+  author="小野侑一"
+  date="20160715"
+/>
+
+<Article
+  title="社内プロジェクト「Armeria」をオープンソース化するために行った６つのステップ"
+  url="https://engineering.linecorp.com/ja/blog/open-sourcing-armeria/"
+  author="Trustin Lee"
+  date="20160414"
+/>
+
+## Korean
+
+### Slides and videos
+
+<Article
+  title="Armeria: 어디서나 잘 어울리는 마이크로서비스 프레임워크"
+  url="https://tv.naver.com/v/11267414"
+  author="이희승"
+  date="20191026"
+  type="video"
+/>
+
+### Articles
+
+<Article
+  title="Spring WebFlux와 Armeria 살펴보기 (Mono, Flux, gRPC, Thrift)"
+  url="https://sjh836.tistory.com/176"
+  author="빨간색소년"
+  date="20200619"
+/>
+
+<Article
+  title="Armeria로 Reactive Streams와 놀자! – 2"
+  url="https://engineering.linecorp.com/ko/blog/reactive-streams-with-armeria-2/"
+  author="엄익훈"
+  date="20200703"
+/>
+
+<Article
+  title="Armeria로 Reactive Streams와 놀자! – 1"
+  url="https://engineering.linecorp.com/ko/blog/reactive-streams-with-armeria-1/"
+  author="엄익훈"
+  date="20200506"
+/>
+
+<Article
+  title="Armeria의 서킷 브레이커 사용해 보기"
+  url="https://engineering.linecorp.com/ko/blog/try-armeria-circuit-breaker/"
+  author="주승환"
+  date="20200427"
+/>
+
+<Article
+  title="Spring WebFlux와 Armeria를 이용하여 Microservice에 필요한 Reactive + RPC 동시에 잡기"
+  url="https://d2.naver.com/helloworld/6080222"
+  author="이준행"
+  date="20200219"
+/>
+
+<Article
+  title="생애 첫 오픈 소스 기여 경험 (feat. Armeria)"
+  url="https://engineering.linecorp.com/ko/blog/my-first-opensource-contribution-to-armeria/"
+  author="강우진"
+  date="20191224"
+/>
+
+<Article
+  title="2019 컨트리뷰톤 (feat. Armeria)"
+  url="https://heowc.dev/2019/11/04/2019-contributon-feat-armeria/"
+  author="허원철"
+  date="20191104"
+/>
+
+<Article
+  title="Armeria 컨트리뷰션 회고"
+  url="https://junojunho.github.io/review-contribution-on-armeria/"
+  author="김준호"
+  date="20190621"
+/>
+
+<Article
+  title="첫 오픈 소스 컨트리뷰션 경험기"
+  url="https://jongmin92.github.io/2019/05/18/Etc/open-source-experience/"
+  author="김종민"
+  date="20190518"
+/>
+
+<Article
+  title="GitHub Contributions 그래프를 푸릇푸릇하게 만들어보아요 (feat. Armeria Sprint)"
+  url="https://engineering.linecorp.com/ko/blog/armeria-sprint-1/"
+  author="이서연"
+  date="20190514"
+/>
+
+<Article
+  title="오픈소스 Armeria의 기여자를 위한 이벤트를 진행하였습니다"
+  url="https://engineering.linecorp.com/ko/blog/thank-you-for-contributing-to-armeria/"
+  author="이서연"
+  date="20190416"
+/>
+
+<Article
+  title="Channel Gateway에 Circuit Breaker 적용"
+  url="https://engineering.linecorp.com/ko/blog/applying-circuitbreaker-to-channel-gateway/"
+  author="신종훈"
+  date="20160805"
+/>
+
+<Article
+  title="분산 서비스 환경에 대한 Circuit Breaker 적용"
+  url="https://engineering.linecorp.com/ko/blog/circuit-breakers-for-distributed-services/"
+  author="Yuichi Ono"
+  date="20160725"
+/>
+
+<Article
+  title="Armeria 오픈소스화 이야기"
+  url="https://engineering.linecorp.com/ko/blog/open-sourcing-armeria/"
+  author="이희승"
+  date="20160414"
+/>

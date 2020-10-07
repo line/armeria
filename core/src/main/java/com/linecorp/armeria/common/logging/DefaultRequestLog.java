@@ -773,7 +773,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    @Nullable
     public String name() {
         ensureAvailable(RequestLogProperty.NAME);
         return name;
@@ -808,16 +807,14 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         updateFlags(RequestLogProperty.NAME);
     }
 
-    @Nullable
     @Override
     public String fullName() {
         ensureAvailable(RequestLogProperty.NAME);
         if (fullName != null) {
             return fullName;
         }
-        if (name == null) {
-            return null;
-        }
+
+        assert name != null;
 
         if (serviceName != null) {
             return fullName = serviceName + '/' + name;
@@ -1053,25 +1050,46 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (name == null) {
             String newServiceName = null;
             String newName = null;
+            ServiceConfig config = null;
+
+            // Set the default names from ServiceConfig
+            if (ctx instanceof ServiceRequestContext) {
+                config = ((ServiceRequestContext) ctx).config();
+                newServiceName = config.defaultServiceName();
+                newName = config.defaultLogName();
+            }
+
             RpcRequest rpcReq = ctx.rpcRequest();
             if (rpcReq == null && requestContent instanceof RpcRequest) {
                 rpcReq = (RpcRequest) requestContent;
             }
 
-            if (rpcReq != null) {
-                newServiceName = rpcReq.serviceType().getName();
-                newName = rpcReq.method();
-            } else if (ctx instanceof ServiceRequestContext) {
-                final ServiceConfig config = ((ServiceRequestContext) ctx).config();
-                newServiceName = config.defaultServiceName();
-                if (newServiceName == null) {
+            // Set serviceName from ServiceType or innermost class name
+            if (newServiceName == null) {
+                if (rpcReq != null) {
+                    final String serviceType = rpcReq.serviceType().getName();
+                    if ("com.linecorp.armeria.internal.common.grpc.GrpcLogUtil".equals(serviceType)) {
+                        // Parse gRPC serviceName and methodName
+                        final String fullMethodName = rpcReq.method();
+                        final int methodIndex = fullMethodName.lastIndexOf('/');
+                        newServiceName = fullMethodName.substring(0, methodIndex);
+                        if (newName == null) {
+                            newName = fullMethodName.substring(methodIndex + 1);
+                        }
+                    } else {
+                        newServiceName = serviceType;
+                    }
+                } else if (config != null) {
                     newServiceName = getInnermostServiceName(config.service());
                 }
-                newName = config.defaultLogName();
             }
 
             if (newName == null) {
-                newName = ctx.method().name();
+                if (rpcReq != null) {
+                    newName = rpcReq.method();
+                } else {
+                    newName = ctx.method().name();
+                }
             }
 
             serviceName = newServiceName;
@@ -1847,13 +1865,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return serviceName;
         }
 
-        @Nullable
         @Override
         public String name() {
             return name;
         }
 
-        @Nullable
         @Override
         public String fullName() {
             return DefaultRequestLog.this.fullName();

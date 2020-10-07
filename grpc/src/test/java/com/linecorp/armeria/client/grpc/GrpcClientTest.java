@@ -47,6 +47,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 
 import com.google.protobuf.ByteString;
@@ -298,9 +300,31 @@ class GrpcClientTest {
                                                  .setType(COMPRESSABLE)
                                                  .setBody(ByteString.copyFrom(new byte[314159])))
                               .build();
-
         final TestServiceBlockingStub stub =
                 Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB),
+                                  TestServiceBlockingStub.class);
+        assertThat(stub.unaryCall(request)).isEqualTo(simpleResponse);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = CompressionType.class, names = { "NONE", "GZIP" })
+    void largeWebText(CompressionType compressionType) throws Exception {
+        final SimpleRequest request =
+                SimpleRequest.newBuilder()
+                             .setResponseSize(314159)
+                             .setResponseType(COMPRESSABLE)
+                             .setResponseCompression(compressionType)
+                             .setPayload(Payload.newBuilder()
+                                                .setBody(ByteString.copyFrom(new byte[271828])))
+                             .build();
+        final SimpleResponse simpleResponse =
+                SimpleResponse.newBuilder()
+                              .setPayload(Payload.newBuilder()
+                                                 .setType(COMPRESSABLE)
+                                                 .setBody(ByteString.copyFrom(new byte[314159])))
+                              .build();
+        final TestServiceBlockingStub stub =
+                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO_WEB_TEXT),
                                   TestServiceBlockingStub.class);
         assertThat(stub.unaryCall(request)).isEqualTo(simpleResponse);
     }
@@ -846,7 +870,7 @@ class GrpcClientTest {
         TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
-                        ClientOptions.HTTP_HEADERS.newValue(
+                        ClientOptions.HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
         final AtomicReference<Metadata> headers = new AtomicReference<>();
@@ -1065,7 +1089,7 @@ class GrpcClientTest {
         final TestServiceStub stub =
                 Clients.newDerivedClient(
                         asyncStub,
-                        ClientOptions.HTTP_HEADERS.newValue(
+                        ClientOptions.HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
         final List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);

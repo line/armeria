@@ -4,6 +4,8 @@ plugins {
 
 dependencies {
     implementation project(':core')
+    implementation 'com.spotify:completable-futures'
+    runtimeOnly 'org.slf4j:slf4j-simple'
 }
 
 application {

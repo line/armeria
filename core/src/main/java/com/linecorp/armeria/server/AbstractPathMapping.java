@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.server.RouteUtil.UNKNOWN_LOGGER_NAME;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 import static java.util.Objects.requireNonNull;
 
@@ -51,12 +50,7 @@ abstract class AbstractPathMapping implements PathMapping {
     abstract RoutingResultBuilder doApply(RoutingContext routingCtx);
 
     @Override
-    public String loggerName() {
-        return UNKNOWN_LOGGER_NAME;
-    }
-
-    @Override
-    public String meterTag() {
-        return "__UNKNOWN_PATH__";
+    public String toString() {
+        return patternString();
     }
 }

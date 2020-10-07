@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -111,10 +110,8 @@ public class HttpClientPipeliningTest {
 
     @AfterClass
     public static void destroyClientFactory() {
-        ForkJoinPool.commonPool().execute(() -> {
-            factoryWithPipelining.close();
-            factoryWithoutPipelining.close();
-        });
+        factoryWithPipelining.closeAsync();
+        factoryWithoutPipelining.closeAsync();
     }
 
     @Before
