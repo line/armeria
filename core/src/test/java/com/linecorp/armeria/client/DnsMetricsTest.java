@@ -25,6 +25,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
@@ -66,7 +67,6 @@ public class DnsMetricsTest {
                     .domainNameResolverCustomizer(builder -> {
                         builder.dnsServerAddressStreamProvider(dnsServerList(server));
                         builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                        builder.traceEnabled(false);
                     })
                     .meterRegistry(meterRegistry)
                     .build()) {
@@ -102,7 +102,7 @@ public class DnsMetricsTest {
                     .domainNameResolverCustomizer(builder -> {
                         builder.dnsServerAddressStreamProvider(dnsServerList(server));
                         builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                        builder.traceEnabled(false);
+                        builder.queryTimeout(Duration.ofSeconds(1));
                     })
                     .meterRegistry(meterRegistry)
                     .build()) {
@@ -146,7 +146,6 @@ public class DnsMetricsTest {
                         builder.dnsServerAddressStreamProvider(dnsServerList(server));
                         builder.searchDomains();
                         builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                        builder.ndots(0);
                     })
                     .meterRegistry(meterRegistry)
                     .build()) {
@@ -191,7 +190,6 @@ public class DnsMetricsTest {
                         builder.dnsServerAddressStreamProvider(dnsServerList(server));
                         builder.searchDomains();
                         builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                        builder.ndots(0);
                     })
                     .meterRegistry(meterRegistry)
                     .build()) {
@@ -223,40 +221,6 @@ public class DnsMetricsTest {
                         .containsEntry(nxDomainMeterId, 1.0)
                         .containsEntry(nameServerExhaustedMeterId, 3.0);
             }
-        }
-    }
-
-    @Test
-    void successWithGooglePublicServer() {
-        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
-        try (ClientFactory factory = ClientFactory.builder()
-                .domainNameResolverCustomizer(builder -> {
-                    builder.dnsServerAddressStreamProvider(
-                            hostname -> {
-                                return DnsServerAddresses.sequential(
-                                        new InetSocketAddress("1.1.1.1", 53)).stream();
-                            });
-                })
-                .meterRegistry(meterRegistry)
-                .build()) {
-            final WebClient client2 = WebClient.builder()
-                    .factory(factory)
-                    .build();
-
-            final String writtenMeterId =
-                    "armeria.client.dns.queries.written#count{name=google.com.,server=1.1.1.1}";
-            final String successMeterId =
-                    "armeria.client.dns.queries#count{cause=none,name=google.com.,result=success}";
-
-            assertThat(MoreMeters.measureAll(meterRegistry))
-                    .doesNotContainKeys(writtenMeterId, successMeterId);
-            client2.get("http://google.com/").aggregate();
-
-            await().untilAsserted(() -> {
-                assertThat(MoreMeters.measureAll(meterRegistry))
-                        .containsEntry(writtenMeterId, 1.0)
-                        .containsEntry(successMeterId, 1.0);
-            });
         }
     }
 
