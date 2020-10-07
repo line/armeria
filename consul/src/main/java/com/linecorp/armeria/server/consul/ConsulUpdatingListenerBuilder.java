@@ -37,7 +37,8 @@ import com.linecorp.armeria.server.Server;
  * ConsulUpdatingListener listener = ConsulUpdatingListener.builder("myService")
  *                                                         .consulPort(8501")
  *                                                         .build();
- * server.addListener(listener);
+ * ServerBuilder sb = Server.builder();
+ * sb.serverListener(listener);
  * }</pre>
  */
 public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
@@ -62,41 +63,6 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
     ConsulUpdatingListenerBuilder(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
         checkArgument(!this.serviceName.isEmpty(), "serviceName can't be empty");
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulUri(URI consulUri) {
-        return (ConsulUpdatingListenerBuilder) super.consulUri(consulUri);
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulUri(String consulUri) {
-        return (ConsulUpdatingListenerBuilder) super.consulUri(consulUri);
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulProtocol(SessionProtocol consulProtocol) {
-        return (ConsulUpdatingListenerBuilder) super.consulProtocol(consulProtocol);
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulAddress(String consulAddress) {
-        return (ConsulUpdatingListenerBuilder) super.consulAddress(consulAddress);
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulPort(int consulPort) {
-        return (ConsulUpdatingListenerBuilder) super.consulPort(consulPort);
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulApiVersion(String consulApiVersion) {
-        return (ConsulUpdatingListenerBuilder) super.consulApiVersion(consulApiVersion);
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulToken(String consulToken) {
-        return (ConsulUpdatingListenerBuilder) super.consulToken(consulToken);
     }
 
     /**
@@ -184,5 +150,40 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
         }
         return new ConsulUpdatingListener(buildClient(), serviceName, serviceEndpoint, checkUri, checkMethod,
                                           firstNonNull(checkInterval, DEFAULT_CHECK_INTERVAL));
+    }
+
+    @Override
+    public ConsulUpdatingListenerBuilder consulUri(URI consulUri) {
+        return (ConsulUpdatingListenerBuilder) super.consulUri(consulUri);
+    }
+
+    @Override
+    public ConsulUpdatingListenerBuilder consulUri(String consulUri) {
+        return (ConsulUpdatingListenerBuilder) super.consulUri(consulUri);
+    }
+
+    @Override
+    public ConsulUpdatingListenerBuilder consulProtocol(SessionProtocol consulProtocol) {
+        return (ConsulUpdatingListenerBuilder) super.consulProtocol(consulProtocol);
+    }
+
+    @Override
+    public ConsulUpdatingListenerBuilder consulAddress(String consulAddress) {
+        return (ConsulUpdatingListenerBuilder) super.consulAddress(consulAddress);
+    }
+
+    @Override
+    public ConsulUpdatingListenerBuilder consulPort(int consulPort) {
+        return (ConsulUpdatingListenerBuilder) super.consulPort(consulPort);
+    }
+
+    @Override
+    public ConsulUpdatingListenerBuilder consulApiVersion(String consulApiVersion) {
+        return (ConsulUpdatingListenerBuilder) super.consulApiVersion(consulApiVersion);
+    }
+
+    @Override
+    public ConsulUpdatingListenerBuilder consulToken(String consulToken) {
+        return (ConsulUpdatingListenerBuilder) super.consulToken(consulToken);
     }
 }

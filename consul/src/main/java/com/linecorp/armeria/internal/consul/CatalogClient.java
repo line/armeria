@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -66,22 +65,9 @@ final class CatalogClient {
     CompletableFuture<List<Endpoint>> endpoints(String serviceName) {
         requireNonNull(serviceName, "serviceName");
         return service(serviceName)
-                .thenApply(nodes -> {
-                    final Function<Node, Endpoint> nodeEndpointFunction = node -> {
-                        final String host;
-                        if (!Strings.isNullOrEmpty(node.serviceAddress)) {
-                            host = node.serviceAddress;
-                        } else if (!Strings.isNullOrEmpty(node.address)) {
-                            host = node.address;
-                        } else {
-                            host = "127.0.0.1";
-                        }
-                        return Endpoint.of(host, node.servicePort);
-                    };
-                    return nodes.stream()
-                                .map(nodeEndpointFunction)
-                                .collect(toImmutableList());
-                });
+                .thenApply(nodes -> nodes.stream()
+                                         .map(CatalogClient::convertToEndpoint)
+                                         .collect(toImmutableList()));
     }
 
     /**
@@ -100,6 +86,18 @@ final class CatalogClient {
                              return Exceptions.throwUnsafely(e);
                          }
                      });
+    }
+
+    private static Endpoint convertToEndpoint(Node node) {
+        final String host;
+        if (!Strings.isNullOrEmpty(node.serviceAddress)) {
+            host = node.serviceAddress;
+        } else if (!Strings.isNullOrEmpty(node.address)) {
+            host = node.address;
+        } else {
+            host = "127.0.0.1";
+        }
+        return Endpoint.of(host, node.servicePort);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
