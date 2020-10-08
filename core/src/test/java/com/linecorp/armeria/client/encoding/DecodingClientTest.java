@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.encoding;
+package com.linecorp.armeria.client.encoding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -38,7 +37,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class StreamDecoderCompatibleTest {
+class DecodingClientTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -58,31 +57,55 @@ class StreamDecoderCompatibleTest {
     };
 
     @Test
-    void httpDecodingWithNewDecoder() throws Exception {
+    void httpGzipDecodingTest() throws Exception {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(DecodingClient.newDecorator(
-                                                  StreamDecoderFactory.gzip()))
-                                          .build();
-
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test")).aggregate().get();
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
-        assertThat(response.contentUtf8()).isEqualTo(
-                "some content to compress more content to compress");
-    }
-
-    @Test
-    void httpDecodingWithOldDecoder() throws Exception {
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(DecodingClient.newDecorator(
-                                                  com.linecorp.armeria.client.encoding.StreamDecoderFactory
+                                                  com.linecorp.armeria.common.encoding.StreamDecoderFactory
                                                           .gzip()))
                                           .build();
 
         final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
-        assertThat(response.contentUtf8()).isEqualTo(
-                "some content to compress more content to compress");
+        assertThat(response.contentUtf8()).isEqualTo("some content to compress more content to compress");
+    }
+
+    @Test
+    void httpDeflateDecodingTest() throws Exception {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(DecodingClient.newDecorator(
+                                                  com.linecorp.armeria.common.encoding.StreamDecoderFactory
+                                                          .deflate()))
+                                          .build();
+
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test")).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
+        assertThat(response.contentUtf8()).isEqualTo("some content to compress more content to compress");
+    }
+
+    @Test
+    void httpGzipDecodingTestWithOldDecoder() throws Exception {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(DecodingClient.newDecorator(StreamDecoderFactory.gzip()))
+                                          .build();
+
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test")).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
+        assertThat(response.contentUtf8()).isEqualTo("some content to compress more content to compress");
+    }
+
+    @Test
+    void httpDeflateDecodingTestWithOldDecoder() throws Exception {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(
+                                                  DecodingClient.newDecorator(StreamDecoderFactory.deflate())
+                                          ).build();
+
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-test")).aggregate().get();
+        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
+        assertThat(response.contentUtf8()).isEqualTo("some content to compress more content to compress");
     }
 }
