@@ -17,11 +17,9 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -55,6 +53,7 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
+import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 
@@ -77,7 +76,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
 
     private static final char LINE_SEPARATOR = '\n';
 
-    private final Map<String, MethodDescriptor<?, ?>> methodsByName;
+    private final Map<String, ServerMethodDefinition<?, ?>> methodsByName;
     private final GrpcService delegateGrpcService;
 
     /**
@@ -87,10 +86,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         super(delegate);
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
         delegateGrpcService = delegate;
-        methodsByName = registry.methods().entrySet()
-                                .stream()
-                                .collect(toImmutableMap(Entry::getKey,
-                                                        entry -> entry.getValue().getMethodDescriptor()));
+        methodsByName = registry.methods();
     }
 
     @Override
@@ -104,7 +100,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     }
 
     @Override
-    public Map<String, MethodDescriptor<?, ?>> methods() {
+    public Map<String, ServerMethodDefinition<?, ?>> methods() {
         return methodsByName;
     }
 
@@ -131,7 +127,18 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         }
 
         final String methodName = GrpcRequestUtil.determineMethod(ctx);
-        final MethodDescriptor<?, ?> method = methodName != null ? methodsByName.get(methodName) : null;
+        final MethodDescriptor<?, ?> method;
+        if (methodName != null) {
+            final ServerMethodDefinition<?, ?> methodDef = methodsByName.get(methodName);
+            if (methodDef != null) {
+                method = methodDef.getMethodDescriptor();
+            } else {
+                method = null;
+            }
+        } else {
+            method = null;
+        }
+
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
             return unwrap().serve(ctx, req);

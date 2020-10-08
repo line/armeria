@@ -189,7 +189,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                     .availableMimeTypes(supportedMediaTypes)
                                     .build();
 
-                serviceInfosBuilder.addEndpoint(method, endpointInfo);
+                serviceInfosBuilder.addEndpoint(method.getMethodDescriptor(), endpointInfo);
             });
         }
         return generate(serviceInfosBuilder.build(filter));

@@ -56,6 +56,7 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import io.grpc.MethodDescriptor;
@@ -67,10 +68,10 @@ import io.grpc.ServerServiceDefinition;
  * documentation generation.
  */
 final class HandlerRegistry {
-    private final Map<String, ServerServiceDefinition> services;
+    private final ImmutableList<ServerServiceDefinition> services;
     private final Map<String, ServerMethodDefinition<?, ?>> methods;
 
-    private HandlerRegistry(Map<String, ServerServiceDefinition> services,
+    private HandlerRegistry(ImmutableList<ServerServiceDefinition> services,
                             Map<String, ServerMethodDefinition<?, ?>> methods) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
@@ -81,7 +82,7 @@ final class HandlerRegistry {
         return methods.get(methodName);
     }
 
-    Map<String, ServerServiceDefinition> services() {
+    List<ServerServiceDefinition> services() {
         return services;
     }
 
@@ -99,17 +100,27 @@ final class HandlerRegistry {
 
         Builder addService(String path, ServerServiceDefinition service,
                            @Nullable MethodDescriptor<?, ?> methodDescriptor) {
-            entries.add(new Entry(normalizePath(path), service, methodDescriptor));
+            entries.add(new Entry(normalizePath(path, methodDescriptor == null), service, methodDescriptor));
             return this;
         }
 
-        private static String normalizePath(String path) {
+        private static String normalizePath(String path, boolean isServicePath) {
             if (path.isEmpty()) {
                 return path;
             }
 
             if (path.charAt(0) == '/') {
                 path = path.substring(1);
+            }
+            if (path.isEmpty()) {
+                return path;
+            }
+
+            if (isServicePath) {
+                final int lastCharIndex = path.length() - 1;
+                if (path.charAt(lastCharIndex) == '/') {
+                    path = path.substring(0, lastCharIndex);
+                }
             }
 
             return path;
@@ -144,7 +155,7 @@ final class HandlerRegistry {
                     methods.put(path, method);
                 }
             }
-            return new HandlerRegistry(ImmutableMap.copyOf(services), ImmutableMap.copyOf(methods));
+            return new HandlerRegistry(ImmutableList.copyOf(services.values()), ImmutableMap.copyOf(methods));
         }
     }
 

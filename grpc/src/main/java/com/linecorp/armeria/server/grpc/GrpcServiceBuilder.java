@@ -142,7 +142,7 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
+     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service) {
@@ -165,7 +165,7 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
+     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
      * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service,
@@ -203,7 +203,7 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
+     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService) {
@@ -230,7 +230,7 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set the {@code path} to {@code "/foo"}, the {@code Hello} method will be served at
+     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
      * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService,

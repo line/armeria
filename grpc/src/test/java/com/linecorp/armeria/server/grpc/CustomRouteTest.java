@@ -70,6 +70,8 @@ class CustomRouteTest {
             sb.service(GrpcService.builder()
                                   .addService("foo", testService)
                                   .addService("bar", testService)
+                                  .addService("/quz", testService)
+                                  .addService("/qux/", testService)
                                   .addService("/v1/tests/empty", testService,
                                               TestServiceGrpc.getEmptyCallMethod())
                                   .addService("/v1/tests/empty/", testService,
@@ -83,7 +85,7 @@ class CustomRouteTest {
         }
     };
 
-    @CsvSource({ "/foo/EmptyCall", "/v1/tests/empty", "/v1/tests/empty/"  })
+    @CsvSource({ "/foo/EmptyCall", "/quz/EmptyCall", "/qux/EmptyCall", "/v1/tests/empty", "/v1/tests/empty/" })
     @ParameterizedTest
     void unframedJsonRequestWithCustomPath(String path) throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());

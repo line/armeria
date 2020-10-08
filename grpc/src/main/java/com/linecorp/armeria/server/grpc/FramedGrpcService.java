@@ -82,7 +82,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
 
     private final HandlerRegistry registry;
-    private final Map<String, MethodDescriptor<?, ?>> methods;
     private final Set<Route> routes;
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
@@ -113,9 +112,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useClientTimeoutHeader,
                       int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
-        methods = registry.methods().entrySet().stream()
-                          .collect(toImmutableMap(Entry::getKey,
-                                                  entry -> entry.getValue().getMethodDescriptor()));
         this.routes = requireNonNull(routes, "routes");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
@@ -125,7 +121,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             jsonMarshallers = ImmutableMap.of();
         } else {
             jsonMarshallers =
-                    registry.services().values().stream()
+                    registry.services().stream()
                             .map(ServerServiceDefinition::getServiceDescriptor)
                             .distinct()
                             .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
@@ -347,12 +343,14 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public List<ServerServiceDefinition> services() {
-        return ImmutableList.copyOf(registry.services().values());
+        final List<ServerServiceDefinition> services = registry.services();
+        assert services instanceof ImmutableList;
+        return services;
     }
 
     @Override
-    public Map<String, MethodDescriptor<?, ?>> methods() {
-        return methods;
+    public Map<String, ServerMethodDefinition<?, ?>> methods() {
+        return registry.methods();
     }
 
     @Override

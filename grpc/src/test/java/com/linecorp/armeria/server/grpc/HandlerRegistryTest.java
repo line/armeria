@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
@@ -39,7 +37,7 @@ class HandlerRegistryTest {
                                                        .addService(path2, testService.bindService(), null)
                                                        .build();
 
-        assertThat(handlerRegistry.services().get(expected1)).isNotNull();
-        assertThat(handlerRegistry.services().get(expected2)).isNotNull();
+        handlerRegistry.lookupMethod(expected1 + "EmptyCall");
+        handlerRegistry.lookupMethod(expected2 + "EmptyCall");
     }
 }

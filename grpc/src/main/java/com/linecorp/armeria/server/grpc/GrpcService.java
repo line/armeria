@@ -30,7 +30,6 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 
-import io.grpc.MethodDescriptor;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 
@@ -69,15 +68,15 @@ public interface GrpcService extends HttpServiceWithRoutes {
     List<ServerServiceDefinition> services();
 
     /**
-     * Returns a {@link Map} whose key is a route path and whose value is {@link MethodDescriptor}, which is
-     * serviced by this service.
+     * Returns a {@link Map} whose key is a route path and whose value is {@link ServerMethodDefinition},
+     * which is serviced by this service.
      */
-    default Map<String, MethodDescriptor<?, ?>> methods() {
+    default Map<String, ServerMethodDefinition<?, ?>> methods() {
         return services().stream()
                          .flatMap(service -> service.getMethods().stream())
-                         .map(ServerMethodDefinition::getMethodDescriptor)
                          .distinct()
-                         .collect(toImmutableMap(MethodDescriptor::getFullMethodName, Function.identity()));
+                         .collect(toImmutableMap(method -> method.getMethodDescriptor().getFullMethodName(),
+                                                 Function.identity()));
     }
 
     /**
