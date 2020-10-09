@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
+import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
+import static io.netty.handler.codec.dns.DnsRecordType.SRV;
 import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -32,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.endpoint.dns.DnsNameEncoder;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -39,12 +42,16 @@ import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DefaultDnsRawRecord;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsOpCode;
+import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
@@ -224,6 +231,47 @@ public class DnsMetricsTest {
         }
     }
 
+    @Test
+    void cname() {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("bar.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newCnameRecord("bar.com.", "baz.com.")),
+                new DefaultDnsQuestion("baz.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "127.0.0.1"))
+        ))) {
+            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            try (ClientFactory factory = ClientFactory.builder()
+                    .domainNameResolverCustomizer(builder -> {
+                        builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                        builder.searchDomains();
+                        builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                    })
+                    .meterRegistry(meterRegistry)
+                    .build()) {
+
+                final WebClient client = WebClient.builder()
+                        .factory(factory)
+                        .build();
+
+                final String writtenMeterId =
+                        "armeria.client.dns.queries.written#count{name=bar.com.,server=" +
+                                server.addr().getHostString() + '}';
+                final String cnamed =
+                        "armeria.client.dns.queries.cnamed#count{cname=baz.com.,name=bar.com.}";
+                final String successMeterId =
+                        "armeria.client.dns.queries#count{cause=none,name=bar.com.,result=success}";
+                client.get("http://bar.com:1/").aggregate();
+
+                await().untilAsserted(() -> {
+                    assertThat(MoreMeters.measureAll(meterRegistry))
+                            .containsEntry(writtenMeterId, 2.0)
+                            .containsEntry(cnamed, 1.0)
+                            .containsEntry(successMeterId, 2.0);
+                });
+            }
+        }
+    }
+
     private static DnsServerAddressStreamProvider dnsServerList(TestDnsServer dnsServer) {
         final InetSocketAddress dnsServerAddr = dnsServer.addr();
         return hostname -> DnsServerAddresses.sequential(ImmutableList.of(dnsServerAddr)).stream();
@@ -239,5 +287,20 @@ public class DnsMetricsTest {
             }
             super.channelRead(ctx, msg);
         }
+    }
+
+    public static DnsRecord newCnameRecord(String name, String actualName) {
+        final ByteBuf content = Unpooled.buffer();
+        DnsNameEncoder.encodeName(actualName, content);
+        return new DefaultDnsRawRecord(name, CNAME, 60, content);
+    }
+
+    public static DnsRecord newSrvRecord(String hostname, int weight, int port, String target) {
+        final ByteBuf content = Unpooled.buffer();
+        content.writeShort(1); // priority unused
+        content.writeShort(weight);
+        content.writeShort(port);
+        DnsNameEncoder.encodeName(target, content);
+        return new DefaultDnsRawRecord(hostname, SRV, 60, content);
     }
 }
