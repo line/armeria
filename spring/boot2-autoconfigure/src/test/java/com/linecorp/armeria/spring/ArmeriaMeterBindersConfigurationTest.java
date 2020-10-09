@@ -44,7 +44,7 @@ import com.linecorp.armeria.spring.ArmeriaMeterBindersConfigurationTest.TestConf
 import io.micrometer.core.instrument.MeterRegistry;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class)
+@SpringBootTest(classes = TestConfiguration.class, properties = "spring.main.web-application-type=none")
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
 public class ArmeriaMeterBindersConfigurationTest {

@@ -39,7 +39,7 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguratio
  * {@code application-gracefulShutdownTest.yml} will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class)
+@SpringBootTest(classes = TestConfiguration.class, properties = "spring.main.web-application-type=none")
 @ActiveProfiles({ "local", "gracefulShutdownTest" })
 @DirtiesContext
 public class ArmeriaGracefulShutdownConfigurationTest {

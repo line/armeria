@@ -32,8 +32,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.autoconfigure.condition.NoneNestedConditions;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
 import com.google.common.base.Strings;
@@ -46,6 +49,7 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
+import com.linecorp.armeria.spring.ArmeriaAutoConfiguration.NonReactiveWebApplicationCondition;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -55,6 +59,7 @@ import io.micrometer.core.instrument.Metrics;
  * Spring Boot {@link Configuration} that provides Armeria integration.
  */
 @Configuration
+@Conditional(NonReactiveWebApplicationCondition.class)
 @EnableConfigurationProperties(ArmeriaSettings.class)
 @ConditionalOnMissingBean(Server.class)
 public class ArmeriaAutoConfiguration {
@@ -64,6 +69,19 @@ public class ArmeriaAutoConfiguration {
                                                        .setProtocol(SessionProtocol.HTTP);
 
     private static final String GRACEFUL_SHUTDOWN = "graceful";
+
+    /**
+     * Condition for non-reactive web application type.
+     */
+    static class NonReactiveWebApplicationCondition extends NoneNestedConditions {
+
+        NonReactiveWebApplicationCondition() {
+            super(ConfigurationPhase.PARSE_CONFIGURATION);
+        }
+
+        @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
+        static class ReactiveWebApplication {}
+    }
 
     /**
      * Create a started {@link Server} bean.

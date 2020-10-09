@@ -41,7 +41,7 @@ import com.linecorp.armeria.spring.LocalArmeriaPortTest.TestConfiguration;
  * Tests for {@link LocalArmeriaPort}.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class)
+@SpringBootTest(classes = TestConfiguration.class, properties = "spring.main.web-application-type=none")
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
 public class LocalArmeriaPortTest {

@@ -43,7 +43,7 @@ import com.linecorp.armeria.spring.LocalArmeriaPortTest.TestConfiguration;
  * Tests for {@link LocalArmeriaPort} when https.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class)
+@SpringBootTest(classes = TestConfiguration.class, properties = "spring.main.web-application-type=none")
 @ActiveProfiles({ "local", "sslTest" })
 @DirtiesContext
 public class LocalArmeriaPortHttpsTest {
