@@ -69,10 +69,10 @@ import io.grpc.ServerServiceDefinition;
  */
 final class HandlerRegistry {
     private final ImmutableList<ServerServiceDefinition> services;
-    private final Map<String, ServerMethodDefinition<?, ?>> methods;
+    private final ImmutableMap<String, ServerMethodDefinition<?, ?>> methods;
 
     private HandlerRegistry(ImmutableList<ServerServiceDefinition> services,
-                            Map<String, ServerMethodDefinition<?, ?>> methods) {
+                            ImmutableMap<String, ServerMethodDefinition<?, ?>> methods) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
     }

@@ -350,7 +350,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public Map<String, ServerMethodDefinition<?, ?>> methods() {
-        return registry.methods();
+        final Map<String, ServerMethodDefinition<?, ?>> methods = registry.methods();
+        assert methods instanceof ImmutableMap;
+        return methods;
     }
 
     @Override
