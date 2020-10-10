@@ -1,5 +1,5 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  com.linecorp.armeria.spring.ArmeriaAutoConfiguration,\
+  com.linecorp.armeria.spring.ArmeriaSpringBoot1AutoConfiguration,\
   com.linecorp.armeria.spring.ArmeriaSpringBoot1MeterBindersConfiguration,\
   com.linecorp.armeria.spring.ArmeriaSpringBoot1BeanPostProcessorConfiguration,\
   com.linecorp.armeria.spring.ArmeriaSpringBoot1ConversionServiceConfiguration

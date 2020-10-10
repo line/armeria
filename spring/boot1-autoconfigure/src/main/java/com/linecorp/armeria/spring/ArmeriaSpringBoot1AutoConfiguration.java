@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,34 +17,16 @@
 package com.linecorp.armeria.spring;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.boot.autoconfigure.condition.NoneNestedConditions;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.spring.ArmeriaAutoConfiguration.NonReactiveWebApplicationCondition;
 
 /**
  * Spring Boot {@link Configuration} that provides Armeria integration.
  */
 @Configuration
-@Conditional(NonReactiveWebApplicationCondition.class)
 @EnableConfigurationProperties(ArmeriaSettings.class)
 @ConditionalOnMissingBean(Server.class)
-public class ArmeriaAutoConfiguration extends AbstractArmeriaAutoConfiguration {
-
-    /**
-     * Condition for non-reactive web application type.
-     */
-    static class NonReactiveWebApplicationCondition extends NoneNestedConditions {
-
-        NonReactiveWebApplicationCondition() {
-            super(ConfigurationPhase.PARSE_CONFIGURATION);
-        }
-
-        @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
-        static class ReactiveWebApplication {}
-    }
+public class ArmeriaSpringBoot1AutoConfiguration extends AbstractArmeriaAutoConfiguration {
 }
