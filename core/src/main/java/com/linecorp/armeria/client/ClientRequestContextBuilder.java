@@ -33,8 +33,8 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
-import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -48,7 +48,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  */
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
 
-    private static final TimeoutTask noopTimeoutTask = new TimeoutTask() {
+    private static final CancellationTask noopCancellationTask = new CancellationTask() {
         @Override
         public boolean canSchedule() {
             return true;
@@ -59,12 +59,12 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     };
 
     /**
-     * A timeout scheduler that has been timed-out.
+     * A cancellation scheduler that has been finished.
      */
-    private static final TimeoutScheduler noopResponseCancellationScheduler = new TimeoutScheduler(0);
+    private static final CancellationScheduler noopResponseCancellationScheduler = new CancellationScheduler(0);
 
     static {
-        noopResponseCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0,
+        noopResponseCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0,
                                                ResponseTimeoutException.get());
         noopResponseCancellationScheduler.finishNow();
     }
@@ -128,14 +128,14 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             endpoint = Endpoint.parse(authority());
         }
 
-        final TimeoutScheduler responseCancellationScheduler;
+        final CancellationScheduler responseCancellationScheduler;
         if (timedOut()) {
             responseCancellationScheduler = noopResponseCancellationScheduler;
         } else {
-            responseCancellationScheduler = new TimeoutScheduler(0);
+            responseCancellationScheduler = new CancellationScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                responseCancellationScheduler.init(eventLoop(), noopTimeoutTask, 0,
+                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0,
                                                    ResponseTimeoutException.get());
                 latch.countDown();
             });

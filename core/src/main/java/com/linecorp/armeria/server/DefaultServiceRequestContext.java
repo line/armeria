@@ -56,7 +56,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -86,7 +86,7 @@ public final class DefaultServiceRequestContext
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
-    private final TimeoutScheduler requestCancellationScheduler;
+    private final CancellationScheduler requestCancellationScheduler;
     @Nullable
     private final SSLSession sslSession;
 
@@ -146,7 +146,7 @@ public final class DefaultServiceRequestContext
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
-            @Nullable TimeoutScheduler requestCancellationScheduler,
+            @Nullable CancellationScheduler requestCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
@@ -163,7 +163,7 @@ public final class DefaultServiceRequestContext
             this.requestCancellationScheduler = requestCancellationScheduler;
         } else {
             this.requestCancellationScheduler =
-                    new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
         }
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
@@ -306,7 +306,7 @@ public final class DefaultServiceRequestContext
                                                              .toNanos());
     }
 
-    TimeoutScheduler requestCancellationScheduler() {
+    CancellationScheduler requestCancellationScheduler() {
         return requestCancellationScheduler;
     }
 

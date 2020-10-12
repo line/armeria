@@ -36,9 +36,9 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
-import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
@@ -334,7 +334,7 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
                                         Consumer<Throwable> actionOnNotTimedOut) {
 
-            TimeoutScheduler responseCancellationScheduler = null;
+            CancellationScheduler responseCancellationScheduler = null;
             if (ctx instanceof DefaultClientRequestContext) {
                 responseCancellationScheduler =
                         ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
@@ -376,16 +376,16 @@ abstract class HttpResponseDecoder {
 
         void initTimeout() {
             if (ctx instanceof DefaultClientRequestContext) {
-                final TimeoutScheduler responseCancellationScheduler =
+                final CancellationScheduler responseCancellationScheduler =
                         ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
-                responseCancellationScheduler.init(ctx.eventLoop(), newTimeoutTask(),
+                responseCancellationScheduler.init(ctx.eventLoop(), newCancellationTask(),
                                                    TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis),
                                                    ResponseTimeoutException.get());
             }
         }
 
-        private TimeoutTask newTimeoutTask() {
-            return new TimeoutTask() {
+        private CancellationTask newCancellationTask() {
+            return new CancellationTask() {
                 @Override
                 public boolean canSchedule() {
                     return delegate.isOpen() && state != State.DONE;

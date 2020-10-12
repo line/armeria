@@ -40,8 +40,8 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
-import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -65,12 +65,12 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      */
     private static final ServerListener rejectingListener = new ServerListenerAdapter() {
         @Override
-        public void serverStarting(Server server) throws Exception {
+        public void serverStarting(Server server) {
             throw new UnsupportedOperationException();
         }
     };
 
-    private static final TimeoutTask noopTimeoutTask = new TimeoutTask() {
+    private static final CancellationTask noopCancellationTask = new CancellationTask() {
         @Override
         public boolean canSchedule() {
             return true;
@@ -81,12 +81,12 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     };
 
     /**
-     * A timeout scheduler that has been timed-out.
+     * A cancellation scheduler that has been finished.
      */
-    private static final TimeoutScheduler noopRequestCancellationScheduler = new TimeoutScheduler(0);
+    private static final CancellationScheduler noopRequestCancellationScheduler = new CancellationScheduler(0);
 
     static {
-        noopRequestCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0,
+        noopRequestCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0,
                                               RequestTimeoutException.get());
         noopRequestCancellationScheduler.finishNow();
     }
@@ -234,14 +234,14 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
-        final TimeoutScheduler requestCancellationScheduler;
+        final CancellationScheduler requestCancellationScheduler;
         if (timedOut()) {
             requestCancellationScheduler = noopRequestCancellationScheduler;
         } else {
-            requestCancellationScheduler = new TimeoutScheduler(0);
+            requestCancellationScheduler = new CancellationScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                requestCancellationScheduler.init(eventLoop(), noopTimeoutTask, 0,
+                requestCancellationScheduler.init(eventLoop(), noopCancellationTask, 0,
                                                   RequestTimeoutException.get());
                 latch.countDown();
             });

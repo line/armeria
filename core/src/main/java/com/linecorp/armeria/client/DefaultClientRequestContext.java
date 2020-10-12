@@ -60,7 +60,7 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -102,7 +102,7 @@ public final class DefaultClientRequestContext
 
     private final ClientOptions options;
     private final RequestLogBuilder log;
-    private final TimeoutScheduler responseCancellationScheduler;
+    private final CancellationScheduler responseCancellationScheduler;
     private long writeTimeoutMillis;
     @Nullable
     private Runnable responseTimeoutHandler;
@@ -138,7 +138,7 @@ public final class DefaultClientRequestContext
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            TimeoutScheduler responseCancellationScheduler,
+            CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
@@ -174,7 +174,7 @@ public final class DefaultClientRequestContext
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable ServiceRequestContext root, @Nullable TimeoutScheduler responseCancellationScheduler,
+            @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
 
@@ -188,7 +188,7 @@ public final class DefaultClientRequestContext
 
         if (responseCancellationScheduler == null) {
             this.responseCancellationScheduler =
-                    new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
+                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
@@ -372,7 +372,7 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         responseCancellationScheduler =
-                new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+                new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
@@ -573,7 +573,7 @@ public final class DefaultClientRequestContext
         return log;
     }
 
-    TimeoutScheduler responseCancellationScheduler() {
+    CancellationScheduler responseCancellationScheduler() {
         return responseCancellationScheduler;
     }
 

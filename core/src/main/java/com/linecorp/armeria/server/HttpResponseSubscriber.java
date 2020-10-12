@@ -41,9 +41,9 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.ChannelFuture;
@@ -111,7 +111,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         }
 
         // Schedule the initial request timeout with the timeoutNanos in the TimeoutScheduler
-        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newTimeoutTask(), 0,
+        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(), 0,
                                                    RequestTimeoutException.get());
 
         // Start consuming.
@@ -400,8 +400,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         ctx.flush();
     }
 
-    private TimeoutTask newTimeoutTask() {
-        return new TimeoutTask() {
+    private CancellationTask newCancellationTask() {
+        return new CancellationTask() {
             @Override
             public boolean canSchedule() {
                 return state != State.DONE;
