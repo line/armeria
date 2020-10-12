@@ -21,6 +21,9 @@ package com.linecorp.armeria.common;
  */
 public final class RequestCancellationException extends RuntimeException {
 
+    // TODO(trustin): Clean up the type hierarchy between RequestCancellationException,
+    //                TimeoutException, RequestTimeoutException and ResponseTimeoutException.
+
     private static final long serialVersionUID = -8891853443874862294L;
 
     private static final RequestCancellationException INSTANCE = new RequestCancellationException(false);
