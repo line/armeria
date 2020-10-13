@@ -123,6 +123,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             jsonMarshallers =
                     registry.services().stream()
                             .map(ServerServiceDefinition::getServiceDescriptor)
+                            .distinct()
                             .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
         }
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
@@ -342,7 +343,16 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public List<ServerServiceDefinition> services() {
-        return registry.services();
+        final List<ServerServiceDefinition> services = registry.services();
+        assert services instanceof ImmutableList;
+        return services;
+    }
+
+    @Override
+    public Map<String, ServerMethodDefinition<?, ?>> methods() {
+        final Map<String, ServerMethodDefinition<?, ?>> methods = registry.methods();
+        assert methods instanceof ImmutableMap;
+        return methods;
     }
 
     @Override
