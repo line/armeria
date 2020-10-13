@@ -53,6 +53,7 @@ class HttpClientRequestPathTest {
     static final ServerExtension server1 = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/", (ctx, req) -> HttpResponse.of(OK));
             sb.service("/new-location", (ctx, req) -> HttpResponse.of(OK));
         }
     };
@@ -169,5 +170,16 @@ class HttpClientRequestPathTest {
         // Should use the default WebClient or a different WebClient to send a request to another endpoint.
         final AggregatedHttpResponse actual = WebClient.of().get(location).aggregate().join();
         assertThat(actual.status()).isEqualTo(OK);
+    }
+
+    @Test
+    void absoluteUriWithoutPath() {
+        final WebClient client = WebClient.of();
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final HttpResponse httpResponse = client.get("http://127.0.0.1:" + server1.httpPort());
+            final ClientRequestContext ctx = captor.get();
+            assertThat(ctx.path()).isEqualTo("/");
+            assertThat(httpResponse.aggregate().join().status()).isEqualTo(OK);
+        }
     }
 }
