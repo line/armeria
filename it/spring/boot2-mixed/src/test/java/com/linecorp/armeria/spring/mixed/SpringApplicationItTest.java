@@ -26,9 +26,7 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.context.ApplicationContext;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.spring.ArmeriaAutoConfiguration;
@@ -39,35 +37,12 @@ import com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactory;
 public class SpringApplicationItTest {
     @Inject
     private ApplicationContext applicationContext;
-    @Inject
-    private TestRestTemplate restTemplate;
-    @Inject
-    private GreetingController greetingController;
 
     @Test
     public void contextLoads() {
-        assertThat(greetingController).isNotNull();
         assertThat(applicationContext.getBean(ArmeriaReactiveWebServerFactory.class)).isNotNull();
         assertThatThrownBy(() -> {
             applicationContext.getBean(ArmeriaAutoConfiguration.class);
         }).isInstanceOf(BeansException.class);
-    }
-
-    @Test
-    public void greetingShouldReturnDefaultMessage() throws Exception {
-        assertThat(restTemplate.getForObject("/greeting", String.class))
-                .contains("Hello, World!");
-    }
-
-    @Test
-    public void greetingShouldReturnUsersMessage() throws Exception {
-        assertThat(restTemplate.getForObject("/greeting?name=Armeria", String.class))
-                .contains("Hello, Armeria!");
-    }
-
-    @Test
-    public void greetingShouldReturn404() throws Exception {
-        assertThat(restTemplate.getForEntity("/greet", Void.class).getStatusCode())
-                .isEqualByComparingTo(HttpStatus.NOT_FOUND);
     }
 }
