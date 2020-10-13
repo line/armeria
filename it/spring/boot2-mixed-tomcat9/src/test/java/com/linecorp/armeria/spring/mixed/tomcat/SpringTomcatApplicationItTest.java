@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,18 +24,11 @@ import javax.inject.Inject;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.boot.web.context.WebServerApplicationContext;
-import org.springframework.boot.web.embedded.tomcat.TomcatWebServer;
-import org.springframework.boot.web.server.WebServer;
 import org.springframework.context.ApplicationContext;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.spring.ArmeriaAutoConfiguration;
 import com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactory;
 
@@ -44,57 +37,12 @@ import com.linecorp.armeria.spring.web.reactive.ArmeriaReactiveWebServerFactory;
 public class SpringTomcatApplicationItTest {
     @Inject
     private ApplicationContext applicationContext;
-    @Inject
-    private TestRestTemplate restTemplate;
-    @Inject
-    private GreetingController greetingController;
-    @Value("${armeria-tomcat.version.major:9}")
-    private int tomcatMajorVersion;
-    @Value("${armeria-tomcat.version.minor:0}")
-    private int tomcatMinorVersion;
 
     @Test
     public void contextLoads() {
-        assertThat(greetingController).isNotNull();
         assertThat(applicationContext.getBean(ArmeriaAutoConfiguration.class)).isNotNull();
         assertThatThrownBy(() -> {
             applicationContext.getBean(ArmeriaReactiveWebServerFactory.class);
         }).isInstanceOf(BeansException.class);
-    }
-
-    @Test
-    public void verifyTomcatVersion() {
-        assertThat(TomcatVersion.major()).isEqualTo(tomcatMajorVersion);
-        assertThat(TomcatVersion.minor()).isEqualTo(tomcatMinorVersion);
-    }
-
-    @Test
-    public void verifySingleConnector() {
-        // Relevant to Tomcat 9.0
-        assertThat(applicationContext).isInstanceOf(WebServerApplicationContext.class);
-        final WebServer webServer = ((WebServerApplicationContext) applicationContext).getWebServer();
-        assertThat(webServer).isInstanceOf(TomcatWebServer.class);
-        assertThat(((TomcatWebServer) webServer).getTomcat()
-                                                .getEngine()
-                                                .getService()
-                                                .findConnectors()).hasSize(1);
-    }
-
-    @Test
-    public void greetingShouldReturnDefaultMessage() throws Exception {
-        assertThat(restTemplate.getForObject("/tomcat/api/rest/v1/greeting", String.class))
-                .contains("Hello, World!");
-    }
-
-    @Test
-    public void greetingShouldReturnUsersMessage() throws Exception {
-        assertThat(restTemplate.getForObject("/tomcat/api/rest/v1/greeting?name=Armeria", String.class))
-                .contains("Hello, Armeria!");
-    }
-
-    @Test
-    public void greetingShouldReturn404() throws Exception {
-        assertThat(restTemplate.getForEntity("/tomcat/api/rest/v1/greet", Void.class).getStatusCode())
-                .isEqualByComparingTo(HttpStatus.NOT_FOUND);
     }
 }
