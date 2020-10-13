@@ -112,7 +112,8 @@ final class UnionMap<K, V> extends AbstractMap<K, V> {
 
         // Check for dupes first to reduce allocations on the vastly more common case where there aren't any.
         boolean secondHasDupes = false;
-        for (Entry<K, V> entry : second.entrySet()) {
+        final Set<Entry<K, V>> secondEntries = second.entrySet();
+        for (Entry<K, V> entry : secondEntries) {
             if (first.containsKey(entry.getKey())) {
                 secondHasDupes = true;
                 break;
@@ -121,17 +122,16 @@ final class UnionMap<K, V> extends AbstractMap<K, V> {
 
         final Set<Entry<K, V>> filteredSecond;
         if (!secondHasDupes) {
-            filteredSecond = second.entrySet();
+            filteredSecond = secondEntries;
         } else {
             filteredSecond = new LinkedHashSet<>();
-            for (Entry<K, V> entry : second.entrySet()) {
+            for (Entry<K, V> entry : secondEntries) {
                 if (!first.containsKey(entry.getKey())) {
                     filteredSecond.add(entry);
                 }
             }
         }
-        return entrySet =
-                Collections.unmodifiableSet(new ConcatenatedSet<>(first.entrySet(), filteredSecond));
+        return entrySet = Collections.unmodifiableSet(new ConcatenatedSet<>(first.entrySet(), filteredSecond));
     }
 
     private static final class ConcatenatedSet<T> extends AbstractSet<T> {
