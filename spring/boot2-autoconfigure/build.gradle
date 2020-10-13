@@ -16,7 +16,6 @@ dependencies {
 
     testImplementation project(':grpc')
     testImplementation project(':thrift0.13')
-    testImplementation project(':spring:boot2-webflux-autoconfigure')
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

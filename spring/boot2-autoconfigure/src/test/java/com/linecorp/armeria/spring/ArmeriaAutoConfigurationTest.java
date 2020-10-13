@@ -85,7 +85,7 @@ import io.grpc.stub.StreamObserver;
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class, properties = "spring.main.web-application-type=none")
+@SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
 public class ArmeriaAutoConfigurationTest {

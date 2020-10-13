@@ -47,7 +47,7 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithConsumerTest.Test
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class, properties = "spring.main.web-application-type=none")
+@SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 public class ArmeriaAutoConfigurationWithConsumerTest {
 

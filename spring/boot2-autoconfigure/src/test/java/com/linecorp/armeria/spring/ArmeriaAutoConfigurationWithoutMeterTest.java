@@ -47,7 +47,7 @@ import io.micrometer.core.instrument.MeterRegistry;
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = NoMeterTestConfiguration.class, properties = "spring.main.web-application-type=none")
+@SpringBootTest(classes = NoMeterTestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 public class ArmeriaAutoConfigurationWithoutMeterTest {
 
