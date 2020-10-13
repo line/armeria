@@ -154,7 +154,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         return new EurekaEndpointGroupBuilder(sessionProtocol, endpointGroup, requireNonNull(path, "path"));
     }
 
-    private final long registryFetchIntervalSeconds;
+    private final long registryFetchIntervalMillis;
 
     private final RequestHeaders requestHeaders;
     private final Function<byte[], List<Endpoint>> responseConverter;
@@ -164,12 +164,12 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     private volatile boolean closed;
 
     EurekaEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                        WebClient webClient, long registryFetchIntervalSeconds, @Nullable String appName,
+                        WebClient webClient, long registryFetchIntervalMillis, @Nullable String appName,
                         @Nullable String instanceId, @Nullable String vipAddress,
                         @Nullable String secureVipAddress, @Nullable List<String> regions) {
         super(selectionStrategy);
         this.webClient = webClient;
-        this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
+        this.registryFetchIntervalMillis = registryFetchIntervalMillis;
 
         final RequestHeadersBuilder headersBuilder = RequestHeaders.builder();
         headersBuilder.method(HttpMethod.GET);
@@ -219,7 +219,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                 }
             }
             scheduledFuture = eventLoop.schedule(this::fetchRegistry,
-                                                 registryFetchIntervalSeconds, TimeUnit.SECONDS);
+                                                 registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
             return null;
         });
     }
