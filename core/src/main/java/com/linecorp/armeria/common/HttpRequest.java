@@ -268,6 +268,62 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new {@link HttpRequestBuilder}.
+     */
+    static HttpRequestBuilder builder() {
+        return new HttpRequestBuilder();
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with OPTIONS method and path.
+     */
+    static HttpRequestBuilder options(String path) {
+        return new HttpRequestBuilder(HttpMethod.OPTIONS, path);
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with HEAD method and path.
+     */
+    static HttpRequestBuilder head(String path) {
+        return new HttpRequestBuilder(HttpMethod.HEAD, path);
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with GET method and path.
+     */
+    static HttpRequestBuilder get(String path) {
+        return new HttpRequestBuilder(HttpMethod.GET, path);
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with POST method and path.
+     */
+    static HttpRequestBuilder post(String path) {
+        return new HttpRequestBuilder(HttpMethod.POST, path);
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with PUT method and path.
+     */
+    static HttpRequestBuilder put(String path) {
+        return new HttpRequestBuilder(HttpMethod.PUT, path);
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with PATCH method and path.
+     */
+    static HttpRequestBuilder patch(String path) {
+        return new HttpRequestBuilder(HttpMethod.PATCH, path);
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with DELETE method and path.
+     */
+    static HttpRequestBuilder delete(String path) {
+        return new HttpRequestBuilder(HttpMethod.DELETE, path);
+    }
+
+    /**
      * Returns the initial HTTP/2 headers of this request.
      */
     RequestHeaders headers();
