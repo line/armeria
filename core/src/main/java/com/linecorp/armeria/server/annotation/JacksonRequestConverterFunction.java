@@ -23,7 +23,9 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -56,6 +58,18 @@ public final class JacksonRequestConverterFunction implements RequestConverterFu
 
     private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
     private static final Map<Class<?>, Boolean> skippableTypes;
+    @Nullable
+    private static final Class<?> protobufMessageClass;
+
+    static {
+        Class<?> messageType;
+        try {
+            messageType = Class.forName("com.google.protobuf.Message");
+        } catch (ClassNotFoundException e) {
+            messageType = null;
+        }
+        protobufMessageClass = messageType;
+    }
 
     static {
         final Map<Class<?>, Boolean> tmp = new IdentityHashMap<>();
@@ -106,6 +120,10 @@ public final class JacksonRequestConverterFunction implements RequestConverterFu
                 }
             }
 
+            if (isProtobufType(expectedResultType, expectedParameterizedResultType)) {
+                return RequestConverterFunction.fallthrough();
+            }
+
             final ObjectReader reader = getObjectReader(expectedResultType,
                                                         expectedParameterizedResultType);
             if (reader != null) {
@@ -126,6 +144,27 @@ public final class JacksonRequestConverterFunction implements RequestConverterFu
 
     private static String getContent(AggregatedHttpRequest request, MediaType contentType) {
         return request.content(contentType.charset(StandardCharsets.UTF_8));
+    }
+
+    private static boolean isProtobufType(Class<?> expectedResultType,
+                                          @Nullable ParameterizedType expectedParameterizedResultType) {
+
+        if (protobufMessageClass == null) {
+            return false;
+        }
+        if (protobufMessageClass.isAssignableFrom(expectedResultType)) {
+            return true;
+        }
+        if (expectedParameterizedResultType != null) {
+            final Class<?> rawType = (Class<?>) expectedParameterizedResultType.getRawType();
+            if (List.class.isAssignableFrom(rawType) || Set.class.isAssignableFrom(rawType)) {
+                final Class<?> typeArgument =
+                        (Class<?>) expectedParameterizedResultType.getActualTypeArguments()[0];
+                return protobufMessageClass.isAssignableFrom(typeArgument);
+            }
+        }
+
+        return false;
     }
 
     @Nullable

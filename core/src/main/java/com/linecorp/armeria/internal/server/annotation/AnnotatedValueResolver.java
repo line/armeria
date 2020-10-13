@@ -90,18 +90,43 @@ import io.netty.handler.codec.http.HttpConstants;
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
 
-    private static final List<RequestObjectResolver> defaultRequestConverters = ImmutableList.of(
-            (resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
-                final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
-                if (factory == null) {
-                    return RequestConverterFunction.fallthrough();
-                } else {
-                    return factory.create(resolverContext);
-                }
-            },
-            RequestObjectResolver.of(new JacksonRequestConverterFunction()),
-            RequestObjectResolver.of(new StringRequestConverterFunction()),
-            RequestObjectResolver.of(new ByteArrayRequestConverterFunction()));
+    @Nullable
+    private static final RequestConverterFunction protobufRequestConverterFunction;
+
+    static {
+        RequestConverterFunction converterFunction;
+        try {
+            final Class<?> protobufConverterClass =
+                    Class.forName("com.linecorp.armeria.server.grpc.ProtobufRequestConverterFunction");
+            converterFunction =
+                    (RequestConverterFunction) protobufConverterClass.getDeclaredConstructor().newInstance();
+        } catch (Exception ignored) {
+            converterFunction = null;
+        }
+        protobufRequestConverterFunction = converterFunction;
+    }
+
+    private static final List<RequestObjectResolver> defaultRequestConverters;
+
+    static {
+        final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builder();
+        builder.add((resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
+            final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
+            if (factory == null) {
+                return RequestConverterFunction.fallthrough();
+            } else {
+                return factory.create(resolverContext);
+            }
+        });
+        builder.add(RequestObjectResolver.of(new JacksonRequestConverterFunction()));
+
+        if (protobufRequestConverterFunction != null) {
+            builder.add(RequestObjectResolver.of(protobufRequestConverterFunction));
+        }
+        builder.add(RequestObjectResolver.of(new StringRequestConverterFunction()),
+                    RequestObjectResolver.of(new ByteArrayRequestConverterFunction()));
+        defaultRequestConverters = builder.build();
+    }
 
     private static final Object[] emptyArguments = new Object[0];
 
