@@ -37,9 +37,9 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -48,7 +48,7 @@ import reactor.core.publisher.Flux;
 class HttpServerRequestTimeoutTest {
 
     @Nullable
-    private static CompletableFuture<Void> timeoutFuture;
+    private static CompletableFuture<Throwable> timeoutFuture;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -81,7 +81,7 @@ class HttpServerRequestTimeoutTest {
                   return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
               })
               .service("/streaming", (ctx, req) -> {
-                  timeoutFuture = ctx.whenRequestTimedOut();
+                  timeoutFuture = ctx.whenRequestCancelled();
                   return HttpResponse.streaming();
               })
               .serviceUnder("/timeout-by-decorator", (ctx, req) ->
@@ -216,7 +216,8 @@ class HttpServerRequestTimeoutTest {
         final AggregatedHttpResponse response = client.get("/streaming").aggregate().join();
         assertThat(response.status().code()).isEqualTo(503);
         await().untilAsserted(() -> {
-            assertThat(timeoutFuture).isInstanceOf(UnmodifiableFuture.class);
+            assertThat(timeoutFuture).isCompletedWithValueMatching(
+                    throwable -> throwable instanceof TimeoutException);
             assertThat(timeoutFuture).isDone();
         });
     }

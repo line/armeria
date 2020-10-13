@@ -134,10 +134,22 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public CompletableFuture<Throwable> whenRequestCancelling() {
+        return delegate().whenRequestCancelling();
+    }
+
+    @Override
+    public CompletableFuture<Throwable> whenRequestCancelled() {
+        return delegate().whenRequestCancelled();
+    }
+
+    @Deprecated
+    @Override
     public CompletableFuture<Void> whenRequestTimingOut() {
         return delegate().whenRequestTimingOut();
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Void> whenRequestTimedOut() {
         return delegate().whenRequestTimedOut();

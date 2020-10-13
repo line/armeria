@@ -147,10 +147,22 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public CompletableFuture<Throwable> whenResponseCancelling() {
+        return delegate().whenResponseCancelling();
+    }
+
+    @Override
+    public CompletableFuture<Throwable> whenResponseCancelled() {
+        return delegate().whenResponseCancelled();
+    }
+
+    @Deprecated
+    @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
         return delegate().whenResponseTimingOut();
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
         return delegate().whenResponseTimedOut();

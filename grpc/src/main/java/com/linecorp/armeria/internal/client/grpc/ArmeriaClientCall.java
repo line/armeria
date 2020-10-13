@@ -194,7 +194,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 close(status, new Metadata());
             } else {
                 ctx.setResponseTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(remainingNanos));
-                ctx.whenResponseTimingOut().thenRun(() -> {
+                ctx.whenResponseCancelling().thenRun(() -> {
                     final Status status = Status.DEADLINE_EXCEEDED
                             .augmentDescription("deadline exceeded after " + remainingNanos + "ns.");
                     close(status, new Metadata());

@@ -39,8 +39,8 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestCancellationException;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -94,12 +94,12 @@ class HttpClientResponseTimeoutTest {
 
     @Test
     void whenTimedOut() {
-        final AtomicReference<CompletableFuture<Void>> timeoutFutureRef = new AtomicReference<>();
+        final AtomicReference<CompletableFuture<Throwable>> timeoutFutureRef = new AtomicReference<>();
         final WebClient client = WebClient
                 .builder(server.httpUri())
                 .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(1000L))
                 .decorator((delegate, ctx, req) -> {
-                    timeoutFutureRef.set(ctx.whenResponseTimedOut());
+                    timeoutFutureRef.set(ctx.whenResponseCancelled());
                     return delegate.execute(ctx, req);
                 })
                 .build();
@@ -111,8 +111,9 @@ class HttpClientResponseTimeoutTest {
         });
 
         await().untilAsserted(() -> {
-            final CompletableFuture<Void> timeoutFuture = timeoutFutureRef.get();
-            assertThat(timeoutFuture).isInstanceOf(UnmodifiableFuture.class);
+            final CompletableFuture<Throwable> timeoutFuture = timeoutFutureRef.get();
+            assertThat(timeoutFuture).isCompletedWithValueMatching(
+                    throwable -> throwable instanceof TimeoutException);
             assertThat(timeoutFuture).isDone();
         });
     }

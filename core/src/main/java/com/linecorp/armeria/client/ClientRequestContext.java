@@ -428,9 +428,25 @@ public interface ClientRequestContext extends RequestContext {
     }
 
     /**
+     * Returns a {@link CompletableFuture} which is completed with a {@link Throwable} cancellation cause when
+     * {@link ClientRequestContext} is about to get cancelled.
+     */
+    CompletableFuture<Throwable> whenResponseCancelling();
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed with a {@link Throwable} cancellation cause after
+     * {@link ClientRequestContext} has been cancelled. {@link #isCancelled()} will always return {@code true}
+     * when the returned {@link CompletableFuture} is completed.
+     */
+    CompletableFuture<Throwable> whenResponseCancelled();
+
+    /**
      * Returns a {@link CompletableFuture} which is completed when {@link ClientRequestContext} is about to
      * get timed out.
+     *
+     * @deprecated Use {@link #whenResponseCancelling()} instead.
      */
+    @Deprecated
     CompletableFuture<Void> whenResponseTimingOut();
 
     /**
@@ -438,7 +454,10 @@ public interface ClientRequestContext extends RequestContext {
      * timed out (e.g., when the corresponding request passes a deadline).
      * {@link #isTimedOut()} will always return {@code true} when the returned
      * {@link CompletableFuture} is completed.
+     *
+     * @deprecated Use {@link #whenResponseCancelled()} instead.
      */
+    @Deprecated
     CompletableFuture<Void> whenResponseTimedOut();
 
     /**

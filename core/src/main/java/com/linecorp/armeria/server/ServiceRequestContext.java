@@ -416,9 +416,25 @@ public interface ServiceRequestContext extends RequestContext {
     void setRequestTimeout(TimeoutMode mode, Duration requestTimeout);
 
     /**
+     * Returns a {@link CompletableFuture} which is completed with a {@link Throwable} cancellation cause when
+     * {@link ServiceRequestContext} is about to get cancelled.
+     */
+    CompletableFuture<Throwable> whenRequestCancelling();
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed with a {@link Throwable} cancellation cause after
+     * {@link ServiceRequestContext} has been cancelled. {@link #isCancelled()} will always return {@code true}
+     * when the returned {@link CompletableFuture} is completed.
+     */
+    CompletableFuture<Throwable> whenRequestCancelled();
+
+    /**
      * Returns a {@link CompletableFuture} which is completed when {@link ServiceRequestContext} is about to
      * get timed out.
+     *
+     * @deprecated Use {@link #whenRequestCancelling()} instead.
      */
+    @Deprecated
     CompletableFuture<Void> whenRequestTimingOut();
 
     /**
@@ -426,7 +442,10 @@ public interface ServiceRequestContext extends RequestContext {
      * timed out (e.g., when the corresponding request passes a deadline).
      * {@link #isTimedOut()} will always return {@code true} when the returned
      * {@link CompletableFuture} is completed.
+     *
+     * @deprecated Use {@link #whenRequestCancelled()} instead.
      */
+    @Deprecated
     CompletableFuture<Void> whenRequestTimedOut();
 
     /**

@@ -587,10 +587,22 @@ public final class DefaultClientRequestContext
     }
 
     @Override
+    public CompletableFuture<Throwable> whenResponseCancelling() {
+        return responseCancellationScheduler.whenCancelling();
+    }
+
+    @Override
+    public CompletableFuture<Throwable> whenResponseCancelled() {
+        return responseCancellationScheduler.whenCancelled();
+    }
+
+    @Deprecated
+    @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
         return responseCancellationScheduler.whenTimingOut();
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
         return responseCancellationScheduler.whenTimedOut();
