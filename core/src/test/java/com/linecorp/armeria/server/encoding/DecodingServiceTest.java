@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.decoding;
+package com.linecorp.armeria.server.encoding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
