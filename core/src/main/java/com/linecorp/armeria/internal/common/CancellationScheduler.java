@@ -370,8 +370,6 @@ public final class CancellationScheduler {
             whenCancelling().thenAccept(cause -> {
                 if (cause instanceof TimeoutException) {
                     timeoutFuture.doComplete();
-                } else {
-                    timeoutFuture.doCancel();
                 }
             });
             return timeoutFuture;
@@ -391,8 +389,6 @@ public final class CancellationScheduler {
             whenCancelled().thenAccept(cause -> {
                 if (cause instanceof TimeoutException) {
                     timeoutFuture.doComplete();
-                } else {
-                    timeoutFuture.doCancel();
                 }
             });
             return timeoutFuture;
@@ -452,7 +448,7 @@ public final class CancellationScheduler {
             return;
         }
         if (task.canSchedule()) {
-            whenCancelling().complete(cause);
+            ((CancellationFuture) whenCancelling()).doComplete(cause);
         }
         // Set state first to prevent duplicate execution
         state = State.FINISHED;
@@ -461,7 +457,7 @@ public final class CancellationScheduler {
             task.run(cause);
         }
         this.cause = cause;
-        whenCancelled().complete(cause);
+        ((CancellationFuture) whenCancelled()).doComplete(cause);
     }
 
     @Nullable
@@ -497,16 +493,15 @@ public final class CancellationScheduler {
         void run(Throwable cause);
     }
 
-    private static class CancellationFuture extends CompletableFuture<Throwable> {
+    private static class CancellationFuture extends UnmodifiableFuture<Throwable> {
+        protected void doComplete(@Nullable Throwable cause) {
+            super.doComplete(cause);
+        }
     }
 
     private static class TimeoutFuture extends UnmodifiableFuture<Void> {
         void doComplete() {
             doComplete(null);
-        }
-
-        public boolean doCancel() {
-            return super.doCancel();
         }
     }
 }

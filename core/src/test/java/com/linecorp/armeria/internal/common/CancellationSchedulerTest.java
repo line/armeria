@@ -24,7 +24,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -299,20 +298,6 @@ class CancellationSchedulerTest {
         });
         whenTimingOutRef.get().join();
         whenTimedOutRef.get().join();
-    }
-
-    @Test
-    void whenTimingOutAndWhenTimedOutAreCancelled() {
-        final AtomicReference<CompletableFuture<Void>> whenTimingOutRef = new AtomicReference<>();
-        final AtomicReference<CompletableFuture<Void>> whenTimedOutRef = new AtomicReference<>();
-        executeInEventLoop(0, scheduler -> {
-            whenTimingOutRef.set(scheduler.whenTimingOut());
-            whenTimedOutRef.set(scheduler.whenTimedOut());
-            scheduler.finishNow(new RuntimeException());
-            assertThat(scheduler.isFinished()).isTrue();
-        });
-        assertThatThrownBy(() -> whenTimingOutRef.get().join()).isInstanceOf(CancellationException.class);
-        assertThatThrownBy(() -> whenTimedOutRef.get().join()).isInstanceOf(CancellationException.class);
     }
 
     @Test

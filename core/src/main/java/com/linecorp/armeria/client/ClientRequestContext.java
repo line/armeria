@@ -429,20 +429,23 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Returns a {@link CompletableFuture} which is completed with a {@link Throwable} cancellation cause when
-     * {@link ClientRequestContext} is about to get cancelled.
+     * the {@link ClientRequestContext} is about to get cancelled. If the response is handled successfully
+     * without cancellation, the {@link CompletableFuture} won't complete.
      */
     CompletableFuture<Throwable> whenResponseCancelling();
 
     /**
      * Returns a {@link CompletableFuture} which is completed with a {@link Throwable} cancellation cause after
-     * {@link ClientRequestContext} has been cancelled. {@link #isCancelled()} will always return {@code true}
-     * when the returned {@link CompletableFuture} is completed.
+     * the {@link ClientRequestContext} has been cancelled. {@link #isCancelled()} will always return
+     * {@code true} when the returned {@link CompletableFuture} is completed. If the response is handled
+     * successfully without cancellation, the {@link CompletableFuture} won't complete.
      */
     CompletableFuture<Throwable> whenResponseCancelled();
 
     /**
-     * Returns a {@link CompletableFuture} which is completed when {@link ClientRequestContext} is about to
-     * get timed out.
+     * Returns a {@link CompletableFuture} which is completed when the {@link ClientRequestContext} is about to
+     * get timed out. If the response is handled successfully or not cancelled by timeout, the
+     * {@link CompletableFuture} won't complete.
      *
      * @deprecated Use {@link #whenResponseCancelling()} instead.
      */
@@ -450,10 +453,10 @@ public interface ClientRequestContext extends RequestContext {
     CompletableFuture<Void> whenResponseTimingOut();
 
     /**
-     * Returns a {@link CompletableFuture} which is completed after {@link ClientRequestContext} has been
-     * timed out (e.g., when the corresponding request passes a deadline).
-     * {@link #isTimedOut()} will always return {@code true} when the returned
-     * {@link CompletableFuture} is completed.
+     * Returns a {@link CompletableFuture} which is completed after the {@link ClientRequestContext} has been
+     * timed out. {@link #isTimedOut()} will always return {@code true} when the returned
+     * {@link CompletableFuture} is completed. If the response is handled successfully or not cancelled by
+     * timeout, the {@link CompletableFuture} won't complete.
      *
      * @deprecated Use {@link #whenResponseCancelled()} instead.
      */
