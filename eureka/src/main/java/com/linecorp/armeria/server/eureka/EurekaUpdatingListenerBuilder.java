@@ -100,7 +100,7 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     /**
      * Sets the interval between renewal. {@value DEFAULT_LEASE_RENEWAL_INTERVAL_SECONDS} seconds is used
      * by default and it's not recommended to modify this value. Eureka protocol stores this value in seconds
-     * internally, and thus this method will convert the given interval into seconds, while rounding up
+     * internally, and thus this method will convert the given interval into seconds, rounding up
      * its sub-second part. See
      * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
      * renew</a>.
@@ -137,8 +137,7 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     /**
      * Sets the interval between renewal in milliseconds. {@code 30000} (30 seconds) is used by default and
      * it's not recommended to modify this value. Eureka protocol stores this value in seconds internally,
-     * and thus this method will convert the given interval into seconds, while rounding up its sub-second part.
-     * See
+     * and thus this method will convert the given interval into seconds, rounding up its sub-second part. See
      * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
      * renew</a>.
      */
@@ -158,7 +157,7 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     /**
      * Sets the lease duration. {@value DEFAULT_LEASE_DURATION_SECONDS} seconds is used by default and it's
      * not recommended to modify this value. Eureka protocol stores this value in seconds internally, and thus
-     * this method will convert the given duration into seconds, while rounding up its sub-second part. See
+     * this method will convert the given duration into seconds, rounding up its sub-second part. See
      * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
      * renew</a>.
      */
@@ -194,7 +193,7 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     /**
      * Sets the lease duration in milliseconds. {@code 90000} (90 seconds) is used by default and it's not
      * recommended to modify this value. Eureka protocol stores this value in seconds internally, and thus
-     * this method will convert the given duration into seconds, while rounding up its sub-second part. See
+     * this method will convert the given duration into seconds, rounding up its sub-second part. See
      * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
      * renew</a>.
      */
