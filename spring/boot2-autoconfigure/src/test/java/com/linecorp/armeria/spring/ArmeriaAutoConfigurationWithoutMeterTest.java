@@ -16,6 +16,7 @@
 package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.TimeUnit;
 
@@ -68,10 +69,12 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
 
     @Test
     public void test() {
-        final String metricReport = WebClient.of(newUrl("http"))
-                                             .get("/internal/metrics")
-                                             .aggregate().join()
-                                             .contentUtf8();
-        assertThat(metricReport).contains("# TYPE armeria_server_connections gauge");
+        await().untilAsserted(() -> {
+            final String metricReport = WebClient.of(newUrl("h1c"))
+                                                 .get("/internal/metrics")
+                                                 .aggregate().join()
+                                                 .contentUtf8();
+            assertThat(metricReport).contains("# TYPE armeria_server_connections gauge");
+        });
     }
 }
