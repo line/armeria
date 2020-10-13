@@ -19,11 +19,11 @@ package com.linecorp.armeria.common.logback;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -131,7 +131,7 @@ final class UnionMap<K, V> extends AbstractMap<K, V> {
                 }
             }
         }
-        return entrySet = Collections.unmodifiableSet(new ConcatenatedSet<>(first.entrySet(), filteredSecond));
+        return entrySet = new ConcatenatedSet<>(first.entrySet(), filteredSecond);
     }
 
     private static final class ConcatenatedSet<T> extends AbstractSet<T> {
@@ -169,12 +169,22 @@ final class UnionMap<K, V> extends AbstractMap<K, V> {
         }
 
         @Override
+        public boolean removeAll(Collection<?> coll) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public boolean retainAll(Collection<?> c) {
             throw new UnsupportedOperationException();
         }
 
         @Override
         public void clear() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean removeIf(Predicate<? super T> filter) {
             throw new UnsupportedOperationException();
         }
 
