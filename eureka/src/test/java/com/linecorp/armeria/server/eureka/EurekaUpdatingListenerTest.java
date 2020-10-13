@@ -21,6 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.net.Inet4Address;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -101,7 +102,8 @@ class EurekaUpdatingListenerTest {
         final EurekaUpdatingListener listener =
                 EurekaUpdatingListener.builder(eurekaServer.httpUri())
                                       .instanceId(INSTANCE_ID)
-                                      .renewalIntervalSeconds(2)
+                                      .renewalIntervalMillis(2000)
+                                      .leaseDurationMillis(10000)
                                       .appName(APP_NAME)
                                       .build();
 
@@ -136,7 +138,8 @@ class EurekaUpdatingListenerTest {
         final InstanceInfoBuilder builder = new InstanceInfoBuilder().appName(APP_NAME)
                                                                      .instanceId(INSTANCE_ID)
                                                                      .hostname(application.defaultHostname())
-                                                                     .renewalIntervalSeconds(2);
+                                                                     .renewalIntervalSeconds(2)
+                                                                     .leaseDurationSeconds(10);
         final Inet4Address inet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
         final String hostnameOrIpAddr;
         if (inet4Address != null) {
@@ -163,7 +166,8 @@ class EurekaUpdatingListenerTest {
         final EurekaUpdatingListener listener =
                 EurekaUpdatingListener.builder(eurekaServer.httpUri())
                                       .instanceId(INSTANCE_ID)
-                                      .renewalIntervalSeconds(2)
+                                      .renewalInterval(Duration.ofSeconds(2))
+                                      .leaseDuration(Duration.ofSeconds(10))
                                       .port(1) // misconfigued!
                                       .appName(APP_NAME)
                                       .build();
@@ -179,6 +183,8 @@ class EurekaUpdatingListenerTest {
         final int port = instanceInfo.getPort().getPort();
         // The specified port number is used although the port is not actually used.
         assertThat(port).isEqualTo(1);
+        assertThat(instanceInfo.getLeaseInfo().getRenewalIntervalInSecs()).isEqualTo(2);
+        assertThat(instanceInfo.getLeaseInfo().getDurationInSecs()).isEqualTo(10);
         application.stop().join();
     }
 }
