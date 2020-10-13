@@ -372,7 +372,9 @@ public interface RequestContext {
     /**
      * Cancels the request. Shortcut for {@code cancel(RequestCancellationException.get())}.
      */
-    void cancel();
+    default void cancel() {
+        cancel(RequestCancellationException.get());
+    }
 
     /**
      * Times out the request.
@@ -388,13 +390,17 @@ public interface RequestContext {
     /**
      * Returns whether this {@link RequestContext} has been cancelled.
      */
-    boolean isCancelled();
+    default boolean isCancelled() {
+        return cancellationCause() != null;
+    }
 
     /**
      * Returns whether this {@link RequestContext} has been timed-out, that is the cancellation cause is an
      * instance of {@link TimeoutException}.
      */
-    boolean isTimedOut();
+    default boolean isTimedOut() {
+        return cancellationCause() instanceof TimeoutException;
+    }
 
     /**
      * Returns the {@link ContextAwareEventLoop} that is handling the current {@link Request}.

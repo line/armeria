@@ -432,7 +432,9 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Times out the request. Shortcut for {@code cancel(RequestTimeoutException.get())}.
      */
-    void timeoutNow();
+    default void timeoutNow() {
+        cancel(RequestTimeoutException.get());
+    }
 
     /**
      * Returns the maximum length of the current {@link Request}.

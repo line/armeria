@@ -45,11 +45,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestCancellationException;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -315,30 +313,10 @@ public final class DefaultServiceRequestContext
         requestCancellationScheduler.finishNow(cause);
     }
 
-    @Override
-    public void cancel() {
-        cancel(RequestCancellationException.get());
-    }
-
-    @Override
-    public void timeoutNow() {
-        cancel(RequestTimeoutException.get());
-    }
-
     @Nullable
     @Override
     public Throwable cancellationCause() {
         return requestCancellationScheduler.cause();
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return cancellationCause() != null;
-    }
-
-    @Override
-    public boolean isTimedOut() {
-        return cancellationCause() instanceof TimeoutException;
     }
 
     @Override

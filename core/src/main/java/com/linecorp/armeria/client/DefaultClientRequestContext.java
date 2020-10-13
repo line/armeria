@@ -42,7 +42,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestCancellationException;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
@@ -50,7 +49,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -582,30 +580,10 @@ public final class DefaultClientRequestContext
         responseCancellationScheduler.finishNow(cause);
     }
 
-    @Override
-    public void cancel() {
-        cancel(RequestCancellationException.get());
-    }
-
-    @Override
-    public void timeoutNow() {
-        cancel(ResponseTimeoutException.get());
-    }
-
     @Nullable
     @Override
     public Throwable cancellationCause() {
         return responseCancellationScheduler.cause();
-    }
-
-    @Override
-    public boolean isCancelled() {
-        return cancellationCause() != null;
-    }
-
-    @Override
-    public boolean isTimedOut() {
-        return cancellationCause() instanceof TimeoutException;
     }
 
     @Override

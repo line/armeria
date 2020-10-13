@@ -444,7 +444,9 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Times out the request. Shortcut for {@code cancel(ResponseTimeoutException.get())}.
      */
-    void timeoutNow();
+    default void timeoutNow() {
+        cancel(ResponseTimeoutException.get());
+    }
 
     /**
      * Returns the maximum length of the received {@link Response}.
