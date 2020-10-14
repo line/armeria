@@ -71,36 +71,28 @@ final class HttpRequestBuilder {
      * Shortcut to create a new {@link HttpRequestBuilder} with GET method and path.
      */
     public HttpRequestBuilder get(String path) {
-        method(HttpMethod.GET);
-        path(path);
-        return this;
+        return method(HttpMethod.GET).path(path);
     }
 
     /**
      * Shortcut to create a new {@link HttpRequestBuilder} with POST method and path.
      */
     public HttpRequestBuilder post(String path) {
-        method(HttpMethod.POST);
-        path(path);
-        return this;
+        return method(HttpMethod.POST).path(path);
     }
 
     /**
      * Shortcut to create a new {@link HttpRequestBuilder} with PUT method and path.
      */
     public HttpRequestBuilder put(String path) {
-        method(HttpMethod.PUT);
-        path(path);
-        return this;
+        return method(HttpMethod.PUT).path(path);
     }
 
     /**
      * Shortcut to create a new {@link HttpRequestBuilder} with DELETE method and path.
      */
     public HttpRequestBuilder delete(String path) {
-        method(HttpMethod.DELETE);
-        path(path);
-        return this;
+        return method(HttpMethod.DELETE).path(path);
     }
 
     /**
