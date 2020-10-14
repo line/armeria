@@ -17,6 +17,8 @@ package com.linecorp.armeria.common.logback;
 
 import com.google.common.base.MoreObjects;
 
+import io.netty.util.AttributeKey;
+
 public class CustomObject {
 
     final String name;
@@ -33,4 +35,8 @@ public class CustomObject {
                           .add("name", name)
                           .add("value", value).toString();
     }
+
+    public static final AttributeKey<CustomObject> ATTR = AttributeKey.valueOf(CustomObject.class, "ATTR");
+
+    public static final AttributeKey<String> FOO = AttributeKey.valueOf(CustomObject.class, "FOO");
 }

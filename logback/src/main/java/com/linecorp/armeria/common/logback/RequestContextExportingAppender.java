@@ -29,10 +29,10 @@ import org.slf4j.MDC;
 import org.slf4j.Marker;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
+import com.linecorp.armeria.common.logging.ExportGroupBuilder;
 import com.linecorp.armeria.common.logging.RequestContextExporter;
 import com.linecorp.armeria.common.logging.RequestContextExporterBuilder;
 
@@ -65,8 +65,6 @@ public final class RequestContextExportingAppender
             InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
         }
     }
-
-    private static final Splitter KEY_SPLITTER = Splitter.on(',').trimResults();
 
     private final AppenderAttachableImpl<ILoggingEvent> aai = new AppenderAttachableImpl<>();
     private final RequestContextExporterBuilder builder = RequestContextExporter.builder();
@@ -132,6 +130,16 @@ public final class RequestContextExportingAppender
     }
 
     /**
+     * Specifies a prefix of the default export group.
+     * Note: this method is meant to be used for XML configuration.
+     */
+    public void setPrefix(String prefix) {
+        requireNonNull(prefix, "prefix");
+        checkArgument(!prefix.isEmpty(), "prefix must not be empty");
+        builder.setDefaultExportPrefix(prefix);
+    }
+
+    /**
      * Adds the property represented by the specified MDC key to the export list.
      * Note: this method is meant to be used for XML configuration.
      * Use {@code add*()} methods instead.
@@ -149,11 +157,17 @@ public final class RequestContextExportingAppender
      */
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
-        KEY_SPLITTER.split(mdcKeys)
-                    .forEach(mdcKey -> {
-                        checkArgument(!mdcKey.isEmpty(), "comma-separated MDC key must not be empty");
-                        builder.keyPattern(mdcKey);
-                    });
+        checkArgument(!mdcKeys.isEmpty(), "mdcKeys must not be empty");
+        builder.keyPatterns(mdcKeys);
+    }
+
+    /**
+     * Adds the export group.
+     * Note: this method is meant to be used for XML configuration.
+     */
+    public void setExportGroup(ExportGroupBuilder exportGroupBuilder) {
+        requireNonNull(exportGroupBuilder, "exportGroupBuilder");
+        builder.addExportGroup(exportGroupBuilder.build());
     }
 
     private void ensureNotStarted() {
