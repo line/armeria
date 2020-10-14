@@ -49,6 +49,7 @@ class HttpDeframerTest {
         StepVerifier.create(deframer)
                     .expectComplete()
                     .verify();
+        assertThat(decoder.isReleased()).isTrue();
     }
 
     @Test
@@ -62,6 +63,7 @@ class HttpDeframerTest {
                     .expectNext("A0123456789")
                     .expectComplete()
                     .verify();
+        assertThat(decoder.isReleased()).isTrue();
     }
 
     @Test
@@ -83,6 +85,7 @@ class HttpDeframerTest {
                     .expectNext("E0123456789")
                     .expectComplete()
                     .verify();
+        assertThat(decoder.isReleased()).isTrue();
     }
 
     @Test
@@ -108,6 +111,7 @@ class HttpDeframerTest {
                     .expectNext("E0123456789")
                     .expectComplete()
                     .verify();
+        assertThat(decoder.isReleased()).isTrue();
     }
 
     @Test
@@ -121,6 +125,7 @@ class HttpDeframerTest {
                     .expectNext("A0123456789")
                     .expectComplete()
                     .verify();
+        assertThat(decoder.isReleased()).isTrue();
     }
 
     @Test
@@ -177,6 +182,7 @@ class HttpDeframerTest {
         assertThat(completed).isFalse();
         assertThat(consumed).containsExactly("A0123456789", "B0123456789", "C0123456789");
         deframer.cancel();
+        assertThat(decoder.isReleased()).isTrue();
     }
 
     @Test
@@ -206,11 +212,13 @@ class HttpDeframerTest {
                     .expectNext("E0123456789")
                     .expectComplete()
                     .verify();
+        assertThat(decoder.isReleased()).isTrue();
     }
 
     private static final class FixedLengthDecoder implements HttpDeframerHandler<String> {
 
         private final int length;
+        private final List<ByteBuf> byteBufs = new ArrayList<>();
 
         private FixedLengthDecoder(int length) {
             this.length = length;
@@ -218,23 +226,29 @@ class HttpDeframerTest {
 
         @Override
         public void process(HttpDeframerInput in, HttpDeframerOutput<String> out) {
-            int remained = in.readableBytes();
-            if (remained < length) {
+            int remaining = in.readableBytes();
+            if (remaining < length) {
                 return;
             }
 
-            while (remained >= length) {
+            while (remaining >= length) {
                 final ByteBuf buf = in.readBytes(length);
                 out.add(buf.toString(StandardCharsets.UTF_8));
+                byteBufs.add(buf);
                 buf.release();
-                remained -= length;
+                remaining -= length;
             }
+        }
+
+        boolean isReleased() {
+            return byteBufs.stream().allMatch(buf -> buf.refCnt() == 0);
         }
     }
 
     private static final class HeaderAwareDecoder implements HttpDeframerHandler<String> {
 
         private int length;
+        private final List<ByteBuf> byteBufs = new ArrayList<>();
 
         @Override
         public void processHeaders(HttpHeaders in, HttpDeframerOutput<String> out) {
@@ -243,17 +257,22 @@ class HttpDeframerTest {
 
         @Override
         public void process(HttpDeframerInput in, HttpDeframerOutput<String> out) {
-            int remained = in.readableBytes();
-            if (remained < length) {
+            int remaining = in.readableBytes();
+            if (remaining < length) {
                 return;
             }
 
-            while (remained >= length) {
+            while (remaining >= length) {
                 final ByteBuf buf = in.readBytes(length);
                 out.add(buf.toString(StandardCharsets.UTF_8));
+                byteBufs.add(buf);
                 buf.release();
-                remained -= length;
+                remaining -= length;
             }
+        }
+
+        boolean isReleased() {
+            return byteBufs.stream().allMatch(buf -> buf.refCnt() == 0);
         }
     }
 }

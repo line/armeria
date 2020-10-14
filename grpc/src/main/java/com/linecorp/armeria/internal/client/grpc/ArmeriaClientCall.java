@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
+import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -47,7 +48,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -61,7 +62,7 @@ import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
-import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
+import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframerHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
@@ -217,10 +218,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
-        final HttpStreamDeframer streamDeframer =
-                new HttpStreamDeframer(decompressorRegistry, this, maxInboundMessageSizeBytes);
-        responseReader = streamDeframer.newHttpDeframer(ctx.alloc(), grpcWebText);
-        streamDeframer.setDeframer(responseReader);
+        final HttpStreamDeframerHandler handler =
+                new HttpStreamDeframerHandler(decompressorRegistry, this, maxInboundMessageSizeBytes);
+        responseReader = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
+        handler.setDeframer(responseReader);
         responseReader.subscribe(this, ctx.eventLoop());
 
         res.subscribe(responseReader, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
@@ -230,13 +231,17 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     @Override
     public void request(int numMessages) {
         if (ctx.eventLoop().inEventLoop()) {
-            if (upstream == null) {
-                pendingRequests += numMessages;
-            } else {
-                upstream.request(numMessages);
-            }
+            doRequest(numMessages);
         } else {
-            ctx.eventLoop().execute(() -> request(numMessages));
+            ctx.eventLoop().execute(() -> doRequest(numMessages));
+        }
+    }
+
+    private void doRequest(int numMessages) {
+        if (upstream == null) {
+            pendingRequests += numMessages;
+        } else {
+            upstream.request(numMessages);
         }
     }
 

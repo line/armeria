@@ -34,22 +34,22 @@ public interface HttpDeframerHandler<T> {
      * Decodes a stream of {@link HttpData}s to N objects.
      * This method will be called whenever an {@link HttpData} is signaled from {@link Publisher}.
      */
-    void process(HttpDeframerInput in, HttpDeframerOutput<T> out);
+    void process(HttpDeframerInput in, HttpDeframerOutput<T> out) throws Exception;
 
     /**
      * Decodes an informational {@link ResponseHeaders} to N objects.
      */
-    default void processInformationalHeaders(ResponseHeaders in, HttpDeframerOutput<T> out) {}
+    default void processInformationalHeaders(ResponseHeaders in, HttpDeframerOutput<T> out) throws Exception {}
 
     /**
      * Decodes an non-informational {@link HttpHeaders} to N objects.
      */
-    default void processHeaders(HttpHeaders in, HttpDeframerOutput<T> out) {}
+    default void processHeaders(HttpHeaders in, HttpDeframerOutput<T> out) throws Exception {}
 
     /**
      * Decodes a {@link HttpHeaders trailers} to N objects.
      */
-    default void processTrailers(HttpHeaders in, HttpDeframerOutput<T> out) {}
+    default void processTrailers(HttpHeaders in, HttpDeframerOutput<T> out) throws Exception {}
 
     /**
      * Invoked when a {@link Throwable} is raised while deframing.

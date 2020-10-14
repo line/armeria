@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.HttpDeframer;
@@ -54,11 +54,11 @@ class HttpStreamDeframerTest {
     void setUp() {
         statusRef = new AtomicReference<>();
         final TransportStatusListener statusListener = (status, metadata) -> statusRef.set(status);
-        final HttpStreamDeframer streamDeframer =
-                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), statusListener,
-                                       Integer.MAX_VALUE);
-        deframer = streamDeframer.newHttpDeframer(ByteBufAllocator.DEFAULT);
-        streamDeframer.setDeframer(deframer);
+        final HttpStreamDeframerHandler handler =
+                new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), statusListener,
+                                              Integer.MAX_VALUE);
+        deframer = new HttpDeframer<>(handler, ByteBufAllocator.DEFAULT);
+        handler.setDeframer(deframer);
     }
 
     @Test

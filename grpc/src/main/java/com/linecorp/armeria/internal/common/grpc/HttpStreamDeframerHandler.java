@@ -25,7 +25,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.HttpDeframer;
@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.stream.HttpDeframerOutput;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
 
-public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
+public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandler {
 
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
@@ -42,9 +42,9 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     @Nullable
     private HttpDeframer<DeframedMessage> deframer;
 
-    public HttpStreamDeframer(DecompressorRegistry decompressorRegistry,
-                              TransportStatusListener transportStatusListener,
-                              int maxMessageSizeBytes) {
+    public HttpStreamDeframerHandler(DecompressorRegistry decompressorRegistry,
+                                     TransportStatusListener transportStatusListener,
+                                     int maxMessageSizeBytes) {
         super(maxMessageSizeBytes);
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
@@ -84,8 +84,9 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             assert deframer != null;
             // A gRPC client could not receive messages fully yet.
             // Let ArmeriaClientCall be closed when the gRPC client has been consumed all messages.
-            deframer.whenComplete().whenComplete((unused1, unused2) -> {
+            deframer.whenComplete().handle((unused1, unused2) -> {
                 GrpcStatus.reportStatus(headers, deframer, transportStatusListener);
+                return null;
             });
         }
 
@@ -123,7 +124,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     }
 
     @Override
-    public HttpStreamDeframer decompressor(@Nullable Decompressor decompressor) {
-        return (HttpStreamDeframer) super.decompressor(decompressor);
+    public HttpStreamDeframerHandler decompressor(@Nullable Decompressor decompressor) {
+        return (HttpStreamDeframerHandler) super.decompressor(decompressor);
     }
 }

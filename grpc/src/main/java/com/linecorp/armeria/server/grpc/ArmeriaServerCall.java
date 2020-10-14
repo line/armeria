@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil.serializeTrailersAsMessage;
+import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Base64;
@@ -47,7 +48,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -60,7 +61,7 @@ import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
-import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
+import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframerHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
@@ -161,11 +162,11 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         requireNonNull(decompressorRegistry, "decompressorRegistry");
 
-        final HttpStreamDeframer streamDeframer =
-                new HttpStreamDeframer(decompressorRegistry, this, maxInboundMessageSizeBytes)
+        final HttpStreamDeframerHandler handler =
+                new HttpStreamDeframerHandler(decompressorRegistry, this, maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
-        messageDeframer = streamDeframer.newHttpDeframer(ctx.alloc(), grpcWebText);
-        streamDeframer.setDeframer(messageDeframer);
+        messageDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
+        handler.setDeframer(messageDeframer);
         messageDeframer.subscribe(this, ctx.eventLoop());
         messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
 

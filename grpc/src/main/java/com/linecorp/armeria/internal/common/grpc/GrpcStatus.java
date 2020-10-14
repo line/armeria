@@ -53,7 +53,7 @@ import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
@@ -235,8 +235,8 @@ public final class GrpcStatus {
     }
 
     /**
-     * Extracts the gRPC status from the {@link HttpHeaders}, closing the {@link HttpStreamDeframer} for a
-     * successful response, then delivering the status to the {@link TransportStatusListener}.
+     * Extracts the gRPC status from the {@link HttpHeaders}, closing the {@link HttpStreamDeframerHandler}
+     * for a successful response, then delivering the status to the {@link TransportStatusListener}.
      */
     public static void reportStatus(HttpHeaders headers,
                                     HttpDeframer<DeframedMessage> reader,

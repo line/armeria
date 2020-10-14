@@ -19,6 +19,9 @@ package com.linecorp.armeria.common.stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,25 +34,39 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 class ByteBufDeframerInputTest {
 
     ByteBufDeframerInput input;
+    List<ByteBuf> byteBufs = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
         input = new ByteBufDeframerInput(UnpooledByteBufAllocator.DEFAULT);
-        input.add(Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4}));
-        final ByteBuf writableBuffer = Unpooled.buffer(4);
-        writableBuffer.writeByte(5);
-        writableBuffer.writeByte(6);
-        input.add(writableBuffer);
-        input.add(Unpooled.wrappedBuffer(new byte[]{7, 8}));
-        input.add(Unpooled.EMPTY_BUFFER);
-        final ByteBuf readableBuffer = Unpooled.wrappedBuffer(new byte[]{-1, 9});
-        readableBuffer.readByte();
-        input.add(readableBuffer);
+        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[]{ 1, 2, 3, 4 });
+        input.add(byteBuf1);
+        byteBufs.add(byteBuf1);
+        final ByteBuf byteBuf2 = Unpooled.buffer(4);
+        byteBuf2.writeByte(5);
+        byteBuf2.writeByte(6);
+        input.add(byteBuf2);
+        byteBufs.add(byteBuf2);
+        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer(new byte[]{ 7, 8 });
+        input.add(byteBuf3);
+        byteBufs.add(byteBuf3);
+        final ByteBuf byteBuf4 = Unpooled.EMPTY_BUFFER;
+        input.add(byteBuf4);
+        byteBufs.add(byteBuf4);
+        final ByteBuf byteBuf5 = Unpooled.wrappedBuffer(new byte[]{-1, 9});
+        byteBuf5.readByte();
+        input.add(byteBuf5);
+        byteBufs.add(byteBuf5);
     }
 
     @AfterEach
     void tearDown() {
         input.close();
+        for (ByteBuf byteBuf : byteBufs) {
+            if (byteBuf != Unpooled.EMPTY_BUFFER) {
+                assertThat(byteBuf.refCnt()).isZero();
+            }
+        }
     }
 
     @Test
@@ -114,17 +131,18 @@ class ByteBufDeframerInputTest {
         input.add(byteBuf4);
 
         ByteBuf buf = input.readBytes(4);
-        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{1, 2, 3, 4});
-        assertThat(buf.refCnt()).isEqualTo(2);
-        assertThat(buf.unwrap()).isSameAs(byteBuf1);
+        assertThat(buf).isSameAs(byteBuf1);
+        assertThat(buf.refCnt()).isEqualTo(1);
         buf.release();
 
+        // Read from byteBuf2
         buf = input.readBytes(1);
         assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{5});
         assertThat(buf.unwrap()).isSameAs(byteBuf2);
         assertThat(buf.refCnt()).isEqualTo(2);
         buf.release();
 
+        // Read from byteBuf2 and byteBuf3
         buf = input.readBytes(3);
         assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{6, 7, 8});
         assertThat(buf.refCnt()).isEqualTo(1);
@@ -132,12 +150,17 @@ class ByteBufDeframerInputTest {
 
         buf = input.readBytes(1);
         assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{9});
-        assertThat(buf.unwrap()).isSameAs(byteBuf4);
+        assertThat(buf).isSameAs(byteBuf4);
+        assertThat(buf.refCnt()).isEqualTo(1);
+        buf.release();
 
         assertThatThrownBy(() -> input.readBytes(1))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("end of deframer input");
-        buf.release();
         input.close();
+        assertThat(byteBuf1.refCnt()).isZero();
+        assertThat(byteBuf2.refCnt()).isZero();
+        assertThat(byteBuf3.refCnt()).isZero();
+        assertThat(byteBuf4.refCnt()).isZero();
     }
 }

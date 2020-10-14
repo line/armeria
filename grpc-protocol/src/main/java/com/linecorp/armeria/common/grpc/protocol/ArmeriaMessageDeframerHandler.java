@@ -59,16 +59,13 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
-import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.stream.HttpDeframerHandler;
 import com.linecorp.armeria.common.stream.HttpDeframerInput;
 import com.linecorp.armeria.common.stream.HttpDeframerOutput;
-import com.linecorp.armeria.internal.common.grpc.protocol.Base64Decoder;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 
@@ -82,11 +79,11 @@ import io.netty.buffer.Unpooled;
  * a {@link ByteBuf} to optimize message parsing.
  */
 @UnstableApi
-public class ArmeriaMessageDeframer implements HttpDeframerHandler<DeframedMessage> {
+public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<DeframedMessage> {
 
     public static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
-    private static final String DEBUG_STRING = ArmeriaMessageDeframer.class.getName();
+    private static final String DEBUG_STRING = ArmeriaMessageDeframerHandler.class.getName();
 
     private static final int HEADER_LENGTH = 5;
     private static final int COMPRESSED_FLAG_MASK = 1;
@@ -104,41 +101,15 @@ public class ArmeriaMessageDeframer implements HttpDeframerHandler<DeframedMessa
     private Decompressor decompressor;
 
     /**
-     * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or response.
+     * Construct an {@link ArmeriaMessageDeframerHandler} for reading messages out of a gRPC request or
+     * response.
      */
-    public ArmeriaMessageDeframer(int maxMessageSizeBytes) {
+    public ArmeriaMessageDeframerHandler(int maxMessageSizeBytes) {
         this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
     }
 
-    /**
-     * Returns a newly-created {@link HttpDeframer} using this {@link HttpDeframerHandler}.
-     */
-    public final HttpDeframer<DeframedMessage> newHttpDeframer(ByteBufAllocator alloc) {
-        return newHttpDeframer(alloc, false);
-    }
-
-    /**
-     * Returns a newly-created {@link HttpDeframer} using this {@link HttpDeframerHandler}.
-     * If {@code decodeBase64} is set to true, a base64-encoded {@link ByteBuf} is decoded before deframing.
-     */
-    public final HttpDeframer<DeframedMessage> newHttpDeframer(ByteBufAllocator alloc, boolean decodeBase64) {
-        final Base64Decoder base64Decoder;
-        if (decodeBase64) {
-            base64Decoder = new Base64Decoder(alloc);
-        } else {
-            base64Decoder = null;
-        }
-        return new HttpDeframer<>(this, alloc, data -> {
-            if (base64Decoder != null) {
-                return base64Decoder.decode(data.byteBuf());
-            } else {
-                return data.byteBuf();
-            }
-        });
-    }
-
     @Override
-    public void process(HttpDeframerInput in, HttpDeframerOutput<DeframedMessage> out) {
+    public void process(HttpDeframerInput in, HttpDeframerOutput<DeframedMessage> out) throws Exception {
         startedDeframing = true;
         int readableBytes = in.readableBytes();
         while (readableBytes >= requiredLength) {
@@ -224,7 +195,7 @@ public class ArmeriaMessageDeframer implements HttpDeframerHandler<DeframedMessa
     /**
      * Sets the {@link Decompressor} for this deframer.
      */
-    public ArmeriaMessageDeframer decompressor(@Nullable Decompressor decompressor) {
+    public ArmeriaMessageDeframerHandler decompressor(@Nullable Decompressor decompressor) {
         checkState(!startedDeframing,
                    "Deframing has already started, cannot change decompressor mid-stream.");
         this.decompressor = decompressor;

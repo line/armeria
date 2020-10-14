@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.grpc;
 
+import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.UncheckedIOException;
@@ -41,8 +42,8 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -167,8 +168,8 @@ class GrpcWebTextTest {
                                                                  EventLoop eventLoop,
                                                                  ByteBufAllocator alloc) {
             final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
-            final HttpDeframer<DeframedMessage> deframer =
-                    new ArmeriaMessageDeframer(Integer.MAX_VALUE).newHttpDeframer(alloc, true);
+            final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
+            final HttpDeframer<DeframedMessage> deframer = newHttpDeframer(handler, alloc, true);
             StreamMessage.of(framed).subscribe(deframer, eventLoop);
             deframer.subscribe(singleSubscriber(deframed), eventLoop);
             return deframed;

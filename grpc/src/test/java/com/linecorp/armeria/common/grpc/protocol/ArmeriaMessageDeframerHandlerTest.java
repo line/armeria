@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.grpc.protocol;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -46,7 +47,7 @@ import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -61,7 +62,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import reactor.test.StepVerifier;
 
-class ArmeriaMessageDeframerTest {
+class ArmeriaMessageDeframerHandlerTest {
 
     private static final int MAX_MESSAGE_SIZE = 1024;
 
@@ -70,9 +71,9 @@ class ArmeriaMessageDeframerTest {
 
     @BeforeEach
     void setUp() {
-        deframer = new ArmeriaMessageDeframer(MAX_MESSAGE_SIZE)
-                .decompressor(ForwardingDecompressor.forGrpc(new Gzip()))
-                .newHttpDeframer(UnpooledByteBufAllocator.DEFAULT, false);
+        final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(MAX_MESSAGE_SIZE)
+                .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
+        deframer = new HttpDeframer<>(handler, UnpooledByteBufAllocator.DEFAULT);
         deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
     }
 
@@ -325,9 +326,11 @@ class ArmeriaMessageDeframerTest {
         }
 
         private static Arguments newDeframerWithData(boolean decodeBase64) {
-            final HttpDeframer<DeframedMessage> deframer = new ArmeriaMessageDeframer(MAX_MESSAGE_SIZE)
-                    .decompressor(ForwardingDecompressor.forGrpc(new Gzip()))
-                    .newHttpDeframer(UnpooledByteBufAllocator.DEFAULT, decodeBase64);
+            final ArmeriaMessageDeframerHandler handler =
+                    new ArmeriaMessageDeframerHandler(MAX_MESSAGE_SIZE)
+                            .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
+            final HttpDeframer<DeframedMessage> deframer =
+                    newHttpDeframer(handler, UnpooledByteBufAllocator.DEFAULT, decodeBase64);
             final byte[] data = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
             return Arguments.of(deframer, decodeBase64, data);
         }

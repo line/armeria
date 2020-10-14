@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.parseGrpcWebTrailers;
+import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,8 +39,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.HttpDeframer;
@@ -74,8 +75,8 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
         final HttpResponse response = delegate.execute(ctx, req);
         final ByteBufAllocator alloc = ctx.alloc();
 
-        final ArmeriaMessageDeframer messageDeframer = new ArmeriaMessageDeframer(maxMessageSizeBytes);
-        final HttpDeframer<DeframedMessage> deframer = messageDeframer.newHttpDeframer(alloc, grpcWebText);
+        final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(maxMessageSizeBytes);
+        final HttpDeframer<DeframedMessage> deframer = newHttpDeframer(handler, alloc, grpcWebText);
 
         final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         publisher.subscribe(deframer, ctx.eventLoop());
@@ -115,7 +116,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                             publisher.close();
                             return obj;
                         }
-                        messageDeframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
+                        handler.decompressor(ForwardingDecompressor.forGrpc(decompressor));
                     }
                     return obj;
                 }

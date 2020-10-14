@@ -28,7 +28,7 @@ import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
@@ -67,9 +67,10 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
                                           .toArray(HttpData[]::new);
         final StreamMessage<HttpData> source = StreamMessage.of(data);
 
+        final HttpStreamDeframerHandler handler =
+                new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), noopListener, -1);
         final HttpDeframer<DeframedMessage> deframer =
-                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), noopListener, -1)
-                        .newHttpDeframer(ByteBufAllocator.DEFAULT);
+                        new HttpDeframer<>(handler, ByteBufAllocator.DEFAULT);
 
         source.subscribe(deframer, ImmediateEventExecutor.INSTANCE);
         return Flux.from(deframer).doOnNext(message -> byteBufs.add(message.buf()));
@@ -78,9 +79,9 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
     @Override
     public Publisher<DeframedMessage> createFailedPublisher() {
         final Flux<HttpData> source = Flux.error(new RuntimeException());
-        final HttpDeframer<DeframedMessage> reader =
-                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), noopListener, -1)
-                        .newHttpDeframer(ByteBufAllocator.DEFAULT);
+        final HttpStreamDeframerHandler handler =
+                new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), noopListener, -1);
+        final HttpDeframer<DeframedMessage> reader = new HttpDeframer<>(handler, ByteBufAllocator.DEFAULT);
         source.subscribe(reader);
         return reader;
     }

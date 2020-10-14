@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
@@ -44,7 +43,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * A {@link Processor} implementation that decodes a stream of {@link HttpObject}s to N objects.
  *
- * <p>To deframe HTTP payload using {@link HttpDeframer}, you can follow the steps below.
+ * <p>Follow the below steps to deframe HTTP payload using {@link HttpDeframer}.
  * <ol>
  *   <li>Implement your deframing logic in {@link HttpDeframerHandler}.
  *       <pre>{@code
@@ -57,21 +56,21 @@ import io.netty.util.concurrent.EventExecutor;
  *
  *       >     @Override
  *       >     public void process(HttpDeframerInput in, HttpDeframerOutput<String> out) {
- *       >         int remained = in.readableBytes();
- *       >         if (remained < length) {
+ *       >         int remaining = in.readableBytes();
+ *       >         if (remaining < length) {
  *       >             // The input is not enough to process. Waiting for more data.
  *       >             return;
  *       >         }
  *
- *       >         while (remained >= length) {
+ *       >         do {
  *       >             // Read data from 'HttpDeframerInput' and
  *       >             // write the processed result to 'HttpDeframerOutput'.
  *       >             ByteBuf buf = in.readBytes(length);
  *       >             out.add(buf.toString(StandardCharsets.UTF_8));
  *       >             // Should release the returned 'ByteBuf'
  *       >             buf.release();
- *       >             remained -= length;
- *       >         }
+ *       >             remaining -= length;
+ *       >         } (remaining >= length);
  *       >     }
  *       > }
  *       }</pre>
@@ -111,7 +110,6 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     private static final AtomicIntegerFieldUpdater<HttpDeframer> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(HttpDeframer.class, "subscribed");
 
-    private final ArrayDeque<T> outputQueue = new ArrayDeque<>();
     private final HttpDeframerHandler<T> handler;
     private final ByteBufDeframerInput input;
     private final Function<? super HttpData, ? extends ByteBuf> byteBufConverter;
@@ -145,32 +143,32 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
         this.byteBufConverter = requireNonNull(byteBufConverter, "byteBufConverter");
     }
 
-    private void process(HttpObject data) {
+    private void process(HttpObject data) throws Exception {
         if (data instanceof HttpHeaders) {
             final HttpHeaders headers = (HttpHeaders) data;
 
             if (headers instanceof ResponseHeaders) {
                 final ResponseHeaders responseHeaders = (ResponseHeaders) headers;
                 if (responseHeaders.status().isInformational()) {
-                    handler.processInformationalHeaders(responseHeaders, outputQueue::addLast);
+                    handler.processInformationalHeaders(responseHeaders, this::write);
                     return;
                 }
             }
 
             if (!sawLeadingHeaders) {
                 sawLeadingHeaders = true;
-                handler.processHeaders((HttpHeaders) data, outputQueue::addLast);
+                handler.processHeaders((HttpHeaders) data, this::write);
             } else {
-                handler.processTrailers((HttpHeaders) data, outputQueue::addLast);
+                handler.processTrailers((HttpHeaders) data, this::write);
             }
             return;
         }
 
         if (data instanceof HttpData) {
             final ByteBuf byteBuf = byteBufConverter.apply((HttpData) data);
-            requireNonNull(byteBuf, "byteBufConverter returned null");
+            requireNonNull(byteBuf, "byteBufConverter.apply() returned null");
             input.add(byteBuf);
-            handler.process(input, outputQueue::addLast);
+            handler.process(input, this::write);
             input.discardReadBytes();
         }
     }
@@ -198,7 +196,7 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
 
     @Override
     void request(long n) {
-        if (initialized != 0 && outputQueue.isEmpty()) {
+        if (initialized != 0 && demand() == 0) {
             upstream.request(1);
         }
         super.request(n);
@@ -234,24 +232,11 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
         try {
             process(data);
 
-            final Subscription upstream = this.upstream;
-            if (outputQueue.isEmpty()) {
-                upstream.request(1);
-            } else {
-                for (;;) {
-                    final T deframed = outputQueue.poll();
-                    if (deframed != null) {
-                        write(deframed);
-                    } else {
-                        break;
-                    }
+            whenConsumed().thenRun(() -> {
+                if (demand() > 0) {
+                    upstream.request(1);
                 }
-                whenConsumed().thenRun(() -> {
-                    if (demand() > 0) {
-                        upstream.request(1);
-                    }
-                });
-            }
+            });
             input.discardReadBytes();
         } catch (Throwable ex) {
             Exceptions.throwIfFatal(ex);
