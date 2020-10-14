@@ -119,7 +119,7 @@ public class DnsMetricsTest {
                         .build();
 
                 final String writeMeterId =
-                        "armeria.client.dns.queries.written#count{name=foo.com.,server=127.0.0.1}";
+                        "armeria.client.dns.queries.written#count{name=foo.com.,server=0:0:0:0:0:0:0:1}";
                 final String timeoutMeterId =
                         "armeria.client.dns.queries#count{" +
                         "cause=DNS_RESOLVER_TIMEOUT_EXCEPTION,name=foo.com.,result=failure}";
@@ -213,9 +213,7 @@ public class DnsMetricsTest {
                 final String nxDomainMeterId =
                         "armeria.client.dns.queries#count{" +
                                 "cause=NX_DOMAIN_QUERY_FAILED_EXCEPTION,name=bar.com.,result=failure}";
-                final String nameServerExhaustedMeterId =
-                        "armeria.client.dns.queries#count{" +
-                                "cause=NAME_SERVERS_EXHAUSTED_EXCEPTION,name=bar.com.,result=failure}";
+
                 assertThat(MoreMeters.measureAll(meterRegistry)).doesNotContainKeys(
                         writtenMeterId, noAnswerMeterId, nxDomainMeterId, nxDomainMeterId);
 
@@ -225,8 +223,7 @@ public class DnsMetricsTest {
                 assertThat(MoreMeters.measureAll(meterRegistry))
                         .containsEntry(writtenMeterId, 2.0)
                         .containsEntry(noAnswerMeterId, 1.0)
-                        .containsEntry(nxDomainMeterId, 1.0)
-                        .containsEntry(nameServerExhaustedMeterId, 3.0);
+                        .containsEntry(nxDomainMeterId, 1.0);
             }
         }
     }
