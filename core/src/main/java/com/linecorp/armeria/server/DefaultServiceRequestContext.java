@@ -310,6 +310,7 @@ public final class DefaultServiceRequestContext
 
     @Override
     public void cancel(Throwable cause) {
+        requireNonNull(cause, "cause");
         requestCancellationScheduler.finishNow(cause);
     }
 

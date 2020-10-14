@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
@@ -194,10 +195,12 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 close(status, new Metadata());
             } else {
                 ctx.setResponseTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(remainingNanos));
-                ctx.whenResponseCancelling().thenRun(() -> {
-                    final Status status = Status.DEADLINE_EXCEEDED
-                            .augmentDescription("deadline exceeded after " + remainingNanos + "ns.");
-                    close(status, new Metadata());
+                ctx.whenResponseCancelling().thenAccept(cause -> {
+                    if (cause instanceof TimeoutException) {
+                        final Status status = Status.DEADLINE_EXCEEDED
+                                .augmentDescription("deadline exceeded after " + remainingNanos + "ns.");
+                        close(status, new Metadata());
+                    }
                 });
             }
         } else {

@@ -36,8 +36,8 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestCancellationException;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -151,7 +151,7 @@ class HttpClientResponseTimeoutTest {
                 .build();
         assertThatThrownBy(() -> client.get("/no-timeout").aggregate().join())
                 .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(RequestCancellationException.class);
+                .hasCauseInstanceOf(CancellationException.class);
     }
 
     @Test
@@ -168,11 +168,11 @@ class HttpClientResponseTimeoutTest {
             await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
                 assertThatThrownBy(response::join)
                         .isInstanceOf(CompletionException.class)
-                        .hasCauseInstanceOf(RequestCancellationException.class);
+                        .hasCauseInstanceOf(CancellationException.class);
             });
 
             assertThat(cctx.isCancelled()).isTrue();
-            assertThat(cctx.cancellationCause()).isInstanceOf(RequestCancellationException.class);
+            assertThat(cctx.cancellationCause()).isInstanceOf(CancellationException.class);
         }
     }
 

@@ -452,6 +452,13 @@ public interface ServiceRequestContext extends RequestContext {
     CompletableFuture<Void> whenRequestTimedOut();
 
     /**
+     * Cancels the request. Shortcut for {@code cancel(RequestCancellationException.get())}.
+     */
+    default void cancel() {
+        cancel(RequestCancellationException.get());
+    }
+
+    /**
      * Times out the request. Shortcut for {@code cancel(RequestTimeoutException.get())}.
      */
     default void timeoutNow() {

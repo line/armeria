@@ -14,15 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.server;
+
+import com.linecorp.armeria.common.CancellationException;
+import com.linecorp.armeria.common.Flags;
 
 /**
- * A {@link RuntimeException} raised when a request is cancelled by the user.
+ * A {@link CancellationException} raised when a request is cancelled by the user.
  */
-public final class RequestCancellationException extends RuntimeException {
-
-    // TODO(trustin): Clean up the type hierarchy between RequestCancellationException,
-    //                TimeoutException, RequestTimeoutException and ResponseTimeoutException.
+public final class RequestCancellationException extends CancellationException {
 
     private static final long serialVersionUID = -8891853443874862294L;
 
@@ -33,7 +33,7 @@ public final class RequestCancellationException extends RuntimeException {
      */
     public static RequestCancellationException get() {
         return Flags.verboseExceptionSampler().isSampled(RequestCancellationException.class) ?
-                new RequestCancellationException() : INSTANCE;
+               new RequestCancellationException() : INSTANCE;
     }
 
     private RequestCancellationException() {}

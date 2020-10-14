@@ -577,6 +577,7 @@ public final class DefaultClientRequestContext
 
     @Override
     public void cancel(Throwable cause) {
+        requireNonNull(cause, "cause");
         responseCancellationScheduler.finishNow(cause);
     }
 

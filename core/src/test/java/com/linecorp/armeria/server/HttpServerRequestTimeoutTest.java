@@ -121,6 +121,10 @@ class HttpServerRequestTimeoutTest {
                   ctx.timeoutNow();
                   return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
               })
+              .service("/cancel", (ctx, req) -> {
+                  ctx.cancel();
+                  return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
+              })
               .serviceUnder("/timeout-by-decorator", (ctx, req) -> HttpResponse.streaming())
               .decorator("/timeout-by-decorator/from_now", (delegate, ctx, req) -> {
                   ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofSeconds(1));
@@ -208,6 +212,13 @@ class HttpServerRequestTimeoutTest {
     void timeoutNow() {
         final AggregatedHttpResponse response =
                 withoutTimeoutServerClient.get("/timeout-now").aggregate().join();
+        assertThat(response.status().code()).isEqualTo(503);
+    }
+
+    @Test
+    void cancel() {
+        final AggregatedHttpResponse response =
+                withoutTimeoutServerClient.get("/cancel").aggregate().join();
         assertThat(response.status().code()).isEqualTo(503);
     }
 

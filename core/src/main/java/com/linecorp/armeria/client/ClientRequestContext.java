@@ -464,7 +464,14 @@ public interface ClientRequestContext extends RequestContext {
     CompletableFuture<Void> whenResponseTimedOut();
 
     /**
-     * Times out the request. Shortcut for {@code cancel(ResponseTimeoutException.get())}.
+     * Cancels the response. Shortcut for {@code cancel(ResponseCancellationException.get())}.
+     */
+    default void cancel() {
+        cancel(ResponseCancellationException.get());
+    }
+
+    /**
+     * Times out the response. Shortcut for {@code cancel(ResponseTimeoutException.get())}.
      */
     default void timeoutNow() {
         cancel(ResponseTimeoutException.get());
