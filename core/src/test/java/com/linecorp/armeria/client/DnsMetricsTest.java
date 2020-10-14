@@ -119,7 +119,7 @@ public class DnsMetricsTest {
                         .build();
 
                 final String writeMeterId =
-                        "armeria.client.dns.queries.written#count{name=foo.com.,server=0:0:0:0:0:0:0:1}";
+                        "armeria.client.dns.queries.written#count{name=foo.com.,server=127.0.0.1}";
                 final String timeoutMeterId =
                         "armeria.client.dns.queries#count{" +
                         "cause=DNS_RESOLVER_TIMEOUT_EXCEPTION,name=foo.com.,result=failure}";
