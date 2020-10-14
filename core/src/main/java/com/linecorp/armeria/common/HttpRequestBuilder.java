@@ -29,13 +29,14 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Publisher;
+
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
-import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 
 import io.netty.util.AsciiString;
 
@@ -44,19 +45,17 @@ import io.netty.util.AsciiString;
  */
 final class HttpRequestBuilder {
 
+    private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
+    private final HttpHeadersBuilder httpTrailersBuilder = HttpHeaders.builder();
+    private final QueryParamsBuilder queryParamsBuilder = QueryParams.builder();
+    private final Map<String, Object> pathParams = new HashMap<>();
     private final List<Cookie> cookies = new ArrayList<>();
-    private final Map<String, String> pathParams = new HashMap<>();
-    private HttpHeaders httpHeaders = HttpHeaders.of();
-    private HttpHeaders httpTrailers = HttpHeaders.of();
-    private QueryParams queryParams = QueryParams.of();
-    private HttpData content = HttpData.empty();
     @Nullable
-    private HttpMethod method;
+    private HttpData content;
+    @Nullable
+    private Publisher<? extends HttpObject> publisher;
     @Nullable
     private String path;
-    @Nullable
-    private MediaType mediaType;
-    private boolean streaming;
 
     HttpRequestBuilder() {
     }
@@ -64,17 +63,54 @@ final class HttpRequestBuilder {
     HttpRequestBuilder(HttpMethod method, String path) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
-        this.method = method;
+        requestHeadersBuilder.method(method);
         this.path = path;
     }
 
     /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with GET method and path.
+     */
+    public HttpRequestBuilder get(String path) {
+        method(HttpMethod.GET);
+        path(path);
+        return this;
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with POST method and path.
+     */
+    public HttpRequestBuilder post(String path) {
+        method(HttpMethod.POST);
+        path(path);
+        return this;
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with PUT method and path.
+     */
+    public HttpRequestBuilder put(String path) {
+        method(HttpMethod.PUT);
+        path(path);
+        return this;
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with DELETE method and path.
+     */
+    public HttpRequestBuilder delete(String path) {
+        method(HttpMethod.DELETE);
+        path(path);
+        return this;
+    }
+
+    /**
      * Sets the method for this request.
+     *
      * @see HttpMethod
      */
     public HttpRequestBuilder method(HttpMethod method) {
         requireNonNull(method, "method");
-        this.method = method;
+        requestHeadersBuilder.method(method);
         return this;
     }
 
@@ -93,8 +129,9 @@ final class HttpRequestBuilder {
     public HttpRequestBuilder content(MediaType mediaType, CharSequence content) {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        this.mediaType = mediaType;
+        requestHeadersBuilder.contentType(mediaType);
         this.content = HttpData.of(mediaType.charset(StandardCharsets.UTF_8), content);
+        this.publisher = null;
         return this;
     }
 
@@ -104,8 +141,9 @@ final class HttpRequestBuilder {
     public HttpRequestBuilder content(MediaType mediaType, String content) {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        this.mediaType = mediaType;
+        requestHeadersBuilder.contentType(mediaType);
         this.content = HttpData.of(mediaType.charset(StandardCharsets.UTF_8), content);
+        this.publisher = null;
         return this;
     }
 
@@ -117,8 +155,9 @@ final class HttpRequestBuilder {
     public HttpRequestBuilder content(MediaType mediaType, @FormatString String format, Object... content) {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(format, "format");
-        this.mediaType = mediaType;
+        requestHeadersBuilder.contentType(mediaType);
         this.content = HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, content);
+        this.publisher = null;
         return this;
     }
 
@@ -128,8 +167,9 @@ final class HttpRequestBuilder {
     public HttpRequestBuilder content(MediaType mediaType, byte[] content) {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        this.mediaType = mediaType;
+        requestHeadersBuilder.contentType(mediaType);
         this.content = HttpData.wrap(content);
+        this.publisher = null;
         return this;
     }
 
@@ -139,42 +179,56 @@ final class HttpRequestBuilder {
     public HttpRequestBuilder content(MediaType mediaType, HttpData content) {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        this.mediaType = mediaType;
+        requestHeadersBuilder.contentType(mediaType);
         this.content = content;
+        this.publisher = null;
+        return this;
+    }
+
+    /**
+     * Sets the content for this request.
+     */
+    public HttpRequestBuilder content(MediaType mediaType, Publisher<HttpData> publisher) {
+        requireNonNull(mediaType, "mediaType");
+        requireNonNull(publisher, "publisher");
+        requestHeadersBuilder.contentType(mediaType);
+        this.publisher = publisher;
+        this.content = null;
         return this;
     }
 
     /**
      * Sets a header for this request. For example:
      * <pre>{@code
-     * HttpRequest.get("/")
+     * HttpRequest.builder()
+     *            .get("/")
      *            .header("authorization", "foo")
      *            .build();
      * }</pre>
      */
-    public HttpRequestBuilder header(String name, String value) {
+    public HttpRequestBuilder header(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        httpHeaders = httpHeaders.toBuilder().add(name, value).build();
+        requestHeadersBuilder.setObject(name, value);
         return this;
     }
 
     /**
      * Sets multiple headers for this request. For example:
      * <pre>{@code
-     * HttpRequest.get("/")
+     * HttpRequest.builder()
+     *            .get("/")
      *            .headers(HttpHeaders.of("authorization", "foo", "bar", "baz"))
      *            .build();
      * }</pre>
+     *
      * @see HttpHeaders
      */
     public HttpRequestBuilder headers(HttpHeaders httpHeaders) {
         requireNonNull(httpHeaders, "httpHeaders");
-        final HttpHeadersBuilder httpHeadersBuilder = this.httpHeaders.toBuilder();
         for (AsciiString name : httpHeaders.names()) {
-            httpHeadersBuilder.add(name, requireNonNull(httpHeaders.get(name), "header"));
+            requestHeadersBuilder.set(name, requireNonNull(httpHeaders.get(name), "header"));
         }
-        this.httpHeaders = httpHeadersBuilder.build();
         return this;
     }
 
@@ -183,23 +237,22 @@ final class HttpRequestBuilder {
      */
     public HttpRequestBuilder trailers(HttpHeaders httpTrailers) {
         requireNonNull(httpTrailers, "httpTrailers");
-        final HttpHeadersBuilder httpTrailersBuilder = this.httpTrailers.toBuilder();
         for (AsciiString name : httpTrailers.names()) {
-            httpTrailersBuilder.add(name, requireNonNull(httpTrailers.get(name), "trailer"));
+            httpTrailersBuilder.set(name, requireNonNull(httpTrailers.get(name), "trailer"));
         }
-        this.httpTrailers = httpTrailersBuilder.build();
         return this;
     }
 
     /**
      * Sets a path param for this request. For example:
      * <pre>{@code
-     * HttpRequest.get("/{foo}")
+     * HttpRequest.builder()
+     *            .get("/{foo}")
      *            .pathParam("foo", "bar")
      *            .build(); // GET `/bar`
      * }</pre>
      */
-    public HttpRequestBuilder pathParam(String name, String value) {
+    public HttpRequestBuilder pathParam(String name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         pathParams.put(name, value);
@@ -209,12 +262,13 @@ final class HttpRequestBuilder {
     /**
      * Sets multiple path params for this request. For example:
      * <pre>{@code
-     * HttpRequest.get("/{foo}/{bar}")
+     * HttpRequest.builder()
+     *            .get("/{foo}/{bar}")
      *            .pathParams(Map.of("foo", "bar", "bar", "baz"))
      *            .build(); // GET `/bar/baz`
      * }</pre>
      */
-    public HttpRequestBuilder pathParams(Map<String, String> pathParams) {
+    public HttpRequestBuilder pathParams(Map<String, Object> pathParams) {
         requireNonNull(pathParams, "pathParams");
         this.pathParams.putAll(pathParams);
         return this;
@@ -223,44 +277,47 @@ final class HttpRequestBuilder {
     /**
      * Sets a query param for this request. For example:
      * <pre>{@code
-     * HttpRequest.get("/endpoint")
+     * HttpRequest.builder()
+     *            .get("/endpoint")
      *            .queryParam("foo", "bar")
      *            .build(); // GET `/endpoint?foo=bar`
      * }</pre>
      */
-    public HttpRequestBuilder queryParam(String name, String value) {
+    public HttpRequestBuilder queryParam(String name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        queryParams = queryParams.toBuilder().add(name, value).build();
+        queryParamsBuilder.setObject(name, value);
         return this;
     }
 
     /**
      * Sets multiple query params for this request. For example:
      * <pre>{@code
-     * HttpRequest.get("/endpoint")
+     * HttpRequest.builder()
+     *            .get("/endpoint")
      *            .queryParams(QueryParams.of("from", "foo", "limit", 10))
      *            .build(); // GET `/endpoint?from=foo&limit=10`
      * }</pre>
+     *
      * @see QueryParams
      */
     public HttpRequestBuilder queryParams(QueryParams queryParams) {
         requireNonNull(queryParams, "queryParams");
-        final QueryParamsBuilder queryParamsBuilder = this.queryParams.toBuilder();
         for (String name : queryParams.names()) {
-            queryParamsBuilder.add(name, requireNonNull(queryParams.get(name), "query"));
+            queryParamsBuilder.set(name, requireNonNull(queryParams.get(name), "query"));
         }
-        this.queryParams = queryParamsBuilder.build();
         return this;
     }
 
     /**
      * Sets a cookie for this request. For example:
      * <pre>{@code
-     * HttpRequest.get("/")
+     * HttpRequest.builder()
+     *            .get("/")
      *            .cookie(Cookie.of("cookie", "foo"))
      *            .build();
      * }</pre>
+     *
      * @see Cookie
      */
     public HttpRequestBuilder cookie(Cookie cookie) {
@@ -272,11 +329,13 @@ final class HttpRequestBuilder {
     /**
      * Sets multiple cookies for this request. For example:
      * <pre>{@code
-     * HttpRequest.get("/")
+     * HttpRequest.builder()
+     *            .get("/")
      *            .cookies(Cookies.of(Cookie.of("cookie1", "foo"),
      *                                Cookie.of("cookie2", "bar")))
      *            .build();
      * }</pre>
+     *
      * @see Cookies
      */
     public HttpRequestBuilder cookies(Cookies cookies) {
@@ -286,58 +345,37 @@ final class HttpRequestBuilder {
     }
 
     /**
-     * Makes this request a streaming request.
-     */
-    public HttpRequestBuilder streaming() {
-        this.streaming = true;
-        return this;
-    }
-
-    /**
      * Creates a new {@link HttpRequest}.
      */
     public HttpRequest build() {
-        if (!pathParams.isEmpty()) {
-            path = replacePathParams();
-        }
-        if (!queryParams.isEmpty()) {
-            path += "?" + queryParams.toQueryString();
-        }
-        final RequestHeaders requestHeaders = buildRequestHeader();
-        if (streaming) {
-            return new DefaultHttpRequest(requestHeaders);
-        }
-        if (content.length() == 0) {
-            content.close();
-            if (httpTrailers.isEmpty()) {
-                return new EmptyFixedHttpRequest(requestHeaders);
-            } else {
-                return new OneElementFixedHttpRequest(requestHeaders, httpTrailers);
+        final RequestHeaders requestHeaders = requestHeaders();
+        if (content == null || content.length() == 0) {
+            if (content != null) {
+                content.close();
             }
+            if (publisher != null) {
+                if (publisher instanceof HttpRequest) {
+                    return ((HttpRequest) publisher).withHeaders(requestHeaders);
+                }
+                return new PublisherBasedHttpRequest(requestHeaders, publisher);
+            }
+            if (httpTrailersBuilder.isEmpty()) {
+                return new EmptyFixedHttpRequest(requestHeaders);
+            }
+            return new OneElementFixedHttpRequest(requestHeaders, httpTrailersBuilder.build());
         }
-        if (httpTrailers.isEmpty()) {
+        if (httpTrailersBuilder.isEmpty()) {
             return new OneElementFixedHttpRequest(requestHeaders, content);
-        } else {
-            return new TwoElementFixedHttpRequest(requestHeaders, content, httpTrailers);
         }
+        return new TwoElementFixedHttpRequest(requestHeaders, content, httpTrailersBuilder.build());
     }
 
-    private RequestHeaders buildRequestHeader() {
-        requireNonNull(path, "path");
-        requireNonNull(method, "method");
-        final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder().method(method).path(path);
-        if (mediaType != null) {
-            requestHeadersBuilder.contentType(mediaType);
-        }
-        if (!httpHeaders.isEmpty()) {
-            for (AsciiString name : httpHeaders.names()) {
-                requestHeadersBuilder.add(name, requireNonNull(httpHeaders.get(name), "header"));
-            }
-        }
+    private RequestHeaders requestHeaders() {
+        requestHeadersBuilder.path(fullPath());
         if (!cookies.isEmpty()) {
-            requestHeadersBuilder.add(COOKIE, Cookie.toCookieHeader(cookies));
+            requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
         }
-        if (content.length() == 0) {
+        if (content == null || content.length() == 0) {
             requestHeadersBuilder.remove(CONTENT_LENGTH);
         } else {
             requestHeadersBuilder.setInt(CONTENT_LENGTH, content.length());
@@ -345,26 +383,42 @@ final class HttpRequestBuilder {
         return requestHeadersBuilder.build();
     }
 
-    private String replacePathParams() {
-        requireNonNull(path, "path");
-        int i = 0;
-        final StringBuilder pathBuilder = new StringBuilder(path);
-        while (i < pathBuilder.length()) {
-            if (pathBuilder.charAt(i) == '{') {
-                int j = i;
-                while (j < pathBuilder.length() && pathBuilder.charAt(j) != '}') {
-                    j++;
+    private String fullPath() {
+        final StringBuilder pathBuilder = new StringBuilder(requireNonNull(this.path, "path"));
+        if (!pathParams.isEmpty()) {
+            int i = 0;
+            while (i < pathBuilder.length()) {
+                if (pathBuilder.charAt(i) == '{') {
+                    int j = i;
+                    while (j < pathBuilder.length() && pathBuilder.charAt(j) != '}') {
+                        j++;
+                    }
+                    if (j == pathBuilder.length()) {
+                        break;
+                    }
+                    final String name = pathBuilder.substring(i + 1, j);
+                    if (pathParams.containsKey(name)) {
+                        final String value = pathParams.get(name).toString();
+                        pathBuilder.replace(i, j + 1, value);
+                        i += value.length() - 1;
+                    }
+                } else if (pathBuilder.charAt(i) == ':') {
+                    int j = i;
+                    while (j < pathBuilder.length() && pathBuilder.charAt(j) != '/') {
+                        j++;
+                    }
+                    final String name = pathBuilder.substring(i + 1, j);
+                    if (pathParams.containsKey(name)) {
+                        final String value = pathParams.get(name).toString();
+                        pathBuilder.replace(i, j, value);
+                        i += value.length();
+                    }
                 }
-                if (j == pathBuilder.length()) {
-                    break;
-                }
-                final String name = pathBuilder.substring(i + 1, j);
-                if (pathParams.containsKey(name)) {
-                    pathBuilder.replace(i, j + 1, pathParams.get(name));
-                    i += pathParams.get(name).length() - 1;
-                }
+                i++;
             }
-            i++;
+        }
+        if (!queryParamsBuilder.isEmpty()) {
+            pathBuilder.append("?").append(queryParamsBuilder.toQueryString());
         }
         return pathBuilder.toString();
     }

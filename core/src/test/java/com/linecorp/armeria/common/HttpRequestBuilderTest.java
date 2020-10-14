@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
-import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 
 import io.netty.util.AsciiString;
 import reactor.test.StepVerifier;
@@ -36,37 +35,18 @@ import reactor.test.StepVerifier;
 public class HttpRequestBuilderTest {
 
     @Test
-    void factoryMethods() {
-        final HttpRequest getRequest = HttpRequest.get("/1").build();
+    void buildSimple() {
+        final HttpRequest getRequest = HttpRequest.builder().get("/1").build();
         assertThat(getRequest.method()).isEqualTo(HttpMethod.GET);
         assertThat(getRequest.path()).isEqualTo("/1");
 
-        final HttpRequest postRequest = HttpRequest.post("/2").build();
+        final HttpRequest postRequest = HttpRequest.builder().post("/2").build();
         assertThat(postRequest.method()).isEqualTo(HttpMethod.POST);
         assertThat(postRequest.path()).isEqualTo("/2");
 
-        final HttpRequest putRequest = HttpRequest.put("/3").build();
+        final HttpRequest putRequest = HttpRequest.builder().put("/3").build();
         assertThat(putRequest.method()).isEqualTo(HttpMethod.PUT);
         assertThat(putRequest.path()).isEqualTo("/3");
-    }
-
-    @Test
-    void buildSimple() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
-        final HttpRequest request = requestBuilder.method(HttpMethod.GET)
-                                                  .path("/")
-                                                  .build();
-        assertThat(request.method()).isEqualTo(HttpMethod.GET);
-        assertThat(request.path()).isEqualTo("/");
-        assertThat(request).isInstanceOf(EmptyFixedHttpRequest.class);
-    }
-
-    @Test
-    void buildStreaming() {
-        final HttpRequest request = new HttpRequestBuilder(HttpMethod.GET, "/").streaming().build();
-        assertThat(request.method()).isEqualTo(HttpMethod.GET);
-        assertThat(request.path()).isEqualTo("/");
-        assertThat(request).isInstanceOf(DefaultHttpRequest.class);
     }
 
     @Test
@@ -97,10 +77,9 @@ public class HttpRequestBuilderTest {
     @Test
     void buildWithPathParams() {
         final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
-        final HttpRequest request = requestBuilder.method(HttpMethod.GET)
-                                                  .path("/{foo}/{bar}/{id}/foo")
+        final HttpRequest request = requestBuilder.get("/{foo}/{bar}/:id/foo")
                                                   .pathParam("foo", "resource1")
-                                                  .pathParams(ImmutableMap.of("bar", "resource2", "id", "1"))
+                                                  .pathParams(ImmutableMap.of("bar", "resource2", "id", 1))
                                                   .build();
         assertThat(request.path()).isEqualTo("/resource1/resource2/1/foo");
         assertThat(request).isInstanceOf(EmptyFixedHttpRequest.class);
@@ -134,5 +113,38 @@ public class HttpRequestBuilderTest {
                     .expectComplete()
                     .verify();
         assertThat(request).isInstanceOf(OneElementFixedHttpRequest.class);
+    }
+
+    @Test
+    void buildComplex() {
+        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+        HttpRequest request = requestBuilder.put("/{foo}/{bar}/:baz/foo-{id}/:boo")
+                                            .header("x-header-1", 1234)
+                                            .pathParam("foo", "resource1")
+                                            .pathParams(ImmutableMap.of("bar", "resource2", "id", 1))
+                                            .pathParams(ImmutableMap.of("boo", 2, "baz", "resource3"))
+                                            .queryParam("q", "foo")
+                                            .content(MediaType.JSON, "foo")
+                                            .build();
+        assertThat(request.path()).isEqualTo("/resource1/resource2/resource3/foo-1/2?q=foo");
+        assertThat(request.headers().contains("x-header-1", "1234")).isTrue();
+        assertThat(request.contentType()).isEqualTo(MediaType.JSON);
+
+        requestBuilder.pathParams(ImmutableMap.of("baz", "resource4", "boo", "3", "id", 2))
+                      .queryParams(QueryParams.of("q", "bar", "f", 10))
+                      .header("x-header-1", 5678)
+                      .headers(HttpHeaders.of("x-header-2", "value"))
+                      .cookie(Cookie.of("cookie", "value"))
+                      .content(MediaType.PLAIN_TEXT_UTF_8, "test");
+        request = requestBuilder.build();
+        assertThat(request.path()).isEqualTo("/resource1/resource2/resource4/foo-2/3?q=bar&f=10");
+        assertThat(request.headers().contains("x-header-1", "5678")).isTrue();
+        assertThat(request.headers().contains("x-header-2", "value")).isTrue();
+        assertThat(request.headers().contains(COOKIE, "cookie=value")).isTrue();
+        assertThat(request.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        StepVerifier.create(request)
+                    .expectNext(HttpData.ofUtf8("test"))
+                    .expectComplete()
+                    .verify();
     }
 }
