@@ -28,5 +28,5 @@ import com.linecorp.armeria.server.Server;
 @Configuration
 @EnableConfigurationProperties(ArmeriaSettings.class)
 @ConditionalOnMissingBean(Server.class)
-public class ArmeriaSpringBoot1AutoConfiguration extends AbstractArmeriaAutoConfiguration {
+public class ArmeriaAutoConfiguration extends AbstractArmeriaAutoConfiguration {
 }

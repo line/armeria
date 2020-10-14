@@ -46,10 +46,10 @@ public class SpringTomcatApplication {
         if (webServer instanceof TomcatWebServer) {
             final Tomcat tomcat = ((TomcatWebServer) webServer).getTomcat();
 
-            return serverBuilder -> serverBuilder.service("prefix:/tomcat/api/rest/v1",
+            return serverBuilder -> serverBuilder.serviceUnder("/tomcat/api/rest/v1",
                                                           TomcatService.of(tomcat));
         }
-        return serverBuilder -> { };
+        return serverBuilder -> {};
     }
 
     /**
