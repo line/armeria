@@ -37,6 +37,7 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.PercentEncoder;
 
 /**
  * A Consul client that is responsible for
@@ -76,8 +77,9 @@ final class CatalogClient {
     @VisibleForTesting
     CompletableFuture<List<Node>> service(String serviceName) {
         requireNonNull(serviceName, "serviceName");
-
-        return client.get("/catalog/service/" + serviceName)
+        final StringBuilder path = new StringBuilder("/catalog/service/");
+        PercentEncoder.encodeComponent(path, serviceName);
+        return client.get(path.toString())
                      .aggregate()
                      .thenApply(response -> {
                          try {

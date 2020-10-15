@@ -135,23 +135,6 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
         return this;
     }
 
-    /**
-     * Returns a newly-created {@link ConsulUpdatingListener} that registers the {@link Server} to
-     * Consul when the {@link Server} starts.
-     */
-    public ConsulUpdatingListener build() {
-        if (checkUri == null) {
-            if (checkMethod != null) {
-                throw new IllegalStateException("'checkMethod' should declare with checkUri.");
-            }
-            if (checkInterval != null) {
-                throw new IllegalStateException("'checkInterval' should declare with checkUri.");
-            }
-        }
-        return new ConsulUpdatingListener(buildClient(), serviceName, serviceEndpoint, checkUri, checkMethod,
-                                          firstNonNull(checkInterval, DEFAULT_CHECK_INTERVAL));
-    }
-
     @Override
     public ConsulUpdatingListenerBuilder consulUri(URI consulUri) {
         return (ConsulUpdatingListenerBuilder) super.consulUri(consulUri);
@@ -185,5 +168,22 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
     @Override
     public ConsulUpdatingListenerBuilder consulToken(String consulToken) {
         return (ConsulUpdatingListenerBuilder) super.consulToken(consulToken);
+    }
+
+    /**
+     * Returns a newly-created {@link ConsulUpdatingListener} that registers the {@link Server} to
+     * Consul when the {@link Server} starts.
+     */
+    public ConsulUpdatingListener build() {
+        if (checkUri == null) {
+            if (checkMethod != null) {
+                throw new IllegalStateException("'checkMethod' should declare with checkUri.");
+            }
+            if (checkInterval != null) {
+                throw new IllegalStateException("'checkInterval' should declare with checkUri.");
+            }
+        }
+        return new ConsulUpdatingListener(buildClient(), serviceName, serviceEndpoint, checkUri, checkMethod,
+                                          firstNonNull(checkInterval, DEFAULT_CHECK_INTERVAL));
     }
 }

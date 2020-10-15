@@ -15,13 +15,25 @@
  */
 package com.linecorp.armeria.internal.consul;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URISyntaxException;
 
 import org.junit.jupiter.api.Test;
 
-class ConsulClientBuilderTest {
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpStatus;
+
+class ConsulClientBuilderTest extends ConsulTestBase {
+
+    @Test
+    void gets403WithOutToken() throws Exception {
+        final HttpStatus status = WebClient.of("http://localhost:" + consul().getHttpPort())
+                                           .get("/v1/agent/self").aggregate()
+                                           .get().status();
+        assertThat(status).isEqualTo(HttpStatus.FORBIDDEN);
+    }
 
     @Test
     void consulUriShouldContainsVersionPath() throws URISyntaxException {

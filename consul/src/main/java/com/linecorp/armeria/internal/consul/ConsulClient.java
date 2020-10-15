@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
@@ -42,21 +43,22 @@ public final class ConsulClient {
             ClientOptions.of(ClientOptions.DECORATION.newValue(ClientDecoration.of(
                     RetryingClient.newDecorator(RetryRule.failsafe(), 3))));
 
-    private final WebClient webClient;
-    private final AgentServiceClient agentClient;
-    private final CatalogClient catalogClient;
-    private final HealthClient healthClient;
+    private static final CharSequence X_CONSUL_TOKEN = HttpHeaderNames.of("x-consul-token");
 
     public static ConsulClientBuilder builder() {
         return new ConsulClientBuilder();
     }
 
+    private final WebClient webClient;
+    private final AgentServiceClient agentClient;
+    private final CatalogClient catalogClient;
+    private final HealthClient healthClient;
+
     ConsulClient(URI uri, @Nullable String token) {
         final WebClientBuilder builder = WebClient.builder(uri);
         builder.options(retryingClientOptions);
         if (token != null) {
-            // TODO(eugene70) test with token
-            builder.addHeader("X-Consul-Token", token);
+            builder.addHeader(X_CONSUL_TOKEN, token);
         }
         webClient = builder.build();
         agentClient = AgentServiceClient.of(this);

@@ -30,6 +30,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.internal.common.PercentEncoder;
 
 /**
  * A Consul client that is responsible for
@@ -67,7 +68,9 @@ final class AgentServiceClient {
      */
     HttpResponse deregister(String serviceId) {
         requireNonNull(serviceId, "serviceId");
-        return client.put("/agent/service/deregister/" + serviceId, HttpData.empty());
+        final StringBuilder path = new StringBuilder("/agent/service/deregister/");
+        PercentEncoder.encodeComponent(path, serviceId);
+        return client.put(path.toString(), HttpData.empty());
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

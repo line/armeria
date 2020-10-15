@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.consul;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.internal.common.PercentEncoder;
 
 /**
  * A Consul client that is responsible for
@@ -45,7 +47,8 @@ final class HealthClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthClient.class);
 
-    private static final String PASSING_PARAM = QueryParams.of("passing", true).toQueryString();
+    private static final String PASSING_PARAM = '?' +
+                                                QueryParams.of("passing", true).toQueryString();
 
     static HealthClient of(ConsulClient consulClient) {
         return new HealthClient(consulClient);
@@ -63,12 +66,16 @@ final class HealthClient {
      * Returns a healthy endpoint list with service name.
      */
     CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName) {
+        requireNonNull(serviceName, "serviceName");
+        final StringBuilder path = new StringBuilder("/health/service/");
+        PercentEncoder.encodeComponent(path, serviceName);
+        path.append(PASSING_PARAM);
         return client
-                .get("/health/service/" + serviceName + '?' + PASSING_PARAM)
+                .get(path.toString())
                 .aggregate()
                 .handle((response, cause) -> {
                     if (cause != null) {
-                        logger.warn("Unexpected exception while fetching the registry from Consul: {}." +
+                        logger.warn("Unexpected exception while fetching the registry from Consul: {}" +
                                     " (serviceName: {})", client.uri(), serviceName,
                                     cause);
                         return null;
@@ -77,8 +84,8 @@ final class HealthClient {
                     final HttpStatus status = response.status();
                     final String content = response.contentUtf8();
                     if (!status.isSuccess()) {
-                        logger.warn("Unexpected response from Consul: {}. (status: {}, content: {}, " +
-                                    "serviceName: {})", client.uri(), status,
+                        logger.warn("Unexpected response from Consul: {} (status: {}, content: {}," +
+                                    " serviceName: {})", client.uri(), status,
                                     content, serviceName);
                         return null;
                     }
@@ -88,8 +95,8 @@ final class HealthClient {
                                      .map(HealthClient::toEndpoint)
                                      .collect(toImmutableList());
                     } catch (IOException e) {
-                        logger.warn("Unexpected exception while parsing a response from Consul: {}. " +
-                                    "(content: {}, serviceName: {})",
+                        logger.warn("Unexpected exception while parsing a response from Consul: {}" +
+                                    " (content: {}, serviceName: {})",
                                     client.uri(), content, serviceName, e);
                         return null;
                     }

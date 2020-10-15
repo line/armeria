@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 public abstract class ConsulTestBase {
 
+    protected static final String TOKEN = UUID.randomUUID().toString();
     protected static final String serviceName = "testService";
     protected static final Set<Endpoint> sampleEndpoints;
 
@@ -67,9 +69,11 @@ public abstract class ConsulTestBase {
         // Initialize Consul embedded server for testing
         consul = ConsulStarterBuilder.consulStarter()
                                      .withConsulVersion("1.8.4")
+                                     .withCustomConfig(aclConfiguration(TOKEN))
+                                     .withToken(TOKEN)
                                      .build().start();
         // Initialize Consul client
-        consulClient = ConsulClient.builder().consulPort(consul.getHttpPort()).buildClient();
+        consulClient = ConsulClient.builder().consulToken(TOKEN).consulPort(consul.getHttpPort()).buildClient();
     }
 
     @AfterAll
@@ -115,6 +119,22 @@ public abstract class ConsulTestBase {
         }
 
         return ports;
+    }
+
+    private static String aclConfiguration(String token) {
+        return
+                new StringBuilder()
+                        .append('{')
+                        .append("\"acl\": {")
+                        .append("\"enabled\": true, ")
+                        .append("\"default_policy\": \"deny\", ")
+                        .append("\"down_policy\": \"deny\", ")
+                        .append("\"tokens\": {")
+                        .append("    \"agent\": \"").append(token).append("\", ")
+                        .append("    \"master\": \"").append(token).append("\", ")
+                        .append("    }")
+                        .append('}')
+                        .toString();
     }
 
     public static class EchoService extends AbstractHttpService {

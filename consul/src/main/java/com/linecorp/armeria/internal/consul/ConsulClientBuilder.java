@@ -85,7 +85,7 @@ public class ConsulClientBuilder {
 
     /**
      * Sets the specified Consul's API service host address.
-     * @param consulAddress the host address of Consul API service, default: {@code 127.0.0.1}
+     * @param consulAddress the host address of Consul API service, default: {@value #DEFAULT_CONSUL_ADDRESS}
      */
     public ConsulClientBuilder consulAddress(String consulAddress) {
         checkState(consulUri == null, "consulAddress can't comes with consulUri");
@@ -98,7 +98,7 @@ public class ConsulClientBuilder {
 
     /**
      * Sets the specified Consul's HTTP service port.
-     * @param consulPort the port of Consul agent, default: {@code 8500}
+     * @param consulPort the port of Consul agent, default: {@value #DEFAULT_CONSUL_PORT}
      */
     public ConsulClientBuilder consulPort(int consulPort) {
         checkState(consulUri == null, "consulPort can't comes with consulUri");
@@ -110,7 +110,7 @@ public class ConsulClientBuilder {
 
     /**
      * Sets the specified Consul's API version.
-     * @param consulApiVersion the version of Consul API service, default: {@code /v1}
+     * @param consulApiVersion the version of Consul API service, default: {@value #DEFAULT_CONSUL_API_VERSION}
      */
     public ConsulClientBuilder consulApiVersion(String consulApiVersion) {
         checkState(consulUri == null, "consulApiVersion can't comes with consulUri");

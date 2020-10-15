@@ -48,7 +48,7 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
     /**
      * Returns a {@link ConsulEndpointGroup} with the specified {@code serviceName}.
      * The returned {@link ConsulEndpointGroup} will retrieve the list of {@link Endpoint}s from
-     * a local Consul agent(using default Consul service port).
+     * a local Consul agent at the default Consul service port.
      */
     public static ConsulEndpointGroup of(String serviceName) {
         return builder(serviceName).build();
@@ -63,17 +63,17 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
 
     private final ConsulClient consulClient;
     private final String serviceName;
-    private final long registryFetchIntervalSeconds;
+    private final long registryFetchIntervalMillis;
     private final boolean useHealthyEndpoints;
 
     @Nullable
     private volatile ScheduledFuture<?> scheduledFuture;
 
-    ConsulEndpointGroup(ConsulClient consulClient, String serviceName, long registryFetchIntervalSeconds,
+    ConsulEndpointGroup(ConsulClient consulClient, String serviceName, long registryFetchIntervalMillis,
                         boolean useHealthyEndpoints) {
         this.consulClient = requireNonNull(consulClient, "consulClient");
         this.serviceName = requireNonNull(serviceName, "serviceName");
-        this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
+        this.registryFetchIntervalMillis = registryFetchIntervalMillis;
         this.useHealthyEndpoints = useHealthyEndpoints;
 
         update();
@@ -100,13 +100,14 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
                 return null;
             }
             if (cause != null) {
-                logger.warn("Unexpected exception while fetching the registry from: {}." +
+                logger.warn("Unexpected exception while fetching the registry from: {}" +
                             " (serviceName: {})", consulClient.uri(), serviceName, cause);
             } else if (endpoints != null) {
                 setEndpoints(endpoints);
             }
 
-            scheduledFuture = eventLoop.schedule(this::update, registryFetchIntervalSeconds, TimeUnit.SECONDS);
+            scheduledFuture = eventLoop.schedule(this::update, registryFetchIntervalMillis,
+                                                 TimeUnit.MILLISECONDS);
             return null;
         });
     }

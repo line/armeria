@@ -41,7 +41,7 @@ import com.linecorp.armeria.server.ServerPort;
  * A {@link ServerListener} which registers the current {@link Server} to
  * <a href="https://www.consul.io">Consul</a>.
  */
-public class ConsulUpdatingListener extends ServerListenerAdapter {
+public final class ConsulUpdatingListener extends ServerListenerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsulUpdatingListener.class);
 
@@ -73,7 +73,7 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
             final Check check = new Check();
             check.setHttp(checkUrl.toString());
             if (checkMethod != null) {
-                check.setMethod(checkMethod.toString());
+                check.setMethod(checkMethod.name());
             }
             check.setInterval(checkInterval);
             this.check = check;
@@ -96,7 +96,7 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
                   }
 
                   if (res.status() != HttpStatus.OK) {
-                      logger.warn("Failed to register {}:{} to Consul: {}. (status: {}, content: {})",
+                      logger.warn("Failed to register {}:{} to Consul: {} (status: {}, content: {})",
                                   endpoint.host(), endpoint.port(), consulClient.uri(), res.status(),
                                   res.contentUtf8());
                       return null;
@@ -147,8 +147,7 @@ public class ConsulUpdatingListener extends ServerListenerAdapter {
                       if (cause != null) {
                           logger.warn("Failed to deregister {} from Consul: {}",
                                       serviceId, consulClient.uri(), cause);
-                      }
-                      if (res.status() != HttpStatus.OK) {
+                      } else if (res.status() != HttpStatus.OK) {
                           logger.warn("Failed to deregister {} from Consul: {}. (status: {}, content: {})",
                                       serviceId, consulClient.uri(), res.status(),
                                       res.contentUtf8());

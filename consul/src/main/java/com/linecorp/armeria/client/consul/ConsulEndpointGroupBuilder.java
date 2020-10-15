@@ -29,10 +29,10 @@ import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
  * A builder class for {@link ConsulEndpointGroup}.
  */
 public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
-    private static final long DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS = 10;
+    private static final long DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS = 10_000;
 
     private final String serviceName;
-    private long registryFetchIntervalSeconds = DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS;
+    private long registryFetchIntervalMillis = DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS;
     private boolean useHealthyEndpoints;
 
     ConsulEndpointGroupBuilder(String serviceName) {
@@ -41,43 +41,36 @@ public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
 
     /**
      * Sets the interval between fetching registry requests.
-     * If not set, {@value #DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS} is used by default.
+     * If not set, {@value #DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS} milliseconds is used by default.
      */
     public ConsulEndpointGroupBuilder registryFetchInterval(Duration registryFetchInterval) {
         requireNonNull(registryFetchInterval, "registryFetchInterval");
-        final long seconds = registryFetchInterval.getSeconds();
-        checkArgument(seconds > 0, "registryFetchInterval.getSeconds(): %s (expected: > 0)", seconds);
-        return registryFetchIntervalSeconds(seconds);
+        checkArgument(!registryFetchInterval.isZero() && !registryFetchInterval.isNegative(),
+                      "registryFetchInterval: %s (expected: > 0)",
+                      registryFetchInterval);
+        return registryFetchIntervalMillis(registryFetchInterval.toMillis());
     }
 
     /**
-     * Sets the interval between fetching registry requests.
-     * If not set {@value #DEFAULT_HEALTH_CHECK_INTERVAL_SECONDS} is used by default.
+     * Sets the interval between fetching registry requests in milliseconds.
+     * If not set, {@value #DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS} is used by default.
      */
-    public ConsulEndpointGroupBuilder registryFetchIntervalSeconds(long registryFetchIntervalSeconds) {
-        checkArgument(registryFetchIntervalSeconds > 0, "registryFetchIntervalSeconds: %s (expected: > 0)",
-                      registryFetchIntervalSeconds);
-        this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
+    public ConsulEndpointGroupBuilder registryFetchIntervalMillis(long registryFetchIntervalMillis) {
+        checkArgument(registryFetchIntervalMillis > 0, "registryFetchIntervalMillis: %s (expected: > 0)",
+                      registryFetchIntervalMillis);
+        this.registryFetchIntervalMillis = registryFetchIntervalMillis;
         return this;
     }
 
     /**
      * Sets whether to use <a href="https://www.consul.io/api/health.html">Health HTTP endpoint</a>.
-     * Before enabling this feature, make sure that your target endpoints are health-checked by Consul.
+     * make sure that your target endpoints are health-checked by Consul before enabling this feature.
      *
      * @see ConsulUpdatingListenerBuilder#checkUri(URI)
      */
     public ConsulEndpointGroupBuilder useHealthEndpoints(boolean useHealthyEndpoints) {
         this.useHealthyEndpoints = useHealthyEndpoints;
         return this;
-    }
-
-    /**
-     * Returns a newly-created {@link ConsulEndpointGroup}.
-     */
-    public ConsulEndpointGroup build() {
-        return new ConsulEndpointGroup(buildClient(), serviceName, registryFetchIntervalSeconds,
-                                       useHealthyEndpoints);
     }
 
     @Override
@@ -113,5 +106,13 @@ public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
     @Override
     public ConsulEndpointGroupBuilder consulToken(String consulToken) {
         return (ConsulEndpointGroupBuilder) super.consulToken(consulToken);
+    }
+
+    /**
+     * Returns a newly-created {@link ConsulEndpointGroup}.
+     */
+    public ConsulEndpointGroup build() {
+        return new ConsulEndpointGroup(buildClient(), serviceName, registryFetchIntervalMillis,
+                                       useHealthyEndpoints);
     }
 }
