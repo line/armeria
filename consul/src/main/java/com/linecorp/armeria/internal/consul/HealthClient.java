@@ -36,7 +36,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.internal.common.PercentEncoder;
 
 /**
@@ -47,8 +46,7 @@ final class HealthClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthClient.class);
 
-    private static final String PASSING_PARAM = '?' +
-                                                QueryParams.of("passing", true).toQueryString();
+    private static final String PASSING_PARAM = "?passing=true";
 
     static HealthClient of(ConsulClient consulClient) {
         return new HealthClient(consulClient);

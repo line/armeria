@@ -51,7 +51,7 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
             final ServerListener listener =
                     ConsulUpdatingListener.builder(serviceName)
                                           .consulPort(consul().getHttpPort())
-                                          .consulToken(TOKEN)
+                                          .consulToken(CONSUL_TOKEN)
                                           .endpoint(endpoint)
                                           .checkUri("http://" + endpoint.host() +
                                                     ':' + endpoint.port() + "/echo")

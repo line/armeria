@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.consul;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -43,15 +42,14 @@ import com.linecorp.armeria.server.Server;
  */
 public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
 
-    private static final String DEFAULT_CHECK_INTERVAL = "10s";
+    private static final long DEFAULT_CHECK_INTERVAL_MILLIS = 10_000;
     private final String serviceName;
 
     @Nullable
     private Endpoint serviceEndpoint;
     @Nullable
     private URI checkUri;
-    @Nullable
-    private String checkInterval;
+    private String checkInterval = DEFAULT_CHECK_INTERVAL_MILLIS + "ms";
     @Nullable
     private HttpMethod checkMethod;
 
@@ -101,7 +99,7 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
 
     /**
      * Sets the specified {@link Duration} for checking health.
-     * If not set {@value DEFAULT_CHECK_INTERVAL} is used by default.
+     * If not set {@value DEFAULT_CHECK_INTERVAL_MILLIS} milliseconds is used by default.
      *
      * <p>Note that the {@code checkInterval} should be configured with {@link #checkUri(URI)}.
      * Otherwise, the {@link #build()} method will throws {@link IllegalStateException}.
@@ -113,8 +111,8 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
     }
 
     /**
-     * Sets the specified {@code checkIntervalMills} for checking health.
-     * If not set {@value DEFAULT_CHECK_INTERVAL} is used by default.
+     * Sets the specified {@code checkIntervalMills} for checking health in milliseconds.
+     * If not set {@value DEFAULT_CHECK_INTERVAL_MILLIS} is used by default.
      *
      * <p>Note that the {@code checkIntervalMillis} should be configured with {@link #checkUri(URI)}.
      * Otherwise, the {@link #build()} method will throws {@link IllegalStateException}.
@@ -179,11 +177,8 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
             if (checkMethod != null) {
                 throw new IllegalStateException("'checkMethod' should declare with checkUri.");
             }
-            if (checkInterval != null) {
-                throw new IllegalStateException("'checkInterval' should declare with checkUri.");
-            }
         }
         return new ConsulUpdatingListener(buildClient(), serviceName, serviceEndpoint, checkUri, checkMethod,
-                                          firstNonNull(checkInterval, DEFAULT_CHECK_INTERVAL));
+                                          checkInterval);
     }
 }

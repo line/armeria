@@ -44,7 +44,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 public abstract class ConsulTestBase {
 
-    protected static final String TOKEN = UUID.randomUUID().toString();
+    protected static final String CONSUL_TOKEN = UUID.randomUUID().toString();
     protected static final String serviceName = "testService";
     protected static final Set<Endpoint> sampleEndpoints;
 
@@ -69,11 +69,14 @@ public abstract class ConsulTestBase {
         // Initialize Consul embedded server for testing
         consul = ConsulStarterBuilder.consulStarter()
                                      .withConsulVersion("1.8.4")
-                                     .withCustomConfig(aclConfiguration(TOKEN))
-                                     .withToken(TOKEN)
+                                     .withCustomConfig(aclConfiguration(CONSUL_TOKEN))
+                                     .withToken(CONSUL_TOKEN)
                                      .build().start();
         // Initialize Consul client
-        consulClient = ConsulClient.builder().consulToken(TOKEN).consulPort(consul.getHttpPort()).buildClient();
+        consulClient = ConsulClient.builder()
+                                   .consulToken(CONSUL_TOKEN)
+                                   .consulPort(consul.getHttpPort())
+                                   .buildClient();
     }
 
     @AfterAll

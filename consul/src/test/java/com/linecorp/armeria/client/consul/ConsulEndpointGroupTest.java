@@ -49,7 +49,7 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
             final ServerListener listener = ConsulUpdatingListener.builder(serviceName)
                                                                   .consulUri("http://127.0.0.1:" +
                                                                              consul().getHttpPort() + "/v1")
-                                                                  .consulToken(TOKEN)
+                                                                  .consulToken(CONSUL_TOKEN)
                                                                   .build();
             server.addListener(listener);
             server.start().join();
@@ -71,7 +71,7 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
                                         .consulAddress(consul().getAddress())
                                         .consulPort(consul().getHttpPort())
                                         .consulApiVersion("v1")
-                                        .consulToken(TOKEN)
+                                        .consulToken(CONSUL_TOKEN)
                                         .registryFetchIntervalMillis(1000)
                                         .build()) {
             await().atMost(3, TimeUnit.SECONDS)
@@ -95,7 +95,7 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
         try (ConsulEndpointGroup endpointGroup =
                      ConsulEndpointGroup.builder(serviceName)
                                         .consulPort(consul().getHttpPort())
-                                        .consulToken(TOKEN)
+                                        .consulToken(CONSUL_TOKEN)
                                         .registryFetchInterval(Duration.ofSeconds(1))
                                         .build()) {
             await().atMost(3, TimeUnit.SECONDS)

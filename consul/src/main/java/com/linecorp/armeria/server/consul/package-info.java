@@ -14,7 +14,6 @@
  * under the License.
  */
 /**
- /**
  * Automatic service registration and discovery with <a href="https://consul.io/">Consul</a>.
  **/
 @NonNullByDefault
