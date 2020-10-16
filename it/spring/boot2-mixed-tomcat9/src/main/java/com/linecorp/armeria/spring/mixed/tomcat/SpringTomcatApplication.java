@@ -47,7 +47,7 @@ public class SpringTomcatApplication {
             final Tomcat tomcat = ((TomcatWebServer) webServer).getTomcat();
 
             return serverBuilder -> serverBuilder.serviceUnder("/tomcat/api/rest/v1",
-                                                          TomcatService.of(tomcat));
+                                                               TomcatService.of(tomcat));
         }
         return serverBuilder -> {};
     }
