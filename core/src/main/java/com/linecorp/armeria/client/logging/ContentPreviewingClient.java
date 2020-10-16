@@ -38,6 +38,8 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 
+import io.netty.util.AttributeKey;
+
 /**
  * Decorates an {@link HttpClient} to preview the content of {@link Request}s and {@link Response}s.
  *
@@ -53,6 +55,9 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
  * }</pre>
  */
 public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
+
+    private static final AttributeKey<Boolean> CONTENT_PREVIEWING_SET =
+            AttributeKey.valueOf(ContentPreviewingClient.class, "CONTENT_PREVIEWING_SET");
 
     /**
      * Creates a new {@link ContentPreviewingClient} decorator which produces text preview with the
@@ -115,6 +120,11 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        final Boolean isContentPreviewingSet = ctx.attr(CONTENT_PREVIEWING_SET);
+        if (Boolean.TRUE.equals(isContentPreviewingSet)) {
+            return unwrap().execute(ctx, req);
+        }
+        ctx.setAttr(CONTENT_PREVIEWING_SET, true);
         final ContentPreviewer requestContentPreviewer =
                 contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
         req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer);

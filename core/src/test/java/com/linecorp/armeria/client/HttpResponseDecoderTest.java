@@ -36,11 +36,15 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -106,5 +110,18 @@ class HttpResponseDecoderTest {
 
         latch.await(System.getenv("CI") != null ? 60 : 10, TimeUnit.SECONDS);
         assertThat(failed.get()).isFalse();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    void responseCompleteNormallyIfRequestIsAborted(SessionProtocol protocol) throws Exception {
+        final WebClient client = WebClient.of(server.uri(protocol));
+        final HttpRequestWriter streaming = HttpRequest.streaming(RequestHeaders.of(HttpMethod.POST, "/"));
+        final AggregatedHttpResponse res = client.execute(streaming).aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Hello, Armeria!");
+        streaming.whenComplete().exceptionally(cause -> {
+            assertThat(cause).isExactlyInstanceOf(AbortedStreamException.class);
+            return null;
+        }).join();
     }
 }

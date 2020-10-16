@@ -293,7 +293,7 @@ abstract class HttpResponseDecoder {
         private void close(@Nullable Throwable cause,
                            Consumer<Throwable> actionOnNotTimedOut) {
             state = State.DONE;
-
+            cancelTimeoutOrLog(cause, actionOnNotTimedOut);
             if (ctx != null) {
                 if (cause == null) {
                     ctx.request().abort();
@@ -301,8 +301,6 @@ abstract class HttpResponseDecoder {
                     ctx.request().abort(cause);
                 }
             }
-
-            cancelTimeoutOrLog(cause, actionOnNotTimedOut);
         }
 
         private void closeAction(@Nullable Throwable cause) {
