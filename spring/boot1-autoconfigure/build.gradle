@@ -64,6 +64,7 @@ def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot2-autoconfig
 task generateSources(type: Copy) {
     from "${autoconfigureProjectDir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
+    exclude '**/ArmeriaAutoConfiguration.java'
     exclude '**/ArmeriaBeanPostProcessor.java'
     exclude '**/ArmeriaBeanPostProcessorConfiguration.java'
     exclude '**/package-info.java'
