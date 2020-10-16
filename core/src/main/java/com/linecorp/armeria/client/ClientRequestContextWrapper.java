@@ -136,8 +136,29 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public void cancel(Throwable cause) {
+        delegate().cancel(cause);
+    }
+
+    @Override
+    public void cancel() {
+        delegate().cancel();
+    }
+
+    @Override
     public void timeoutNow() {
         delegate().timeoutNow();
+    }
+
+    @Nullable
+    @Override
+    public Throwable cancellationCause() {
+        return delegate().cancellationCause();
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return delegate().isCancelled();
     }
 
     @Override
@@ -146,10 +167,22 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public CompletableFuture<Throwable> whenResponseCancelling() {
+        return delegate().whenResponseCancelling();
+    }
+
+    @Override
+    public CompletableFuture<Throwable> whenResponseCancelled() {
+        return delegate().whenResponseCancelled();
+    }
+
+    @Deprecated
+    @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
         return delegate().whenResponseTimingOut();
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
         return delegate().whenResponseTimedOut();
