@@ -55,9 +55,16 @@ class UnionMapTest {
 
     @Test
     void testGet() {
-        assertThat(new UnionMap<>(of("1", "a"), of("2", "b"))).containsEntry("1", "a");
-        assertThat(new UnionMap<>(of("1", "a"), of("2", "b"))).containsEntry("2", "b");
-        assertThat(new UnionMap<>(of("1", "a"), of("1", "b"))).containsEntry("1", "a");
+        assertThat(new UnionMap<>(of("1", "a"), of("2", "b")).get("1")).isEqualTo("a");
+        assertThat(new UnionMap<>(of("1", "a"), of("2", "b")).get("2")).isEqualTo("b");
+        assertThat(new UnionMap<>(of("1", "a"), of("1", "b")).get("1")).isEqualTo("a");
+    }
+
+    @Test
+    void testEntrySet() {
+        assertThat(new UnionMap<>(of("1", "a"), of("2", "b"))).containsExactlyEntriesOf(of("1", "a", "2", "b"));
+        assertThat(new UnionMap<>(of("1", "a"), of("2", "a"))).containsExactlyEntriesOf(of("1", "a", "2", "a"));
+        assertThat(new UnionMap<>(of("1", "a"), of("1", "b"))).containsExactlyEntriesOf(of("1", "a"));
     }
 
     @Test
