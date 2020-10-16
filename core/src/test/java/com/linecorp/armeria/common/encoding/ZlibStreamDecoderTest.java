@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.encoding;
+package com.linecorp.armeria.common.encoding;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.compression.ZlibWrapper;

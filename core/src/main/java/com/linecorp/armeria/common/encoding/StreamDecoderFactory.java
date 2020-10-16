@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.encoding;
+package com.linecorp.armeria.common.encoding;
 
 import com.linecorp.armeria.common.HttpResponse;
 
@@ -23,11 +23,8 @@ import io.netty.buffer.ByteBufAllocator;
 /**
  * An interface that constructs a new {@link StreamDecoder} for a given Content-Encoding header value.
  * A new decoder is valid for the lifetime of an {@link HttpResponse}.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.encoding.StreamDecoderFactory} instead.
  */
-@Deprecated
-public interface StreamDecoderFactory {
+public interface StreamDecoderFactory extends com.linecorp.armeria.client.encoding.StreamDecoderFactory {
 
     /**
      * Returns the {@link StreamDecoderFactory} for {@code "deflate"} content encoding.
@@ -46,10 +43,12 @@ public interface StreamDecoderFactory {
     /**
      * Returns the value of the Content-Encoding header which this factory applies to.
      */
+    @Override
     String encodingHeaderValue();
 
     /**
      * Construct a new {@link StreamDecoder} to use to decode an {@link HttpResponse}.
      */
+    @Override
     StreamDecoder newDecoder(ByteBufAllocator alloc);
 }

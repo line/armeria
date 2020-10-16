@@ -17,7 +17,9 @@
 package com.linecorp.armeria.client.encoding;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -50,6 +52,7 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
      */
     public static Function<? super HttpClient, DecodingClient>
     newDecorator(StreamDecoderFactory... decoderFactories) {
+        requireNonNull(decoderFactories, "decoderFactories");
         return newDecorator(ImmutableList.copyOf(decoderFactories));
     }
 
@@ -58,7 +61,10 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
      */
     public static Function<? super HttpClient, DecodingClient> newDecorator(
             Iterable<? extends StreamDecoderFactory> decoderFactories) {
-        return client -> new DecodingClient(client, decoderFactories);
+        requireNonNull(decoderFactories, "decoderFactories");
+        final List<? extends StreamDecoderFactory>
+                immutableDecoderFactories = ImmutableList.copyOf(decoderFactories);
+        return client -> new DecodingClient(client, immutableDecoderFactories);
     }
 
     private final Map<String, StreamDecoderFactory> decoderFactories;

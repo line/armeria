@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,26 +14,25 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.encoding;
+package com.linecorp.armeria.common.encoding;
 
 import com.linecorp.armeria.common.HttpData;
 
 /**
  * An interface for objects that apply HTTP content decoding to incoming {@link HttpData}.
  * Implement this interface to use content decoding schemes not built-in to the JDK.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.encoding.StreamDecoder} instead.
  */
-@Deprecated
-public interface StreamDecoder {
+public interface StreamDecoder extends com.linecorp.armeria.client.encoding.StreamDecoder {
 
     /**
      * Decodes an {@link HttpData} and returns the decoded {@link HttpData}.
      */
+    @Override
     HttpData decode(HttpData obj);
 
     /**
      * Closes the decoder and returns any decoded data that may be left over.
      */
+    @Override
     HttpData finish();
 }

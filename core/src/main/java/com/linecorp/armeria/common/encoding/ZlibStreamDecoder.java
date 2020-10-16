@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.encoding;
+package com.linecorp.armeria.common.encoding;
 
 import com.linecorp.armeria.common.HttpData;
 
@@ -27,10 +27,7 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 /**
  * A {@link StreamDecoder} that user zlib ('gzip' or 'deflate'). Netty implementation used to allow
  * for incremental decoding using an {@link EmbeddedChannel}.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.encoding.ZlibStreamDecoder} instead.
  */
-@Deprecated
 final class ZlibStreamDecoder implements StreamDecoder {
 
     private final EmbeddedChannel decoder;
