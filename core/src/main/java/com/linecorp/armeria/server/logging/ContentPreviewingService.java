@@ -56,8 +56,8 @@ import io.netty.util.AttributeKey;
  */
 public final class ContentPreviewingService extends SimpleDecoratingHttpService {
 
-    private static final AttributeKey<Boolean> CONTENT_PREVIEWING_SET =
-            AttributeKey.valueOf(ContentPreviewingService.class, "CONTENT_PREVIEWING_SET");
+    private static final AttributeKey<Boolean> SETTING_CONTENT_PREVIEW =
+            AttributeKey.valueOf(ContentPreviewingService.class, "SETTING_CONTENT_PREVIEW");
 
     /**
      * Creates a new {@link ContentPreviewingService} decorator which produces text preview with the
@@ -120,11 +120,11 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Boolean isContentPreviewingSet = ctx.attr(CONTENT_PREVIEWING_SET);
-        if (Boolean.TRUE.equals(isContentPreviewingSet)) {
+        final Boolean settingContentPreview = ctx.attr(SETTING_CONTENT_PREVIEW);
+        if (Boolean.TRUE.equals(settingContentPreview)) {
             return unwrap().serve(ctx, req);
         }
-        ctx.setAttr(CONTENT_PREVIEWING_SET, true);
+        ctx.setAttr(SETTING_CONTENT_PREVIEW, true);
         final ContentPreviewer requestContentPreviewer =
                 contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
         req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer);
