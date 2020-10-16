@@ -31,7 +31,7 @@
      "5" : [ false ]
   },
 
-  "k" : [ true , false , false , false , true ],
+  "k" : [ true, false ],
 
   "l" : "SGVsbG8gV29ybGQ=",
 
@@ -39,23 +39,23 @@
 
   "n" : 678,
 
-  "p" : 3,
+  "p" : "CHARLIE",
 
-  "q" : [ "ALPHA", 2, "CHARLIE", 4, 5 ],
+  "q" : [ "ALPHA", "BETA", "CHARLIE", "DELTA", "ECHO" ],
 
   "r": {
-    "{\n  \"s\": 1,\n  \"s2\": {\n    \"x\": 2\n  }\n}": 100
+    "{\n  \"s\" : 1,\n  \"s2\" : {\n    \"x\" : 2\n  }\n}": 100
   },
 
   "s": {
-    "{\n  \"{200: 400}\": 300\n}": 100
+    "{\n  \"{\\n  \\\"200\\\" : 400\\n}\" : 300\n}": 100
   },
 
-  "t": [ 1, "ALPHA", 3, "ALPHA", "CHARLIE", 5],
+  "t": [ "ALPHA", "ALPHA", "CHARLIE", "ALPHA", "CHARLIE", "ECHO" ],
 
   "u": {
     "foo": "ALPHA",
-    "bar": 4
+    "bar": "DELTA"
   },
 
   "v": "BETA",
@@ -67,24 +67,24 @@
   "y": 1,
 
   "aa": {
-    "1": 2,
+    "ALPHA": 2,
     "BETA": 4
   },
 
   "ab": {
-    "3": "ONE",
-    "DELTA": 3,
+    "CHARLIE": "ONE",
+    "DELTA": "THREE",
     "BETA": "FIVE"
   },
 
   "ac": {
-    "{\n  \"1\" : 3\n}": {
+    "{\n  \"ONE\" : 3\n}": {
       "{\n  \"n\" : \"TWO\"\n}": {
-        "ECHO": [ 5, "ALPHA", 1 ]
+        "ECHO": [ "ECHO", "ALPHA", "ALPHA" ]
       }
     },
     "{\n  \"THREE\" : 5\n}": {
-      "{\n  \"n\" : 4\n}": {
+      "{\n  \"n\" : \"FOUR\"\n}": {
         "ALPHA": [ "BETA", "DELTA" ]
       }
     }

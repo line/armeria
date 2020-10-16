@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -42,6 +42,7 @@ import javax.annotation.Nullable;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
+import org.apache.thrift.TFieldRequirementType;
 import org.apache.thrift.meta_data.EnumMetaData;
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.meta_data.FieldValueMetaData;
@@ -174,49 +175,7 @@ final class StructContext extends PairContext {
             for (Entry<? extends TFieldIdEnum, FieldMetaData> e : metaDataMap.entrySet()) {
                 final String fieldName = e.getKey().getFieldName();
                 final FieldMetaData metaData = e.getValue();
-
-                final FieldValueMetaData elementMetaData;
-                if (metaData.valueMetaData.isContainer()) {
-                    if (metaData.valueMetaData instanceof SetMetaData) {
-                        elementMetaData = ((SetMetaData) metaData.valueMetaData).elemMetaData;
-                    } else if (metaData.valueMetaData instanceof ListMetaData) {
-                        elementMetaData = ((ListMetaData) metaData.valueMetaData).elemMetaData;
-                    } else if (metaData.valueMetaData instanceof MapMetaData) {
-                        elementMetaData = ((MapMetaData) metaData.valueMetaData).valueMetaData;
-                    } else {
-                        // Unrecognized container type, but let's still continue processing without
-                        // special enum support.
-                        elementMetaData = metaData.valueMetaData;
-                    }
-                } else {
-                    elementMetaData = metaData.valueMetaData;
-                }
-
-                if (elementMetaData instanceof EnumMetaData) {
-                    classMap.put(fieldName, ((EnumMetaData) elementMetaData).enumClass);
-                } else if (elementMetaData instanceof StructMetaData) {
-                    classMap.put(fieldName, ((StructMetaData) elementMetaData).structClass);
-                } else {
-                    // Workaround a bug where the generated 'FieldMetaData' does not provide
-                    // a fully qualified class name.
-                    final String typedefName = elementMetaData.getTypedefName();
-                    if (typedefName != null) {
-                        final String fqcn = clazz.getPackage().getName() + '.' + typedefName;
-                        Class<?> fieldClass = fieldMetaDataClassCache.get(fqcn);
-                        if (fieldClass == null) {
-                            fieldClass = fieldMetaDataClassCache.computeIfAbsent(fqcn, key -> {
-                                try {
-                                    return Class.forName(key);
-                                } catch (ClassNotFoundException ignored) {
-                                    return StructContext.class;
-                                }
-                            });
-                        }
-                        if (fieldClass != StructContext.class) {
-                            classMap.put(fieldName, fieldClass);
-                        }
-                    }
-                }
+                updateClassMap(metaData, clazz);
 
                 // Workaround a bug in the generated thrift message read()
                 // method by mapping the ENUM type to the INT32 type
@@ -237,5 +196,63 @@ final class StructContext extends PairContext {
         }
 
         return map;
+    }
+
+    private void updateClassMap(FieldMetaData metaData, Class<?> clazz) {
+        final String fieldName = metaData.fieldName;
+
+        final FieldValueMetaData elementMetaData;
+        if (metaData.valueMetaData.isContainer()) {
+            if (metaData.valueMetaData instanceof SetMetaData) {
+                elementMetaData = ((SetMetaData) metaData.valueMetaData).elemMetaData;
+            } else if (metaData.valueMetaData instanceof ListMetaData) {
+                elementMetaData = ((ListMetaData) metaData.valueMetaData).elemMetaData;
+            } else if (metaData.valueMetaData instanceof MapMetaData) {
+                final MapMetaData mapMetaData = (MapMetaData) metaData.valueMetaData;
+                final byte req = TFieldRequirementType.REQUIRED;
+
+                final FieldMetaData keyMetaData = new FieldMetaData(
+                        fieldName + TTextProtocol.MAP_KEY_SUFFIX, req, mapMetaData.keyMetaData);
+                updateClassMap(keyMetaData, clazz);
+
+                final FieldMetaData valueMetaData = new FieldMetaData(
+                        fieldName + TTextProtocol.MAP_VALUE_SUFFIX, req, mapMetaData.valueMetaData);
+                updateClassMap(valueMetaData, clazz);
+
+                return;
+            } else {
+                // Unrecognized container type, but let's still continue processing without
+                // special enum support.
+                elementMetaData = metaData.valueMetaData;
+            }
+        } else {
+            elementMetaData = metaData.valueMetaData;
+        }
+
+        if (elementMetaData instanceof EnumMetaData) {
+            classMap.put(fieldName, ((EnumMetaData) elementMetaData).enumClass);
+        } else if (elementMetaData instanceof StructMetaData) {
+            classMap.put(fieldName, ((StructMetaData) elementMetaData).structClass);
+        } else {
+            // Workaround a bug where the generated 'FieldMetaData' does not provide
+            // a fully qualified class name.
+            final String typedefName = elementMetaData.getTypedefName();
+            if (typedefName != null) {
+                final String fqcn = clazz.getPackage().getName() + '.' + typedefName;
+                Class<?> fieldClass = fieldMetaDataClassCache.get(fqcn);
+                if (fieldClass == null) {
+                    fieldClass = fieldMetaDataClassCache.computeIfAbsent(fqcn, key -> {
+                        try {
+                            return Class.forName(key);
+                        } catch (ClassNotFoundException ignored) {
+                            return StructContext.class;
+                        }
+                    });
+                }
+                if (fieldClass != StructContext.class) {
+                    classMap.put(fieldName, fieldClass);
+                }
+            }
+        }
     }
 }
