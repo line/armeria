@@ -70,7 +70,7 @@ import io.netty.util.concurrent.EventExecutor;
  *       >             // Should release the returned 'ByteBuf'
  *       >             buf.release();
  *       >             remaining -= length;
- *       >         } (remaining >= length);
+ *       >         } while (remaining >= length);
  *       >     }
  *       > }
  *       }</pre>
