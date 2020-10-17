@@ -116,10 +116,11 @@ class HttpResponseDecoderTest {
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
     void responseCompleteNormallyIfRequestIsAborted(SessionProtocol protocol) throws Exception {
         final WebClient client = WebClient.of(server.uri(protocol));
-        final HttpRequestWriter streaming = HttpRequest.streaming(RequestHeaders.of(HttpMethod.POST, "/"));
-        final AggregatedHttpResponse res = client.execute(streaming).aggregate().join();
+        final HttpRequestWriter request = HttpRequest.streaming(RequestHeaders.of(HttpMethod.POST, "/"));
+        final AggregatedHttpResponse res = client.execute(request).aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Hello, Armeria!");
-        streaming.whenComplete().exceptionally(cause -> {
+        // The request is aborted in HttpResponseDecoder.close(...) after the client receives the response.
+        request.whenComplete().handle((unused, cause) -> {
             assertThat(cause).isExactlyInstanceOf(AbortedStreamException.class);
             return null;
         }).join();
