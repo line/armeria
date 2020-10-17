@@ -23,7 +23,10 @@ import io.netty.buffer.ByteBufAllocator;
 /**
  * An interface that constructs a new {@link StreamDecoder} for a given Content-Encoding header value.
  * A new decoder is valid for the lifetime of an {@link HttpResponse}.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.encoding.StreamDecoderFactory} instead.
  */
+@Deprecated
 public interface StreamDecoderFactory {
 
     /**

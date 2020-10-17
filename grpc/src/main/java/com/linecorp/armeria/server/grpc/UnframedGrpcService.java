@@ -17,13 +17,11 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -82,22 +80,17 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
 
     private static final char LINE_SEPARATOR = '\n';
 
-    private final Map<String, MethodDescriptor<?, ?>> methodsByName;
+    private final Map<String, ServerMethodDefinition<?, ?>> methodsByName;
     private final GrpcService delegateGrpcService;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    UnframedGrpcService(GrpcService delegate) {
+    UnframedGrpcService(GrpcService delegate, HandlerRegistry registry) {
         super(delegate);
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
         delegateGrpcService = delegate;
-        methodsByName = delegate.services()
-                                .stream()
-                                .flatMap(service -> service.getMethods().stream())
-                                .map(ServerMethodDefinition::getMethodDescriptor)
-                                .collect(toImmutableMap(MethodDescriptor::getFullMethodName,
-                                                        Function.identity()));
+        methodsByName = registry.methods();
     }
 
     @Override
@@ -108,6 +101,11 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     @Override
     public List<ServerServiceDefinition> services() {
         return delegateGrpcService.services();
+    }
+
+    @Override
+    public Map<String, ServerMethodDefinition<?, ?>> methods() {
+        return methodsByName;
     }
 
     @Override
@@ -133,7 +131,18 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         }
 
         final String methodName = GrpcRequestUtil.determineMethod(ctx);
-        final MethodDescriptor<?, ?> method = methodName != null ? methodsByName.get(methodName) : null;
+        final MethodDescriptor<?, ?> method;
+        if (methodName != null) {
+            final ServerMethodDefinition<?, ?> methodDef = methodsByName.get(methodName);
+            if (methodDef != null) {
+                method = methodDef.getMethodDescriptor();
+            } else {
+                method = null;
+            }
+        } else {
+            method = null;
+        }
+
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
             return unwrap().serve(ctx, req);

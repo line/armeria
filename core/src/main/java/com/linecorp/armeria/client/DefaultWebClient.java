@@ -21,6 +21,8 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri
 
 import java.net.URI;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
@@ -69,9 +71,13 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final String query = uri.getRawQuery();
-            final String path = uri.getRawPath();
-            final HttpRequest newReq = req.withHeaders(req.headers().toBuilder()
-                                                          .path(query == null ? path : path + '?' + query));
+            String path = uri.getRawPath();
+            if (Strings.isNullOrEmpty(path)) {
+                path = query == null ? "/" : "/?" + query;
+            } else if (query != null) {
+                path = path + '?' + query;
+            }
+            final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(path));
             return execute(endpoint, newReq, protocol);
         }
 

@@ -464,6 +464,14 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try (SafeCloseable ignored = ctx.push()) {
             assert listener != null;
             listener.onHalfClose();
+
+            // Based on the implementation of ServerCalls of gRPC-Java, onReady() is called only by
+            // onHalfClose() of UnaryServerCallListener, which is used for UNARY and SERVER_STREAMING.
+            // https://github.com/grpc/grpc-java/blob/9b73e2365da502a466b01544f102cd487e374428/stub/src/main/java/io/grpc/stub/ServerCalls.java#L188
+            final MethodType methodType = method.getType();
+            if (methodType == MethodType.UNARY || methodType == MethodType.SERVER_STREAMING) {
+                listener.onReady();
+            }
         } catch (Throwable t) {
             close(GrpcStatus.fromThrowable(t), new Metadata());
         }
@@ -577,6 +585,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     void setListener(Listener<I> listener) {
         checkState(this.listener == null, "listener already set");
         this.listener = requireNonNull(listener, "listener");
+        invokeOnReady();
     }
 
     @Nullable
