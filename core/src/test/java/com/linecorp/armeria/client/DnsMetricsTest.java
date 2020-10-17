@@ -23,6 +23,7 @@ import static io.netty.handler.codec.dns.DnsRecordType.SRV;
 import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
@@ -103,7 +104,10 @@ public class DnsMetricsTest {
 
     @Test
     void timeout() {
-        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(), new AlwaysTimeoutHandler())) {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
+        ), new AlwaysTimeoutHandler())) {
             final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
             try (ClientFactory factory = ClientFactory.builder()
                     .domainNameResolverCustomizer(builder -> {
@@ -118,13 +122,15 @@ public class DnsMetricsTest {
                         .factory(factory)
                         .build();
 
-                final String writeMeterId =
+                final String writeMeterId_ipv4_addr =
                         "armeria.client.dns.queries.written#count{name=foo.com.,server=127.0.0.1}";
+                final String writeMeterId_ipv6_addr =
+                        "armeria.client.dns.queries.written#count{name=foo.com.,server=0:0:0:0:0:0:0:1}";
                 final String timeoutMeterId =
                         "armeria.client.dns.queries#count{" +
                         "cause=DNS_RESOLVER_TIMEOUT_EXCEPTION,name=foo.com.,result=failure}";
                 assertThat(MoreMeters.measureAll(meterRegistry))
-                        .doesNotContainKeys(writeMeterId, timeoutMeterId);
+                        .doesNotContainKeys(writeMeterId_ipv4_addr,writeMeterId_ipv6_addr, timeoutMeterId);
 
                 assertThatThrownBy(() -> client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com"))
                         .aggregate().join())
@@ -133,8 +139,8 @@ public class DnsMetricsTest {
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
-                            .containsEntry(writeMeterId, 1.0)
-                            .containsEntry(timeoutMeterId, 1.0);
+                            .containsAnyOf(entry(writeMeterId_ipv6_addr, 1.0),
+                                    entry(writeMeterId_ipv4_addr, 1.0));
                 });
             }
         }
