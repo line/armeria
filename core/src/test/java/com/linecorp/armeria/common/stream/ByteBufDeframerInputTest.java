@@ -45,18 +45,24 @@ class ByteBufDeframerInputTest {
         final ByteBuf byteBuf2 = Unpooled.buffer(4);
         byteBuf2.writeByte(5);
         byteBuf2.writeByte(6);
+        byteBuf2.writeByte(7);
         input.add(byteBuf2);
         byteBufs.add(byteBuf2);
-        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer(new byte[]{ 7, 8 });
+        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer(new byte[]{ 8 });
         input.add(byteBuf3);
         byteBufs.add(byteBuf3);
         final ByteBuf byteBuf4 = Unpooled.EMPTY_BUFFER;
         input.add(byteBuf4);
         byteBufs.add(byteBuf4);
-        final ByteBuf byteBuf5 = Unpooled.wrappedBuffer(new byte[]{-1, 9});
+        final ByteBuf byteBuf5 = Unpooled.wrappedBuffer(new byte[]{ -1, 9 });
         byteBuf5.readByte();
         input.add(byteBuf5);
         byteBufs.add(byteBuf5);
+
+        final ByteBuf byteBuf6 = Unpooled.wrappedBuffer(new byte[]{ -1 });
+        byteBuf6.readByte();
+        input.add(byteBuf6);
+        byteBufs.add(byteBuf6);
     }
 
     @AfterEach
@@ -93,10 +99,18 @@ class ByteBufDeframerInputTest {
 
     @Test
     void readInt() {
+        // fast path
         final int expected1 = 1 << 24 | 2 << 16 | 3 << 8 | 4;
         assertThat(input.readInt()).isEqualTo(expected1);
+        assertThat(input.readableBytes()).isEqualTo(5);
+        assertThat(byteBufs.get(0).refCnt()).isZero();
+
+        // slow path
         final int expected2 = 5 << 24 | 6 << 16 | 7 << 8 | 8;
         assertThat(input.readInt()).isEqualTo(expected2);
+        assertThat(input.readableBytes()).isEqualTo(1);
+        assertThat(byteBufs.get(1).refCnt()).isZero();
+        assertThat(byteBufs.get(2).refCnt()).isZero();
 
         assertThatThrownBy(() -> input.readInt())
                 .isInstanceOf(IllegalStateException.class)
@@ -116,12 +130,12 @@ class ByteBufDeframerInputTest {
     @Test
     void readBytes() {
         final ByteBufDeframerInput input = new ByteBufDeframerInput(UnpooledByteBufAllocator.DEFAULT);
-        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[]{1, 2, 3, 4});
+        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[]{ 1, 2, 3, 4 });
         final ByteBuf byteBuf2 = Unpooled.buffer(4);
         byteBuf2.writeByte(5);
         byteBuf2.writeByte(6);
-        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer(new byte[]{7, 8});
-        final ByteBuf byteBuf4 = Unpooled.wrappedBuffer(new byte[]{-1, 9});
+        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer(new byte[]{ 7, 8 });
+        final ByteBuf byteBuf4 = Unpooled.wrappedBuffer(new byte[]{ -1, 9 });
         byteBuf4.readByte();
 
         input.add(byteBuf1);
@@ -130,26 +144,28 @@ class ByteBufDeframerInputTest {
         input.add(Unpooled.EMPTY_BUFFER);
         input.add(byteBuf4);
 
+        // Should return byteBuf1 without additional copies
         ByteBuf buf = input.readBytes(4);
         assertThat(buf).isSameAs(byteBuf1);
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.release();
 
-        // Read from byteBuf2
+        // Should return retained slice ByteBuf from byteBuf2
         buf = input.readBytes(1);
-        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{5});
+        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{ 5 });
         assertThat(buf.unwrap()).isSameAs(byteBuf2);
         assertThat(buf.refCnt()).isEqualTo(2);
         buf.release();
 
-        // Read from byteBuf2 and byteBuf3
+        // Create new ByteBuf and copy data from byteBuf2 and byteBuf3
         buf = input.readBytes(3);
-        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{6, 7, 8});
+        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{ 6, 7, 8 });
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.release();
 
+        // Should return byteBuf4 without additional copies
         buf = input.readBytes(1);
-        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{9});
+        assertThat(ByteBufUtil.getBytes(buf)).isEqualTo(new byte[]{ 9 });
         assertThat(buf).isSameAs(byteBuf4);
         assertThat(buf.refCnt()).isEqualTo(1);
         buf.release();

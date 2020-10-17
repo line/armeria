@@ -89,11 +89,11 @@ public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<Defram
     private static final int COMPRESSED_FLAG_MASK = 1;
     private static final int RESERVED_MASK = 0x7E;
     // Valid type is always positive.
-    private static final int UNINITIALIED_TYPE = -1;
+    private static final int UNINITIALIZED_TYPE = -1;
 
     private final int maxMessageSizeBytes;
 
-    private int currentType = UNINITIALIED_TYPE;
+    private int currentType = UNINITIALIZED_TYPE;
     private int requiredLength = HEADER_LENGTH;
     private boolean startedDeframing;
 
@@ -114,7 +114,7 @@ public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<Defram
         int readableBytes = in.readableBytes();
         while (readableBytes >= requiredLength) {
             final int length = requiredLength;
-            if (currentType == UNINITIALIED_TYPE) {
+            if (currentType == UNINITIALIZED_TYPE) {
                 readHeader(in);
             } else {
                 out.add(readBody(in));
@@ -163,7 +163,7 @@ public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<Defram
         final boolean isCompressed = (currentType & COMPRESSED_FLAG_MASK) != 0;
         final DeframedMessage msg = isCompressed ? getCompressedBody(buf) : getUncompressedBody(buf);
         // Done with this frame, begin processing the next header.
-        currentType = UNINITIALIED_TYPE;
+        currentType = UNINITIALIZED_TYPE;
         requiredLength = HEADER_LENGTH;
         return msg;
     }

@@ -169,7 +169,6 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
             requireNonNull(byteBuf, "byteBufConverter.apply() returned null");
             input.add(byteBuf);
             handler.process(input, this::write);
-            input.discardReadBytes();
         }
     }
 
@@ -237,7 +236,6 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
                     upstream.request(1);
                 }
             });
-            input.discardReadBytes();
         } catch (Throwable ex) {
             Exceptions.throwIfFatal(ex);
             handler.processOnError(ex);

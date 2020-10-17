@@ -39,6 +39,8 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
     void add(ByteBuf byteBuf) {
         if (byteBuf.isReadable()) {
             queue.add(byteBuf);
+        } else {
+            byteBuf.release();
         }
     }
 
@@ -57,13 +59,19 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
 
     @Override
     public byte readByte() {
-        for (ByteBuf buf : queue) {
-            if (!buf.isReadable()) {
-                continue;
-            }
-            return buf.readByte();
+        final ByteBuf buf = queue.peek();
+
+        if (buf == null) {
+            throw newEndOfInputException();
         }
-        throw newEndOfInputException();
+
+        final int readableBytes = buf.readableBytes();
+        final byte value = buf.readByte();
+        if (readableBytes == 1) {
+            queue.remove();
+            buf.release();
+        }
+        return value;
     }
 
     @Override
@@ -73,8 +81,14 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
             throw newEndOfInputException();
         }
 
-        if (firstBuf.readableBytes() >= 4) {
-            return firstBuf.readInt();
+        final int readableBytes = firstBuf.readableBytes();
+        if (readableBytes >= 4) {
+            final int value = firstBuf.readInt();
+            if (readableBytes == 4) {
+                queue.remove();
+                firstBuf.release();
+            }
+            return value;
         }
 
         return readIntSlow();
@@ -83,14 +97,10 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
     private int readIntSlow() {
         int value = 0;
         int remaining = 4;
-        for (ByteBuf buf : queue) {
-            if (!buf.isReadable()) {
-                continue;
-            }
-            final int readSize = Math.min(remaining, buf.readableBytes());
-            if (readSize == 4) {
-                return buf.readInt();
-            }
+        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext(); ) {
+            final ByteBuf buf = it.next();
+            final int readableBytes = buf.readableBytes();
+            final int readSize = Math.min(remaining, readableBytes);
 
             value <<= 8 * readSize;
             switch (readSize) {
@@ -106,17 +116,17 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
                 default:
                     throw new Error(); // Should not reach here.
             }
+            if (readSize == readableBytes) {
+                it.remove();
+                buf.release();
+            }
             remaining -= readSize;
             if (remaining == 0) {
-                break;
+                return value;
             }
         }
 
-        if (remaining == 0) {
-            return value;
-        } else {
-            throw newEndOfInputException();
-        }
+        throw newEndOfInputException();
     }
 
     @Override
@@ -139,29 +149,12 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
     }
 
     private ByteBuf readBytesSlow(int length) {
-        ByteBuf value = null;
+        final ByteBuf value = alloc.buffer(length);
         int remaining = length;
         for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext();) {
             final ByteBuf buf = it.next();
-            if (!buf.isReadable()) {
-                it.remove();
-                buf.release();
-                continue;
-            }
-
             final int readableBytes = buf.readableBytes();
-            if (value == null) {
-                if (readableBytes == length) {
-                    it.remove();
-                    return buf;
-                }
-
-                if (readableBytes > length) {
-                    return buf.readRetainedSlice(length);
-                }
-
-                value = alloc.buffer(length);
-            }
+            assert readableBytes > 0 : buf;
 
             final int readSize = Math.min(remaining, readableBytes);
             value.writeBytes(buf, readSize);
@@ -172,30 +165,12 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
 
             remaining -= readSize;
             if (remaining == 0) {
-                break;
+                return value;
             }
         }
 
-        if (remaining > 0 || value == null) {
-            ReferenceCountUtil.release(value);
-            throw newEndOfInputException();
-        }
-
-        return value;
-    }
-
-    /**
-     * Discards the {@link ByteBuf}s that have been fully consumed and are not readable anymore.
-     */
-    void discardReadBytes() {
-        for (;;) {
-            final ByteBuf buf = queue.peek();
-            if (buf != null && !buf.isReadable()) {
-                queue.remove().release();
-            } else {
-                break;
-            }
-        }
+        ReferenceCountUtil.release(value);
+        throw newEndOfInputException();
     }
 
     private static IllegalStateException newEndOfInputException() {

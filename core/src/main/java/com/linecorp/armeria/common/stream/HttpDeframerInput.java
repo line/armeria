@@ -32,24 +32,24 @@ public interface HttpDeframerInput extends SafeCloseable {
     int readableBytes();
 
     /**
-     * Returns a byte from the readable bytes.
+     * Reads a byte from the readable bytes.
      */
     byte readByte();
 
     /**
-     * Returns a unsigned byte from the readable bytes.
+     * Reads a unsigned byte from the readable bytes.
      */
     default short readUnsignedByte() {
         return (short) (readByte() & 0xFF);
     }
 
     /**
-     * Returns a 32-bit integer from the readable bytes.
+     * Reads a 32-bit integer from the readable bytes.
      */
     int readInt();
 
     /**
-     * Returns a newly retained slice of this {@link ByteBuf} from the readable types.
+     * Reads a newly retained slice of this {@link ByteBuf} from the readable bytes.
      *
      * @throws IllegalStateException if the specified {@code length} is greater than {@link #readableBytes()}
      */
