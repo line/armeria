@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -51,12 +52,13 @@ public class HttpRequestBuilderTest {
 
     @Test
     void buildWithHeaders() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder(HttpMethod.GET, "/");
-        final HttpHeaders headers = HttpHeaders.of("authorization", "foo", "bar", "baz");
-        final HttpRequest request = requestBuilder.header("x-header", "foo")
+        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+        final HttpHeaders headers = HttpHeaders.of(AUTHORIZATION, "foo", "bar", "baz");
+        final HttpRequest request = requestBuilder.get("/")
+                                                  .header("x-header", "foo")
                                                   .headers(headers)
                                                   .build();
-        final List<Entry<AsciiString, String>> list = ImmutableMap.of(AsciiString.of("authorization"), "foo",
+        final List<Entry<AsciiString, String>> list = ImmutableMap.of(AUTHORIZATION, "foo",
                                                                       AsciiString.of("bar"), "baz",
                                                                       AsciiString.of("x-header"), "foo")
                                                                   .entrySet().asList();
@@ -66,8 +68,9 @@ public class HttpRequestBuilderTest {
 
     @Test
     void buildWithQueryParams() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder(HttpMethod.GET, "/");
-        final HttpRequest request = requestBuilder.queryParam("foo", "bar")
+        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+        final HttpRequest request = requestBuilder.get("/")
+                                                  .queryParam("foo", "bar")
                                                   .queryParams(QueryParams.of("from", 0, "limit", 10))
                                                   .build();
         assertThat(request.path()).isEqualTo("/?foo=bar&from=0&limit=10");
@@ -87,8 +90,9 @@ public class HttpRequestBuilderTest {
 
     @Test
     void buildWithCookies() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder(HttpMethod.GET, "/");
-        final HttpRequest request = requestBuilder.cookie(Cookie.of("cookie1", "foo"))
+        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+        final HttpRequest request = requestBuilder.get("/")
+                                                  .cookie(Cookie.of("cookie1", "foo"))
                                                   .cookies(Cookies.of(Cookie.of("cookie2", "foo"),
                                                                       Cookie.of("cookie3", "foo")))
                                                   .build();
@@ -101,8 +105,9 @@ public class HttpRequestBuilderTest {
 
     @Test
     void buildWithContent() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder(HttpMethod.POST, "/");
-        final HttpRequest request = requestBuilder.content(MediaType.JSON,
+        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+        final HttpRequest request = requestBuilder.post("/")
+                                                  .content(MediaType.JSON,
                                                            "{\"foo\":\"bar\",\"bar\":\"baz\",\"baz\":1}")
                                                   .build();
         assertThat(request.method()).isEqualTo(HttpMethod.POST);

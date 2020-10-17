@@ -26,10 +26,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 import javax.annotation.Nullable;
-
-import org.reactivestreams.Publisher;
 
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
@@ -45,6 +44,8 @@ import io.netty.util.AsciiString;
  */
 final class HttpRequestBuilder {
 
+    // TODO(tumile): Add content(Publisher).
+
     private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
     private final HttpHeadersBuilder httpTrailersBuilder = HttpHeaders.builder();
     private final QueryParamsBuilder queryParamsBuilder = QueryParams.builder();
@@ -53,19 +54,9 @@ final class HttpRequestBuilder {
     @Nullable
     private HttpData content;
     @Nullable
-    private Publisher<? extends HttpObject> publisher;
-    @Nullable
     private String path;
 
-    HttpRequestBuilder() {
-    }
-
-    HttpRequestBuilder(HttpMethod method, String path) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requestHeadersBuilder.method(method);
-        this.path = path;
-    }
+    HttpRequestBuilder() {}
 
     /**
      * Shortcut to create a new {@link HttpRequestBuilder} with GET method and path.
@@ -96,13 +87,39 @@ final class HttpRequestBuilder {
     }
 
     /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with PATCH method and path.
+     */
+    public HttpRequestBuilder patch(String path) {
+        return method(HttpMethod.PATCH).path(path);
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with OPTIONS method and path.
+     */
+    public HttpRequestBuilder options(String path) {
+        return method(HttpMethod.OPTIONS).path(path);
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with HEAD method and path.
+     */
+    public HttpRequestBuilder head(String path) {
+        return method(HttpMethod.HEAD).path(path);
+    }
+
+    /**
+     * Shortcut to create a new {@link HttpRequestBuilder} with TRACE method and path.
+     */
+    public HttpRequestBuilder trace(String path) {
+        return method(HttpMethod.TRACE).path(path);
+    }
+
+    /**
      * Sets the method for this request.
-     *
      * @see HttpMethod
      */
     public HttpRequestBuilder method(HttpMethod method) {
-        requireNonNull(method, "method");
-        requestHeadersBuilder.method(method);
+        requestHeadersBuilder.method(requireNonNull(method, "method"));
         return this;
     }
 
@@ -110,32 +127,31 @@ final class HttpRequestBuilder {
      * Sets the path for this request.
      */
     public HttpRequestBuilder path(String path) {
-        requireNonNull(path, "path");
-        this.path = path;
+        this.path = requireNonNull(path, "path");
         return this;
     }
 
     /**
      * Sets the content for this request.
      */
-    public HttpRequestBuilder content(MediaType mediaType, CharSequence content) {
-        requireNonNull(mediaType, "mediaType");
+    public HttpRequestBuilder content(MediaType contentType, CharSequence content) {
+        requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
-        requestHeadersBuilder.contentType(mediaType);
-        this.content = HttpData.of(mediaType.charset(StandardCharsets.UTF_8), content);
-        this.publisher = null;
+
+        requestHeadersBuilder.contentType(contentType);
+        this.content = HttpData.of(contentType.charset(StandardCharsets.UTF_8), content);
         return this;
     }
 
     /**
      * Sets the content for this request.
      */
-    public HttpRequestBuilder content(MediaType mediaType, String content) {
-        requireNonNull(mediaType, "mediaType");
+    public HttpRequestBuilder content(MediaType contentType, String content) {
+        requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
-        requestHeadersBuilder.contentType(mediaType);
-        this.content = HttpData.of(mediaType.charset(StandardCharsets.UTF_8), content);
-        this.publisher = null;
+
+        requestHeadersBuilder.contentType(contentType);
+        this.content = HttpData.of(contentType.charset(StandardCharsets.UTF_8), content);
         return this;
     }
 
@@ -144,48 +160,37 @@ final class HttpRequestBuilder {
      * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
      */
     @FormatMethod
-    public HttpRequestBuilder content(MediaType mediaType, @FormatString String format, Object... content) {
-        requireNonNull(mediaType, "mediaType");
+    public HttpRequestBuilder content(MediaType contentType, @FormatString String format, Object... content) {
+        requireNonNull(contentType, "contentType");
         requireNonNull(format, "format");
-        requestHeadersBuilder.contentType(mediaType);
-        this.content = HttpData.of(mediaType.charset(StandardCharsets.UTF_8), format, content);
-        this.publisher = null;
+        requireNonNull(content, "content");
+
+        requestHeadersBuilder.contentType(contentType);
+        this.content = HttpData.of(contentType.charset(StandardCharsets.UTF_8), format, content);
         return this;
     }
 
     /**
      * Sets the content for this request.
      */
-    public HttpRequestBuilder content(MediaType mediaType, byte[] content) {
-        requireNonNull(mediaType, "mediaType");
+    public HttpRequestBuilder content(MediaType contentType, byte[] content) {
+        requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
-        requestHeadersBuilder.contentType(mediaType);
+
+        requestHeadersBuilder.contentType(contentType);
         this.content = HttpData.wrap(content);
-        this.publisher = null;
         return this;
     }
 
     /**
      * Sets the content for this request.
      */
-    public HttpRequestBuilder content(MediaType mediaType, HttpData content) {
-        requireNonNull(mediaType, "mediaType");
+    public HttpRequestBuilder content(MediaType contentType, HttpData content) {
+        requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
-        requestHeadersBuilder.contentType(mediaType);
-        this.content = content;
-        this.publisher = null;
-        return this;
-    }
 
-    /**
-     * Sets the content for this request.
-     */
-    public HttpRequestBuilder content(MediaType mediaType, Publisher<HttpData> publisher) {
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(publisher, "publisher");
-        requestHeadersBuilder.contentType(mediaType);
-        this.publisher = publisher;
-        this.content = null;
+        requestHeadersBuilder.contentType(contentType);
+        this.content = content;
         return this;
     }
 
@@ -199,9 +204,7 @@ final class HttpRequestBuilder {
      * }</pre>
      */
     public HttpRequestBuilder header(CharSequence name, Object value) {
-        requireNonNull(name, "name");
-        requireNonNull(value, "value");
-        requestHeadersBuilder.setObject(name, value);
+        requestHeadersBuilder.setObject(requireNonNull(name, "name"), requireNonNull(value, "value"));
         return this;
     }
 
@@ -213,14 +216,11 @@ final class HttpRequestBuilder {
      *            .headers(HttpHeaders.of("authorization", "foo", "bar", "baz"))
      *            .build();
      * }</pre>
-     *
      * @see HttpHeaders
      */
     public HttpRequestBuilder headers(HttpHeaders httpHeaders) {
         requireNonNull(httpHeaders, "httpHeaders");
-        for (AsciiString name : httpHeaders.names()) {
-            requestHeadersBuilder.set(name, requireNonNull(httpHeaders.get(name), "header"));
-        }
+        httpHeaders.forEach((BiConsumer<AsciiString, String>) requestHeadersBuilder::set);
         return this;
     }
 
@@ -229,9 +229,7 @@ final class HttpRequestBuilder {
      */
     public HttpRequestBuilder trailers(HttpHeaders httpTrailers) {
         requireNonNull(httpTrailers, "httpTrailers");
-        for (AsciiString name : httpTrailers.names()) {
-            httpTrailersBuilder.set(name, requireNonNull(httpTrailers.get(name), "trailer"));
-        }
+        httpTrailers.forEach((BiConsumer<AsciiString, String>) httpTrailersBuilder::set);
         return this;
     }
 
@@ -245,9 +243,7 @@ final class HttpRequestBuilder {
      * }</pre>
      */
     public HttpRequestBuilder pathParam(String name, Object value) {
-        requireNonNull(name, "name");
-        requireNonNull(value, "value");
-        pathParams.put(name, value);
+        pathParams.put(requireNonNull(name, "name"), requireNonNull(value, "value"));
         return this;
     }
 
@@ -261,8 +257,7 @@ final class HttpRequestBuilder {
      * }</pre>
      */
     public HttpRequestBuilder pathParams(Map<String, Object> pathParams) {
-        requireNonNull(pathParams, "pathParams");
-        this.pathParams.putAll(pathParams);
+        this.pathParams.putAll(requireNonNull(pathParams, "pathParams"));
         return this;
     }
 
@@ -276,9 +271,7 @@ final class HttpRequestBuilder {
      * }</pre>
      */
     public HttpRequestBuilder queryParam(String name, Object value) {
-        requireNonNull(name, "name");
-        requireNonNull(value, "value");
-        queryParamsBuilder.setObject(name, value);
+        queryParamsBuilder.setObject(requireNonNull(name, "name"), requireNonNull(value, "value"));
         return this;
     }
 
@@ -290,14 +283,11 @@ final class HttpRequestBuilder {
      *            .queryParams(QueryParams.of("from", "foo", "limit", 10))
      *            .build(); // GET `/endpoint?from=foo&limit=10`
      * }</pre>
-     *
      * @see QueryParams
      */
     public HttpRequestBuilder queryParams(QueryParams queryParams) {
         requireNonNull(queryParams, "queryParams");
-        for (String name : queryParams.names()) {
-            queryParamsBuilder.set(name, requireNonNull(queryParams.get(name), "query"));
-        }
+        queryParams.forEach((BiConsumer<String, String>) queryParamsBuilder::set);
         return this;
     }
 
@@ -309,12 +299,10 @@ final class HttpRequestBuilder {
      *            .cookie(Cookie.of("cookie", "foo"))
      *            .build();
      * }</pre>
-     *
      * @see Cookie
      */
     public HttpRequestBuilder cookie(Cookie cookie) {
-        requireNonNull(cookie, "cookie");
-        cookies.add(cookie);
+        cookies.add(requireNonNull(cookie, "cookie"));
         return this;
     }
 
@@ -327,12 +315,10 @@ final class HttpRequestBuilder {
      *                                Cookie.of("cookie2", "bar")))
      *            .build();
      * }</pre>
-     *
      * @see Cookies
      */
     public HttpRequestBuilder cookies(Cookies cookies) {
-        requireNonNull(cookies, "cookies");
-        this.cookies.addAll(cookies);
+        this.cookies.addAll(requireNonNull(cookies, "cookies"));
         return this;
     }
 
@@ -344,12 +330,6 @@ final class HttpRequestBuilder {
         if (content == null || content.length() == 0) {
             if (content != null) {
                 content.close();
-            }
-            if (publisher != null) {
-                if (publisher instanceof HttpRequest) {
-                    return ((HttpRequest) publisher).withHeaders(requestHeaders);
-                }
-                return new PublisherBasedHttpRequest(requestHeaders, publisher);
             }
             if (httpTrailersBuilder.isEmpty()) {
                 return new EmptyFixedHttpRequest(requestHeaders);
