@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.client.DnsUtil.anyInterfaceSupportsIpV6;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -90,19 +91,6 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         return builder.build();
     }
 
-    private static Cache<String, CompletableFuture<CacheEntry>> buildDnsCache(String spec) {
-        final Caffeine<Object, Object> b = Caffeine.from(spec);
-        b.removalListener((RemovalListener<String, CompletableFuture<CacheEntry>>) (key, value, cause) -> {
-            if (value != null) {
-                value.handle((cacheEntry, throwable) -> {
-                    cacheEntry.clear();
-                    return null;
-                });
-            }
-        });
-        return b.build();
-    }
-
     private final int minTtl;
     private final int maxTtl;
     private final int negativeTtl;
@@ -110,15 +98,13 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
-
-    @Nullable
-    private Cache<String, CompletableFuture<CacheEntry>> dnsCache =
-            Flags.dnsCacheSpec() != null ? buildDnsCache(Flags.dnsCacheSpec()) : null;
+    private final Cache<String, CompletableFuture<CacheEntry>> cache;
 
     RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
                                    int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
                                    Backoff refreshBackoff,
-                                   @Nullable ResolvedAddressTypes resolvedAddressTypes) {
+                                   @Nullable ResolvedAddressTypes resolvedAddressTypes,
+                                   @Nullable String cacheSpec) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
@@ -130,17 +116,13 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         } else {
             dnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
         }
+        cache = buildCache(cacheSpec != null ? cacheSpec
+                                             : requireNonNull(Flags.dnsCacheSpec(), "cacheSpec"));
     }
 
-    @Nullable
     @VisibleForTesting
     Cache<String, CompletableFuture<CacheEntry>> cache() {
-        return dnsCache;
-    }
-
-    @VisibleForTesting
-    void cache(@Nullable Cache<String, CompletableFuture<CacheEntry>> dnsCache) {
-        this.dnsCache = dnsCache;
+        return cache;
     }
 
     @Override
@@ -151,15 +133,26 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         resolverConfigurator.accept(builder);
         final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop,
                                                                            queryTimeoutMillis);
-        return new RefreshingAddressResolver(eventLoop, dnsCache, resolver, dnsRecordTypes, minTtl, maxTtl,
+        return new RefreshingAddressResolver(eventLoop, cache, resolver, dnsRecordTypes, minTtl, maxTtl,
                                              negativeTtl, refreshBackoff);
     }
 
     @Override
     public void close() {
         super.close();
-        if (cache() != null) {
-            cache().invalidateAll();
-        }
+        cache.invalidateAll();
+    }
+
+    private static Cache<String, CompletableFuture<CacheEntry>> buildCache(String cacheSpec) {
+        final Caffeine<Object, Object> b = Caffeine.from(cacheSpec);
+        b.removalListener((RemovalListener<String, CompletableFuture<CacheEntry>>) (key, value, cause) -> {
+            if (value != null) {
+                value.handle((cacheEntry, throwable) -> {
+                    cacheEntry.clear();
+                    return null;
+                });
+            }
+        });
+        return b.build();
     }
 }

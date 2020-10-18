@@ -54,7 +54,6 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
 
     private static final Logger logger = LoggerFactory.getLogger(RefreshingAddressResolver.class);
 
-    @Nullable
     private final Cache<String, CompletableFuture<CacheEntry>> cache;
     private final DefaultDnsNameResolver resolver;
     private final List<DnsRecordType> dnsRecordTypes;
@@ -66,7 +65,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
     private volatile boolean resolverClosed;
 
     RefreshingAddressResolver(EventLoop eventLoop,
-                              @Nullable Cache<String, CompletableFuture<CacheEntry>> cache,
+                              Cache<String, CompletableFuture<CacheEntry>> cache,
                               DefaultDnsNameResolver resolver, List<DnsRecordType> dnsRecordTypes,
                               int minTtl, int maxTtl, int negativeTtl, Backoff refreshBackoff) {
         super(eventLoop);
@@ -97,20 +96,16 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         result.handle((entry, unused) -> {
             final Throwable cause = entry.cause();
             if (cause != null) {
-                if (cache != null && entry.hasCacheableCause() && negativeTtl > 0) {
+                if (entry.hasCacheableCause() && negativeTtl > 0) {
                     executor().schedule(() -> cache.invalidate(hostname), negativeTtl, TimeUnit.SECONDS);
                 } else {
-                    if (cache != null) {
-                        cache.invalidate(hostname);
-                    }
+                    cache.invalidate(hostname);
                 }
                 promise.tryFailure(cause);
                 return null;
             }
 
-            if (cache != null) {
-                entry.scheduleRefresh(entry.ttlMillis());
-            }
+            entry.scheduleRefresh(entry.ttlMillis());
             promise.trySuccess(new InetSocketAddress(entry.address(), port));
             return null;
         });
@@ -126,14 +121,8 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             promise.tryFailure(new IllegalStateException("resolver is closed already."));
             return;
         }
-        final String hostname = unresolvedAddress.getHostString();
-        final int port = unresolvedAddress.getPort();
-        if (cache == null) {
-            loadingCache(unresolvedAddress, promise);
-            return;
-        }
-        final CompletableFuture<CacheEntry> entryFuture = cache.get(hostname, s ->
-                loadingCache(unresolvedAddress, promise));
+        final CompletableFuture<CacheEntry> entryFuture =
+                cache.get(unresolvedAddress.getHostString(), s -> loadingCache(unresolvedAddress, promise));
         assert entryFuture != null; // loader does not return null.
         entryFuture.handle((entry, unused) -> {
             final Throwable cause = entry.cause();
@@ -141,7 +130,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 promise.tryFailure(cause);
                 return null;
             }
-            promise.trySuccess(new InetSocketAddress(entry.address(), port));
+            promise.trySuccess(new InetSocketAddress(entry.address(), unresolvedAddress.getPort()));
             return null;
         });
     }

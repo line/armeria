@@ -121,26 +121,6 @@ class RefreshingAddressResolverTest {
     }
 
     @Test
-    void resolveWithoutCache() throws Exception {
-        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
-                new DefaultDnsQuestion("foo.com.", A),
-                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))
-        ) {
-            final EventLoop eventLoop = eventLoopExtension.get();
-            try (RefreshingAddressResolverGroup group = builder(server).build(eventLoop)) {
-                group.cache(null);
-                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
-                final Future<InetSocketAddress> foo = resolver.resolve(
-                        InetSocketAddress.createUnresolved("foo.com", 36462));
-                await().untilAsserted(() -> assertThat(foo.isSuccess()).isTrue());
-                final InetSocketAddress addr = foo.getNow();
-                assertThat(addr.getAddress().getHostAddress()).isEqualTo("1.1.1.1");
-                assertThat(addr.getPort()).isEqualTo(36462);
-            }
-        }
-    }
-
-    @Test
     void nonRemovalWhenNoCacheHit() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", A),
