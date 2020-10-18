@@ -32,7 +32,6 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
-import com.linecorp.armeria.common.logging.ExportGroupBuilder;
 import com.linecorp.armeria.common.logging.RequestContextExporter;
 import com.linecorp.armeria.common.logging.RequestContextExporterBuilder;
 
@@ -136,7 +135,7 @@ public final class RequestContextExportingAppender
     public void setPrefix(String prefix) {
         requireNonNull(prefix, "prefix");
         checkArgument(!prefix.isEmpty(), "prefix must not be empty");
-        builder.setDefaultExportPrefix(prefix);
+        builder.prefix(prefix);
     }
 
     /**
@@ -165,9 +164,9 @@ public final class RequestContextExportingAppender
      * Adds the export group.
      * Note: this method is meant to be used for XML configuration.
      */
-    public void setExportGroup(ExportGroupBuilder exportGroupBuilder) {
-        requireNonNull(exportGroupBuilder, "exportGroupBuilder");
-        builder.addExportGroup(exportGroupBuilder.build());
+    public void setExportGroup(ExportGroupConfiguration exportGroupConfiguration) {
+        requireNonNull(exportGroupConfiguration, "exportGroupConfiguration");
+        builder.addExportGroup(exportGroupConfiguration.exportGroup());
     }
 
     private void ensureNotStarted() {

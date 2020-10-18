@@ -52,10 +52,7 @@ public final class ExportGroupBuilder {
     private final Set<ExportEntry<AsciiString>> reqHeaders;
     private final Set<ExportEntry<AsciiString>> resHeaders;
 
-    /**
-     * Returns a new {@link ExportGroupBuilder}.
-     */
-    public ExportGroupBuilder() {
+    ExportGroupBuilder() {
         builtIns = new HashSet<>();
         attrs = new HashSet<>();
         reqHeaders = new HashSet<>();
@@ -76,38 +73,6 @@ public final class ExportGroupBuilder {
                     ExportEntry.withPrefix(reqHeaders, prefix),
                     ExportEntry.withPrefix(resHeaders, prefix));
         }
-    }
-
-    /**
-     * Specifies a prefix of the default export group.
-     * Note: this method is meant to be used for XML configuration.
-     * Use {@link #prefix(String)} instead.
-     */
-    public void setPrefix(String prefix) {
-        requireNonNull(prefix, "prefix");
-        checkArgument(!prefix.isEmpty(), "prefix must not be empty");
-        this.prefix = prefix;
-    }
-
-    /**
-     * Adds the property represented by the specified MDC key to the export list.
-     * Note: this method is meant to be used for XML configuration.
-     * Use {@link #keyPattern(String)} instead.
-     */
-    public void setExport(String mdcKey) {
-        requireNonNull(mdcKey, "mdcKey");
-        checkArgument(!mdcKey.isEmpty(), "mdcKey must not be empty");
-        keyPattern(mdcKey);
-    }
-
-    /**
-     * Adds the properties represented by the specified comma-separated MDC keys to the export list.
-     * Note: this method is meant to be used for XML configuration.
-     */
-    public void setExports(String mdcKeys) {
-        requireNonNull(mdcKeys, "mdcKeys");
-        checkArgument(!mdcKeys.isEmpty(), "mdcKeys must not be empty");
-        keyPatterns(mdcKeys);
     }
 
     /**
@@ -267,12 +232,16 @@ public final class ExportGroupBuilder {
         throw new IllegalArgumentException("unknown key pattern: " + keyPattern);
     }
 
-    void keyPatterns(String keyPatterns) {
+    /**
+     * Adds the property represented by the specified key pattern to the export list.
+     */
+    public ExportGroupBuilder keyPatterns(String keyPatterns) {
         KEY_SPLITTER.split(keyPatterns)
                     .forEach(keyPattern -> {
                         checkArgument(!keyPattern.isEmpty(), "comma-separated keyPattern must not be empty");
                         keyPattern(keyPattern);
                     });
+        return this;
     }
 
     private ExportEntry<AttributeKey<?>> parseAttrPattern(String keyPattern, @Nullable String exportKey) {
