@@ -119,7 +119,7 @@ class HttpResponseDecoderTest {
         final HttpRequestWriter request = HttpRequest.streaming(RequestHeaders.of(HttpMethod.POST, "/"));
         final AggregatedHttpResponse res = client.execute(request).aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Hello, Armeria!");
-        // The request is aborted in HttpResponseDecoder.close(...) after the client receives the response.
+        // The stream is aborted in HttpResponseDecoder.close(...) after the client receives the response.
         request.whenComplete().handle((unused, cause) -> {
             assertThat(cause).isExactlyInstanceOf(AbortedStreamException.class);
             return null;
