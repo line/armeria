@@ -18,14 +18,13 @@ package com.linecorp.armeria.common.logging;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 
@@ -47,16 +46,16 @@ public final class ExportGroupBuilder {
 
     @Nullable
     private String prefix;
-    private final Set<ExportEntry<BuiltInProperty>> builtIns;
-    private final Set<ExportEntry<AttributeKey<?>>> attrs;
-    private final Set<ExportEntry<AsciiString>> reqHeaders;
-    private final Set<ExportEntry<AsciiString>> resHeaders;
+    private final ImmutableSet.Builder<ExportEntry<BuiltInProperty>> builtIns;
+    private final ImmutableSet.Builder<ExportEntry<AttributeKey<?>>> attrs;
+    private final ImmutableSet.Builder<ExportEntry<AsciiString>> reqHeaders;
+    private final ImmutableSet.Builder<ExportEntry<AsciiString>> resHeaders;
 
     ExportGroupBuilder() {
-        builtIns = new HashSet<>();
-        attrs = new HashSet<>();
-        reqHeaders = new HashSet<>();
-        resHeaders = new HashSet<>();
+        builtIns = ImmutableSet.builder();
+        attrs = ImmutableSet.builder();
+        reqHeaders = ImmutableSet.builder();
+        resHeaders = ImmutableSet.builder();
     }
 
     /**
@@ -65,13 +64,13 @@ public final class ExportGroupBuilder {
      */
     public ExportGroup build() {
         if (prefix == null) {
-            return new ExportGroup(builtIns, attrs, reqHeaders, resHeaders);
+            return new ExportGroup(builtIns.build(), attrs.build(), reqHeaders.build(), resHeaders.build());
         } else {
             return new ExportGroup(
-                    ExportEntry.withPrefix(builtIns, prefix),
-                    ExportEntry.withPrefix(attrs, prefix),
-                    ExportEntry.withPrefix(reqHeaders, prefix),
-                    ExportEntry.withPrefix(resHeaders, prefix));
+                    ExportEntry.withPrefix(builtIns.build(), prefix),
+                    ExportEntry.withPrefix(attrs.build(), prefix),
+                    ExportEntry.withPrefix(reqHeaders.build(), prefix),
+                    ExportEntry.withPrefix(resHeaders.build(), prefix));
         }
     }
 
@@ -354,7 +353,8 @@ public final class ExportGroupBuilder {
         public static <T> Set<ExportEntry<T>> withPrefix(Set<ExportEntry<T>> entries, String exportPrefix) {
             checkArgument(!exportPrefix.isEmpty(), "exportPrefix must not be empty");
 
-            return entries.stream().map(entry -> entry.withPrefix(exportPrefix)).collect(Collectors.toSet());
+            return entries.stream().map(entry -> entry.withPrefix(exportPrefix))
+                          .collect(ImmutableSet.toImmutableSet());
         }
     }
 }

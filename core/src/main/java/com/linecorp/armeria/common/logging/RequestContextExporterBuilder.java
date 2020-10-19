@@ -21,7 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableSet;
 
 import io.netty.util.AttributeKey;
 
@@ -31,7 +34,8 @@ import io.netty.util.AttributeKey;
 public final class RequestContextExporterBuilder {
 
     private final ExportGroupBuilder defaultExportGroupBuilder = ExportGroup.builder();
-    private final List<ExportGroup> exportGroups = new ArrayList<>();
+    @Nullable
+    private List<ExportGroup> exportGroups;
 
     RequestContextExporterBuilder() {}
 
@@ -161,6 +165,9 @@ public final class RequestContextExporterBuilder {
      * Adds the export group.
      */
     public RequestContextExporterBuilder addExportGroup(ExportGroup exportGroup) {
+        if (exportGroups == null) {
+            exportGroups = new ArrayList<>();
+        }
         exportGroups.add(exportGroup);
         return this;
     }
@@ -169,12 +176,22 @@ public final class RequestContextExporterBuilder {
      * Returns a newly-created {@link RequestContextExporter} instance.
      */
     public RequestContextExporter build() {
+        if (exportGroups == null) {
+            final ExportGroup defaultExportGroup = defaultExportGroupBuilder.build();
+            return new RequestContextExporter(
+                    defaultExportGroup.getBuiltIns(), defaultExportGroup.getAttrs(),
+                    defaultExportGroup.getReqHeaders(), defaultExportGroup.getResHeaders());
+        }
         exportGroups.add(defaultExportGroupBuilder.build());
         return new RequestContextExporter(
-                exportGroups.stream().flatMap(it -> it.getBuiltIns().stream()).collect(Collectors.toSet()),
-                exportGroups.stream().flatMap(it -> it.getAttrs().stream()).collect(Collectors.toSet()),
-                exportGroups.stream().flatMap(it -> it.getReqHeaders().stream()).collect(Collectors.toSet()),
-                exportGroups.stream().flatMap(it -> it.getResHeaders().stream()).collect(Collectors.toSet())
+                exportGroups.stream().flatMap(it -> it.getBuiltIns().stream())
+                            .collect(ImmutableSet.toImmutableSet()),
+                exportGroups.stream().flatMap(it -> it.getAttrs().stream())
+                            .collect(ImmutableSet.toImmutableSet()),
+                exportGroups.stream().flatMap(it -> it.getReqHeaders().stream())
+                            .collect(ImmutableSet.toImmutableSet()),
+                exportGroups.stream().flatMap(it -> it.getResHeaders().stream())
+                            .collect(ImmutableSet.toImmutableSet())
         );
     }
 }

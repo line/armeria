@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.logging.ExportGroupBuilder;
  *
  * @see RequestContextExportingAppender#setExportGroup(ExportGroupConfiguration)
  */
-public class ExportGroupConfiguration {
+public final class ExportGroupConfiguration {
 
     private final ExportGroupBuilder builder = ExportGroup.builder();
 
