@@ -61,7 +61,35 @@ public interface Route {
      * @see RouteBuilder#matchesHeaders(Iterable)
      * @see RouteBuilder#matchesParams(Iterable)
      */
-    RoutingResult apply(RoutingContext routingCtx);
+    default RoutingResult apply(RoutingContext routingCtx) {
+        return apply(routingCtx, false);
+    }
+
+    /**
+     * Matches the specified {@link RoutingContext} and extracts the path parameters from it if exists.
+     *
+     * @param routingCtx a context to find the {@link HttpService}
+     * @param routeDecoratingService tells whether this method is called in {@link RouteDecoratingService}.
+     *                               If it's {@code true},
+     *                               {@link RoutingContext#deferStatusException(HttpStatusException)} is not
+     *                               set and {@link RoutingContext#isCorsPreflight() preflight request} is
+     *                               not handled by this {@link Route}.
+     *
+     * @return a non-empty {@link RoutingResult} if the {@linkplain RoutingContext#path() path},
+     *         {@linkplain RoutingContext#method() method},
+     *         {@linkplain RoutingContext#contentType() contentType} and
+     *         {@linkplain RoutingContext#acceptTypes() acceptTypes} and
+     *         {@linkplain RoutingContext#headers() HTTP headers} and
+     *         {@linkplain RoutingContext#params() query parameters} matches the equivalent conditions in
+     *         {@link Route}. {@link RoutingResult#empty()} otherwise.
+     *
+     * @see RouteBuilder#methods(Iterable)
+     * @see RouteBuilder#consumes(Iterable)
+     * @see RouteBuilder#produces(Iterable)
+     * @see RouteBuilder#matchesHeaders(Iterable)
+     * @see RouteBuilder#matchesParams(Iterable)
+     */
+    RoutingResult apply(RoutingContext routingCtx, boolean routeDecoratingService);
 
     /**
      * Returns the names of the path parameters extracted by this mapping.

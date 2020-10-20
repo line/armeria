@@ -75,7 +75,7 @@ public final class Routers {
                                                     .map(ServiceConfig::route)
                                                     .collect(toImmutableList()));
         return wrapVirtualHostRouter(defaultRouter(configs, virtualHost.fallbackServiceConfig(),
-                                                   ServiceConfig::route, rejectionConsumer),
+                                                   ServiceConfig::route, rejectionConsumer, false),
                                      ambiguousRoutes);
     }
 
@@ -85,9 +85,8 @@ public final class Routers {
     public static Router<RouteDecoratingService> ofRouteDecoratingService(
             List<RouteDecoratingService> routeDecoratingServices) {
         return wrapRouteDecoratingServiceRouter(
-                defaultRouter(routeDecoratingServices, null,
-                              RouteDecoratingService::route,
-                              (route1, route2) -> {/* noop */}),
+                defaultRouter(routeDecoratingServices, null, RouteDecoratingService::route,
+                              (route1, route2) -> {/* noop */}, true),
                 resolveAmbiguousRoutes(routeDecoratingServices.stream()
                                                               .map(RouteDecoratingService::route)
                                                               .collect(toImmutableList())));
@@ -129,8 +128,10 @@ public final class Routers {
      */
     private static <V> Router<V> defaultRouter(Iterable<V> values, @Nullable V fallbackValue,
                                                Function<V, Route> routeResolver,
-                                               BiConsumer<Route, Route> rejectionHandler) {
-        return new CompositeRouter<>(routers(values, fallbackValue, routeResolver, rejectionHandler),
+                                               BiConsumer<Route, Route> rejectionHandler,
+                                               boolean routeDecoratingService) {
+        return new CompositeRouter<>(routers(values, fallbackValue, routeResolver, rejectionHandler,
+                                             routeDecoratingService),
                                      Function.identity());
     }
 
@@ -140,7 +141,8 @@ public final class Routers {
     @VisibleForTesting
     static <V> List<Router<V>> routers(Iterable<V> values, @Nullable V fallbackValue,
                                        Function<V, Route> routeResolver,
-                                       BiConsumer<Route, Route> rejectionHandler) {
+                                       BiConsumer<Route, Route> rejectionHandler,
+                                       boolean routeDecoratingService) {
         rejectDuplicateMapping(values, routeResolver, rejectionHandler);
 
         final ImmutableList.Builder<Router<V>> builder = ImmutableList.builder();
@@ -159,13 +161,13 @@ public final class Routers {
 
             // Changed the router type.
             if (!group.isEmpty()) {
-                builder.add(router(addingTrie, group, fallbackValue, routeResolver));
+                builder.add(router(addingTrie, group, fallbackValue, routeResolver, routeDecoratingService));
             }
             addingTrie = !addingTrie;
             group.add(value);
         }
         if (!group.isEmpty()) {
-            builder.add(router(addingTrie, group, fallbackValue, routeResolver));
+            builder.add(router(addingTrie, group, fallbackValue, routeResolver, routeDecoratingService));
         }
         return builder.build();
     }
@@ -223,7 +225,7 @@ public final class Routers {
      * Returns a {@link Router} implementation which is using one of {@link RoutingTrie} and {@link List}.
      */
     private static <V> Router<V> router(boolean isTrie, List<V> values, @Nullable V fallbackValue,
-                                        Function<V, Route> routeResolver) {
+                                        Function<V, Route> routeResolver, boolean routeDecoratingService) {
         final Comparator<V> valueComparator =
                 Comparator.comparingInt(e -> -1 * routeResolver.apply(e).complexity());
 
@@ -247,10 +249,10 @@ public final class Routers {
                     }
                 }
             }
-            router = new TrieRouter<>(builder.build(), routeResolver);
+            router = new TrieRouter<>(builder.build(), routeResolver, routeDecoratingService);
         } else {
             values.sort(valueComparator);
-            router = new SequentialRouter<>(values, routeResolver);
+            router = new SequentialRouter<>(values, routeResolver, routeDecoratingService);
         }
 
         if (logger.isDebugEnabled()) {
@@ -315,12 +317,13 @@ public final class Routers {
     }
 
     private static <V> List<Routed<V>> findAll(RoutingContext routingCtx, List<V> values,
-                                               Function<V, Route> routeResolver) {
+                                               Function<V, Route> routeResolver,
+                                               boolean routeDecoratingService) {
         final ImmutableList.Builder<Routed<V>> builder = ImmutableList.builderWithExpectedSize(values.size());
 
         for (V value : values) {
             final Route route = routeResolver.apply(value);
-            final RoutingResult routingResult = route.apply(routingCtx);
+            final RoutingResult routingResult = route.apply(routingCtx, routeDecoratingService);
             if (routingResult.isPresent()) {
                 builder.add(Routed.of(route, routingResult, value));
             }
@@ -332,10 +335,12 @@ public final class Routers {
 
         private final RoutingTrie<V> trie;
         private final Function<V, Route> routeResolver;
+        private final boolean routeDecoratingService;
 
-        TrieRouter(RoutingTrie<V> trie, Function<V, Route> routeResolver) {
+        TrieRouter(RoutingTrie<V> trie, Function<V, Route> routeResolver, boolean routeDecoratingService) {
             this.trie = requireNonNull(trie, "trie");
             this.routeResolver = requireNonNull(routeResolver, "routeResolver");
+            this.routeDecoratingService = routeDecoratingService;
         }
 
         @Override
@@ -345,7 +350,8 @@ public final class Routers {
 
         @Override
         public List<Routed<V>> findAll(RoutingContext routingCtx) {
-            return Routers.findAll(routingCtx, trie.findAll(routingCtx.path()), routeResolver);
+            return Routers.findAll(routingCtx, trie.findAll(routingCtx.path()),
+                                   routeResolver, routeDecoratingService);
         }
 
         @Override
@@ -358,10 +364,12 @@ public final class Routers {
 
         private final List<V> values;
         private final Function<V, Route> routeResolver;
+        private final boolean routeDecoratingService;
 
-        SequentialRouter(List<V> values, Function<V, Route> routeResolver) {
+        SequentialRouter(List<V> values, Function<V, Route> routeResolver, boolean routeDecoratingService) {
             this.values = ImmutableList.copyOf(requireNonNull(values, "values"));
             this.routeResolver = requireNonNull(routeResolver, "routeResolver");
+            this.routeDecoratingService = routeDecoratingService;
         }
 
         @Override
@@ -371,7 +379,7 @@ public final class Routers {
 
         @Override
         public List<Routed<V>> findAll(RoutingContext routingCtx) {
-            return Routers.findAll(routingCtx, values, routeResolver);
+            return Routers.findAll(routingCtx, values, routeResolver, routeDecoratingService);
         }
 
         @Override
