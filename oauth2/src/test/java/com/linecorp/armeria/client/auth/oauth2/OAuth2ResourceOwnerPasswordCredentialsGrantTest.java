@@ -44,6 +44,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.auth.AuthService;
 import com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -85,26 +86,35 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
         protected void configure(ServerBuilder sb) throws Exception {
             final WebClient introspectClient = WebClient.of(authServer.httpUri());
             sb.service("/resource-read-write/",
-                       OAuth2TokenIntrospectionAuthorizer.builder(introspectClient, "/introspect/token/")
-                                                         .realm("protected resource read-write")
-                                                         .accessTokenType("Bearer")
-                                                         .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                                                         .permittedScope("read", "write")
-                                                         .build().asAuthService(SERVICE));
+                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
+                               introspectClient,
+                               "/introspect/token/")
+                               .realm("protected resource read-write")
+                               .accessTokenType("Bearer")
+                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
+                               .permittedScope("read", "write")
+                               .build()
+                       ).build(SERVICE));
             sb.service("/resource-read/",
-                       OAuth2TokenIntrospectionAuthorizer.builder(introspectClient, "/introspect/token/")
-                                                         .realm("protected resource read")
-                                                         .accessTokenType("Bearer")
-                                                         .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                                                         .permittedScope("read")
-                                                         .build().asAuthService(SERVICE));
+                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
+                               introspectClient,
+                               "/introspect/token/")
+                               .realm("protected resource read")
+                               .accessTokenType("Bearer")
+                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
+                               .permittedScope("read")
+                               .build()
+                       ).build(SERVICE));
             sb.service("/resource-read-write-update/",
-                       OAuth2TokenIntrospectionAuthorizer.builder(introspectClient, "/introspect/token/")
-                                                         .realm("protected resource read-write-update")
-                                                         .accessTokenType("Bearer")
-                                                         .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                                                         .permittedScope("read", "write", "update")
-                                                         .build().asAuthService(SERVICE));
+                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
+                               introspectClient,
+                               "/introspect/token/")
+                               .realm("protected resource read-write-update")
+                               .accessTokenType("Bearer")
+                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
+                               .permittedScope("read", "write", "update")
+                               .build()
+                       ).build(SERVICE));
         }
     };
 

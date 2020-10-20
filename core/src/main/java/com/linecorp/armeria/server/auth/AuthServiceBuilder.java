@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -63,6 +63,7 @@ public final class AuthServiceBuilder {
         } else {
             this.authorizer = this.authorizer.orElse(authorizer);
         }
+        setAuthorizerHandlers(authorizer);
         return this;
     }
 
@@ -140,6 +141,7 @@ public final class AuthServiceBuilder {
             return authorizer.authorize(ctx, token);
         };
         add(requestAuthorizer);
+        setAuthorizerHandlers(authorizer);
         return this;
     }
 
@@ -189,5 +191,20 @@ public final class AuthServiceBuilder {
             throw new IllegalStateException("no " + Authorizer.class.getSimpleName() + " was added.");
         }
         return authorizer;
+    }
+
+    private boolean setAuthorizerHandlers(Authorizer<?> authorizer) {
+        boolean set = false;
+        final AuthFailureHandler authorizerFailureHandler = authorizer.failureHandler();
+        if (authorizerFailureHandler != null) {
+            failureHandler = authorizerFailureHandler;
+            set = true;
+        }
+        final AuthSuccessHandler authorizerSuccessHandler = authorizer.successHandler();
+        if (authorizerSuccessHandler != null) {
+            successHandler = authorizerSuccessHandler;
+            set = true;
+        }
+        return set;
     }
 }

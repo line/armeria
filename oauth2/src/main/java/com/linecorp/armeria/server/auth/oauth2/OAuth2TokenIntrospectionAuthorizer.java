@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -33,10 +32,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
 import com.linecorp.armeria.internal.server.auth.oauth2.TokenIntrospectionRequest;
-import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthFailureHandler;
-import com.linecorp.armeria.server.auth.AuthService;
 import com.linecorp.armeria.server.auth.Authorizer;
 
 import io.netty.util.AttributeKey;
@@ -90,24 +87,6 @@ public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Toke
     }
 
     /**
-     * Creates a new {@link AuthService} that authorizes HTTP requests using OAuth 2.0 Token Introspection.
-     */
-    public AuthService asAuthService(HttpService delegate) {
-        return AuthService.builder()
-                          .addOAuth2(this)
-                          .onFailure(authFailureHandler())
-                          .build(delegate);
-    }
-
-    /**
-     * Creates a new {@link AuthService} that authorizes HTTP requests using OAuth 2.0 Token Introspection.
-     * Returns this service as a decorator.
-     */
-    public Function<? super HttpService, ? extends HttpService> asDecorator() {
-        return this::asAuthService;
-    }
-
-    /**
      * Scopes permitted by this authorizer. The authorizer will accept any scope if empty.
      */
     public Set<String> permittedScope() {
@@ -136,7 +115,8 @@ public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Toke
     /**
      * An instance of {@link OAuth2AuthorizationFailureHandler}.
      */
-    public AuthFailureHandler authFailureHandler() {
+    @Override
+    public AuthFailureHandler failureHandler() {
         return authFailureHandler;
     }
 

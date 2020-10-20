@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -92,5 +92,29 @@ public interface Authorizer<T> {
                 return strVal = buf.toString();
             }
         };
+    }
+
+    /**
+     * Returns the {@link AuthSuccessHandler} which handles successfully authorized requests.
+     * By default, returns {@code null}, which means to use the default or whatever specified by
+     * the {@link AuthServiceBuilder}.
+     * @return An instance of {@link AuthSuccessHandler} to handle successfully authorized requests
+     *         or {@code null} to use the default.
+     */
+    @Nullable
+    default AuthSuccessHandler successHandler() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link AuthFailureHandler} which handles the requests with failed authorization.
+     * By default, returns {@code null}, which means to use the default or whatever specified by
+     * the {@link AuthServiceBuilder}.
+     * @return An instance of {@link AuthFailureHandler} to handle the requests with failed authorization
+     *         or {@code null} to use the default.
+     */
+    @Nullable
+    default AuthFailureHandler failureHandler() {
+        return null;
     }
 }
