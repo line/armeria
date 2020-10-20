@@ -62,7 +62,7 @@ class RouterTest {
                 Route.builder().path("glob:/h/**/z").build(),     // router 4
                 Route.builder().path("prefix:/i").build()         // router 5
         );
-        final List<Router<Route>> routers = Routers.routers(routes, null, Function.identity(), REJECT, false);
+        final List<Router<Route>> routers = Routers.routers(routes, null, Function.identity(), REJECT);
         assertThat(routers).hasSize(5);
 
         // Map of a path string and a router index
@@ -99,7 +99,7 @@ class RouterTest {
                 Route.builder().path("glob:/h/**/z").build(),
                 Route.builder().path("prefix:/h").build()
         );
-        final List<Router<Route>> routers = Routers.routers(routes, null, Function.identity(), REJECT, false);
+        final List<Router<Route>> routers = Routers.routers(routes, null, Function.identity(), REJECT);
         final CompositeRouter<Route, Route> router = new CompositeRouter<>(routers, Function.identity());
         final RoutingContext routingCtx = routingCtx(path);
         assertThat(router.find(routingCtx).route()).isEqualTo(routes.get(expectForFind));
@@ -146,7 +146,7 @@ class RouterTest {
         assertThat(Routers.routers(ImmutableList.of(Route.builder().path("/foo/:bar").build(),
                                                     Route.builder().regex("not-trie-compatible").build(),
                                                     Route.builder().path("/bar/:baz").build()),
-                                   null, Function.identity(), REJECT, false)).hasSize(3);
+                                   null, Function.identity(), REJECT)).hasSize(3);
 
         testDuplicateRoutes(Route.builder().path("/foo/:bar").build(),
                             Route.builder().regex("not-trie-compatible").build(),
@@ -215,12 +215,12 @@ class RouterTest {
 
     private static void testDuplicateRoutes(Route... routes) {
         assertThatThrownBy(() -> Routers.routers(ImmutableList.copyOf(routes), null,
-                                                 Function.identity(), REJECT, false))
+                                                 Function.identity(), REJECT))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageStartingWith("duplicate route:");
     }
 
     private static void testNonDuplicateRoutes(Route... routes) {
-        Routers.routers(ImmutableList.copyOf(routes), null, Function.identity(), REJECT, false);
+        Routers.routers(ImmutableList.copyOf(routes), null, Function.identity(), REJECT);
     }
 }
