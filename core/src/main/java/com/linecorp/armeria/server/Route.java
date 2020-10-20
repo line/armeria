@@ -61,7 +61,35 @@ public interface Route {
      * @see RouteBuilder#matchesHeaders(Iterable)
      * @see RouteBuilder#matchesParams(Iterable)
      */
-    RoutingResult apply(RoutingContext routingCtx);
+    default RoutingResult apply(RoutingContext routingCtx) {
+        return apply(routingCtx, true);
+    }
+
+    /**
+     * Matches the specified {@link RoutingContext} and extracts the path parameters from it if exists.
+     *
+     * @param routingCtx a context to find the {@link HttpService}
+     * @param setDeferStatusException tells whether
+     *                                {@link RoutingContext#deferStatusException(HttpStatusException)} should be
+     *                                set or not while applying this {@link Route}. The parameter must be
+     *                                {@code false} when this method is called by the {@link Router} in
+     *                                {@link RouteDecoratingService}.
+     *
+     * @return a non-empty {@link RoutingResult} if the {@linkplain RoutingContext#path() path},
+     *         {@linkplain RoutingContext#method() method},
+     *         {@linkplain RoutingContext#contentType() contentType} and
+     *         {@linkplain RoutingContext#acceptTypes() acceptTypes} and
+     *         {@linkplain RoutingContext#headers() HTTP headers} and
+     *         {@linkplain RoutingContext#params() query parameters} matches the equivalent conditions in
+     *         {@link Route}. {@link RoutingResult#empty()} otherwise.
+     *
+     * @see RouteBuilder#methods(Iterable)
+     * @see RouteBuilder#consumes(Iterable)
+     * @see RouteBuilder#produces(Iterable)
+     * @see RouteBuilder#matchesHeaders(Iterable)
+     * @see RouteBuilder#matchesParams(Iterable)
+     */
+    RoutingResult apply(RoutingContext routingCtx, boolean setDeferStatusException);
 
     /**
      * Returns the names of the path parameters extracted by this mapping.
