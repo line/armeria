@@ -393,7 +393,7 @@ org.apache.zookeeper:
     - org.slf4j:slf4j-log4j12
 
 org.assertj:
-  assertj-core: { version: '3.17.2' }
+  assertj-core: { version: '3.16.1' }
 
 org.awaitility:
   awaitility: { version: '4.0.3' }
