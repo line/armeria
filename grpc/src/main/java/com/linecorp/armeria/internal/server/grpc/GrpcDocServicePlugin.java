@@ -374,6 +374,11 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         return TypeSignature.ofNamed(descriptor.getFullName(), descriptor);
     }
 
+    @Override
+    public String toString() {
+        return GrpcDocServicePlugin.class.getSimpleName();
+    }
+
     @VisibleForTesting
     static final class ServiceEntry {
         final ServiceDescriptor service;
