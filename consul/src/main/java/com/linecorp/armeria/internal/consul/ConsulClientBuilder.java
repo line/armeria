@@ -34,7 +34,7 @@ public class ConsulClientBuilder {
     private static final String DEFAULT_CONSUL_ADDRESS = "127.0.0.1";
     private static final int DEFAULT_CONSUL_PORT = 8500;
     private static final String DEFAULT_CONSUL_API_VERSION = "v1";
-    private static final Pattern CONSUL_VERSION_PATTERN = Pattern.compile("^v[0-9][-._a-zA-Z0-9]*$");
+    private static final Pattern CONSUL_API_VERSION_PATTERN = Pattern.compile("^v[0-9][-._a-zA-Z0-9]*$");
 
     @Nullable
     private URI consulUri;
@@ -117,9 +117,9 @@ public class ConsulClientBuilder {
     public ConsulClientBuilder consulApiVersion(String consulApiVersion) {
         checkState(consulUri == null, "consulApiVersion can't comes with consulUri");
         requireNonNull(consulApiVersion, "consulApiVersion");
-        checkArgument(!consulApiVersion.isEmpty(), "consulApiVersion can't be empty");
-        checkArgument(CONSUL_VERSION_PATTERN.matcher(consulApiVersion).matches(),
-                      "consulApiVersion has unexpected format");
+        checkArgument(CONSUL_API_VERSION_PATTERN.matcher(consulApiVersion).matches(),
+                      "consulApiVersion: %s (expected: a version string that starts with 'v', e.g. 'v1')",
+                      consulApiVersion);
         this.consulApiVersion = consulApiVersion;
         isUriComponentSet = true;
         return this;
