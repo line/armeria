@@ -157,5 +157,4 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         }
         return (Message.Builder) method.invoke(clazz);
     }
-
 }
