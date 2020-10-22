@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.cookie;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -35,6 +36,8 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class CookieClientTest {
+
+    private static int port;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -63,6 +66,11 @@ class CookieClientTest {
         }
     };
 
+    @BeforeAll
+    static void init() {
+        port = server.httpPort();
+    }
+
     @Test
     void setCookie() {
         try (ClientFactory factory = ClientFactory.builder()
@@ -74,15 +82,15 @@ class CookieClientTest {
                                               .decorator(CookieClient.newDecorator())
                                               .build();
 
-            client.get("http://foo.com:" + server.httpPort() + "/set-cookie").aggregate().join();
-            String cookie = client.get("http://foo.com:" + server.httpPort() + "/get-cookie").aggregate()
+            client.get("http://foo.com:" + port + "/set-cookie").aggregate().join();
+            String cookie = client.get("http://foo.com:" + port + "/get-cookie").aggregate()
                                   .join().contentUtf8();
 
             final Cookies cookies = Cookie.fromCookieHeader(cookie);
             assertThat(cookies).contains(Cookie.of("some-cookie", "foo"),
                                          Cookie.of("some-cookie2", "bar"));
 
-            cookie = client.get("http://bar.com:" + server.httpPort() + "/get-cookie").aggregate()
+            cookie = client.get("http://bar.com:" + port + "/get-cookie").aggregate()
                            .join().contentUtf8();
             assertThat(cookie).isEmpty();
         }
