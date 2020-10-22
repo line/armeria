@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
+import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 
 import io.netty.util.AsciiString;
 import reactor.test.StepVerifier;
@@ -48,6 +49,26 @@ public class HttpRequestBuilderTest {
         final HttpRequest putRequest = HttpRequest.builder().put("/3").build();
         assertThat(putRequest.method()).isEqualTo(HttpMethod.PUT);
         assertThat(putRequest.path()).isEqualTo("/3");
+
+        final HttpRequest deleteRequest = HttpRequest.builder().delete("/4").build();
+        assertThat(deleteRequest.method()).isEqualTo(HttpMethod.DELETE);
+        assertThat(deleteRequest.path()).isEqualTo("/4");
+
+        final HttpRequest patchRequest = HttpRequest.builder().patch("/5").build();
+        assertThat(patchRequest.method()).isEqualTo(HttpMethod.PATCH);
+        assertThat(patchRequest.path()).isEqualTo("/5");
+
+        final HttpRequest optionsRequest = HttpRequest.builder().options("/6").build();
+        assertThat(optionsRequest.method()).isEqualTo(HttpMethod.OPTIONS);
+        assertThat(optionsRequest.path()).isEqualTo("/6");
+
+        final HttpRequest headRequest = HttpRequest.builder().head("/7").build();
+        assertThat(headRequest.method()).isEqualTo(HttpMethod.HEAD);
+        assertThat(headRequest.path()).isEqualTo("/7");
+
+        final HttpRequest traceRequest = HttpRequest.builder().trace("/8").build();
+        assertThat(traceRequest.method()).isEqualTo(HttpMethod.TRACE);
+        assertThat(traceRequest.path()).isEqualTo("/8");
     }
 
     @Test
@@ -104,7 +125,21 @@ public class HttpRequestBuilderTest {
     }
 
     @Test
-    void buildWithContent() {
+    void buildWithTrailers() {
+        final HttpRequest request1 = HttpRequest.builder().get("/")
+                                                .trailers(HttpHeaders.of("some-trailer", "foo"))
+                                                .build();
+        assertThat(request1).isInstanceOf(OneElementFixedHttpRequest.class);
+
+        final HttpRequest request2 = HttpRequest.builder().get("/")
+                                                .content(MediaType.PLAIN_TEXT_UTF_8, "foo")
+                                                .trailers(HttpHeaders.of("some-trailer", "foo"))
+                                                .build();
+        assertThat(request2).isInstanceOf(TwoElementFixedHttpRequest.class);
+    }
+
+    @Test
+    void buildWithStringContent() {
         final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
         final HttpRequest request = requestBuilder.post("/")
                                                   .content(MediaType.JSON,
@@ -118,6 +153,33 @@ public class HttpRequestBuilderTest {
                     .expectComplete()
                     .verify();
         assertThat(request).isInstanceOf(OneElementFixedHttpRequest.class);
+    }
+
+    @Test
+    void buildWithFormatContent() {
+        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+        final HttpRequest request = requestBuilder.post("/")
+                                                  .content(MediaType.PLAIN_TEXT_UTF_8, "%s = %d", "foo", 10)
+                                                  .build();
+        assertThat(request.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        StepVerifier.create(request)
+                    .expectNext(HttpData.ofUtf8("foo = 10"))
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    void buildWithByteContent() {
+        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+        final HttpRequest request = requestBuilder.post("/")
+                                                  .content(MediaType.PLAIN_TEXT_UTF_8,
+                                                           "abcdefghiklmn".getBytes())
+                                                  .build();
+        assertThat(request.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        StepVerifier.create(request)
+                    .expectNext(HttpData.ofUtf8("abcdefghiklmn"))
+                    .expectComplete()
+                    .verify();
     }
 
     @Test
