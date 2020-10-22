@@ -1,0 +1,128 @@
+---
+date: 2020-10-22
+---
+
+## 🌟 New features
+
+- You can now bind a <type://GrpcService> to a custom route path. #3072 #3083
+  ```java
+  ServerBuilder sb = ...
+  sb.service(GrpcService.builder()
+                        // Bind 'getProfile()' method to '/v1/api/users/profile'
+                        .addService("/v1/api/users/profile", userService,
+                                    UserServiceGrpc.getProfile())
+                        // Bind 'getFriends()' method to '/v1/api/users/friends'
+                        .addService("/v1/api/users/friends", userService,
+                                    UserServiceGrpc.getFriends())
+                        .build());
+  ```
+- You can now decode a compressed request using <type://DecodingService>. #1521 #3087
+- You can now easily send a redirect response using <type://HttpResponse#ofRedirect(String)>. #914 #3059
+  ```java
+  HttpResponse.ofRedirect("/new-location");
+  HttpResponse.ofRedirect("/new-location/%s", someVar);
+  HttpResponse.ofRedirect(RedirectType.PERMANENT, "/new-location");
+  ```
+- You can now choose a path when Thrift/gRPC service has more than one path
+  in the <type://DocService>. #2167 #3024
+- You can now cancel a service's request or client's response with <type://CancellationException> or 
+  any `Throwable` using <type://RequestContext#cancel()> and 
+  <type://RequestContext#cancel(Throwable)?full>. #3046 #3080
+  ```java
+  ClientRequestContext cctx = ...;
+  // Cancel a client's response with ResponseCancellationException
+  cctx.cancel();
+  cctx.cancel(new RuntimeException("A custom error message"));
+  
+  ServiceRequestContext sctx = ...;
+  // Cancel a service's request with RequestCancellationException
+  sctx.cancel();
+  sctx.cancel(new RuntimeException("A custom error message"));
+  ```
+
+## 📈 Improvements
+
+- Do not launch two servers if both `armeria-spring-boot2-autoconfigure` and 
+  `armeria-spring-boot2-webflux-autoconfigure` are in the class path. #3056 #3102
+- You no longer see a previously selected input when the input box of `Go to` menu is clicked. #3095
+
+## 🛠️ Bug fixes
+
+- You now get proper 404 Not Found status when `routeDecorator()`is used and 
+  the endpoint of the request doesn't exist. #3120
+- You no longer see duplicated MDC keys anymore when `armeria-logback` is applied. #3044 #3105
+- You can now get the normal response even though the request is not fully sent. #3115
+- You can now use milliseconds as an interval unit in <type://EurekaEndpointGroup>. #3108
+- You no longer see `UNKNOWN` error code while sending stream messages with Reactive gRPC stub. #3090 3099
+- `TTEXT_NAMED_ENUM` now correctly serializes enums when used inside maps. #3091
+- <type://BraveClient> and <type://BraveService> do not override 
+  the default `(Client|Server)(Request|Response)Parser` anymore. #3023 #3111
+- Armeria client now sets the default path(`/`) properly if a path is empty. #3098
+- You no longer see an outdated JS bundle of <type://DocService> in the browser 
+  when a new Armeria version is released. #3094
+
+## 🏚️ Deprecations
+
+- The following methods have been deprecated in favor of their `millis`-accepting versions: #3108
+  - <type://EurekaEndpointGroupBuilder.registryFetchIntervalSeconds()>
+  - <type://EurekaUpdatingServerListener.leaseDurationSeconds()>
+  - <type://EurekaUpdatingServerListener.renewalIntervalSeconds()>
+- The following methods have been deprecated in favor of their `Cancelling` and `Cancelling` versions: #3080
+  - <type://ClientRequestContext.whenResponseTimingOut()>
+  - <type://ClientRequestContext.whenResponseTimedOut()>
+  - <type://ServiceRequestContext.whenRequestTimingOut()>
+  - <type://ServiceRequestContext.whenRequestTimedOut()>
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- Brave 5.12.6 → 5.12.7
+- Caffeine 2.8.5 → 2.8.6
+- Dropwizard 1.3.24 → 1.3.25
+- Dropwizard Metrics 4.1.12.1 → 4.1.13
+- Eureka 1.9.26 → 1.10.7
+- gRPC-Java 1.32.1 → 1.33.0
+- Guava 29.0 → 30.0
+- java-jwt 3.10.3 → 3.11.0
+- Jetty 9.4.31 → 9.4.32
+- Micrometer 1.3.12 → 1.3.14
+- Netty 4.1.52 → 4.1.53
+- RxJava2 2.2.19 → 2.2.20
+- RxJava3 3.0.6 → 3.0.7
+- Spring Boot 2.1.16 → 2.1.17
+- Spring 5.1.17 → 5.1.18
+- Tomcat8 8.5.57 → 8.5.58
+- Tomcat9 9.0.38 → 9.0.39
+- Test:
+  - Akka Actor 2.6.9 → 2.6.10
+  - gax-grpc 1.58.2 → 1.60.0
+  - Finagle Serverset 20.8.1 → 20.9.0
+  - JUnit 4 4.13 → 4.13.1
+  - Hibernate Validator 6.1.5 → 6.1.6
+  - Mockito 3.5.11 → 3.5.15
+  - JMH 1.25.2 → 1.26
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'adriancole',
+    'anuraaga',
+    'ikhoon',
+    'kojilin',
+    'minwoox',
+    'trustin',
+    'tumile',
+    'joonhaeng',
+    'cnabro',
+    'jrhee17',
+    'KarboniteKream',
+    'heowc',
+    'kowshikn',
+    'policeman-kh',
+    'ghkim3221'
+  ]}
+/>
