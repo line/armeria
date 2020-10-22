@@ -60,28 +60,28 @@ public final class ExportGroup {
     /**
      * Returns a set of {@link ExportEntry} of {@link BuiltInProperty}.
      */
-    public Set<ExportEntry<BuiltInProperty>> getBuiltIns() {
+    public Set<ExportEntry<BuiltInProperty>> builtIns() {
         return builtIns;
     }
 
     /**
      * Returns a set of {@link ExportEntry} of {@link AttributeKey}.
      */
-    public Set<ExportEntry<AttributeKey<?>>> getAttrs() {
+    public Set<ExportEntry<AttributeKey<?>>> attrs() {
         return attrs;
     }
 
     /**
      * Returns a set of {@link ExportEntry} of request headers.
      */
-    public Set<ExportEntry<AsciiString>> getReqHeaders() {
+    public Set<ExportEntry<AsciiString>> reqHeaders() {
         return reqHeaders;
     }
 
     /**
      * Returns a set of {@link ExportEntry} of response headers.
      */
-    public Set<ExportEntry<AsciiString>> getResHeaders() {
+    public Set<ExportEntry<AsciiString>> resHeaders() {
         return resHeaders;
     }
 }

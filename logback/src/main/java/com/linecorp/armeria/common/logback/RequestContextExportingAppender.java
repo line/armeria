@@ -164,9 +164,9 @@ public final class RequestContextExportingAppender
      * Adds the export group.
      * Note: this method is meant to be used for XML configuration.
      */
-    public void setExportGroup(ExportGroupConfiguration exportGroupConfiguration) {
+    public void setExportGroup(ExportGroupConfig exportGroupConfiguration) {
         requireNonNull(exportGroupConfiguration, "exportGroupConfiguration");
-        builder.addExportGroup(exportGroupConfiguration.exportGroup());
+        builder.exportGroup(exportGroupConfiguration.exportGroup());
     }
 
     private void ensureNotStarted() {

@@ -24,9 +24,9 @@ import com.linecorp.armeria.common.logging.ExportGroupBuilder;
 /**
  * Bridge class for Logback configuration.
  *
- * @see RequestContextExportingAppender#setExportGroup(ExportGroupConfiguration)
+ * @see RequestContextExportingAppender#setExportGroup(ExportGroupConfig)
  */
-public final class ExportGroupConfiguration {
+public final class ExportGroupConfig {
 
     private final ExportGroupBuilder builder = ExportGroup.builder();
 

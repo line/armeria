@@ -172,7 +172,7 @@ class RequestContextExporterTest {
         final RequestContextExporter exporter =
                 RequestContextExporter
                         .builder()
-                        .addExportGroup(
+                        .exportGroup(
                                 ExportGroup
                                         .builder()
                                         .keyPattern("client.*")
@@ -181,7 +181,7 @@ class RequestContextExporterTest {
                                         .attr("attrs.attr1-2", ATTR1)
                                         .build()
                         )
-                        .addExportGroup(
+                        .exportGroup(
                                 ExportGroup
                                         .builder()
                                         .prefix("armeria.")

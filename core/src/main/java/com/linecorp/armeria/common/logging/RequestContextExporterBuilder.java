@@ -164,7 +164,7 @@ public final class RequestContextExporterBuilder {
     /**
      * Adds the export group.
      */
-    public RequestContextExporterBuilder addExportGroup(ExportGroup exportGroup) {
+    public RequestContextExporterBuilder exportGroup(ExportGroup exportGroup) {
         if (exportGroups == null) {
             exportGroups = new ArrayList<>();
         }
@@ -179,18 +179,18 @@ public final class RequestContextExporterBuilder {
         if (exportGroups == null) {
             final ExportGroup defaultExportGroup = defaultExportGroupBuilder.build();
             return new RequestContextExporter(
-                    defaultExportGroup.getBuiltIns(), defaultExportGroup.getAttrs(),
-                    defaultExportGroup.getReqHeaders(), defaultExportGroup.getResHeaders());
+                    defaultExportGroup.builtIns(), defaultExportGroup.attrs(),
+                    defaultExportGroup.reqHeaders(), defaultExportGroup.resHeaders());
         }
         exportGroups.add(defaultExportGroupBuilder.build());
         return new RequestContextExporter(
-                exportGroups.stream().flatMap(it -> it.getBuiltIns().stream())
+                exportGroups.stream().flatMap(it -> it.builtIns().stream())
                             .collect(ImmutableSet.toImmutableSet()),
-                exportGroups.stream().flatMap(it -> it.getAttrs().stream())
+                exportGroups.stream().flatMap(it -> it.attrs().stream())
                             .collect(ImmutableSet.toImmutableSet()),
-                exportGroups.stream().flatMap(it -> it.getReqHeaders().stream())
+                exportGroups.stream().flatMap(it -> it.reqHeaders().stream())
                             .collect(ImmutableSet.toImmutableSet()),
-                exportGroups.stream().flatMap(it -> it.getResHeaders().stream())
+                exportGroups.stream().flatMap(it -> it.resHeaders().stream())
                             .collect(ImmutableSet.toImmutableSet())
         );
     }
