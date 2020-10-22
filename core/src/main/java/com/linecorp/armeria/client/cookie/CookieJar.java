@@ -18,11 +18,9 @@ package com.linecorp.armeria.client.cookie;
 
 import java.net.CookiePolicy;
 import java.net.URI;
-import java.util.List;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.Cookies;
 
 /**
  * A {@link Cookie} container for a client.
@@ -30,20 +28,18 @@ import com.linecorp.armeria.common.Cookie;
 public interface CookieJar {
 
     /**
-     * Returns a {@code Cookie} header value for an {@link URI}. Returns {@code null} if there is no cookie
-     * matches the URI.
+     * Returns a {@link Cookies} set of cookies for an {@link URI}.
      */
-    @Nullable
-    String getCookieHeader(URI uri);
+    Cookies get(URI uri);
 
     /**
-     * Stores cookies for an {@link URI} from a list of {@code Set-Cookie} header values.
+     * Stores cookies for an {@link URI}.
      */
-    void set(URI uri, List<String> setCookies);
+    void set(URI uri, Cookies cookies);
 
     /**
      * Sets the {@link CookiePolicy} for this {@link CookieJar}.
      * @see CookiePolicy
      */
-    void cookiePolicy(CookiePolicy policy);
+    void setCookiePolicy(CookiePolicy policy);
 }

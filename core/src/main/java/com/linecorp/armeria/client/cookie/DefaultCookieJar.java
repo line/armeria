@@ -17,18 +17,21 @@
 package com.linecorp.armeria.client.cookie;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Nullable;
-
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.Cookies;
+
 /**
- * A default in-memory {@link CookieJar} implementation. Uses JDK's {@link CookieManager}.
+ * A default in-memory {@link CookieJar} implementation that delegates to JDK's {@link CookieManager}.
  * @see CookieManager
  */
 final class DefaultCookieJar implements CookieJar {
@@ -37,34 +40,35 @@ final class DefaultCookieJar implements CookieJar {
     private final CookieManager cookieManager;
 
     DefaultCookieJar() {
-        cookieManager = new CookieManager();
+        cookieManager = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
     }
 
-    @Nullable
     @Override
-    public String getCookieHeader(URI uri) {
+    public Cookies get(URI uri) {
         try {
-            final List<String> cookies = cookieManager.get(uri, EMPTY_MAP).get("Cookie");
-            if (cookies == null || cookies.isEmpty()) {
-                return null;
+            final List<String> cookieList = cookieManager.get(uri, EMPTY_MAP).get("Cookie");
+            if (cookieList == null || cookieList.isEmpty()) {
+                return Cookies.of();
             }
-            return String.join("; ", cookies);
+            final List<Cookie> cookies = new ArrayList<>();
+            cookieList.forEach(c -> cookies.addAll(Cookie.fromCookieHeader(c)));
+            return Cookies.of(cookies);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
     @Override
-    public void set(URI uri, List<String> setCookies) {
+    public void set(URI uri, Cookies cookies) {
         try {
-            cookieManager.put(uri, ImmutableMap.of("Set-Cookie", setCookies));
+            cookieManager.put(uri, ImmutableMap.of("Set-Cookie", Cookie.toSetCookieHeaders(cookies)));
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
     @Override
-    public void cookiePolicy(CookiePolicy policy) {
+    public void setCookiePolicy(CookiePolicy policy) {
         cookieManager.setCookiePolicy(policy);
     }
 }

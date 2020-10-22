@@ -23,6 +23,8 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
+import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.Cookies;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -47,7 +49,7 @@ public final class CookieClient extends SimpleDecoratingHttpClient {
      */
     public static Function<? super HttpClient, CookieClient> newDecorator(CookiePolicy cookiePolicy) {
         final CookieJar cookieJar = new DefaultCookieJar();
-        cookieJar.cookiePolicy(cookiePolicy);
+        cookieJar.setCookiePolicy(cookiePolicy);
         return newDecorator(cookieJar);
     }
 
@@ -71,12 +73,14 @@ public final class CookieClient extends SimpleDecoratingHttpClient {
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final URI uri = req.uri();
-        final String cookieHeader = cookieJar.getCookieHeader(uri);
-        if (cookieHeader != null) {
+        final Cookies cookies = cookieJar.get(uri);
+        if (!cookies.isEmpty()) {
+            final String cookieHeader = Cookie.toCookieHeader(cookies);
             req = req.withHeaders(req.headers().toBuilder().add(HttpHeaderNames.COOKIE, cookieHeader));
             ctx.updateRequest(req);
         }
         final HttpResponse res = unwrap().execute(ctx, req);
-        return new SetCookieResponse(res, setCookieHeaders -> cookieJar.set(uri, setCookieHeaders));
+        return new SetCookieResponse(res, setCookieHeaders ->
+                cookieJar.set(uri, Cookie.fromSetCookieHeaders(setCookieHeaders)));
     }
 }
