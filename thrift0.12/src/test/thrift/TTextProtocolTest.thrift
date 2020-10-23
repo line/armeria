@@ -30,6 +30,14 @@ enum Letter {
   ECHO    = 5,
 }
 
+enum Number {
+  ONE   = 1,
+  TWO   = 2,
+  THREE = 3,
+  FOUR  = 4,
+  FIVE  = 5,
+}
+
 typedef Letter Moji
 
 union TestUnion {
@@ -45,6 +53,10 @@ struct Sub {
   1: required i32 s;
 
   2: required SubSub s2;
+}
+
+struct NumberSub {
+  1: required Number n;
 }
 
 struct TTextProtocolTestMsg {
@@ -93,18 +105,14 @@ struct TTextProtocolTestMsg {
   22: required list<TestUnion> x;
 
   23: Moji y;  // Does not support string values.
+
+  27: required map<Letter, i32> aa;
+
+  28: required map<Letter, Number> ab;
+
+  29: required map<map<Number, i32>, map<NumberSub, map<string, list<Letter>>>> ac;
 }
 
 struct TTextProtocolTestMsgUnion {
   1: required TestUnion u;
-}
-
-struct TTextNamedEnumProtocolTestMsg {
-  1: required i32 a;
-
-  2: required Letter b;
-
-  3: required list<i32> c;
-
-  4: required list<Letter> d;
 }

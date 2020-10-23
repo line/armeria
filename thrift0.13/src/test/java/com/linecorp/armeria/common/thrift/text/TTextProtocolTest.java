@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -30,14 +30,17 @@
 // =================================================================================================
 package com.linecorp.armeria.common.thrift.text;
 
+import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
+import java.util.regex.Pattern;
 
 import org.apache.commons.codec.binary.Base64;
 import org.apache.thrift.TApplicationException;
@@ -45,8 +48,8 @@ import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.transport.TIOStreamTransport;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
@@ -66,21 +69,21 @@ import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
  *
  * @author Alex Roetter
  */
-public class TTextProtocolTest {
+class TTextProtocolTest {
+
+    private static final Pattern CR_PATTERN = Pattern.compile("(\\\\)+r");
 
     private String testData;
-    private String testDataNamedEnum;
-    private String testDataNamedEnumSerialized;
+    private String namedEnumSerialized;
     private Base64 base64Encoder;
 
     /**
      * Load a file containing a serialized thrift message in from disk.
      */
-    @Before
-    public void setUp() throws IOException {
+    @BeforeEach
+    void setUp() throws IOException {
         testData = readFile("TTextProtocol_TestData.txt");
-        testDataNamedEnum = readFile("TTextNamedEnumProtocol_TestData.txt");
-        testDataNamedEnumSerialized = readFile("TTextNamedEnumProtocol_TestData_Serialized.txt");
+        namedEnumSerialized = readFile("TTextProtocol_NamedEnum_Serialized.txt");
         base64Encoder = new Base64();
     }
 
@@ -91,10 +94,9 @@ public class TTextProtocolTest {
      * message.
      */
     @Test
-    public void tTextProtocolReadWriteTest() throws Exception {
+    void tTextProtocolReadWriteTest() throws Exception {
         // Deserialize the file contents into a thrift message.
         final ByteArrayInputStream bais1 = new ByteArrayInputStream(testData.getBytes());
-
         final TTextProtocolTestMsg msg1 = new TTextProtocolTestMsg();
         msg1.read(new TTextProtocol(new TIOStreamTransport(bais1)));
 
@@ -102,7 +104,7 @@ public class TTextProtocolTest {
 
         // Serialize that thrift message out to a byte array
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        msg1.write(new TTextProtocol(new TIOStreamTransport(baos), true));
+        msg1.write(new TTextProtocol(new TIOStreamTransport(baos)));
         final byte[] bytes = baos.toByteArray();
 
         // Deserialize that string back to a thrift message.
@@ -114,31 +116,32 @@ public class TTextProtocolTest {
     }
 
     @Test
-    public void tTextNamedEnumProtocolReadWriteTest() throws Exception {
+    void tTextNamedEnumProtocolReadWriteTest() throws Exception {
         // Deserialize the file contents into a thrift message.
-        final ByteArrayInputStream bais1 = new ByteArrayInputStream(testDataNamedEnum.getBytes());
-
-        final TTextNamedEnumProtocolTestMsg msg1 = new TTextNamedEnumProtocolTestMsg();
+        final ByteArrayInputStream bais1 = new ByteArrayInputStream(testData.getBytes());
+        final TTextProtocolTestMsg msg1 = new TTextProtocolTestMsg();
         msg1.read(new TTextProtocol(new TIOStreamTransport(bais1), true));
-        assertThat(msg1).isEqualTo(namedEnumTestMsg());
+
+        assertThat(msg1).isEqualTo(testMsg());
 
         // Serialize that thrift message out to a byte array
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         msg1.write(new TTextProtocol(new TIOStreamTransport(baos), true));
         final byte[] bytes = baos.toByteArray();
 
-        assertThatJson(baos.toString()).isEqualTo(testDataNamedEnumSerialized);
+        assertThatJson(CR_PATTERN.matcher(baos.toString()).replaceAll(""))
+                .when(IGNORING_ARRAY_ORDER)
+                .isEqualTo(namedEnumSerialized);
 
         // Deserialize that string back to a thrift message.
         final ByteArrayInputStream bais2 = new ByteArrayInputStream(bytes);
-        final TTextNamedEnumProtocolTestMsg msg2 = new TTextNamedEnumProtocolTestMsg();
+        final TTextProtocolTestMsg msg2 = new TTextProtocolTestMsg();
         msg2.read(new TTextProtocol(new TIOStreamTransport(bais2), true));
 
         assertThat(msg2).isEqualTo(msg1);
     }
 
     private TTextProtocolTestMsg testMsg() {
-
         return new TTextProtocolTestMsg()
                 .setA(12345L)
                 .setB(5)
@@ -178,15 +181,20 @@ public class TTextProtocolTest {
                 .setV(Letter.BETA)
                 .setW(TestUnion.f2(4))
                 .setX(ImmutableList.of(TestUnion.f2(5), TestUnion.f1(base64Encoder.decode("SGVsbG8gV29ybGQ="))))
-                .setY(Letter.ALPHA);
-    }
-
-    private static TTextNamedEnumProtocolTestMsg namedEnumTestMsg() {
-        return new TTextNamedEnumProtocolTestMsg()
-                .setA(1)
-                .setB(Letter.ALPHA)
-                .setC(ImmutableList.of(1, 2, 3))
-                .setD(ImmutableList.of(Letter.ALPHA, Letter.BETA, Letter.CHARLIE));
+                .setY(Letter.ALPHA)
+                .setAa(ImmutableMap.of(Letter.ALPHA, 2, Letter.BETA, 4))
+                .setAb(ImmutableMap.of(Letter.CHARLIE, Number.ONE,
+                                       Letter.DELTA, Number.THREE,
+                                       Letter.BETA, Number.FIVE))
+                .setAc(ImmutableMap.of(
+                        ImmutableMap.of(Number.ONE, 3),
+                        ImmutableMap.of(new NumberSub(Number.TWO),
+                                        ImmutableMap.of("ECHO", ImmutableList.of(Letter.ECHO, Letter.ALPHA,
+                                                                                 Letter.ALPHA))),
+                        ImmutableMap.of(Number.THREE, 5),
+                        ImmutableMap.of(new NumberSub(Number.FOUR),
+                                        ImmutableMap.of("ALPHA", ImmutableList.of(Letter.BETA, Letter.DELTA)))
+                ));
     }
 
     private static Sub sub(int s, int x) {
@@ -194,7 +202,7 @@ public class TTextProtocolTest {
     }
 
     @Test
-    public void rpcCall() throws Exception {
+    void rpcCall() throws Exception {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
@@ -236,7 +244,7 @@ public class TTextProtocolTest {
     }
 
     @Test
-    public void rpcCall_noSeqId() throws Exception {
+    void rpcCall_noSeqId() throws Exception {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
@@ -264,7 +272,7 @@ public class TTextProtocolTest {
     }
 
     @Test
-    public void rpcCall_oneWay() throws Exception {
+    void rpcCall_oneWay() throws Exception {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
@@ -306,7 +314,7 @@ public class TTextProtocolTest {
     }
 
     @Test
-    public void rpcReply() throws Exception {
+    void rpcReply() throws Exception {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
@@ -342,7 +350,7 @@ public class TTextProtocolTest {
     }
 
     @Test
-    public void rpcException() throws Exception {
+    void rpcException() throws Exception {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
@@ -378,7 +386,7 @@ public class TTextProtocolTest {
     }
 
     @Test
-    public void rpcTApplicationException() throws Exception {
+    void rpcTApplicationException() throws Exception {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
@@ -412,8 +420,8 @@ public class TTextProtocolTest {
         assertThatJson(new String(outputStream.toByteArray(), StandardCharsets.UTF_8)).isEqualTo(request);
     }
 
-    @Test(expected = TException.class)
-    public void rpcNoMethod() throws Exception {
+    @Test
+    void rpcNoMethod() {
         final String request =
                 "{\n" +
                 "  \"type\" : \"CALL\",\n" +
@@ -428,11 +436,11 @@ public class TTextProtocolTest {
                 '}';
         final TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
-        prot.readMessageBegin();
+        assertThatThrownBy(prot::readMessageBegin).isInstanceOf(TException.class);
     }
 
-    @Test(expected = TException.class)
-    public void rpcNoType() throws Exception {
+    @Test
+    void rpcNoType() {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
@@ -447,11 +455,11 @@ public class TTextProtocolTest {
                 '}';
         final TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
-        prot.readMessageBegin();
+        assertThatThrownBy(prot::readMessageBegin).isInstanceOf(TException.class);
     }
 
-    @Test(expected = TException.class)
-    public void noRpcArgs() throws Exception {
+    @Test
+    void noRpcArgs() {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\"\n" +
@@ -459,11 +467,11 @@ public class TTextProtocolTest {
                 '}';
         final TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
-        prot.readMessageBegin();
+        assertThatThrownBy(prot::readMessageBegin).isInstanceOf(TException.class);
     }
 
-    @Test(expected = TException.class)
-    public void rpcArgsNotObject() throws Exception {
+    @Test
+    void rpcArgsNotObject() {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
@@ -471,7 +479,7 @@ public class TTextProtocolTest {
                 '}';
         final TTextProtocol prot = new TTextProtocol(
                 new TIOStreamTransport(new ByteArrayInputStream(request.getBytes())));
-        prot.readMessageBegin();
+        assertThatThrownBy(prot::readMessageBegin).isInstanceOf(TException.class);
     }
 
     private static String readFile(String filename) throws IOException {

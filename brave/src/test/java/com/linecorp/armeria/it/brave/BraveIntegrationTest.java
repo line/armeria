@@ -292,10 +292,6 @@ class BraveIntegrationTest {
         assertThat(zipClient.hello("Lee")).isEqualTo("Hello, Lee!, and Hello, Lee!");
 
         final MutableSpan[] spans = spanHandler.take(6);
-        for (MutableSpan span : spans) {
-            assertThat(span.name()).isEqualTo("hello");
-        }
-
         final String traceId = spans[0].traceId();
         assertThat(spans).allMatch(s -> s.traceId().equals(traceId));
     }

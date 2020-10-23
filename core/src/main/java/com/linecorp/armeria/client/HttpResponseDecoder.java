@@ -36,9 +36,9 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
-import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
@@ -293,7 +293,7 @@ abstract class HttpResponseDecoder {
         private void close(@Nullable Throwable cause,
                            Consumer<Throwable> actionOnNotTimedOut) {
             state = State.DONE;
-
+            cancelTimeoutOrLog(cause, actionOnNotTimedOut);
             if (ctx != null) {
                 if (cause == null) {
                     ctx.request().abort();
@@ -301,8 +301,6 @@ abstract class HttpResponseDecoder {
                     ctx.request().abort(cause);
                 }
             }
-
-            cancelTimeoutOrLog(cause, actionOnNotTimedOut);
         }
 
         private void closeAction(@Nullable Throwable cause) {
@@ -334,14 +332,15 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause,
                                         Consumer<Throwable> actionOnNotTimedOut) {
 
-            TimeoutScheduler responseTimeoutScheduler = null;
+            CancellationScheduler responseCancellationScheduler = null;
             if (ctx instanceof DefaultClientRequestContext) {
-                responseTimeoutScheduler = ((DefaultClientRequestContext) ctx).responseTimeoutScheduler();
+                responseCancellationScheduler =
+                        ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
             }
 
-            if (responseTimeoutScheduler == null || !responseTimeoutScheduler.isTimedOut()) {
-                if (responseTimeoutScheduler != null) {
-                    responseTimeoutScheduler.clearTimeout(false);
+            if (responseCancellationScheduler == null || !responseCancellationScheduler.isFinished()) {
+                if (responseCancellationScheduler != null) {
+                    responseCancellationScheduler.clearTimeout(false);
                 }
                 // There's no timeout or the response has not been timed out.
                 actionOnNotTimedOut.accept(cause);
@@ -375,28 +374,28 @@ abstract class HttpResponseDecoder {
 
         void initTimeout() {
             if (ctx instanceof DefaultClientRequestContext) {
-                final TimeoutScheduler responseTimeoutScheduler =
-                        ((DefaultClientRequestContext) ctx).responseTimeoutScheduler();
-                responseTimeoutScheduler.init(ctx.eventLoop(), newTimeoutTask(),
-                                      TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                final CancellationScheduler responseCancellationScheduler =
+                        ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
+                responseCancellationScheduler.init(ctx.eventLoop(), newCancellationTask(),
+                                                   TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis),
+                                                   ResponseTimeoutException.get());
             }
         }
 
-        private TimeoutTask newTimeoutTask() {
-            return new TimeoutTask() {
+        private CancellationTask newCancellationTask() {
+            return new CancellationTask() {
                 @Override
                 public boolean canSchedule() {
                     return delegate.isOpen() && state != State.DONE;
                 }
 
                 @Override
-                public void run() {
-                    final ResponseTimeoutException cause = ResponseTimeoutException.get();
+                public void run(Throwable cause) {
+                    assert ctx != null;
+
                     delegate.close(cause);
-                    if (ctx != null) {
-                        ctx.request().abort(cause);
-                        ctx.logBuilder().endResponse(cause);
-                    }
+                    ctx.request().abort(cause);
+                    ctx.logBuilder().endResponse(cause);
                 }
             };
         }

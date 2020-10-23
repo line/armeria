@@ -33,8 +33,8 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
-import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -48,24 +48,25 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  */
 public final class ClientRequestContextBuilder extends AbstractRequestContextBuilder {
 
-    private static final TimeoutTask noopTimeoutTask = new TimeoutTask() {
+    private static final CancellationTask noopCancellationTask = new CancellationTask() {
         @Override
         public boolean canSchedule() {
             return true;
         }
 
         @Override
-        public void run() { /* no-op */ }
+        public void run(Throwable cause) { /* no-op */ }
     };
 
     /**
-     * A timeout scheduler that has been timed-out.
+     * A cancellation scheduler that has been finished.
      */
-    private static final TimeoutScheduler noopResponseTimeoutScheduler = new TimeoutScheduler(0);
+    private static final CancellationScheduler noopResponseCancellationScheduler = new CancellationScheduler(0);
 
     static {
-        noopResponseTimeoutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
-        noopResponseTimeoutScheduler.timeoutNow();
+        noopResponseCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0,
+                                               ResponseTimeoutException.get());
+        noopResponseCancellationScheduler.finishNow();
     }
 
     @Nullable
@@ -127,14 +128,15 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             endpoint = Endpoint.parse(authority());
         }
 
-        final TimeoutScheduler responseTimeoutScheduler;
+        final CancellationScheduler responseCancellationScheduler;
         if (timedOut()) {
-            responseTimeoutScheduler = noopResponseTimeoutScheduler;
+            responseCancellationScheduler = noopResponseCancellationScheduler;
         } else {
-            responseTimeoutScheduler = new TimeoutScheduler(0);
+            responseCancellationScheduler = new CancellationScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                responseTimeoutScheduler.init(eventLoop(), noopTimeoutTask, 0);
+                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0,
+                                                   ResponseTimeoutException.get());
                 latch.countDown();
             });
 
@@ -147,7 +149,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
                 id(), method(), path(), query(), fragment, options, request(), rpcRequest(),
-                responseTimeoutScheduler,
+                responseCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 

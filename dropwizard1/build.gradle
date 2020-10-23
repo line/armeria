@@ -1,4 +1,4 @@
-final def DROPWIZARD_VERSION = '1.3.24'
+final def DROPWIZARD_VERSION = '1.3.25'
 
 dependencies {
     implementation project(':jetty9')

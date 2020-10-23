@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.eureka;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.eureka.EurekaClientUtil.retryingClientOptions;
 import static java.util.Objects.requireNonNull;
 
@@ -22,10 +23,13 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
+
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.AbstractWebClientBuilder;
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -70,8 +74,8 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
  */
 public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilder {
 
-    static final int DEFAULT_LEASE_RENEWAL_INTERVAL = 30;
-    static final int DEFAULT_LEASE_DURATION = 90;
+    static final int DEFAULT_LEASE_RENEWAL_INTERVAL_SECONDS = 30;
+    static final int DEFAULT_LEASE_DURATION_SECONDS = 90;
     static final String DEFAULT_DATA_CENTER_NAME = "MyOwn";
 
     private final InstanceInfoBuilder instanceInfoBuilder;
@@ -94,23 +98,114 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     /**
-     * Sets the interval between renewal in seconds. {@value DEFAULT_LEASE_RENEWAL_INTERVAL} is used by default
-     * and it's not recommended to modify this value. See
+     * Sets the interval between renewal. {@value DEFAULT_LEASE_RENEWAL_INTERVAL_SECONDS} seconds is used
+     * by default and it's not recommended to modify this value. Eureka protocol stores this value in seconds
+     * internally, and thus this method will convert the given interval into seconds, rounding up
+     * its sub-second part. See
      * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
      * renew</a>.
      */
+    public EurekaUpdatingListenerBuilder renewalInterval(Duration renewalInterval) {
+        requireNonNull(renewalInterval, "renewalInterval");
+        checkArgument(!renewalInterval.isZero() &&
+                      !renewalInterval.isNegative(),
+                      "renewalInterval: %s (expected: > 0)",
+                      renewalInterval);
+
+        final int renewalIntervalSeconds = Ints.saturatedCast(
+                renewalInterval.getSeconds() +
+                (renewalInterval.getNano() != 0 ? 1 : 0));
+
+        instanceInfoBuilder.renewalIntervalSeconds(renewalIntervalSeconds);
+        return this;
+    }
+
+    /**
+     * Sets the interval between renewal in seconds. {@value DEFAULT_LEASE_RENEWAL_INTERVAL_SECONDS} is used
+     * by default and it's not recommended to modify this value. See
+     * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
+     * renew</a>.
+     *
+     * @deprecated Use {@link #renewalIntervalMillis(long)}.
+     */
+    @Deprecated
     public EurekaUpdatingListenerBuilder renewalIntervalSeconds(int renewalIntervalSeconds) {
         instanceInfoBuilder.renewalIntervalSeconds(renewalIntervalSeconds);
         return this;
     }
 
     /**
-     * Sets the lease duration in seconds. {@value DEFAULT_LEASE_DURATION} is used by default and it's
-     * not recommended to modify this value. See
+     * Sets the interval between renewal in milliseconds. {@code 30000} (30 seconds) is used by default and
+     * it's not recommended to modify this value. Eureka protocol stores this value in seconds internally,
+     * and thus this method will convert the given interval into seconds, rounding up its sub-second part. See
      * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
      * renew</a>.
      */
+    public EurekaUpdatingListenerBuilder renewalIntervalMillis(long renewalIntervalMillis) {
+        checkArgument(renewalIntervalMillis > 0,
+                      "renewalIntervalMillis: %s (expected: > 0)",
+                      renewalIntervalMillis);
+
+        final int renewalIntervalSeconds = Ints.saturatedCast(
+                TimeUnit.MILLISECONDS.toSeconds(renewalIntervalMillis) +
+                (renewalIntervalMillis % 1000 != 0 ? 1 : 0));
+
+        instanceInfoBuilder.renewalIntervalSeconds(renewalIntervalSeconds);
+        return this;
+    }
+
+    /**
+     * Sets the lease duration. {@value DEFAULT_LEASE_DURATION_SECONDS} seconds is used by default and it's
+     * not recommended to modify this value. Eureka protocol stores this value in seconds internally, and thus
+     * this method will convert the given duration into seconds, rounding up its sub-second part. See
+     * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
+     * renew</a>.
+     */
+    public EurekaUpdatingListenerBuilder leaseDuration(Duration leaseDuration) {
+        requireNonNull(leaseDuration, "leaseDuration");
+        checkArgument(!leaseDuration.isZero() &&
+                      !leaseDuration.isNegative(),
+                      "renewalInterval: %s (expected: > 0)",
+                      leaseDuration);
+
+        final int leaseDurationSeconds = Ints.saturatedCast(
+                leaseDuration.getSeconds() +
+                (leaseDuration.getNano() != 0 ? 1 : 0));
+
+        instanceInfoBuilder.leaseDurationSeconds(leaseDurationSeconds);
+        return this;
+    }
+
+    /**
+     * Sets the lease duration in seconds. {@value DEFAULT_LEASE_DURATION_SECONDS} is used by default and it's
+     * not recommended to modify this value. See
+     * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
+     * renew</a>.
+     *
+     * @deprecated Use {@link #leaseDurationMillis(long)}.
+     */
+    @Deprecated
     public EurekaUpdatingListenerBuilder leaseDurationSeconds(int leaseDurationSeconds) {
+        instanceInfoBuilder.leaseDurationSeconds(leaseDurationSeconds);
+        return this;
+    }
+
+    /**
+     * Sets the lease duration in milliseconds. {@code 90000} (90 seconds) is used by default and it's not
+     * recommended to modify this value. Eureka protocol stores this value in seconds internally, and thus
+     * this method will convert the given duration into seconds, rounding up its sub-second part. See
+     * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew">
+     * renew</a>.
+     */
+    public EurekaUpdatingListenerBuilder leaseDurationMillis(long leaseDurationMillis) {
+        checkArgument(leaseDurationMillis > 0,
+                      "leaseDurationMillis: %s (expected: > 0)",
+                      leaseDurationMillis);
+
+        final int leaseDurationSeconds = Ints.saturatedCast(
+                TimeUnit.MILLISECONDS.toSeconds(leaseDurationMillis) +
+                (leaseDurationMillis % 1000 != 0 ? 1 : 0));
+
         instanceInfoBuilder.leaseDurationSeconds(leaseDurationSeconds);
         return this;
     }

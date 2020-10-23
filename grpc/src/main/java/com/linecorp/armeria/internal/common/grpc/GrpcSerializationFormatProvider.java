@@ -40,4 +40,9 @@ public final class GrpcSerializationFormatProvider extends SerializationFormatPr
                 new Entry("gproto-web-text", create("application", "grpc-web-text+proto"),
                           create("application", "grpc-web-text")));
     }
+
+    @Override
+    public String toString() {
+        return GrpcSerializationFormatProvider.class.getSimpleName();
+    }
 }

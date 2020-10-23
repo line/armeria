@@ -544,4 +544,9 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         return exampleTBase;
     }
+
+    @Override
+    public String toString() {
+        return ThriftDocServicePlugin.class.getSimpleName();
+    }
 }

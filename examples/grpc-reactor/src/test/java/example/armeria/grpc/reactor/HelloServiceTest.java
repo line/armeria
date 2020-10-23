@@ -89,6 +89,21 @@ class HelloServiceTest {
     }
 
     @Test
+    void getLotsOfRepliesWithoutScheduler() {
+        final List<String> messages =
+                helloService.lotsOfRepliesWithoutScheduler(HelloRequest.newBuilder().setName("Armeria").build())
+                            .map(HelloReply::getMessage)
+                            .collectList()
+                            .block();
+
+        assertThat(messages).hasSize(5);
+
+        for (int i = 0; i < messages.size(); i++) {
+            assertThat(messages.get(i)).isEqualTo("Hello, Armeria! (sequence: " + (i + 1) + ')');
+        }
+    }
+
+    @Test
     void sendLotsOfGreetings() {
         final String message = Flux.just("Armeria", "Grpc", "Streaming").log()
                                    .map(name -> HelloRequest.newBuilder().setName(name).build())
