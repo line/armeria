@@ -73,9 +73,6 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
     private static final Parser defaultJsonParser = JsonFormat.parser().ignoringUnknownFields();
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private final ExtensionRegistry extensionRegistry;
-    private final Parser jsonParser;
-
     private static final MethodHandle unknownMethodHandle;
 
     static {
@@ -91,6 +88,9 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         assert methodHandle != null;
         unknownMethodHandle = methodHandle;
     }
+
+    private final ExtensionRegistry extensionRegistry;
+    private final Parser jsonParser;
 
     /**
      * Creates an instance with the default {@link Parser} and {@link ExtensionRegistry}.
