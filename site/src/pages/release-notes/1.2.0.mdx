@@ -16,8 +16,8 @@ date: 2020-10-22
                                     UserServiceGrpc.getFriends())
                         .build());
   ```
-- You can now decode a compressed request using <type://DecodingService>. #1521 #3087
-- You can now easily send a redirect response using <type://HttpResponse#ofRedirect(String)>. #914 #3059
+- You can now use <type://DecodingService> for decoding a compressed request. #1521 #3087
+- You can now use <type://HttpResponse#ofRedirect(String)> for easily sending a redirect response. #914 #3059
   ```java
   HttpResponse.ofRedirect("/new-location");
   HttpResponse.ofRedirect("/new-location/%s", someVar);
@@ -58,8 +58,8 @@ date: 2020-10-22
 - <type://BraveClient> and <type://BraveService> do not override 
   the default `(Client|Server)(Request|Response)Parser` anymore. #3023 #3111
 - Armeria client now sets the default path(`/`) properly if a path is empty. #3098
-- You no longer see an outdated JS bundle of <type://DocService> in the browser 
-  when a new Armeria version is released. #3094
+- You no longer see an outdated JS bundle in the browser 
+  when the <type://DocService> page is rebuilt. #3094
 
 ## 🏚️ Deprecations
 
