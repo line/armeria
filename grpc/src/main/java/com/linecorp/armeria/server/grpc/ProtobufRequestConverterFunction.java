@@ -16,7 +16,12 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import java.lang.reflect.Method;
+import static java.lang.invoke.MethodType.methodType;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.ParameterizedType;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -54,7 +59,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
  *
  * <p>The Protocol Buffers spec does not have an official way to sending multiple messages because
  * an encoded message does not have self-delimiting.
- * See <a href="https://developers.google.com/protocol-buffers/docs/techniques#streaming">Streaming Multiple Messages</a>
+ * See
+ * <a href="https://developers.google.com/protocol-buffers/docs/techniques#streaming">Streaming Multiple Messages</a>
  * for more information.
  * Therefore a sequence of Protocol Buffer messages can not be handled by this {@link RequestConverterFunction}.
  * However a <a href="https://tools.ietf.org/html/rfc7159#section-5">JSON array</a> body
@@ -62,12 +68,29 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
  */
 public final class ProtobufRequestConverterFunction implements RequestConverterFunction {
 
-    private static final ConcurrentMap<Class<?>, Method> methodCache = new MapMaker().weakKeys().makeMap();
+    private static final ConcurrentMap<Class<?>, MethodHandle> methodCache =
+            new MapMaker().weakKeys().makeMap();
     private static final Parser defaultJsonParser = JsonFormat.parser().ignoringUnknownFields();
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final ExtensionRegistry extensionRegistry;
     private final Parser jsonParser;
+
+    private static final MethodHandle unknownMethodHandle;
+
+    static {
+        final MethodHandles.Lookup publicLookup = MethodHandles.publicLookup();
+        final MethodType mt = methodType(void.class);
+
+        MethodHandle methodHandle;
+        try {
+            methodHandle = publicLookup.findConstructor(ProtobufRequestConverterFunction.class, mt);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            methodHandle = null;
+        }
+        assert methodHandle != null;
+        unknownMethodHandle = methodHandle;
+    }
 
     /**
      * Creates an instance with the default {@link Parser} and {@link ExtensionRegistry}.
@@ -149,12 +172,23 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
                (contentType.is(MediaType.JSON) || contentType.subtype().endsWith("+json"));
     }
 
-    private static Message.Builder getMessageBuilder(Class<?> clazz) throws Exception {
-        Method method = methodCache.get(clazz);
-        if (method == null) {
-            method = clazz.getMethod("newBuilder");
-            methodCache.put(clazz, method);
+    private static Message.Builder getMessageBuilder(Class<?> clazz) {
+        final MethodHandle methodHandle = methodCache.computeIfAbsent(clazz, key -> {
+            try {
+                final Class<?> builderClass = Class.forName(key.getName() + "$Builder");
+                final Lookup publicLookup = MethodHandles.publicLookup();
+                return publicLookup.findStatic(key, "newBuilder", methodType(builderClass));
+            } catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException ignored) {
+                return unknownMethodHandle;
+            }
+        });
+        if (methodHandle == unknownMethodHandle) {
+            throw new IllegalStateException("Failed to find a static newBuilder() method from " + clazz);
         }
-        return (Message.Builder) method.invoke(clazz);
+        try {
+            return (Message.Builder) methodHandle.invoke();
+        } catch (Throwable throwable) {
+            throw new IllegalStateException("Failed to find a static newBuilder() method from " + clazz);
+        }
     }
 }
