@@ -188,7 +188,8 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         try {
             return (Message.Builder) methodHandle.invoke();
         } catch (Throwable throwable) {
-            throw new IllegalStateException("Failed to find a static newBuilder() method from " + clazz);
+            throw new IllegalStateException(
+                    "Failed to create an empty instance of " + clazz + " using newBuilder() method", throwable);
         }
     }
 }
