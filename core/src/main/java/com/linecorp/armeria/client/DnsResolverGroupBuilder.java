@@ -297,13 +297,10 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets the cache spec for caching resolved addresses.
-     * If this is set, {@link Flags#dnsCacheSpec()} is ignored.
-     * Otherwise, it uses the value of {@link Flags#dnsCacheSpec()} by default.
-     *
-     * @see Flags#dnsCacheSpec()
+     * {@link Flags#dnsCacheSpec()} is used by default.
      */
     public DnsResolverGroupBuilder cacheSpec(String cacheSpec) {
-        this.cacheSpec = cacheSpec;
+        this.cacheSpec = requireNonNull(cacheSpec, "cacheSpec");;
         return this;
     }
 
@@ -357,6 +354,7 @@ public final class DnsResolverGroupBuilder {
                 builder.decodeIdn(decodeIdn);
             }
         };
+        cacheSpec = requireNonNull(cacheSpec != null ? cacheSpec : Flags.dnsCacheSpec(), "cacheSpec");
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
                                                   queryTimeoutMillis, refreshBackoff, resolvedAddressTypes,
                                                   cacheSpec);

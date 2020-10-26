@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.client.DnsUtil.anyInterfaceSupportsIpV6;
-import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -35,7 +34,6 @@ import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.client.DefaultDnsNameResolver;
 
 import io.netty.channel.EventLoop;
@@ -104,7 +102,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
                                    int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
                                    Backoff refreshBackoff,
                                    @Nullable ResolvedAddressTypes resolvedAddressTypes,
-                                   @Nullable String cacheSpec) {
+                                   String cacheSpec) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
@@ -116,8 +114,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         } else {
             dnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
         }
-        cache = buildCache(cacheSpec != null ? cacheSpec
-                                             : requireNonNull(Flags.dnsCacheSpec(), "cacheSpec"));
+        cache = buildCache(cacheSpec);
     }
 
     @VisibleForTesting

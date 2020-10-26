@@ -358,7 +358,7 @@ public final class Flags {
     private static final String DEFAULT_DNS_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String DNS_CACHE_SPEC =
-            caffeineSpec("dnsCache", DEFAULT_DNS_CACHE_SPEC);
+            caffeineSpec("dnsCacheSpec", DEFAULT_DNS_CACHE_SPEC);
 
     private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
     private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
@@ -990,9 +990,8 @@ public final class Flags {
      * {@link Cache} instance using {@link CaffeineSpec} for caching file entries.
      *
      * <p>The default value of this flag is {@value DEFAULT_DNS_CACHE_SPEC}. Specify the
-     * {@code -Dcom.linecorp.armeria.dnsCache=<spec>} JVM option to override the default value.
-     * For example, {@code -Dcom.linecorp.armeria.dnsCache=maximumSize=4096}.
-     * Also, specify {@code -Dcom.linecorp.armeria.dnsCache=off} JVM option to disable it.
+     * {@code -Dcom.linecorp.armeria.dnsCacheSpec=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.dnsCacheSpec=maximumSize=4096}.
      */
     @Nullable
     public static String dnsCacheSpec() {

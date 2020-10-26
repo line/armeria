@@ -271,6 +271,14 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         }
 
         void clear() {
+            if (executor().inEventLoop()) {
+                clear0();
+            } else {
+                executor().execute(this::clear0);
+            }
+        }
+
+        void clear0() {
             assert resolverClosed;
             if (refreshFuture != null) {
                 refreshFuture.cancel(false);
@@ -326,6 +334,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                               .add("questions", questions)
                               .add("cause", cause)
                               .add("hasCacheableCause", hasCacheableCause)
+                              .add("numAttemptsSoFar", numAttemptsSoFar)
                               .toString();
         }
     }
