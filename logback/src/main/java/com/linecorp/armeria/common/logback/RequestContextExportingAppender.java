@@ -66,12 +66,12 @@ public final class RequestContextExportingAppender
         }
     }
 
+    private static final Splitter KEY_SPLITTER = Splitter.on(',').trimResults();
+
     private final AppenderAttachableImpl<ILoggingEvent> aai = new AppenderAttachableImpl<>();
     private final RequestContextExporterBuilder builder = RequestContextExporter.builder();
     @Nullable
     private RequestContextExporter exporter;
-
-    private static final Splitter KEY_SPLITTER = Splitter.on(',').trimResults();
 
     @VisibleForTesting
     RequestContextExporter exporter() {

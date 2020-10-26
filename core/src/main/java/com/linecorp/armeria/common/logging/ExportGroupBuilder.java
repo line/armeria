@@ -38,7 +38,7 @@ public final class ExportGroupBuilder {
     private static final String PREFIX_REQ_HEADERS = "req.headers.";
     private static final String PREFIX_RES_HEADERS = "res.headers.";
 
-    static final String PREFIX_ATTRS = "attrs.";
+    private static final String PREFIX_ATTRS = "attrs.";
     private static final String ATTR_NAMESPACE = "attr:";
 
     @Nullable

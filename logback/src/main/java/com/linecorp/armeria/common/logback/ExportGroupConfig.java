@@ -30,9 +30,9 @@ import com.linecorp.armeria.common.logging.ExportGroupBuilder;
  */
 public final class ExportGroupConfig {
 
-    private final ExportGroupBuilder builder = ExportGroup.builder();
-
     private static final Splitter KEY_SPLITTER = Splitter.on(',').trimResults();
+
+    private final ExportGroupBuilder builder = ExportGroup.builder();
 
     /**
      * Specifies a prefix of the default export group.
