@@ -152,16 +152,6 @@ public final class RequestContextExporterBuilder {
     }
 
     /**
-     * Adds the property represented by the specified key pattern to the export list.
-     */
-    public RequestContextExporterBuilder keyPatterns(String keyPatterns) {
-        requireNonNull(keyPatterns, "keyPatterns");
-        checkArgument(!keyPatterns.isEmpty(), "keyPatterns must not be empty");
-        defaultExportGroupBuilder.keyPatterns(keyPatterns);
-        return this;
-    }
-
-    /**
      * Adds the export group.
      */
     public RequestContextExporterBuilder exportGroup(ExportGroup exportGroup) {

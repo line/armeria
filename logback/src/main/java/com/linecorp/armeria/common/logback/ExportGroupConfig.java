@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.logback;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.Splitter;
+
 import com.linecorp.armeria.common.logging.ExportGroup;
 import com.linecorp.armeria.common.logging.ExportGroupBuilder;
 
@@ -29,6 +31,8 @@ import com.linecorp.armeria.common.logging.ExportGroupBuilder;
 public final class ExportGroupConfig {
 
     private final ExportGroupBuilder builder = ExportGroup.builder();
+
+    private static final Splitter KEY_SPLITTER = Splitter.on(',').trimResults();
 
     /**
      * Specifies a prefix of the default export group.
@@ -57,7 +61,11 @@ public final class ExportGroupConfig {
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
         checkArgument(!mdcKeys.isEmpty(), "mdcKeys must not be empty");
-        builder.keyPatterns(mdcKeys);
+        KEY_SPLITTER.split(mdcKeys)
+                    .forEach(mdcKey -> {
+                        checkArgument(!mdcKey.isEmpty(), "comma-separated MDC key must not be empty");
+                        builder.keyPattern(mdcKey);
+                    });
     }
 
     /**

@@ -23,7 +23,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -41,8 +40,6 @@ public final class ExportGroupBuilder {
 
     static final String PREFIX_ATTRS = "attrs.";
     private static final String ATTR_NAMESPACE = "attr:";
-
-    private static final Splitter KEY_SPLITTER = Splitter.on(',').trimResults();
 
     @Nullable
     private String prefix;
@@ -167,10 +164,6 @@ public final class ExportGroupBuilder {
         return this;
     }
 
-    private static AsciiString toHeaderName(CharSequence name) {
-        return HttpHeaderNames.of(requireNonNull(name, "name").toString());
-    }
-
     /**
      * Adds the property represented by the specified key pattern to the export list. Please refer to the
      * <a href="https://armeria.dev/docs/advanced-logging">Logging contextual information</a>
@@ -231,17 +224,8 @@ public final class ExportGroupBuilder {
         throw new IllegalArgumentException("unknown key pattern: " + keyPattern);
     }
 
-    /**
-     * Adds the property represented by the specified key pattern to the export list.
-     */
-    public ExportGroupBuilder keyPatterns(String keyPatterns) {
-        requireNonNull(keyPatterns, "keyPatterns");
-        KEY_SPLITTER.split(keyPatterns)
-                    .forEach(keyPattern -> {
-                        checkArgument(!keyPattern.isEmpty(), "comma-separated keyPattern must not be empty");
-                        keyPattern(keyPattern);
-                    });
-        return this;
+    private static AsciiString toHeaderName(CharSequence name) {
+        return HttpHeaderNames.of(requireNonNull(name, "name").toString());
     }
 
     private ExportEntry<AttributeKey<?>> parseAttrPattern(String keyPattern, @Nullable String exportKey) {

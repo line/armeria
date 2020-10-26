@@ -29,6 +29,7 @@ import org.slf4j.MDC;
 import org.slf4j.Marker;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
@@ -69,6 +70,8 @@ public final class RequestContextExportingAppender
     private final RequestContextExporterBuilder builder = RequestContextExporter.builder();
     @Nullable
     private RequestContextExporter exporter;
+
+    private static final Splitter KEY_SPLITTER = Splitter.on(',').trimResults();
 
     @VisibleForTesting
     RequestContextExporter exporter() {
@@ -157,7 +160,11 @@ public final class RequestContextExportingAppender
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
         checkArgument(!mdcKeys.isEmpty(), "mdcKeys must not be empty");
-        builder.keyPatterns(mdcKeys);
+        KEY_SPLITTER.split(mdcKeys)
+                    .forEach(mdcKey -> {
+                        checkArgument(!mdcKey.isEmpty(), "comma-separated MDC key must not be empty");
+                        builder.keyPattern(mdcKey);
+                    });
     }
 
     /**
