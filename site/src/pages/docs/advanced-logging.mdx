@@ -158,4 +158,57 @@ For example, if you want to change `req.id` to `request_id`, use `request_id=req
 
 Note that a custom MDC key cannot be used with a wildcard expression `*` or `req.*`.
 
+### Specifying a prefix for MDC keys
+
+You can specify a prefix for MDC keys using the `<prefix>` element.
+If you want to add a prefix `armeria.` to all MDC keys,
+you need to add `<prefix>armeria.</prefix>` to the XML configuration.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  ...
+  <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    ...
+    <!-- set the prefix of MDC keys -->
+    <prefix>armeria.</prefix>
+    <export>remote.id</export>
+    <export>req.headers.user-agent</export>
+    <export>some_value=attr:com.example.AttrKeys#SOME_KEY</export>
+    ...
+  </appender>
+  ...
+</configuration>
+```
+
+When you want to specify a different prefix, you can define `<prefix>`, `<export>`, and `<exports>` elements
+in the `<exportGroup>` element.
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  ...
+  <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    ...
+    <!-- set the prefix of exports which is not wrapped with the <exportGroup> element -->
+    <prefix>armeria.</prefix>
+    <export>remote.id</export>
+    <export>req.headers.user-agent</export>
+    ...
+    <exportGroup>
+      <!-- set the prefix of exports in this <exportGroup> -->
+      <prefix>some_prefix.</prefix>
+      <export>some_value=attr:com.example.AttrKeys#SOME_KEY</export>
+      ...
+    </exportGroup>
+    <exportGroup>
+      <!-- if no <prefix> is defined, no prefix is added to exports -->
+      <export>tracking_id=attr:com.example.AttrKeys#TRACKING_ID_KEY</export>
+      ...
+    </exportGroup>
+  </appender>
+  ...
+</configuration>
+```
+
 [MDC]: https://logback.qos.ch/manual/mdc.html

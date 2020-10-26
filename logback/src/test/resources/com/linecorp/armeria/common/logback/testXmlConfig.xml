@@ -53,6 +53,12 @@
       <!-- users can specify a prefix later -->
       <prefix>group2.</prefix>
     </exportGroup>
+
+    <exportGroup>
+      <!-- no prefix -->
+      <export>remote.host</export>
+      <exports>remote.ip, remote.port</exports>
+    </exportGroup>
   </appender>
 
   <logger name="RCEA" level="TRACE">

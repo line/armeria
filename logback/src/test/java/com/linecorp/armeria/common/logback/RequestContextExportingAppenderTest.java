@@ -245,7 +245,10 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("group2.remote.host", "client.com")
                            .containsEntry("group2.remote.ip", "1.2.3.4")
                            .containsEntry("group2.remote.port", "5678")
-                           .hasSize(9);
+                           .containsEntry("remote.host", "client.com")
+                           .containsEntry("remote.ip", "1.2.3.4")
+                           .containsEntry("remote.port", "5678")
+                           .hasSize(12);
         } finally {
             // Revert to the original configuration.
             final JoranConfigurator configurator = new JoranConfigurator();
