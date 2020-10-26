@@ -19,14 +19,16 @@ date: 2020-10-22
 - You can now use <type://DecodingService> for decoding a compressed request. #1521 #3087
 - You can now use <type://HttpResponse#ofRedirect(String)> for easily sending a redirect response. #914 #3059
   ```java
+  // The status is HttpStatus.TEMPORARY_REDIRECT.
   HttpResponse.ofRedirect("/new-location");
   HttpResponse.ofRedirect("/new-location/%s", someVar);
-  HttpResponse.ofRedirect(RedirectType.PERMANENT, "/new-location");
+  // Redirect with the specified redirection status.
+  HttpResponse.ofRedirect(HttpStatus.MOVED_PERMANENTLY, "/new-location");
   ```
-- You can now choose a path when Thrift/gRPC service has more than one path
+- You can now choose a path when a Thrift/gRPC service has more than one path
   in the <type://DocService>. #2167 #3024
 - You can now cancel a service's request or client's response with <type://CancellationException> or 
-  any `Throwable` using <type://RequestContext#cancel()> and 
+  any `Throwable` using <type://RequestContext#cancel()> or
   <type://RequestContext#cancel(Throwable)?full>. #3046 #3080
   ```java
   ClientRequestContext cctx = ...;
@@ -48,7 +50,7 @@ date: 2020-10-22
 
 ## 🛠️ Bug fixes
 
-- You now get proper 404 Not Found status when `routeDecorator()`is used and 
+- You now get proper 404 Not Found status when `routeDecorator()` is used and
   the endpoint of the request doesn't exist. #3120
 - You no longer see duplicated MDC keys anymore when `armeria-logback` is applied. #3044 #3105
 - You can now get the normal response even though the request is not fully sent. #3115

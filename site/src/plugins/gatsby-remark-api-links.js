@@ -18,7 +18,7 @@ const transformer = (markdownAST) => {
     if (optionIndex < 0) {
       optionIndex = node.url.length;
     } else {
-        option = node.url.substring(optionIndex);
+      option = node.url.substring(optionIndex);
     }
     // Exclude option string from typeName
     const typeName = node.url.substring(prefixLength, optionIndex);

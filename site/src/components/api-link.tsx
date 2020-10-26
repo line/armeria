@@ -1,4 +1,4 @@
-import {OutboundLink} from 'gatsby-plugin-google-analytics';
+import { OutboundLink } from 'gatsby-plugin-google-analytics';
 import React from 'react';
 
 import styles from './api-link.module.less';
@@ -21,7 +21,7 @@ const TypeLink: React.FC<TypeLinkProps> = (props) => {
   if (href) {
     const optionIndex = href.lastIndexOf('?');
     if (optionIndex > 0) {
-      showParams = href.substring(optionIndex + 1) === "full";
+      showParams = href.substring(optionIndex + 1) === 'full';
       href = href.substring(0, optionIndex);
     }
   }
