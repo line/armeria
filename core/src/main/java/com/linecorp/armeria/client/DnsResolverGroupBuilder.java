@@ -300,7 +300,7 @@ public final class DnsResolverGroupBuilder {
      * {@link Flags#dnsCacheSpec()} is used by default.
      */
     public DnsResolverGroupBuilder cacheSpec(String cacheSpec) {
-        this.cacheSpec = requireNonNull(cacheSpec, "cacheSpec");;
+        this.cacheSpec = requireNonNull(cacheSpec, "cacheSpec");
         return this;
     }
 
