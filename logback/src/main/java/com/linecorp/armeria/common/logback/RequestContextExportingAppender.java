@@ -166,7 +166,7 @@ public final class RequestContextExportingAppender
      */
     public void setExportGroup(ExportGroupConfig exportGroupConfiguration) {
         requireNonNull(exportGroupConfiguration, "exportGroupConfiguration");
-        builder.exportGroup(exportGroupConfiguration.exportGroup());
+        builder.exportGroup(exportGroupConfiguration.build());
     }
 
     private void ensureNotStarted() {

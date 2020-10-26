@@ -40,14 +40,10 @@ public final class ExportGroup {
                 Set<ExportEntry<AttributeKey<?>>> attrs,
                 Set<ExportEntry<AsciiString>> reqHeaders,
                 Set<ExportEntry<AsciiString>> resHeaders) {
-        requireNonNull(builtIns, "builtIns");
-        requireNonNull(attrs, "attrs");
-        requireNonNull(reqHeaders, "reqHeaders");
-        requireNonNull(resHeaders, "resHeaders");
-        this.builtIns = builtIns;
-        this.attrs = attrs;
-        this.reqHeaders = reqHeaders;
-        this.resHeaders = resHeaders;
+        this.builtIns = requireNonNull(builtIns, "builtIns");
+        this.attrs = requireNonNull(attrs, "attrs");
+        this.reqHeaders = requireNonNull(reqHeaders, "reqHeaders");
+        this.resHeaders = requireNonNull(resHeaders, "resHeaders");
     }
 
     /**

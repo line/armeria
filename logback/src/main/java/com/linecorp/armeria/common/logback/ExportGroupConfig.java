@@ -63,7 +63,7 @@ public final class ExportGroupConfig {
     /**
      * Returns {@link ExportGroup}.
      */
-    ExportGroup exportGroup() {
+    ExportGroup build() {
         return builder.build();
     }
 }

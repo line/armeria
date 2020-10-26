@@ -21,6 +21,9 @@ import io.netty.util.AttributeKey;
 
 public class CustomObject {
 
+    static final AttributeKey<CustomObject> ATTR = AttributeKey.valueOf(CustomObject.class, "ATTR");
+    static final AttributeKey<String> FOO = AttributeKey.valueOf(CustomObject.class, "FOO");
+
     final String name;
     final String value;
 
@@ -35,8 +38,4 @@ public class CustomObject {
                           .add("name", name)
                           .add("value", value).toString();
     }
-
-    public static final AttributeKey<CustomObject> ATTR = AttributeKey.valueOf(CustomObject.class, "ATTR");
-
-    public static final AttributeKey<String> FOO = AttributeKey.valueOf(CustomObject.class, "FOO");
 }

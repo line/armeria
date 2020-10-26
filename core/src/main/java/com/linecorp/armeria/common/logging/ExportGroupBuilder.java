@@ -235,6 +235,7 @@ public final class ExportGroupBuilder {
      * Adds the property represented by the specified key pattern to the export list.
      */
     public ExportGroupBuilder keyPatterns(String keyPatterns) {
+        requireNonNull(keyPatterns, "keyPatterns");
         KEY_SPLITTER.split(keyPatterns)
                     .forEach(keyPattern -> {
                         checkArgument(!keyPattern.isEmpty(), "comma-separated keyPattern must not be empty");
@@ -340,7 +341,7 @@ public final class ExportGroupBuilder {
             return exportKey + ':' + key;
         }
 
-        public ExportEntry<T> withPrefix(String exportPrefix) {
+        private ExportEntry<T> withPrefix(String exportPrefix) {
             checkArgument(!exportPrefix.isEmpty(), "exportPrefix must not be empty");
 
             if (stringifier == null) {
@@ -350,7 +351,7 @@ public final class ExportGroupBuilder {
             }
         }
 
-        public static <T> Set<ExportEntry<T>> withPrefix(Set<ExportEntry<T>> entries, String exportPrefix) {
+        private static <T> Set<ExportEntry<T>> withPrefix(Set<ExportEntry<T>> entries, String exportPrefix) {
             checkArgument(!exportPrefix.isEmpty(), "exportPrefix must not be empty");
 
             return entries.stream().map(entry -> entry.withPrefix(exportPrefix))
