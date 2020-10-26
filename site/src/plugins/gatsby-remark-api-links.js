@@ -29,6 +29,7 @@ const transformer = (markdownAST) => {
       // eslint-disable-next-line no-param-reassign
       node.url = `${node.url.substring(0, prefixLength)}${typeName}:${href}`;
       if (option) {
+        // eslint-disable-next-line no-param-reassign
         node.url += option;
       }
     }
