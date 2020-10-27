@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import javax.annotation.Nullable;
+
 /**
  * A functional interface that represents a mapper factory, mapping a combination of host, method and path
  * to a CircuitBreaker.
@@ -29,5 +31,5 @@ interface CircuitBreakerFactory {
      * @param path the path of the context request.
      * @return the CircuitBreaker instance corresponding to this combination.
      */
-    CircuitBreaker apply(String host, String method, String path);
+    CircuitBreaker apply(@Nullable String host, @Nullable String method, @Nullable String path);
 }
