@@ -97,7 +97,7 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
     private int readIntSlow() {
         int value = 0;
         int remaining = 4;
-        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext(); ) {
+        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext();) {
             final ByteBuf buf = it.next();
             final int readableBytes = buf.readableBytes();
             final int readSize = Math.min(remaining, readableBytes);
