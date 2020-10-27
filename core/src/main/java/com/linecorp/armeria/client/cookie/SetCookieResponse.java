@@ -21,10 +21,9 @@ import java.util.function.Consumer;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
  * A {@link FilteredHttpResponse} that extracts {@code Set-Cookie} headers.
@@ -32,7 +31,6 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 final class SetCookieResponse extends FilteredHttpResponse {
 
     private final Consumer<List<String>> consumer;
-    private boolean headersReceived;
 
     SetCookieResponse(HttpResponse delegate, Consumer<List<String>> consumer) {
         super(delegate);
@@ -41,26 +39,16 @@ final class SetCookieResponse extends FilteredHttpResponse {
 
     @Override
     protected HttpObject filter(HttpObject obj) {
-        if (!(obj instanceof HttpHeaders)) {
-            return obj;
+        if (obj instanceof ResponseHeaders) {
+            final ResponseHeaders responseHeaders = (ResponseHeaders) obj;
+            if (responseHeaders.status().isInformational()) {
+                return obj;
+            }
+            final List<String> setCookieHeaders = responseHeaders.getAll(HttpHeaderNames.SET_COOKIE);
+            if (!setCookieHeaders.isEmpty()) {
+                consumer.accept(setCookieHeaders);
+            }
         }
-        final HttpHeaders headers = (HttpHeaders) obj;
-        final String status = headers.get(HttpHeaderNames.STATUS);
-        // Skip informational headers.
-        if (ArmeriaHttpUtil.isInformational(status)) {
-            return obj;
-        }
-        // Trailers, no modification.
-        if (headersReceived) {
-            return obj;
-        }
-        // Follow-up headers for informational headers, no modification.
-        if (status == null) {
-            return obj;
-        }
-        headersReceived = true;
-        final List<String> setCookieHeaders = headers.getAll(HttpHeaderNames.SET_COOKIE);
-        consumer.accept(setCookieHeaders);
-        return headers;
+        return obj;
     }
 }

@@ -16,16 +16,18 @@
 
 package com.linecorp.armeria.client.cookie;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.Cookies;
@@ -40,19 +42,21 @@ final class DefaultCookieJar implements CookieJar {
     private final CookieManager cookieManager;
 
     DefaultCookieJar() {
-        cookieManager = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+        cookieManager = new CookieManager();
     }
 
     @Override
     public Cookies get(URI uri) {
+        requireNonNull(uri, "uri");
         try {
             final List<String> cookieList = cookieManager.get(uri, EMPTY_MAP).get("Cookie");
             if (cookieList == null || cookieList.isEmpty()) {
                 return Cookies.of();
             }
-            final List<Cookie> cookies = new ArrayList<>();
-            cookieList.forEach(c -> cookies.addAll(Cookie.fromCookieHeader(c)));
-            return Cookies.of(cookies);
+            final ImmutableSet.Builder<Cookie> cookieBuilder =
+                    ImmutableSet.builderWithExpectedSize(cookieList.size());
+            cookieList.forEach(c -> cookieBuilder.addAll(Cookie.fromCookieHeader(c)));
+            return Cookies.of(cookieBuilder.build());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -60,6 +64,8 @@ final class DefaultCookieJar implements CookieJar {
 
     @Override
     public void set(URI uri, Cookies cookies) {
+        requireNonNull(uri, "uri");
+        requireNonNull(cookies, "cookies");
         try {
             cookieManager.put(uri, ImmutableMap.of("Set-Cookie", Cookie.toSetCookieHeaders(cookies)));
         } catch (IOException e) {
@@ -68,7 +74,8 @@ final class DefaultCookieJar implements CookieJar {
     }
 
     @Override
-    public void setCookiePolicy(CookiePolicy policy) {
-        cookieManager.setCookiePolicy(policy);
+    public void setCookiePolicy(CookiePolicy cookiePolicy) {
+        requireNonNull(cookiePolicy, "cookiePolicy");
+        cookieManager.setCookiePolicy(cookiePolicy);
     }
 }

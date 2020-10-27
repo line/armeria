@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.cookie;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.CookiePolicy;
 import java.net.URI;
 import java.util.function.Function;
@@ -28,12 +30,10 @@ import com.linecorp.armeria.common.Cookies;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 
 /**
- * Decorates a {@link HttpClient} to set cookies to {@code Cookie} header of outgoing {@link Request} and
- * store cookies from {@code Set-Cookie} headers of incoming {@link Response}.
+ * Decorates an {@link HttpClient} to set cookies to {@code Cookie} header of outgoing {@link HttpRequest} and
+ * store cookies from {@code Set-Cookie} headers of incoming {@link HttpResponse}.
  */
 public final class CookieClient extends SimpleDecoratingHttpClient {
 
@@ -48,6 +48,7 @@ public final class CookieClient extends SimpleDecoratingHttpClient {
      * Creates a new {@link CookieClient} decorator with a custom {@link CookiePolicy}.
      */
     public static Function<? super HttpClient, CookieClient> newDecorator(CookiePolicy cookiePolicy) {
+        requireNonNull(cookiePolicy, "cookiePolicy");
         final CookieJar cookieJar = new DefaultCookieJar();
         cookieJar.setCookiePolicy(cookiePolicy);
         return newDecorator(cookieJar);
@@ -57,6 +58,7 @@ public final class CookieClient extends SimpleDecoratingHttpClient {
      * Creates a new {@link CookieClient} decorator with a {@link CookieJar} implementation.
      */
     public static Function<? super HttpClient, CookieClient> newDecorator(CookieJar cookieJar) {
+        requireNonNull(cookieJar, "cookieJar");
         return client -> new CookieClient(client, cookieJar);
     }
 
@@ -65,7 +67,7 @@ public final class CookieClient extends SimpleDecoratingHttpClient {
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CookieClient(HttpClient delegate, CookieJar cookieJar) {
+    private CookieClient(HttpClient delegate, CookieJar cookieJar) {
         super(delegate);
         this.cookieJar = cookieJar;
     }

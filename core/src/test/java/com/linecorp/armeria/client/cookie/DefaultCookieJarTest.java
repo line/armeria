@@ -83,7 +83,7 @@ class DefaultCookieJarTest {
         final URI foobar = URI.create("http://bar.foo.com");
         final URI foobaz = URI.create("http://baz.foo.com");
         final Cookie cookie1 = Cookie.fromSetCookieHeader("name1=value1");
-        final Cookie cookie2 = Cookie.fromSetCookieHeader("name2=value2; domain=foo.com");
+        final Cookie cookie2 = Cookie.fromSetCookieHeader("name2=value2; domain=.foo.com");
 
         cookieJar.set(foobar, Cookies.of(cookie1, cookie2));
         assertThat(cookieJar.get(foobaz)).contains(Cookie.of("name2", "value2"))
