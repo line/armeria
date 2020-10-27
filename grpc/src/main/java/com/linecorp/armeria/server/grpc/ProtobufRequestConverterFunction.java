@@ -91,6 +91,13 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
 
     private final ExtensionRegistry extensionRegistry;
     private final Parser jsonParser;
+    private final ResultType resultType;
+
+    ProtobufRequestConverterFunction(ResultType resultType) {
+        jsonParser = defaultJsonParser;
+        extensionRegistry = ExtensionRegistry.getEmptyRegistry();
+        this.resultType = resultType;
+    }
 
     /**
      * Creates an instance with the default {@link Parser} and {@link ExtensionRegistry}.
@@ -105,6 +112,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
     public ProtobufRequestConverterFunction(Parser jsonParser, ExtensionRegistry extensionRegistry) {
         this.jsonParser = jsonParser;
         this.extensionRegistry = extensionRegistry;
+        resultType = ResultType.UNKNOWN;
     }
 
     @Nullable
@@ -114,7 +122,8 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
                                  @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
 
         final MediaType contentType = request.contentType();
-        if (Message.class.isAssignableFrom(expectedResultType)) {
+        if (resultType == ResultType.PROTOBUF ||
+            (resultType == ResultType.UNKNOWN && Message.class.isAssignableFrom(expectedResultType))) {
             final Message.Builder messageBuilder = getMessageBuilder(expectedResultType);
 
             if (contentType == null ||
@@ -129,16 +138,16 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         }
 
         if (isJson(contentType) && expectedParameterizedResultType != null) {
-            final int collectionType;
-            if (List.class.isAssignableFrom(expectedResultType)) {
-                collectionType = 1;
-            } else if (Set.class.isAssignableFrom(expectedResultType)) {
-                collectionType = 2;
-            } else {
-                collectionType = 0;
+            ResultType resultType = this.resultType;
+            if (resultType == ResultType.UNKNOWN) {
+                if (List.class.isAssignableFrom(expectedResultType)) {
+                    resultType = ResultType.LIST_PROTOBUF;
+                } else if (Set.class.isAssignableFrom(expectedResultType)) {
+                    resultType = ResultType.SET_PROTOBUF;
+                }
             }
 
-            if (collectionType > 0) {
+            if (resultType == ResultType.LIST_PROTOBUF || resultType == ResultType.SET_PROTOBUF) {
                 final Class<?> typeArgument =
                         (Class<?>) expectedParameterizedResultType.getActualTypeArguments()[0];
                 if (Message.class.isAssignableFrom(typeArgument)) {
@@ -147,7 +156,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
                     final JsonNode jsonNode = mapper.readTree(content);
                     if (jsonNode.isArray()) {
                         final ImmutableCollection.Builder<Message> builder;
-                        if (collectionType == 1) {
+                        if (resultType == ResultType.LIST_PROTOBUF) {
                             builder = ImmutableList.builderWithExpectedSize(jsonNode.size());
                         } else {
                             builder = ImmutableSet.builderWithExpectedSize(jsonNode.size());
@@ -191,5 +200,12 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
             throw new IllegalStateException(
                     "Failed to create an empty instance of " + clazz + " using newBuilder() method", throwable);
         }
+    }
+
+    enum ResultType {
+        UNKNOWN,
+        PROTOBUF,
+        LIST_PROTOBUF,
+        SET_PROTOBUF
     }
 }

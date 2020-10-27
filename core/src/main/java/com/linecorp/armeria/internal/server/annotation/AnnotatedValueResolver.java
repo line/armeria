@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
@@ -82,6 +83,7 @@ import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
+import com.linecorp.armeria.server.annotation.RequestConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 
@@ -90,26 +92,15 @@ import io.netty.handler.codec.http.HttpConstants;
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
 
-    @Nullable
-    private static final RequestConverterFunction protobufRequestConverterFunction;
-
-    static {
-        RequestConverterFunction converterFunction;
-        try {
-            final Class<?> protobufConverterClass =
-                    Class.forName("com.linecorp.armeria.server.grpc.ProtobufRequestConverterFunction");
-            converterFunction =
-                    (RequestConverterFunction) protobufConverterClass.getDeclaredConstructor().newInstance();
-        } catch (Exception ignored) {
-            converterFunction = null;
-        }
-        protobufRequestConverterFunction = converterFunction;
-    }
+    private static final List<RequestConverterFunction> defaultRequestFunctions = ImmutableList.of(
+            new JacksonRequestConverterFunction(),
+            new StringRequestConverterFunction(),
+            new ByteArrayRequestConverterFunction());
 
     private static final List<RequestObjectResolver> defaultRequestConverters;
 
     static {
-        final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builder();
+        final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builderWithExpectedSize(4);
         builder.add((resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
             final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
             if (factory == null) {
@@ -118,14 +109,22 @@ final class AnnotatedValueResolver {
                 return factory.create(resolverContext);
             }
         });
-        builder.add(RequestObjectResolver.of(new JacksonRequestConverterFunction()));
-
-        if (protobufRequestConverterFunction != null) {
-            builder.add(RequestObjectResolver.of(protobufRequestConverterFunction));
+        for (RequestConverterFunction function : defaultRequestFunctions) {
+            builder.add(RequestObjectResolver.of(function));
         }
-        builder.add(RequestObjectResolver.of(new StringRequestConverterFunction()),
-                    RequestObjectResolver.of(new ByteArrayRequestConverterFunction()));
+
         defaultRequestConverters = builder.build();
+    }
+
+    static final List<RequestConverterFunctionProvider> requestConverterFunctionProviders =
+            ImmutableList.copyOf(ServiceLoader.load(RequestConverterFunctionProvider.class,
+                                                    AnnotatedService.class.getClassLoader()));
+
+    static {
+        if (!requestConverterFunctionProviders.isEmpty()) {
+            logger.debug("Available {}s: {}", RequestConverterFunctionProvider.class.getSimpleName(),
+                         requestConverterFunctionProviders);
+        }
     }
 
     private static final Object[] emptyArguments = new Object[0];
@@ -148,10 +147,26 @@ final class AnnotatedValueResolver {
      * Returns a list of {@link RequestObjectResolver} that default request converters are added.
      */
     static List<RequestObjectResolver> toRequestObjectResolvers(
-            List<RequestConverterFunction> converters) {
+            List<RequestConverterFunction> converters, Method method) {
         final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builder();
         // Wrap every converters received from a user with a default object resolver.
         converters.stream().map(RequestObjectResolver::of).forEach(builder::add);
+        if (!requestConverterFunctionProviders.isEmpty()) {
+            final ImmutableList<RequestConverterFunction> merged =
+                    ImmutableList.<RequestConverterFunction>builder().addAll(converters)
+                                                                     .addAll(defaultRequestFunctions)
+                                                                     .build();
+            final CompositeRequestConverterFunction composed = new CompositeRequestConverterFunction(merged);
+            for (Type type : method.getGenericParameterTypes()) {
+                for (RequestConverterFunctionProvider provider : requestConverterFunctionProviders) {
+                    final RequestConverterFunction func =
+                            provider.createRequestConverterFunction(type, composed);
+                    if (func != null) {
+                        builder.add(RequestObjectResolver.of(func));
+                    }
+                }
+            }
+        }
         builder.addAll(defaultRequestConverters);
         return builder.build();
     }
@@ -1446,6 +1461,36 @@ final class AnnotatedValueResolver {
 
         NoParameterException(String name) {
             super("No parameters found from: " + name);
+        }
+    }
+
+    private static final class CompositeRequestConverterFunction implements RequestConverterFunction {
+
+        private final List<RequestConverterFunction> functions;
+
+        private CompositeRequestConverterFunction(List<RequestConverterFunction> functions) {
+            this.functions = functions;
+        }
+
+        @Nullable
+        @Override
+        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
+                                     Class<?> expectedResultType,
+                                     @Nullable ParameterizedType expectedParameterizedResultType)
+                throws Exception {
+            for (RequestConverterFunction function : functions) {
+                try {
+                    return function.convertRequest(ctx, request, expectedResultType,
+                                                   expectedParameterizedResultType);
+                } catch (FallthroughException ignore) {
+                    // Do nothing.
+                } catch (Exception e) {
+                    throw new IllegalStateException(
+                            "Request converter " + function.getClass().getName() +
+                            " cannot convert an " + request + " to a " + expectedResultType, e);
+                }
+            }
+            return RequestConverterFunction.fallthrough();
         }
     }
 }

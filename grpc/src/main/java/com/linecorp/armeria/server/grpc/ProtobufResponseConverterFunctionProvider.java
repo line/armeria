@@ -19,8 +19,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.stream.Stream;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 
 import com.google.protobuf.MessageLite;
@@ -34,7 +32,6 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
  */
 public final class ProtobufResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
-    @Nullable
     @Override
     public ResponseConverterFunction createResponseConverterFunction(
             Type returnType,

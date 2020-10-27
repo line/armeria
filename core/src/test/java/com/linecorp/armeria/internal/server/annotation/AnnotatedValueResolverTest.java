@@ -75,7 +75,8 @@ class AnnotatedValueResolverTest {
 
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolverTest.class);
 
-    static final List<RequestObjectResolver> objectResolvers = toRequestObjectResolvers(ImmutableList.of());
+    static final List<RequestObjectResolver> objectResolvers =
+            toRequestObjectResolvers(ImmutableList.of(), AnnotatedValueResolverTest.class.getMethods()[0]);
 
     // A string which is the same as the parameter will be returned.
     static final Set<String> pathParams = ImmutableSet.of("var1");
