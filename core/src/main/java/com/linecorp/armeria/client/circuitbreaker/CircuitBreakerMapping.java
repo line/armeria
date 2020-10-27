@@ -45,7 +45,7 @@ public interface CircuitBreakerMapping {
      */
     static CircuitBreakerMapping perMethod(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return new KeyedCircuitBreakerMapping(MappingKey.METHOD, (host, method) -> factory.apply(method));
+        return new KeyedCircuitBreakerMapping(MappingKey.METHOD, (host, method, path) -> factory.apply(method));
     }
 
     /**
@@ -55,7 +55,17 @@ public interface CircuitBreakerMapping {
      */
     static CircuitBreakerMapping perHost(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return new KeyedCircuitBreakerMapping(MappingKey.HOST, (host, method) -> factory.apply(host));
+        return new KeyedCircuitBreakerMapping(MappingKey.HOST, (host, method, path) -> factory.apply(host));
+    }
+
+    /**
+     * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with the request path.
+     *
+     * @param factory the function that takes a path and creates a new {@link CircuitBreaker}
+     */
+    static CircuitBreakerMapping perPath(Function<String, ? extends CircuitBreaker> factory) {
+        requireNonNull(factory, "factory");
+        return new KeyedCircuitBreakerMapping(MappingKey.PATH, (host, method, path) -> factory.apply(path));
     }
 
     /**
@@ -68,7 +78,53 @@ public interface CircuitBreakerMapping {
     static CircuitBreakerMapping perHostAndMethod(
             BiFunction<String, String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return new KeyedCircuitBreakerMapping(MappingKey.HOST_AND_METHOD, factory);
+        return new KeyedCircuitBreakerMapping(
+                MappingKey.HOST_AND_METHOD,
+                (host, method, path) -> factory.apply(host, method));
+    }
+
+    /**
+     * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with the remote host and
+     * request path.
+     *
+     * @param factory the function that takes the remote host and request path and
+     *                creates a new {@link CircuitBreaker}
+     */
+    static CircuitBreakerMapping perHostAndPath(
+            BiFunction<String, String, ? extends CircuitBreaker> factory) {
+        requireNonNull(factory, "factory");
+        return new KeyedCircuitBreakerMapping(
+                MappingKey.HOST_AND_PATH,
+                (host, method, path) -> factory.apply(host, path));
+    }
+
+    /**
+     * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with the request method
+     * and path.
+     *
+     * @param factory the function that takes the remote host and request path and
+     *                creates a new {@link CircuitBreaker}
+     */
+    static CircuitBreakerMapping perMethodAndPath(
+            BiFunction<String, String, ? extends CircuitBreaker> factory) {
+        requireNonNull(factory, "factory");
+        return new KeyedCircuitBreakerMapping(
+                MappingKey.METHOD_AND_PATH,
+                (host, method, path) -> factory.apply(method, path));
+    }
+
+    /**
+     * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with the remote host,
+     * request method and path.
+     *
+     * @param factory the function that takes the remote host and request path and
+     *                creates a new {@link CircuitBreaker}
+     */
+    static CircuitBreakerMapping perHostAndMethodAndPath(
+            CircuitBreakerFactory factory) {
+        requireNonNull(factory, "factory");
+        return new KeyedCircuitBreakerMapping(
+                MappingKey.HOST_AND_METHOD_AND_PATH, factory);
     }
 
     /**

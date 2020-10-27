@@ -20,10 +20,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 
@@ -35,19 +35,19 @@ import com.linecorp.armeria.common.RpcRequest;
 final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
     static final CircuitBreakerMapping hostMapping =
-            new KeyedCircuitBreakerMapping(MappingKey.HOST, (host, method) -> CircuitBreaker.of(host));
+            new KeyedCircuitBreakerMapping(MappingKey.HOST, (host, method, path) -> CircuitBreaker.of(host));
 
     private final ConcurrentMap<String, CircuitBreaker> mapping = new ConcurrentHashMap<>();
 
     private final MappingKey mappingKey;
-    private final BiFunction<String, String, ? extends CircuitBreaker> factory;
+    private final CircuitBreakerFactory factory;
 
     /**
      * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link MappingKey} and
      * {@link CircuitBreaker} factory.
      */
     KeyedCircuitBreakerMapping(MappingKey mappingKey,
-                               BiFunction<String, String, ? extends CircuitBreaker> factory) {
+                               CircuitBreakerFactory factory) {
         this.mappingKey = requireNonNull(mappingKey, "mappingKey");
         this.factory = requireNonNull(factory, "factory");
     }
@@ -57,19 +57,46 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
         final String key;
         final String host;
         final String method;
+        final String path;
         switch (mappingKey) {
             case HOST:
                 key = host = host(ctx);
                 method = null;
+                path = null;
                 break;
             case METHOD:
                 host = null;
                 key = method = method(ctx);
+                path = null;
+                break;
+            case PATH:
+                host = null;
+                method = null;
+                key = path = path(ctx);
                 break;
             case HOST_AND_METHOD:
                 host = host(ctx);
                 method = method(ctx);
+                path = null;
                 key = host + '#' + method;
+                break;
+            case HOST_AND_PATH:
+                host = host(ctx);
+                method = null;
+                path = path(ctx);
+                key = host + '#' + path;
+                break;
+            case METHOD_AND_PATH:
+                host = null;
+                method = method(ctx);
+                path = path(ctx);
+                key = method + '#' + path;
+                break;
+            case HOST_AND_METHOD_AND_PATH:
+                host = host(ctx);
+                method = method(ctx);
+                path = path(ctx);
+                key = host + '#' + method + "#" + path;
                 break;
             default:
                 // should never reach here.
@@ -79,7 +106,7 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
         if (circuitBreaker != null) {
             return circuitBreaker;
         }
-        return mapping.computeIfAbsent(key, mapKey -> factory.apply(host, method));
+        return mapping.computeIfAbsent(key, mapKey -> factory.apply(host, method, path));
     }
 
     private static String host(ClientRequestContext ctx) {
@@ -101,9 +128,18 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
         return rpcReq != null ? rpcReq.method() : ctx.method().name();
     }
 
+    private static String path(ClientRequestContext ctx) {
+        final HttpRequest request = ctx.request();
+        return request == null ? "" : request.path();
+    }
+
     enum MappingKey {
         HOST,
         METHOD,
-        HOST_AND_METHOD
+        PATH,
+        HOST_AND_METHOD,
+        HOST_AND_PATH,
+        METHOD_AND_PATH,
+        HOST_AND_METHOD_AND_PATH
     }
 }

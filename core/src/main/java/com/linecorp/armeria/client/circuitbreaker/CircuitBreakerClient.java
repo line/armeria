@@ -154,6 +154,35 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     }
 
     /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per request path with the specified
+     * {@link CircuitBreakerRule}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a request path and creates a new {@link CircuitBreaker}.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerPathDecorator(Function<String, ? extends CircuitBreaker> factory, CircuitBreakerRule rule) {
+        return newDecorator(CircuitBreakerMapping.perPath(factory), rule);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per request path with the specified
+     * {@link CircuitBreakerRuleWithContent}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a request path and creates a new {@link CircuitBreaker}.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerPathDecorator(Function<String, ? extends CircuitBreaker> factory,
+                        CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perPath(factory), ruleWithContent);
+    }
+
+    /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per host and {@link HttpMethod} with
      * the specified {@link CircuitBreakerRule}.
      *
@@ -181,6 +210,95 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     newPerHostAndMethodDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
                                  CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), ruleWithContent);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per host and request path with
+     * the specified {@link CircuitBreakerRule}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a host+path and creates a new {@link CircuitBreaker}.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerHostAndPathDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
+                               CircuitBreakerRule rule) {
+        return newDecorator(CircuitBreakerMapping.perHostAndPath(factory), rule);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per host and request path with
+     * the specified {@link CircuitBreakerRuleWithContent}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a host+path and creates a new {@link CircuitBreaker}.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerHostAndPathDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
+                               CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perHostAndPath(factory), ruleWithContent);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per request method path with
+     * the specified {@link CircuitBreakerRule}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a method+path and creates a new {@link CircuitBreaker}.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerMethodAndPathDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
+                                 CircuitBreakerRule rule) {
+        return newDecorator(CircuitBreakerMapping.perMethodAndPath(factory), rule);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per request method and path with
+     * the specified {@link CircuitBreakerRuleWithContent}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a method+path and creates a new {@link CircuitBreaker}.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerMethodAndPathDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
+                                 CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perMethodAndPath(factory), ruleWithContent);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per host, request method and path with
+     * the specified {@link CircuitBreakerRule}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a host+method+path and creates a new {@link CircuitBreaker}.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerHostAndMethodAndPathDecorator(CircuitBreakerFactory factory, CircuitBreakerRule rule) {
+        return newDecorator(CircuitBreakerMapping.perHostAndMethodAndPath(factory), rule);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per host, request method and path with
+     * the specified {@link CircuitBreakerRuleWithContent}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a host+method+path and creates a new {@link CircuitBreaker}.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerHostAndMethodAndPathDecorator(CircuitBreakerFactory factory,
+                                        CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perHostAndMethodAndPath(factory), ruleWithContent);
     }
 
     /**
