@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Map.Entry;
@@ -213,5 +214,13 @@ public class HttpRequestBuilderTest {
                     .expectNext(HttpData.ofUtf8("test"))
                     .expectComplete()
                     .verify();
+    }
+
+    @Test
+    void buildThrows() {
+        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+        assertThatThrownBy(requestBuilder::build)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("path must be set");
     }
 }

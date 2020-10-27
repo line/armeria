@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static java.util.Objects.requireNonNull;
@@ -55,8 +56,6 @@ final class HttpRequestBuilder {
     private HttpData content;
     @Nullable
     private String path;
-
-    HttpRequestBuilder() {}
 
     /**
      * Shortcut to create a new {@link HttpRequestBuilder} with GET method and path.
@@ -327,7 +326,7 @@ final class HttpRequestBuilder {
      */
     public HttpRequest build() {
         final RequestHeaders requestHeaders = requestHeaders();
-        if (content == null || content.length() == 0) {
+        if (content == null || content.isEmpty()) {
             if (content != null) {
                 content.close();
             }
@@ -343,11 +342,11 @@ final class HttpRequestBuilder {
     }
 
     private RequestHeaders requestHeaders() {
-        requestHeadersBuilder.path(fullPath());
+        requestHeadersBuilder.path(buildPath());
         if (!cookies.isEmpty()) {
             requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
         }
-        if (content == null || content.length() == 0) {
+        if (content == null || content.isEmpty()) {
             requestHeadersBuilder.remove(CONTENT_LENGTH);
         } else {
             requestHeadersBuilder.setInt(CONTENT_LENGTH, content.length());
@@ -355,8 +354,9 @@ final class HttpRequestBuilder {
         return requestHeadersBuilder.build();
     }
 
-    private String fullPath() {
-        final StringBuilder pathBuilder = new StringBuilder(requireNonNull(this.path, "path"));
+    private String buildPath() {
+        checkState(path != null, "path must be set.");
+        final StringBuilder pathBuilder = new StringBuilder(path);
         if (!pathParams.isEmpty()) {
             int i = 0;
             while (i < pathBuilder.length()) {
@@ -390,7 +390,7 @@ final class HttpRequestBuilder {
             }
         }
         if (!queryParamsBuilder.isEmpty()) {
-            pathBuilder.append("?").append(queryParamsBuilder.toQueryString());
+            pathBuilder.append('?').append(queryParamsBuilder.toQueryString());
         }
         return pathBuilder.toString();
     }
