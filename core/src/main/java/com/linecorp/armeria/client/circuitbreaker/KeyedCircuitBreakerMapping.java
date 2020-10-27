@@ -28,80 +28,46 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 
 /**
- * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to its {@link MappingKey}.
- * If there is no circuit breaker bound to the key, a new one is created by using the given circuit breaker
- * factory.
+ * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to a combination of host, method and/or
+ * path. If there is no circuit breaker bound to the key, a new one is created by using the given circuit
+ * breaker factory.
  */
 final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
-    static final CircuitBreakerMapping hostMapping =
-            new KeyedCircuitBreakerMapping(MappingKey.HOST, (host, method, path) -> CircuitBreaker.of(host));
+    static final CircuitBreakerMapping hostMapping = new KeyedCircuitBreakerMapping(
+            new CircuitBreakerMapping.Builder().perHost(),
+            (host, method, path) -> CircuitBreaker.of(host));
 
     private final ConcurrentMap<String, CircuitBreaker> mapping = new ConcurrentHashMap<>();
 
-    private final MappingKey mappingKey;
+    private final boolean isPerHost;
+    private final boolean isPerMethod;
+    private final boolean isPerPath;
     private final CircuitBreakerFactory factory;
 
     /**
-     * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link MappingKey} and
+     * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link CircuitBreakerMapping.Builder} and
      * {@link CircuitBreaker} factory.
      */
-    KeyedCircuitBreakerMapping(MappingKey mappingKey,
-                               CircuitBreakerFactory factory) {
-        this.mappingKey = requireNonNull(mappingKey, "mappingKey");
+    KeyedCircuitBreakerMapping(CircuitBreakerMapping.Builder mappingBuilder, CircuitBreakerFactory factory) {
+        requireNonNull(mappingBuilder, "mappingBuilder");
+        isPerHost = mappingBuilder.isPerHost();
+        isPerMethod = mappingBuilder.isPerMethod();
+        isPerPath = mappingBuilder.isPerPath();
         this.factory = requireNonNull(factory, "factory");
     }
 
     @Override
     public CircuitBreaker get(ClientRequestContext ctx, Request req) throws Exception {
-        final String key;
-        final String host;
-        final String method;
-        final String path;
-        switch (mappingKey) {
-            case HOST:
-                key = host = host(ctx);
-                method = null;
-                path = null;
-                break;
-            case METHOD:
-                host = null;
-                key = method = method(ctx);
-                path = null;
-                break;
-            case PATH:
-                host = null;
-                method = null;
-                key = path = path(ctx);
-                break;
-            case HOST_AND_METHOD:
-                host = host(ctx);
-                method = method(ctx);
-                path = null;
-                key = host + '#' + method;
-                break;
-            case HOST_AND_PATH:
-                host = host(ctx);
-                method = null;
-                path = path(ctx);
-                key = host + '#' + path;
-                break;
-            case METHOD_AND_PATH:
-                host = null;
-                method = method(ctx);
-                path = path(ctx);
-                key = method + '#' + path;
-                break;
-            case HOST_AND_METHOD_AND_PATH:
-                host = host(ctx);
-                method = method(ctx);
-                path = path(ctx);
-                key = host + '#' + method + "#" + path;
-                break;
-            default:
-                // should never reach here.
-                throw new Error();
+        if (!isPerHost && !isPerMethod && !isPerPath) {
+            // should never reach here.
+            throw new Error();
         }
+        final String host = isPerHost ? host(ctx) : null;
+        final String method = isPerMethod ? method(ctx) : null;
+        final String path = isPerPath ? path(ctx) : null;
+        final String key =
+                (isPerHost ? host : "") + '#' + (isPerMethod ? method : "") + '#' + (isPerPath ? path : "");
         final CircuitBreaker circuitBreaker = mapping.get(key);
         if (circuitBreaker != null) {
             return circuitBreaker;
@@ -131,15 +97,5 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
     private static String path(ClientRequestContext ctx) {
         final HttpRequest request = ctx.request();
         return request == null ? "" : request.path();
-    }
-
-    enum MappingKey {
-        HOST,
-        METHOD,
-        PATH,
-        HOST_AND_METHOD,
-        HOST_AND_PATH,
-        METHOD_AND_PATH,
-        HOST_AND_METHOD_AND_PATH
     }
 }
