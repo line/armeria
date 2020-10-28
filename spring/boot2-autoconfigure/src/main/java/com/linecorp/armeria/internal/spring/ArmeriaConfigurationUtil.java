@@ -54,9 +54,11 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
+import com.linecorp.armeria.server.healthcheck.HealthCheckServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 import com.linecorp.armeria.spring.Ssl;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -79,17 +81,22 @@ public final class ArmeriaConfigurationUtil {
     private static final Pattern DATA_SIZE_PATTERN = Pattern.compile("^([+]?\\d+)([a-zA-Z]{0,2})$");
 
     /**
-     * Sets graceful shutdown timeout, health check services and {@link MeterRegistry} for the specified
+     * Sets graceful shutdown timeout, health check service and {@link MeterRegistry} for the specified
      * {@link ServerBuilder}.
      */
-    public static void configureServerWithArmeriaSettings(ServerBuilder server, ArmeriaSettings settings,
-                                                          MeterRegistry meterRegistry,
-                                                          List<HealthChecker> healthCheckers,
-                                                          MeterIdPrefixFunction meterIdPrefixFunction) {
+    public static void configureServerWithArmeriaSettings(
+            ServerBuilder server,
+            ArmeriaSettings settings,
+            MeterRegistry meterRegistry,
+            List<HealthChecker> healthCheckers,
+            List<HealthCheckServiceConfigurator> healthCheckServiceConfigurators,
+            MeterIdPrefixFunction meterIdPrefixFunction) {
+
         requireNonNull(server, "server");
         requireNonNull(settings, "settings");
         requireNonNull(meterRegistry, "meterRegistry");
         requireNonNull(healthCheckers, "healthCheckers");
+        requireNonNull(healthCheckServiceConfigurators, "healthCheckServiceConfigurators");
 
         if (settings.getGracefulShutdownQuietPeriodMillis() >= 0 &&
             settings.getGracefulShutdownTimeoutMillis() >= 0) {
@@ -102,7 +109,9 @@ public final class ArmeriaConfigurationUtil {
 
         final String healthCheckPath = settings.getHealthCheckPath();
         if (!Strings.isNullOrEmpty(healthCheckPath)) {
-            server.service(healthCheckPath, HealthCheckService.of(healthCheckers));
+            final HealthCheckServiceBuilder builder = HealthCheckService.builder().checkers(healthCheckers);
+            healthCheckServiceConfigurators.forEach(configurator -> configurator.configure(builder));
+            server.service(healthCheckPath, builder.build());
         }
 
         server.meterRegistry(meterRegistry);

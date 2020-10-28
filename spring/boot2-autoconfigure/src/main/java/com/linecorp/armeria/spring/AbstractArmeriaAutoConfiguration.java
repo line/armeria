@@ -70,6 +70,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
             Optional<List<HealthChecker>> healthCheckers,
+            Optional<List<HealthCheckServiceConfigurator>> healthCheckServiceConfigurators,
             Optional<MeterIdPrefixFunction> meterIdPrefixFunction,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
@@ -99,6 +100,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
         configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
                                            meterRegistry.orElse(Metrics.globalRegistry),
                                            healthCheckers.orElseGet(Collections::emptyList),
+                                           healthCheckServiceConfigurators.orElseGet(Collections::emptyList),
                                            meterIdPrefixFunction.orElse(
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")));
 
