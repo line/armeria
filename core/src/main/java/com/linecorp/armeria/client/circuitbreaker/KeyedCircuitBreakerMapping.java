@@ -17,9 +17,12 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Stream;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -35,7 +38,7 @@ import com.linecorp.armeria.common.RpcRequest;
 final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
     static final CircuitBreakerMapping hostMapping = new KeyedCircuitBreakerMapping(
-            new CircuitBreakerMapping.Builder().perHost(),
+            CircuitBreakerMapping.builder().perHost(),
             (host, method, path) -> CircuitBreaker.of(host));
 
     private final ConcurrentMap<String, CircuitBreaker> mapping = new ConcurrentHashMap<>();
@@ -46,10 +49,10 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
     private final CircuitBreakerFactory factory;
 
     /**
-     * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link CircuitBreakerMapping.Builder} and
+     * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link CircuitBreakerMappingBuilder} and
      * {@link CircuitBreaker} factory.
      */
-    KeyedCircuitBreakerMapping(CircuitBreakerMapping.Builder mappingBuilder, CircuitBreakerFactory factory) {
+    KeyedCircuitBreakerMapping(CircuitBreakerMappingBuilder mappingBuilder, CircuitBreakerFactory factory) {
         requireNonNull(mappingBuilder, "mappingBuilder");
         isPerHost = mappingBuilder.isPerHost();
         isPerMethod = mappingBuilder.isPerMethod();
@@ -66,8 +69,9 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
         final String host = isPerHost ? host(ctx) : null;
         final String method = isPerMethod ? method(ctx) : null;
         final String path = isPerPath ? path(ctx) : null;
-        final String key =
-                (isPerHost ? host : "") + '#' + (isPerMethod ? method : "") + '#' + (isPerPath ? path : "");
+        final String key = Stream.of(host, method, path)
+                                 .filter(Objects::nonNull)
+                                 .collect(joining("#"));
         final CircuitBreaker circuitBreaker = mapping.get(key);
         if (circuitBreaker != null) {
             return circuitBreaker;

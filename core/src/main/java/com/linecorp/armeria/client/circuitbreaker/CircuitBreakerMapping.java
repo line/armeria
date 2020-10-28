@@ -29,68 +29,18 @@ import com.linecorp.armeria.common.Request;
  */
 @FunctionalInterface
 public interface CircuitBreakerMapping {
-
-    /**
-     * Builder class for building a CircuitBreakerMapping based on a combination of host, method and path.
-     */
-    class Builder {
-        private boolean perHost;
-        private boolean perMethod;
-        private boolean perPath;
-
-        /**
-         * Adds host dimension to the mapping Key.
-         * @return this Builder.
-         */
-        public Builder perHost() {
-            perHost = true;
-            return this;
-        }
-
-        /**
-         * Adds method dimension to the mapping Key.
-         * @return this Builder.
-         */
-        public Builder perMethod() {
-            perMethod = true;
-            return this;
-        }
-
-        /**
-         * Adds path dimension to the mapping Key.
-         * @return this Builder.
-         */
-        public Builder perPath() {
-            perPath = true;
-            return this;
-        }
-
-        /**
-         * Builds the {@link CircuitBreakerMapping} using a three-dimensional factory.
-         * @return a {@link CircuitBreakerMapping} based on the added dimensions.
-         */
-        public CircuitBreakerMapping build(CircuitBreakerFactory factory) {
-            return new KeyedCircuitBreakerMapping(this, factory);
-        }
-
-        boolean isPerHost() {
-            return perHost;
-        }
-
-        boolean isPerMethod() {
-            return perMethod;
-        }
-
-        boolean isPerPath() {
-            return perPath;
-        }
-    }
-
     /**
      * Returns the default {@link CircuitBreakerMapping}.
      */
     static CircuitBreakerMapping ofDefault() {
         return KeyedCircuitBreakerMapping.hostMapping;
+    }
+
+    /**
+     * Returns a Builder that builds a CircuitBreakerMapping by setting host, method and/or path.
+     */
+    static CircuitBreakerMappingBuilder builder() {
+        return new CircuitBreakerMappingBuilder();
     }
 
     /**
@@ -100,7 +50,7 @@ public interface CircuitBreakerMapping {
      */
     static CircuitBreakerMapping perMethod(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return new Builder().perMethod().build((host, method, path) -> factory.apply(method));
+        return builder().perMethod().build((host, method, path) -> factory.apply(method));
     }
 
     /**
@@ -110,7 +60,7 @@ public interface CircuitBreakerMapping {
      */
     static CircuitBreakerMapping perHost(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return new Builder().perHost().build((host, method, path) -> factory.apply(host));
+        return builder().perHost().build((host, method, path) -> factory.apply(host));
     }
 
     /**
@@ -120,7 +70,7 @@ public interface CircuitBreakerMapping {
      */
     static CircuitBreakerMapping perPath(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return new Builder().perPath().build((host, method, path) -> factory.apply(path));
+        return builder().perPath().build((host, method, path) -> factory.apply(path));
     }
 
     /**
@@ -133,7 +83,7 @@ public interface CircuitBreakerMapping {
     static CircuitBreakerMapping perHostAndMethod(
             BiFunction<String, String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return new Builder().perHost().perMethod().build((host, method, path) -> factory.apply(host, method));
+        return builder().perHost().perMethod().build((host, method, path) -> factory.apply(host, method));
     }
 
     /**

@@ -159,7 +159,7 @@ class CircuitBreakerClientTest {
         final int COUNT = 2;
         failFastInvocation(
                 CircuitBreakerClient.newDecorator(
-                        new CircuitBreakerMapping.Builder().perHost().perPath().build(factory), rule()),
+                        CircuitBreakerMapping.builder().perHost().perPath().build(factory), rule()),
                 HttpMethod.GET,
                 COUNT);
 
@@ -180,7 +180,7 @@ class CircuitBreakerClientTest {
         final int COUNT = 2;
         failFastInvocation(
                 CircuitBreakerClient.newDecorator(
-                        new CircuitBreakerMapping.Builder().perHost().perPath().build(factory),
+                        CircuitBreakerMapping.builder().perHost().perPath().build(factory),
                         ruleWithResponse()),
                 HttpMethod.GET,
                 COUNT);
@@ -202,7 +202,7 @@ class CircuitBreakerClientTest {
         final int COUNT = 2;
         failFastInvocation(
                 CircuitBreakerClient.newDecorator(
-                        new CircuitBreakerMapping.Builder().perMethod().perPath().build(factory), rule()),
+                        CircuitBreakerMapping.builder().perMethod().perPath().build(factory), rule()),
                 HttpMethod.GET,
                 COUNT);
 
@@ -222,7 +222,7 @@ class CircuitBreakerClientTest {
         final int COUNT = 2;
         failFastInvocation(
                 CircuitBreakerClient.newDecorator(
-                        new CircuitBreakerMapping.Builder().perMethod().perPath().build(factory),
+                        CircuitBreakerMapping.builder().perMethod().perPath().build(factory),
                         ruleWithResponse()),
                 HttpMethod.GET,
                 COUNT);
@@ -244,7 +244,7 @@ class CircuitBreakerClientTest {
         final int COUNT = 2;
         failFastInvocation(
                 CircuitBreakerClient.newDecorator(
-                        new CircuitBreakerMapping.Builder().perHost().perMethod().perPath().build(factory),
+                        CircuitBreakerMapping.builder().perHost().perMethod().perPath().build(factory),
                         rule()),
                 HttpMethod.GET,
                 COUNT);
@@ -266,7 +266,7 @@ class CircuitBreakerClientTest {
         final int COUNT = 2;
         failFastInvocation(
                 CircuitBreakerClient.newDecorator(
-                        new CircuitBreakerMapping.Builder().perHost().perMethod().perPath().build(factory),
+                        CircuitBreakerMapping.builder().perHost().perMethod().perPath().build(factory),
                         ruleWithResponse()),
                 HttpMethod.GET,
                 COUNT);
