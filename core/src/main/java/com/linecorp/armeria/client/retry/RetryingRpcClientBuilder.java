@@ -35,9 +35,7 @@ public final class RetryingRpcClientBuilder extends AbstractRetryingClientBuilde
      * Returns a newly-created {@link RetryingRpcClient} based on the properties of this builder.
      */
     public RetryingRpcClient build(RpcClient delegate) {
-        return new RetryingRpcClient(
-                delegate, retryRuleWithContent(), maxTotalAttempts(),
-                responseTimeoutMillisForEachAttempt());
+        return new RetryingRpcClient(delegate, retryRuleWithContent(), mapping());
     }
 
     /**
@@ -67,5 +65,10 @@ public final class RetryingRpcClientBuilder extends AbstractRetryingClientBuilde
     public RetryingRpcClientBuilder responseTimeoutForEachAttempt(
             Duration responseTimeoutForEachAttempt) {
         return (RetryingRpcClientBuilder) super.responseTimeoutForEachAttempt(responseTimeoutForEachAttempt);
+    }
+
+    @Override
+    public RetryingRpcClientBuilder mapping(RetryConfigMapping mapping) {
+        return (RetryingRpcClientBuilder) super.mapping(mapping);
     }
 }

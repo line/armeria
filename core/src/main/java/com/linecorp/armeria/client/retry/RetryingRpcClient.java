@@ -76,6 +76,18 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
     }
 
     /**
+     * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
+     * RPC requests.
+     *
+     * @param retryRuleWithContent the retry rule
+     * @param mapping the mapping that returns a {@link RetryConfig} for a given context/request.
+     */
+    public static Function<? super RpcClient, RetryingRpcClient>
+    newDecorator(RetryRuleWithContent<RpcResponse> retryRuleWithContent, RetryConfigMapping mapping) {
+        return builder(retryRuleWithContent).mapping(mapping).newDecorator();
+    }
+
+    /**
      * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryRuleWithContent}.
      */
     public static RetryingRpcClientBuilder builder(RetryRuleWithContent<RpcResponse> retryRuleWithContent) {
@@ -86,8 +98,8 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * Creates a new instance that decorates the specified {@link RpcClient}.
      */
     RetryingRpcClient(RpcClient delegate, RetryRuleWithContent<RpcResponse> retryRuleWithContent,
-                      int totalMaxAttempts, long responseTimeoutMillisForEachAttempt) {
-        super(delegate, retryRuleWithContent, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
+                      RetryConfigMapping mapping) {
+        super(delegate, retryRuleWithContent, mapping);
     }
 
     @Override

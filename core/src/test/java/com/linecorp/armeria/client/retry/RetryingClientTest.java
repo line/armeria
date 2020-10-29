@@ -434,6 +434,46 @@ class RetryingClientTest {
     }
 
     @Test
+    void honorRetryMapping() {
+        final Backoff backoff = Backoff.fixed(2000);
+        final RetryRule rule = RetryRule.builder()
+                                        .onException(UnprocessedRequestException.class)
+                                        .thenBackoff(backoff);
+        final RetryConfigMapping mapping = RetryConfigMapping.of(
+                (ctx, req) -> ctx.method() + "#" + ctx.path(),
+                (ctx, req) -> {
+                    if (ctx.method().equals(HttpMethod.GET)) {
+                        return RetryConfig.builder().maxTotalAttempts(2).build();
+                    } else {
+                        return RetryConfig.builder().maxTotalAttempts(4).build();
+                    }
+                }
+        );
+        final Function<? super HttpClient, RetryingClient> retryingDecorator =
+                RetryingClient.builder(rule).mapping(mapping).newDecorator();
+        final ClientFactory clientFactory = ClientFactory.builder()
+                                                   .options(RetryingClientTest.clientFactory.options())
+                                                   .workerGroup(EventLoopGroups.newEventLoopGroup(2), true)
+                                                   .connectTimeoutMillis(Long.MAX_VALUE)
+                                                   .build();
+        final WebClient client = WebClient.builder("http://127.0.0.1:1")
+                                          .factory(clientFactory)
+                                          .responseTimeoutMillis(0)
+                                          .decorator(retryingDecorator)
+                                          .build();
+        Stopwatch stopwatch = Stopwatch.createStarted();
+        assertThatThrownBy(() -> client.get("/unprocessed-exception").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(UnprocessedRequestException.class);
+        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(2), Duration.ofSeconds(3));
+        stopwatch = Stopwatch.createStarted();
+        assertThatThrownBy(() -> client.post("/unprocessed-exception", "").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(UnprocessedRequestException.class);
+        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(6), Duration.ofSeconds(7));
+    }
+
+    @Test
     void retryWithContentOnUnprocessedException() {
         final Backoff backoff = Backoff.fixed(2000);
         final RetryRuleWithContent<HttpResponse> strategy =

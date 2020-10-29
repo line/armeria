@@ -164,6 +164,30 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                        .newDecorator();
     }
 
+    /**
+     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
+     * requests.
+     *
+     * @param retryRule the retry rule
+     * @param mapping the mapping that returns a {@link RetryConfig} for a given context/request.
+     */
+    public static Function<? super HttpClient, RetryingClient>
+    newDecorator(RetryRule retryRule, RetryConfigMapping mapping) {
+        return builder(retryRule).mapping(mapping).newDecorator();
+    }
+
+    /**
+     * Creates a new {@link HttpClient} decorator with the specified {@link RetryRuleWithContent} that
+     * handles failures of an invocation and retries HTTP requests.
+     *
+     * @param retryRuleWithContent the retry rule
+     * @param mapping the mapping that returns a {@link RetryConfig} for a given context/request.
+     */
+    public static Function<? super HttpClient, RetryingClient>
+    newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent, RetryConfigMapping mapping) {
+        return builder(retryRuleWithContent).mapping(mapping).newDecorator();
+    }
+
     private final boolean useRetryAfter;
 
     private final int maxContentLength;
@@ -175,9 +199,9 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    RetryingClient(HttpClient delegate, RetryRule retryRule, int totalMaxAttempts,
-                   long responseTimeoutMillisForEachAttempt, boolean useRetryAfter) {
-        super(delegate, retryRule, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
+    RetryingClient(
+            HttpClient delegate, RetryRule retryRule, RetryConfigMapping mapping, boolean useRetryAfter) {
+        super(delegate, retryRule, mapping);
         requiresResponseTrailers = retryRule.requiresResponseTrailers();
         needsContentInRule = false;
         this.useRetryAfter = useRetryAfter;
@@ -187,10 +211,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    RetryingClient(HttpClient delegate,
-                   RetryRuleWithContent<HttpResponse> retryRuleWithContent, int totalMaxAttempts,
-                   long responseTimeoutMillisForEachAttempt, boolean useRetryAfter, int maxContentLength) {
-        super(delegate, retryRuleWithContent, totalMaxAttempts, responseTimeoutMillisForEachAttempt);
+    RetryingClient(
+            HttpClient delegate,
+            RetryRuleWithContent<HttpResponse> retryRuleWithContent,
+            RetryConfigMapping mapping,
+            boolean useRetryAfter,
+            int maxContentLength) {
+        super(delegate, retryRuleWithContent, mapping);
         requiresResponseTrailers = retryRuleWithContent.requiresResponseTrailers();
         needsContentInRule = true;
         this.useRetryAfter = useRetryAfter;

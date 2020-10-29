@@ -82,12 +82,11 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      */
     public RetryingClient build(HttpClient delegate) {
         if (needsContentInRule) {
-            return new RetryingClient(delegate, retryRuleWithContent(), maxTotalAttempts(),
-                                      responseTimeoutMillisForEachAttempt(), useRetryAfter, maxContentLength);
+            return new RetryingClient(
+                    delegate, retryRuleWithContent(), mapping(), useRetryAfter, maxContentLength);
         }
 
-        return new RetryingClient(delegate, retryRule(), maxTotalAttempts(),
-                                  responseTimeoutMillisForEachAttempt(), useRetryAfter);
+        return new RetryingClient(delegate, retryRule(), mapping(), useRetryAfter);
     }
 
     /**
@@ -124,5 +123,10 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
     @Override
     public RetryingClientBuilder responseTimeoutForEachAttempt(Duration responseTimeoutForEachAttempt) {
         return (RetryingClientBuilder) super.responseTimeoutForEachAttempt(responseTimeoutForEachAttempt);
+    }
+
+    @Override
+    public RetryingClientBuilder mapping(RetryConfigMapping mapping) {
+        return (RetryingClientBuilder) super.mapping(mapping);
     }
 }

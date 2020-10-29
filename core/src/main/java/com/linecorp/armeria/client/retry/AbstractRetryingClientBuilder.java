@@ -38,14 +38,16 @@ import com.linecorp.armeria.common.Response;
  */
 public abstract class AbstractRetryingClientBuilder<O extends Response> {
 
+    private static final RetryConfig DEFAULT_RETRY_CONFIG = RetryConfig.builder().build();
+
     @Nullable
     private final RetryRule retryRule;
 
     @Nullable
     private final RetryRuleWithContent<O> retryRuleWithContent;
 
-    private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
-    private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
+    private final RetryConfigBuilder retryConfig = RetryConfig.builder();
+    private RetryConfigMapping mapping = (ctx, req) -> DEFAULT_RETRY_CONFIG;
 
     /**
      * Creates a new builder with the specified {@link RetryRule}.
@@ -86,12 +88,13 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
     public AbstractRetryingClientBuilder<O> maxTotalAttempts(int maxTotalAttempts) {
         checkArgument(maxTotalAttempts > 0,
                       "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
-        this.maxTotalAttempts = maxTotalAttempts;
+        retryConfig.maxTotalAttempts = maxTotalAttempts;
+        mapping = (ctx, req) -> retryConfig.build();
         return this;
     }
 
     final int maxTotalAttempts() {
-        return maxTotalAttempts;
+        return retryConfig.maxTotalAttempts;
     }
 
     /**
@@ -110,12 +113,13 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
         checkArgument(responseTimeoutMillisForEachAttempt >= 0,
                       "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
                       responseTimeoutMillisForEachAttempt);
-        this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
+        retryConfig.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
+        mapping = (ctx, req) -> retryConfig.build();
         return this;
     }
 
     final long responseTimeoutMillisForEachAttempt() {
-        return responseTimeoutMillisForEachAttempt;
+        return retryConfig.responseTimeoutMillisForEachAttempt;
     }
 
     /**
@@ -134,16 +138,30 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
         return responseTimeoutMillisForEachAttempt(responseTimeoutForEachAttempt.toMillis());
     }
 
+    /**
+     * Sets the {@link RetryConfigMapping} that returns a {@link RetryConfig} for a given context/request.
+     */
+    public AbstractRetryingClientBuilder<O> mapping(RetryConfigMapping mapping) {
+        this.mapping = mapping;
+        return this;
+    }
+
+    final RetryConfigMapping mapping() {
+        return mapping;
+    }
+
     @Override
     public String toString() {
         return toStringHelper().toString();
     }
 
     final ToStringHelper toStringHelper() {
-        return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("retryRule", retryRule)
-                          .add("retryRuleWithContent", retryRuleWithContent)
-                          .add("maxTotalAttempts", maxTotalAttempts)
-                          .add("responseTimeoutMillisForEachAttempt", responseTimeoutMillisForEachAttempt);
+        return MoreObjects
+                .toStringHelper(this)
+                .omitNullValues()
+                .add("retryRule", retryRule)
+                .add("retryRuleWithContent", retryRuleWithContent)
+                .add("maxTotalAttempts", retryConfig.maxTotalAttempts)
+                .add("responseTimeoutMillisForEachAttempt", retryConfig.responseTimeoutMillisForEachAttempt);
     }
 }
