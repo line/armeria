@@ -112,6 +112,11 @@ public final class ArmeriaConfigurationUtil {
             final HealthCheckServiceBuilder builder = HealthCheckService.builder().checkers(healthCheckers);
             healthCheckServiceConfigurators.forEach(configurator -> configurator.configure(builder));
             server.service(healthCheckPath, builder.build());
+        } else if (!healthCheckServiceConfigurators.isEmpty()) {
+            logger.warn("{}s exist but they are disabled by the empty 'health-check-path' property."
+                        + " configurators: {}",
+                        HealthCheckServiceConfigurator.class.getSimpleName(),
+                        healthCheckServiceConfigurators);
         }
 
         server.meterRegistry(meterRegistry);
