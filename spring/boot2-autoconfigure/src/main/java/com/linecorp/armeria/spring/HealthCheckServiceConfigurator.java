@@ -45,6 +45,7 @@ public interface HealthCheckServiceConfigurator extends Ordered {
      * @see Ordered#HIGHEST_PRECEDENCE
      * @see AnnotationAwareOrderComparator
      */
+    @Override
     default int getOrder() {
         return 0;
     }
