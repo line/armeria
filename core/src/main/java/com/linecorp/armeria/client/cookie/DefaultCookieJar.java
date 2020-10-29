@@ -164,7 +164,7 @@ final class DefaultCookieJar implements CookieJar {
                         if (allCookies.contains(cookie)) {
                             if (cookie.isExpired()) {
                                 it.remove();
-                                cookies.remove(cookie);
+                                allCookies.remove(cookie);
                             } else if (pathMatches(path, cookie.path()) && (secure || !cookie.isSecure())) {
                                 cookies.add(cookie);
                             }
