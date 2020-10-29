@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.cookie;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.CookiePolicy;
 import java.net.URI;
 import java.util.function.Function;
 

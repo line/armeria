@@ -16,10 +16,14 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
 class DefaultCookieTest {
+
     @Test
     void toBuilder() {
         final Cookie cookie = Cookie.builder("a", "b")
@@ -32,6 +36,9 @@ class DefaultCookieTest {
                                     .valueQuoted(true)
                                     .build();
         assertThat(cookie.toBuilder().build()).isEqualTo(cookie);
+        assertThat(cookie.isExpired()).isFalse();
+        await().pollDelay(Duration.ofSeconds(1)).until(() -> true);
+        assertThat(cookie.isExpired()).isTrue();
     }
 
     @Test

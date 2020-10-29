@@ -57,6 +57,7 @@ final class DefaultCookie implements Cookie {
     private final boolean httpOnly;
     @Nullable
     private final String sameSite;
+    private final long createdMillis;
 
     DefaultCookie(String name, String value, boolean valueQuoted,
                   @Nullable String domain, @Nullable String path,
@@ -70,6 +71,7 @@ final class DefaultCookie implements Cookie {
         this.secure = secure;
         this.httpOnly = httpOnly;
         this.sameSite = sameSite;
+        createdMillis = System.currentTimeMillis();
     }
 
     @Override
@@ -115,6 +117,18 @@ final class DefaultCookie implements Cookie {
     @Override
     public String sameSite() {
         return sameSite;
+    }
+
+    @Override
+    public boolean isExpired() {
+        if (maxAge() == UNDEFINED_MAX_AGE) {
+            return false;
+        }
+        if (maxAge <= 0) {
+            return true;
+        }
+        final double timePassed = (System.currentTimeMillis() - createdMillis) / 1000.0;
+        return timePassed > maxAge;
     }
 
     @Override
