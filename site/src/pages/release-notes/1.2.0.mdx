@@ -5,6 +5,7 @@ date: 2020-10-22
 ## 🌟 New features
 
 - You can now bind a <type://GrpcService> to a custom route path. #3072 #3083
+  This is useful if you want to serve an unframed gRPC service with RESTful routes.
   ```java
   ServerBuilder sb = ...
   sb.service(GrpcService.builder()
@@ -98,14 +99,6 @@ date: 2020-10-22
 - Spring 5.1.17 → 5.1.18
 - Tomcat8 8.5.57 → 8.5.58
 - Tomcat9 9.0.38 → 9.0.39
-- Test:
-  - Akka Actor 2.6.9 → 2.6.10
-  - gax-grpc 1.58.2 → 1.60.0
-  - Finagle Serverset 20.8.1 → 20.9.0
-  - JUnit 4 4.13 → 4.13.1
-  - Hibernate Validator 6.1.5 → 6.1.6
-  - Mockito 3.5.11 → 3.5.15
-  - JMH 1.25.2 → 1.26
 
 ## 🙇 Thank you
 
@@ -113,18 +106,18 @@ date: 2020-10-22
   usernames={[
     'adriancole',
     'anuraaga',
-    'ikhoon',
-    'kojilin',
-    'minwoox',
-    'trustin',
-    'tumile',
-    'joonhaeng',
     'cnabro',
+    'ghkim3221'
+    'heowc',
+    'ikhoon',
+    'joonhaeng',
     'jrhee17',
     'KarboniteKream',
-    'heowc',
+    'kojilin',
     'kowshikn',
+    'minwoox',
     'policeman-kh',
-    'ghkim3221'
+    'trustin',
+    'tumile',
   ]}
 />
