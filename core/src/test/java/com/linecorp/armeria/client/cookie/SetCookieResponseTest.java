@@ -17,19 +17,14 @@
 package com.linecorp.armeria.client.cookie;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -47,29 +42,7 @@ class SetCookieResponseTest {
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS);
         final AtomicReference<List<String>> headers = new AtomicReference<>();
         final HttpResponse response = new SetCookieResponse(delegate, headers::set);
-        finish(response);
+        response.aggregate().join();
         assertThat(headers.get()).contains("cookie1=value1", "cookie2=value2", "cookie3=value3");
-    }
-
-    private static void finish(HttpResponse response) {
-        final AtomicBoolean done = new AtomicBoolean();
-        response.subscribe(new Subscriber<HttpObject>() {
-            @Override
-            public void onSubscribe(Subscription s) {
-                s.request(Long.MAX_VALUE);
-            }
-
-            @Override
-            public void onNext(HttpObject httpObject) {}
-
-            @Override
-            public void onError(Throwable t) {}
-
-            @Override
-            public void onComplete() {
-                done.set(true);
-            }
-        });
-        await().untilTrue(done);
     }
 }

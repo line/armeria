@@ -45,11 +45,17 @@ class CookieClientTest {
         protected void configure(ServerBuilder sb) {
             sb.virtualHost("foo.com")
               .service("/set-cookie", (ctx, req) -> {
-                  final String cookie1 = Cookie.of("some-cookie", "foo").toSetCookieHeader();
-                  final String cookie2 = Cookie.of("some-cookie2", "bar").toSetCookieHeader();
+                  final String cookie1 = Cookie.builder("some-cookie", "foo").path("/").build()
+                                               .toSetCookieHeader();
+                  final String cookie2 = Cookie.builder("some-cookie2", "bar").path("/").build()
+                                               .toSetCookieHeader();
+                  final String cookie3 = Cookie.builder("bad-cookie", "hmm").path("/").domain("bar.com")
+                                               .build()
+                                               .toSetCookieHeader();
                   final HttpHeaders headers = HttpHeaders.builder()
                                                          .add(HttpHeaderNames.SET_COOKIE, cookie1)
                                                          .add(HttpHeaderNames.SET_COOKIE, cookie2)
+                                                         .add(HttpHeaderNames.SET_COOKIE, cookie3)
                                                          .build();
                   return HttpResponse.of(ResponseHeaders.builder().status(HttpStatus.OK).add(headers).build());
               })
@@ -87,8 +93,8 @@ class CookieClientTest {
                                   .join().contentUtf8();
 
             final Cookies cookies = Cookie.fromCookieHeader(cookie);
-            assertThat(cookies).contains(Cookie.of("some-cookie", "foo"),
-                                         Cookie.of("some-cookie2", "bar"));
+            assertThat(cookies).hasSize(2).contains(Cookie.of("some-cookie", "foo"),
+                                                    Cookie.of("some-cookie2", "bar"));
 
             cookie = client.get("http://bar.com:" + port + "/get-cookie").aggregate()
                            .join().contentUtf8();

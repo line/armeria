@@ -37,22 +37,19 @@ class DefaultCookieJarTest {
 
         cookieJar.set(foo, Cookies.of(Cookie.of("cookie1", "value1"),
                                       Cookie.of("cookie2", "value2")));
-        assertThat(cookieJar.get(foo)).containsAll(
-                Cookies.of(Cookie.builder("cookie1", "value1").path("/").build(),
-                           Cookie.builder("cookie2", "value2").path("/").build())
-        );
+        assertThat(cookieJar.get(foo)).containsAll(Cookies.of(
+                Cookie.builder("cookie1", "value1").domain("foo.com").path("/").build(),
+                Cookie.builder("cookie2", "value2").domain("foo.com").path("/").build()));
         assertThat(cookieJar.get(bar)).isEmpty();
 
         cookieJar.set(bar, Cookies.of(Cookie.of("cookie4", "value4"),
                                       Cookie.of("cookie5", "value5")));
-        assertThat(cookieJar.get(bar)).containsAll(
-                Cookies.of(Cookie.builder("cookie4", "value4").path("/").build(),
-                           Cookie.builder("cookie5", "value5").path("/").build())
-        );
-        assertThat(cookieJar.get(foo)).doesNotContainAnyElementsOf(
-                Cookies.of(Cookie.builder("cookie4", "value4").path("/").build(),
-                           Cookie.builder("cookie5", "value5").path("/").build())
-        );
+        assertThat(cookieJar.get(bar)).containsAll(Cookies.of(
+                Cookie.builder("cookie4", "value4").domain("bar.com").path("/").build(),
+                Cookie.builder("cookie5", "value5").domain("bar.com").path("/").build()));
+        assertThat(cookieJar.get(foo)).doesNotContainAnyElementsOf(Cookies.of(
+                Cookie.builder("cookie4", "value4").domain("bar.com").path("/").build(),
+                Cookie.builder("cookie5", "value5").domain("bar.com").path("/").build()));
     }
 
     @Test
@@ -68,7 +65,7 @@ class DefaultCookieJarTest {
         cookieJar.set(fooHttps, Cookies.of(cookie));
         assertThat(cookieJar.get(fooHttp)).isEmpty();
         assertThat(cookieJar.get(fooHttps)).contains(
-                Cookie.builder("name", "value").path("/").secure(true).build());
+                Cookie.builder("name", "value").domain("foo.com").path("/").secure(true).build());
     }
 
     @Test
@@ -76,11 +73,15 @@ class DefaultCookieJarTest {
         final CookieJar cookieJar = new DefaultCookieJar();
         final URI foo = URI.create("http://foo.com");
         final URI foobar = URI.create("http://foo.com/bar");
+        final URI foobarbaz = URI.create("http://foo.com/bar/baz");
         final Cookie cookie = Cookie.fromSetCookieHeader("name=value; path=/bar");
 
         cookieJar.set(foo, Cookies.of(cookie));
         assertThat(cookieJar.get(foo)).isEmpty();
-        assertThat(cookieJar.get(foobar)).contains(Cookie.builder("name", "value").path("/bar").build());
+        assertThat(cookieJar.get(foobar)).contains(
+                Cookie.builder("name", "value").domain("foo.com").path("/bar").build());
+        assertThat(cookieJar.get(foobarbaz)).contains(
+                Cookie.builder("name", "value").domain("foo.com").path("/bar").build());
     }
 
     @Test
@@ -90,27 +91,29 @@ class DefaultCookieJarTest {
         final URI foobaz = URI.create("http://baz.foo.com");
         final Cookie cookie1 = Cookie.fromSetCookieHeader("name1=value1");
         final Cookie cookie2 = Cookie.fromSetCookieHeader("name2=value2; domain=.foo.com");
-        final Cookie cookie3 = Cookie.fromSetCookieHeader("name2=value2; domain=.com");
+        final Cookie cookie3 = Cookie.fromSetCookieHeader("name3=value3; domain=foo.com");
+        final Cookie cookie4 = Cookie.fromSetCookieHeader("name3=value3; domain=bar.foo.com");
 
-        cookieJar.set(foobar, Cookies.of(cookie1, cookie2, cookie3));
-        cookieJar.set(foobaz, Cookies.of(cookie3));
+        cookieJar.set(foobar, Cookies.of(cookie1, cookie2, cookie3, cookie4));
         assertThat(cookieJar.get(foobaz))
-                .hasSize(1)
-                .contains(Cookie.builder("name2", "value2").path("/").domain(".foo.com").build());
+                .hasSize(2)
+                .containsAll(Cookies.of(
+                        Cookie.builder("name2", "value2").domain(".foo.com").path("/").build(),
+                        Cookie.builder("name3", "value3").domain("foo.com").path("/").build()));
+
+        assertThat(cookieJar.get(URI.create("http://baz.bar.foo.com"))).hasSize(3);
     }
 
     @Test
     void testSetCookiePolicy() {
-        final CookieJar cookieJar = new DefaultCookieJar();
         final URI foo = URI.create("http://foo.com");
-
-        cookieJar.setCookiePolicy(CookiePolicy.ACCEPT_NONE);
+        CookieJar cookieJar = new DefaultCookieJar(CookiePolicy.ACCEPT_NONE);
         cookieJar.set(foo, Cookies.of(Cookie.of("name", "value")));
         assertThat(cookieJar.get(foo)).isEmpty();
 
-        cookieJar.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+        cookieJar = new DefaultCookieJar(CookiePolicy.ACCEPT_ALL);
         cookieJar.set(foo, Cookies.of(Cookie.of("name", "value")));
-        assertThat(cookieJar.get(foo)).isNotEmpty();
+        assertThat(cookieJar.get(foo)).hasSize(1);
     }
 
     @Test

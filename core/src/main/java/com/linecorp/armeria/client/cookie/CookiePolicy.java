@@ -34,7 +34,7 @@ public interface CookiePolicy {
     CookiePolicy ACCEPT_ORIGINAL_SERVER = (uri, cookie) -> {
         requireNonNull(uri, "uri");
         requireNonNull(cookie, "cookie");
-        return cookie.domain() == null || CookieJar.domainMatches(cookie.domain(), uri.getHost());
+        return CookieJar.domainMatch(cookie.domain(), uri.getHost());
     };
 
     /**

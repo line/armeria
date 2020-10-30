@@ -474,6 +474,13 @@ public interface Cookie extends Comparable<Cookie> {
     String sameSite();
 
     /**
+     * Returns whether this {@link Cookie} should only match its original host in domain matching. If this
+     * returns {@code true}, should {@link #domain()} returns a non-null value, it's going to be the original
+     * request host.
+     */
+    boolean isHostOnly();
+
+    /**
      * Returns whether this {@link Cookie} has been expired.
      */
     boolean isExpired();

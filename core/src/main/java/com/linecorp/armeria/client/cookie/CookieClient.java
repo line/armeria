@@ -44,13 +44,11 @@ public final class CookieClient extends SimpleDecoratingHttpClient {
     }
 
     /**
-     * Creates a new {@link CookieClient} decorator with a custom {@link CookiePolicy}.
+     * Creates a new {@link CookieClient} decorator with a specified {@link CookiePolicy}.
      */
     public static Function<? super HttpClient, CookieClient> newDecorator(CookiePolicy cookiePolicy) {
         requireNonNull(cookiePolicy, "cookiePolicy");
-        final CookieJar cookieJar = new DefaultCookieJar();
-        cookieJar.setCookiePolicy(cookiePolicy);
-        return newDecorator(cookieJar);
+        return newDecorator(new DefaultCookieJar(cookiePolicy));
     }
 
     /**
