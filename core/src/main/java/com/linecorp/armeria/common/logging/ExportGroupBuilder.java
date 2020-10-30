@@ -85,7 +85,7 @@ public final class ExportGroupBuilder {
      * Adds the specified {@link BuiltInProperty} to the export list.
      * The specified {@code alias} will be used for the export key.
      */
-    ExportGroupBuilder builtIn(BuiltInProperty property, String alias) {
+    public ExportGroupBuilder builtIn(BuiltInProperty property, String alias) {
         requireNonNull(property, "BuiltInProperty");
         requireNonNull(alias, "alias");
         builtIns.add(new ExportEntry<>(property, alias));
@@ -99,7 +99,7 @@ public final class ExportGroupBuilder {
      * @param alias the alias of the attribute to export
      * @param attrKey the key of the attribute to export
      */
-    ExportGroupBuilder attr(String alias, AttributeKey<?> attrKey) {
+    public ExportGroupBuilder attr(String alias, AttributeKey<?> attrKey) {
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         attrs.add(new ExportEntry<>(attrKey, alias));
@@ -114,7 +114,7 @@ public final class ExportGroupBuilder {
      * @param attrKey the key of the attribute to export
      * @param stringifier the {@link Function} that converts the attribute value into a {@link String}
      */
-    ExportGroupBuilder attr(String alias, AttributeKey<?> attrKey, Function<?, String> stringifier) {
+    public ExportGroupBuilder attr(String alias, AttributeKey<?> attrKey, Function<?, String> stringifier) {
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         requireNonNull(stringifier, "stringifier");
@@ -125,7 +125,7 @@ public final class ExportGroupBuilder {
     /**
      * Adds the specified HTTP request header name to the export list.
      */
-    ExportGroupBuilder requestHeader(CharSequence headerName) {
+    public ExportGroupBuilder requestHeader(CharSequence headerName) {
         requireNonNull(headerName, "headerName");
         final AsciiString key = toHeaderName(headerName);
         reqHeaders.add(new ExportEntry<>(key, PREFIX_REQ_HEADERS + key));
@@ -136,7 +136,7 @@ public final class ExportGroupBuilder {
      * Adds the specified HTTP request header name to the export list.
      * The specified {@code alias} is used for the export key.
      */
-    ExportGroupBuilder requestHeader(CharSequence headerName, String alias) {
+    public ExportGroupBuilder requestHeader(CharSequence headerName, String alias) {
         requireNonNull(headerName, "headerName");
         requireNonNull(alias, "alias");
         reqHeaders.add(new ExportEntry<>(toHeaderName(headerName), alias));
@@ -146,7 +146,7 @@ public final class ExportGroupBuilder {
     /**
      * Adds the specified HTTP response header name to the export list.
      */
-    ExportGroupBuilder responseHeader(CharSequence headerName) {
+    public ExportGroupBuilder responseHeader(CharSequence headerName) {
         requireNonNull(headerName, "headerName");
         final AsciiString key = toHeaderName(headerName);
         resHeaders.add(new ExportEntry<>(key, PREFIX_RES_HEADERS + key));
@@ -157,7 +157,7 @@ public final class ExportGroupBuilder {
      * Adds the specified HTTP response header name to the export list.
      * The specified {@code alias} is used for the export key.
      */
-    ExportGroupBuilder responseHeader(CharSequence headerName, String alias) {
+    public ExportGroupBuilder responseHeader(CharSequence headerName, String alias) {
         requireNonNull(headerName, "headerName");
         requireNonNull(alias, "alias");
         resHeaders.add(new ExportEntry<>(toHeaderName(headerName), alias));

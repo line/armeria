@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.logging.ExportGroupBuilder.ExportEntry;
 
 import io.netty.util.AsciiString;
@@ -40,10 +42,10 @@ public final class ExportGroup {
                 Set<ExportEntry<AttributeKey<?>>> attrs,
                 Set<ExportEntry<AsciiString>> reqHeaders,
                 Set<ExportEntry<AsciiString>> resHeaders) {
-        this.builtIns = requireNonNull(builtIns, "builtIns");
-        this.attrs = requireNonNull(attrs, "attrs");
-        this.reqHeaders = requireNonNull(reqHeaders, "reqHeaders");
-        this.resHeaders = requireNonNull(resHeaders, "resHeaders");
+        this.builtIns = ImmutableSet.copyOf(requireNonNull(builtIns, "builtIns"));
+        this.attrs = ImmutableSet.copyOf(requireNonNull(attrs, "attrs"));
+        this.reqHeaders = ImmutableSet.copyOf(requireNonNull(reqHeaders, "reqHeaders"));
+        this.resHeaders = ImmutableSet.copyOf(requireNonNull(resHeaders, "resHeaders"));
     }
 
     /**
