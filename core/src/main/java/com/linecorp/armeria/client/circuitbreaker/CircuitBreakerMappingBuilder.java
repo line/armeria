@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 /**
- * Builder class for building a CircuitBreakerMapping based on a combination of host, method and path.
+ * Builder class for building a {@link CircuitBreakerMapping} based on a combination of host, method and path.
  */
 public final class CircuitBreakerMappingBuilder {
     private boolean perHost;
@@ -26,7 +26,7 @@ public final class CircuitBreakerMappingBuilder {
 
     /**
      * Adds host dimension to the mapping Key.
-     * @return this Builder.
+     * @return this builder.
      */
     public CircuitBreakerMappingBuilder perHost() {
         perHost = true;
@@ -35,7 +35,7 @@ public final class CircuitBreakerMappingBuilder {
 
     /**
      * Adds method dimension to the mapping Key.
-     * @return this Builder.
+     * @return this builder.
      */
     public CircuitBreakerMappingBuilder perMethod() {
         perMethod = true;
@@ -44,7 +44,7 @@ public final class CircuitBreakerMappingBuilder {
 
     /**
      * Adds path dimension to the mapping Key.
-     * @return this Builder.
+     * @return this builder.
      */
     public CircuitBreakerMappingBuilder perPath() {
         perPath = true;

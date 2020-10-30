@@ -37,7 +37,7 @@ public interface CircuitBreakerMapping {
     }
 
     /**
-     * Returns a Builder that builds a CircuitBreakerMapping by setting host, method and/or path.
+     * Returns a builder that builds a {@link CircuitBreakerMapping} by setting host, method and/or path.
      */
     static CircuitBreakerMappingBuilder builder() {
         return new CircuitBreakerMappingBuilder();

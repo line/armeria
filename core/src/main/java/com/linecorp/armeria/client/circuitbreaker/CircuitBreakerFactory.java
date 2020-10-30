@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
 
 /**
  * A functional interface that represents a mapper factory, mapping a combination of host, method and path
- * to a CircuitBreaker.
+ * to a {@link CircuitBreaker}.
  */
 @FunctionalInterface
 interface CircuitBreakerFactory {
