@@ -27,7 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.BiConsumer;
+import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
@@ -37,8 +37,6 @@ import com.google.errorprone.annotations.FormatString;
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
-
-import io.netty.util.AsciiString;
 
 /**
  * Builds a new {@link HttpRequest}.
@@ -58,56 +56,56 @@ final class HttpRequestBuilder {
     private String path;
 
     /**
-     * Shortcut to create a new {@link HttpRequestBuilder} with GET method and path.
+     * Shortcut to set GET method and path.
      */
     public HttpRequestBuilder get(String path) {
         return method(HttpMethod.GET).path(path);
     }
 
     /**
-     * Shortcut to create a new {@link HttpRequestBuilder} with POST method and path.
+     * Shortcut to set POST method and path.
      */
     public HttpRequestBuilder post(String path) {
         return method(HttpMethod.POST).path(path);
     }
 
     /**
-     * Shortcut to create a new {@link HttpRequestBuilder} with PUT method and path.
+     * Shortcut to set PUT method and path.
      */
     public HttpRequestBuilder put(String path) {
         return method(HttpMethod.PUT).path(path);
     }
 
     /**
-     * Shortcut to create a new {@link HttpRequestBuilder} with DELETE method and path.
+     * Shortcut to set DELETE method and path.
      */
     public HttpRequestBuilder delete(String path) {
         return method(HttpMethod.DELETE).path(path);
     }
 
     /**
-     * Shortcut to create a new {@link HttpRequestBuilder} with PATCH method and path.
+     * Shortcut to set PATCH method and path.
      */
     public HttpRequestBuilder patch(String path) {
         return method(HttpMethod.PATCH).path(path);
     }
 
     /**
-     * Shortcut to create a new {@link HttpRequestBuilder} with OPTIONS method and path.
+     * Shortcut to set OPTIONS method and path.
      */
     public HttpRequestBuilder options(String path) {
         return method(HttpMethod.OPTIONS).path(path);
     }
 
     /**
-     * Shortcut to create a new {@link HttpRequestBuilder} with HEAD method and path.
+     * Shortcut to set HEAD method and path.
      */
     public HttpRequestBuilder head(String path) {
         return method(HttpMethod.HEAD).path(path);
     }
 
     /**
-     * Shortcut to create a new {@link HttpRequestBuilder} with TRACE method and path.
+     * Shortcut to set TRACE method and path.
      */
     public HttpRequestBuilder trace(String path) {
         return method(HttpMethod.TRACE).path(path);
@@ -136,10 +134,7 @@ final class HttpRequestBuilder {
     public HttpRequestBuilder content(MediaType contentType, CharSequence content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
-
-        requestHeadersBuilder.contentType(contentType);
-        this.content = HttpData.of(contentType.charset(StandardCharsets.UTF_8), content);
-        return this;
+        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), content));
     }
 
     /**
@@ -148,14 +143,11 @@ final class HttpRequestBuilder {
     public HttpRequestBuilder content(MediaType contentType, String content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
-
-        requestHeadersBuilder.contentType(contentType);
-        this.content = HttpData.of(contentType.charset(StandardCharsets.UTF_8), content);
-        return this;
+        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), content));
     }
 
     /**
-     * Sets the content for this request. The content of the request is formatted by
+     * Sets the content for this request. The {@code content} is formatted by
      * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
      */
     @FormatMethod
@@ -163,22 +155,17 @@ final class HttpRequestBuilder {
         requireNonNull(contentType, "contentType");
         requireNonNull(format, "format");
         requireNonNull(content, "content");
-
-        requestHeadersBuilder.contentType(contentType);
-        this.content = HttpData.of(contentType.charset(StandardCharsets.UTF_8), format, content);
-        return this;
+        return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8), format, content));
     }
 
     /**
-     * Sets the content for this request.
+     * Sets the content for this request. The {@code content} will be wrapped using
+     * {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the request.
      */
     public HttpRequestBuilder content(MediaType contentType, byte[] content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
-
-        requestHeadersBuilder.contentType(contentType);
-        this.content = HttpData.wrap(content);
-        return this;
+        return content(contentType, HttpData.wrap(content));
     }
 
     /**
@@ -187,7 +174,6 @@ final class HttpRequestBuilder {
     public HttpRequestBuilder content(MediaType contentType, HttpData content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
-
         requestHeadersBuilder.contentType(contentType);
         this.content = content;
         return this;
@@ -217,18 +203,18 @@ final class HttpRequestBuilder {
      * }</pre>
      * @see HttpHeaders
      */
-    public HttpRequestBuilder headers(HttpHeaders httpHeaders) {
-        requireNonNull(httpHeaders, "httpHeaders");
-        httpHeaders.forEach((BiConsumer<AsciiString, String>) requestHeadersBuilder::set);
+    public HttpRequestBuilder headers(Iterable<? extends Entry<? extends CharSequence, String>> headers) {
+        requireNonNull(headers, "headers");
+        requestHeadersBuilder.set(headers);
         return this;
     }
 
     /**
      * Sets HTTP trailers for this request.
      */
-    public HttpRequestBuilder trailers(HttpHeaders httpTrailers) {
-        requireNonNull(httpTrailers, "httpTrailers");
-        httpTrailers.forEach((BiConsumer<AsciiString, String>) httpTrailersBuilder::set);
+    public HttpRequestBuilder trailers(Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
+        requireNonNull(trailers, "trailers");
+        httpTrailersBuilder.set(trailers);
         return this;
     }
 
@@ -255,7 +241,7 @@ final class HttpRequestBuilder {
      *            .build(); // GET `/bar/baz`
      * }</pre>
      */
-    public HttpRequestBuilder pathParams(Map<String, Object> pathParams) {
+    public HttpRequestBuilder pathParams(Map<String, ?> pathParams) {
         this.pathParams.putAll(requireNonNull(pathParams, "pathParams"));
         return this;
     }
@@ -284,9 +270,9 @@ final class HttpRequestBuilder {
      * }</pre>
      * @see QueryParams
      */
-    public HttpRequestBuilder queryParams(QueryParams queryParams) {
+    public HttpRequestBuilder queryParams(Iterable<? extends Entry<? extends String, String>> queryParams) {
         requireNonNull(queryParams, "queryParams");
-        queryParams.forEach((BiConsumer<String, String>) queryParamsBuilder::set);
+        queryParamsBuilder.set(queryParams);
         return this;
     }
 
@@ -356,12 +342,15 @@ final class HttpRequestBuilder {
 
     private String buildPath() {
         checkState(path != null, "path must be set.");
+        if (pathParams.isEmpty() && queryParamsBuilder.isEmpty()) {
+            return path;
+        }
         final StringBuilder pathBuilder = new StringBuilder(path);
         if (!pathParams.isEmpty()) {
             int i = 0;
             while (i < pathBuilder.length()) {
                 if (pathBuilder.charAt(i) == '{') {
-                    int j = i;
+                    int j = i + 1;
                     while (j < pathBuilder.length() && pathBuilder.charAt(j) != '}') {
                         j++;
                     }
@@ -375,7 +364,7 @@ final class HttpRequestBuilder {
                         i += value.length() - 1;
                     }
                 } else if (pathBuilder.charAt(i) == ':') {
-                    int j = i;
+                    int j = i + 1;
                     while (j < pathBuilder.length() && pathBuilder.charAt(j) != '/') {
                         j++;
                     }

@@ -111,6 +111,24 @@ public class HttpRequestBuilderTest {
     }
 
     @Test
+    void buildWithPathParams2() {
+        HttpRequest request = new HttpRequestBuilder().get("/{foo}/{bar}/:unknown/foo/{}/{unknown}/a{")
+                                                      .pathParams(ImmutableMap.of("foo", "foo", "bar", "bar"))
+                                                      .build();
+        assertThat(request.path()).isEqualTo("/foo/bar/:unknown/foo/{}/{unknown}/a{");
+
+        request = new HttpRequestBuilder().get("/{foo}/{unknown}/:id/:/{/foo/}/:")
+                                          .pathParams(ImmutableMap.of("id", 1, "foo", "foo"))
+                                          .build();
+        assertThat(request.path()).isEqualTo("/foo/{unknown}/1/:/{/foo/}/:");
+
+        request = new HttpRequestBuilder().get("/{}/:")
+                                          .pathParams(ImmutableMap.of("", "foo"))
+                                          .build();
+        assertThat(request.path()).isEqualTo("/foo/foo");
+    }
+
+    @Test
     void buildWithCookies() {
         final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
         final HttpRequest request = requestBuilder.get("/")
