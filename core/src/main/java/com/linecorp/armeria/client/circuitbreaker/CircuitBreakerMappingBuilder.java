@@ -74,5 +74,5 @@ public final class CircuitBreakerMappingBuilder {
         return perPath;
     }
 
-    private CircuitBreakerMappingBuilder() {}
+    CircuitBreakerMappingBuilder() {}
 }
