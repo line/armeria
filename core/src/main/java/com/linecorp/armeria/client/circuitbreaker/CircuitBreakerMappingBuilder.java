@@ -73,4 +73,6 @@ public final class CircuitBreakerMappingBuilder {
     boolean isPerPath() {
         return perPath;
     }
+
+    private CircuitBreakerMappingBuilder() {}
 }
