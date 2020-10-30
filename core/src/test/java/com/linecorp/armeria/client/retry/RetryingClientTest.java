@@ -445,7 +445,7 @@ class RetryingClientTest {
                     if (ctx.method().equals(HttpMethod.GET)) {
                         return RetryConfig.builder().maxTotalAttempts(2).build();
                     } else {
-                        return RetryConfig.builder().maxTotalAttempts(4).build();
+                        return RetryConfig.builder().maxTotalAttempts(8).build();
                     }
                 }
         );
@@ -465,12 +465,12 @@ class RetryingClientTest {
         assertThatThrownBy(() -> client.get("/unprocessed-exception").aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(UnprocessedRequestException.class);
-        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(2), Duration.ofSeconds(3));
+        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(2), Duration.ofSeconds(6));
         stopwatch = Stopwatch.createStarted();
         assertThatThrownBy(() -> client.post("/unprocessed-exception", "").aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(UnprocessedRequestException.class);
-        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(6), Duration.ofSeconds(7));
+        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(14), Duration.ofSeconds(20));
     }
 
     @Test
