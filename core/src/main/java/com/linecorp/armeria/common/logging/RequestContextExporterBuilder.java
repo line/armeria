@@ -25,7 +25,11 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
 
+import com.linecorp.armeria.common.logging.ExportGroupBuilder.ExportEntry;
+
+import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
 /**
@@ -172,17 +176,24 @@ public final class RequestContextExporterBuilder {
                     defaultExportGroup.builtIns(), defaultExportGroup.attrs(),
                     defaultExportGroup.reqHeaders(), defaultExportGroup.resHeaders());
         }
+
+        final Builder<ExportEntry<BuiltInProperty>> builtInProperties = ImmutableSet.builder();
+        final Builder<ExportEntry<AttributeKey<?>>> attrs = ImmutableSet.builder();
+        final Builder<ExportEntry<AsciiString>> reqHeaders = ImmutableSet.builder();
+        final Builder<ExportEntry<AsciiString>> resHeaders = ImmutableSet.builder();
+
         final List<ExportGroup> exportGroupList = new ArrayList<>(exportGroups);
         exportGroupList.add(defaultExportGroupBuilder.build());
+
+        for (ExportGroup exportGroup : exportGroupList) {
+            builtInProperties.addAll(exportGroup.builtIns());
+            attrs.addAll(exportGroup.attrs());
+            reqHeaders.addAll(exportGroup.reqHeaders());
+            resHeaders.addAll(exportGroup.resHeaders());
+        }
+
         return new RequestContextExporter(
-                exportGroupList.stream().flatMap(it -> it.builtIns().stream())
-                               .collect(ImmutableSet.toImmutableSet()),
-                exportGroupList.stream().flatMap(it -> it.attrs().stream())
-                               .collect(ImmutableSet.toImmutableSet()),
-                exportGroupList.stream().flatMap(it -> it.reqHeaders().stream())
-                               .collect(ImmutableSet.toImmutableSet()),
-                exportGroupList.stream().flatMap(it -> it.resHeaders().stream())
-                               .collect(ImmutableSet.toImmutableSet())
+                builtInProperties.build(), attrs.build(), reqHeaders.build(), resHeaders.build()
         );
     }
 }
