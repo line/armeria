@@ -20,25 +20,67 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Cookie;
+
+import io.netty.util.NetUtil;
 
 /**
  * Specifies how {@link CookieJar} should accept new {@link Cookie}.
  */
+@FunctionalInterface
 public interface CookiePolicy {
 
-    CookiePolicy ACCEPT_ALL = (uri, cookie) -> true;
+    /**
+     * Creates a {@link CookiePolicy} that accepts all cookies.
+     */
+    static CookiePolicy acceptAll() {
+        return (uri, cookie) -> true;
+    }
 
-    CookiePolicy ACCEPT_NONE = (uri, cookie) -> false;
+    /**
+     * Creates a {@link CookiePolicy} that rejects all cookies.
+     */
+    static CookiePolicy acceptNone() {
+        return (uri, cookie) -> false;
+    }
 
-    CookiePolicy ACCEPT_ORIGINAL_SERVER = (uri, cookie) -> {
-        requireNonNull(uri, "uri");
-        requireNonNull(cookie, "cookie");
-        return CookieJar.domainMatch(cookie.domain(), uri.getHost());
-    };
+    /**
+     * Creates a {@link CookiePolicy} that only accepts cookies from the original server.
+     */
+    static CookiePolicy acceptOriginalServer() {
+        return new CookiePolicy() {
+            @Override
+            public boolean accept(URI uri, Cookie cookie) {
+                requireNonNull(uri, "uri");
+                requireNonNull(cookie, "cookie");
+                return domainMatch(cookie.domain(), uri.getHost());
+            }
+        };
+    }
 
     /**
      * Determines whether a {@link Cookie} may be stored for a {@link URI}.
      */
-    boolean shouldAccept(URI uri, Cookie cookie);
+    boolean accept(URI uri, Cookie cookie);
+
+    /**
+     * Determines whether a host matches a domain, as specified by RFC 6265
+     * <a href="https://tools.ietf.org/html/rfc6265#section-5.1.3">Domain Matching</a>.
+     */
+    default boolean domainMatch(@Nullable String domain, @Nullable String host) {
+        if (domain == null || host == null) {
+            return false;
+        }
+        if (domain.equalsIgnoreCase(host)) {
+            return true;
+        }
+        // ignore the leading dot
+        if (!domain.isEmpty() && domain.charAt(0) == '.') {
+            domain = domain.substring(1);
+        }
+        return host.endsWith(domain) && host.charAt(host.length() - domain.length() - 1) == '.' &&
+                !NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host);
+    }
 }

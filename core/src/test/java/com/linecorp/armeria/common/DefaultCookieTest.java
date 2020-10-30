@@ -37,7 +37,7 @@ class DefaultCookieTest {
                                     .build();
         assertThat(cookie.toBuilder().build()).isEqualTo(cookie);
         assertThat(cookie.isExpired()).isFalse();
-        await().pollDelay(Duration.ofSeconds(1)).until(() -> true);
+        await().pollDelay(Duration.ofSeconds(2)).until(() -> true);
         assertThat(cookie.isExpired()).isTrue();
     }
 

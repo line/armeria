@@ -31,6 +31,7 @@
 package com.linecorp.armeria.common;
 
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -134,7 +135,7 @@ final class DefaultCookie implements Cookie {
         if (maxAge <= 0) {
             return true;
         }
-        final double timePassed = (System.currentTimeMillis() - createdMillis) / 1000.0;
+        final long timePassed = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - createdMillis);
         return timePassed > maxAge;
     }
 

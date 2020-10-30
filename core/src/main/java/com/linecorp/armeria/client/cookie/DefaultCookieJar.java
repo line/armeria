@@ -28,9 +28,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.CookieBuilder;
 import com.linecorp.armeria.common.Cookies;
 
 /**
@@ -48,7 +50,7 @@ final class DefaultCookieJar implements CookieJar {
     private final ReentrantLock lock;
 
     DefaultCookieJar() {
-        this(CookiePolicy.ACCEPT_ORIGINAL_SERVER);
+        this(CookiePolicy.acceptOriginalServer());
     }
 
     DefaultCookieJar(CookiePolicy cookiePolicy) {
@@ -65,7 +67,7 @@ final class DefaultCookieJar implements CookieJar {
             return Cookies.of();
         }
         final String host = uri.getHost();
-        final String path = Strings.isNullOrEmpty(uri.getPath()) ? "/" : uri.getPath();
+        final String path = uri.getPath().isEmpty() ? "/" : uri.getPath();
         final boolean secure = "https".equalsIgnoreCase(uri.getScheme());
         final Set<Cookie> cookies = new HashSet<>();
         lock.lock();
@@ -84,30 +86,10 @@ final class DefaultCookieJar implements CookieJar {
         lock.lock();
         try {
             for (Cookie cookie : cookies) {
-                // if domain is not specified, set the domain as the original request host
-                // https://tools.ietf.org/html/rfc6265#section-5.3
-                if (cookie.domain() == null) {
-                    cookie = cookie.toBuilder().domain(uri.getHost()).hostOnly(true).build();
-                }
-                // if path is not specified or the first character is not '/', set the default path
-                // https://tools.ietf.org/html/rfc6265#section-5.2.4
-                // https://tools.ietf.org/html/rfc6265#section-5.1.4
-                final String cookiePath = cookie.path();
-                if (Strings.isNullOrEmpty(cookiePath) || cookiePath.charAt(0) != '/') {
-                    String path = uri.getPath();
-                    if (Strings.isNullOrEmpty(path) || path.charAt(0) != '/') {
-                        path = "/";
-                    } else {
-                        final int i = path.lastIndexOf('/');
-                        if (i > 0) {
-                            path = path.substring(0, i);
-                        }
-                    }
-                    cookie = cookie.toBuilder().path(path).build();
-                }
+                cookie = ensureDomainAndPath(cookie, uri);
                 // remove similar cookie if present
                 store.remove(cookie);
-                if (!cookie.isExpired() && cookiePolicy.shouldAccept(uri, cookie)) {
+                if (!cookie.isExpired() && cookiePolicy.accept(uri, cookie)) {
                     store.add(cookie);
                     filter.putIfAbsent(cookie.domain(), new HashSet<>());
                     final Set<Cookie> cookieSet = filter.get(cookie.domain());
@@ -121,9 +103,38 @@ final class DefaultCookieJar implements CookieJar {
         }
     }
 
+    /**
+     * Ensures this cookie has domain and path attributes, otherwise sets them to default values. If domain
+     * is absent, the default is the request host, with {@code host-only} flag set to {@code true}. If path is
+     * absent, the default is computed from the request path. See RFC 6265
+     * <a href="https://tools.ietf.org/html/rfc6265#section-5.3">5.3</a> and
+     * <a href="https://tools.ietf.org/html/rfc6265#section-5.1.4">5.1.4</a>
+     */
+    @VisibleForTesting
+    Cookie ensureDomainAndPath(Cookie cookie, URI uri) {
+        final CookieBuilder cb = cookie.toBuilder();
+        if (Strings.isNullOrEmpty(cookie.domain())) {
+            cb.domain(uri.getHost()).hostOnly(true);
+        }
+        final String cookiePath = cookie.path();
+        if (Strings.isNullOrEmpty(cookiePath) || cookiePath.charAt(0) != '/') {
+            String path = uri.getPath();
+            if (path.isEmpty()) {
+                path = "/";
+            } else {
+                final int i = path.lastIndexOf('/');
+                if (i > 0) {
+                    path = path.substring(0, i);
+                }
+            }
+            cb.path(path);
+        }
+        return cb.build();
+    }
+
     private void filterGet(Set<Cookie> cookies, String host, String path, boolean secure) {
         for (Map.Entry<String, Set<Cookie>> entry : filter.entrySet()) {
-            if (CookieJar.domainMatch(entry.getKey(), host)) {
+            if (cookiePolicy.domainMatch(entry.getKey(), host)) {
                 final Iterator<Cookie> it = entry.getValue().iterator();
                 while (it.hasNext()) {
                     final Cookie cookie = it.next();

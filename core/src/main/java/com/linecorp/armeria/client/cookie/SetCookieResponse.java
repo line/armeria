@@ -30,11 +30,11 @@ import com.linecorp.armeria.common.ResponseHeaders;
  */
 final class SetCookieResponse extends FilteredHttpResponse {
 
-    private final Consumer<List<String>> consumer;
+    private final Consumer<List<String>> cookieSetter;
 
-    SetCookieResponse(HttpResponse delegate, Consumer<List<String>> consumer) {
+    SetCookieResponse(HttpResponse delegate, Consumer<List<String>> cookieSetter) {
         super(delegate);
-        this.consumer = consumer;
+        this.cookieSetter = cookieSetter;
     }
 
     @Override
@@ -46,7 +46,7 @@ final class SetCookieResponse extends FilteredHttpResponse {
             }
             final List<String> setCookieHeaders = responseHeaders.getAll(HttpHeaderNames.SET_COOKIE);
             if (!setCookieHeaders.isEmpty()) {
-                consumer.accept(setCookieHeaders);
+                cookieSetter.accept(setCookieHeaders);
             }
         }
         return obj;
