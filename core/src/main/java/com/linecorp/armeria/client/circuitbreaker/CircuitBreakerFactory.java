@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
 @FunctionalInterface
 interface CircuitBreakerFactory {
     /**
-     * Given a combination of host, method and path, creates a CircuitBreaker.
+     * Given a combination of host, method and path, creates a {@link CircuitBreaker}.
      * @param host the host of the context endpoint.
      * @param method the method of the context request.
      * @param path the path of the context request.
