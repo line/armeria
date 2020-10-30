@@ -42,7 +42,7 @@ public interface HttpDeframerHandler<T> {
     default void processInformationalHeaders(ResponseHeaders in, HttpDeframerOutput<T> out) throws Exception {}
 
     /**
-     * Decodes an non-informational {@link HttpHeaders} to N objects.
+     * Decodes a non-informational {@link HttpHeaders} to N objects.
      */
     default void processHeaders(HttpHeaders in, HttpDeframerOutput<T> out) throws Exception {}
 

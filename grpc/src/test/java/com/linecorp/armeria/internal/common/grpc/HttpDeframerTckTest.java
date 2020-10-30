@@ -28,7 +28,7 @@ import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 

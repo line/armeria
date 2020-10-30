@@ -41,9 +41,9 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.HttpDeframer;
@@ -187,8 +187,7 @@ public final class UnaryGrpcClient {
                     final ByteBuf buf = unframed.buf();
                     // Compression not supported.
                     assert buf != null;
-                    responseFuture.complete(HttpResponse.of(msg.headers(), HttpData.wrap(buf).withEndOfStream(),
-                                                            msg.trailers()));
+                    responseFuture.complete(HttpResponse.of(msg.headers(), HttpData.wrap(buf), msg.trailers()));
                 }
 
                 @Override

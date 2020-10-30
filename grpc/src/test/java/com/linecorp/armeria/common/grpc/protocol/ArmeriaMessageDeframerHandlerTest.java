@@ -47,7 +47,6 @@ import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;

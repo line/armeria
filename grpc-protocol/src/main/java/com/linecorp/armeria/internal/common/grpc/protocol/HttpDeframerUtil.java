@@ -17,7 +17,7 @@
 package com.linecorp.armeria.internal.common.grpc.protocol;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.HttpDeframerHandler;
 

@@ -106,10 +106,6 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     private static final AtomicIntegerFieldUpdater<HttpDeframer> initializedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(HttpDeframer.class, "initialized");
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicIntegerFieldUpdater<HttpDeframer> subscribedUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(HttpDeframer.class, "subscribed");
-
     private final HttpDeframerHandler<T> handler;
     private final ByteBufDeframerInput input;
     private final Function<? super HttpData, ? extends ByteBuf> byteBufConverter;
@@ -122,7 +118,6 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     private volatile Subscription upstream;
     private volatile boolean cancelled;
     private volatile int initialized;
-    private volatile int subscribed;
 
     /**
      * Returns a new {@link HttpDeframer} with the specified {@link HttpDeframerHandler} and
@@ -175,7 +170,7 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     @Override
     SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         final SubscriptionImpl subscriptionImpl = super.subscribe(subscription);
-        if (subscribedUpdater.compareAndSet(this, 0, 1)) {
+        if (subscriptionImpl == subscription) {
             eventLoop = subscription.executor();
             deferredInit();
         }
@@ -184,7 +179,7 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
 
     private void deferredInit() {
         final Subscription upstream = this.upstream;
-        if (upstream != null && subscribed != 0) {
+        if (upstream != null && eventLoop != null) {
             if (initializedUpdater.compareAndSet(this, 0, 1)) {
                 if (demand() > 0) {
                     upstream.request(1);
@@ -237,10 +232,10 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
                 }
             });
         } catch (Throwable ex) {
-            Exceptions.throwIfFatal(ex);
             handler.processOnError(ex);
             cancelAndCleanup();
             abort(ex);
+            Exceptions.throwIfFatal(ex);
         }
     }
 
@@ -260,7 +255,7 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
             return;
         }
         final EventExecutor eventLoop = this.eventLoop;
-        if (!eventLoop.inEventLoop()) {
+        if (eventLoop != null && !eventLoop.inEventLoop()) {
             eventLoop.execute(() -> onError(cause));
             return;
         }
@@ -280,7 +275,7 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
         }
 
         final EventExecutor eventLoop = this.eventLoop;
-        if (!eventLoop.inEventLoop()) {
+        if (eventLoop != null && !eventLoop.inEventLoop()) {
             eventLoop.execute(this::onComplete);
             return;
         }

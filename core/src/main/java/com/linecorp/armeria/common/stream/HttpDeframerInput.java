@@ -37,7 +37,7 @@ public interface HttpDeframerInput extends SafeCloseable {
     byte readByte();
 
     /**
-     * Reads a unsigned byte from the readable bytes.
+     * Reads an unsigned byte from the readable bytes.
      */
     default short readUnsignedByte() {
         return (short) (readByte() & 0xFF);

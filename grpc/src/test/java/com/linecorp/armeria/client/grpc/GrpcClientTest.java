@@ -45,7 +45,6 @@ import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -1442,7 +1441,7 @@ class GrpcClientTest {
         });
     }
 
-    @RepeatedTest(20000)
+    @Test
     void unimplementedService() throws Exception {
         final UnimplementedServiceGrpc.UnimplementedServiceBlockingStub stub =
                 UnimplementedServiceGrpc.newBlockingStub(asyncStub.getChannel());

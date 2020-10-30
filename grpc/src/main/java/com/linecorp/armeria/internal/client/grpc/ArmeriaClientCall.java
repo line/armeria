@@ -45,12 +45,11 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -89,8 +88,7 @@ import io.netty.buffer.ByteBuf;
 final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         implements Subscriber<DeframedMessage>, TransportStatusListener {
 
-    private static final Runnable NO_OP = () -> {
-    };
+    private static final Runnable NO_OP = () -> {};
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaClientCall.class);
 
@@ -458,7 +456,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             req.abort(status.asRuntimeException(metadata));
         }
         if (responseReader != null) {
-            responseReader.abort();
+            responseReader.close();
         }
 
         try (SafeCloseable ignored = ctx.push()) {

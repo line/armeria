@@ -29,8 +29,13 @@ import org.junit.jupiter.api.Test;
 
 import com.google.protobuf.ByteString;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -98,10 +103,16 @@ class UnaryGrpcClientTest {
                                                                       .build())
                                                    .build();
 
-        final byte[] responseBytes =
-                client.execute("/armeria.grpc.testing.TestService/UnaryCall", request.toByteArray()).join();
-        final SimpleResponse response = SimpleResponse.parseFrom(responseBytes);
-        assertThat(response.getPayload().getBody().toStringUtf8()).isEqualTo("hello");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final byte[] responseBytes =
+                    client.execute("/armeria.grpc.testing.TestService/UnaryCall", request.toByteArray()).join();
+            final ClientRequestContext ctx = captor.get();
+            final HttpHeaders trailers = ctx.log().whenComplete().join().responseTrailers();
+            final int status = trailers.getInt(GrpcHeaderNames.GRPC_STATUS);
+            assertThat(status).isZero();
+            final SimpleResponse response = SimpleResponse.parseFrom(responseBytes);
+            assertThat(response.getPayload().getBody().toStringUtf8()).isEqualTo("hello");
+        }
     }
 
     /** This shows we can handle status that happens in headers. */
