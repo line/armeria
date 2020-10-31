@@ -137,10 +137,11 @@ public final class RequestContextExporterBuilder {
     /**
      * Specifies a prefix of the default export group.
      */
-    public void prefix(String prefix) {
+    public RequestContextExporterBuilder prefix(String prefix) {
         requireNonNull(prefix, "prefix");
         checkArgument(!prefix.isEmpty(), "prefix must not be empty");
         defaultExportGroupBuilder.prefix(prefix);
+        return this;
     }
 
     /**
