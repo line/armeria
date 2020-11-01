@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
