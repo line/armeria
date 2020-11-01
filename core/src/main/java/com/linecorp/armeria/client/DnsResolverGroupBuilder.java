@@ -354,7 +354,7 @@ public final class DnsResolverGroupBuilder {
                 builder.decodeIdn(decodeIdn);
             }
         };
-        cacheSpec = requireNonNull(cacheSpec != null ? cacheSpec : Flags.dnsCacheSpec(), "cacheSpec");
+        final String cacheSpec = firstNonNull(this.cacheSpec, Flags.dnsCacheSpec());
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
                                                   queryTimeoutMillis, refreshBackoff, resolvedAddressTypes,
                                                   cacheSpec);
