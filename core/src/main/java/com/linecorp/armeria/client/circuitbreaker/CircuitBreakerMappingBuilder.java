@@ -24,6 +24,8 @@ public final class CircuitBreakerMappingBuilder {
     private boolean perMethod;
     private boolean perPath;
 
+    CircuitBreakerMappingBuilder() {}
+
     /**
      * Adds host dimension to the mapping Key.
      * @return this builder.
@@ -73,6 +75,4 @@ public final class CircuitBreakerMappingBuilder {
     boolean isPerPath() {
         return perPath;
     }
-
-    CircuitBreakerMappingBuilder() {}
 }
