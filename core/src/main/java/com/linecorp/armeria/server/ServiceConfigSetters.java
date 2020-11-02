@@ -22,8 +22,6 @@ import java.util.function.Function;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
-import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 interface ServiceConfigSetters {
 
@@ -111,15 +109,4 @@ interface ServiceConfigSetters {
      * @param defaultLogName the default log name.
      */
     ServiceConfigSetters defaultLogName(String defaultLogName);
-
-    /**
-     * Specifies whether the {@link Service} is transient or not. It the {@link Service} is transient:
-     * <ul>
-     *   <li>requests are not taken account of
-     *       {@linkplain ServerBuilder#gracefulShutdownTimeout(Duration, Duration) graceful shutdown}.</li>
-     *   <li>requests and responses are not logged or recorded by {@link LoggingService},
-     *       {@link AccessLogWriter} and {@link MetricCollectingService}.</li>
-     * </ul>
-     */
-    ServiceConfigSetters transientService(boolean transientService);
 }

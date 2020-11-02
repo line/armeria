@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.healthcheck;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import java.util.EnumMap;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -144,6 +145,7 @@ public final class HealthCheckService implements TransientHttpService {
     final Set<PendingResponse> pendingUnhealthyResponses;
     @Nullable
     private final HealthCheckUpdateHandler updateHandler;
+    private final EnumMap<ActionType, Boolean> transientServiceActions;
 
     @Nullable
     private Server server;
@@ -152,11 +154,13 @@ public final class HealthCheckService implements TransientHttpService {
     HealthCheckService(Iterable<HealthChecker> healthCheckers,
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
                        long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
-                       long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler) {
+                       long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
+                       EnumMap<ActionType, Boolean> transientServiceActions) {
         serverHealth = new SettableHealthChecker(false);
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
                 .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
+        this.transientServiceActions = transientServiceActions;
 
         if (maxLongPollingTimeoutMillis > 0 &&
             this.healthCheckers.stream().allMatch(ListenableHealthChecker.class::isInstance)) {

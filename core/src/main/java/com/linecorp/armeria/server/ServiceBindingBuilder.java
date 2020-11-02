@@ -194,11 +194,6 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    public ServiceBindingBuilder transientService(boolean transientService) {
-        return (ServiceBindingBuilder) super.transientService(transientService);
-    }
-
-    @Override
     public ServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         return (ServiceBindingBuilder) super.requestTimeout(requestTimeout);
     }

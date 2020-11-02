@@ -196,11 +196,6 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
-    public VirtualHostServiceBindingBuilder transientService(boolean transientService) {
-        return (VirtualHostServiceBindingBuilder) super.transientService(transientService);
-    }
-
-    @Override
     public VirtualHostServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         return (VirtualHostServiceBindingBuilder) super.requestTimeout(requestTimeout);
     }

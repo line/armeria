@@ -52,8 +52,6 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
-    @Nullable
-    private Boolean transientService;
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -143,12 +141,6 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return this;
     }
 
-    @Override
-    public ServiceConfigSetters transientService(boolean transientService) {
-        this.transientService = transientService;
-        return this;
-    }
-
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
      * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
@@ -192,9 +184,6 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (accessLogWriter != null) {
             serviceConfigBuilder.accessLogWriter(accessLogWriter, shutdownAccessLogWriterOnStop);
-        }
-        if (transientService != null) {
-            serviceConfigBuilder.transientService(transientService);
         }
         return serviceConfigBuilder;
     }

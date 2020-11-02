@@ -23,9 +23,11 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
+import com.linecorp.armeria.internal.server.TransientServiceUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.TransientService.ActionType;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.AttributeKey;
@@ -71,7 +73,7 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (!ctx.config().transientService()) {
+        if (TransientServiceUtil.countFor(ctx, ActionType.METRIC_COLLECTION)) {
             RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
         }
         return unwrap().serve(ctx, req);

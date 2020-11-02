@@ -45,8 +45,6 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
-    @Nullable
-    private Boolean transientService;
 
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
@@ -119,12 +117,6 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         return this;
     }
 
-    @Override
-    public ServiceConfigSetters transientService(boolean transientService) {
-        this.transientService = transientService;
-        return this;
-    }
-
     ServiceConfig build(long defaultRequestTimeoutMillis,
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
@@ -136,8 +128,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,
                 accessLogWriter != null ? accessLogWriter : defaultAccessLogWriter,
-                accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop,
-                transientService != null ? transientService : service.as(TransientService.class) != null);
+                accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop);
     }
 
     @Override
@@ -150,7 +141,6 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("verboseResponses", verboseResponses)
                           .add("accessLogWriter", accessLogWriter)
                           .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
-                          .add("transientService", transientService)
                           .toString();
     }
 }

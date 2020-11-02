@@ -18,6 +18,9 @@ package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 /**
  * A {@link Service} that handles transient requests, for example, health check requests.
@@ -27,4 +30,37 @@ import com.linecorp.armeria.common.Response;
  */
 @FunctionalInterface
 public interface TransientService<I extends Request, O extends Response> extends Service<I, O> {
+
+    /**
+     * Tells whether the specified {@link ActionType} is enabled for this {@link TransientService}.
+     */
+    default boolean countFor(ActionType type) {
+        return false;
+    }
+
+    /**
+     * The type of actions that is used in {@link TransientService#countFor(ActionType)}.
+     */
+    enum ActionType {
+
+        /**
+         * Graceful shutdown counts the requests to the {@link TransientService} as processing requests.
+         */
+        GRACEFUL_SHUTDOWN,
+
+        /**
+         * {@link MetricCollectingService} collects the metrics of the requests to the {@link TransientService}.
+         */
+        METRIC_COLLECTION,
+
+        /**
+         * {@link LoggingService} logs the requests to the {@link TransientService}.
+         */
+        LOGGING,
+
+        /**
+         * {@link AccessLogWriter} produces the access logs of the requests to the {@link TransientService}.
+         */
+        ACCESS_LOGGING;
+    }
 }

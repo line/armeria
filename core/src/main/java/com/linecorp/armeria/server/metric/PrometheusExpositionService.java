@@ -16,10 +16,15 @@
 
 package com.linecorp.armeria.server.metric;
 
+import static com.linecorp.armeria.internal.server.TransientServiceUtil.defaultTransientServiceActions;
 import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
+import java.util.EnumMap;
+import java.util.Map;
+
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -40,16 +45,41 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
 
     private static final MediaType CONTENT_TYPE_004 = MediaType.parse(TextFormat.CONTENT_TYPE_004);
 
+    /**
+     * Returns a new {@link PrometheusExpositionService} that exposes Prometheus metrics from the specified
+     * {@link CollectorRegistry}.
+     */
+    public static PrometheusExpositionService of(CollectorRegistry collectorRegistry) {
+        return new PrometheusExpositionService(collectorRegistry, defaultTransientServiceActions());
+    }
+
+    /**
+     * Returns a new {@link PrometheusExpositionServiceBuilder} created with the specified
+     * {@link CollectorRegistry}.
+     */
+    public static PrometheusExpositionServiceBuilder builder(CollectorRegistry collectorRegistry) {
+        return new PrometheusExpositionServiceBuilder(collectorRegistry);
+    }
+
     private final CollectorRegistry collectorRegistry;
+    private final Map<ActionType, Boolean> transientServiceActions;
 
     /**
      * Creates a new instance.
      *
      * @param collectorRegistry Prometheus registry
+     *
+     * @deprecated Use {@link #of(CollectorRegistry)}.
      */
+    @Deprecated
     public PrometheusExpositionService(CollectorRegistry collectorRegistry) {
-        requireNonNull(collectorRegistry, "collectorRegistry");
-        this.collectorRegistry = collectorRegistry;
+        this(collectorRegistry, defaultTransientServiceActions());
+    }
+
+    PrometheusExpositionService(CollectorRegistry collectorRegistry,
+                                EnumMap<ActionType, Boolean> transientServiceActions) {
+        this.collectorRegistry = requireNonNull(collectorRegistry, "collectorRegistry");
+        this.transientServiceActions = ImmutableMap.copyOf(transientServiceActions);
     }
 
     @Override
@@ -64,5 +94,10 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
     @Override
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         return doGet(ctx, req);
+    }
+
+    @Override
+    public boolean countFor(ActionType type) {
+        return transientServiceActions.get(requireNonNull(type, "type"));
     }
 }

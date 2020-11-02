@@ -61,6 +61,8 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.server.TransientServiceUtil;
+import com.linecorp.armeria.server.TransientService.ActionType;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -405,9 +407,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             // Keep track of the number of unfinished requests and
             // clean up the request stream when response stream ends.
-            final boolean isTransient = service.as(TransientService.class) != null ||
-                                        serviceCfg.transientService();
-            if (!isTransient) {
+            final boolean countForGracefulShutdown =
+                    TransientServiceUtil.countFor(reqCtx, ActionType.GRACEFUL_SHUTDOWN);
+            if (countForGracefulShutdown) {
                 gracefulShutdownSupport.inc();
             }
             unfinishedRequests.put(req, res);
@@ -443,7 +445,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         req.abort(cause);
                     }
                     // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
-                    if (!isTransient) {
+                    if (countForGracefulShutdown) {
                         gracefulShutdownSupport.dec();
                     }
                     unfinishedRequests.remove(req);
@@ -586,7 +588,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     // Respect the first specified cause.
                     logBuilder.endResponse(firstNonNull(cause, f.cause()));
                 }
-                // Don't check ctx.config().service().shouldLogRequest() but just log.
                 reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
             }
         });

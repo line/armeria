@@ -225,12 +225,6 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
         return this;
     }
 
-    @Override
-    public ServiceConfigSetters transientService(boolean transientService) {
-        defaultServiceConfigSetters.transientService(transientService);
-        return this;
-    }
-
     /**
      * Registers the given service to {@link ServerBuilder} and return {@link ServerBuilder}
      * to continue building {@link Server}.

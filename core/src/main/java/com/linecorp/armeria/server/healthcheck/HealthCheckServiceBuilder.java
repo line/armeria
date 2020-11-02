@@ -16,14 +16,18 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.server.TransientServiceUtil.defaultTransientServiceActions;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.EnumMap;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -31,6 +35,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.TransientService.ActionType;
 import com.linecorp.armeria.server.auth.AuthService;
 
 /**
@@ -54,8 +59,12 @@ public final class HealthCheckServiceBuilder {
     private long pingIntervalMillis = TimeUnit.SECONDS.toMillis(DEFAULT_PING_INTERVAL_SECONDS);
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
+    private final EnumMap<ActionType, Boolean> transientServiceActions;
 
-    HealthCheckServiceBuilder() {}
+    HealthCheckServiceBuilder() {
+        transientServiceActions = new EnumMap<>(ActionType.class);
+        transientServiceActions.putAll(defaultTransientServiceActions());
+    }
 
     /**
      * Adds the specified {@link HealthChecker}s that determine the healthiness of the {@link Server}.
@@ -251,12 +260,22 @@ public final class HealthCheckServiceBuilder {
     }
 
     /**
+     * Sets whether the specified {@link ActionType} is enabled or not for the
+     * {@link #build() HealthCheckService}. All {@link ActionType}s are disabled by default.
+     */
+    public HealthCheckServiceBuilder transientServiceAction(ActionType actionType, boolean enable) {
+        transientServiceActions.put(requireNonNull(actionType, "actionType"), enable);
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link HealthCheckService} built from the properties specified so far.
      */
     public HealthCheckService build() {
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      pingIntervalMillis, updateHandler);
+                                      pingIntervalMillis, updateHandler,
+                                      Maps.newEnumMap(ImmutableMap.copyOf(transientServiceActions)));
     }
 }
