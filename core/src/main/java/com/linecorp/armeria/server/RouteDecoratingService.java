@@ -119,7 +119,8 @@ final class RouteDecoratingService implements HttpService {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             final Queue<HttpService> serviceChain = new ArrayDeque<>(4);
-            router.findAll(ctx.routingContext()).forEach(routed -> {
+            // TODO(minwoox): Can do without making a new instance for RoutingContext?
+            router.findAll(RouteDecoratorRoutingContext.of(ctx.routingContext())).forEach(routed -> {
                 if (routed.isPresent()) {
                     serviceChain.add(routed.value().decorator());
                 }

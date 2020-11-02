@@ -79,6 +79,7 @@ const config: Configuration = {
   plugins: [
     new HtmlWebpackPlugin({
       template: './src/index.html',
+      hash: true,
     }),
     new FaviconsWebpackPlugin({
       logo: './src/images/logo.png',

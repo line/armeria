@@ -54,7 +54,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -84,7 +84,7 @@ public final class DefaultServiceRequestContext
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
-    private final TimeoutScheduler requestTimeoutScheduler;
+    private final CancellationScheduler requestCancellationScheduler;
     @Nullable
     private final SSLSession sslSession;
 
@@ -136,7 +136,7 @@ public final class DefaultServiceRequestContext
             long requestStartTimeNanos, long requestStartTimeMicros) {
 
         this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
-             sslSession, proxiedAddresses, clientAddress, /* requestTimeoutScheduler */ null,
+             sslSession, proxiedAddresses, clientAddress, /* requestCancellationScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
     }
 
@@ -144,7 +144,7 @@ public final class DefaultServiceRequestContext
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
-            @Nullable TimeoutScheduler requestTimeoutScheduler,
+            @Nullable CancellationScheduler requestCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
@@ -157,11 +157,11 @@ public final class DefaultServiceRequestContext
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
-        if (requestTimeoutScheduler != null) {
-            this.requestTimeoutScheduler = requestTimeoutScheduler;
+        if (requestCancellationScheduler != null) {
+            this.requestCancellationScheduler = requestCancellationScheduler;
         } else {
-            this.requestTimeoutScheduler =
-                    new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+            this.requestCancellationScheduler =
+                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
         }
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
@@ -283,48 +283,63 @@ public final class DefaultServiceRequestContext
 
     @Override
     public long requestTimeoutMillis() {
-        return TimeUnit.NANOSECONDS.toMillis(requestTimeoutScheduler.timeoutNanos());
+        return TimeUnit.NANOSECONDS.toMillis(requestCancellationScheduler.timeoutNanos());
     }
 
     @Override
     public void clearRequestTimeout() {
-        requestTimeoutScheduler.clearTimeout();
+        requestCancellationScheduler.clearTimeout();
     }
 
     @Override
     public void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis) {
-        requestTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                                TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
+        requestCancellationScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                     TimeUnit.MILLISECONDS.toNanos(requestTimeoutMillis));
     }
 
     @Override
     public void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
-        requestTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                                requireNonNull(requestTimeout, "requestTimeout").toNanos());
+        requestCancellationScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                     requireNonNull(requestTimeout, "requestTimeout")
+                                                             .toNanos());
     }
 
-    TimeoutScheduler requestTimeoutScheduler() {
-        return requestTimeoutScheduler;
-    }
-
-    @Override
-    public void timeoutNow() {
-        requestTimeoutScheduler.timeoutNow();
+    CancellationScheduler requestCancellationScheduler() {
+        return requestCancellationScheduler;
     }
 
     @Override
-    public boolean isTimedOut() {
-        return requestTimeoutScheduler.isTimedOut();
+    public void cancel(Throwable cause) {
+        requireNonNull(cause, "cause");
+        requestCancellationScheduler.finishNow(cause);
     }
 
+    @Nullable
+    @Override
+    public Throwable cancellationCause() {
+        return requestCancellationScheduler.cause();
+    }
+
+    @Override
+    public CompletableFuture<Throwable> whenRequestCancelling() {
+        return requestCancellationScheduler.whenCancelling();
+    }
+
+    @Override
+    public CompletableFuture<Throwable> whenRequestCancelled() {
+        return requestCancellationScheduler.whenCancelled();
+    }
+
+    @Deprecated
     @Override
     public CompletableFuture<Void> whenRequestTimingOut() {
-        return requestTimeoutScheduler.whenTimingOut();
+        return requestCancellationScheduler.whenTimingOut();
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Void> whenRequestTimedOut() {
-        return requestTimeoutScheduler.whenTimedOut();
+        return requestCancellationScheduler.whenTimedOut();
     }
 
     @Override

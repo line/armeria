@@ -50,6 +50,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
@@ -96,7 +97,7 @@ public final class DocService extends SimpleDecoratingHttpService {
             DocServicePlugin.class, DocService.class.getClassLoader()));
 
     static {
-        logger.info("Loaded {}: {}", DocServicePlugin.class.getSimpleName(), plugins);
+        logger.debug("Available {}s: {}", DocServicePlugin.class.getSimpleName(), plugins);
     }
 
     /**
@@ -411,7 +412,10 @@ public final class DocService extends SimpleDecoratingHttpService {
                 return builder.build();
             }
 
-            return staticFiles.get(fileReadExecutor, path, clock, contentEncoding, additionalHeaders);
+            final HttpHeadersBuilder headers = additionalHeaders.toBuilder();
+            headers.set(HttpHeaderNames.CACHE_CONTROL, ServerCacheControl.REVALIDATED.asHeaderValue());
+
+            return staticFiles.get(fileReadExecutor, path, clock, contentEncoding, headers.build());
         }
 
         @Override

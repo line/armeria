@@ -47,7 +47,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 
 /**
- * Abstract class for implementing ArmeriaBeanPostProcessor of boot-autoconfigure module
+ * Abstract class for implementing ArmeriaBeanPostProcessor of boot2-autoconfigure module
  * and ArmeriaSpringBoot1BeanPostProcessor of boot1-autoconfigure module.
  */
 abstract class AbstractArmeriaBeanPostProcessor {

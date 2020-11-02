@@ -19,9 +19,10 @@ package com.linecorp.armeria.common;
 import javax.annotation.Nullable;
 
 /**
- * A {@link RuntimeException} that is raised when a requested invocation did not complete before its deadline.
+ * A {@link RuntimeException} raised when a requested invocation does not complete before its deadline.
  */
-public class TimeoutException extends RuntimeException {
+public class TimeoutException extends CancellationException {
+
     private static final long serialVersionUID = 2887898788270995289L;
 
     /**

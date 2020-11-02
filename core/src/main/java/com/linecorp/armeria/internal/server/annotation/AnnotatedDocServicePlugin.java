@@ -445,4 +445,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         }
         return null;
     }
+
+    @Override
+    public String toString() {
+        return AnnotatedDocServicePlugin.class.getSimpleName();
+    }
 }
