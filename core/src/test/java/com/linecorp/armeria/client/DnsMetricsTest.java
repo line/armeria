@@ -182,10 +182,12 @@ public class DnsMetricsTest {
                 assertThatThrownBy(() -> client.get("http://bar.com").aggregate().join())
                         .hasRootCauseInstanceOf(UnknownHostException.class);
 
-                assertThat(MoreMeters.measureAll(meterRegistry))
-                        .containsEntry(writtenMeterId, 2.0)
-                        .containsEntry(nxDomainMeterId, 2.0)
-                        .containsEntry(nameServerExhaustedMeterId1, 3.0);
+                await().untilAsserted(() -> {
+                    assertThat(MoreMeters.measureAll(meterRegistry))
+                            .containsEntry(writtenMeterId, 2.0)
+                            .containsEntry(nxDomainMeterId, 2.0)
+                            .containsEntry(nameServerExhaustedMeterId1, 3.0);
+                });
             }
         }
     }
