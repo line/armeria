@@ -8,6 +8,7 @@ service HelloService {
   rpc LazyHello (HelloRequest) returns (HelloReply) {}
   rpc BlockingHello (HelloRequest) returns (HelloReply) {}
   rpc LotsOfReplies (HelloRequest) returns (stream HelloReply) {}
+  rpc LotsOfRepliesWithoutScheduler (HelloRequest) returns (stream HelloReply) {}
   rpc LotsOfGreetings (stream HelloRequest) returns (HelloReply) {}
   rpc BidiHello (stream HelloRequest) returns (stream HelloReply) {}
 }

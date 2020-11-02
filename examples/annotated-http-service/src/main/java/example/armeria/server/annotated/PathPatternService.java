@@ -3,6 +3,7 @@ package example.armeria.server.annotated;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 
 /**
@@ -40,5 +41,17 @@ public class PathPatternService {
     @Get("glob:/glob/**")
     public String glob(@Param("0") String name) {
         return "glob: " + name;
+    }
+
+    /**
+     * Accesses the parameter with the name of the path variable.
+     * NOTE: Configure -parameters javac option to use variable name as the parameter name.
+     *       (i.e. '@Param String name' instead of '@Param("name") String name')
+     */
+    @Get
+    @Path("/paths/first/{name}")
+    @Path("/paths/second/{name}")
+    public String pathsVar(@Param String name) {
+        return "paths: " + name;
     }
 }

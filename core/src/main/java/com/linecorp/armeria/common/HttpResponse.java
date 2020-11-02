@@ -391,6 +391,47 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new HTTP response of the redirect to specific location.
+     */
+    static HttpResponse ofRedirect(HttpStatus redirectStatus, String location) {
+        requireNonNull(redirectStatus, "redirectStatus");
+        requireNonNull(location, "location");
+        if (redirectStatus.compareTo(HttpStatus.MULTIPLE_CHOICES) < 0 ||
+            redirectStatus.compareTo(HttpStatus.TEMPORARY_REDIRECT) > 0) {
+            throw new IllegalArgumentException("redirectStatus: " + redirectStatus + " (expected: 300 .. 307)");
+        }
+
+        return of(ResponseHeaders.of(redirectStatus, HttpHeaderNames.LOCATION, location));
+    }
+
+    /**
+     * Creates a new HTTP response of the redirect to specific location using string format.
+     */
+    static HttpResponse ofRedirect(HttpStatus redirectStatus, String format, Object... args) {
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+
+        return ofRedirect(redirectStatus, String.format(format, args));
+    }
+
+    /**
+     * Creates a new HTTP response of the temporary redirect to specific location.
+     */
+    static HttpResponse ofRedirect(String location) {
+        return ofRedirect(HttpStatus.TEMPORARY_REDIRECT, location);
+    }
+
+    /**
+     * Creates a new HTTP response of the temporary redirect to specific location using string format.
+     */
+    static HttpResponse ofRedirect(String format, Object... args) {
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+
+        return ofRedirect(HttpStatus.TEMPORARY_REDIRECT, String.format(format, args));
+    }
+
+    /**
      * Creates a new failed HTTP response.
      */
     static HttpResponse ofFailure(Throwable cause) {

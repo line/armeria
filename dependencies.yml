@@ -4,13 +4,13 @@
 
 boms:
   - com.fasterxml.jackson:jackson-bom:2.11.2
-  - io.dropwizard.metrics:metrics-bom:4.1.12.1
-  - io.grpc:grpc-bom:1.32.1
+  - io.dropwizard.metrics:metrics-bom:4.1.13
+  - io.grpc:grpc-bom:1.33.0
   - io.micrometer:micrometer-bom:1.5.5
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.52.Final
-  - io.zipkin.brave:brave-bom:5.12.6
-  - org.eclipse.jetty:jetty-bom:9.4.31.v20200723
+  - io.netty:netty-bom:4.1.53.Final
+  - io.zipkin.brave:brave-bom:5.12.7
+  - org.eclipse.jetty:jetty-bom:9.4.32.v20200930
   - org.junit:junit-bom:5.7.0
 
 cglib:
@@ -28,9 +28,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.10.3'
+    version: '3.11.0'
     javadocs:
-    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.10.3/
+    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.11.0/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -45,23 +45,23 @@ com.fasterxml.jackson.core:
 
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.8.5'
+    version: '2.8.6'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.8.5/
+    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.8.6/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
 
 com.github.jengelman.gradle.plugins:
-  shadow: { version: '6.0.0' }
+  shadow: { version: '6.1.0' }
 
 com.github.node-gradle:
   gradle-node-plugin: { version: '2.2.4' }
 
 com.google.api:
-  gax-grpc: { version: '1.58.2' }
+  gax-grpc: { version: '1.60.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -78,7 +78,7 @@ com.google.errorprone:
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '29.0-jre'
+    version: &GUAVA_VERSION '30.0-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -126,11 +126,11 @@ com.lightbend.akka.grpc:
 
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
-  eureka-client: { version: &EUREKA_VERSION '1.9.26' }
+  eureka-client: { version: &EUREKA_VERSION '1.10.7' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.36.1' }
+  checkstyle: { version: '8.36.2' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.1' }
@@ -165,7 +165,7 @@ com.typesafe.akka:
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
   finagle-serversets_2.13:
-    version: '20.8.1'
+    version: '20.9.0'
 
 gradle.plugin.net.davidecavestro:
   gradle-jxr-plugin: { version: '0.2.1' }
@@ -256,13 +256,13 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.19'
+    version: '2.2.20'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.reactivex.rxjava3:
   rxjava:
-    version: '3.0.6'
+    version: '3.0.7'
     javadocs:
       - http://reactivex.io/RxJava/3.x/javadoc/
 
@@ -297,7 +297,7 @@ javax.ws.rs:
 
 junit:
   junit:
-    version: '4.13'
+    version: '4.13.1'
     javadocs:
     - https://junit.org/junit4/javadoc/4.13/
 
@@ -314,7 +314,7 @@ log4j:
   log4j: { version: '1.2.17' }
 
 me.champeau.gradle:
-  jmh-gradle-plugin: { version: '0.5.1' }
+  jmh-gradle-plugin: { version: '0.5.0' }
 
 net.javacrumbs.future-converter:
   future-converter-rxjava2-java8: { version: 1.2.0 }
@@ -378,7 +378,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.38'
+    version: &TOMCAT_VERSION '9.0.39'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -436,7 +436,7 @@ org.hamcrest:
   hamcrest-library: { version: *HAMCREST_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.1.5.Final' }
+  hibernate-validator: { version: '6.1.6.Final' }
 
 org.jctools:
   jctools-core:
@@ -456,7 +456,7 @@ org.jetbrains.kotlinx:
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
 org.jlleitschuh.gradle:
-  ktlint-gradle: { version: '9.4.0' }
+  ktlint-gradle: { version: '9.4.1' }
 
 org.jooq:
   joor: { version: '0.9.13' }
@@ -465,14 +465,14 @@ org.jsoup:
   jsoup: { version: '1.13.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.5.11' }
+  mockito-core: { version: &MOCKITO_VERSION '3.5.15' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.10' }
 
 org.openjdk.jmh:
-  jmh-core: { version: &JMH_VERSION '1.25.2' }
+  jmh-core: { version: &JMH_VERSION '1.26' }
   jmh-generator-annprocess: { version: *JMH_VERSION }
 
 org.opensaml:

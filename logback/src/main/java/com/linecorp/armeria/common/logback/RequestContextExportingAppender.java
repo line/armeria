@@ -132,6 +132,16 @@ public final class RequestContextExportingAppender
     }
 
     /**
+     * Specifies a prefix of the default export group.
+     * Note: this method is meant to be used for XML configuration.
+     */
+    public void setPrefix(String prefix) {
+        requireNonNull(prefix, "prefix");
+        checkArgument(!prefix.isEmpty(), "prefix must not be empty");
+        builder.prefix(prefix);
+    }
+
+    /**
      * Adds the property represented by the specified MDC key to the export list.
      * Note: this method is meant to be used for XML configuration.
      * Use {@code add*()} methods instead.
@@ -149,11 +159,21 @@ public final class RequestContextExportingAppender
      */
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
+        checkArgument(!mdcKeys.isEmpty(), "mdcKeys must not be empty");
         KEY_SPLITTER.split(mdcKeys)
                     .forEach(mdcKey -> {
                         checkArgument(!mdcKey.isEmpty(), "comma-separated MDC key must not be empty");
                         builder.keyPattern(mdcKey);
                     });
+    }
+
+    /**
+     * Adds the export group.
+     * Note: this method is meant to be used for XML configuration.
+     */
+    public void setExportGroup(ExportGroupConfig exportGroupConfiguration) {
+        requireNonNull(exportGroupConfiguration, "exportGroupConfiguration");
+        builder.exportGroup(exportGroupConfiguration.build());
     }
 
     private void ensureNotStarted() {

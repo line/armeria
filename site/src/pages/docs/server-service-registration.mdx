@@ -107,7 +107,7 @@ EurekaUpdatingListener listener =
         EurekaUpdatingListener.of("https://eureka.com:8001/eureka/v2");
 
 ServerBuilder sb = Server.builder();
-sb.addListener(listener);
+sb.serverListener(listener);
 sb.builder().start();
 ```
 
@@ -128,7 +128,7 @@ EurekaUpdatingListenerBuilder builder =
                               .build();
 EurekaUpdatingListener listener = builder.build();
 ServerBuilder sb = Server.builder();
-sb.addListener(listener);
+sb.serverListener(listener);
 sb.builder().start();
 ```
 

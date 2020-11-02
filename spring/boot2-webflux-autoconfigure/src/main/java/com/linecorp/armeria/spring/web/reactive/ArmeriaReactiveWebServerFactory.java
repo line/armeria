@@ -68,6 +68,7 @@ import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
+import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -262,6 +263,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         configureServerWithArmeriaSettings(sb, settings,
                                            firstNonNull(findBean(MeterRegistry.class), Metrics.globalRegistry),
                                            findBeans(HealthChecker.class),
+                                           findBeans(HealthCheckServiceConfigurator.class),
                                            f != null ? f : MeterIdPrefixFunction.ofDefault("armeria.server"));
         if (settings.getSsl() != null) {
             configureTls(sb, settings.getSsl());

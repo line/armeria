@@ -10,6 +10,7 @@ import example.armeria.grpc.reactor.Hello.HelloRequest;
 import example.armeria.grpc.reactor.ReactorHelloServiceGrpc.HelloServiceImplBase;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
 public class HelloServiceImpl extends HelloServiceImplBase {
@@ -79,6 +80,21 @@ public class HelloServiceImpl extends HelloServiceImplBase {
                 )
                 // You can make your Flux/Mono publish the signals in the RequestContext-aware executor.
                 .publishOn(Schedulers.fromExecutor(ServiceRequestContext.current().eventLoop()))
+                .map(HelloServiceImpl::buildReply);
+    }
+
+    /**
+     * Sends 5 {@link HelloReply} responses published without a specific {@link Scheduler}
+     * when receiving a request.
+     */
+    @Override
+    public Flux<HelloReply> lotsOfRepliesWithoutScheduler(Mono<HelloRequest> request) {
+        return request
+                .flatMapMany(
+                        it -> Flux.interval(Duration.ofSeconds(1))
+                                  .take(5)
+                                  .map(index -> "Hello, " + it.getName() + "! (sequence: " + (index + 1) + ')')
+                )
                 .map(HelloServiceImpl::buildReply);
     }
 
