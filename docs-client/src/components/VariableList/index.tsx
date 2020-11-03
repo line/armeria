@@ -184,7 +184,7 @@ const FieldInfos: React.FunctionComponent<FieldInfosProps> = (props) => {
   );
 };
 
-export default function ({ title, variables, specification }: Props) {
+export default ({ title, variables, specification }: Props) => {
   const hasBean = variables.some(
     (variable) =>
       !!variable.childFieldInfos && variable.childFieldInfos.length > 0,
@@ -224,4 +224,4 @@ export default function ({ title, variables, specification }: Props) {
       <Typography variant="body2" paragraph />
     </>
   );
-}
+};

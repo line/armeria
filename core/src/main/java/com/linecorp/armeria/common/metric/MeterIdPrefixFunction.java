@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction;
-import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 
@@ -48,7 +47,7 @@ public interface MeterIdPrefixFunction {
      * <ul>
      *   <li>Server-side tags:<ul>
      *     <li>{@code hostnamePattern} - {@link VirtualHost#hostnamePattern()}
-     *     <li>{@code route} - {@link Route#patternString()}</li>
+     *     <li>{@code service} - RPC service name or innermost service class name</li>
      *     <li>{@code method} - RPC method name or {@link HttpMethod#name()} if RPC method name is not
      *                          available</li>
      *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>

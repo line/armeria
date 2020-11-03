@@ -78,7 +78,7 @@ public final class SerializationFormat implements Comparable<SerializationFormat
                 ServiceLoader.load(SerializationFormatProvider.class,
                                    SerializationFormatProvider.class.getClassLoader()));
         if (!providers.isEmpty()) {
-            logger.info("Loaded {}: {}", SerializationFormatProvider.class.getSimpleName(), providers);
+            logger.debug("Available {}s: {}", SerializationFormatProvider.class.getSimpleName(), providers);
 
             providers.forEach(p -> p.entries().forEach(e -> register(mutableUriTextToFormats,
                                                                      mutableSimplifiedMediaTypeToFormats, e)));

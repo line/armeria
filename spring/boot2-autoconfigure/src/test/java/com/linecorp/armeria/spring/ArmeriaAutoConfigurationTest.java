@@ -158,6 +158,11 @@ public class ArmeriaAutoConfigurationTest {
         public MeterIdPrefixFunction myMeterIdPrefixFunction() {
             return GrpcMeterIdPrefixFunction.of("custom.armeria.server");
         }
+
+        @Bean
+        public HealthCheckServiceConfigurator healthCheckServiceConfigurator() {
+            return builder -> builder.updatable(true);
+        }
     }
 
     public static class IllegalArgumentExceptionHandler implements ExceptionHandlerFunction {
@@ -341,5 +346,18 @@ public class ArmeriaAutoConfigurationTest {
         assertThat(metricReport).contains("# TYPE custom_armeria_server_response_duration_seconds_max gauge");
         assertThat(metricReport).contains(
                 "custom_armeria_server_response_duration_seconds_max{grpc_status=\"0\"");
+    }
+
+    @Test
+    public void testHealthCheckService() throws Exception {
+        final WebClient client = WebClient.of(newUrl("h1c"));
+
+        HttpResponse response = client.get("/internal/healthcheck");
+        AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+        response = client.post("/internal/healthcheck", "{\"healthy\":false}");
+        res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 }

@@ -21,7 +21,10 @@ import com.linecorp.armeria.common.HttpData;
 /**
  * An interface for objects that apply HTTP content decoding to incoming {@link HttpData}.
  * Implement this interface to use content decoding schemes not built-in to the JDK.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.encoding.StreamDecoder} instead.
  */
+@Deprecated
 public interface StreamDecoder {
 
     /**

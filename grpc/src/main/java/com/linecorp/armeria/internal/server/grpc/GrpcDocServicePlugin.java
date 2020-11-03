@@ -18,22 +18,21 @@ package com.linecorp.armeria.internal.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
 
 import java.io.UncheckedIOException;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import javax.annotation.Nullable;
-
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimap;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.EnumDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
@@ -56,7 +55,6 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
@@ -76,6 +74,8 @@ import io.grpc.protobuf.ProtoFileDescriptorSupplier;
  * {@link DocServicePlugin} implementation that supports {@link GrpcService}s.
  */
 public final class GrpcDocServicePlugin implements DocServicePlugin {
+
+    private static final String NAME = "grpc";
 
     @VisibleForTesting
     static final TypeSignature BOOL = TypeSignature.ofBase("bool");
@@ -117,7 +117,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     @Override
     public String name() {
-        return "grpc";
+        return NAME;
     }
 
     @Override
@@ -131,7 +131,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
 
-        final Map<String, ServiceEntryBuilder> map = new LinkedHashMap<>();
+        final ServiceInfosBuilder serviceInfosBuilder = new ServiceInfosBuilder();
         for (ServiceConfig serviceConfig : serviceConfigs) {
             final GrpcService grpcService = serviceConfig.service().as(GrpcService.class);
             assert grpcService != null;
@@ -162,17 +162,16 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                        .filter(desc -> desc.getSchemaDescriptor() instanceof ProtoFileDescriptorSupplier)
                        .forEach(desc -> {
                            final String serviceName = desc.getName();
-                           map.computeIfAbsent(serviceName, s -> {
-                               final ProtoFileDescriptorSupplier fileDescSupplier =
-                                       (ProtoFileDescriptorSupplier) desc.getSchemaDescriptor();
-                               final FileDescriptor fileDesc = fileDescSupplier.getFileDescriptor();
-                               final ServiceDescriptor serviceDesc =
-                                       fileDesc.getServices().stream()
-                                               .filter(sd -> sd.getFullName().equals(serviceName))
-                                               .findFirst()
-                                               .orElseThrow(IllegalStateException::new);
-                               return new ServiceEntryBuilder(serviceDesc);
-                           });
+
+                           final ProtoFileDescriptorSupplier fileDescSupplier =
+                                   (ProtoFileDescriptorSupplier) desc.getSchemaDescriptor();
+                           final FileDescriptor fileDesc = fileDescSupplier.getFileDescriptor();
+                           final ServiceDescriptor serviceDesc =
+                                   fileDesc.getServices().stream()
+                                           .filter(sd -> sd.getFullName().equals(serviceName))
+                                           .findFirst()
+                                           .orElseThrow(IllegalStateException::new);
+                           serviceInfosBuilder.addService(serviceDesc);
                        });
 
             final String pathPrefix;
@@ -183,19 +182,17 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 pathPrefix = "/";
             }
 
-            for (ServerServiceDefinition service : grpcService.services()) {
-                final String serviceName = service.getServiceDescriptor().getName();
-                map.get(serviceName).endpoint(
+            grpcService.methods().forEach((path, method) -> {
+                final EndpointInfo endpointInfo =
                         EndpointInfo.builder(serviceConfig.virtualHost().hostnamePattern(),
-                                             // Only the URL prefix, each method is served
-                                             // at a different path.
-                                             pathPrefix + serviceName + '/')
+                                             pathPrefix + path)
                                     .availableMimeTypes(supportedMediaTypes)
-                                    .build());
-            }
+                                    .build();
+
+                serviceInfosBuilder.addEndpoint(method.getMethodDescriptor(), endpointInfo);
+            });
         }
-        return generate(map.values().stream().map(ServiceEntryBuilder::build).collect(toImmutableList()),
-                        filter);
+        return generate(serviceInfosBuilder.build(filter));
     }
 
     @Override
@@ -228,12 +225,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    ServiceSpecification generate(List<ServiceEntry> entries, DocServiceFilter filter) {
-        final List<ServiceInfo> services = entries.stream()
-                                                  .map(entry -> newServiceInfo(entry, filter))
-                                                  .filter(Objects::nonNull)
-                                                  .collect(toImmutableList());
-
+    ServiceSpecification generate(List<ServiceInfo> services) {
         return ServiceSpecification.generate(services, this::newNamedTypeInfo);
     }
 
@@ -247,35 +239,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         return newEnumInfo((EnumDescriptor) descriptor);
     }
 
-    @Nullable
-    ServiceInfo newServiceInfo(ServiceEntry entry, DocServiceFilter filter) {
-        final List<MethodInfo> methodInfos =
-                entry.methods().stream()
-                     .filter(m -> filter.test(name(), entry.name(), m.getName()))
-                     .map(m -> newMethodInfo(m, entry))
-                     .collect(toImmutableList());
-        if (methodInfos.isEmpty()) {
-            return null;
-        }
-        return new ServiceInfo(entry.name(), methodInfos);
-    }
-
     @VisibleForTesting
-    static MethodInfo newMethodInfo(MethodDescriptor method, ServiceEntry service) {
-        final Set<EndpointInfo> methodEndpoints =
-                service.endpointInfos.stream()
-                                     .map(e -> {
-                                         final EndpointInfoBuilder builder = EndpointInfo.builder(
-                                                 e.hostnamePattern(), e.pathMapping() + method.getName());
-                                         if (e.fragment() != null) {
-                                             builder.fragment(e.fragment());
-                                         }
-                                         if (e.defaultMimeType() != null) {
-                                             builder.defaultMimeType(e.defaultMimeType());
-                                         }
-                                         return builder.availableMimeTypes(e.availableMimeTypes()).build();
-                                     })
-                                     .collect(toImmutableSet());
+    static MethodInfo newMethodInfo(MethodDescriptor method, Set<EndpointInfo> endpointInfos) {
         return new MethodInfo(
                 method.getName(),
                 namedMessageSignature(method.getOutputType()),
@@ -283,7 +248,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 ImmutableList.of(FieldInfo.builder("request", namedMessageSignature(method.getInputType()))
                                           .requirement(FieldRequirement.REQUIRED).build()),
                 /* exceptionTypeSignatures */ ImmutableList.of(),
-                methodEndpoints,
+                endpointInfos,
                 /* exampleHeaders */ ImmutableList.of(),
                 defaultExamples(method),
                 /* examplePaths */ ImmutableList.of(),
@@ -409,6 +374,11 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         return TypeSignature.ofNamed(descriptor.getFullName(), descriptor);
     }
 
+    @Override
+    public String toString() {
+        return GrpcDocServicePlugin.class.getSimpleName();
+    }
+
     @VisibleForTesting
     static final class ServiceEntry {
         final ServiceDescriptor service;
@@ -430,21 +400,48 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    static final class ServiceEntryBuilder {
-        private final ServiceDescriptor service;
-        private final List<EndpointInfo> endpointInfos = new ArrayList<>();
+    static final class ServiceInfosBuilder {
+        private final Map<String, ServiceDescriptor> services = new LinkedHashMap<>();
+        private final Multimap<ServiceDescriptor, MethodDescriptor> methods = HashMultimap.create();
+        private final Multimap<MethodDescriptor, EndpointInfo> endpoints = HashMultimap.create();
 
-        ServiceEntryBuilder(ServiceDescriptor service) {
-            this.service = service;
-        }
-
-        ServiceEntryBuilder endpoint(EndpointInfo endpointInfo) {
-            endpointInfos.add(requireNonNull(endpointInfo, "endpointInfo"));
+        ServiceInfosBuilder addService(ServiceDescriptor service) {
+            services.put(service.getFullName(), service);
             return this;
         }
 
-        ServiceEntry build() {
-            return new ServiceEntry(service, endpointInfos);
+        ServiceInfosBuilder addEndpoint(io.grpc.MethodDescriptor<?, ?> grpcMethod, EndpointInfo endpointInfo) {
+            final ServiceDescriptor service = services.get(grpcMethod.getServiceName());
+            assert service != null;
+
+            final MethodDescriptor method =
+                    service.findMethodByName(extractMethodName(grpcMethod.getFullMethodName()));
+            assert method != null;
+
+            methods.put(service, method);
+            endpoints.put(method, endpointInfo);
+            return this;
+        }
+
+        List<ServiceInfo> build(DocServiceFilter filter) {
+            return methods
+                    .asMap().entrySet().stream()
+                    .map(entry -> {
+                        final String serviceName = entry.getKey().getFullName();
+                        final List<MethodInfo> methodInfos =
+                                entry.getValue().stream()
+                                     .filter(m -> filter.test(NAME, serviceName, m.getName()))
+                                     .map(method -> newMethodInfo(method,
+                                                                  ImmutableSet.copyOf(endpoints.get(method))))
+                                     .collect(toImmutableList());
+                        if (methodInfos.isEmpty()) {
+                            return null;
+                        } else {
+                            return new ServiceInfo(serviceName, methodInfos);
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(toImmutableList());
         }
     }
 }

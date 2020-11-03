@@ -17,22 +17,56 @@
 <configuration>
   <appender name="NOP" class="ch.qos.logback.core.helpers.NOPAppender" />
   <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
-    <appender-ref ref="NOP"/>
+    <appender-ref ref="NOP" />
     <export>remote.host</export>
     <export>req.headers.user-agent</export>
     <export>res.headers.set-cookie</export>
-    <export>attrs.foo:com.example.AttrKeys#FOO</export>
-    <export>attrs.bar:com.example.AttrKeys#BAR:com.linecorp.armeria.common.logback.CustomObjectValueStringifier</export>
-    <export>attrs.qux:com.example.AttrKeys#BAR:com.linecorp.armeria.common.logback.CustomObjectNameStringifier</export>
+    <export>attrs.foo:com.linecorp.armeria.common.logback.CustomObject#FOO</export>
+    <export>
+      attrs.bar:com.linecorp.armeria.common.logback.CustomObject#ATTR:com.linecorp.armeria.common.logback.CustomObjectNameStringifier
+    </export>
     <exports>
-      remote.ip, remote.port,
+      foo.remote.host=remote.host,
+      remote.*,
+      local.*,
       req.headers.content-type,
-      attrs.baz:com.example.AttrKeys#BAZ
+      baz=attr:com.linecorp.armeria.common.logback.CustomObject#ATTR:com.linecorp.armeria.common.logback.CustomObjectValueStringifier
     </exports>
   </appender>
 
-  <logger name="com.linecorp.armeria.common.logback.RequestContextExportingAppenderTest" level="TRACE">
+  <appender name="RCEA_WITH_PREFIX" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    <appender-ref ref="NOP" />
+    <!-- default export group -->
+    <prefix>defaultPrefix.</prefix>
+    <export>remote.host</export>
+    <exports>remote.ip, remote.port</exports>
+
+    <exportGroup>
+      <prefix>group1.</prefix>
+      <export>remote.host</export>
+      <exports>remote.ip, remote.port</exports>
+    </exportGroup>
+
+    <exportGroup>
+      <export>remote.host</export>
+      <exports>remote.ip, remote.port</exports>
+      <!-- users can specify a prefix later -->
+      <prefix>group2.</prefix>
+    </exportGroup>
+
+    <exportGroup>
+      <!-- no prefix -->
+      <export>remote.host</export>
+      <exports>remote.ip, remote.port</exports>
+    </exportGroup>
+  </appender>
+
+  <logger name="RCEA" level="TRACE">
     <appender-ref ref="RCEA" />
+  </logger>
+
+  <logger name="RCEA_WITH_PREFIX" level="TRACE">
+    <appender-ref ref="RCEA_WITH_PREFIX" />
   </logger>
 
   <!-- Copied from testing-internal/src/main/resources/logback-test.xml -->

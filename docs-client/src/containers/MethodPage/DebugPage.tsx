@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -28,14 +28,14 @@ import React, {
   ChangeEvent,
   useCallback,
   useEffect,
+  useMemo,
   useReducer,
   useState,
 } from 'react';
 import { Option } from 'react-dropdown';
-import SyntaxHighlighter from 'react-syntax-highlighter';
-// react-syntax-highlighter type definitions are out of date.
-// @ts-ignore
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import githubGist from 'react-syntax-highlighter/dist/esm/styles/hljs/github-gist';
+import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
 
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
@@ -48,6 +48,8 @@ import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
+
+SyntaxHighlighter.registerLanguage('json', json);
 
 interface OwnProps {
   method: Method;
@@ -133,6 +135,15 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [keepDebugResponse, toggleKeepDebugResponse] = useReducer(
+    toggle,
+    false,
+  );
+
+  const transport = TRANSPORTS.getDebugTransport(method);
+  if (!transport) {
+    throw new Error("This method doesn't have a debug transport.");
+  }
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -145,13 +156,27 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
     }
 
-    const urlPath =
-      isAnnotatedService && exactPathMapping
-        ? method.endpoints[0].pathMapping.substring('exact:'.length)
-        : urlParams.get('endpoint_path') || '';
+    let urlPath;
+    if (isAnnotatedService) {
+      if (exactPathMapping) {
+        urlPath = method.endpoints[0].pathMapping.substring('exact:'.length);
+      } else {
+        urlPath = urlParams.get('endpoint_path') || '';
+      }
+    } else {
+      urlPath =
+        transport.findDebugMimeTypeEndpoint(
+          method,
+          urlParams.get('endpoint_path') || undefined,
+        )?.pathMapping || '';
+    }
+
     const urlQueries = isAnnotatedService ? urlParams.get('queries') : '';
 
-    setDebugResponse('');
+    if (!keepDebugResponse) {
+      setDebugResponse('');
+      toggleKeepDebugResponse(false);
+    }
     setSnackbarOpen(false);
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalPath(urlPath || '');
@@ -162,9 +187,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
     isAnnotatedService,
     location.search,
     match.params,
-    method.endpoints,
-    method.exampleRequests,
+    method,
+    transport,
     useRequestBody,
+    keepDebugResponse,
   ]);
 
   /* eslint-disable react-hooks/exhaustive-deps */
@@ -194,55 +220,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
   const dismissSnackbar = useCallback(() => {
     setSnackbarOpen(false);
   }, []);
-
-  const validateEndpointPath = useCallback(
-    (newEndpointPath: string) => {
-      if (!newEndpointPath) {
-        throw new Error('You must specify the endpoint path.');
-      }
-      const endpoint = method.endpoints[0];
-      const regexPathPrefix = endpoint.regexPathPrefix;
-      const originalPath = endpoint.pathMapping;
-
-      if (originalPath.startsWith('prefix:')) {
-        // Prefix path mapping.
-        const prefix = originalPath.substring('prefix:'.length);
-        if (!newEndpointPath.startsWith(prefix)) {
-          throw new Error(
-            `The path: '${newEndpointPath}' should start with the prefix: ${prefix}`,
-          );
-        }
-      }
-
-      if (originalPath.startsWith('regex:')) {
-        let regexPart;
-        if (regexPathPrefix) {
-          // Prefix adding path mapping.
-          const prefix = regexPathPrefix.substring('prefix:'.length);
-          if (!newEndpointPath.startsWith(prefix)) {
-            throw new Error(
-              `The path: '${newEndpointPath}' should start with the prefix: ${prefix}`,
-            );
-          }
-
-          // Remove the prefix from the endpointPath so that we can test the regex.
-          regexPart = newEndpointPath.substring(prefix.length - 1);
-        } else {
-          regexPart = newEndpointPath;
-        }
-        const regExp = new RegExp(originalPath.substring('regex:'.length));
-        if (!regExp.test(regexPart)) {
-          const expectedPath = regexPathPrefix
-            ? `${regexPathPrefix} ${originalPath}`
-            : originalPath;
-          throw new Error(
-            `Endpoint path: ${newEndpointPath} (expected: ${expectedPath})`,
-          );
-        }
-      }
-    },
-    [method],
-  );
 
   const onSelectedQueriesChange = useCallback((selectedQueries: Option) => {
     setAdditionalQueries(selectedQueries.value);
@@ -297,36 +274,38 @@ const DebugPage: React.FunctionComponent<Props> = ({
         `${window.location.protocol}//${window.location.hostname}` +
         `${window.location.port ? `:${window.location.port}` : ''}`;
 
-      const transport = TRANSPORTS.getDebugTransport(method);
-      if (!transport) {
-        throw new Error("This method doesn't have a debug transport.");
+      const httpMethod = method.httpMethod;
+      let uri;
+      let endpoint;
+
+      if (isAnnotatedService) {
+        const queries = additionalQueries;
+        if (exactPathMapping) {
+          endpoint = transport.getDebugMimeTypeEndpoint(method);
+          uri =
+            `'${host}${escapeSingleQuote(
+              endpoint.pathMapping.substring('exact:'.length),
+            )}` +
+            `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
+        } else {
+          endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
+          uri =
+            `'${host}${escapeSingleQuote(additionalPath)}'` +
+            `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
+        }
+      } else if (additionalPath.length > 0) {
+        endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
+        uri = `'${host}${escapeSingleQuote(additionalPath)}'`;
+      } else {
+        endpoint = transport.getDebugMimeTypeEndpoint(method);
+        uri = `'${host}${escapeSingleQuote(endpoint.pathMapping)}'`;
       }
 
-      const httpMethod = method.httpMethod;
-      const endpoint = transport.findDebugMimeTypeEndpoint(method);
-      const path = endpoint.pathMapping;
       const body = transport.getCurlBody(
         endpoint,
         method,
         escapeSingleQuote(requestBody),
       );
-      let uri;
-
-      if (isAnnotatedService) {
-        const queries = additionalQueries;
-        if (exactPathMapping) {
-          uri =
-            `'${host}${escapeSingleQuote(path.substring('exact:'.length))}` +
-            `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
-        } else {
-          validateEndpointPath(additionalPath);
-          uri =
-            `'${host}${escapeSingleQuote(additionalPath)}'` +
-            `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
-        }
-      } else {
-        uri = `'${host}${escapeSingleQuote(path)}'`;
-      }
 
       headers['content-type'] = transport.getDebugMimeType();
       if (process.env.WEBPACK_DEV === 'true') {
@@ -352,12 +331,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
     useRequestBody,
     additionalHeaders,
     method,
+    transport,
     requestBody,
     isAnnotatedService,
     showSnackbar,
     additionalQueries,
     exactPathMapping,
-    validateEndpointPath,
     additionalPath,
   ]);
 
@@ -390,12 +369,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
         if (!exactPathMapping) {
           executedEndpointPath = params.get('endpoint_path') || undefined;
         }
+      } else {
+        executedEndpointPath = params.get('endpoint_path') || undefined;
       }
 
       const headersText = params.get('headers');
       const headers = headersText ? JSON.parse(headersText) : {};
 
-      const transport = TRANSPORTS.getDebugTransport(method)!;
       let executedDebugResponse;
       try {
         executedDebugResponse = await transport.send(
@@ -410,10 +390,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
       setDebugResponse(executedDebugResponse);
     },
-    [useRequestBody, isAnnotatedService, exactPathMapping, method],
+    [useRequestBody, isAnnotatedService, exactPathMapping, method, transport],
   );
 
-  const onSubmit = useCallback(() => {
+  const onSubmit = useCallback(async () => {
     setDebugResponse('');
 
     const queries = additionalQueries;
@@ -439,9 +419,14 @@ const DebugPage: React.FunctionComponent<Props> = ({
           params.set('queries', queries);
         }
         if (!exactPathMapping) {
-          validateEndpointPath(additionalPath);
+          transport.getDebugMimeTypeEndpoint(method, additionalPath);
           params.set('endpoint_path', additionalPath);
         }
+      } else if (additionalPath.length > 0) {
+        params.set('endpoint_path', additionalPath);
+      } else {
+        // Fall back to default endpoint.
+        params.delete('endpoint_path');
       }
 
       if (headers) {
@@ -467,9 +452,11 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     const serializedParams = `?${params.toString()}`;
     if (serializedParams !== location.search) {
+      // executeRequest may throw error before useEffect, we need to avoid useEffect cleanup the debug response.
+      toggleKeepDebugResponse(true);
       history.push(`${location.pathname}${serializedParams}`);
     }
-    executeRequest(params);
+    await executeRequest(params);
   }, [
     additionalQueries,
     additionalHeaders,
@@ -481,10 +468,23 @@ const DebugPage: React.FunctionComponent<Props> = ({
     isAnnotatedService,
     requestBody,
     exactPathMapping,
-    validateEndpointPath,
     additionalPath,
     history,
+    method,
+    transport,
   ]);
+
+  const supportedExamplePaths = useMemo(() => {
+    if (isAnnotatedService) {
+      return examplePaths;
+    }
+    return transport.listDebugMimeTypeEndpoint(method).map((endpoint) => {
+      return {
+        label: endpoint.pathMapping,
+        value: endpoint.pathMapping,
+      };
+    });
+  }, [examplePaths, method, isAnnotatedService, transport]);
 
   return (
     <Section>
@@ -507,22 +507,27 @@ const DebugPage: React.FunctionComponent<Props> = ({
               .
             </Alert>
             <EndpointPath
-              examplePaths={examplePaths}
+              examplePaths={supportedExamplePaths}
               editable={!exactPathMapping}
+              isAnnotatedService={isAnnotatedService}
               endpointPathOpen={endpointPathOpen}
               additionalPath={additionalPath}
               onEditEndpointPathClick={toggleEndpointPathOpen}
               onPathFormChange={onPathFormChange}
               onSelectedPathChange={onSelectedPathChange}
             />
-            <HttpQueryString
-              exampleQueries={exampleQueries}
-              additionalQueriesOpen={additionalQueriesOpen}
-              additionalQueries={additionalQueries}
-              onEditHttpQueriesClick={toggleAdditionalQueriesOpen}
-              onQueriesFormChange={onQueriesFormChange}
-              onSelectedQueriesChange={onSelectedQueriesChange}
-            />
+            {isAnnotatedService && (
+              <>
+                <HttpQueryString
+                  exampleQueries={exampleQueries}
+                  additionalQueriesOpen={additionalQueriesOpen}
+                  additionalQueries={additionalQueries}
+                  onEditHttpQueriesClick={toggleAdditionalQueriesOpen}
+                  onQueriesFormChange={onQueriesFormChange}
+                  onSelectedQueriesChange={onSelectedQueriesChange}
+                />
+              </>
+            )}
             <HttpHeaders
               exampleHeaders={exampleHeaders}
               additionalHeadersOpen={additionalHeadersOpen}

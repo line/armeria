@@ -54,6 +54,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
@@ -266,7 +267,12 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                       .map(TypeSignature::ofNamed)
                       .collect(toImmutableList());
 
-        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints);
+        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+                              ImmutableList.of(),
+                              ImmutableList.of(),
+                              ImmutableList.of(),
+                              ImmutableList.of(),
+                              HttpMethod.POST, null);
     }
 
     private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {
@@ -537,5 +543,10 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         }
 
         return exampleTBase;
+    }
+
+    @Override
+    public String toString() {
+        return ThriftDocServicePlugin.class.getSimpleName();
     }
 }

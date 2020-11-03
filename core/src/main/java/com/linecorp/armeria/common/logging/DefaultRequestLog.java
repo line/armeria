@@ -31,9 +31,6 @@ import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
@@ -68,8 +65,6 @@ import io.netty.channel.Channel;
  */
 final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultRequestLog.class);
-
     private static final AtomicIntegerFieldUpdater<DefaultRequestLog> flagsUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultRequestLog.class, "flags");
 
@@ -81,8 +76,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private static final RequestHeaders DUMMY_REQUEST_HEADERS_HTTPS =
             RequestHeaders.builder(HttpMethod.UNKNOWN, "?").scheme("https").authority("?").build();
     private static final ResponseHeaders DUMMY_RESPONSE_HEADERS = ResponseHeaders.of(HttpStatus.UNKNOWN);
-
-    private static boolean warnedSettingContentPreviewTwice;
 
     private final RequestContext ctx;
     private final CompleteRequestLog notCheckingAccessor = new CompleteRequestLog();
@@ -564,7 +557,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              .thenAccept(log -> requestContent(log.requestContent(), log.rawRequestContent()));
         child.whenRequestComplete().thenAccept(log -> {
             requestLength(log.requestLength());
-            requestContentPreview(log.requestContentPreview(), false);
+            requestContentPreview(log.requestContentPreview());
             requestTrailers(log.requestTrailers());
             // Note that we do not propagate `requestCause` because otherwise the request which succeeded after
             // retries can be considered to have failed.
@@ -623,7 +616,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private void propagateResponseEndData(RequestLog log) {
         responseContent(log.responseContent(), log.rawResponseContent());
         responseLength(log.responseLength());
-        responseContentPreview(log.responseContentPreview(), false);
+        responseContentPreview(log.responseContentPreview());
         responseTrailers(log.responseTrailers());
         endResponse0(log.responseCause(), log.responseEndTimeNanos());
     }
@@ -941,17 +934,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void requestContentPreview(@Nullable String requestContentPreview) {
-        requestContentPreview(requestContentPreview, true);
-    }
-
-    private void requestContentPreview(@Nullable String requestContentPreview, boolean warnIfSetAlready) {
         if (isAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
-            if (warnIfSetAlready && requestContentPreview != null && !warnedSettingContentPreviewTwice) {
-                warnedSettingContentPreviewTwice = true;
-                logger.warn("You tried to set the request content preview twice: {} " +
-                            " Did you apply content previewing decorator more than once?",
-                            requestContentPreview);
-            }
             return;
         }
 
@@ -1294,17 +1277,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public void responseContentPreview(@Nullable String responseContentPreview) {
-        responseContentPreview(responseContentPreview, true);
-    }
-
-    private void responseContentPreview(@Nullable String responseContentPreview, boolean warnIfSetAlready) {
         if (isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
-            if (warnIfSetAlready && responseContentPreview != null && !warnedSettingContentPreviewTwice) {
-                warnedSettingContentPreviewTwice = true;
-                logger.warn("You tried to set the response content preview twice: {} " +
-                            " Did you apply content previewing decorator more than once?",
-                            responseContentPreview);
-            }
             return;
         }
 

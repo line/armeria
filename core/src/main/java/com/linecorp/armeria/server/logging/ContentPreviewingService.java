@@ -38,6 +38,8 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
+import io.netty.util.AttributeKey;
+
 /**
  * Decorates an {@link HttpService} to preview the content of {@link Request}s and {@link Response}s.
  *
@@ -53,6 +55,9 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  * }</pre>
  */
 public final class ContentPreviewingService extends SimpleDecoratingHttpService {
+
+    private static final AttributeKey<Boolean> SETTING_CONTENT_PREVIEW =
+            AttributeKey.valueOf(ContentPreviewingService.class, "SETTING_CONTENT_PREVIEW");
 
     /**
      * Creates a new {@link ContentPreviewingService} decorator which produces text preview with the
@@ -115,6 +120,11 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        final Boolean settingContentPreview = ctx.attr(SETTING_CONTENT_PREVIEW);
+        if (Boolean.TRUE.equals(settingContentPreview)) {
+            return unwrap().serve(ctx, req);
+        }
+        ctx.setAttr(SETTING_CONTENT_PREVIEW, true);
         final ContentPreviewer requestContentPreviewer =
                 contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
         req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer);
