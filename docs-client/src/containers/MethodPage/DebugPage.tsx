@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -33,10 +33,9 @@ import React, {
   useState,
 } from 'react';
 import { Option } from 'react-dropdown';
-import SyntaxHighlighter from 'react-syntax-highlighter';
-// react-syntax-highlighter type definitions are out of date.
-// @ts-ignore
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import githubGist from 'react-syntax-highlighter/dist/esm/styles/hljs/github-gist';
+import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
 
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
@@ -49,6 +48,8 @@ import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
+
+SyntaxHighlighter.registerLanguage('json', json);
 
 interface OwnProps {
   method: Method;
