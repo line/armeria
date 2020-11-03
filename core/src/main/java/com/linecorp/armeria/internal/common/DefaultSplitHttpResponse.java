@@ -246,7 +246,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                     // Ignore informational headers
                     upstream.request(1);
                 } else {
-                    completeInformationHeaders();
                     headersFuture.doComplete(headers);
                 }
                 return;

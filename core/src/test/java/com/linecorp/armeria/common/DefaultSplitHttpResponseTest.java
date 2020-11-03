@@ -50,7 +50,7 @@ class DefaultSplitHttpResponseTest {
     }
 
     @Test
-    void informationalHeaders() {
+    void dropInformationalHeaders() {
         final HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.CONTINUE),
                                                       ResponseHeaders.of(HttpStatus.PROCESSING),
                                                       ResponseHeaders.of(HttpStatus.OK),
@@ -61,8 +61,6 @@ class DefaultSplitHttpResponseTest {
                     .thenRequest(1)
                     .expectNext(HttpData.ofUtf8("Hello"))
                     .verifyComplete();
-        assertThat(splitHttpResponse.informationalHeaders().join()).containsExactly(
-                ResponseHeaders.of(HttpStatus.CONTINUE), ResponseHeaders.of(HttpStatus.PROCESSING));
         assertThat(splitHttpResponse.headers().join().status()).isEqualTo(HttpStatus.OK);
     }
 
@@ -105,7 +103,6 @@ class DefaultSplitHttpResponseTest {
                     .thenRequest(1)
                     .expectError(ResponseTimeoutException.class)
                     .verify();
-        assertThat(splitHttpResponse.informationalHeaders().join()).isEmpty();
         assertThatThrownBy(() -> splitHttpResponse.headers().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
@@ -120,7 +117,6 @@ class DefaultSplitHttpResponseTest {
                     .thenRequest(1)
                     .expectError(AbortedStreamException.class)
                     .verify();
-        assertThat(splitHttpResponse.informationalHeaders().join()).isEmpty();
         assertThat(splitHttpResponse.headers().join().status()).isEqualTo(HttpStatus.UNKNOWN);
         assertThat(splitHttpResponse.trailers().join().isEmpty()).isTrue();
     }
@@ -136,7 +132,6 @@ class DefaultSplitHttpResponseTest {
                     .thenCancel()
                     .verify();
 
-        assertThat(splitHttpResponse.informationalHeaders().join()).isEmpty();
         assertThat(splitHttpResponse.headers().join()).isEqualTo(ResponseHeaders.of(HttpStatus.OK));
         assertThat(splitHttpResponse.trailers().join().isEmpty()).isTrue();
     }

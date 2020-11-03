@@ -552,12 +552,12 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject} into
+     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject}s into
      * {@link HttpHeaders} and {@link HttpData}.
-     * {@link SplitHttpResponse#informationalHeaders()}, {@link SplitHttpResponse#headers()} will be
-     * completed before publishing the first element of {@link HttpData}.
-     * {@link SplitHttpResponse#trailers()} might not complete until the entire {@link HttpData} has been
-     * consumed.
+     * {@link SplitHttpResponse#headers()} will be
+     * completed before publishing the first {@link HttpData}.
+     * {@link SplitHttpResponse#trailers()} might not complete until the entire response body is consumed
+     * completely.
      */
     @CheckReturnValue
     default SplitHttpResponse split() {
@@ -565,12 +565,11 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject} into
+     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject}s into
      * {@link HttpHeaders} and {@link HttpData}.
-     * {@link SplitHttpResponse#informationalHeaders()}, {@link SplitHttpResponse#headers()} will be
-     * completed before publishing the first element of {@link HttpData}.
-     * {@link SplitHttpResponse#trailers()} might not complete until the entire {@link HttpData} has been
-     * consumed.
+     * {@link SplitHttpResponse#headers()} will be completed before publishing the first {@link HttpData}.
+     * {@link SplitHttpResponse#trailers()} might not complete until the entire response body is consumed
+     * completely.
      */
     @CheckReturnValue
     default SplitHttpResponse split(EventExecutor executor) {
@@ -578,12 +577,11 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject} into
+     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject}s into
      * {@link HttpHeaders} and {@link HttpData}.
-     * {@link SplitHttpResponse#informationalHeaders()}, {@link SplitHttpResponse#headers()} will be
-     * completed before publishing the first element of {@link HttpData}.
-     * {@link SplitHttpResponse#trailers()} might not complete until the entire {@link HttpData} has been
-     * consumed.
+     * {@link SplitHttpResponse#headers()} will be completed before publishing the first {@link HttpData}.
+     * {@link SplitHttpResponse#trailers()} might not complete until the entire response body is consumed
+     * completely.
      *
      * <p>(Advanced users only) If you want to get pooled objects from {@link SplitHttpResponse#body()},
      * you should call this method with {@link SubscriptionOption#WITH_POOLED_OBJECTS}.
