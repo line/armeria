@@ -49,7 +49,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * A {@link ResponseConverterFunction} which creates an {@link HttpResponse} with
  * {@code content-type: application/protobuf} or {@code content-type: application/json; charset=utf-8}.
  * If the returned object is instance of {@link MessageLite}, the object can be converted to
- * <a href="https://developers.google.com/protocol-buffers/docs/encoding">Protocol Buffer</a> or
+ * <a href="https://developers.google.com/protocol-buffers/docs/encoding">Protocol Buffers</a> or
  * <a href="https://developers.google.com/protocol-buffers/docs/proto3#json">JSON</a> format.
  *
  * <p>The Protocol Buffers spec does not have an official way to sending multiple messages because
