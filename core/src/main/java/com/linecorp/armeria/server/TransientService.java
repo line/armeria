@@ -44,22 +44,26 @@ public interface TransientService<I extends Request, O extends Response> extends
     enum ActionType {
 
         /**
-         * Graceful shutdown counts the requests to the {@link TransientService} as processing requests.
+         * Whether Graceful shutdown counts the requests to the {@link TransientService} as processing requests.
+         *
+         * @see ServerBuilder#gracefulShutdownTimeoutMillis(long, long)
          */
         GRACEFUL_SHUTDOWN,
 
         /**
-         * {@link MetricCollectingService} collects the metrics of the requests to the {@link TransientService}.
+         * Whether {@link MetricCollectingService} collects the metrics of the requests to the
+         * {@link TransientService}.
          */
         METRIC_COLLECTION,
 
         /**
-         * {@link LoggingService} logs the requests to the {@link TransientService}.
+         * Whether {@link LoggingService} logs the requests to the {@link TransientService}.
          */
         LOGGING,
 
         /**
-         * {@link AccessLogWriter} produces the access logs of the requests to the {@link TransientService}.
+         * Whether {@link AccessLogWriter} produces the access logs of the requests to the
+         * {@link TransientService}.
          */
         ACCESS_LOGGING;
     }
