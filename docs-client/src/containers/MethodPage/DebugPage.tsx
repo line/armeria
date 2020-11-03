@@ -32,10 +32,9 @@ import React, {
   useReducer,
   useState,
 } from 'react';
-import SyntaxHighlighter from 'react-syntax-highlighter';
-// react-syntax-highlighter type definitions are out of date.
-// @ts-ignore
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import githubGist from 'react-syntax-highlighter/dist/esm/styles/hljs/github-gist';
+import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
 
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
@@ -49,6 +48,8 @@ import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
+
+SyntaxHighlighter.registerLanguage('json', json);
 
 interface OwnProps {
   method: Method;
