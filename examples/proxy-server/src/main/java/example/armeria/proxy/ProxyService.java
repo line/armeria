@@ -48,7 +48,11 @@ public final class ProxyService extends AbstractHttpService {
     private final boolean addViaToResponseHeaders;
 
     public ProxyService() throws ExecutionException, InterruptedException {
-        loadBalancingClient = newLoadBalancingClient();
+        this(newLoadBalancingClient());
+    }
+
+    public ProxyService(WebClient loadBalancingClient) throws ExecutionException, InterruptedException {
+        this.loadBalancingClient = loadBalancingClient;
         addForwardedToRequestHeaders = true;
         addViaToResponseHeaders = true;
     }
@@ -74,7 +78,8 @@ public final class ProxyService extends AbstractHttpService {
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (addForwardedToRequestHeaders) {
-            addForwarded(ctx, req);
+            req = addForwarded(ctx, req);
+            ctx.updateRequest(req);
         }
 
         // We can just send the request from a browser to a backend and the response from the backend
