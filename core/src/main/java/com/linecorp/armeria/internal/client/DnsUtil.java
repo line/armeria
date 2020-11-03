@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
+import io.netty.handler.codec.dns.DefaultDnsRecordEncoder;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 
@@ -98,4 +99,24 @@ public final class DnsUtil {
     }
 
     private DnsUtil() {}
+
+    public static void encodeName(String name, ByteBuf out) {
+        DefaultDnsRecordEncoderTrampoline.INSTANCE.encodeName(name, out);
+    }
+
+    // Hacky trampoline class to be able to access encodeName
+    private static class DefaultDnsRecordEncoderTrampoline extends DefaultDnsRecordEncoder {
+
+        private static final DefaultDnsRecordEncoderTrampoline INSTANCE =
+                new DefaultDnsRecordEncoderTrampoline();
+
+        @Override
+        protected void encodeName(String name, ByteBuf buf) {
+            try {
+                super.encodeName(name, buf);
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        }
+    }
 }

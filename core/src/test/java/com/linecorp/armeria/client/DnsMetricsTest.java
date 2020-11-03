@@ -35,12 +35,12 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.endpoint.dns.DnsNameEncoder;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.internal.client.DnsUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBuf;
@@ -128,7 +128,7 @@ public class DnsMetricsTest {
                         "armeria.client.dns.queries.written#count{name=foo.com.,server=0:0:0:0:0:0:0:1}";
                 final String timeoutMeterId =
                         "armeria.client.dns.queries#count{" +
-                        "cause=DNS_RESOLVER_TIMEOUT_EXCEPTION,name=foo.com.,result=failure}";
+                        "cause=resolver_timeout,name=foo.com.,result=failure}";
                 assertThat(MoreMeters.measureAll(meterRegistry))
                         .doesNotContainKeys(writeMeterId_ipv4_addr,writeMeterId_ipv6_addr, timeoutMeterId);
 
@@ -172,21 +172,14 @@ public class DnsMetricsTest {
                         server.addr().getHostString() + '}';
                 final String nxDomainMeterId =
                         "armeria.client.dns.queries#count{" +
-                        "cause=NX_DOMAIN_QUERY_FAILED_EXCEPTION,name=bar.com.,result=failure}";
-                final String nameServerExhaustedMeterId1 =
-                        "armeria.client.dns.queries#count{" +
-                                "cause=NAME_SERVERS_EXHAUSTED_EXCEPTION,name=bar.com.,result=failure}";
-                assertThat(MoreMeters.measureAll(meterRegistry))
-                        .doesNotContainKeys(writtenMeterId, nameServerExhaustedMeterId1, nxDomainMeterId);
-
+                        "cause=nx_domain,name=bar.com.,result=failure}";
                 assertThatThrownBy(() -> client.get("http://bar.com").aggregate().join())
                         .hasRootCauseInstanceOf(UnknownHostException.class);
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
                             .containsEntry(writtenMeterId, 2.0)
-                            .containsEntry(nxDomainMeterId, 2.0)
-                            .containsEntry(nameServerExhaustedMeterId1, 3.0);
+                            .containsEntry(nxDomainMeterId, 2.0);
                 });
             }
         }
@@ -220,7 +213,7 @@ public class DnsMetricsTest {
                         "armeria.client.dns.queries.noanswer#count{code=10,name=bar.com.}";
                 final String nxDomainMeterId =
                         "armeria.client.dns.queries#count{" +
-                                "cause=NX_DOMAIN_QUERY_FAILED_EXCEPTION,name=bar.com.,result=failure}";
+                                "cause=nx_domain,name=bar.com.,result=failure}";
 
                 assertThat(MoreMeters.measureAll(meterRegistry)).doesNotContainKeys(
                         writtenMeterId, noAnswerMeterId, nxDomainMeterId, nxDomainMeterId);
@@ -296,7 +289,7 @@ public class DnsMetricsTest {
 
     public static DnsRecord newCnameRecord(String name, String actualName) {
         final ByteBuf content = Unpooled.buffer();
-        DnsNameEncoder.encodeName(actualName, content);
+        DnsUtil.encodeName(actualName, content);
         return new DefaultDnsRawRecord(name, CNAME, 60, content);
     }
 
@@ -305,7 +298,7 @@ public class DnsMetricsTest {
         content.writeShort(1); // priority unused
         content.writeShort(weight);
         content.writeShort(port);
-        DnsNameEncoder.encodeName(target, content);
+        DnsUtil.encodeName(target, content);
         return new DefaultDnsRawRecord(hostname, SRV, 60, content);
     }
 }

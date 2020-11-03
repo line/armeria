@@ -31,6 +31,7 @@ import org.junit.rules.Timeout;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.internal.client.DnsUtil;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -101,7 +102,7 @@ public class DnsServiceEndpointGroupTest {
 
     private static DnsRecord newCnameRecord(String name, String actualName) {
         final ByteBuf content = Unpooled.buffer();
-        DnsNameEncoder.encodeName(actualName, content);
+        DnsUtil.encodeName(actualName, content);
         return new DefaultDnsRawRecord(name, CNAME, 60, content);
     }
 
@@ -110,7 +111,7 @@ public class DnsServiceEndpointGroupTest {
         content.writeShort(1); // priority unused
         content.writeShort(weight);
         content.writeShort(port);
-        DnsNameEncoder.encodeName(target, content);
+        DnsUtil.encodeName(target, content);
         return new DefaultDnsRawRecord(hostname, SRV, 60, content);
     }
 

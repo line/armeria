@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Ascii;
+
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -54,14 +56,21 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     private final DnsQuestion question;
 
     private enum DnsExceptionTypes {
-        NX_DOMAIN_QUERY_FAILED_EXCEPTION,
-        CNAME_NOT_FOUND_QUERY_FAILED_EXCEPTION,
-        NO_MATCHING_RECORD_QUERY_FAILED_EXCEPTION,
-        UNRECOGNIZED_TYPE_QUERY_FAILED_EXCEPTION,
-        NAME_SERVERS_EXHAUSTED_EXCEPTION,
-        DNS_EXCEPTION,
-        DNS_TIMEOUT_EXCEPTION,
-        DNS_RESOLVER_TIMEOUT_EXCEPTION
+
+        NX_DOMAIN,
+        CNAME_NOT_FOUND,
+        NO_MATCHING_RECORD,
+        UNRECOGNIZED_TYPE,
+        NAME_SERVERS_EXHAUSTED,
+        OTHERS,
+        SERVER_TIMEOUT,
+        RESOLVER_TIMEOUT;
+
+        final String lowerCasedName;
+
+        DnsExceptionTypes() {
+            lowerCasedName = Ascii.toLowerCase(name());
+        }
     }
 
     /**
@@ -118,7 +127,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     public void queryFailed(Throwable cause) {
         meterRegistry.counter(meterIdPrefix.name(),
                 Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(RESULT_TAG, "failure"),
-                        Tag.of(CAUSE_TAG, determineDNSExceptionTag(cause).name()))).increment();
+                        Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause).lowerCasedName))).increment();
     }
 
     @Override
@@ -128,35 +137,29 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
                         Tag.of(CAUSE_TAG, "none"))).increment();
     }
 
-    private static DnsExceptionTypes determineDNSExceptionTag(Throwable cause) {
+    private static DnsExceptionTypes determineDnsExceptionTag(Throwable cause) {
         if (cause instanceof DnsTimeoutException) {
-            return DnsExceptionTypes.DNS_TIMEOUT_EXCEPTION;
+            return DnsExceptionTypes.SERVER_TIMEOUT;
         } else if (cause instanceof DnsNameResolverTimeoutException) {
-            return DnsExceptionTypes.DNS_RESOLVER_TIMEOUT_EXCEPTION;
+            return DnsExceptionTypes.RESOLVER_TIMEOUT;
         }
-        return discoverExceptionType(cause.getMessage());
-    }
-
-    private static DnsExceptionTypes discoverExceptionType(String message) {
+        final String message = cause.getMessage();
         if (NXDOMAIN_EXCEPTION.matcher(message).find()) {
-            return DnsExceptionTypes.NX_DOMAIN_QUERY_FAILED_EXCEPTION;
+            return DnsExceptionTypes.NX_DOMAIN;
         }
 
         if (CNAME_EXCEPTION.matcher(message).find()) {
-            return DnsExceptionTypes.CNAME_NOT_FOUND_QUERY_FAILED_EXCEPTION;
+            return DnsExceptionTypes.CNAME_NOT_FOUND;
         }
 
         if (NO_MATCHING_EXCEPTION.matcher(message).find()) {
-            return DnsExceptionTypes.NO_MATCHING_RECORD_QUERY_FAILED_EXCEPTION;
+            return DnsExceptionTypes.NO_MATCHING_RECORD;
         }
 
         if (UNRECOGNIZED_TYPE_EXCEPTION.matcher(message).find()) {
-            return DnsExceptionTypes.UNRECOGNIZED_TYPE_QUERY_FAILED_EXCEPTION;
+            return DnsExceptionTypes.UNRECOGNIZED_TYPE;
         }
 
-        if (NS_EXHAUSTED_EXCEPTION.matcher(message).find()) {
-            return DnsExceptionTypes.NAME_SERVERS_EXHAUSTED_EXCEPTION;
-        }
-        return DnsExceptionTypes.DNS_EXCEPTION;
+        return DnsExceptionTypes.OTHERS;
     }
 }
