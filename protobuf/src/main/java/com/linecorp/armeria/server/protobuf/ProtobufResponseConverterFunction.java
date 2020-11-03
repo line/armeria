@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc;
+package com.linecorp.armeria.server.protobuf;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -62,6 +63,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * <p>Note that this {@link ResponseConverterFunction} is applied to the annotated service by default,
  * so you don't have to set explicitly unless you want to use your own {@link Printer}.
  */
+@UnstableApi
 public final class ProtobufResponseConverterFunction implements ResponseConverterFunction {
 
     private static final Printer defaultJsonPrinter = JsonFormat.printer();

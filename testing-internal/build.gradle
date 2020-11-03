@@ -6,4 +6,5 @@ dependencies {
     api 'org.assertj:assertj-core'
     api 'org.junit.jupiter:junit-jupiter-params'
     api 'org.mockito:mockito-junit-jupiter'
+    api 'io.projectreactor:reactor-test'
 }

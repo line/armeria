@@ -14,11 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc;
+package com.linecorp.armeria.server.protobuf;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,13 +38,13 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.protobuf.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class ProtobufRequestConverterFunctionTest {
+class ProtobufRequestAnnotatedServiceTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -62,7 +63,7 @@ class ProtobufRequestConverterFunctionTest {
 
     @Test
     void protobufRequest() throws InvalidProtocolBufferException {
-        final SimpleRequest simpleRequest = SimpleRequest.newBuilder().setFillUsername(true).build();
+        final SimpleRequest simpleRequest = SimpleRequest.newBuilder().setPayload("Armeria").build();
         final AggregatedHttpResponse response =
                 client.post("/default-content-type", simpleRequest.toByteArray()).aggregate().join();
 
@@ -71,7 +72,7 @@ class ProtobufRequestConverterFunctionTest {
 
     @Test
     void jsonRequest() throws InvalidProtocolBufferException {
-        final SimpleRequest simpleRequest = SimpleRequest.newBuilder().setFillUsername(true).build();
+        final SimpleRequest simpleRequest = SimpleRequest.newBuilder().setPayload("Armeria").build();
         final String json = JsonFormat.printer().print(simpleRequest);
         final HttpRequest request = HttpRequest.of(HttpMethod.POST, "/json", MediaType.JSON, json);
         final AggregatedHttpResponse response = client.execute(request).aggregate().join();
@@ -79,11 +80,11 @@ class ProtobufRequestConverterFunctionTest {
         assertThat(response.contentUtf8()).isEqualTo("Hello, Armeria!");
     }
 
-    @CsvSource({"/json+array", "/json+array2"})
+    @CsvSource({ "/json+array", "/json+array2" })
     @ParameterizedTest
     void jsonArrayRequest(String path) throws InvalidProtocolBufferException {
-        final SimpleRequest simpleRequest1 = SimpleRequest.newBuilder().setResponseSize(1).build();
-        final SimpleRequest simpleRequest2 = SimpleRequest.newBuilder().setResponseSize(2).build();
+        final SimpleRequest simpleRequest1 = SimpleRequest.newBuilder().setSize(1).build();
+        final SimpleRequest simpleRequest2 = SimpleRequest.newBuilder().setSize(2).build();
         final String json1 = JsonFormat.printer().print(simpleRequest1);
         final String json2 = JsonFormat.printer().print(simpleRequest2);
         final String jsonArray = ImmutableList.of(json1, json2).stream()
@@ -94,36 +95,51 @@ class ProtobufRequestConverterFunctionTest {
         assertThat(response.contentUtf8()).isEqualTo("Sum: 3");
     }
 
+    @Test
+    void jsonObjectRequest() throws InvalidProtocolBufferException {
+        final SimpleRequest simpleRequest1 = SimpleRequest.newBuilder().setSize(1).build();
+        final SimpleRequest simpleRequest2 = SimpleRequest.newBuilder().setSize(2).build();
+        final String json1 = JsonFormat.printer().print(simpleRequest1);
+        final String json2 = JsonFormat.printer().print(simpleRequest2);
+        final String jsonObject = "{ \"json1\":" + json1 +
+                                  ", \"json2\":" + json2 + '}';
+
+        final HttpRequest request = HttpRequest.of(HttpMethod.POST, "/json+object", MediaType.JSON, jsonObject);
+        final AggregatedHttpResponse response = client.execute(request).aggregate().join();
+
+        assertThat(response.contentUtf8()).isEqualTo("OK");
+    }
+
     private static class GreetingService {
         @Post("/default-content-type")
         public String noContentType(SimpleRequest request) {
-            if (request.getFillUsername()) {
-                return "Hello, Armeria!";
-            } else {
-                return "Hello";
-            }
+            return "Hello, Armeria!";
         }
 
         @Post("/json")
         @ConsumesJson
         public String consumeJson(SimpleRequest request) {
-            if (request.getFillUsername()) {
-                return "Hello, Armeria!";
-            } else {
-                return "Hello";
-            }
+            return "Hello, Armeria!";
         }
 
         @Post("/json+array")
         @ConsumesJson
         public String consumeJson(List<SimpleRequest> request) {
-            return "Sum: " + request.stream().mapToInt(SimpleRequest::getResponseSize).sum();
+            return "Sum: " + request.stream().mapToInt(SimpleRequest::getSize).sum();
         }
 
         @Post("/json+array2")
         @ConsumesJson
         public String consumeJson2(Set<SimpleRequest> request) {
-            return "Sum: " + request.stream().mapToInt(SimpleRequest::getResponseSize).sum();
+            return "Sum: " + request.stream().mapToInt(SimpleRequest::getSize).sum();
+        }
+
+        @Post("/json+object")
+        @ConsumesJson
+        public String consumeJson3(Map<String, SimpleRequest> request) {
+            assertThat(request.get("json1").getSize()).isEqualTo(1);
+            assertThat(request.get("json2").getSize()).isEqualTo(2);
+            return "OK";
         }
     }
 }

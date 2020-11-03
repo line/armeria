@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc;
+package com.linecorp.armeria.server.protobuf;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,6 +24,7 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
+import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
@@ -54,7 +55,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
 
-class ProtobufResponseConverterFunctionTest {
+class ProtobufResponseAnnotatedServiceTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -83,47 +84,47 @@ class ProtobufResponseConverterFunctionTest {
     private static class GreetingService {
         @Get("/default-content-type")
         public SimpleResponse noContentType() {
-            return SimpleResponse.newBuilder().setUsername("Hello, Armeria!").build();
+            return SimpleResponse.newBuilder().setMessage("Hello, Armeria!").build();
         }
 
         @Get("/json")
         @ProducesJson
         public SimpleResponse produceJson() {
-            return SimpleResponse.newBuilder().setUsername("Hello, Armeria!").build();
+            return SimpleResponse.newBuilder().setMessage("Hello, Armeria!").build();
         }
 
         @Get("/protobuf+json")
         @Produces("application/protobuf+json")
         public SimpleResponse protobufJson() {
-            return SimpleResponse.newBuilder().setUsername("Hello, Armeria!").build();
+            return SimpleResponse.newBuilder().setMessage("Hello, Armeria!").build();
         }
 
         @Get("/protobuf+json/publisher")
         @Produces("application/protobuf+json")
         public Publisher<SimpleResponse> protobufJsonPublisher() {
-            return Flux.just(SimpleResponse.newBuilder().setUsername("Hello, Armeria1!").build(),
-                             SimpleResponse.newBuilder().setUsername("Hello, Armeria2!").build());
+            return Flux.just(SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build(),
+                             SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
         }
 
         @Get("/protobuf+json/stream")
         @Produces("application/protobuf+json")
         public Stream<SimpleResponse> protobufJsonStream() {
-            return Stream.of(SimpleResponse.newBuilder().setUsername("Hello, Armeria1!").build(),
-                             SimpleResponse.newBuilder().setUsername("Hello, Armeria2!").build());
+            return Stream.of(SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build(),
+                             SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
         }
 
         @Get("/protobuf/stream")
         @Produces(MediaTypeNames.PROTOBUF)
         public Stream<SimpleResponse> protobufStream() {
-            return Stream.of(SimpleResponse.newBuilder().setUsername("Hello, Armeria1!").build(),
-                             SimpleResponse.newBuilder().setUsername("Hello, Armeria2!").build());
+            return Stream.of(SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build(),
+                             SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
         }
 
         @Get("/protobuf/publisher")
         @Produces(MediaTypeNames.PROTOBUF)
         public Publisher<SimpleResponse> protobufPublisher() {
-            return Flux.just(SimpleResponse.newBuilder().setUsername("Hello, Armeria1!").build(),
-                             SimpleResponse.newBuilder().setUsername("Hello, Armeria2!").build());
+            return Flux.just(SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build(),
+                             SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
         }
     }
 
@@ -132,7 +133,7 @@ class ProtobufResponseConverterFunctionTest {
         final AggregatedHttpResponse response = client.get("/default-content-type").aggregate().join();
         assertThat(response.headers().contentType()).isEqualTo(MediaType.PROTOBUF);
         final SimpleResponse simpleResponse = SimpleResponse.parseFrom(response.content().array());
-        assertThat(simpleResponse.getUsername()).isEqualTo("Hello, Armeria!");
+        Assertions.assertThat(simpleResponse.getMessage()).isEqualTo("Hello, Armeria!");
     }
 
     @CsvSource({"json", "protobuf+json"})
@@ -142,7 +143,7 @@ class ProtobufResponseConverterFunctionTest {
         assertThat(response.headers().contentType().subtype()).isEqualTo(contentType);
         final SimpleResponse.Builder simpleResponse = SimpleResponse.newBuilder();
         JsonFormat.parser().merge(response.contentUtf8(), simpleResponse);
-        assertThat(simpleResponse.getUsername()).isEqualTo("Hello, Armeria!");
+        Assertions.assertThat(simpleResponse.getMessage()).isEqualTo("Hello, Armeria!");
     }
 
     @CsvSource({ "/protobuf/stream", "/protobuf/publisher" })
@@ -159,14 +160,14 @@ class ProtobufResponseConverterFunctionTest {
     void protobufJsonStreamResponse(String path) throws InvalidProtocolBufferException {
         final AggregatedHttpResponse response = client.get(path).aggregate().join();
         assertThat(response.headers().contentType().subtype()).isEqualTo("protobuf+json");
-        final String expected = "[{\"username\":\"Hello, Armeria1!\"},{\"username\":\"Hello, Armeria2!\"}]";
+        final String expected = "[{\"message\":\"Hello, Armeria1!\"},{\"message\":\"Hello, Armeria2!\"}]";
         assertThatJson(response.contentUtf8()).isEqualTo(expected);
     }
 
     private static class CustomExceptionHandlerFunction implements ExceptionHandlerFunction {
         @Override
         public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
-            ProtobufResponseConverterFunctionTest.cause = cause;
+            ProtobufResponseAnnotatedServiceTest.cause = cause;
             return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

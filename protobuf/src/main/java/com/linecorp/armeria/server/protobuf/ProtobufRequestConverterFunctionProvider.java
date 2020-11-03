@@ -14,22 +14,25 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc;
+package com.linecorp.armeria.server.protobuf;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.protobuf.Message;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunctionProvider;
-import com.linecorp.armeria.server.grpc.ProtobufRequestConverterFunction.ResultType;
+import com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.ResultType;
 
 /**
  * Provides a {@link ProtobufRequestConverterFunction} to annotated services.
  */
+@UnstableApi
 public final class ProtobufRequestConverterFunctionProvider implements RequestConverterFunctionProvider {
 
     @Override
@@ -43,7 +46,7 @@ public final class ProtobufRequestConverterFunctionProvider implements RequestCo
         }
     }
 
-    private static ResultType toResultType(Type type) {
+    static ResultType toResultType(Type type) {
         if (type instanceof Class) {
             if (isProtobufMessage((Class<?>) type)) {
                 return ResultType.PROTOBUF;
@@ -62,6 +65,17 @@ public final class ProtobufRequestConverterFunctionProvider implements RequestCo
                 final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[0];
                 if (isProtobufMessage(typeArgument)) {
                     return ResultType.SET_PROTOBUF;
+                }
+            } else if (Map.class.isAssignableFrom(rawType)) {
+                final Type[] typeArguments = parameterizedType.getActualTypeArguments();
+                final Class<?> keyType = (Class<?>) typeArguments[0];
+                if (!String.class.isAssignableFrom(keyType)) {
+                    throw new IllegalStateException(
+                            keyType + " cannot be used for the key type of Map. " +
+                            "(expected: Map<String, ?>)");
+                }
+                if (isProtobufMessage((Class<?>) typeArguments[1])) {
+                    return ResultType.MAP_PROTOBUF;
                 }
             }
         }

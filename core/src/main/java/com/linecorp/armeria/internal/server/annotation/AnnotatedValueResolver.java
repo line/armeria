@@ -92,12 +92,12 @@ import io.netty.handler.codec.http.HttpConstants;
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
 
-    private static final List<RequestConverterFunction> defaultRequestFunctions = ImmutableList.of(
+    private static final List<RequestConverterFunction> defaultRequestConverterFunctions = ImmutableList.of(
             new JacksonRequestConverterFunction(),
             new StringRequestConverterFunction(),
             new ByteArrayRequestConverterFunction());
 
-    private static final List<RequestObjectResolver> defaultRequestConverters;
+    private static final List<RequestObjectResolver> defaultRequestObjectResolvers;
 
     static {
         final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builderWithExpectedSize(4);
@@ -109,11 +109,11 @@ final class AnnotatedValueResolver {
                 return factory.create(resolverContext);
             }
         });
-        for (RequestConverterFunction function : defaultRequestFunctions) {
+        for (RequestConverterFunction function : defaultRequestConverterFunctions) {
             builder.add(RequestObjectResolver.of(function));
         }
 
-        defaultRequestConverters = builder.build();
+        defaultRequestObjectResolvers = builder.build();
     }
 
     static final List<RequestConverterFunctionProvider> requestConverterFunctionProviders =
@@ -154,7 +154,7 @@ final class AnnotatedValueResolver {
         if (!requestConverterFunctionProviders.isEmpty()) {
             final ImmutableList<RequestConverterFunction> merged =
                     ImmutableList.<RequestConverterFunction>builder().addAll(converters)
-                                                                     .addAll(defaultRequestFunctions)
+                                                                     .addAll(defaultRequestConverterFunctions)
                                                                      .build();
             final CompositeRequestConverterFunction composed = new CompositeRequestConverterFunction(merged);
             for (Type type : method.getGenericParameterTypes()) {
@@ -167,7 +167,7 @@ final class AnnotatedValueResolver {
                 }
             }
         }
-        builder.addAll(defaultRequestConverters);
+        builder.addAll(defaultRequestObjectResolvers);
         return builder.build();
     }
 
@@ -1487,7 +1487,7 @@ final class AnnotatedValueResolver {
                 } catch (Exception e) {
                     throw new IllegalStateException(
                             "Request converter " + function.getClass().getName() +
-                            " cannot convert an " + request + " to a " + expectedResultType, e);
+                            " failed to convert an " + request + " to a " + expectedResultType, e);
                 }
             }
             return RequestConverterFunction.fallthrough();

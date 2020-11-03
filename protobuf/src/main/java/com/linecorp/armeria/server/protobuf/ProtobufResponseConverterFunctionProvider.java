@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.grpc;
+package com.linecorp.armeria.server.protobuf;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -23,13 +23,15 @@ import org.reactivestreams.Publisher;
 
 import com.google.protobuf.MessageLite;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 
 /**
- * Provides an {@link ProtobufResponseConverterFunction} to annotated services.
+ * Provides a {@link ProtobufResponseConverterFunction} to annotated services.
  */
+@UnstableApi
 public final class ProtobufResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
     @Override

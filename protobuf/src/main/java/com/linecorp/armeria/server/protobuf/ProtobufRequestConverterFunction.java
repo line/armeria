@@ -14,19 +14,23 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc;
+package com.linecorp.armeria.server.protobuf;
 
+import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunctionProvider.toResultType;
 import static java.lang.invoke.MethodType.methodType;
+import static java.util.Objects.requireNonNull;
 
+import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.Nullable;
@@ -35,6 +39,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
 import com.google.protobuf.ExtensionRegistry;
@@ -45,6 +50,7 @@ import com.google.protobuf.util.JsonFormat.Parser;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 
@@ -66,6 +72,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
  * However a <a href="https://tools.ietf.org/html/rfc7159#section-5">JSON array</a> body
  * could be converted into a {@link Collection} type. e.g, {@code List<Message>} and {@code Set<Message>}.
  */
+@UnstableApi
 public final class ProtobufRequestConverterFunction implements RequestConverterFunction {
 
     private static final ConcurrentMap<Class<?>, MethodHandle> methodCache =
@@ -96,7 +103,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
     ProtobufRequestConverterFunction(ResultType resultType) {
         jsonParser = defaultJsonParser;
         extensionRegistry = ExtensionRegistry.getEmptyRegistry();
-        this.resultType = resultType;
+        this.resultType = requireNonNull(resultType, "resultType");
     }
 
     /**
@@ -110,8 +117,8 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
      * Creates an instance with the specified {@link Parser} and {@link ExtensionRegistry}.
      */
     public ProtobufRequestConverterFunction(Parser jsonParser, ExtensionRegistry extensionRegistry) {
-        this.jsonParser = jsonParser;
-        this.extensionRegistry = extensionRegistry;
+        this.jsonParser = requireNonNull(jsonParser, "jsonParser");
+        this.extensionRegistry = requireNonNull(extensionRegistry, "extensionRegistry");
         resultType = ResultType.UNKNOWN;
     }
 
@@ -128,7 +135,9 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
 
             if (contentType == null ||
                 contentType.subtype().contains("protobuf") || contentType.is(MediaType.OCTET_STREAM)) {
-                return messageBuilder.mergeFrom(request.content().array(), extensionRegistry).build();
+                try (InputStream is = request.content().toInputStream()) {
+                    return messageBuilder.mergeFrom(is, extensionRegistry).build();
+                }
             }
 
             if (isJson(contentType)) {
@@ -140,20 +149,15 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         if (isJson(contentType) && expectedParameterizedResultType != null) {
             ResultType resultType = this.resultType;
             if (resultType == ResultType.UNKNOWN) {
-                if (List.class.isAssignableFrom(expectedResultType)) {
-                    resultType = ResultType.LIST_PROTOBUF;
-                } else if (Set.class.isAssignableFrom(expectedResultType)) {
-                    resultType = ResultType.SET_PROTOBUF;
-                }
+                resultType = toResultType(expectedParameterizedResultType);
             }
 
-            if (resultType == ResultType.LIST_PROTOBUF || resultType == ResultType.SET_PROTOBUF) {
-                final Class<?> typeArgument =
-                        (Class<?>) expectedParameterizedResultType.getActualTypeArguments()[0];
-                if (Message.class.isAssignableFrom(typeArgument)) {
-                    final String content = request.content(contentType.charset(StandardCharsets.UTF_8));
+            if (resultType != ResultType.UNKNOWN && resultType != ResultType.PROTOBUF) {
+                final Type[] typeArguments = expectedParameterizedResultType.getActualTypeArguments();
+                final String content = request.content(contentType.charset(StandardCharsets.UTF_8));
+                final JsonNode jsonNode = mapper.readTree(content);
 
-                    final JsonNode jsonNode = mapper.readTree(content);
+                if (resultType == ResultType.LIST_PROTOBUF || resultType == ResultType.SET_PROTOBUF) {
                     if (jsonNode.isArray()) {
                         final ImmutableCollection.Builder<Message> builder;
                         if (resultType == ResultType.LIST_PROTOBUF) {
@@ -161,14 +165,27 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
                         } else {
                             builder = ImmutableSet.builderWithExpectedSize(jsonNode.size());
                         }
-                        for (JsonNode node : jsonNode) {
-                            final Message.Builder messageBuilder = getMessageBuilder(typeArgument);
-                            jsonParser.merge(mapper.writeValueAsString(node), messageBuilder);
-                            builder.add(messageBuilder.build());
-                        }
 
+                        for (JsonNode node : jsonNode) {
+                            final Message.Builder msgBuilder = getMessageBuilder((Class<?>) typeArguments[0]);
+                            jsonParser.merge(mapper.writeValueAsString(node), msgBuilder);
+                            builder.add(msgBuilder.build());
+                        }
                         return builder.build();
                     }
+                } else if (resultType == ResultType.MAP_PROTOBUF) {
+                     if (jsonNode.isObject()) {
+                         final ImmutableMap.Builder<String, Message> builder =
+                                 ImmutableMap.builderWithExpectedSize(jsonNode.size());
+
+                         for (final Iterator<Entry<String, JsonNode>> i = jsonNode.fields(); i.hasNext();) {
+                             final Entry<String, JsonNode> e = i.next();
+                             final Message.Builder msgBuilder = getMessageBuilder((Class<?>) typeArguments[1]);
+                             jsonParser.merge(mapper.writeValueAsString(e.getValue()), msgBuilder);
+                             builder.put(e.getKey(), msgBuilder.build());
+                         }
+                         return builder.build();
+                     }
                 }
             }
         }
@@ -206,6 +223,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         UNKNOWN,
         PROTOBUF,
         LIST_PROTOBUF,
-        SET_PROTOBUF
+        SET_PROTOBUF,
+        MAP_PROTOBUF
     }
 }
