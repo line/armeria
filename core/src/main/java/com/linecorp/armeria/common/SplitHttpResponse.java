@@ -16,26 +16,25 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
+
+import org.reactivestreams.Subscriber;
 
 import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
- * An {@link HttpResponse} which splits a stream of {@link HttpObject} into HTTP headers and payloads.
- * {@link #informationalHeaders()}, {@link #headers()} will be completed before publishing the first element of
- * {@link HttpData}. {@link #trailers()} might not complete until the entire {@link HttpData} has been consumed.
+ * An {@link HttpResponse} which splits a stream of {@link HttpObject}s into HTTP headers and payloads.
+ * {@link #headers()} will be completed before publishing the first {@link HttpData}.
+ * {@link #trailers()} might not complete until the entire response body is consumed completely.
+ *
+ * <p>Note that
+ * <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#Information_responses">informational
+ * headers</a> are not collected by this {@link HttpResponse}. If you want to get informational headers,
+ * use {@link HttpResponse#subscribe(Subscriber)} instead.
  */
 public interface SplitHttpResponse {
-
-    /**
-     * Returns a {@link CompletableFuture} completed with a list of
-     * <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#Information_responses">informational
-     * </a> {@link ResponseHeaders}.
-     */
-    CompletableFuture<List<ResponseHeaders>> informationalHeaders();
 
     /**
      * Returns a {@link CompletableFuture} completed with a non-informational {@link ResponseHeaders}.

@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.common;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -30,7 +29,6 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpData;
@@ -60,22 +58,13 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultSplitHttpResponse, HeadersFuture>
-            informationalHeadersFutureUpdater = AtomicReferenceFieldUpdater
-            .newUpdater(DefaultSplitHttpResponse.class, HeadersFuture.class, "informationalHeadersFuture");
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultSplitHttpResponse, HeadersFuture>
             trailersFutureUpdater = AtomicReferenceFieldUpdater
             .newUpdater(DefaultSplitHttpResponse.class, HeadersFuture.class, "trailersFuture");
 
     private static final ResponseHeaders HEADERS_WITH_UNKNOWN_STATUS = ResponseHeaders.of(HttpStatus.UNKNOWN);
-    private static final HeadersFuture<List<ResponseHeaders>> EMPTY_INFORMATIONAL_HEADERS;
     private static final HeadersFuture<HttpHeaders> EMPTY_TRAILERS;
 
     static {
-        EMPTY_INFORMATIONAL_HEADERS = new HeadersFuture<>();
-        EMPTY_INFORMATIONAL_HEADERS.doComplete(ImmutableList.of());
-
         EMPTY_TRAILERS = new HeadersFuture<>();
         EMPTY_TRAILERS.doComplete(HttpHeaders.of());
     }
@@ -86,8 +75,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     private final EventExecutor executor;
 
     @Nullable
-    private volatile HeadersFuture<List<ResponseHeaders>> informationalHeadersFuture;
-    @Nullable
     private volatile HeadersFuture<HttpHeaders> trailersFuture;
     private volatile boolean wroteAny;
 
@@ -97,21 +84,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         this.executor = requireNonNull(executor, "executor");
 
         response.subscribe(bodySubscriber, executor, options);
-    }
-
-    @Override
-    public final CompletableFuture<List<ResponseHeaders>> informationalHeaders() {
-        HeadersFuture<List<ResponseHeaders>> informationalHeadersFuture = this.informationalHeadersFuture;
-        if (informationalHeadersFuture != null) {
-            return informationalHeadersFuture;
-        }
-
-        informationalHeadersFuture = new HeadersFuture<>();
-        if (informationalHeadersFutureUpdater.compareAndSet(this, null, informationalHeadersFuture)) {
-            return informationalHeadersFuture;
-        } else {
-            return this.informationalHeadersFuture;
-        }
     }
 
     @Override
@@ -183,13 +155,9 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     private final class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
         @Nullable
-        private ImmutableList.Builder<ResponseHeaders> informationalHeadersBuilder;
-        @Nullable
         private Throwable cause;
 
         private boolean completing;
-        private boolean sawLeadingHeaders;
-
         // 1 is used for prefetching headers
         private long pendingRequests = 1;
 
@@ -275,15 +243,9 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                 final ResponseHeaders headers = (ResponseHeaders) httpObject;
                 final HttpStatus status = headers.status();
                 if (status.isInformational()) {
-                    if (!sawLeadingHeaders) {
-                        if (informationalHeadersBuilder == null) {
-                            informationalHeadersBuilder = ImmutableList.builder();
-                        }
-                        informationalHeadersBuilder.add(headers);
-                    }
+                    // Ignore informational headers
                     upstream.request(1);
                 } else {
-                    sawLeadingHeaders = true;
                     completeInformationHeaders();
                     headersFuture.doComplete(headers);
                 }
@@ -302,34 +264,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
             final HttpData data = (HttpData) httpObject;
             wroteAny = true;
             downstream.onNext(data);
-        }
-
-        /**
-         * Completes informational headers received so far.
-         */
-        private void completeInformationHeaders() {
-            if (informationalHeadersBuilder == null) {
-                if (!informationalHeadersFutureUpdater
-                        .compareAndSet(DefaultSplitHttpResponse.this, null,
-                                       EMPTY_INFORMATIONAL_HEADERS)) {
-                    informationalHeadersFuture.doComplete(ImmutableList.of());
-                }
-            } else {
-                final List<ResponseHeaders> informationalHeaders = informationalHeadersBuilder.build();
-                HeadersFuture<List<ResponseHeaders>> headersFuture = informationalHeadersFuture;
-                if (headersFuture != null) {
-                    headersFuture.doComplete(informationalHeaders);
-                    return;
-                }
-
-                headersFuture = new HeadersFuture<>();
-                if (informationalHeadersFutureUpdater
-                        .compareAndSet(DefaultSplitHttpResponse.this, null, headersFuture)) {
-                    headersFuture.doComplete(informationalHeaders);
-                } else {
-                    informationalHeadersFuture.doComplete(informationalHeaders);
-                }
-            }
         }
 
         /**
@@ -373,8 +307,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         }
 
         private void maybeCompleteHeaders(@Nullable Throwable cause) {
-            completeInformationHeaders();
-
             if (!headersFuture.isDone()) {
                 if (cause != null && !(cause instanceof CancelledSubscriptionException) &&
                     !(cause instanceof AbortedStreamException)) {
