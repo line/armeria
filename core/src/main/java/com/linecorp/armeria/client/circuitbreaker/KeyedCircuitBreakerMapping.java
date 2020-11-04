@@ -61,10 +61,6 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
     @Override
     public CircuitBreaker get(ClientRequestContext ctx, Request req) throws Exception {
-        if (!isPerHost && !isPerMethod && !isPerPath) {
-            // should never reach here.
-            throw new Error();
-        }
         final String host = isPerHost ? host(ctx) : null;
         final String method = isPerMethod ? method(ctx) : null;
         final String path = isPerPath ? path(ctx) : null;

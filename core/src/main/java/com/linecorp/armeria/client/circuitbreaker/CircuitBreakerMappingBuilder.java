@@ -60,16 +60,4 @@ public final class CircuitBreakerMappingBuilder {
         }
         return new KeyedCircuitBreakerMapping(perHost, perMethod, perPath, factory);
     }
-
-    boolean isPerHost() {
-        return perHost;
-    }
-
-    boolean isPerMethod() {
-        return perMethod;
-    }
-
-    boolean isPerPath() {
-        return perPath;
-    }
 }
