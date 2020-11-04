@@ -135,7 +135,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
         builder.dnsQueryLifecycleObserverFactory(
                 new DefaultDnsQueryLifecycleObserverFactory(meterRegistry,
-                        new MeterIdPrefix("armeria.client.dns.queries")));
+                new MeterIdPrefix("armeria.client.dns.queries")));
         resolverConfigurator.accept(builder);
         final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop,
                                                                            queryTimeoutMillis);

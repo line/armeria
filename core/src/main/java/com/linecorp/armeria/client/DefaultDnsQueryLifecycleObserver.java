@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Tags;
 import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsResponseCode;
@@ -49,11 +50,10 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     private static final Pattern CNAME_EXCEPTION = Pattern.compile("\\bCNAME\\b/");
     private static final Pattern NO_MATCHING_EXCEPTION = Pattern.compile("\\bmatching\\b");
     private static final Pattern UNRECOGNIZED_TYPE_EXCEPTION = Pattern.compile("\\bunrecognized\b/");
-    private static final Pattern NS_EXHAUSTED_EXCEPTION = Pattern.compile("\\bname\\sservers\\b");
 
     private final MeterRegistry meterRegistry;
     private final MeterIdPrefix meterIdPrefix;
-    private final DnsQuestion question;
+    private final Tag nameTag;
 
     private enum DnsExceptionTypes {
 
@@ -82,59 +82,60 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
                                      DnsQuestion question, MeterIdPrefix prefix) {
         this.meterRegistry = meterRegistry;
         meterIdPrefix = prefix;
-        this.question = question;
+        nameTag = Tag.of(NAME_TAG, question.name());
     }
 
     @Override
     public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
-        meterRegistry.counter(meterIdPrefix.name().concat(".written"),
-                Arrays.asList(Tag.of(NAME_TAG, question.name()),
-                        Tag.of(SERVER_TAG, dnsServerAddress.getAddress().getHostAddress()))).increment();
+        meterRegistry.counter(meterIdPrefix.name() + ".written",
+                              Arrays.asList(nameTag,
+                              Tag.of(SERVER_TAG, dnsServerAddress.getAddress().getHostAddress())))
+                              .increment();
     }
 
     @Override
     public void queryCancelled(int queriesRemaining) {
-        meterRegistry.counter(meterIdPrefix.name().concat(".cancelled"),
-                NAME_TAG, question.name()).increment();
+        meterRegistry.counter(meterIdPrefix.name() + ".cancelled",
+                              Tags.of(nameTag)).increment();
     }
 
     @Override
     public DnsQueryLifecycleObserver queryRedirected(List<InetSocketAddress> nameServers) {
-        meterRegistry.counter(meterIdPrefix.name().concat(".redirected"),
-                Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(SERVERS_TAG,
-                        nameServers.stream().map(addr -> addr.getAddress().getHostAddress())
-                                .collect(Collectors.joining(","))))).increment();
+        meterRegistry.counter(meterIdPrefix.name() + ".redirected",
+                              Arrays.asList(nameTag, Tag.of(SERVERS_TAG,
+                              nameServers.stream().map(addr -> addr.getAddress().getHostAddress())
+                              .collect(Collectors.joining(","))))).increment();
         return this;
     }
 
     @Override
     public DnsQueryLifecycleObserver queryCNAMEd(DnsQuestion cnameQuestion) {
-        meterRegistry.counter(meterIdPrefix.name().concat(".cnamed"),
-                Arrays.asList(Tag.of(NAME_TAG, question.name()),
-                        Tag.of(CNAME_TAG, cnameQuestion.name()))).increment();
+        meterRegistry.counter(meterIdPrefix.name() + ".cnamed",
+                              Arrays.asList(nameTag,
+                              Tag.of(CNAME_TAG, cnameQuestion.name()))).increment();
         return this;
     }
 
     @Override
     public DnsQueryLifecycleObserver queryNoAnswer(DnsResponseCode code) {
-        meterRegistry.counter(meterIdPrefix.name().concat(".noanswer"),
-                Arrays.asList(Tag.of(NAME_TAG, question.name()),
-                        Tag.of(CODE_TAG, String.valueOf(code.intValue())))).increment();
+        meterRegistry.counter(meterIdPrefix.name() + ".noanswer",
+                              Arrays.asList(nameTag,
+                              Tag.of(CODE_TAG, String.valueOf(code.intValue())))).increment();
         return this;
     }
 
     @Override
     public void queryFailed(Throwable cause) {
         meterRegistry.counter(meterIdPrefix.name(),
-                Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(RESULT_TAG, "failure"),
-                        Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause).lowerCasedName))).increment();
+                              Arrays.asList(nameTag, Tag.of(RESULT_TAG, "failure"),
+                              Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause).lowerCasedName))).increment();
     }
 
     @Override
     public void querySucceed() {
         meterRegistry.counter(meterIdPrefix.name(),
-                Arrays.asList(Tag.of(NAME_TAG, question.name()), Tag.of(RESULT_TAG, "success"),
-                        Tag.of(CAUSE_TAG, "none"))).increment();
+                              Arrays.asList(nameTag, Tag.of(RESULT_TAG, "success"),
+                              Tag.of(CAUSE_TAG, "none"))).increment();
     }
 
     private static DnsExceptionTypes determineDnsExceptionTag(Throwable cause) {

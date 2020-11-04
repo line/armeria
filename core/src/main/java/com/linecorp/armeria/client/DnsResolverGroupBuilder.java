@@ -296,9 +296,7 @@ public final class DnsResolverGroupBuilder {
     }
 
     /**
-     * Sets MeterRegistry.
-     * @param meterRegistry {@link MeterRegistry}.
-     * @return DnsResolverGroupBuilder.
+     * Sets {@link MeterRegistry} to collect the DNS query metrics.
      */
     DnsResolverGroupBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;

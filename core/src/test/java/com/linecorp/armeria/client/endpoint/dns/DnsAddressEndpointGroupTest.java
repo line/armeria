@@ -37,7 +37,6 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.internal.client.DnsUtil;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -360,7 +359,7 @@ public class DnsAddressEndpointGroupTest {
 
     private static DnsRecord newCnameRecord(String name, String actualName) {
         final ByteBuf content = Unpooled.buffer();
-        DnsUtil.encodeName(actualName, content);
+        DnsNameEncoder.encodeName(actualName, content);
         return new DefaultDnsRawRecord(name, CNAME, 60, content);
     }
 }

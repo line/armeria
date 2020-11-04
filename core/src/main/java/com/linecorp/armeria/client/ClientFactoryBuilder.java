@@ -619,8 +619,9 @@ public final class ClientFactoryBuilder {
 
                         final ClientFactoryOptionValue<?> opt = options
                                 .getOrDefault(ClientFactoryOptions.METER_REGISTRY,
-                                ClientFactoryOptions.METER_REGISTRY
-                                        .newValue(ClientFactoryOptions.of().meterRegistry()));
+                                ClientFactoryOptions
+                                .METER_REGISTRY
+                                .newValue(ClientFactoryOptions.of().meterRegistry()));
 
                         return builder
                                 .meterRegistry((MeterRegistry) opt.value())

@@ -35,12 +35,12 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.endpoint.dns.DnsNameEncoder;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
-import com.linecorp.armeria.internal.client.DnsUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBuf;
@@ -289,7 +289,7 @@ public class DnsMetricsTest {
 
     public static DnsRecord newCnameRecord(String name, String actualName) {
         final ByteBuf content = Unpooled.buffer();
-        DnsUtil.encodeName(actualName, content);
+        DnsNameEncoder.encodeName(actualName, content);
         return new DefaultDnsRawRecord(name, CNAME, 60, content);
     }
 
@@ -298,7 +298,7 @@ public class DnsMetricsTest {
         content.writeShort(1); // priority unused
         content.writeShort(weight);
         content.writeShort(port);
-        DnsUtil.encodeName(target, content);
+        DnsNameEncoder.encodeName(target, content);
         return new DefaultDnsRawRecord(hostname, SRV, 60, content);
     }
 }
