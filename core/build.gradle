@@ -1,3 +1,5 @@
+import java.util.concurrent.TimeUnit
+
 String releaseFlagFromVersion(String src) {
     // Java 9+ are 9, 10, etc, before was 1.8, 1.7, etc.
     if (src.contains('.')) {
@@ -194,3 +196,32 @@ if (tasks.findByName('trimShadedJar')) {
         dontnote
     }
 }
+
+class PublicSuffixesTask extends DefaultTask {
+    // Rebuild up to once in 7 days, unless cleaned.
+    @Input
+    final def day = (System.currentTimeMillis() / TimeUnit.DAYS.toMillis(7)).intValue()
+    @OutputFile
+    final def publicSuffixesFile = project.file("${project.buildDir}/resources/main/publicsuffixes")
+
+    @TaskAction
+    def run() {
+        publicSuffixesFile.createNewFile()
+        publicSuffixesFile.write("")
+        def url = 'https://publicsuffix.org/list/public_suffix_list.dat'
+        def req = new URL(url).openConnection()
+        if (req.getResponseCode() != 200) {
+            throw new Exception('Received a non-200 response from publicsuffix.org: ' +
+                    "${req.getResponseCode()}, ${req.getHeaderFields()}")
+        }
+        def res = req.getInputStream()
+        res.eachLine {
+            if (!it.isEmpty() && !it.startsWith("//")) {
+                publicSuffixesFile.append(IDN.toASCII(it) + "\n")
+            }
+        }
+    }
+}
+
+task publicSuffixes(type: PublicSuffixesTask)
+tasks.test.dependsOn publicSuffixes

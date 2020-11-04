@@ -31,6 +31,27 @@ import com.linecorp.armeria.common.Cookies;
 class DefaultCookieJarTest {
 
     @Test
+    void testPublicTLD() {
+        final DefaultCookieJar cookieJar = new DefaultCookieJar();
+
+        cookieJar.set(URI.create("http://google.com"),
+                      Cookies.of(Cookie.builder("name", "value").domain("com").build()));
+        assertThat(cookieJar.get(URI.create("http://google.com"))).isEmpty();
+
+        cookieJar.set(URI.create("http://foo.kawasaki.jp"),
+                      Cookies.of(Cookie.builder("name", "value").domain("kawasaki.jp").build()));
+        assertThat(cookieJar.get(URI.create("http://foo.kawasaki.jp"))).isEmpty();
+
+        cookieJar.set(URI.create("http://foo.city.kawasaki.jp"),
+                      Cookies.of(Cookie.builder("name", "value").domain("city.kawasaki.jp").build()));
+        assertThat(cookieJar.get(URI.create("http://city.kawasaki.jp"))).hasSize(1);
+
+        cookieJar.set(URI.create("http://xn--12c1fe0br.xn--o3cw4h"),
+                      Cookies.of(Cookie.builder("name", "value").domain("xn--12c1fe0br.xn--o3cw4h").build()));
+        assertThat(cookieJar.get(URI.create("http://xn--12c1fe0br.xn--o3cw4h"))).isEmpty();
+    }
+
+    @Test
     void testCookieDefaultDomainAndPath() {
         final DefaultCookieJar cookieJar = new DefaultCookieJar();
         final Cookie emptyCookie = Cookie.of("", "");

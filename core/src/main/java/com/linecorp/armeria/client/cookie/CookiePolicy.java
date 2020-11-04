@@ -23,6 +23,7 @@ import java.net.URI;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.internal.client.PublicSuffix;
 
 import io.netty.util.NetUtil;
 
@@ -71,6 +72,9 @@ public interface CookiePolicy {
      */
     default boolean domainMatch(@Nullable String domain, @Nullable String host) {
         if (domain == null || host == null) {
+            return false;
+        }
+        if (PublicSuffix.get().isPublicSuffix(domain)) {
             return false;
         }
         if (domain.equalsIgnoreCase(host)) {
