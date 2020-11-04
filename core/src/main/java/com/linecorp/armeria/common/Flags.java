@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -327,27 +328,27 @@ public final class Flags {
     private static final String DEFAULT_ROUTE_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String ROUTE_CACHE_SPEC =
-            caffeineSpec("routeCache", DEFAULT_ROUTE_CACHE_SPEC);
+            nullableCaffeineSpec("routeCache", DEFAULT_ROUTE_CACHE_SPEC);
 
     private static final String DEFAULT_ROUTE_DECORATOR_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String ROUTE_DECORATOR_CACHE_SPEC =
-            caffeineSpec("routeDecoratorCache", DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
+            nullableCaffeineSpec("routeDecoratorCache", DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
 
     private static final String DEFAULT_PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String PARSED_PATH_CACHE_SPEC =
-            caffeineSpec("parsedPathCache", DEFAULT_PARSED_PATH_CACHE_SPEC);
+            nullableCaffeineSpec("parsedPathCache", DEFAULT_PARSED_PATH_CACHE_SPEC);
 
     private static final String DEFAULT_HEADER_VALUE_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String HEADER_VALUE_CACHE_SPEC =
-            caffeineSpec("headerValueCache", DEFAULT_HEADER_VALUE_CACHE_SPEC);
+            nullableCaffeineSpec("headerValueCache", DEFAULT_HEADER_VALUE_CACHE_SPEC);
 
     private static final String DEFAULT_FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
     @Nullable
     private static final String FILE_SERVICE_CACHE_SPEC =
-            caffeineSpec("fileServiceCache", DEFAULT_FILE_SERVICE_CACHE_SPEC);
+            nullableCaffeineSpec("fileServiceCache", DEFAULT_FILE_SERVICE_CACHE_SPEC);
 
     private static final String DEFAULT_CACHED_HEADERS =
             ":authority,:scheme,:method,accept-encoding,content-type";
@@ -356,7 +357,6 @@ public final class Flags {
                     "cachedHeaders", DEFAULT_CACHED_HEADERS, CharMatcher.ascii()::matchesAllOf));
 
     private static final String DEFAULT_DNS_CACHE_SPEC = "maximumSize=4096";
-    @Nullable
     private static final String DNS_CACHE_SPEC =
             caffeineSpec("dnsCacheSpec", DEFAULT_DNS_CACHE_SPEC);
 
@@ -993,7 +993,6 @@ public final class Flags {
      * {@code -Dcom.linecorp.armeria.dnsCacheSpec=<spec>} JVM option to override the default value.
      * For example, {@code -Dcom.linecorp.armeria.dnsCacheSpec=maximumSize=4096}.
      */
-    @Nullable
     public static String dnsCacheSpec() {
         return DNS_CACHE_SPEC;
     }
@@ -1087,12 +1086,22 @@ public final class Flags {
     }
 
     @Nullable
+    private static String nullableCaffeineSpec(String name, String defaultValue) {
+        return getCaffeineSpec(name, defaultValue, true);
+    }
+
     private static String caffeineSpec(String name, String defaultValue) {
+        return requireNonNull(getCaffeineSpec(name, defaultValue, false), "caffeineSpec");
+    }
+
+    @Nullable
+    private static String getCaffeineSpec(String name, String defaultValue, boolean allowToDisable) {
         final String spec = get(name, defaultValue, value -> {
             try {
-                if (!"off".equals(value)) {
-                    CaffeineSpec.parse(value);
+                if (allowToDisable && "off".equals(value)) {
+                    return true;
                 }
+                CaffeineSpec.parse(value);
                 return true;
             } catch (Exception e) {
                 return false;
