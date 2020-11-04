@@ -73,6 +73,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     private final BodySubscriber bodySubscriber = new BodySubscriber();
     private final HttpResponse response;
     private final EventExecutor executor;
+    private final boolean notifyCancellation;
 
     @Nullable
     private volatile HeadersFuture<HttpHeaders> trailersFuture;
@@ -82,6 +83,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                                     SubscriptionOption... options) {
         this.response = requireNonNull(response, "response");
         this.executor = requireNonNull(executor, "executor");
+        notifyCancellation = containsNotifyCancellation(options);
 
         response.subscribe(bodySubscriber, executor, options);
     }
@@ -190,11 +192,15 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
-            if (cancelCalled || upstream != null) {
+            if (upstream != null) {
                 subscription.cancel();
                 return;
             }
             upstream = subscription;
+            if (cancelCalled) {
+                subscription.cancel();
+                return;
+            }
             subscription.request(pendingRequests);
         }
 
@@ -228,7 +234,9 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                 return;
             }
             cancelCalled = true;
-            downstream = NoopSubscriber.get();
+            if (!notifyCancellation) {
+                downstream = NoopSubscriber.get();
+            }
             maybeCompleteHeaders(null);
             final Subscription upstream = this.upstream;
             if (upstream != null) {
@@ -238,7 +246,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
         @Override
         public void onNext(HttpObject httpObject) {
-            final Subscription upstream = this.upstream;
             if (httpObject instanceof ResponseHeaders) {
                 final ResponseHeaders headers = (ResponseHeaders) httpObject;
                 final HttpStatus status = headers.status();
@@ -291,6 +298,9 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                 this.cause = cause;
             } else {
                 downstream.onError(cause);
+                if (cause instanceof CancelledSubscriptionException) {
+                    this.downstream = NoopSubscriber.get();
+                }
             }
         }
 
@@ -319,6 +329,19 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                 trailersFutureUpdater.compareAndSet(DefaultSplitHttpResponse.this, null, EMPTY_TRAILERS);
             }
         }
+    }
+
+    private static boolean containsNotifyCancellation(SubscriptionOption... options) {
+        if (options.length == 0) {
+            return false;
+        }
+
+        for (SubscriptionOption option : options) {
+            if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static final class HeadersFuture<T> extends UnmodifiableFuture<T> {

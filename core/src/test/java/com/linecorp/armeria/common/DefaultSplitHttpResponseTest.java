@@ -18,13 +18,23 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.instanceOf;
 
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
@@ -134,5 +144,42 @@ class DefaultSplitHttpResponseTest {
 
         assertThat(splitHttpResponse.headers().join()).isEqualTo(ResponseHeaders.of(HttpStatus.OK));
         assertThat(splitHttpResponse.trailers().join().isEmpty()).isTrue();
+    }
+
+    @Test
+    void cancelNotification() {
+        final HttpResponse response = HttpResponse.of(Flux.just(ResponseHeaders.of(HttpStatus.OK),
+                                                                HttpData.ofUtf8("Hello1"),
+                                                                HttpData.ofUtf8("Hello2"),
+                                                                HttpHeaders.of("grpc-status", 0)));
+        final SplitHttpResponse splitHttpResponse = response.split(SubscriptionOption.NOTIFY_CANCELLATION);
+        final StreamMessage<HttpData> body = splitHttpResponse.body();
+        final AtomicReference<Throwable> causeCaptor = new AtomicReference<>();
+        body.subscribe(new Subscriber<HttpData>() {
+
+            @Nullable
+            private Subscription subscription;
+
+            @Override
+            public void onSubscribe(Subscription s) {
+                subscription = s;
+                subscription.request(1);
+            }
+
+            @Override
+            public void onNext(HttpData data) {
+                subscription.cancel();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                causeCaptor.set(t);
+            }
+
+            @Override
+            public void onComplete() {}
+        });
+
+        await().untilAtomic(causeCaptor, instanceOf(CancelledSubscriptionException.class));
     }
 }
