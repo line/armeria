@@ -201,6 +201,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private void doSendHeaders(Metadata metadata) {
+        if (cancelled) {
+            // call was already closed by client
+            return;
+        }
         checkState(!sendHeadersCalled, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
@@ -242,6 +246,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private void doSendMessage(O message) {
+        if (cancelled) {
+            // call was already closed by client
+            return;
+        }
         checkState(sendHeadersCalled, "sendHeaders has not been called");
         checkState(!closeCalled, "call is closed");
 
@@ -294,14 +302,14 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private void doClose(Status status, Metadata metadata) {
-        checkState(!closeCalled, "call already closed");
-
-        closeCalled = true;
         if (cancelled) {
             // No need to write anything to client if cancelled already.
             closeListener(status);
             return;
         }
+
+        checkState(!closeCalled, "call already closed");
+        closeCalled = true;
 
         final HttpHeaders trailers = statusToTrailers(
                 ctx, sendHeadersCalled ? HttpHeaders.builder() : defaultHeaders.toBuilder(),
