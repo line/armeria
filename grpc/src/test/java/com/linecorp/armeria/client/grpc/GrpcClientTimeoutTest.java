@@ -58,6 +58,8 @@ class GrpcClientTimeoutTest {
     private static final ch.qos.logback.classic.Logger rootLogger =
             (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 
+    private static final Logger logger = LoggerFactory.getLogger(GrpcClientTimeoutTest.class);
+
     @Mock
     private Appender<ILoggingEvent> appender;
 
@@ -134,6 +136,7 @@ class GrpcClientTimeoutTest {
                                  .blockingTaskExecutor()
                                  .submit(() -> {
                                      // Defer response
+                                     logger.debug("Perform a long running task.");
                                      Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
                                      responseObserver.onNext(SimpleResponse.newBuilder()
                                                                            .setUsername("Armeria")
