@@ -38,8 +38,7 @@ import com.linecorp.armeria.common.RpcRequest;
 final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
     static final CircuitBreakerMapping hostMapping = new KeyedCircuitBreakerMapping(
-            CircuitBreakerMapping.builder().perHost(),
-            (host, method, path) -> CircuitBreaker.of(host));
+            true, false, false, (host, method, path) -> CircuitBreaker.of(host));
 
     private final ConcurrentMap<String, CircuitBreaker> mapping = new ConcurrentHashMap<>();
 
@@ -52,11 +51,11 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
      * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link CircuitBreakerMappingBuilder} and
      * {@link CircuitBreaker} factory.
      */
-    KeyedCircuitBreakerMapping(CircuitBreakerMappingBuilder mappingBuilder, CircuitBreakerFactory factory) {
-        requireNonNull(mappingBuilder, "mappingBuilder");
-        isPerHost = mappingBuilder.isPerHost();
-        isPerMethod = mappingBuilder.isPerMethod();
-        isPerPath = mappingBuilder.isPerPath();
+    KeyedCircuitBreakerMapping(
+            boolean perHost, boolean perMethod, boolean perPath, CircuitBreakerFactory factory) {
+        isPerHost = perHost;
+        isPerMethod = perMethod;
+        isPerPath = perPath;
         this.factory = requireNonNull(factory, "factory");
     }
 

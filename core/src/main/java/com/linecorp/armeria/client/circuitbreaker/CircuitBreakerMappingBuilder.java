@@ -28,7 +28,6 @@ public final class CircuitBreakerMappingBuilder {
 
     /**
      * Adds host dimension to the mapping Key.
-     * @return this builder.
      */
     public CircuitBreakerMappingBuilder perHost() {
         perHost = true;
@@ -37,7 +36,6 @@ public final class CircuitBreakerMappingBuilder {
 
     /**
      * Adds method dimension to the mapping Key.
-     * @return this builder.
      */
     public CircuitBreakerMappingBuilder perMethod() {
         perMethod = true;
@@ -46,7 +44,6 @@ public final class CircuitBreakerMappingBuilder {
 
     /**
      * Adds path dimension to the mapping Key.
-     * @return this builder.
      */
     public CircuitBreakerMappingBuilder perPath() {
         perPath = true;
@@ -54,14 +51,14 @@ public final class CircuitBreakerMappingBuilder {
     }
 
     /**
-     * Builds the {@link CircuitBreakerMapping} using a three-dimensional factory.
-     * @return a {@link CircuitBreakerMapping} based on the added dimensions.
+     * Returns a newly-created {@link CircuitBreakerMapping} with the specified {@link CircuitBreakerFactory}
+     * and properties set so far.
      */
     public CircuitBreakerMapping build(CircuitBreakerFactory factory) {
         if (!perHost && !perMethod && !perPath) {
             throw new IllegalStateException("A CircuitBreakerMapping must be per host, method and/or path");
         }
-        return new KeyedCircuitBreakerMapping(this, factory);
+        return new KeyedCircuitBreakerMapping(perHost, perMethod, perPath, factory);
     }
 
     boolean isPerHost() {
