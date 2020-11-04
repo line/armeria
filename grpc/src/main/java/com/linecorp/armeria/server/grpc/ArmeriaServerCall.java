@@ -202,7 +202,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void doSendHeaders(Metadata metadata) {
         if (cancelled) {
-            // call was already closed by client
+            // call was already closed by client or with non-OK status.
             return;
         }
         checkState(!sendHeadersCalled, "sendHeaders already called");
@@ -247,7 +247,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private void doSendMessage(O message) {
         if (cancelled) {
-            // call was already closed by client
+            // call was already closed by client or with non-OK status
             return;
         }
         checkState(sendHeadersCalled, "sendHeaders has not been called");

@@ -78,6 +78,7 @@ class GrpcClientTimeoutTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.requestTimeoutMillis(2000);
             sb.service(GrpcService.builder()
                                   .addService(new SlowService())
                                   .build());
@@ -85,7 +86,7 @@ class GrpcClientTimeoutTest {
     };
 
     @Test
-    void timeout() throws InterruptedException {
+    void clientTimeout() throws InterruptedException {
         final TestServiceBlockingStub client =
                 Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
                                   TestServiceBlockingStub.class);
@@ -94,6 +95,27 @@ class GrpcClientTimeoutTest {
                   .unaryCall(SimpleRequest.getDefaultInstance());
         }, StatusRuntimeException.class);
         assertThat(exception.getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+        // Wait for a long running task to complete
+        Thread.sleep(4000);
+
+        verify(appender, atLeastOnce()).doAppend(loggingEventCaptor.capture());
+        assertThat(loggingEventCaptor.getAllValues()).noneMatch(event -> {
+            return event.getLevel() == Level.WARN &&
+                   event.getThrowableProxy() != null &&
+                   event.getThrowableProxy().getMessage().contains("call already closed");
+        });
+    }
+
+    @Test
+    void serverTimeout() throws InterruptedException {
+        final TestServiceBlockingStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
+                                                      .responseTimeoutMillis(0)
+                                                      .build(TestServiceBlockingStub.class);
+
+        final StatusRuntimeException exception = catchThrowableOfType(() -> {
+            client.unaryCall(SimpleRequest.getDefaultInstance());
+        }, StatusRuntimeException.class);
+        assertThat(exception.getStatus().getCode()).isEqualTo(Code.CANCELLED);
         // Wait for a long running task to complete
         Thread.sleep(3000);
 
@@ -112,7 +134,7 @@ class GrpcClientTimeoutTest {
                                  .blockingTaskExecutor()
                                  .submit(() -> {
                                      // Defer response
-                                     Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
+                                     Uninterruptibles.sleepUninterruptibly(3, TimeUnit.SECONDS);
                                      responseObserver.onNext(SimpleResponse.newBuilder()
                                                                            .setUsername("Armeria")
                                                                            .build());
