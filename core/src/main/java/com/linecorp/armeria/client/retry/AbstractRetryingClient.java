@@ -52,11 +52,11 @@ import io.netty.util.concurrent.ScheduledFuture;
 /**
  * A {@link Client} decorator that handles failures of remote invocation and retries requests.
  *
- * @param <I> the {@link Request} type
- * @param <O> the {@link Response} type
+ * @param <REQ_T> the {@link Request} type
+ * @param <RES_T> the {@link Response} type
  */
-public abstract class AbstractRetryingClient<I extends Request, O extends Response>
-        extends SimpleDecoratingClient<I, O> {
+public abstract class AbstractRetryingClient<REQ_T extends Request, RES_T extends Response>
+        extends SimpleDecoratingClient<REQ_T, RES_T> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractRetryingClient.class);
 
@@ -69,54 +69,19 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
 
-    @Nullable
-    private final RetryRule retryRule;
-
-    @Nullable
-    private final RetryRule fromRetryRuleWithContent;
-
-    @Nullable
-    private final RetryRuleWithContent<O> retryRuleWithContent;
-
-    private final RetryConfigMapping mapping;
+    private final RetryConfigMapping<RES_T> mapping;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractRetryingClient(Client<I, O> delegate, RetryRule retryRule, RetryConfigMapping mapping) {
-        this(delegate, requireNonNull(retryRule, "retryRule"), null, mapping);
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    AbstractRetryingClient(Client<I, O> delegate,
-                           RetryRuleWithContent<O> retryRuleWithContent,
-                           RetryConfigMapping mapping) {
-        this(delegate, null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"), mapping);
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    private AbstractRetryingClient(Client<I, O> delegate, @Nullable RetryRule retryRule,
-                                   @Nullable RetryRuleWithContent<O> retryRuleWithContent,
-                                   RetryConfigMapping mapping) {
+    AbstractRetryingClient(Client<REQ_T, RES_T> delegate, RetryConfigMapping<RES_T> mapping) {
         super(delegate);
-        this.retryRule = retryRule;
-        this.retryRuleWithContent = retryRuleWithContent;
-        if (retryRuleWithContent != null) {
-            fromRetryRuleWithContent = RetryRuleUtil.fromRetryRuleWithContent(retryRuleWithContent);
-        } else {
-            fromRetryRuleWithContent = null;
-        }
-
         this.mapping = checkNotNull(mapping, "mapping");
     }
 
     @Override
-    public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final RetryConfig config = mapping.get(ctx, req);
+    public final RES_T execute(ClientRequestContext ctx, REQ_T req) throws Exception {
+        final RetryConfig<RES_T> config = mapping.get(ctx, req);
         final State state = new State(
                 config.maxTotalAttempts(),
                 config.responseTimeoutMillisForEachAttempt(),
@@ -125,11 +90,15 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         return doExecute(ctx, req);
     }
 
+    protected RetryConfigMapping<RES_T> mapping() {
+        return mapping;
+    }
+
     /**
      * Invoked by {@link #execute(ClientRequestContext, Request)}
      * after the deadline for response timeout is set.
      */
-    protected abstract O doExecute(ClientRequestContext ctx, I req) throws Exception;
+    protected abstract RES_T doExecute(ClientRequestContext ctx, REQ_T req) throws Exception;
 
     /**
      * This should be called when retrying is finished.
@@ -143,7 +112,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      *
      * @throws IllegalStateException if the {@link RetryRule} is not set
      */
-    protected final RetryRule retryRule() {
+    protected final RetryRule retryRule(ClientRequestContext ctx, REQ_T req) {
+        final RetryConfig<RES_T> config = mapping.get(ctx, req);
+        final RetryRule retryRule = config.retryRule();
         checkState(retryRule != null, "retryRule is not set.");
         return retryRule;
     }
@@ -153,13 +124,17 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      *
      * @throws IllegalStateException if the {@link RetryRuleWithContent} is not set
      */
-    protected final RetryRuleWithContent<O> retryRuleWithContent() {
+    protected final RetryRuleWithContent<RES_T> retryRuleWithContent(ClientRequestContext ctx, REQ_T req) {
+        final RetryConfig<RES_T> config = mapping.get(ctx, req);
+        final RetryRuleWithContent<RES_T> retryRuleWithContent = config.retryRuleWithContent();
         checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
         return retryRuleWithContent;
     }
 
-    final RetryRule fromRetryRuleWithContent() {
-        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
+    final RetryRule fromRetryRuleWithContent(ClientRequestContext ctx, REQ_T req) {
+        final RetryConfig<RES_T> config = mapping.get(ctx, req);
+        final RetryRule fromRetryRuleWithContent = config.fromRetryRuleWithContent();
+        checkState(fromRetryRuleWithContent != null, "retryRuleWithContent is not set.");
         return fromRetryRuleWithContent;
     }
 

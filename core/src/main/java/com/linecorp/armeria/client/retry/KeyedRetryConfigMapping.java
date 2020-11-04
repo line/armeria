@@ -24,24 +24,25 @@ import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 
-final class KeyedRetryConfigMapping implements RetryConfigMapping {
-    private final BiFunction<ClientRequestContext, Request, ? extends RetryConfig> retryConfigFactory;
+final class KeyedRetryConfigMapping<T extends Response> implements RetryConfigMapping<T> {
+    private final BiFunction<ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory;
     private final BiFunction<ClientRequestContext, Request, String> keyFactory;
-    private final ConcurrentMap<String, RetryConfig>  mapping = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, RetryConfig<T>>  mapping = new ConcurrentHashMap<>();
 
     KeyedRetryConfigMapping(
             BiFunction<ClientRequestContext, Request, String> keyFactory,
-            BiFunction<ClientRequestContext, Request, ? extends RetryConfig> retryConfigFactory
+            BiFunction<ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory
     ) {
         this.keyFactory = requireNonNull(keyFactory, "keyFactory");
         this.retryConfigFactory = requireNonNull(retryConfigFactory, "retryConfigFactory");
     }
 
     @Override
-    public RetryConfig get(ClientRequestContext ctx, Request req) throws Exception {
+    public RetryConfig<T> get(ClientRequestContext ctx, Request req) {
         final String key = keyFactory.apply(ctx, req);
-        final RetryConfig config = mapping.get(key);
+        final RetryConfig<T> config = mapping.get(key);
         if (config != null) {
             return config;
         }

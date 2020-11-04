@@ -108,13 +108,19 @@ class RetryingRpcClientTest {
     @Test
     void execute_honorMapping() throws Exception {
         final HelloService.Iface client = helloClient(
-                retryOnException,
                 RetryConfigMapping.of(
                         (ctx, req) -> ctx.rpcRequest().params().contains("Alice") ?  "1" : "2",
-                        (ctx, req) -> RetryConfig
-                                .builder()
-                                .maxTotalAttempts(ctx.rpcRequest().params().contains("Alice") ? 3 : 5)
-                                .build()));
+                        (ctx, req) -> {
+                            if (ctx.rpcRequest().params().contains("Alice")) {
+                                return RetryConfig.<RpcResponse>builder(retryOnException)
+                                        .maxTotalAttempts(3)
+                                        .build();
+                            } else {
+                                return RetryConfig.<RpcResponse>builder(retryOnException)
+                                        .maxTotalAttempts(5)
+                                        .build();
+                            }
+                        }));
 
         when(serviceHandler.hello(anyString()))
                 .thenThrow(new IllegalArgumentException())
@@ -189,11 +195,9 @@ class RetryingRpcClientTest {
         assertThatThrownBy(() -> client.hello("bar")).isSameAs(exception);
     }
 
-    private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> rule, RetryConfigMapping mapping) {
+    private HelloService.Iface helloClient(RetryConfigMapping<RpcResponse> mapping) {
         return Clients.builder(server.httpUri(BINARY) + "/thrift")
-                      .rpcDecorator(RetryingRpcClient.builder(rule)
-                                                     .mapping(mapping)
-                                                     .newDecorator())
+                      .rpcDecorator(RetryingRpcClient.builder(mapping).newDecorator())
                       .build(HelloService.Iface.class);
     }
 

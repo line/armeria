@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.function.BiFunction;
@@ -26,9 +27,12 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.retry.RetryConfig;
 import com.linecorp.armeria.client.retry.RetryConfigMapping;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RpcResponse;
 
 class KeyedRetryConfigMappingTest {
 
@@ -36,32 +40,35 @@ class KeyedRetryConfigMappingTest {
     void mapsCorrectly() throws Exception {
         final BiFunction<ClientRequestContext, Request, String> keyFactory =
                 (ctx, req) -> ctx.endpoint().host() + '#' + ctx.path();
-        final BiFunction<ClientRequestContext, Request, RetryConfig> configFactory = (ctx, req) -> {
+        final BiFunction<ClientRequestContext, Request, RetryConfig<RpcResponse>> configFactory =
+                (ctx, req) -> {
             if (ctx.endpoint().host().equals("host1")) {
-                return RetryConfig.builder()
+                return RetryConfig.<RpcResponse>builder(RetryRule.onException())
                                   .maxTotalAttempts(1).responseTimeoutMillisForEachAttempt(1000).build();
             } else if (ctx.endpoint().host().equals("host2")) {
                 if (ctx.path().equals("/path2")) {
-                    return RetryConfig.builder()
-                                      .maxTotalAttempts(2).responseTimeoutMillisForEachAttempt(2000).build();
+                    return RetryConfig.<RpcResponse>builder(
+                            RetryRuleWithContent.onResponse((c, r) -> completedFuture(true)))
+                            .maxTotalAttempts(2).responseTimeoutMillisForEachAttempt(2000).build();
                 } else {
-                    return RetryConfig.builder()
+                    return RetryConfig.<RpcResponse>builder(RetryRule.onException())
                                       .maxTotalAttempts(3).responseTimeoutMillisForEachAttempt(3000).build();
                 }
             } else {
-                return RetryConfig.builder()
-                                  .maxTotalAttempts(4).responseTimeoutMillisForEachAttempt(4000).build();
+                return RetryConfig.<RpcResponse>builder(
+                        RetryRuleWithContent.onResponse((c, r) -> completedFuture(false)))
+                        .maxTotalAttempts(4).responseTimeoutMillisForEachAttempt(4000).build();
             }
         };
-        final RetryConfigMapping mapping = RetryConfigMapping.of(keyFactory, configFactory);
+        final RetryConfigMapping<RpcResponse> mapping = RetryConfigMapping.of(keyFactory, configFactory);
 
-        final RetryConfig config1 =
+        final RetryConfig<RpcResponse> config1 =
                 mapping.get(context("host1", "/anypath"), HttpRequest.of(HttpMethod.GET, "/anypath"));
-        final RetryConfig config2 =
+        final RetryConfig<RpcResponse> config2 =
                 mapping.get(context("host2", "/path2"), HttpRequest.of(HttpMethod.GET, "/path2"));
-        final RetryConfig config3 =
+        final RetryConfig<RpcResponse> config3 =
                 mapping.get(context("host2", "/anypath"), HttpRequest.of(HttpMethod.GET, "/anypath"));
-        final RetryConfig config4 =
+        final RetryConfig<RpcResponse> config4 =
                 mapping.get(context("host3", "/anypath"), HttpRequest.of(HttpMethod.GET, "/anypath"));
         assertThat(config1.maxTotalAttempts()).isEqualTo(1);
         assertThat(config1.responseTimeoutMillisForEachAttempt()).isEqualTo(1000);

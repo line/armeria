@@ -20,24 +20,25 @@ import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 
 /**
  * Returns a {@link RetryConfig} given the request context.
  */
 @FunctionalInterface
-public interface RetryConfigMapping {
+public interface RetryConfigMapping<T extends Response> {
     /**
      * Creates a {@link KeyedRetryConfigMapping} that maps keys created by keyFactory to  {@link RetryConfig}s
      * created by retryConfigFactory.
      */
-    static RetryConfigMapping of(
+    static <T extends Response> RetryConfigMapping<T> of(
             BiFunction<ClientRequestContext, Request, String> keyFactory,
-            BiFunction<ClientRequestContext, Request, ? extends RetryConfig> retryConfigFactory) {
-        return new KeyedRetryConfigMapping(keyFactory, retryConfigFactory);
+            BiFunction<ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory) {
+        return new KeyedRetryConfigMapping<>(keyFactory, retryConfigFactory);
     }
 
     /**
      * Returns tha {@link RetryConfig} that maps to the given context/request.
      */
-    RetryConfig get(ClientRequestContext ctx, Request req) throws Exception;
+    RetryConfig<T> get(ClientRequestContext ctx, Request req);
 }

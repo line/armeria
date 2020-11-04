@@ -86,6 +86,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     /**
+     * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryConfigMapping}.
+     */
+    public static RetryingClientBuilder builder(RetryConfigMapping<HttpResponse> mapping) {
+        return new RetryingClientBuilder(mapping);
+    }
+
+    /**
      * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
      * requests.
      *
@@ -168,62 +175,22 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
      * requests.
      *
-     * @param retryRule the retry rule
      * @param mapping the mapping that returns a {@link RetryConfig} for a given context/request.
      */
     public static Function<? super HttpClient, RetryingClient>
-    newDecorator(RetryRule retryRule, RetryConfigMapping mapping) {
-        return builder(retryRule).mapping(mapping).newDecorator();
-    }
-
-    /**
-     * Creates a new {@link HttpClient} decorator with the specified {@link RetryRuleWithContent} that
-     * handles failures of an invocation and retries HTTP requests.
-     *
-     * @param retryRuleWithContent the retry rule
-     * @param mapping the mapping that returns a {@link RetryConfig} for a given context/request.
-     */
-    public static Function<? super HttpClient, RetryingClient>
-    newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent, RetryConfigMapping mapping) {
-        return builder(retryRuleWithContent).mapping(mapping).newDecorator();
+    newDecorator(RetryConfigMapping<HttpResponse> mapping) {
+        return builder(mapping).newDecorator();
     }
 
     private final boolean useRetryAfter;
 
-    private final int maxContentLength;
-
-    private final boolean requiresResponseTrailers;
-
-    private final boolean needsContentInRule;
-
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
     RetryingClient(
-            HttpClient delegate, RetryRule retryRule, RetryConfigMapping mapping, boolean useRetryAfter) {
-        super(delegate, retryRule, mapping);
-        requiresResponseTrailers = retryRule.requiresResponseTrailers();
-        needsContentInRule = false;
+            HttpClient delegate, RetryConfigMapping<HttpResponse> mapping, boolean useRetryAfter) {
+        super(delegate, mapping);
         this.useRetryAfter = useRetryAfter;
-        maxContentLength = 0;
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link HttpClient}.
-     */
-    RetryingClient(
-            HttpClient delegate,
-            RetryRuleWithContent<HttpResponse> retryRuleWithContent,
-            RetryConfigMapping mapping,
-            boolean useRetryAfter,
-            int maxContentLength) {
-        super(delegate, retryRuleWithContent, mapping);
-        requiresResponseTrailers = retryRuleWithContent.requiresResponseTrailers();
-        needsContentInRule = true;
-        this.useRetryAfter = useRetryAfter;
-        checkArgument(maxContentLength > 0,
-                      "maxContentLength: %s (expected: > 0)", maxContentLength);
-        this.maxContentLength = maxContentLength;
     }
 
     @Override
@@ -279,44 +246,49 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 
-        if (requiresResponseTrailers) {
+        final RetryConfig<HttpResponse> config = mapping().get(ctx, originalReq);
+        if (config.requiresResponseTrailers()) {
             response.aggregate().handle((aggregated, cause) -> {
-                handleResponse(ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
+                handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
                                cause != null ? HttpResponse.ofFailure(cause) : aggregated.toHttpResponse());
                 return null;
             });
         } else {
-            handleResponse(ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx, response);
+            handleResponse(
+                    config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx, response);
         }
     }
 
-    private void handleResponse(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
+    private void handleResponse(RetryConfig<HttpResponse> retryConfig, ClientRequestContext ctx,
+                                HttpRequestDuplicator rootReqDuplicator,
                                 HttpRequest originalReq, HttpResponse returnedRes,
                                 CompletableFuture<HttpResponse> future, ClientRequestContext derivedCtx,
                                 HttpResponse response) {
 
-        final RequestLogProperty logProperty = requiresResponseTrailers ? RequestLogProperty.RESPONSE_TRAILERS
-                                                                        : RequestLogProperty.RESPONSE_HEADERS;
+        final RequestLogProperty logProperty =
+                retryConfig.requiresResponseTrailers() ?
+                RequestLogProperty.RESPONSE_TRAILERS : RequestLogProperty.RESPONSE_HEADERS;
 
         derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable responseCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
-            if (needsContentInRule && responseCause == null) {
+            if (retryConfig.needsContentInRule() && responseCause == null) {
                 final HttpResponseDuplicator duplicator =
                         response.toDuplicator(derivedCtx.eventLoop().withoutContext(),
                                               derivedCtx.maxResponseLength());
                 try {
                     final TruncatingHttpResponse truncatingHttpResponse =
-                            new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
+                            new TruncatingHttpResponse(duplicator.duplicate(), retryConfig.maxContentLength());
                     final HttpResponse duplicated = duplicator.duplicate();
-                    retryRuleWithContent().shouldRetry(derivedCtx, truncatingHttpResponse, null)
-                                          .handle((decision, cause) -> {
-                                              truncatingHttpResponse.abort();
-                                              return handleBackoff(
-                                                      ctx, derivedCtx, rootReqDuplicator,
-                                                      originalReq, returnedRes, future,
-                                                      duplicated, duplicator::abort).apply(decision, cause);
-                                          });
+                    retryConfig.retryRuleWithContent()
+                               .shouldRetry(derivedCtx, truncatingHttpResponse, null)
+                               .handle((decision, cause) -> {
+                                   truncatingHttpResponse.abort();
+                                   return handleBackoff(
+                                           ctx, derivedCtx, rootReqDuplicator, originalReq, returnedRes,
+                                           future,duplicated, duplicator::abort)
+                                           .apply(decision, cause);
+                               });
                     duplicator.close();
                 } catch (Throwable cause) {
                     duplicator.abort(cause);
@@ -325,10 +297,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             } else {
                 try {
                     final RetryRule retryRule;
-                    if (needsContentInRule) {
-                        retryRule = fromRetryRuleWithContent();
+                    if (retryConfig.needsContentInRule()) {
+                        retryRule = retryConfig.fromRetryRuleWithContent();
                     } else {
-                        retryRule = retryRule();
+                        retryRule = retryConfig.retryRule();
                     }
 
                     final CompletionStage<RetryDecision> f = retryRule.shouldRetry(derivedCtx, responseCause);

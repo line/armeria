@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.RetryDecision;
+import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
@@ -37,8 +38,8 @@ class GrpcClientUnwrapTest {
         final TestServiceBlockingStub client =
                 Clients.builder("gproto+http://127.0.0.1:1/")
                        .decorator(LoggingClient.newDecorator())
-                       .decorator(RetryingClient.newDecorator(
-                               (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.noRetry())))
+                       .decorator(RetryingClient.newDecorator(RetryRule.of(
+                               (ctx, cause) -> CompletableFuture.completedFuture(RetryDecision.noRetry()))))
                        .build(TestServiceBlockingStub.class);
 
         assertThat(Clients.unwrap(client, TestServiceBlockingStub.class)).isSameAs(client);
