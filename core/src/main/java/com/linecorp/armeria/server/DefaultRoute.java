@@ -79,14 +79,14 @@ final class DefaultRoute implements Route {
     }
 
     @Override
-    public RoutingResult apply(RoutingContext routingCtx, boolean routeDecoratingService) {
+    public RoutingResult apply(RoutingContext routingCtx, boolean isRouteDecorator) {
         final RoutingResultBuilder builder = pathMapping.apply(requireNonNull(routingCtx, "routingCtx"));
         if (builder == null) {
             return RoutingResult.empty();
         }
 
         if (!methods.contains(routingCtx.method())) {
-            if (routeDecoratingService) {
+            if (isRouteDecorator) {
                 return RoutingResult.empty();
             }
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
@@ -112,7 +112,7 @@ final class DefaultRoute implements Route {
                 }
             }
             if (!contentTypeMatched) {
-                if (routeDecoratingService) {
+                if (isRouteDecorator) {
                     return RoutingResult.empty();
                 }
                 routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
@@ -154,7 +154,7 @@ final class DefaultRoute implements Route {
                 }
             }
             if (!found) {
-                if (routeDecoratingService) {
+                if (isRouteDecorator) {
                     return RoutingResult.empty();
                 }
                 routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
