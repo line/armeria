@@ -35,107 +35,109 @@ import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import io.netty.util.AsciiString;
 import reactor.test.StepVerifier;
 
-public class HttpRequestBuilderTest {
+class HttpRequestBuilderTest {
 
     @Test
     void buildSimple() {
-        final HttpRequest getRequest = HttpRequest.builder().get("/1").build();
-        assertThat(getRequest.method()).isEqualTo(HttpMethod.GET);
-        assertThat(getRequest.path()).isEqualTo("/1");
+        HttpRequest request = HttpRequest.builder().get("/1").build();
+        assertThat(request.method()).isEqualTo(HttpMethod.GET);
+        assertThat(request.path()).isEqualTo("/1");
 
-        final HttpRequest postRequest = HttpRequest.builder().post("/2").build();
-        assertThat(postRequest.method()).isEqualTo(HttpMethod.POST);
-        assertThat(postRequest.path()).isEqualTo("/2");
+        request = HttpRequest.builder().post("/2").build();
+        assertThat(request.method()).isEqualTo(HttpMethod.POST);
+        assertThat(request.path()).isEqualTo("/2");
 
-        final HttpRequest putRequest = HttpRequest.builder().put("/3").build();
-        assertThat(putRequest.method()).isEqualTo(HttpMethod.PUT);
-        assertThat(putRequest.path()).isEqualTo("/3");
+        request = HttpRequest.builder().put("/3").build();
+        assertThat(request.method()).isEqualTo(HttpMethod.PUT);
+        assertThat(request.path()).isEqualTo("/3");
 
-        final HttpRequest deleteRequest = HttpRequest.builder().delete("/4").build();
-        assertThat(deleteRequest.method()).isEqualTo(HttpMethod.DELETE);
-        assertThat(deleteRequest.path()).isEqualTo("/4");
+        request = HttpRequest.builder().delete("/4").build();
+        assertThat(request.method()).isEqualTo(HttpMethod.DELETE);
+        assertThat(request.path()).isEqualTo("/4");
 
-        final HttpRequest patchRequest = HttpRequest.builder().patch("/5").build();
-        assertThat(patchRequest.method()).isEqualTo(HttpMethod.PATCH);
-        assertThat(patchRequest.path()).isEqualTo("/5");
+        request = HttpRequest.builder().patch("/5").build();
+        assertThat(request.method()).isEqualTo(HttpMethod.PATCH);
+        assertThat(request.path()).isEqualTo("/5");
 
-        final HttpRequest optionsRequest = HttpRequest.builder().options("/6").build();
-        assertThat(optionsRequest.method()).isEqualTo(HttpMethod.OPTIONS);
-        assertThat(optionsRequest.path()).isEqualTo("/6");
+        request = HttpRequest.builder().options("/6").build();
+        assertThat(request.method()).isEqualTo(HttpMethod.OPTIONS);
+        assertThat(request.path()).isEqualTo("/6");
 
-        final HttpRequest headRequest = HttpRequest.builder().head("/7").build();
-        assertThat(headRequest.method()).isEqualTo(HttpMethod.HEAD);
-        assertThat(headRequest.path()).isEqualTo("/7");
+        request = HttpRequest.builder().head("/7").build();
+        assertThat(request.method()).isEqualTo(HttpMethod.HEAD);
+        assertThat(request.path()).isEqualTo("/7");
 
-        final HttpRequest traceRequest = HttpRequest.builder().trace("/8").build();
-        assertThat(traceRequest.method()).isEqualTo(HttpMethod.TRACE);
-        assertThat(traceRequest.path()).isEqualTo("/8");
+        request = HttpRequest.builder().trace("/8").build();
+        assertThat(request.method()).isEqualTo(HttpMethod.TRACE);
+        assertThat(request.path()).isEqualTo("/8");
     }
 
     @Test
     void buildWithHeaders() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
         final HttpHeaders headers = HttpHeaders.of(AUTHORIZATION, "foo", "bar", "baz");
-        final HttpRequest request = requestBuilder.get("/")
-                                                  .header("x-header", "foo")
-                                                  .headers(headers)
-                                                  .build();
-        final List<Entry<AsciiString, String>> list = ImmutableMap.of(AUTHORIZATION, "foo",
-                                                                      AsciiString.of("bar"), "baz",
-                                                                      AsciiString.of("x-header"), "foo")
-                                                                  .entrySet().asList();
-        assertThat(request.headers()).containsAll(list);
+        final HttpRequest request = HttpRequest.builder().get("/")
+                                               .header("x-header", "foo")
+                                               .headers(headers)
+                                               .build();
+        final List<Entry<AsciiString, String>> finalHeaders =
+                ImmutableMap.of(AUTHORIZATION, "foo", AsciiString.of("bar"), "baz",
+                                AsciiString.of("x-header"), "foo").entrySet().asList();
+        assertThat(request.headers()).containsAll(finalHeaders);
         assertThat(request).isInstanceOf(EmptyFixedHttpRequest.class);
     }
 
     @Test
     void buildWithQueryParams() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
-        final HttpRequest request = requestBuilder.get("/")
-                                                  .queryParam("foo", "bar")
-                                                  .queryParams(QueryParams.of("from", 0, "limit", 10))
-                                                  .build();
+        final HttpRequest request = HttpRequest.builder().get("/")
+                                               .queryParam("foo", "bar")
+                                               .queryParams(QueryParams.of("from", 0, "limit", 10))
+                                               .build();
         assertThat(request.path()).isEqualTo("/?foo=bar&from=0&limit=10");
         assertThat(request).isInstanceOf(EmptyFixedHttpRequest.class);
     }
 
     @Test
     void buildWithPathParams() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
-        final HttpRequest request = requestBuilder.get("/{foo}/{bar}/:id/foo")
-                                                  .pathParam("foo", "resource1")
-                                                  .pathParams(ImmutableMap.of("bar", "resource2", "id", 1))
-                                                  .build();
+        final HttpRequest request = HttpRequest.builder().get("/{foo}/{bar}/:id/foo")
+                                               .pathParam("foo", "resource1")
+                                               .pathParams(ImmutableMap.of("bar", "resource2", "id", 1))
+                                               .build();
         assertThat(request.path()).isEqualTo("/resource1/resource2/1/foo");
         assertThat(request).isInstanceOf(EmptyFixedHttpRequest.class);
     }
 
     @Test
     void buildWithPathParams2() {
-        HttpRequest request = new HttpRequestBuilder().get("/{foo}/{bar}/:unknown/foo/{}/{unknown}/a{")
-                                                      .pathParams(ImmutableMap.of("foo", "foo", "bar", "bar"))
-                                                      .build();
-        assertThat(request.path()).isEqualTo("/foo/bar/:unknown/foo/{}/{unknown}/a{");
+        HttpRequest request = HttpRequest.builder().get("/{foo}/{bar}/:unknown/foo/{unknown}")
+                                         .pathParams(ImmutableMap.of("foo", "foo", "bar", "bar"))
+                                         .disablePathParams()
+                                         .build();
+        assertThat(request.path()).isEqualTo("/{foo}/{bar}/:unknown/foo/{unknown}");
 
-        request = new HttpRequestBuilder().get("/{foo}/{unknown}/:id/:/{/foo/}/:")
-                                          .pathParams(ImmutableMap.of("id", 1, "foo", "foo"))
-                                          .build();
-        assertThat(request.path()).isEqualTo("/foo/{unknown}/1/:/{/foo/}/:");
+        assertThatThrownBy(() -> HttpRequest.builder().get("/{foo}/{bar}/:unknown/foo/{unknown}")
+                                            .pathParams(ImmutableMap.of("foo", "foo", "bar", "bar"))
+                                            .build())
+                .isInstanceOf(IllegalStateException.class);
 
-        request = new HttpRequestBuilder().get("/{}/:")
-                                          .pathParams(ImmutableMap.of("", "foo"))
-                                          .build();
+        request = HttpRequest.builder().get("/{foo}/{bar}/:id/:/{/foo/}/::/a{")
+                             .pathParams(ImmutableMap.of("id", 3, "bar", 2, "foo", 1, "", 4, "/foo/", 5))
+                             .pathParam(":", 6)
+                             .build();
+        assertThat(request.path()).isEqualTo("/1/2/3/4/5/6/a{");
+
+        request = HttpRequest.builder().get("/{}/:")
+                             .pathParams(ImmutableMap.of("", "foo"))
+                             .build();
         assertThat(request.path()).isEqualTo("/foo/foo");
     }
 
     @Test
     void buildWithCookies() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
-        final HttpRequest request = requestBuilder.get("/")
-                                                  .cookie(Cookie.of("cookie1", "foo"))
-                                                  .cookies(Cookies.of(Cookie.of("cookie2", "foo"),
-                                                                      Cookie.of("cookie3", "foo")))
-                                                  .build();
+        final HttpRequest request = HttpRequest.builder().get("/")
+                                               .cookie(Cookie.of("cookie1", "foo"))
+                                               .cookies(Cookies.of(Cookie.of("cookie2", "foo"),
+                                                                   Cookie.of("cookie3", "foo")))
+                                               .build();
         final Cookies cookies = Cookies.of(Cookie.of("cookie1", "foo"),
                                            Cookie.of("cookie2", "foo"),
                                            Cookie.of("cookie3", "foo"));
@@ -145,25 +147,24 @@ public class HttpRequestBuilderTest {
 
     @Test
     void buildWithTrailers() {
-        final HttpRequest request1 = HttpRequest.builder().get("/")
-                                                .trailers(HttpHeaders.of("some-trailer", "foo"))
-                                                .build();
-        assertThat(request1).isInstanceOf(OneElementFixedHttpRequest.class);
+        HttpRequest request = HttpRequest.builder().get("/")
+                                         .trailers(HttpHeaders.of("some-trailer", "foo"))
+                                         .build();
+        assertThat(request).isInstanceOf(OneElementFixedHttpRequest.class);
 
-        final HttpRequest request2 = HttpRequest.builder().get("/")
-                                                .content(MediaType.PLAIN_TEXT_UTF_8, "foo")
-                                                .trailers(HttpHeaders.of("some-trailer", "foo"))
-                                                .build();
-        assertThat(request2).isInstanceOf(TwoElementFixedHttpRequest.class);
+        request = HttpRequest.builder().get("/")
+                             .content(MediaType.PLAIN_TEXT_UTF_8, "foo")
+                             .trailers(HttpHeaders.of("some-trailer", "foo"))
+                             .build();
+        assertThat(request).isInstanceOf(TwoElementFixedHttpRequest.class);
     }
 
     @Test
     void buildWithStringContent() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
-        final HttpRequest request = requestBuilder.post("/")
-                                                  .content(MediaType.JSON,
-                                                           "{\"foo\":\"bar\",\"bar\":\"baz\",\"baz\":1}")
-                                                  .build();
+        final HttpRequest request = HttpRequest.builder().post("/")
+                                               .content(MediaType.JSON,
+                                                        "{\"foo\":\"bar\",\"bar\":\"baz\",\"baz\":1}")
+                                               .build();
         assertThat(request.method()).isEqualTo(HttpMethod.POST);
         assertThat(request.path()).isEqualTo("/");
         assertThat(request.contentType()).isEqualTo(MediaType.JSON);
@@ -176,10 +177,9 @@ public class HttpRequestBuilderTest {
 
     @Test
     void buildWithFormatContent() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
-        final HttpRequest request = requestBuilder.post("/")
-                                                  .content(MediaType.PLAIN_TEXT_UTF_8, "%s = %d", "foo", 10)
-                                                  .build();
+        final HttpRequest request = HttpRequest.builder().post("/")
+                                               .content(MediaType.PLAIN_TEXT_UTF_8, "%s = %d", "foo", 10)
+                                               .build();
         assertThat(request.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         StepVerifier.create(request)
                     .expectNext(HttpData.ofUtf8("foo = 10"))
@@ -189,11 +189,9 @@ public class HttpRequestBuilderTest {
 
     @Test
     void buildWithByteContent() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
-        final HttpRequest request = requestBuilder.post("/")
-                                                  .content(MediaType.PLAIN_TEXT_UTF_8,
-                                                           "abcdefghiklmn".getBytes())
-                                                  .build();
+        final HttpRequest request = HttpRequest.builder().post("/")
+                                               .content(MediaType.PLAIN_TEXT_UTF_8, "abcdefghiklmn".getBytes())
+                                               .build();
         assertThat(request.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         StepVerifier.create(request)
                     .expectNext(HttpData.ofUtf8("abcdefghiklmn"))
@@ -203,7 +201,7 @@ public class HttpRequestBuilderTest {
 
     @Test
     void buildComplex() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
+        final HttpRequestBuilder requestBuilder = HttpRequest.builder();
         HttpRequest request = requestBuilder.put("/{foo}/{bar}/:baz/foo-{id}/:boo")
                                             .header("x-header-1", 1234)
                                             .pathParam("foo", "resource1")
@@ -236,9 +234,8 @@ public class HttpRequestBuilderTest {
 
     @Test
     void buildThrows() {
-        final HttpRequestBuilder requestBuilder = new HttpRequestBuilder();
-        assertThatThrownBy(requestBuilder::build)
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("path must be set");
+        final HttpRequestBuilder requestBuilder = HttpRequest.builder();
+        assertThatThrownBy(requestBuilder::build).isInstanceOf(IllegalStateException.class)
+                                                 .hasMessageContaining("path must be set");
     }
 }

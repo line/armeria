@@ -41,7 +41,7 @@ import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 /**
  * Builds a new {@link HttpRequest}.
  */
-final class HttpRequestBuilder {
+public final class HttpRequestBuilder {
 
     // TODO(tumile): Add content(Publisher).
 
@@ -54,6 +54,9 @@ final class HttpRequestBuilder {
     private HttpData content;
     @Nullable
     private String path;
+    private boolean disablePathParams;
+
+    HttpRequestBuilder() {}
 
     /**
      * Shortcut to set GET method and path.
@@ -236,13 +239,22 @@ final class HttpRequestBuilder {
      * Sets multiple path params for this request. For example:
      * <pre>{@code
      * HttpRequest.builder()
-     *            .get("/{foo}/{bar}")
+     *            .get("/{foo}/:bar")
      *            .pathParams(Map.of("foo", "bar", "bar", "baz"))
      *            .build(); // GET `/bar/baz`
      * }</pre>
      */
     public HttpRequestBuilder pathParams(Map<String, ?> pathParams) {
         this.pathParams.putAll(requireNonNull(pathParams, "pathParams"));
+        return this;
+    }
+
+    /**
+     * Disables path parameters substitution. If path parameter is not disabled and a parameter's, specified
+     * using {@code {}} or {@code :}, value is not found, an {@link IllegalStateException} is thrown.
+     */
+    public HttpRequestBuilder disablePathParams() {
+        disablePathParams = true;
         return this;
     }
 
@@ -302,8 +314,8 @@ final class HttpRequestBuilder {
      * }</pre>
      * @see Cookies
      */
-    public HttpRequestBuilder cookies(Cookies cookies) {
-        this.cookies.addAll(requireNonNull(cookies, "cookies"));
+    public HttpRequestBuilder cookies(Iterable<? extends Cookie> cookies) {
+        requireNonNull(cookies, "cookies").forEach(this.cookies::add);
         return this;
     }
 
@@ -342,11 +354,8 @@ final class HttpRequestBuilder {
 
     private String buildPath() {
         checkState(path != null, "path must be set.");
-        if (pathParams.isEmpty() && queryParamsBuilder.isEmpty()) {
-            return path;
-        }
         final StringBuilder pathBuilder = new StringBuilder(path);
-        if (!pathParams.isEmpty()) {
+        if (!disablePathParams) {
             int i = 0;
             while (i < pathBuilder.length()) {
                 if (pathBuilder.charAt(i) == '{') {
@@ -358,22 +367,20 @@ final class HttpRequestBuilder {
                         break;
                     }
                     final String name = pathBuilder.substring(i + 1, j);
-                    if (pathParams.containsKey(name)) {
-                        final String value = pathParams.get(name).toString();
-                        pathBuilder.replace(i, j + 1, value);
-                        i += value.length() - 1;
-                    }
+                    checkState(pathParams.containsKey(name), "param " + name + " does not have a value.");
+                    final String value = pathParams.get(name).toString();
+                    pathBuilder.replace(i, j + 1, value);
+                    i += value.length() - 1;
                 } else if (pathBuilder.charAt(i) == ':') {
                     int j = i + 1;
                     while (j < pathBuilder.length() && pathBuilder.charAt(j) != '/') {
                         j++;
                     }
                     final String name = pathBuilder.substring(i + 1, j);
-                    if (pathParams.containsKey(name)) {
-                        final String value = pathParams.get(name).toString();
-                        pathBuilder.replace(i, j, value);
-                        i += value.length();
-                    }
+                    checkState(pathParams.containsKey(name), "param " + name + " does not have a value.");
+                    final String value = pathParams.get(name).toString();
+                    pathBuilder.replace(i, j, value);
+                    i += value.length();
                 }
                 i++;
             }
