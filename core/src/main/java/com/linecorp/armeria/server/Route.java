@@ -60,7 +60,10 @@ public interface Route {
      * @see RouteBuilder#produces(Iterable)
      * @see RouteBuilder#matchesHeaders(Iterable)
      * @see RouteBuilder#matchesParams(Iterable)
+     *
+     * @deprecated Use {@link #apply(RoutingContext, boolean)}.
      */
+    @Deprecated
     default RoutingResult apply(RoutingContext routingCtx) {
         return apply(routingCtx, false);
     }
@@ -69,11 +72,12 @@ public interface Route {
      * Matches the specified {@link RoutingContext} and extracts the path parameters from it if exists.
      *
      * @param routingCtx a context to find the {@link HttpService}
-     * @param routeDecoratingService tells whether this method is called in {@link RouteDecoratingService}.
-     *                               If it's {@code true},
-     *                               {@link RoutingContext#deferStatusException(HttpStatusException)} is not
-     *                               set and {@link RoutingContext#isCorsPreflight() preflight request} is
-     *                               not handled by this {@link Route}.
+     * @param isRouteDecorator {@code true} if this method is called for route decorators.
+     *                         {@code false} if this method is called for services.
+     *                         If {@code true}, an {@link HttpStatusException} will not be
+     *                         {@linkplain RoutingContext#deferStatusException(HttpStatusException) deferred}
+     *                         and {@linkplain RoutingContext#isCorsPreflight() preflight request} will not
+     *                         be handled by this {@link Route}.
      *
      * @return a non-empty {@link RoutingResult} if the {@linkplain RoutingContext#path() path},
      *         {@linkplain RoutingContext#method() method},
@@ -89,7 +93,7 @@ public interface Route {
      * @see RouteBuilder#matchesHeaders(Iterable)
      * @see RouteBuilder#matchesParams(Iterable)
      */
-    RoutingResult apply(RoutingContext routingCtx, boolean routeDecoratingService);
+    RoutingResult apply(RoutingContext routingCtx, boolean isRouteDecorator);
 
     /**
      * Returns the names of the path parameters extracted by this mapping.
