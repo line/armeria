@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
@@ -105,37 +104,6 @@ public abstract class AbstractRetryingClient<REQ_T extends Request, RES_T extend
      */
     protected static void onRetryingComplete(ClientRequestContext ctx) {
         ctx.logBuilder().endResponseWithLastChild();
-    }
-
-    /**
-     * Returns the {@link RetryRule}.
-     *
-     * @throws IllegalStateException if the {@link RetryRule} is not set
-     */
-    protected final RetryRule retryRule(ClientRequestContext ctx, REQ_T req) {
-        final RetryConfig<RES_T> config = mapping.get(ctx, req);
-        final RetryRule retryRule = config.retryRule();
-        checkState(retryRule != null, "retryRule is not set.");
-        return retryRule;
-    }
-
-    /**
-     * Returns the {@link RetryRuleWithContent}.
-     *
-     * @throws IllegalStateException if the {@link RetryRuleWithContent} is not set
-     */
-    protected final RetryRuleWithContent<RES_T> retryRuleWithContent(ClientRequestContext ctx, REQ_T req) {
-        final RetryConfig<RES_T> config = mapping.get(ctx, req);
-        final RetryRuleWithContent<RES_T> retryRuleWithContent = config.retryRuleWithContent();
-        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
-        return retryRuleWithContent;
-    }
-
-    final RetryRule fromRetryRuleWithContent(ClientRequestContext ctx, REQ_T req) {
-        final RetryConfig<RES_T> config = mapping.get(ctx, req);
-        final RetryRule fromRetryRuleWithContent = config.fromRetryRuleWithContent();
-        checkState(fromRetryRuleWithContent != null, "retryRuleWithContent is not set.");
-        return fromRetryRuleWithContent;
     }
 
     /**

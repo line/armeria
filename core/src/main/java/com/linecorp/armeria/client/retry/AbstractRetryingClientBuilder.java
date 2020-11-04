@@ -75,22 +75,6 @@ public abstract class AbstractRetryingClientBuilder<T extends Response> {
         retryConfig = null;
     }
 
-    final RetryRule retryRule() {
-        checkState(
-                retryConfig != null,
-                "You are using a RetryConfigMapping, so you do not have one retryRule.");
-        checkState(retryConfig.retryRule != null, "retryRule is not set.");
-        return retryConfig.retryRule;
-    }
-
-    final RetryRuleWithContent<T> retryRuleWithContent() {
-        checkState(
-                retryConfig != null,
-                "You are using a RetryConfigMapping, so you do not have one retryRuleWithContent.");
-        checkState(retryConfig.retryRuleWithContent != null, "retryRuleWithContent is not set.");
-        return retryConfig.retryRuleWithContent;
-    }
-
     final RetryConfigMapping<T> mapping() {
         return mapping;
     }
@@ -110,13 +94,6 @@ public abstract class AbstractRetryingClientBuilder<T extends Response> {
         retryConfig.maxTotalAttempts = maxTotalAttempts;
         mapping = (ctx, req) -> retryConfig.build();
         return this;
-    }
-
-    final int maxTotalAttempts() {
-        checkState(
-                retryConfig != null,
-                "You are using a RetryConfigMapping, so you cannot get maxTotalAttempts.");
-        return retryConfig.maxTotalAttempts;
     }
 
     /**
@@ -141,13 +118,6 @@ public abstract class AbstractRetryingClientBuilder<T extends Response> {
         retryConfig.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
         mapping = (ctx, req) -> retryConfig.build();
         return this;
-    }
-
-    final long responseTimeoutMillisForEachAttempt() {
-        checkState(
-                retryConfig != null,
-                "You are using a RetryConfigMapping, so you cannot get responseTimeoutMillisForEachAttempt.");
-        return retryConfig.responseTimeoutMillisForEachAttempt;
     }
 
     /**

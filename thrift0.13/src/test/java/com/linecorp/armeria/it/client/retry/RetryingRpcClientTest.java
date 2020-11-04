@@ -197,7 +197,7 @@ class RetryingRpcClientTest {
 
     private HelloService.Iface helloClient(RetryConfigMapping<RpcResponse> mapping) {
         return Clients.builder(server.httpUri(BINARY) + "/thrift")
-                      .rpcDecorator(RetryingRpcClient.builder(mapping).newDecorator())
+                      .rpcDecorator(RetryingRpcClient.newDecorator(mapping))
                       .build(HelloService.Iface.class);
     }
 

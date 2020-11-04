@@ -781,9 +781,7 @@ class RetryingClientTest {
 
     private WebClient client(RetryConfigMapping<HttpResponse> mapping) {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(mapping)
-                              .useRetryAfter(true)
-                              .newDecorator();
+                RetryingClient.newDecorator(mapping);
 
         return WebClient.builder(server.httpUri())
                         .factory(clientFactory)
