@@ -144,6 +144,14 @@ public class PathAndQueryTest {
     }
 
     @Test
+    public void colon() {
+        assertThat(PathAndQuery.parse("/:")).isNotNull();
+        assertThat(PathAndQuery.parse("/:/")).isNotNull();
+        assertThat(PathAndQuery.parse("/a/:")).isNotNull();
+        assertThat(PathAndQuery.parse("/a/:/")).isNotNull();
+    }
+
+    @Test
     public void rawUnicode() {
         // 2- and 3-byte UTF-8
         final PathAndQuery res1 = PathAndQuery.parse("/\u00A2?\u20AC"); // ¢ and €
