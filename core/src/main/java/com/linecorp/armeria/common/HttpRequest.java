@@ -268,7 +268,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new {@link HttpRequestBuilder}.
+     * Returns a new {@link HttpRequestBuilder}.
      */
     static HttpRequestBuilder builder() {
         return new HttpRequestBuilder();

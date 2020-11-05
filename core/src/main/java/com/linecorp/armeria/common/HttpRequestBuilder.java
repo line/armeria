@@ -41,7 +41,7 @@ import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 /**
  * Builds a new {@link HttpRequest}.
  */
-public final class HttpRequestBuilder {
+public class HttpRequestBuilder {
 
     // TODO(tumile): Add content(Publisher).
 
@@ -56,7 +56,7 @@ public final class HttpRequestBuilder {
     private String path;
     private boolean disablePathParams;
 
-    HttpRequestBuilder() {}
+    protected HttpRequestBuilder() {}
 
     /**
      * Shortcut to set GET method and path.

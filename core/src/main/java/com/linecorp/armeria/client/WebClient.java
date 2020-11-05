@@ -276,6 +276,13 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
+     * Returns a new {@link WebClientRequestBuilder}.
+     */
+    default WebClientRequestBuilder prepare() {
+        return new WebClientRequestBuilder(this);
+    }
+
+    /**
      * Sends an HTTP OPTIONS request.
      */
     @CheckReturnValue
