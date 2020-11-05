@@ -123,10 +123,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (TransientServiceUtil.countFor(ctx, ActionType.LOGGING)) {
-            if (sampler.isSampled(ctx)) {
-                logWhenComplete(logger, ctx, requestLogger, responseLogger);
-            }
+        if (TransientServiceUtil.countFor(ctx, ActionType.LOGGING) && sampler.isSampled(ctx)) {
+            logWhenComplete(logger, ctx, requestLogger, responseLogger);
         }
         return unwrap().serve(ctx, req);
     }
