@@ -33,8 +33,7 @@ final class KeyedRetryConfigMapping<T extends Response> implements RetryConfigMa
 
     KeyedRetryConfigMapping(
             BiFunction<ClientRequestContext, Request, String> keyFactory,
-            BiFunction<ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory
-    ) {
+            BiFunction<ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory) {
         this.keyFactory = requireNonNull(keyFactory, "keyFactory");
         this.retryConfigFactory = requireNonNull(retryConfigFactory, "retryConfigFactory");
     }

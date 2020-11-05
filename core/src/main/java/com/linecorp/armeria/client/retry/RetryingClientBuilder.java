@@ -76,7 +76,7 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      * Returns a newly-created {@link RetryingClient} based on the properties of this builder.
      */
     public RetryingClient build(HttpClient delegate) {
-        return new RetryingClient(delegate, mapping(), useRetryAfter);
+        return new RetryingClient(delegate, mapping(), retryConfig(), useRetryAfter);
     }
 
     /**

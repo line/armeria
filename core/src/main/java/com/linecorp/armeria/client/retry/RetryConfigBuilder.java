@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 
@@ -35,21 +35,17 @@ import com.linecorp.armeria.common.Response;
  * and responseTimeoutMillisForEachAttempt.
  */
 public final class RetryConfigBuilder<T extends Response> {
-    int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
-    long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
-    @Nullable final RetryRule retryRule;
-    @Nullable final RetryRuleWithContent<T> retryRuleWithContent;
-    final int maxContentLength;
-
-    private RetryConfigBuilder() {
-        throw new IllegalStateException("RetryConfigBuilder must have a rule.");
-    }
+    private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
+    private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
+    @Nullable private final RetryRule retryRule;
+    @Nullable private final RetryRuleWithContent<T> retryRuleWithContent;
+    private final int maxContentLength;
 
     /**
      * Returns a {@link RetryConfigBuilder} with this {@link RetryRule}.
      */
-    public RetryConfigBuilder(RetryRule retryRule) {
-        this.retryRule = checkNotNull(retryRule);
+    RetryConfigBuilder(RetryRule retryRule) {
+        this.retryRule = requireNonNull(retryRule);
         retryRuleWithContent = null;
         maxContentLength = 0;
     }
@@ -57,16 +53,16 @@ public final class RetryConfigBuilder<T extends Response> {
     /**
      * Returns a {@link RetryConfigBuilder} with this {@link RetryRuleWithContent}.
      */
-    public RetryConfigBuilder(RetryRuleWithContent<T> retryRuleWithContent) {
+    RetryConfigBuilder(RetryRuleWithContent<T> retryRuleWithContent) {
         this(retryRuleWithContent, Integer.MAX_VALUE);
     }
 
     /**
      * Returns a {@link RetryConfigBuilder} with this {@link RetryRuleWithContent} and maxContentLength.
      */
-    public RetryConfigBuilder(RetryRuleWithContent<T> retryRuleWithContent, int maxContentLength) {
+    RetryConfigBuilder(RetryRuleWithContent<T> retryRuleWithContent, int maxContentLength) {
         retryRule = null;
-        this.retryRuleWithContent = checkNotNull(retryRuleWithContent);
+        this.retryRuleWithContent = requireNonNull(retryRuleWithContent);
         checkArgument(maxContentLength > 0,
                       "maxContentLength: %s (expected: > 0)", maxContentLength);
         this.maxContentLength = maxContentLength;
@@ -100,7 +96,7 @@ public final class RetryConfigBuilder<T extends Response> {
      * Sets responseTimeoutMillisForEachAttempt by converting responseTimeoutForEachAttempt to millis.
      */
     public RetryConfigBuilder<T> responseTimeoutForEachAttempt(Duration responseTimeoutMillisForEachAttempt) {
-        final long millis = responseTimeoutMillisForEachAttempt.toMillis();
+        final long millis = requireNonNull(responseTimeoutMillisForEachAttempt).toMillis();
         checkArgument(
                 millis >= 0,
                 "responseTimeoutForEachAttempt.toMillis(): %s (expected: >= 0)",
@@ -115,15 +111,15 @@ public final class RetryConfigBuilder<T extends Response> {
     public RetryConfig<T> build() {
         if (retryRule != null) {
             return new RetryConfig<>(retryRule, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
-        } else if (retryRuleWithContent != null) {
+        }
+        if (retryRuleWithContent != null) {
             return new RetryConfig<>(
                     retryRuleWithContent,
                     maxContentLength,
                     maxTotalAttempts,
                     responseTimeoutMillisForEachAttempt);
-        } else {
-            throw new IllegalStateException("RetryConfigBuilder must have a rule.");
         }
+        throw new IllegalStateException("RetryConfigBuilder must have a rule.");
     }
 
     @Override

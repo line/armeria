@@ -104,7 +104,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * Creates a new instance that decorates the specified {@link RpcClient}.
      */
     RetryingRpcClient(RpcClient delegate, RetryConfigMapping<RpcResponse> mapping) {
-        super(delegate, mapping);
+        super(delegate, mapping, null);
     }
 
     @Override

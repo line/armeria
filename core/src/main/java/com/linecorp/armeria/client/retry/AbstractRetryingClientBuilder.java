@@ -34,12 +34,13 @@ import com.linecorp.armeria.common.Response;
 /**
  * Builds a new {@link AbstractRetryingClient} or its decorator function.
  *
- * @param <T> the type of incoming {@link Response} of the {@link Client}
+ * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
-public abstract class AbstractRetryingClientBuilder<T extends Response> {
+public abstract class AbstractRetryingClientBuilder<O extends Response> {
 
-    @Nullable private final RetryConfigBuilder<T> retryConfig;
-    private RetryConfigMapping<T> mapping;
+    @Nullable private final RetryConfigBuilder<O> retryConfig;
+
+    private RetryConfigMapping<O> mapping;
 
     /**
      * Creates a new builder with the specified {@link RetryRule}.
@@ -52,7 +53,7 @@ public abstract class AbstractRetryingClientBuilder<T extends Response> {
     /**
      * Creates a new builder with the specified {@link RetryRuleWithContent}.
      */
-    AbstractRetryingClientBuilder(RetryRuleWithContent<T> retryRuleWithContent) {
+    AbstractRetryingClientBuilder(RetryRuleWithContent<O> retryRuleWithContent) {
         retryConfig = RetryConfig.builder(requireNonNull(retryRuleWithContent, "retryRuleWithContent"));
         mapping = (ctx, req) -> retryConfig.build();
     }
@@ -60,7 +61,7 @@ public abstract class AbstractRetryingClientBuilder<T extends Response> {
     /**
      * Creates a new builder with the specified {@link RetryRuleWithContent}.
      */
-    AbstractRetryingClientBuilder(RetryRuleWithContent<T> retryRuleWithContent, int maxContentLength) {
+    AbstractRetryingClientBuilder(RetryRuleWithContent<O> retryRuleWithContent, int maxContentLength) {
         retryConfig = RetryConfig.builder(
                 requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
                 maxContentLength);
@@ -70,13 +71,20 @@ public abstract class AbstractRetryingClientBuilder<T extends Response> {
     /**
      * Creates a new builder with the specified {@link RetryConfigMapping}.
      */
-    AbstractRetryingClientBuilder(RetryConfigMapping<T> mapping) {
+    AbstractRetryingClientBuilder(RetryConfigMapping<O> mapping) {
         this.mapping = checkNotNull(mapping);
         retryConfig = null;
     }
 
-    final RetryConfigMapping<T> mapping() {
+    final RetryConfigMapping<O> mapping() {
         return mapping;
+    }
+
+    @Nullable final RetryConfig<O> retryConfig() {
+        if (retryConfig == null) {
+            return null;
+        }
+        return retryConfig.build();
     }
 
     /**
@@ -85,13 +93,11 @@ public abstract class AbstractRetryingClientBuilder<T extends Response> {
      *
      * @return {@code this} to support method chaining.
      */
-    public AbstractRetryingClientBuilder<T> maxTotalAttempts(int maxTotalAttempts) {
-        checkState(
-                retryConfig != null,
-                "You are using a RetryConfigMapping, so you cannot set maxTotalAttempts.");
+    public AbstractRetryingClientBuilder<O> maxTotalAttempts(int maxTotalAttempts) {
+        checkState(retryConfig != null, "You are using a RetryConfigMapping. You cannot set maxTotalAttempts.");
         checkArgument(maxTotalAttempts > 0,
                       "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
-        retryConfig.maxTotalAttempts = maxTotalAttempts;
+        retryConfig.maxTotalAttempts(maxTotalAttempts);
         mapping = (ctx, req) -> retryConfig.build();
         return this;
     }
@@ -107,15 +113,14 @@ public abstract class AbstractRetryingClientBuilder<T extends Response> {
      *
      * @see <a href="https://armeria.dev/docs/client-retry#per-attempt-timeout">Per-attempt timeout</a>
      */
-    public AbstractRetryingClientBuilder<T> responseTimeoutMillisForEachAttempt(
+    public AbstractRetryingClientBuilder<O> responseTimeoutMillisForEachAttempt(
             long responseTimeoutMillisForEachAttempt) {
-        checkState(
-                retryConfig != null,
-                "You are using a RetryConfigMapping, so you cannot set responseTimeoutMillisForEachAttempt.");
+        checkState(retryConfig != null,
+                   "You are using a RetryConfigMapping. You cannot set responseTimeoutMillisForEachAttempt.");
         checkArgument(responseTimeoutMillisForEachAttempt >= 0,
                       "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
                       responseTimeoutMillisForEachAttempt);
-        retryConfig.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
+        retryConfig.responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
         mapping = (ctx, req) -> retryConfig.build();
         return this;
     }
@@ -128,7 +133,7 @@ public abstract class AbstractRetryingClientBuilder<T extends Response> {
      *
      * @see <a href="https://armeria.dev/docs/client-retry#per-attempt-timeout">Per-attempt timeout</a>
      */
-    public AbstractRetryingClientBuilder<T> responseTimeoutForEachAttempt(
+    public AbstractRetryingClientBuilder<O> responseTimeoutForEachAttempt(
             Duration responseTimeoutForEachAttempt) {
         checkState(
                 retryConfig != null,

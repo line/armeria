@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
@@ -51,11 +52,11 @@ import io.netty.util.concurrent.ScheduledFuture;
 /**
  * A {@link Client} decorator that handles failures of remote invocation and retries requests.
  *
- * @param <REQ_T> the {@link Request} type
- * @param <RES_T> the {@link Response} type
+ * @param <T> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
-public abstract class AbstractRetryingClient<REQ_T extends Request, RES_T extends Response>
-        extends SimpleDecoratingClient<REQ_T, RES_T> {
+public abstract class AbstractRetryingClient<T extends Request, O extends Response>
+        extends SimpleDecoratingClient<T, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractRetryingClient.class);
 
@@ -68,19 +69,22 @@ public abstract class AbstractRetryingClient<REQ_T extends Request, RES_T extend
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
 
-    private final RetryConfigMapping<RES_T> mapping;
+    private final RetryConfigMapping<O> mapping;
+    private final RetryConfig retryConfig;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractRetryingClient(Client<REQ_T, RES_T> delegate, RetryConfigMapping<RES_T> mapping) {
+    AbstractRetryingClient(
+            Client<T, O> delegate, RetryConfigMapping<O> mapping, @Nullable RetryConfig<O> retryConfig) {
         super(delegate);
         this.mapping = checkNotNull(mapping, "mapping");
+        this.retryConfig = retryConfig;
     }
 
     @Override
-    public final RES_T execute(ClientRequestContext ctx, REQ_T req) throws Exception {
-        final RetryConfig<RES_T> config = mapping.get(ctx, req);
+    public final O execute(ClientRequestContext ctx, T req) throws Exception {
+        final RetryConfig<O> config = mapping.get(ctx, req);
         final State state = new State(
                 config.maxTotalAttempts(),
                 config.responseTimeoutMillisForEachAttempt(),
@@ -89,7 +93,7 @@ public abstract class AbstractRetryingClient<REQ_T extends Request, RES_T extend
         return doExecute(ctx, req);
     }
 
-    protected RetryConfigMapping<RES_T> mapping() {
+    protected RetryConfigMapping<O> mapping() {
         return mapping;
     }
 
@@ -97,13 +101,35 @@ public abstract class AbstractRetryingClient<REQ_T extends Request, RES_T extend
      * Invoked by {@link #execute(ClientRequestContext, Request)}
      * after the deadline for response timeout is set.
      */
-    protected abstract RES_T doExecute(ClientRequestContext ctx, REQ_T req) throws Exception;
+    protected abstract O doExecute(ClientRequestContext ctx, T req) throws Exception;
 
     /**
      * This should be called when retrying is finished.
      */
     protected static void onRetryingComplete(ClientRequestContext ctx) {
         ctx.logBuilder().endResponseWithLastChild();
+    }
+
+    /**
+     * Returns the {@link RetryRule}.
+     *
+     * @throws IllegalStateException if the {@link RetryRule} is not set
+     */
+    protected final RetryRule retryRule() {
+        checkState(retryConfig != null, "No retryRule set. are you using RetryConfigMapping?");
+        checkState(retryConfig.retryRule() != null, "retryRule is not set.");
+        return retryConfig.retryRule();
+    }
+
+    /**
+     * Returns the {@link RetryRuleWithContent}.
+     *
+     * @throws IllegalStateException if the {@link RetryRuleWithContent} is not set
+     */
+    protected final RetryRuleWithContent<O> retryRuleWithContent() {
+        checkState(retryConfig != null, "No retryRuleWithContent set. are you using RetryConfigMapping?");
+        checkState(retryConfig.retryRuleWithContent() != null, "retryRuleWithContent is not set.");
+        return retryConfig.retryRuleWithContent();
     }
 
     /**

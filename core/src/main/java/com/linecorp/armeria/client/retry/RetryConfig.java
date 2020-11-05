@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
@@ -80,21 +80,24 @@ public final class RetryConfig<T extends Response> {
     /**
      * Returns config's retryRule, could be null.
      */
-    @Nullable public RetryRule retryRule() {
+    @Nullable
+    public RetryRule retryRule() {
         return retryRule;
     }
 
     /**
      * Returns config's retryRuleWithContent, could be null.
      */
-    @Nullable public RetryRuleWithContent<T> retryRuleWithContent() {
+    @Nullable
+    public RetryRuleWithContent<T> retryRuleWithContent() {
         return retryRuleWithContent;
     }
 
     /**
      * Returns config's retry rule that is converted from retryRuleWithContent, could be null.
      */
-    @Nullable public RetryRule fromRetryRuleWithContent() {
+    @Nullable
+    public RetryRule fromRetryRuleWithContent() {
         return fromRetryRuleWithContent;
     }
 
@@ -122,7 +125,7 @@ public final class RetryConfig<T extends Response> {
 
     RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
-        this.retryRule = checkNotNull(retryRule);
+        this.retryRule = requireNonNull(retryRule);
         this.maxTotalAttempts = maxTotalAttempts;
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
         needsContentInRule = false;
@@ -138,16 +141,12 @@ public final class RetryConfig<T extends Response> {
             long responseTimeoutMillisForEachAttempt) {
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
         this.maxContentLength = maxContentLength;
-        this.retryRuleWithContent = checkNotNull(retryRuleWithContent);
+        this.retryRuleWithContent = requireNonNull(retryRuleWithContent);
         fromRetryRuleWithContent = RetryRuleUtil.fromRetryRuleWithContent(retryRuleWithContent);
         this.maxTotalAttempts = maxTotalAttempts;
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
         needsContentInRule = true;
         retryRule = null;
-    }
-
-    private RetryConfig() {
-        throw new IllegalStateException("RetryConfig must have a rule.");
     }
 
     private static void checkArguments(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {

@@ -27,6 +27,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +90,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     /**
      * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryConfigMapping}.
      */
-    public static RetryingClientBuilder builder(RetryConfigMapping<HttpResponse> mapping) {
+    public static RetryingClientBuilder builderWithMapping(RetryConfigMapping<HttpResponse> mapping) {
         return new RetryingClientBuilder(mapping);
     }
 
@@ -178,8 +180,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * @param mapping the mapping that returns a {@link RetryConfig} for a given context/request.
      */
     public static Function<? super HttpClient, RetryingClient>
-    newDecorator(RetryConfigMapping<HttpResponse> mapping) {
-        return builder(mapping).newDecorator();
+    newDecoratorWithMapping(RetryConfigMapping<HttpResponse> mapping) {
+        return builderWithMapping(mapping).newDecorator();
     }
 
     private final boolean useRetryAfter;
@@ -188,8 +190,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
     RetryingClient(
-            HttpClient delegate, RetryConfigMapping<HttpResponse> mapping, boolean useRetryAfter) {
-        super(delegate, mapping);
+            HttpClient delegate,
+            RetryConfigMapping<HttpResponse> mapping,
+            @Nullable RetryConfig<HttpResponse> retryConfig,
+            boolean useRetryAfter) {
+        super(delegate, mapping, retryConfig);
         this.useRetryAfter = useRetryAfter;
     }
 
