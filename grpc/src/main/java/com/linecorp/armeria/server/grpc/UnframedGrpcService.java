@@ -296,7 +296,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
 
             @Override
             public void onNext(DeframedMessage message) {
-                // We know that we don't support compression, so this is always a ByteBuffer.
+                // We know that we don't support compression, so this is always a ByteBuf.
                 final HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
                 unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
                 res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
