@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -72,7 +71,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      * Creates a new builder with the specified {@link RetryConfigMapping}.
      */
     AbstractRetryingClientBuilder(RetryConfigMapping<O> mapping) {
-        this.mapping = checkNotNull(mapping);
+        this.mapping = requireNonNull(mapping);
         retryConfig = null;
     }
 
