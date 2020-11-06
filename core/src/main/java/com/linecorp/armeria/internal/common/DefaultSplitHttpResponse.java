@@ -131,10 +131,16 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor unused) {
         requireNonNull(subscriber, "subscriber");
+        if (!downstreamUpdater.compareAndSet(bodySubscriber, null, subscriber)) {
+            subscriber.onSubscribe(NoopSubscription.get());
+            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+            return;
+        }
+
         if (executor.inEventLoop()) {
-            bodySubscriber.setDownStream(subscriber);
+            bodySubscriber.initDownstream(subscriber);
         } else {
-            executor.execute(() -> bodySubscriber.setDownStream(subscriber));
+            executor.execute(() -> bodySubscriber.initDownstream(subscriber));
         }
     }
 
@@ -170,13 +176,8 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
         private volatile boolean cancelCalled;
 
-        private void setDownStream(Subscriber<? super HttpData> downstream) {
+        private void initDownstream(Subscriber<? super HttpData> downstream) {
             try {
-                if (!downstreamUpdater.compareAndSet(this, null, downstream)) {
-                    downstream.onSubscribe(NoopSubscription.get());
-                    downstream.onError(new IllegalStateException("subscribed by other subscriber already"));
-                    return;
-                }
                 downstream.onSubscribe(this);
                 if (cause != null) {
                     downstream.onError(cause);
@@ -298,9 +299,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                 this.cause = cause;
             } else {
                 downstream.onError(cause);
-                if (cause instanceof CancelledSubscriptionException) {
-                    this.downstream = NoopSubscriber.get();
-                }
+                this.downstream = NoopSubscriber.get();
             }
         }
 
