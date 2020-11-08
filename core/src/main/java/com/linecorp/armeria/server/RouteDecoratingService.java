@@ -76,11 +76,13 @@ final class RouteDecoratingService implements HttpService {
 
     private final Route route;
     private final HttpService decorator;
+    private final int order;
 
     RouteDecoratingService(Route route,
-                           Function<? super HttpService, ? extends HttpService> decoratorFunction) {
+                           Function<? super HttpService, ? extends HttpService> decoratorFunction, int order) {
         this.route = requireNonNull(route, "route");
         decorator = requireNonNull(decoratorFunction, "decoratorFunction").apply(this);
+        this.order = order;
     }
 
     @Override
@@ -98,6 +100,10 @@ final class RouteDecoratingService implements HttpService {
 
     private HttpService decorator() {
         return decorator;
+    }
+
+    int order() {
+        return order;
     }
 
     @Override

@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.MediaType;
 public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilder {
 
     private final ServerBuilder serverBuilder;
+    private int order = Integer.MAX_VALUE;
 
     DecoratingServiceBindingBuilder(ServerBuilder serverBuilder) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
@@ -177,6 +178,14 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
     }
 
     /**
+     * FIXME(heowc): Fix javadoc.
+     */
+    public DecoratingServiceBindingBuilder order(int order) {
+        this.order = order;
+        return this;
+    }
+
+    /**
      * Sets the {@code decorator} and returns {@link ServerBuilder} that this
      * {@link DecoratingServiceBindingBuilder} was created from.
      *
@@ -185,7 +194,7 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
     public ServerBuilder build(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
         buildRouteList().forEach(
-                route -> serverBuilder.routingDecorator(new RouteDecoratingService(route, decorator)));
+                route -> serverBuilder.routingDecorator(new RouteDecoratingService(route, decorator, order)));
         return serverBuilder;
     }
 

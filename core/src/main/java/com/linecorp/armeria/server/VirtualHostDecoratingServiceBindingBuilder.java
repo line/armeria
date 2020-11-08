@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.MediaType;
 public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBindingBuilder {
 
     private final VirtualHostBuilder virtualHostBuilder;
+    private int order = Integer.MAX_VALUE;
 
     VirtualHostDecoratingServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
         this.virtualHostBuilder = requireNonNull(virtualHostBuilder, "virtualHostBuilder");
@@ -178,6 +179,14 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     }
 
     /**
+     * FIXME(heowc): Fix javadoc.
+     */
+    public VirtualHostDecoratingServiceBindingBuilder order(int order) {
+        this.order = order;
+        return this;
+    }
+
+    /**
      * Sets the {@code decorator} and returns {@link VirtualHostBuilder} that this
      * {@link VirtualHostDecoratingServiceBindingBuilder} was created from.
      *
@@ -186,7 +195,7 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     public VirtualHostBuilder build(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
         buildRouteList().forEach(route -> virtualHostBuilder.addRouteDecoratingService(
-                new RouteDecoratingService(route, decorator)));
+                new RouteDecoratingService(route, decorator, order)));
         return virtualHostBuilder;
     }
 

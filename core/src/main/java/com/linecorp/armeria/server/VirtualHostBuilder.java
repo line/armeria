@@ -598,14 +598,12 @@ public final class VirtualHostBuilder {
     @Nullable
     private Function<? super HttpService, ? extends HttpService> getRouteDecoratingService(
             @Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
-        final List<RouteDecoratingService> routeDecoratingServices;
+        final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
         if (defaultVirtualHostBuilder != null) {
-            routeDecoratingServices = ImmutableList.<RouteDecoratingService>builder()
-                    .addAll(this.routeDecoratingServices)
-                    .addAll(defaultVirtualHostBuilder.routeDecoratingServices)
-                    .build();
+            routeDecoratingServices.addAll(this.routeDecoratingServices);
+            routeDecoratingServices.addAll(defaultVirtualHostBuilder.routeDecoratingServices);
         } else {
-            routeDecoratingServices = ImmutableList.copyOf(this.routeDecoratingServices);
+            routeDecoratingServices.addAll(this.routeDecoratingServices);
         }
 
         if (!routeDecoratingServices.isEmpty()) {
@@ -665,7 +663,21 @@ public final class VirtualHostBuilder {
             Route route, Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(route, "route");
         requireNonNull(decorator, "decorator");
-        return addRouteDecoratingService(new RouteDecoratingService(route, decorator));
+        return addRouteDecoratingService(new RouteDecoratingService(route, decorator, Integer.MIN_VALUE));
+    }
+
+    /**
+     * Decorates {@link HttpService}s whose {@link Route} matches the specified {@link Route}.
+     * FIXME(heowc): Fix javadoc.
+     *
+     * @param route the route being decorated
+     * @param decorator the {@link Function} that decorates {@link HttpService}
+     */
+    public VirtualHostBuilder decorator(
+            Route route, Function<? super HttpService, ? extends HttpService> decorator, int order) {
+        requireNonNull(route, "route");
+        requireNonNull(decorator, "decorator");
+        return addRouteDecoratingService(new RouteDecoratingService(route, decorator, order));
     }
 
     /**

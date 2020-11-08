@@ -1186,6 +1186,17 @@ public final class ServerBuilder {
     }
 
     /**
+     * Decorates all {@link HttpService}s with the specified {@code decorator} with its order.
+     * FIXME(heowc): Fix javadocs.
+     *
+     * @param decorator the {@link Function} that decorates {@link HttpService}s
+     * @param order the {@code decorator}'s order
+     */
+    public ServerBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator, int order) {
+        return decorator(Route.ofCatchAll(), decorator, order);
+    }
+
+    /**
      * Decorates all {@link HttpService}s with the specified {@link DecoratingHttpServiceFunction}.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
@@ -1197,11 +1208,32 @@ public final class ServerBuilder {
     }
 
     /**
+     * Decorates all {@link HttpService}s with the specified {@link DecoratingHttpServiceFunction}.
+     * FIXME(heowc): Fix javadoc
+     *
+     * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
+     *                                      {@link HttpService}s
+     */
+    public ServerBuilder decorator(
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction, int order) {
+        return decorator(Route.ofCatchAll(), decoratingHttpServiceFunction, order);
+    }
+
+    /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
      */
     public ServerBuilder decorator(
             String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
         return decorator(Route.builder().path(pathPattern).build(), decorator);
+    }
+
+    /**
+     * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
+     * FIXME(heowc): Fix javadoc.
+     */
+    public ServerBuilder decorator(
+            String pathPattern, Function<? super HttpService, ? extends HttpService> decorator, int order) {
+        return decorator(Route.builder().path(pathPattern).build(), decorator, order);
     }
 
     /**
@@ -1226,7 +1258,23 @@ public final class ServerBuilder {
             Route route, Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(route, "route");
         requireNonNull(decorator, "decorator");
-        return routingDecorator(new RouteDecoratingService(route, decorator));
+        return routingDecorator(new RouteDecoratingService(route, decorator, Integer.MIN_VALUE));
+    }
+
+    /**
+     * Decorates {@link HttpService}s with the specified {@link Route}.
+     * FIXME(heowc): Fix javadoc.
+     *
+     * @param route the route being decorated
+     * @param decorator the {@link Function} that decorates {@link HttpService} which matches
+     *                  the specified {@link Route}
+     * @param order the {@code decorator}'s order
+     */
+    public ServerBuilder decorator(
+            Route route, Function<? super HttpService, ? extends HttpService> decorator, int order) {
+        requireNonNull(route, "route");
+        requireNonNull(decorator, "decorator");
+        return routingDecorator(new RouteDecoratingService(route, decorator, order));
     }
 
     /**
@@ -1241,6 +1289,20 @@ public final class ServerBuilder {
         requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
         return decorator(route, delegate -> new FunctionalDecoratingHttpService(
                 delegate, decoratingHttpServiceFunction));
+    }
+
+    /**
+     * Decorates {@link HttpService}s with the specified {@link Route}.
+     *
+     * @param route the route being decorated
+     * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
+     *                                      {@link HttpService}s
+     */
+    public ServerBuilder decorator(
+            Route route, DecoratingHttpServiceFunction decoratingHttpServiceFunction, int order) {
+        requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
+        return decorator(route, delegate -> new FunctionalDecoratingHttpService(
+                delegate, decoratingHttpServiceFunction), order);
     }
 
     /**
