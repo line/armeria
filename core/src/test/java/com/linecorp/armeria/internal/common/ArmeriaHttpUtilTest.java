@@ -366,7 +366,7 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void excludeBlacklistHeadersWhileHttp2ToHttp1() {
+    void excludeBlocklistHeadersWhileHttp2ToHttp1() {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.TRAILER, "foo")
                                           .add(HttpHeaderNames.HOST, "bar")
@@ -390,7 +390,7 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void excludeBlacklistInTrailers() {
+    void excludeBlocklistInTrailers() {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.of("foo"), "bar")
                                           .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")

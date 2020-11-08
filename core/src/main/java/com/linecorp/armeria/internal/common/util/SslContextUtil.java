@@ -174,17 +174,17 @@ public final class SslContextUtil {
         }
 
         for (String cipher : ciphers) {
-            if (HTTP2_BLACKLISTED_CIPHERS.contains(cipher)) {
+            if (HTTP2_BLOCKLISTED_CIPHERS.contains(cipher)) {
                 throw new IllegalStateException(
                         "Attempted to configure a server or HTTP/2 client with a TLS cipher that is not " +
-                        "allowed. Please remove any ciphers from the HTTP/2 cipher blacklist " +
+                        "allowed. Please remove any ciphers from the HTTP/2 cipher blocklist " +
                         "https://httpwg.org/specs/rfc7540.html#BadCipherSuites");
             }
         }
     }
 
     // https://httpwg.org/specs/rfc7540.html#BadCipherSuites
-    private static final Set<String> HTTP2_BLACKLISTED_CIPHERS =
+    private static final Set<String> HTTP2_BLOCKLISTED_CIPHERS =
             ImmutableSet.of(
                     "TLS_NULL_WITH_NULL_NULL",
                     "TLS_RSA_WITH_NULL_MD5",

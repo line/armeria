@@ -82,7 +82,7 @@ class HttpServerAdditionalHeadersTest {
     };
 
     @Test
-    void blacklistedHeadersAndTrailersMustBeFiltered() {
+    void blocklistedHeadersAndTrailersMustBeFiltered() {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/headers_and_trailers").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -98,7 +98,7 @@ class HttpServerAdditionalHeadersTest {
     }
 
     @Test
-    void blacklistedHeadersAndTrailersMustBeFilteredWhenMerged() {
+    void blocklistedHeadersAndTrailersMustBeFilteredWhenMerged() {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/headers_merged").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);

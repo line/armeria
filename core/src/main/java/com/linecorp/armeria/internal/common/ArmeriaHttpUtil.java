@@ -139,82 +139,82 @@ public final class ArmeriaHttpUtil {
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP/1 to HTTP/2.
      */
-    private static final CharSequenceMap HTTP_TO_HTTP2_HEADER_BLACKLIST = new CharSequenceMap();
+    private static final CharSequenceMap HTTP_TO_HTTP2_HEADER_BLOCKLIST = new CharSequenceMap();
 
     /**
      * The set of headers that should not be directly copied when converting headers from HTTP/2 to HTTP/1.
      */
-    private static final CharSequenceMap HTTP2_TO_HTTP_HEADER_BLACKLIST = new CharSequenceMap();
+    private static final CharSequenceMap HTTP2_TO_HTTP_HEADER_BLOCKLIST = new CharSequenceMap();
 
     /**
      * The set of headers that must not be directly copied when converting trailers.
      */
-    private static final CharSequenceMap HTTP_TRAILER_BLACKLIST = new CharSequenceMap();
+    private static final CharSequenceMap HTTP_TRAILER_BLOCKLIST = new CharSequenceMap();
 
     static {
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.CONNECTION, EMPTY_STRING);
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HEADER_NAME_KEEP_ALIVE, EMPTY_STRING);
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HEADER_NAME_PROXY_CONNECTION, EMPTY_STRING);
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(HttpHeaderNames.UPGRADE, EMPTY_STRING);
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
-        HTTP_TO_HTTP2_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLOCKLIST.add(HttpHeaderNames.CONNECTION, EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLOCKLIST.add(HEADER_NAME_KEEP_ALIVE, EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLOCKLIST.add(HEADER_NAME_PROXY_CONNECTION, EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLOCKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLOCKLIST.add(HttpHeaderNames.UPGRADE, EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLOCKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLOCKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
+        HTTP_TO_HTTP2_HEADER_BLOCKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
 
         // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.AUTHORITY, EMPTY_STRING);
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.METHOD, EMPTY_STRING);
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.PATH, EMPTY_STRING);
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.SCHEME, EMPTY_STRING);
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.STATUS, EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLOCKLIST.add(HttpHeaderNames.AUTHORITY, EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLOCKLIST.add(HttpHeaderNames.METHOD, EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLOCKLIST.add(HttpHeaderNames.PATH, EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLOCKLIST.add(HttpHeaderNames.SCHEME, EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLOCKLIST.add(HttpHeaderNames.STATUS, EMPTY_STRING);
 
         // https://tools.ietf.org/html/rfc7540#section-8.1
         // The "chunked" transfer encoding defined in Section 4.1 of [RFC7230] MUST NOT be used in HTTP/2.
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLOCKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
 
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
-        HTTP2_TO_HTTP_HEADER_BLACKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLOCKLIST.add(ExtensionHeaderNames.STREAM_ID.text(), EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLOCKLIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
+        HTTP2_TO_HTTP_HEADER_BLOCKLIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
 
         // https://tools.ietf.org/html/rfc7230#section-4.1.2
         // https://tools.ietf.org/html/rfc7540#section-8.1
         // A sender MUST NOT generate a trailer that contains a field necessary for message framing:
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_LENGTH, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.CONTENT_LENGTH, EMPTY_STRING);
 
         // for request modifiers:
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CACHE_CONTROL, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.EXPECT, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.HOST, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.MAX_FORWARDS, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.PRAGMA, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.RANGE, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.TE, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.CACHE_CONTROL, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.EXPECT, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.HOST, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.MAX_FORWARDS, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.PRAGMA, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.RANGE, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.TE, EMPTY_STRING);
 
         // for authentication:
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.WWW_AUTHENTICATE, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.AUTHORIZATION, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.PROXY_AUTHENTICATE, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.PROXY_AUTHORIZATION, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.WWW_AUTHENTICATE, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.AUTHORIZATION, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.PROXY_AUTHENTICATE, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.PROXY_AUTHORIZATION, EMPTY_STRING);
 
         // for response control data:
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.DATE, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.LOCATION, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.RETRY_AFTER, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.VARY, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.WARNING, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.DATE, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.LOCATION, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.RETRY_AFTER, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.VARY, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.WARNING, EMPTY_STRING);
 
         // or for determining how to process the payload:
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_ENCODING, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_TYPE, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.CONTENT_RANGE, EMPTY_STRING);
-        HTTP_TRAILER_BLACKLIST.add(HttpHeaderNames.TRAILER, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.CONTENT_ENCODING, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.CONTENT_TYPE, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.CONTENT_RANGE, EMPTY_STRING);
+        HTTP_TRAILER_BLOCKLIST.add(HttpHeaderNames.TRAILER, EMPTY_STRING);
     }
 
-    static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_BLACKLIST = ImmutableSet.of(
+    static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_BLOCKLIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD);
 
-    static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_BLACKLIST = ImmutableSet.of(
+    static final Set<AsciiString> ADDITIONAL_RESPONSE_HEADER_BLOCKLIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
 
     public static final String SERVER_HEADER =
@@ -638,13 +638,13 @@ public final class ArmeriaHttpUtil {
         final Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
         // Choose 8 as a default size because it is unlikely we will see more than 4 Connection headers values,
         // but still allowing for "enough" space in the map to reduce the chance of hash code collision.
-        final CharSequenceMap connectionBlacklist =
+        final CharSequenceMap connectionBlocklist =
                 toLowercaseMap(inHeaders.valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
         StringJoiner cookieJoiner = null;
         while (iter.hasNext()) {
             final Entry<CharSequence, CharSequence> entry = iter.next();
             final AsciiString aName = HttpHeaderNames.of(entry.getKey()).toLowerCase();
-            if (HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(aName) || connectionBlacklist.contains(aName)) {
+            if (HTTP_TO_HTTP2_HEADER_BLOCKLIST.contains(aName) || connectionBlocklist.contains(aName)) {
                 continue;
             }
 
@@ -820,7 +820,7 @@ public final class ArmeriaHttpUtil {
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
-            if (HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(name)) {
+            if (HTTP_TO_HTTP2_HEADER_BLOCKLIST.contains(name)) {
                 continue;
             }
             outputHeaders.add(name, value);
@@ -838,13 +838,13 @@ public final class ArmeriaHttpUtil {
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
-            if (HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(name)) {
+            if (HTTP_TO_HTTP2_HEADER_BLOCKLIST.contains(name)) {
                 continue;
             }
-            if (ADDITIONAL_RESPONSE_HEADER_BLACKLIST.contains(name)) {
+            if (ADDITIONAL_RESPONSE_HEADER_BLOCKLIST.contains(name)) {
                 continue;
             }
-            if (isTrailerBlacklisted(name)) {
+            if (isTrailerBlocklisted(name)) {
                 continue;
             }
             outputHeaders.add(name, value);
@@ -881,11 +881,11 @@ public final class ArmeriaHttpUtil {
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
-            if (HTTP_TO_HTTP2_HEADER_BLACKLIST.contains(name)) {
+            if (HTTP_TO_HTTP2_HEADER_BLOCKLIST.contains(name)) {
                 continue;
             }
 
-            if (isTrailer && isTrailerBlacklisted(name)) {
+            if (isTrailer && isTrailerBlocklisted(name)) {
                 continue;
             }
 
@@ -933,11 +933,11 @@ public final class ArmeriaHttpUtil {
         for (Entry<AsciiString, String> entry : inputHeaders) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
-            if (HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
+            if (HTTP2_TO_HTTP_HEADER_BLOCKLIST.contains(name)) {
                 continue;
             }
 
-            if (isTrailer && isTrailerBlacklisted(name)) {
+            if (isTrailer && isTrailerBlocklisted(name)) {
                 continue;
             }
             outputHeaders.add(name, value);
@@ -981,11 +981,11 @@ public final class ArmeriaHttpUtil {
                 continue;
             }
 
-            if (HTTP2_TO_HTTP_HEADER_BLACKLIST.contains(name)) {
+            if (HTTP2_TO_HTTP_HEADER_BLOCKLIST.contains(name)) {
                 continue;
             }
 
-            if (isTrailer && isTrailerBlacklisted(name)) {
+            if (isTrailer && isTrailerBlocklisted(name)) {
                 continue;
             }
 
@@ -1088,8 +1088,8 @@ public final class ArmeriaHttpUtil {
     /**
      * Returns {@code true} if the specified header name is not allowed for HTTP trailers.
      */
-    public static boolean isTrailerBlacklisted(AsciiString name) {
-        return HTTP_TRAILER_BLACKLIST.contains(name);
+    public static boolean isTrailerBlocklisted(AsciiString name) {
+        return HTTP_TRAILER_BLOCKLIST.contains(name);
     }
 
     private static final class CharSequenceMap

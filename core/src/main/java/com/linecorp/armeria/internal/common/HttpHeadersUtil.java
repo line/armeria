@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.ADDITIONAL_REQUEST_HEADER_BLACKLIST;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.ADDITIONAL_RESPONSE_HEADER_BLACKLIST;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isTrailerBlacklisted;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.ADDITIONAL_REQUEST_HEADER_BLOCKLIST;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.ADDITIONAL_RESPONSE_HEADER_BLOCKLIST;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isTrailerBlocklisted;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -40,7 +40,7 @@ public final class HttpHeadersUtil {
 
         final ResponseHeadersBuilder builder = headers.toBuilder();
         for (AsciiString name : additionalHeaders.names()) {
-            if (!ADDITIONAL_RESPONSE_HEADER_BLACKLIST.contains(name)) {
+            if (!ADDITIONAL_RESPONSE_HEADER_BLOCKLIST.contains(name)) {
                 builder.remove(name);
                 additionalHeaders.forEachValue(name, value -> builder.add(name, value));
             }
@@ -56,7 +56,7 @@ public final class HttpHeadersUtil {
 
         final RequestHeadersBuilder builder = headers.toBuilder();
         for (AsciiString name : additionalHeaders.names()) {
-            if (!ADDITIONAL_REQUEST_HEADER_BLACKLIST.contains(name)) {
+            if (!ADDITIONAL_REQUEST_HEADER_BLOCKLIST.contains(name)) {
                 builder.remove(name);
                 additionalHeaders.forEachValue(name, value -> builder.add(name, value));
             }
@@ -74,8 +74,8 @@ public final class HttpHeadersUtil {
 
         final HttpHeadersBuilder builder = headers.toBuilder();
         for (AsciiString name : additionalTrailers.names()) {
-            if (!ADDITIONAL_RESPONSE_HEADER_BLACKLIST.contains(name) &&
-                !isTrailerBlacklisted(name)) {
+            if (!ADDITIONAL_RESPONSE_HEADER_BLOCKLIST.contains(name) &&
+                !isTrailerBlocklisted(name)) {
                 builder.remove(name);
                 additionalTrailers.forEachValue(name, value -> builder.add(name, value));
             }
