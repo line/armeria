@@ -49,7 +49,7 @@ import javax.net.ssl.X509ExtendedTrustManager;
 import com.google.common.collect.ImmutableSet;
 
 /**
- * An implementation of {@link X509ExtendedTrustManager} that skips verification on allowlisted hosts.
+ * An implementation of {@link X509ExtendedTrustManager} that skips verification on the list of allowed hosts.
  */
 final class IgnoreHostsTrustManager extends X509ExtendedTrustManager {
 

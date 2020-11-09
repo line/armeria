@@ -66,7 +66,7 @@ class ClientOptionsTest {
     }
 
     @Test
-    void testSetBlockListHeader() {
+    void testSetDisallowedHeader() {
         assertThatThrownBy(() -> {
             ClientOptions.of(HEADERS.newValue(
                     HttpHeaders.of(HttpHeaderNames.HOST, "localhost")));

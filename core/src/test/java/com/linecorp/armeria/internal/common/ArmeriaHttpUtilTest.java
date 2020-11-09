@@ -390,7 +390,7 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void excludeBlocklistInTrailers() {
+    void excludeDisallowedInTrailers() {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.of("foo"), "bar")
                                           .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")
