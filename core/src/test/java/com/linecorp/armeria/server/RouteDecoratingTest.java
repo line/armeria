@@ -172,9 +172,9 @@ class RouteDecoratingTest {
 
     static Stream<Arguments> generateDecorateInOrder() {
         return Stream.of(
-                Arguments.of("/abc", ImmutableList.of(1, 2)),
-                Arguments.of("/abc/def", ImmutableList.of(1, 3, 5)),
-                Arguments.of("/abc/def/ghi", ImmutableList.of(1, 3, 4)));
+                Arguments.of("/abc", ImmutableList.of(2, 1)),
+                Arguments.of("/abc/def", ImmutableList.of(5, 3, 1)),
+                Arguments.of("/abc/def/ghi", ImmutableList.of(4, 3, 1)));
     }
 
     @ParameterizedTest
@@ -187,7 +187,7 @@ class RouteDecoratingTest {
             "/api/admin/1, , 401, ",
             "/assets/index.html, , 200, ",
             "/assets/resources/index.html, , 200, public",
-            "/assets/resources/private/profile.jpg, , 200, private",
+            "/assets/resources/private/profile.jpg, , 200, public",
     })
     void secured(String path, @Nullable String authorization, int status, String cacheControl) {
         final WebClient client = WebClient.of(authServer.httpUri());

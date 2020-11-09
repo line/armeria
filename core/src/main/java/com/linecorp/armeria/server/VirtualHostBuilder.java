@@ -591,7 +591,7 @@ public final class VirtualHostBuilder {
     }
 
     VirtualHostBuilder addRouteDecoratingService(RouteDecoratingService routeDecoratingService) {
-        routeDecoratingServices.add(routeDecoratingService);
+        routeDecoratingServices.add(0, routeDecoratingService);
         return this;
     }
 
