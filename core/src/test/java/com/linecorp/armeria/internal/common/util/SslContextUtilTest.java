@@ -15,14 +15,23 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import static com.linecorp.armeria.internal.common.util.SslContextUtil.HTTP2_BLACKLISTED_CIPHERS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.util.Set;
 
+import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
+
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.netty.handler.ssl.SslContextBuilder;
@@ -47,5 +56,51 @@ class SslContextUtilTest {
         } else {
             assertThat(supportedProtocols).contains("TLSv1.2");
         }
+    }
+
+    @Test
+    void unsafeTlsCiphers() {
+        final String cipher = getBlackListedCipher();
+        assumeThat(cipher).isNotNull();
+
+        assertThatThrownBy(() -> {
+            ClientFactory.builder()
+                         .tlsCustomizer(builder -> {
+                             builder.ciphers(ImmutableList.of(cipher));
+                         }).build();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Attempting to configure a server or HTTP/2 client without");
+
+        ClientFactory.builder()
+                     .tlsAllowUnsafeCiphers(true)
+                     .tlsCustomizer(builder -> {
+                         builder.ciphers(ImmutableList.of(cipher));
+                     }).build();
+    }
+
+    @Nullable
+    private static String getBlackListedCipher() {
+        for (String cipher : HTTP2_BLACKLISTED_CIPHERS) {
+            try {
+                BouncyCastleKeyFactoryProvider.call(() -> {
+                    final SslContextBuilder builder = SslContextBuilder.forClient();
+                    final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
+                    builder.sslProvider(provider);
+
+                    builder.protocols("TLSv1.2")
+                           .ciphers(ImmutableList.of(cipher));
+
+                    try {
+                        return builder.build();
+                    } catch (SSLException e) {
+                        return Exceptions.throwUnsafely(e);
+                    }
+                });
+                return cipher;
+            } catch (Exception e) {
+                continue;
+            }
+        }
+        return null;
     }
 }

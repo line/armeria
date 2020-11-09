@@ -86,6 +86,7 @@ public final class SslContextUtil {
      */
     public static SslContext createSslContext(
             Supplier<SslContextBuilder> builderSupplier, boolean forceHttp1,
+            boolean tlsAllowUnsafeCiphers,
             Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers) {
 
         return BouncyCastleKeyFactoryProvider.call(() -> {
@@ -130,7 +131,9 @@ public final class SslContextUtil {
                 final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
                 checkState(!ciphers.isEmpty(), "SSLContext has no cipher suites enabled.");
 
-                if (!forceHttp1) {
+                if (forceHttp1 || tlsAllowUnsafeCiphers) {
+                   // Skip validation
+                } else {
                     validateHttp2Ciphers(ciphers);
                 }
 
@@ -184,7 +187,8 @@ public final class SslContextUtil {
     }
 
     // https://httpwg.org/specs/rfc7540.html#BadCipherSuites
-    private static final Set<String> HTTP2_BLACKLISTED_CIPHERS =
+    @VisibleForTesting
+    static final Set<String> HTTP2_BLACKLISTED_CIPHERS =
             ImmutableSet.of(
                     "TLS_NULL_WITH_NULL_NULL",
                     "TLS_RSA_WITH_NULL_MD5",

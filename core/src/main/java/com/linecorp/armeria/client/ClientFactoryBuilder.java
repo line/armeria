@@ -301,6 +301,20 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets whether to allow
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A"/>TLS 1.2 Cipher Suite Block List</>
+     * for TLS negotiation.
+     *
+     * <p>Note that the blocked cipher suites do not meet minimum security requirements.
+     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2>Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     */
+    public ClientFactoryBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
+        option(ClientFactoryOptions.TLS_ALLOW_UNSAFE_CIPHERS, tlsAllowUnsafeCiphers);
+        return this;
+    }
+
+    /**
      * Sets the factory that creates a {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      *

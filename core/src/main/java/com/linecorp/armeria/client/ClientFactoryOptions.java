@@ -79,6 +79,18 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("TLS_CUSTOMIZER", b -> { /* no-op */ });
 
     /**
+     * Whether to allow
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A"/>TLS 1.2 Cipher Suite Block List</> for
+     * TLS negotiation.
+     *
+     * <p>Note that the blocked cipher suites do not meet minimum security requirements.
+     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2>Section 9.2.2, RFC7540</a> for
+     * more information.
+     */
+    public static final ClientFactoryOption<Boolean> TLS_ALLOW_UNSAFE_CIPHERS =
+            ClientFactoryOption.define("tlsAllowUnsafeCiphers", Flags.tlsAllowUnsafeCiphers());
+
+    /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      */
@@ -445,5 +457,15 @@ public final class ClientFactoryOptions
      */
     public ProxyConfigSelector proxyConfigSelector() {
         return get(PROXY_CONFIG_SELECTOR);
+    }
+
+
+    /**
+     * Returns whether to allow
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A"/>TLS 1.2 Cipher Suite Block List</> for
+     * TLS negotiation.
+     */
+    public boolean tlsAllowUnsafeCiphers() {
+        return get(TLS_ALLOW_UNSAFE_CIPHERS);
     }
 }
