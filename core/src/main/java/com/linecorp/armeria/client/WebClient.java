@@ -276,10 +276,10 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new {@link WebClientRequestBuilder}.
+     * Returns a new {@link WebClientRequestPreparation}.
      */
-    default WebClientRequestBuilder prepare() {
-        return new WebClientRequestBuilder(this);
+    default WebClientRequestPreparation prepare() {
+        return new WebClientRequestPreparation(this);
     }
 
     /**
