@@ -32,7 +32,6 @@ import React, {
   useReducer,
   useState,
 } from 'react';
-import { Option } from 'react-dropdown';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import githubGist from 'react-syntax-highlighter/dist/esm/styles/hljs/github-gist';
 import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
@@ -44,6 +43,7 @@ import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
 import { Method } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
+import { SelectOption } from '../../lib/types';
 import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
@@ -54,9 +54,9 @@ SyntaxHighlighter.registerLanguage('json', json);
 interface OwnProps {
   method: Method;
   isAnnotatedService: boolean;
-  exampleHeaders: Option[];
-  examplePaths: Option[];
-  exampleQueries: Option[];
+  exampleHeaders: SelectOption[];
+  examplePaths: SelectOption[];
+  exampleQueries: SelectOption[];
   exactPathMapping: boolean;
   useRequestBody: boolean;
 }
@@ -221,9 +221,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setSnackbarOpen(false);
   }, []);
 
-  const onSelectedQueriesChange = useCallback((selectedQueries: Option) => {
-    setAdditionalQueries(selectedQueries.value);
-  }, []);
+  const onSelectedQueriesChange = useCallback(
+    (e: ChangeEvent<{ value: unknown }>) => {
+      setAdditionalQueries(e.target.value as string);
+    },
+    [],
+  );
 
   const onQueriesFormChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -232,17 +235,23 @@ const DebugPage: React.FunctionComponent<Props> = ({
     [],
   );
 
-  const onSelectedPathChange = useCallback((selectedPath: Option) => {
-    setAdditionalPath(selectedPath.value);
-  }, []);
+  const onSelectedPathChange = useCallback(
+    (e: ChangeEvent<{ value: unknown }>) => {
+      setAdditionalPath(e.target.value as string);
+    },
+    [],
+  );
 
   const onPathFormChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setAdditionalPath(e.target.value);
   }, []);
 
-  const onSelectedHeadersChange = useCallback((selectedHeaders: Option) => {
-    setAdditionalHeaders(selectedHeaders.value);
-  }, []);
+  const onSelectedHeadersChange = useCallback(
+    (e: ChangeEvent<{ value: unknown }>) => {
+      setAdditionalHeaders(e.target.value as string);
+    },
+    [],
+  );
 
   const onHeadersFormChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
