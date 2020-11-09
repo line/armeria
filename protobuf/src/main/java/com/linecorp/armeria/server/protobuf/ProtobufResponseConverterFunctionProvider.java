@@ -21,6 +21,7 @@ import java.util.stream.Stream;
 
 import org.reactivestreams.Publisher;
 
+import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -63,7 +64,7 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
 
                 final Class<?> typeArgument =
                         (Class<?>) parameterizedType.getActualTypeArguments()[0];
-                return MessageLite.class.isAssignableFrom(typeArgument);
+                return Message.class.isAssignableFrom(typeArgument);
             }
         }
 

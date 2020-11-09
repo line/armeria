@@ -58,19 +58,23 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
  * A {@link RequestConverterFunction} which converts a Protocol Buffers or JSON body of
  * the {@link AggregatedHttpRequest} to an object.
  * The built-in parser of {@link Message} for Protocol Buffers is applied only when the {@code content-type} of
- * {@link RequestHeaders} either {@link MediaType#PROTOBUF} or {@link MediaType#OCTET_STREAM} or
+ * {@link RequestHeaders} is either one of {@link MediaType#PROTOBUF} or {@link MediaType#OCTET_STREAM} or
  * the {@link MediaType#subtype()} contains {@code "protobuf"}.
  * The {@link Parser} for JSON is applied only when the {@code content-type} of
  * the {@link RequestHeaders} is {@link MediaType#JSON} or ends with {@code +json}.
  *
- * <p>The Protocol Buffers spec does not have an official way to sending multiple messages because
- * an encoded message does not have self-delimiting.
+ * <h3>Conversion of multiple Protobuf messages</h3>
+ * A sequence of Protocol Buffer messages can not be handled by this {@link RequestConverterFunction},
+ * because Protocol Buffers wire format is not self-delimiting.
  * See
  * <a href="https://developers.google.com/protocol-buffers/docs/techniques#streaming">Streaming Multiple Messages</a>
  * for more information.
- * Therefore a sequence of Protocol Buffer messages can not be handled by this {@link RequestConverterFunction}.
- * However a <a href="https://tools.ietf.org/html/rfc7159#section-5">JSON array</a> body
- * could be converted into a {@link Collection} type. e.g, {@code List<Message>} and {@code Set<Message>}.
+ * However, {@link Collection} types such as {@code List<Message>} and {@code Set<Message>} are supported
+ * when converted from <a href="https://tools.ietf.org/html/rfc7159#section-5">JSON array</a>.
+ *
+ * <p>Note that this {@link RequestConverterFunction} is applied to the annotated service by default,
+ * so you don't have to set explicitly unless you want to use your own {@link Parser} and
+ * {@link ExtensionRegistry}.
  */
 @UnstableApi
 public final class ProtobufRequestConverterFunction implements RequestConverterFunction {
@@ -101,9 +105,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
     private final ResultType resultType;
 
     ProtobufRequestConverterFunction(ResultType resultType) {
-        jsonParser = defaultJsonParser;
-        extensionRegistry = ExtensionRegistry.getEmptyRegistry();
-        this.resultType = requireNonNull(resultType, "resultType");
+        this(defaultJsonParser, ExtensionRegistry.getEmptyRegistry(), resultType);
     }
 
     /**
@@ -117,9 +119,14 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
      * Creates an instance with the specified {@link Parser} and {@link ExtensionRegistry}.
      */
     public ProtobufRequestConverterFunction(Parser jsonParser, ExtensionRegistry extensionRegistry) {
+        this(jsonParser, extensionRegistry, ResultType.UNKNOWN);
+    }
+
+    private ProtobufRequestConverterFunction(Parser jsonParser, ExtensionRegistry extensionRegistry,
+                                             ResultType resultType) {
         this.jsonParser = requireNonNull(jsonParser, "jsonParser");
         this.extensionRegistry = requireNonNull(extensionRegistry, "extensionRegistry");
-        resultType = ResultType.UNKNOWN;
+        this.resultType = requireNonNull(resultType, "resultType");
     }
 
     @Nullable
@@ -141,59 +148,67 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
             }
 
             if (isJson(contentType)) {
-                jsonParser.merge(request.contentUtf8(), messageBuilder);
+                jsonParser.merge(request.content(contentType.charset(StandardCharsets.UTF_8)), messageBuilder);
                 return messageBuilder.build();
             }
         }
 
-        if (isJson(contentType) && expectedParameterizedResultType != null) {
-            ResultType resultType = this.resultType;
-            if (resultType == ResultType.UNKNOWN) {
-                resultType = toResultType(expectedParameterizedResultType);
-            }
+        if (!isJson(contentType) || expectedParameterizedResultType == null) {
+            return RequestConverterFunction.fallthrough();
+        }
 
-            if (resultType != ResultType.UNKNOWN && resultType != ResultType.PROTOBUF) {
-                final Type[] typeArguments = expectedParameterizedResultType.getActualTypeArguments();
-                final String content = request.content(contentType.charset(StandardCharsets.UTF_8));
-                final JsonNode jsonNode = mapper.readTree(content);
+        ResultType resultType = this.resultType;
+        if (resultType == ResultType.UNKNOWN) {
+            resultType = toResultType(expectedParameterizedResultType);
+        }
 
-                if (resultType == ResultType.LIST_PROTOBUF || resultType == ResultType.SET_PROTOBUF) {
-                    if (jsonNode.isArray()) {
-                        final ImmutableCollection.Builder<Message> builder;
-                        if (resultType == ResultType.LIST_PROTOBUF) {
-                            builder = ImmutableList.builderWithExpectedSize(jsonNode.size());
-                        } else {
-                            builder = ImmutableSet.builderWithExpectedSize(jsonNode.size());
-                        }
+        if (resultType == ResultType.UNKNOWN || resultType == ResultType.PROTOBUF) {
+            return RequestConverterFunction.fallthrough();
+        }
 
-                        for (JsonNode node : jsonNode) {
-                            final Message.Builder msgBuilder = getMessageBuilder((Class<?>) typeArguments[0]);
-                            jsonParser.merge(mapper.writeValueAsString(node), msgBuilder);
-                            builder.add(msgBuilder.build());
-                        }
-                        return builder.build();
+        final Type[] typeArguments = expectedParameterizedResultType.getActualTypeArguments();
+        final String content = request.content(contentType.charset(StandardCharsets.UTF_8));
+        final JsonNode jsonNode = mapper.readTree(content);
+
+        switch (resultType) {
+            case LIST_PROTOBUF:
+            case SET_PROTOBUF:
+                if (jsonNode.isArray()) {
+                    final ImmutableCollection.Builder<Message> builder;
+                    if (resultType == ResultType.LIST_PROTOBUF) {
+                        builder = ImmutableList.builderWithExpectedSize(jsonNode.size());
+                    } else {
+                        builder = ImmutableSet.builderWithExpectedSize(jsonNode.size());
                     }
-                } else if (resultType == ResultType.MAP_PROTOBUF) {
-                     if (jsonNode.isObject()) {
-                         final ImmutableMap.Builder<String, Message> builder =
-                                 ImmutableMap.builderWithExpectedSize(jsonNode.size());
 
-                         for (final Iterator<Entry<String, JsonNode>> i = jsonNode.fields(); i.hasNext();) {
-                             final Entry<String, JsonNode> e = i.next();
-                             final Message.Builder msgBuilder = getMessageBuilder((Class<?>) typeArguments[1]);
-                             jsonParser.merge(mapper.writeValueAsString(e.getValue()), msgBuilder);
-                             builder.put(e.getKey(), msgBuilder.build());
-                         }
-                         return builder.build();
-                     }
+                    for (JsonNode node : jsonNode) {
+                        final Message.Builder msgBuilder = getMessageBuilder((Class<?>) typeArguments[0]);
+                        jsonParser.merge(mapper.writeValueAsString(node), msgBuilder);
+                        builder.add(msgBuilder.build());
+                    }
+                    return builder.build();
                 }
-            }
+                break;
+            case MAP_PROTOBUF:
+                if (jsonNode.isObject()) {
+                    final ImmutableMap.Builder<String, Message> builder =
+                            ImmutableMap.builderWithExpectedSize(jsonNode.size());
+
+                    for (final Iterator<Entry<String, JsonNode>> i = jsonNode.fields(); i.hasNext();) {
+                        final Entry<String, JsonNode> e = i.next();
+                        final Message.Builder msgBuilder = getMessageBuilder((Class<?>) typeArguments[1]);
+                        jsonParser.merge(mapper.writeValueAsString(e.getValue()), msgBuilder);
+                        builder.put(e.getKey(), msgBuilder.build());
+                    }
+                    return builder.build();
+                }
+                break;
         }
 
         return RequestConverterFunction.fallthrough();
     }
 
-    private static boolean isJson(@Nullable MediaType contentType) {
+    static boolean isJson(@Nullable MediaType contentType) {
         return contentType != null &&
                (contentType.is(MediaType.JSON) || contentType.subtype().endsWith("+json"));
     }

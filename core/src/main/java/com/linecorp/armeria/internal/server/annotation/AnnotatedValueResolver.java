@@ -74,6 +74,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
+import com.linecorp.armeria.internal.server.annotation.CompositeConverterFunctions.CompositeRequestConverterFunction;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
@@ -1461,36 +1462,6 @@ final class AnnotatedValueResolver {
 
         NoParameterException(String name) {
             super("No parameters found from: " + name);
-        }
-    }
-
-    private static final class CompositeRequestConverterFunction implements RequestConverterFunction {
-
-        private final List<RequestConverterFunction> functions;
-
-        private CompositeRequestConverterFunction(List<RequestConverterFunction> functions) {
-            this.functions = functions;
-        }
-
-        @Nullable
-        @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
-                                     Class<?> expectedResultType,
-                                     @Nullable ParameterizedType expectedParameterizedResultType)
-                throws Exception {
-            for (RequestConverterFunction function : functions) {
-                try {
-                    return function.convertRequest(ctx, request, expectedResultType,
-                                                   expectedParameterizedResultType);
-                } catch (FallthroughException ignore) {
-                    // Do nothing.
-                } catch (Exception e) {
-                    throw new IllegalStateException(
-                            "Request converter " + function.getClass().getName() +
-                            " failed to convert an " + request + " to a " + expectedResultType, e);
-                }
-            }
-            return RequestConverterFunction.fallthrough();
         }
     }
 }

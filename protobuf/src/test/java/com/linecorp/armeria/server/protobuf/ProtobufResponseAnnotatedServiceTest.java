@@ -100,7 +100,7 @@ class ProtobufResponseAnnotatedServiceTest {
         }
 
         @Get("/protobuf+json/publisher")
-        @Produces("application/protobuf+json")
+        @ProducesJson
         public Publisher<SimpleResponse> protobufJsonPublisher() {
             return Flux.just(SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build(),
                              SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
@@ -151,15 +151,24 @@ class ProtobufResponseAnnotatedServiceTest {
     void protobufStreamResponse(String path) throws IOException {
         final AggregatedHttpResponse response = client.get(path).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(cause).isInstanceOf(IllegalStateException.class)
-                         .hasMessageContaining("(expected: a subtype of com.google.protobuf.MessageLite");
+        assertThat(cause).isInstanceOf(IllegalArgumentException.class)
+                         .hasMessageContaining("Cannot convert a");
     }
 
-    @CsvSource({ "/protobuf+json/publisher", "/protobuf+json/stream"})
-    @ParameterizedTest
-    void protobufJsonStreamResponse(String path) throws InvalidProtocolBufferException {
-        final AggregatedHttpResponse response = client.get(path).aggregate().join();
-        assertThat(response.headers().contentType().subtype()).isEqualTo("protobuf+json");
+    @Test
+    void protobufJsonPublisherResponse() throws InvalidProtocolBufferException {
+        final AggregatedHttpResponse response = client.get("/protobuf+json/publisher").aggregate().join();
+        final MediaType mediaType = response.headers().contentType();
+        assertThat(mediaType.is(MediaType.JSON)).isTrue();
+        final String expected = "[{\"message\":\"Hello, Armeria1!\"},{\"message\":\"Hello, Armeria2!\"}]";
+        assertThatJson(response.contentUtf8()).isEqualTo(expected);
+    }
+
+    @Test
+    void protobufJsonStreamResponse() throws InvalidProtocolBufferException {
+        final AggregatedHttpResponse response = client.get("/protobuf+json/stream").aggregate().join();
+        final MediaType mediaType = response.headers().contentType();
+        assertThat(mediaType.subtype()).isEqualTo("protobuf+json");
         final String expected = "[{\"message\":\"Hello, Armeria1!\"},{\"message\":\"Hello, Armeria2!\"}]";
         assertThatJson(response.contentUtf8()).isEqualTo(expected);
     }
