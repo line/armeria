@@ -195,6 +195,14 @@ one of the following supported types:
     - `LocalDate`, `LocalDateTime` and `LocalTime`,
     - `OffsetDateTime` and `OffsetTime`
     - `ZonedDateTime`, `ZoneId` and `ZoneOffset`
+- Custom types with either of the following public static methods/constructor taking a single `String` parameter.
+  Note that these are scanned for in the order below. The first matching method being is used,
+  and if that method throws an exception, no other methods will be tried and that exception will
+  be propagated.
+  - `public static T of(String)`
+  - `public static T valueOf(String)`
+  - `public static T fromString(String)`
+  - `public T(String)` (constructor)
 
 Note that you can omit the value of <type://@Param> if you compiled your code with `-parameters` javac
 option. In this case the variable name is used as the value.

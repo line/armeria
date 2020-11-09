@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.Locale;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,13 @@ public class AnnotatedServiceTypeUtilTest {
         final StringConstructorSkipValueOfWithWrongReturnType value =
             stringToType(testString, StringConstructorSkipValueOfWithWrongReturnType.class);
         assertEquals(testString, value.str);
+    }
+
+    @Test
+    void enumShouldUseOfIfAvailable() {
+        final EnumWithOfCreator value =
+                stringToType("foo", EnumWithOfCreator.class);
+        assertEquals(EnumWithOfCreator.FOO, value);
     }
 
     public static final class StringOf {
@@ -151,6 +159,15 @@ public class AnnotatedServiceTypeUtilTest {
 
         public static StringConstructor valueOf(String str) {
             return new StringConstructor(str);
+        }
+    }
+
+    public enum EnumWithOfCreator {
+        FOO,
+        BAR;
+
+        public static EnumWithOfCreator of(String str) {
+            return valueOf(str.toUpperCase(Locale.US));
         }
     }
 }
