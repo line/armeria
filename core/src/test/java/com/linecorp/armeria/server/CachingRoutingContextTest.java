@@ -43,10 +43,10 @@ class CachingRoutingContextTest {
         when(context.params()).thenReturn(QueryParams.of("foo", "qux"));
         when(context.requiresMatchingParamsPredicates()).thenReturn(true);
 
-        assertThat(route.apply(context).isPresent()).isFalse(); // Because of the query parameters.
+        assertThat(route.apply(context, false).isPresent()).isFalse(); // Because of the query parameters.
 
         final CachingRoutingContext cachingContext = new CachingRoutingContext(context);
-        assertThat(route.apply(cachingContext).isPresent()).isTrue();
+        assertThat(route.apply(cachingContext, false).isPresent()).isTrue();
     }
 
     @Test
@@ -63,9 +63,9 @@ class CachingRoutingContextTest {
         when(context.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/test", "foo", "qux"));
         when(context.requiresMatchingHeadersPredicates()).thenReturn(true);
 
-        assertThat(route.apply(context).isPresent()).isFalse(); // Because of HTTP headers.
+        assertThat(route.apply(context, false).isPresent()).isFalse(); // Because of HTTP headers.
 
         final CachingRoutingContext cachingContext = new CachingRoutingContext(context);
-        assertThat(route.apply(cachingContext).isPresent()).isTrue();
+        assertThat(route.apply(cachingContext, false).isPresent()).isTrue();
     }
 }

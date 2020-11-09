@@ -454,6 +454,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Cancels the request. Shortcut for {@code cancel(RequestCancellationException.get())}.
      */
+    @Override
     default void cancel() {
         cancel(RequestCancellationException.get());
     }
@@ -461,6 +462,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Times out the request. Shortcut for {@code cancel(RequestTimeoutException.get())}.
      */
+    @Override
     default void timeoutNow() {
         cancel(RequestTimeoutException.get());
     }

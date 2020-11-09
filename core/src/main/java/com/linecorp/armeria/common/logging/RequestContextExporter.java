@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -34,6 +33,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.ExportGroupBuilder.ExportEntry;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -309,64 +309,6 @@ public final class RequestContextExporter {
 
         // Remove the value if it exists already.
         state.remove(entry.exportKey);
-    }
-
-    static final class ExportEntry<T> {
-        final T key;
-        final String exportKey;
-        @Nullable
-        final Function<Object, String> stringifier;
-
-        ExportEntry(T key, String exportKey) {
-            assert key != null;
-            assert exportKey != null;
-            this.key = key;
-            this.exportKey = exportKey;
-            stringifier = null;
-        }
-
-        @SuppressWarnings("unchecked")
-        ExportEntry(T key, String exportKey, Function<?, ?> stringifier) {
-            assert key != null;
-            assert exportKey != null;
-            assert stringifier != null;
-            this.key = key;
-            this.exportKey = exportKey;
-            this.stringifier = (Function<Object, String>) stringifier;
-        }
-
-        @Nullable
-        String stringify(@Nullable Object value) {
-            if (stringifier == null) {
-                return value != null ? value.toString() : null;
-            } else {
-                return stringifier.apply(value);
-            }
-        }
-
-        @Override
-        public int hashCode() {
-            return key.hashCode() * 31 + exportKey.hashCode();
-        }
-
-        @Override
-        public boolean equals(@Nullable Object o) {
-            if (this == o) {
-                return true;
-            }
-
-            if (!(o instanceof ExportEntry)) {
-                return false;
-            }
-
-            return key.equals(((ExportEntry<?>) o).key) &&
-                   exportKey.equals(((ExportEntry<?>) o).exportKey);
-        }
-
-        @Override
-        public String toString() {
-            return exportKey + ':' + key;
-        }
     }
 
     private State state(RequestContext ctx) {
