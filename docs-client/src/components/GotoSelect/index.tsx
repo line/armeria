@@ -14,7 +14,9 @@
  * under the License.
  */
 
-import Autocomplete from '@material-ui/lab/Autocomplete';
+import Autocomplete, {
+  createFilterOptions,
+} from '@material-ui/lab/Autocomplete';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
 import React, { ChangeEvent, useCallback } from 'react';
@@ -47,6 +49,10 @@ const useStyles = makeStyles((theme: Theme) =>
     },
   }),
 );
+
+const filterOptions = createFilterOptions<Option>({
+  limit: 500,
+});
 
 function getOptions(specification: Specification): Option[] {
   const options: Option[] = [];
@@ -121,6 +127,7 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
           popupIndicator: classes.popupIndicator,
         }}
         options={getOptions(specification)}
+        filterOptions={filterOptions}
         getOptionLabel={(option) => option.label}
         groupBy={(option) => option.group}
         noOptionsText="No results"
