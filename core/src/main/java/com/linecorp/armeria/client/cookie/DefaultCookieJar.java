@@ -50,7 +50,7 @@ final class DefaultCookieJar implements CookieJar {
     private final ReentrantLock lock;
 
     DefaultCookieJar() {
-        this(CookiePolicy.acceptOriginalServer());
+        this(CookiePolicy.acceptOriginOnly());
     }
 
     DefaultCookieJar(CookiePolicy cookiePolicy) {
@@ -91,8 +91,7 @@ final class DefaultCookieJar implements CookieJar {
                 store.remove(cookie);
                 if (!cookie.isExpired() && cookiePolicy.accept(uri, cookie)) {
                     store.add(cookie);
-                    filter.putIfAbsent(cookie.domain(), new HashSet<>());
-                    final Set<Cookie> cookieSet = filter.get(cookie.domain());
+                    final Set<Cookie> cookieSet = filter.computeIfAbsent(cookie.domain(), s -> new HashSet<>());
                     // remove similar cookie if present
                     cookieSet.remove(cookie);
                     cookieSet.add(cookie);
@@ -134,7 +133,7 @@ final class DefaultCookieJar implements CookieJar {
 
     private void filterGet(Set<Cookie> cookies, String host, String path, boolean secure) {
         for (Map.Entry<String, Set<Cookie>> entry : filter.entrySet()) {
-            if (cookiePolicy.domainMatch(entry.getKey(), host)) {
+            if (cookiePolicy.domainMatches(entry.getKey(), host)) {
                 final Iterator<Cookie> it = entry.getValue().iterator();
                 while (it.hasNext()) {
                     final Cookie cookie = it.next();

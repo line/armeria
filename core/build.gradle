@@ -200,25 +200,30 @@ if (tasks.findByName('trimShadedJar')) {
 class PublicSuffixesTask extends DefaultTask {
     // Rebuild up to once in 7 days, unless cleaned.
     @Input
-    final def day = (System.currentTimeMillis() / TimeUnit.DAYS.toMillis(7)).intValue()
+    final def days = (System.currentTimeMillis() / TimeUnit.DAYS.toMillis(7)).intValue()
     @OutputFile
-    final def publicSuffixesFile = project.file("${project.buildDir}/resources/main/publicsuffixes")
+    final def publicSuffixesFile = project.file("${project.buildDir}/resources/main/com/linecorp/armeria/public_suffixes.txt")
 
     @TaskAction
     def run() {
-        publicSuffixesFile.createNewFile()
-        publicSuffixesFile.write("")
-        def url = 'https://publicsuffix.org/list/public_suffix_list.dat'
-        def req = new URL(url).openConnection()
-        if (req.getResponseCode() != 200) {
-            throw new Exception('Received a non-200 response from publicsuffix.org: ' +
-                    "${req.getResponseCode()}, ${req.getHeaderFields()}")
-        }
-        def res = req.getInputStream()
-        res.eachLine('UTF-8') {
-            if (!it.isEmpty() && !it.startsWith("//")) {
-                publicSuffixesFile.append(IDN.toASCII(it) + "\n")
+        try {
+            def tempFile = File.createTempFile("public_suffixes", null)
+            def url = 'https://publicsuffix.org/list/public_suffix_list.dat'
+            def req = new URL(url).openConnection()
+            if (req.getResponseCode() != 200) {
+                throw new Exception('Received a non-200 response from publicsuffix.org: ' +
+                        "${req.getResponseCode()}, ${req.getHeaderFields()}")
             }
+            def res = req.getInputStream()
+            res.eachLine('UTF-8') {
+                if (!it.isEmpty() && !it.startsWith("//")) {
+                    tempFile.append(IDN.toASCII(it) + "\n")
+                }
+            }
+            publicSuffixesFile.delete()
+            tempFile.renameTo(publicSuffixesFile)
+        } catch (Exception e) {
+            project.logger.info(e.getMessage())
         }
     }
 }

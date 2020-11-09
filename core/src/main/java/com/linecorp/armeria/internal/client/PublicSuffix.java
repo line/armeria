@@ -34,18 +34,12 @@ import javax.annotation.Nullable;
  */
 public final class PublicSuffix {
 
-    @Nullable
-    private static PublicSuffix instance;
-
     public static PublicSuffix get() {
-        if (instance == null) {
-            synchronized (PublicSuffix.class) {
-                if (instance == null) {
-                    instance = new PublicSuffix();
-                }
-            }
-        }
-        return instance;
+        return PublicSuffixHolder.INSTANCE;
+    }
+
+    private static final class PublicSuffixHolder {
+        private static final PublicSuffix INSTANCE = new PublicSuffix();
     }
 
     private final TrieNode trie;
@@ -90,8 +84,9 @@ public final class PublicSuffix {
      * <a href="https://github.com/publicsuffix/list/issues/145">issue</a>.
      */
     private void buildTrie() {
-        try (InputStream in = getClass().getClassLoader().getResourceAsStream("publicsuffixes")) {
-            checkState(in != null, "publicsuffixes file not found.");
+        try (InputStream in = getClass().getClassLoader()
+                                        .getResourceAsStream("com/linecorp/armeria/public_suffixes.txt")) {
+            checkState(in != null, "public_suffixes.txt not found.");
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
@@ -161,7 +156,7 @@ public final class PublicSuffix {
             }
             if (i == 1 && node.isWildcard) {
                 return node.children == null || !node.children.containsKey(labels[0]) ||
-                        !node.children.get(labels[0]).isException;
+                       !node.children.get(labels[0]).isException;
             }
         }
         return node.isEnd;

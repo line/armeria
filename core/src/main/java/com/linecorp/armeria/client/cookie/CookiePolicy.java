@@ -50,13 +50,13 @@ public interface CookiePolicy {
     /**
      * Creates a {@link CookiePolicy} that only accepts cookies from the original server.
      */
-    static CookiePolicy acceptOriginalServer() {
+    static CookiePolicy acceptOriginOnly() {
         return new CookiePolicy() {
             @Override
             public boolean accept(URI uri, Cookie cookie) {
                 requireNonNull(uri, "uri");
                 requireNonNull(cookie, "cookie");
-                return domainMatch(cookie.domain(), uri.getHost());
+                return domainMatches(cookie.domain(), uri.getHost());
             }
         };
     }
@@ -70,7 +70,7 @@ public interface CookiePolicy {
      * Determines whether a host matches a domain, as specified by RFC 6265
      * <a href="https://tools.ietf.org/html/rfc6265#section-5.1.3">Domain Matching</a>.
      */
-    default boolean domainMatch(@Nullable String domain, @Nullable String host) {
+    default boolean domainMatches(@Nullable String domain, @Nullable String host) {
         if (domain == null || host == null) {
             return false;
         }
