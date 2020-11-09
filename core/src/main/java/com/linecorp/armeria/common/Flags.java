@@ -1093,7 +1093,9 @@ public final class Flags {
     }
 
     private static String nonnullCaffeineSpec(String name, String defaultValue) {
-        return requireNonNull(caffeineSpec(name, defaultValue, false));
+        final String spec = caffeineSpec(name, defaultValue, false);
+        assert spec != null; // Can never be null if allowOff is false.
+        return spec;
     }
 
     @Nullable
