@@ -30,8 +30,8 @@ task checkJavadoc(
                 'fields.inherited.from.class.',
                 'nested.classes.inherited.from.class.'
         ]
-        def allowlistedPrefixes = ['java.', 'javax.']
-        def blocklistedPrefixes = [ 'com.linecorp.armeria.internal.' ] +
+        def allowedListPrefixes = ['java.', 'javax.']
+        def disallowedListPrefixes = [ 'com.linecorp.armeria.internal.' ] +
                 rootProject.ext.relocations.collect { it[1] + '.' }
         def errors = []
 
@@ -58,15 +58,15 @@ task checkJavadoc(
                     }
                     return name
                 }).filter({ name ->
-                    allowlistedPrefixes.find { name.startsWith(it) } == null
+                    allowedListPrefixes.find { name.startsWith(it) } == null
                 }).collect(Collectors.toSet())
 
-                // .. and make sure none of them are blocklisted.
+                // .. and make sure none of them are disallowed.
                 classNames.sort().each { className ->
                     def reportLine = "${f.name.replaceFirst(/\.html$/, '')} -> ${className}"
                     reportOut.println reportLine
 
-                    blocklistedPrefixes.each { prefix ->
+                    disallowedListPrefixes.each { prefix ->
                         if (className.startsWith(prefix)) {
                             errors += reportLine
                         }
@@ -76,7 +76,7 @@ task checkJavadoc(
         }
 
         if (!errors.empty) {
-            throw new Exception("Blocklisted class(es) in the public API:${System.lineSeparator()}- " +
+            throw new Exception("Disallowed class(es) in the public API:${System.lineSeparator()}- " +
                     errors.join("${System.lineSeparator()}- "))
         }
     }

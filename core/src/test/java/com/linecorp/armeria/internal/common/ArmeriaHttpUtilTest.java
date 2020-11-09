@@ -366,7 +366,7 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void excludeBlocklistHeadersWhileHttp2ToHttp1() {
+    void excludeDisallowedHeadersWhileHttp2ToHttp1() {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.TRAILER, "foo")
                                           .add(HttpHeaderNames.HOST, "bar")

@@ -235,7 +235,7 @@ final class AnnotationUtil {
             return false;
         }
         if (!visitedAnnotationTypes.add(actualAnnotationType)) {
-            blocklistAnnotation(actualAnnotationType);
+            disallowedListAnnotation(actualAnnotationType);
             return false;
         }
 
@@ -337,7 +337,7 @@ final class AnnotationUtil {
             return false;
         }
         if (!visitedAnnotationTypes.add(annotationType)) {
-            blocklistAnnotation(annotationType);
+            disallowedListAnnotation(annotationType);
             return false;
         }
 
@@ -355,7 +355,7 @@ final class AnnotationUtil {
         return true;
     }
 
-    private static void blocklistAnnotation(Class<? extends Annotation> annotationType) {
+    private static void disallowedListAnnotation(Class<? extends Annotation> annotationType) {
         if (!knownCyclicAnnotationTypes.add(annotationType)) {
             return;
         }
@@ -374,9 +374,9 @@ final class AnnotationUtil {
             }
 
             if (ifaceNames.isEmpty()) {
-                logger.debug("Blocklisting an annotation with a cyclic reference: {}", typeName);
+                logger.debug("Disallowed listing an annotation with a cyclic reference: {}", typeName);
             } else {
-                logger.debug("Blocklisting an annotation with a cyclic reference: {}{}", typeName, ifaceNames);
+                logger.debug("Disallowed listing an annotation with a cyclic reference: {}{}", typeName, ifaceNames);
             }
         }
     }
