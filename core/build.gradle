@@ -224,4 +224,4 @@ class PublicSuffixesTask extends DefaultTask {
 }
 
 task publicSuffixes(type: PublicSuffixesTask)
-tasks.test.dependsOn publicSuffixes
+tasks.classes.dependsOn publicSuffixes 😉
