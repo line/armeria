@@ -32,8 +32,8 @@ public interface RetryConfigMapping<T extends Response> {
      * created by retryConfigFactory.
      */
     static <T extends Response> RetryConfigMapping<T> of(
-            BiFunction<ClientRequestContext, Request, String> keyFactory,
-            BiFunction<ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory) {
+            BiFunction<? super ClientRequestContext, Request, String> keyFactory,
+            BiFunction<? super ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory) {
         return new KeyedRetryConfigMapping<>(keyFactory, retryConfigFactory);
     }
 

@@ -25,17 +25,10 @@ import com.linecorp.armeria.common.Response;
 
 /**
  * Holds retry config used by a {@link RetryingClient}.
- * A {@link RetryConfig} instance encapsulates the used {@link RetryRule}, maxTotalAttempts,
- *  * and responseTimeoutMillisForEachAttempt.
+ * A {@link RetryConfig} instance encapsulates the used {@link RetryRule}, {@code maxTotalAttempts},
+ * and {@code responseTimeoutMillisForEachAttempt}.
  */
 public final class RetryConfig<T extends Response> {
-    private final int maxTotalAttempts;
-    private final long responseTimeoutMillisForEachAttempt;
-    @Nullable private final RetryRule retryRule;
-    @Nullable private final RetryRuleWithContent<T> retryRuleWithContent;
-    @Nullable private final RetryRule fromRetryRuleWithContent;
-    private final int maxContentLength;
-    private final boolean needsContentInRule;
 
     /**
      * Returns a new {@link RetryConfigBuilder} with the default values from Flags.
@@ -54,74 +47,13 @@ public final class RetryConfig<T extends Response> {
         return new RetryConfigBuilder<>(retryRuleWithContent);
     }
 
-    /**
-     * Returns a new {@link RetryConfigBuilder} with the default values from Flags.
-     * Uses {@link RetryRuleWithContent} with specified maxContentLength.
-     */
-    public static <T extends Response> RetryConfigBuilder<T> builder(
-            RetryRuleWithContent<T> retryRuleWithContent, int maxContentLength) {
-        return new RetryConfigBuilder<>(retryRuleWithContent, maxContentLength);
-    }
-
-    /**
-     * Returns config's maxTotalAttempt.
-     */
-    public int maxTotalAttempts() {
-        return maxTotalAttempts;
-    }
-
-    /**
-     * Returns config's responseTimeoutMillisForEachAttempt.
-     */
-    public long responseTimeoutMillisForEachAttempt() {
-        return responseTimeoutMillisForEachAttempt;
-    }
-
-    /**
-     * Returns config's retryRule, could be null.
-     */
-    @Nullable
-    public RetryRule retryRule() {
-        return retryRule;
-    }
-
-    /**
-     * Returns config's retryRuleWithContent, could be null.
-     */
-    @Nullable
-    public RetryRuleWithContent<T> retryRuleWithContent() {
-        return retryRuleWithContent;
-    }
-
-    /**
-     * Returns config's retry rule that is converted from retryRuleWithContent, could be null.
-     */
-    @Nullable
-    public RetryRule fromRetryRuleWithContent() {
-        return fromRetryRuleWithContent;
-    }
-
-    /**
-     * Returns config's maxContentLength, which is non-zero only if a {@link RetryRuleWithContent} is used.
-     */
-    public int maxContentLength() {
-        return maxContentLength;
-    }
-
-    /**
-     * Returns whether a {@link RetryRuleWithContent} is being used.
-     */
-    public boolean needsContentInRule() {
-        return needsContentInRule;
-    }
-
-    /**
-     * Returns whether the associated requires response trailers.
-     */
-    public boolean requiresResponseTrailers() {
-        return needsContentInRule() ?
-               retryRuleWithContent().requiresResponseTrailers() : retryRule().requiresResponseTrailers();
-    }
+    private final int maxTotalAttempts;
+    private final long responseTimeoutMillisForEachAttempt;
+    @Nullable private final RetryRule retryRule;
+    @Nullable private final RetryRuleWithContent<T> retryRuleWithContent;
+    @Nullable private final RetryRule fromRetryRuleWithContent;
+    private final int maxContentLength;
+    private final boolean needsContentInRule;
 
     RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
@@ -158,5 +90,70 @@ public final class RetryConfig<T extends Response> {
                 responseTimeoutMillisForEachAttempt >= 0,
                 "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
                 responseTimeoutMillisForEachAttempt);
+    }
+
+    /**
+     * Returns the maximum allowed number of total attempts made by a {@link RetryingClient}.
+     */
+    public int maxTotalAttempts() {
+        return maxTotalAttempts;
+    }
+
+    /**
+     * Returns the response timeout for each attempt in milliseconds.
+     * When requests in {@link RetryingClient} are made,
+     * corresponding responses are timed out by this value.
+     */
+    public long responseTimeoutMillisForEachAttempt() {
+        return responseTimeoutMillisForEachAttempt;
+    }
+
+    /**
+     * Returns the {@link RetryRule} used by {@link RetryingClient} using this config, could be null.
+     */
+    @Nullable
+    public RetryRule retryRule() {
+        return retryRule;
+    }
+
+    /**
+     * Returns the {@link RetryRuleWithContent} used by {@link RetryingClient} using this config, could be null.
+     */
+    @Nullable
+    public RetryRuleWithContent<T> retryRuleWithContent() {
+        return retryRuleWithContent;
+    }
+
+    /**
+     * Returns the {@link RetryRuleWithContent} converted from the {@link RetryRule} of this config,
+     * could be null.
+     */
+    @Nullable
+    public RetryRule fromRetryRuleWithContent() {
+        return fromRetryRuleWithContent;
+    }
+
+    /**
+     * Returns config's {@code maxContentLength}, which is non-zero only if
+     * a {@link RetryRuleWithContent} is used.
+     */
+    public int maxContentLength() {
+        return maxContentLength;
+    }
+
+    /**
+     * Returns whether a {@link RetryRuleWithContent} is being used.
+     */
+    public boolean needsContentInRule() {
+        return needsContentInRule;
+    }
+
+    /**
+     * Returns whether the associated {@link RetryRule} or {@link RetryRuleWithContent} requires
+     * response trailers.
+     */
+    public boolean requiresResponseTrailers() {
+        return needsContentInRule() ?
+               retryRuleWithContent().requiresResponseTrailers() : retryRule().requiresResponseTrailers();
     }
 }

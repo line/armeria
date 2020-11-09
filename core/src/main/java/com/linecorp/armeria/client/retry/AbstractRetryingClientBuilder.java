@@ -24,6 +24,7 @@ import java.time.Duration;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.client.Client;
@@ -39,14 +40,14 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
 
     @Nullable private final RetryConfigBuilder<O> retryConfig;
 
-    private RetryConfigMapping<O> mapping;
+    @Nullable private final RetryConfigMapping<O> mapping;
 
     /**
      * Creates a new builder with the specified {@link RetryRule}.
      */
     AbstractRetryingClientBuilder(RetryRule retryRule) {
         retryConfig = RetryConfig.builder(requireNonNull(retryRule, "retryRule"));
-        mapping = (ctx, req) -> retryConfig.build();
+        mapping = null;
     }
 
     /**
@@ -54,28 +55,21 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      */
     AbstractRetryingClientBuilder(RetryRuleWithContent<O> retryRuleWithContent) {
         retryConfig = RetryConfig.builder(requireNonNull(retryRuleWithContent, "retryRuleWithContent"));
-        mapping = (ctx, req) -> retryConfig.build();
-    }
-
-    /**
-     * Creates a new builder with the specified {@link RetryRuleWithContent}.
-     */
-    AbstractRetryingClientBuilder(RetryRuleWithContent<O> retryRuleWithContent, int maxContentLength) {
-        retryConfig = RetryConfig.builder(
-                requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
-                maxContentLength);
-        mapping = (ctx, req) -> retryConfig.build();
+        mapping = null;
     }
 
     /**
      * Creates a new builder with the specified {@link RetryConfigMapping}.
      */
     AbstractRetryingClientBuilder(RetryConfigMapping<O> mapping) {
-        this.mapping = requireNonNull(mapping);
+        this.mapping = requireNonNull(mapping, "mapping");
         retryConfig = null;
     }
 
     final RetryConfigMapping<O> mapping() {
+        if (mapping == null) {
+            return (ctx, req) -> retryConfig();
+        }
         return mapping;
     }
 
@@ -97,7 +91,6 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
         checkArgument(maxTotalAttempts > 0,
                       "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
         retryConfig.maxTotalAttempts(maxTotalAttempts);
-        mapping = (ctx, req) -> retryConfig.build();
         return this;
     }
 
@@ -120,7 +113,6 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
                       "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
                       responseTimeoutMillisForEachAttempt);
         retryConfig.responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
-        mapping = (ctx, req) -> retryConfig.build();
         return this;
     }
 
@@ -143,15 +135,32 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
         return responseTimeoutMillisForEachAttempt(responseTimeoutForEachAttempt.toMillis());
     }
 
+    /**
+     * Sets the maximum content length to be used in conjunction with a {@link RetryRuleWithContent}.
+     * This has no effect if a regular {@link RetryRule} is used instead.
+     *
+     * @return {@code this} to support method chaining.
+     */
+    public AbstractRetryingClientBuilder<O> maxContentLength(int maxContentLength) {
+        checkState(
+                retryConfig != null,
+                "You are using a RetryConfigMapping, so you cannot set maxContentLength.");
+        checkArgument(maxContentLength >= 0,
+                      "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
+                      maxContentLength);
+        retryConfig.maxContentLength(maxContentLength);
+        return this;
+    }
+
     @Override
     public String toString() {
         return toStringHelper().toString();
     }
 
     final ToStringHelper toStringHelper() {
-        checkState(
-                retryConfig != null,
-                "You are using a RetryConfigMapping, so you cannot get a string representation.");
+        if (retryConfig == null) {
+            return MoreObjects.toStringHelper(this).add("mapping", mapping);
+        }
         return retryConfig.toStringHelper();
     }
 }

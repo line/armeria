@@ -39,7 +39,7 @@ public final class RetryConfigBuilder<T extends Response> {
     private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
     @Nullable private final RetryRule retryRule;
     @Nullable private final RetryRuleWithContent<T> retryRuleWithContent;
-    private final int maxContentLength;
+    private int maxContentLength;
 
     /**
      * Returns a {@link RetryConfigBuilder} with this {@link RetryRule}.
@@ -54,18 +54,19 @@ public final class RetryConfigBuilder<T extends Response> {
      * Returns a {@link RetryConfigBuilder} with this {@link RetryRuleWithContent}.
      */
     RetryConfigBuilder(RetryRuleWithContent<T> retryRuleWithContent) {
-        this(retryRuleWithContent, Integer.MAX_VALUE);
+        retryRule = null;
+        this.retryRuleWithContent = requireNonNull(retryRuleWithContent);
+        maxContentLength = Integer.MAX_VALUE;
     }
 
     /**
-     * Returns a {@link RetryConfigBuilder} with this {@link RetryRuleWithContent} and maxContentLength.
+     * Sets the maxContentLength to be used with a {@link RetryRuleWithContent}.
      */
-    RetryConfigBuilder(RetryRuleWithContent<T> retryRuleWithContent, int maxContentLength) {
-        retryRule = null;
-        this.retryRuleWithContent = requireNonNull(retryRuleWithContent);
+    public RetryConfigBuilder<T> maxContentLength(int maxContentLength) {
         checkArgument(maxContentLength > 0,
                       "maxContentLength: %s (expected: > 0)", maxContentLength);
         this.maxContentLength = maxContentLength;
+        return this;
     }
 
     /**

@@ -47,7 +47,8 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
      * Creates a new builder with the specified {@link RetryRuleWithContent} and maxContentLength.
      */
     RetryingClientBuilder(RetryRuleWithContent<HttpResponse> retryRuleWithContent, int maxContentLength) {
-        super(retryRuleWithContent, maxContentLength);
+        super(retryRuleWithContent);
+        maxContentLength(maxContentLength);
     }
 
     /**

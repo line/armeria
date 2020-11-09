@@ -27,13 +27,13 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 final class KeyedRetryConfigMapping<T extends Response> implements RetryConfigMapping<T> {
-    private final BiFunction<ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory;
-    private final BiFunction<ClientRequestContext, Request, String> keyFactory;
+    private final BiFunction<? super ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory;
+    private final BiFunction<? super ClientRequestContext, Request, String> keyFactory;
     private final ConcurrentMap<String, RetryConfig<T>>  mapping = new ConcurrentHashMap<>();
 
     KeyedRetryConfigMapping(
-            BiFunction<ClientRequestContext, Request, String> keyFactory,
-            BiFunction<ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory) {
+            BiFunction<? super ClientRequestContext, Request, String> keyFactory,
+            BiFunction<? super ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory) {
         this.keyFactory = requireNonNull(keyFactory, "keyFactory");
         this.retryConfigFactory = requireNonNull(retryConfigFactory, "retryConfigFactory");
     }
