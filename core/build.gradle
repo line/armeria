@@ -215,7 +215,7 @@ class PublicSuffixesTask extends DefaultTask {
                     "${req.getResponseCode()}, ${req.getHeaderFields()}")
         }
         def res = req.getInputStream()
-        res.eachLine {
+        res.eachLine('UTF-8') {
             if (!it.isEmpty() && !it.startsWith("//")) {
                 publicSuffixesFile.append(IDN.toASCII(it) + "\n")
             }
