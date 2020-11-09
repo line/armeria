@@ -123,7 +123,7 @@ final class RouteCache {
                 // RoutingResult may be different to each other for every requests, so we cannot
                 // use it as a cache value.
                 final Route route = routeResolver.apply(cached);
-                final RoutingResult routingResult = route.apply(routingCtx);
+                final RoutingResult routingResult = route.apply(routingCtx, false);
                 return Routed.of(route, routingResult, cached);
             }
 
@@ -155,7 +155,7 @@ final class RouteCache {
         private List<Routed<V>> filterRoutes(List<V> list, RoutingContext routingCtx) {
             return list.stream().map(cached -> {
                 final Route route = routeResolver.apply(cached);
-                final RoutingResult routingResult = route.apply(routingCtx);
+                final RoutingResult routingResult = route.apply(routingCtx, false);
                 return routingResult.isPresent() ? Routed.of(route, routingResult, cached)
                                                  : Routed.<V>empty();
             }).filter(Routed::isPresent).collect(toImmutableList());
