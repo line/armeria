@@ -68,7 +68,8 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
 
     final RetryConfigMapping<O> mapping() {
         if (mapping == null) {
-            return (ctx, req) -> retryConfig();
+            final RetryConfig<O> config = retryConfig();
+            return (ctx, req) -> config;
         }
         return mapping;
     }
