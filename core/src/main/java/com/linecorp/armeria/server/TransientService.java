@@ -32,11 +32,11 @@ public interface TransientService<I extends Request, O extends Response> extends
 
     /**
      * Returns the {@link Set} of {@link OptOutFeature}s that are disabled for this
-     * {@link TransientService}. This returns {@link OptOutFeature#allOf()} if you didn't specify any
-     * {@link OptOutFeature}s using {@link TransientServiceBuilder#optOutFeatures(OptOutFeature...)} when
-     * you create this {@link TransientService}.
+     * {@link TransientService}. This returns {@link OptOutFeature#defaultOptOutFeatures()} if you didn't
+     * specify any {@link OptOutFeature}s using {@link TransientServiceBuilder#optOutFeatures(OptOutFeature...)}
+     * when you create this {@link TransientService}.
      */
     default Set<OptOutFeature> optOutFeatures() {
-        return OptOutFeature.allOf();
+        return OptOutFeature.defaultOptOutFeatures();
     }
 }

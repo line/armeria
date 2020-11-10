@@ -277,7 +277,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     public HealthCheckService build() {
         final Set<OptOutFeature> optOutFeatures;
         if (this.optOutFeatures == null) {
-            optOutFeatures = OptOutFeature.allOf();
+            optOutFeatures = OptOutFeature.defaultOptOutFeatures();
         } else {
             optOutFeatures = Sets.immutableEnumSet(this.optOutFeatures);
         }

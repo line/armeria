@@ -56,9 +56,9 @@ public enum OptOutFeature {
     private static final Set<OptOutFeature> allOf = Sets.immutableEnumSet(EnumSet.allOf(OptOutFeature.class));
 
     /**
-     * Returns.
+     * Returns the default {@link OptOutFeature}s.
      */
-    public static Set<OptOutFeature> allOf() {
+    public static Set<OptOutFeature> defaultOptOutFeatures() {
         return allOf;
     }
 }

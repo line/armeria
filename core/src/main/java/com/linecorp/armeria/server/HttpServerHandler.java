@@ -405,9 +405,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             // Keep track of the number of unfinished requests and
             // clean up the request stream when response stream ends.
-            final boolean countForGracefulShutdown =
-                    !serviceCfg.optOutFeatures().contains(OptOutFeature.GRACEFUL_SHUTDOWN);
-            if (countForGracefulShutdown) {
+            final boolean optOutGracefulShutdown =
+                    serviceCfg.optOutFeatures().contains(OptOutFeature.GRACEFUL_SHUTDOWN);
+            if (!optOutGracefulShutdown) {
                 gracefulShutdownSupport.inc();
             }
             unfinishedRequests.put(req, res);
@@ -443,7 +443,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         req.abort(cause);
                     }
                     // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
-                    if (countForGracefulShutdown) {
+                    if (!optOutGracefulShutdown) {
                         gracefulShutdownSupport.dec();
                     }
                     unfinishedRequests.remove(req);

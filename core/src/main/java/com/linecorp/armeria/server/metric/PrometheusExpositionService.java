@@ -49,7 +49,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
      * {@link CollectorRegistry}.
      */
     public static PrometheusExpositionService of(CollectorRegistry collectorRegistry) {
-        return new PrometheusExpositionService(collectorRegistry, OptOutFeature.allOf());
+        return new PrometheusExpositionService(collectorRegistry, OptOutFeature.defaultOptOutFeatures());
     }
 
     /**
@@ -72,7 +72,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
      */
     @Deprecated
     public PrometheusExpositionService(CollectorRegistry collectorRegistry) {
-        this(collectorRegistry, OptOutFeature.allOf());
+        this(collectorRegistry, OptOutFeature.defaultOptOutFeatures());
     }
 
     PrometheusExpositionService(CollectorRegistry collectorRegistry, Set<OptOutFeature> optOutFeatures) {

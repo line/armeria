@@ -249,7 +249,7 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the {@link EnumSet} of {@link OptOutFeature}s that are disabled for the {@link #service()}.
+     * Returns the {@link Set} of {@link OptOutFeature}s that are disabled for the {@link #service()}.
      */
     public Set<OptOutFeature> optOutFeatures() {
         return optOutFeatures;
