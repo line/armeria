@@ -24,6 +24,7 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -49,7 +50,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
      * {@link CollectorRegistry}.
      */
     public static PrometheusExpositionService of(CollectorRegistry collectorRegistry) {
-        return new PrometheusExpositionService(collectorRegistry, OptOutFeature.defaultOptOutFeatures());
+        return new PrometheusExpositionService(collectorRegistry, Flags.optOutFeatures());
     }
 
     /**
@@ -72,7 +73,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
      */
     @Deprecated
     public PrometheusExpositionService(CollectorRegistry collectorRegistry) {
-        this(collectorRegistry, OptOutFeature.defaultOptOutFeatures());
+        this(collectorRegistry, Flags.optOutFeatures());
     }
 
     PrometheusExpositionService(CollectorRegistry collectorRegistry, Set<OptOutFeature> optOutFeatures) {

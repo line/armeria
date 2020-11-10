@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -277,7 +278,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     public HealthCheckService build() {
         final Set<OptOutFeature> optOutFeatures;
         if (this.optOutFeatures == null) {
-            optOutFeatures = OptOutFeature.defaultOptOutFeatures();
+            optOutFeatures = Flags.optOutFeatures();
         } else {
             optOutFeatures = Sets.immutableEnumSet(this.optOutFeatures);
         }

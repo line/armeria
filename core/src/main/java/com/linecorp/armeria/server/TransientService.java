@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import java.util.Set;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -32,11 +33,11 @@ public interface TransientService<I extends Request, O extends Response> extends
 
     /**
      * Returns the {@link Set} of {@link OptOutFeature}s that are disabled for this
-     * {@link TransientService}. This returns {@link OptOutFeature#defaultOptOutFeatures()} if you didn't
+     * {@link TransientService}. This returns {@link Flags#optOutFeatures()} if you didn't
      * specify any {@link OptOutFeature}s using {@link TransientServiceBuilder#optOutFeatures(OptOutFeature...)}
      * when you create this {@link TransientService}.
      */
     default Set<OptOutFeature> optOutFeatures() {
-        return OptOutFeature.defaultOptOutFeatures();
+        return Flags.optOutFeatures();
     }
 }

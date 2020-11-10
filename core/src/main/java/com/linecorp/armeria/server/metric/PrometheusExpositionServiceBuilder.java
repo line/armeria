@@ -24,6 +24,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.server.OptOutFeature;
 import com.linecorp.armeria.server.TransientServiceBuilder;
 
@@ -64,7 +65,7 @@ public final class PrometheusExpositionServiceBuilder implements TransientServic
     public PrometheusExpositionService build() {
         final Set<OptOutFeature> optOutFeatures;
         if (this.optOutFeatures == null) {
-            optOutFeatures = OptOutFeature.defaultOptOutFeatures();
+            optOutFeatures = Flags.optOutFeatures();
         } else {
             optOutFeatures = ImmutableSet.copyOf(this.optOutFeatures);
         }

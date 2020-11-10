@@ -15,11 +15,6 @@
  */
 package com.linecorp.armeria.server;
 
-import java.util.EnumSet;
-import java.util.Set;
-
-import com.google.common.collect.Sets;
-
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -52,13 +47,4 @@ public enum OptOutFeature {
      * {@link TransientService}.
      */
     ACCESS_LOGGING;
-
-    private static final Set<OptOutFeature> allOf = Sets.immutableEnumSet(EnumSet.allOf(OptOutFeature.class));
-
-    /**
-     * Returns the default {@link OptOutFeature}s.
-     */
-    public static Set<OptOutFeature> defaultOptOutFeatures() {
-        return allOf;
-    }
 }
