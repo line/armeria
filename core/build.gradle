@@ -208,6 +208,8 @@ class PublicSuffixesTask extends DefaultTask {
     def run() {
         try {
             def tempFile = File.createTempFile("public_suffixes", null)
+            println "tempFile is created: ${tempFile}"
+
             def url = 'https://publicsuffix.org/list/public_suffix_list.dat'
             def req = new URL(url).openConnection()
             if (req.getResponseCode() != 200) {
@@ -221,7 +223,11 @@ class PublicSuffixesTask extends DefaultTask {
                 }
             }
             publicSuffixesFile.delete()
+
+            println "public suffixes file is removed: ${publicSuffixesFile}"
             tempFile.renameTo(publicSuffixesFile)
+
+            println "tempFile is renamed"
         } catch (Exception e) {
             project.logger.info(e.getMessage())
         }
@@ -229,4 +235,4 @@ class PublicSuffixesTask extends DefaultTask {
 }
 
 task publicSuffixes(type: PublicSuffixesTask)
-tasks.classes.dependsOn publicSuffixes
+tasks.processResources.dependsOn publicSuffixes
