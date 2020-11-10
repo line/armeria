@@ -95,7 +95,7 @@ public final class ServiceConfig {
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
 
-    static Set<OptOutFeature> extractOptOutFeatures(HttpService service) {
+    private static Set<OptOutFeature> extractOptOutFeatures(HttpService service) {
         @SuppressWarnings("rawtypes")
         final TransientService transientService = service.as(TransientService.class);
         if (transientService == null) {
