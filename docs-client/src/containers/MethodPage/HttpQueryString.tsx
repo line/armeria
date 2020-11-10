@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,18 +15,21 @@
  */
 
 import Button from '@material-ui/core/Button';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@material-ui/core/Select';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { ChangeEvent } from 'react';
-import Dropdown, { Option } from 'react-dropdown';
+
+import { SelectOption } from '../../lib/types';
 
 const queryPlaceHolder = 'foo=bar&baz=qux';
 
 interface Props {
   additionalQueriesOpen: boolean;
-  exampleQueries: Option[];
+  exampleQueries: SelectOption[];
   additionalQueries: string;
-  onSelectedQueriesChange: (selectedQueries: Option) => void;
+  onSelectedQueriesChange: (e: ChangeEvent<{ value: unknown }>) => void;
   onEditHttpQueriesClick: React.Dispatch<unknown>;
   onQueriesFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
@@ -43,11 +46,19 @@ const HttpQueryString: React.FunctionComponent<Props> = (props) => (
         {props.exampleQueries.length > 0 && (
           <>
             <Typography variant="body2" paragraph />
-            <Dropdown
-              placeholder="Select an example queries..."
-              options={props.exampleQueries}
+            <Select
+              fullWidth
+              displayEmpty
+              value=""
+              renderValue={() => 'Select example queries...'}
               onChange={props.onSelectedQueriesChange}
-            />
+            >
+              {props.exampleQueries.map((query) => (
+                <MenuItem key={query.value} value={query.value}>
+                  {query.label}
+                </MenuItem>
+              ))}
+            </Select>
           </>
         )}
         <Typography variant="body2" paragraph />

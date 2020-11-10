@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -410,8 +410,6 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
   return (
     <div className={classes.root}>
       <NoSsr>
-        {/* Can't express nested options with react-select's type definition.
-        // @ts-ignore */}
         <Async
           autoFocus
           classes={classes}

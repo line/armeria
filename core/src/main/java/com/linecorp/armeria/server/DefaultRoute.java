@@ -79,13 +79,16 @@ final class DefaultRoute implements Route {
     }
 
     @Override
-    public RoutingResult apply(RoutingContext routingCtx) {
+    public RoutingResult apply(RoutingContext routingCtx, boolean isRouteDecorator) {
         final RoutingResultBuilder builder = pathMapping.apply(requireNonNull(routingCtx, "routingCtx"));
         if (builder == null) {
             return RoutingResult.empty();
         }
 
         if (!methods.contains(routingCtx.method())) {
+            if (isRouteDecorator) {
+                return RoutingResult.empty();
+            }
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
             if (routingCtx.deferredStatusException() == null) {
@@ -109,6 +112,9 @@ final class DefaultRoute implements Route {
                 }
             }
             if (!contentTypeMatched) {
+                if (isRouteDecorator) {
+                    return RoutingResult.empty();
+                }
                 routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
                 return emptyOrCorsPreflightResult(routingCtx, builder);
             }
@@ -148,6 +154,9 @@ final class DefaultRoute implements Route {
                 }
             }
             if (!found) {
+                if (isRouteDecorator) {
+                    return RoutingResult.empty();
+                }
                 routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
                 return emptyOrCorsPreflightResult(routingCtx, builder);
             }

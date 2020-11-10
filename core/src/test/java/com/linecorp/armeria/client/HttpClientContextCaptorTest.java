@@ -62,8 +62,7 @@ class HttpClientContextCaptorTest {
     void badPath() {
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             // Send a request with a bad path.
-            // Note: A colon cannot come in the first path component.
-            final HttpResponse res = WebClient.of().get("http://127.0.0.1:1/:");
+            final HttpResponse res = WebClient.of().get("http://127.0.0.1:1/|");
             assertThatThrownBy(ctxCaptor::get).isInstanceOf(NoSuchElementException.class)
                                               .hasMessageContaining("no request was made");
             res.aggregate();
