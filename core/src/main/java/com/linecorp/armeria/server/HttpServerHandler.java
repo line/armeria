@@ -61,8 +61,6 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.internal.server.TransientServiceUtil;
-import com.linecorp.armeria.server.TransientService.ActionType;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -408,7 +406,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             // Keep track of the number of unfinished requests and
             // clean up the request stream when response stream ends.
             final boolean countForGracefulShutdown =
-                    TransientServiceUtil.countFor(reqCtx, ActionType.GRACEFUL_SHUTDOWN);
+                    !serviceCfg.optOutFeatures().contains(OptOutFeature.GRACEFUL_SHUTDOWN);
             if (countForGracefulShutdown) {
                 gracefulShutdownSupport.inc();
             }

@@ -16,21 +16,20 @@
 
 package com.linecorp.armeria.server.metric;
 
-import static com.linecorp.armeria.internal.server.TransientServiceUtil.defaultTransientServiceActions;
 import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.Set;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.OptOutFeature;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
 
@@ -50,7 +49,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
      * {@link CollectorRegistry}.
      */
     public static PrometheusExpositionService of(CollectorRegistry collectorRegistry) {
-        return new PrometheusExpositionService(collectorRegistry, defaultTransientServiceActions());
+        return new PrometheusExpositionService(collectorRegistry, OptOutFeature.allOf());
     }
 
     /**
@@ -62,7 +61,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
     }
 
     private final CollectorRegistry collectorRegistry;
-    private final Map<ActionType, Boolean> transientServiceActions;
+    private final Set<OptOutFeature> optOutFeatures;
 
     /**
      * Creates a new instance.
@@ -73,13 +72,12 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
      */
     @Deprecated
     public PrometheusExpositionService(CollectorRegistry collectorRegistry) {
-        this(collectorRegistry, defaultTransientServiceActions());
+        this(collectorRegistry, OptOutFeature.allOf());
     }
 
-    PrometheusExpositionService(CollectorRegistry collectorRegistry,
-                                EnumMap<ActionType, Boolean> transientServiceActions) {
+    PrometheusExpositionService(CollectorRegistry collectorRegistry, Set<OptOutFeature> optOutFeatures) {
         this.collectorRegistry = requireNonNull(collectorRegistry, "collectorRegistry");
-        this.transientServiceActions = ImmutableMap.copyOf(transientServiceActions);
+        this.optOutFeatures = ImmutableSet.copyOf(requireNonNull(optOutFeatures, "optOutFeatures"));
     }
 
     @Override
@@ -97,7 +95,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
     }
 
     @Override
-    public boolean countFor(ActionType type) {
-        return transientServiceActions.get(requireNonNull(type, "type"));
+    public Set<OptOutFeature> optOutFeatures() {
+        return optOutFeatures;
     }
 }

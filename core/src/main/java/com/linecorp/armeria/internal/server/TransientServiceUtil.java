@@ -15,45 +15,30 @@
  */
 package com.linecorp.armeria.internal.server;
 
-import static com.linecorp.armeria.server.TransientService.ActionType.ACCESS_LOGGING;
-import static com.linecorp.armeria.server.TransientService.ActionType.GRACEFUL_SHUTDOWN;
-import static com.linecorp.armeria.server.TransientService.ActionType.LOGGING;
-import static com.linecorp.armeria.server.TransientService.ActionType.METRIC_COLLECTION;
+import static com.linecorp.armeria.server.OptOutFeature.ACCESS_LOGGING;
+import static com.linecorp.armeria.server.OptOutFeature.GRACEFUL_SHUTDOWN;
+import static com.linecorp.armeria.server.OptOutFeature.LOGGING;
+import static com.linecorp.armeria.server.OptOutFeature.METRIC_COLLECTION;
 
-import java.util.EnumMap;
+import java.util.Set;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
-import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.OptOutFeature;
 import com.linecorp.armeria.server.TransientService;
-import com.linecorp.armeria.server.TransientService.ActionType;
 
 public final class TransientServiceUtil {
 
-    private static final EnumMap<ActionType, Boolean> defaultTransientServiceActions =
-            Maps.newEnumMap(ImmutableMap.of(GRACEFUL_SHUTDOWN, false,
-                                            METRIC_COLLECTION, false,
-                                            LOGGING, false,
-                                            ACCESS_LOGGING, false));
+    private static final Set<OptOutFeature> defaultoptOutFeatures =
+            Sets.newEnumSet(ImmutableSet.of(GRACEFUL_SHUTDOWN, METRIC_COLLECTION, LOGGING, ACCESS_LOGGING),
+                            OptOutFeature.class);
 
     /**
      * Returns the default {@link TransientService} actions.
      */
-    public static EnumMap<ActionType, Boolean> defaultTransientServiceActions() {
-        return defaultTransientServiceActions;
-    }
-
-    /**
-     * Tells whether the specified {@link ActionType} is enabled for the {@link Service}
-     * in the specified {@link ServiceRequestContext}.
-     * If the {@link Service} is not a {@link TransientService}, this returns {@code true}.
-     */
-    public static boolean countFor(ServiceRequestContext ctx, ActionType type) {
-        @SuppressWarnings("rawtypes")
-        final TransientService transientService = ctx.config().service().as(TransientService.class);
-        return transientService == null || transientService.countFor(type);
+    public static Set<OptOutFeature> defaultoptOutFeatures() {
+        return defaultoptOutFeatures;
     }
 
     private TransientServiceUtil() {}

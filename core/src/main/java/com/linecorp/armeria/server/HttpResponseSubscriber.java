@@ -44,8 +44,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.internal.server.TransientServiceUtil;
-import com.linecorp.armeria.server.TransientService.ActionType;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.ChannelFuture;
@@ -330,7 +328,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         if (tryComplete()) {
             setDone(true);
             logBuilder().endResponse(cause);
-            if (TransientServiceUtil.countFor(reqCtx, ActionType.ACCESS_LOGGING)) {
+            if (!reqCtx.config().optOutFeatures().contains(OptOutFeature.ACCESS_LOGGING)) {
                 reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
             }
         }
@@ -396,7 +394,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     // Write an access log always with a cause. Respect the first specified cause.
                     if (tryComplete()) {
                         logBuilder().endResponse(cause);
-                        if (TransientServiceUtil.countFor(reqCtx, ActionType.ACCESS_LOGGING)) {
+                        if (!reqCtx.config().optOutFeatures().contains(OptOutFeature.ACCESS_LOGGING)) {
                             reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
                         }
                     }
@@ -500,7 +498,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             if (endOfStream) {
                 if (tryComplete()) {
                     logBuilder().endResponse();
-                    if (TransientServiceUtil.countFor(reqCtx, ActionType.ACCESS_LOGGING)) {
+                    if (!reqCtx.config().optOutFeatures().contains(OptOutFeature.ACCESS_LOGGING)) {
                         reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
                     }
                 }

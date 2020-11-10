@@ -15,39 +15,46 @@
  */
 package com.linecorp.armeria.server.metric;
 
-import static com.linecorp.armeria.internal.server.TransientServiceUtil.defaultTransientServiceActions;
 import static java.util.Objects.requireNonNull;
 
-import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.Set;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
+import javax.annotation.Nullable;
 
-import com.linecorp.armeria.server.TransientService.ActionType;
+import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.server.OptOutFeature;
+import com.linecorp.armeria.server.TransientServiceBuilder;
 
 import io.prometheus.client.CollectorRegistry;
 
 /**
  * Builds a {@link PrometheusExpositionService}.
  */
-public final class PrometheusExpositionServiceBuilder {
+public final class PrometheusExpositionServiceBuilder implements TransientServiceBuilder {
 
     private final CollectorRegistry collectorRegistry;
 
-    private final EnumMap<ActionType, Boolean> transientServiceActions;
+    @Nullable
+    private Set<OptOutFeature> optOutFeatures;
 
     PrometheusExpositionServiceBuilder(CollectorRegistry collectorRegistry) {
         this.collectorRegistry = requireNonNull(collectorRegistry, "collectorRegistry");
-        transientServiceActions = new EnumMap<>(ActionType.class);
-        transientServiceActions.putAll(defaultTransientServiceActions());
     }
 
-    /**
-     * Sets whether the specified {@link ActionType} is enabled or not for the
-     * {@link #build() PrometheusExpositionService}. All {@link ActionType}s are disabled by default.
-     */
-    public PrometheusExpositionServiceBuilder transientServiceAction(ActionType actionType, boolean enable) {
-        transientServiceActions.put(requireNonNull(actionType, "actionType"), enable);
+    @Override
+    public PrometheusExpositionServiceBuilder optOutFeatures(OptOutFeature... optOutFeatures) {
+        return optOutFeatures(ImmutableSet.copyOf(requireNonNull(optOutFeatures, "optOutFeatures")));
+    }
+
+    @Override
+    public PrometheusExpositionServiceBuilder optOutFeatures(Iterable<OptOutFeature> optOutFeatures) {
+        requireNonNull(optOutFeatures, "optOutFeatures");
+        if (this.optOutFeatures == null) {
+            this.optOutFeatures = EnumSet.noneOf(OptOutFeature.class);
+        }
+        this.optOutFeatures.addAll(ImmutableSet.copyOf(optOutFeatures));
         return this;
     }
 
@@ -55,7 +62,13 @@ public final class PrometheusExpositionServiceBuilder {
      * Returns a newly-created {@link PrometheusExpositionService} based on the properties of this builder.
      */
     public PrometheusExpositionService build() {
-        return new PrometheusExpositionService(collectorRegistry,
-                                               Maps.newEnumMap(ImmutableMap.copyOf(transientServiceActions)));
+        final Set<OptOutFeature> optOutFeatures;
+        if (this.optOutFeatures == null) {
+            optOutFeatures = OptOutFeature.allOf();
+        } else {
+            optOutFeatures = ImmutableSet.copyOf(this.optOutFeatures);
+        }
+
+        return new PrometheusExpositionService(collectorRegistry, optOutFeatures);
     }
 }

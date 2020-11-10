@@ -16,32 +16,32 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.server.TransientServiceUtil.defaultTransientServiceActions;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.OptOutFeature;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.TransientService.ActionType;
+import com.linecorp.armeria.server.TransientServiceBuilder;
 import com.linecorp.armeria.server.auth.AuthService;
 
 /**
  * Builds a {@link HealthCheckService}.
  */
-public final class HealthCheckServiceBuilder {
+public final class HealthCheckServiceBuilder implements TransientServiceBuilder {
 
     private static final int DEFAULT_LONG_POLLING_TIMEOUT_SECONDS = 60;
     private static final int DEFAULT_PING_INTERVAL_SECONDS = 5;
@@ -59,12 +59,10 @@ public final class HealthCheckServiceBuilder {
     private long pingIntervalMillis = TimeUnit.SECONDS.toMillis(DEFAULT_PING_INTERVAL_SECONDS);
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
-    private final EnumMap<ActionType, Boolean> transientServiceActions;
+    @Nullable
+    private Set<OptOutFeature> optOutFeatures;
 
-    HealthCheckServiceBuilder() {
-        transientServiceActions = new EnumMap<>(ActionType.class);
-        transientServiceActions.putAll(defaultTransientServiceActions());
-    }
+    HealthCheckServiceBuilder() {}
 
     /**
      * Adds the specified {@link HealthChecker}s that determine the healthiness of the {@link Server}.
@@ -259,12 +257,17 @@ public final class HealthCheckServiceBuilder {
         return this;
     }
 
-    /**
-     * Sets whether the specified {@link ActionType} is enabled or not for the
-     * {@link #build() HealthCheckService}. All {@link ActionType}s are disabled by default.
-     */
-    public HealthCheckServiceBuilder transientServiceAction(ActionType actionType, boolean enable) {
-        transientServiceActions.put(requireNonNull(actionType, "actionType"), enable);
+    @Override
+    public HealthCheckServiceBuilder optOutFeatures(OptOutFeature... optOutFeatures) {
+        return optOutFeatures(ImmutableSet.copyOf(requireNonNull(optOutFeatures, "optOutFeatures")));
+    }
+
+    @Override
+    public HealthCheckServiceBuilder optOutFeatures(Iterable<OptOutFeature> optOutFeatures) {
+        if (this.optOutFeatures == null) {
+            this.optOutFeatures = EnumSet.noneOf(OptOutFeature.class);
+        }
+        this.optOutFeatures.addAll(ImmutableSet.copyOf(optOutFeatures));
         return this;
     }
 
@@ -272,10 +275,16 @@ public final class HealthCheckServiceBuilder {
      * Returns a newly created {@link HealthCheckService} built from the properties specified so far.
      */
     public HealthCheckService build() {
+        final Set<OptOutFeature> optOutFeatures;
+        if (this.optOutFeatures == null) {
+            optOutFeatures = OptOutFeature.allOf();
+        } else {
+            optOutFeatures = Sets.immutableEnumSet(this.optOutFeatures);
+        }
+
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      pingIntervalMillis, updateHandler,
-                                      Maps.newEnumMap(ImmutableMap.copyOf(transientServiceActions)));
+                                      pingIntervalMillis, updateHandler, optOutFeatures);
     }
 }

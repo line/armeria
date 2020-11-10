@@ -18,12 +18,15 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -55,6 +58,7 @@ public final class ServiceConfig {
 
     private final AccessLogWriter accessLogWriter;
     private final boolean shutdownAccessLogWriterOnStop;
+    private final Set<OptOutFeature> optOutFeatures;
     private final boolean handlesCorsPreflight;
 
     /**
@@ -65,7 +69,7 @@ public final class ServiceConfig {
                   long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
                   AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
         this(null, route, service, defaultServiceName, defaultLogName, requestTimeoutMillis, maxRequestLength,
-             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
+             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop, extractOptOutFeatures(service));
     }
 
     /**
@@ -74,7 +78,8 @@ public final class ServiceConfig {
     private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, HttpService service,
                           @Nullable String defaultServiceName, @Nullable String defaultLogName,
                           long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
-                          AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
+                          AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
+                          Set<OptOutFeature> optOutFeatures) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
@@ -85,8 +90,21 @@ public final class ServiceConfig {
         this.verboseResponses = verboseResponses;
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
+        this.optOutFeatures = requireNonNull(optOutFeatures, "optOutFeatures");
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
+    }
+
+    static Set<OptOutFeature> extractOptOutFeatures(HttpService service) {
+        @SuppressWarnings("rawtypes")
+        final TransientService transientService = service.as(TransientService.class);
+        if (transientService == null) {
+            return Sets.immutableEnumSet(EnumSet.noneOf(OptOutFeature.class));
+        }
+        @SuppressWarnings("unchecked")
+        final Set<OptOutFeature> optOutFeatures =
+                (Set<OptOutFeature>) transientService.optOutFeatures();
+        return optOutFeatures;
     }
 
     static long validateRequestTimeoutMillis(long requestTimeoutMillis) {
@@ -108,7 +126,7 @@ public final class ServiceConfig {
         requireNonNull(virtualHost, "virtualHost");
         return new ServiceConfig(virtualHost, route, service, defaultServiceName, defaultLogName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, optOutFeatures);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -116,7 +134,7 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, service.decorate(decorator),
                                  defaultServiceName, defaultLogName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, optOutFeatures);
     }
 
     /**
@@ -228,6 +246,13 @@ public final class ServiceConfig {
      */
     public boolean shutdownAccessLogWriterOnStop() {
         return shutdownAccessLogWriterOnStop;
+    }
+
+    /**
+     * Returns the {@link EnumSet} of {@link OptOutFeature}s that are disabled for the {@link #service()}.
+     */
+    public Set<OptOutFeature> optOutFeatures() {
+        return optOutFeatures;
     }
 
     /**
