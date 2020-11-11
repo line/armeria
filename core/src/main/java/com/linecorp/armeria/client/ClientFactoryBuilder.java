@@ -302,11 +302,11 @@ public final class ClientFactoryBuilder {
 
     /**
      * Sets whether to allow
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A"/>TLS 1.2 Cipher Suite Block List</>
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">TLS 1.2 Cipher Suite Block List</a>
      * for TLS negotiation.
      *
      * <p>Note that the blocked cipher suites do not meet minimum security requirements.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2>Section 9.2.2, RFC7540</a> for
+     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      */
     public ClientFactoryBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
