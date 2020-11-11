@@ -376,7 +376,8 @@ final class AnnotationUtil {
             if (ifaceNames.isEmpty()) {
                 logger.debug("Disallowed listing an annotation with a cyclic reference: {}", typeName);
             } else {
-                logger.debug("Disallowed listing an annotation with a cyclic reference: {}{}", typeName, ifaceNames);
+                logger.debug("Disallowed listing an annotation with a cyclic reference: {}{}",
+                             typeName, ifaceNames);
             }
         }
     }
