@@ -34,8 +34,10 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
+import io.netty.util.ReferenceCountUtil;
 
 class SslContextUtilTest {
 
@@ -82,13 +84,11 @@ class SslContextUtilTest {
     private static String getBlackListedCipher() {
         for (String cipher : HTTP2_BLACKLISTED_CIPHERS) {
             try {
-                BouncyCastleKeyFactoryProvider.call(() -> {
+                final SslContext sslCtx = BouncyCastleKeyFactoryProvider.call(() -> {
                     final SslContextBuilder builder = SslContextBuilder.forClient();
                     final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
                     builder.sslProvider(provider);
-
-                    builder.protocols("TLSv1.2")
-                           .ciphers(ImmutableList.of(cipher));
+                    builder.protocols("TLSv1.2").ciphers(ImmutableList.of(cipher));
 
                     try {
                         return builder.build();
@@ -96,6 +96,7 @@ class SslContextUtilTest {
                         return Exceptions.throwUnsafely(e);
                     }
                 });
+                ReferenceCountUtil.release(sslCtx);
                 return cipher;
             } catch (Exception e) {
                 continue;
