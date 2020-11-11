@@ -20,6 +20,9 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -33,6 +36,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Publisher;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 
@@ -113,6 +119,27 @@ class ProtobufResponseAnnotatedServiceTest {
                              SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
         }
 
+        @Get("/protobuf+json/list")
+        @Produces("application/protobuf+json")
+        public List<SimpleResponse> protobufJsonList() {
+            return ImmutableList.of(SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build(),
+                                    SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
+        }
+
+        @Get("/protobuf+json/set")
+        @Produces("application/protobuf+json")
+        public Set<SimpleResponse> protobufJsonSet() {
+            return ImmutableSet.of(SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build(),
+                                   SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
+        }
+
+        @Get("/protobuf+json/map")
+        @Produces("application/protobuf+json")
+        public Map<String, SimpleResponse> protobufJsonMap() {
+            return ImmutableMap.of("json1", SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build(),
+                                   "json2", SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
+        }
+
         @Get("/protobuf/stream")
         @Produces(MediaTypeNames.PROTOBUF)
         public Stream<SimpleResponse> protobufStream() {
@@ -136,7 +163,7 @@ class ProtobufResponseAnnotatedServiceTest {
         Assertions.assertThat(simpleResponse.getMessage()).isEqualTo("Hello, Armeria!");
     }
 
-    @CsvSource({"json", "protobuf+json"})
+    @CsvSource({ "json", "protobuf+json" })
     @ParameterizedTest
     void protobufJsonResponse(String contentType) throws InvalidProtocolBufferException {
         final AggregatedHttpResponse response = client.get('/' + contentType).aggregate().join();
@@ -164,12 +191,23 @@ class ProtobufResponseAnnotatedServiceTest {
         assertThatJson(response.contentUtf8()).isEqualTo(expected);
     }
 
-    @Test
-    void protobufJsonStreamResponse() throws InvalidProtocolBufferException {
-        final AggregatedHttpResponse response = client.get("/protobuf+json/stream").aggregate().join();
+    @CsvSource({"stream", "list", "set"})
+    @ParameterizedTest
+    void protobufJsonCollectionResponse(String type) throws InvalidProtocolBufferException {
+        final AggregatedHttpResponse response = client.get("/protobuf+json/" + type).aggregate().join();
         final MediaType mediaType = response.headers().contentType();
         assertThat(mediaType.subtype()).isEqualTo("protobuf+json");
         final String expected = "[{\"message\":\"Hello, Armeria1!\"},{\"message\":\"Hello, Armeria2!\"}]";
+        assertThatJson(response.contentUtf8()).isEqualTo(expected);
+    }
+
+    @Test
+    void protobufJsonMapResponse() throws InvalidProtocolBufferException {
+        final AggregatedHttpResponse response = client.get("/protobuf+json/map").aggregate().join();
+        final MediaType mediaType = response.headers().contentType();
+        assertThat(mediaType.subtype()).isEqualTo("protobuf+json");
+        final String expected = "{\"json1\": {\"message\":\"Hello, Armeria1!\"}," +
+                                "\"json2\": {\"message\":\"Hello, Armeria2!\"}}";
         assertThatJson(response.contentUtf8()).isEqualTo(expected);
     }
 

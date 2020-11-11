@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.protobuf;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import org.reactivestreams.Publisher;
@@ -58,12 +59,16 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
         if (type instanceof ParameterizedType) {
             final ParameterizedType parameterizedType = (ParameterizedType) type;
             final Class<?> rawType = (Class<?>) parameterizedType.getRawType();
+
             if (Iterable.class.isAssignableFrom(rawType) ||
                 Stream.class.isAssignableFrom(rawType) ||
                 Publisher.class.isAssignableFrom(rawType)) {
+                final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[0];
+                return Message.class.isAssignableFrom(typeArgument);
+            }
 
-                final Class<?> typeArgument =
-                        (Class<?>) parameterizedType.getActualTypeArguments()[0];
+            if (Map.class.isAssignableFrom(rawType)) {
+                final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[1];
                 return Message.class.isAssignableFrom(typeArgument);
             }
         }

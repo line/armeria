@@ -296,7 +296,7 @@ private Configuration configureShadedTestRuntimeConfiguration(
     def targetConfigurationName
     if (project == recursedProject) {
         targetConfigurationName = 'testRuntimeClasspath'
-    }  else {
+    } else {
         targetConfigurationName = 'runtimeClasspath'
     }
     def projectDependencies = []

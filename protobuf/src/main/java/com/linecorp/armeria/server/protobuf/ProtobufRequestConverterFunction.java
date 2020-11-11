@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.protobuf;
 
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunctionProvider.toResultType;
+import static com.linecorp.armeria.server.protobuf.ProtobufResponseConverterFunction.X_PROTOBUF;
 import static java.lang.invoke.MethodType.methodType;
 import static java.util.Objects.requireNonNull;
 
@@ -27,6 +28,7 @@ import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Iterator;
@@ -61,7 +63,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
  * {@link RequestHeaders} is either one of {@link MediaType#PROTOBUF} or {@link MediaType#OCTET_STREAM} or
  * the {@link MediaType#subtype()} contains {@code "protobuf"}.
  * The {@link Parser} for JSON is applied only when the {@code content-type} of
- * the {@link RequestHeaders} is {@link MediaType#JSON} or ends with {@code +json}.
+ * the {@link RequestHeaders} is either {@link MediaType#JSON} or ends with {@code +json}.
  *
  * <h3>Conversion of multiple Protobuf messages</h3>
  * A sequence of Protocol Buffer messages can not be handled by this {@link RequestConverterFunction},
@@ -136,19 +138,21 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
                                  @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
 
         final MediaType contentType = request.contentType();
+        final Charset charset = contentType == null ? StandardCharsets.UTF_8
+                                              : contentType.charset(StandardCharsets.UTF_8);
+
         if (resultType == ResultType.PROTOBUF ||
             (resultType == ResultType.UNKNOWN && Message.class.isAssignableFrom(expectedResultType))) {
             final Message.Builder messageBuilder = getMessageBuilder(expectedResultType);
 
-            if (contentType == null ||
-                contentType.subtype().contains("protobuf") || contentType.is(MediaType.OCTET_STREAM)) {
+            if (isProtobuf(contentType)) {
                 try (InputStream is = request.content().toInputStream()) {
                     return messageBuilder.mergeFrom(is, extensionRegistry).build();
                 }
             }
 
             if (isJson(contentType)) {
-                jsonParser.merge(request.content(contentType.charset(StandardCharsets.UTF_8)), messageBuilder);
+                jsonParser.merge(request.content(charset), messageBuilder);
                 return messageBuilder.build();
             }
         }
@@ -167,7 +171,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         }
 
         final Type[] typeArguments = expectedParameterizedResultType.getActualTypeArguments();
-        final String content = request.content(contentType.charset(StandardCharsets.UTF_8));
+        final String content = request.content(charset);
         final JsonNode jsonNode = mapper.readTree(content);
 
         switch (resultType) {
@@ -206,6 +210,13 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         }
 
         return RequestConverterFunction.fallthrough();
+    }
+
+    private static boolean isProtobuf(@Nullable MediaType contentType) {
+        return contentType == null ||
+               contentType.is(MediaType.PROTOBUF) ||
+               contentType.is(X_PROTOBUF) ||
+               contentType.is(MediaType.OCTET_STREAM);
     }
 
     static boolean isJson(@Nullable MediaType contentType) {

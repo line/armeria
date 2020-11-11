@@ -23,6 +23,8 @@ includeWithFlags ':reactor3',                            'java', 'publish', 'rel
 includeWithFlags ':retrofit2',                           'java', 'publish', 'relocate'
 includeWithFlags ':rxjava2',                             'java', 'publish', 'relocate'
 includeWithFlags ':rxjava3',                             'java', 'publish', 'relocate'
+// TODO(ikhoon): Support shaded jar for multi version scala
+includeWithFlags ':scalapb',                             'java', 'publish', 'scala-grpc_2.13'
 includeWithFlags ':spring:boot1-autoconfigure',          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot1-starter',                'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot2-actuator-autoconfigure', 'java', 'publish', 'relocate'

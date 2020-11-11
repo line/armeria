@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -50,7 +51,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 /**
  * A {@link ResponseConverterFunction} which creates an {@link HttpResponse} with
  * {@code content-type: application/protobuf} or {@code content-type: application/json; charset=utf-8}.
- * If the returned object is instance of {@link MessageLite}, the object can be converted to
+ * If the returned object is instance of {@link MessageLite}, the object can be converted to either
  * <a href="https://developers.google.com/protocol-buffers/docs/encoding">Protocol Buffers</a> or
  * <a href="https://developers.google.com/protocol-buffers/docs/proto3#json">JSON</a> format.
  *
@@ -69,7 +70,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 @UnstableApi
 public final class ProtobufResponseConverterFunction implements ResponseConverterFunction {
 
-    private static final MediaType X_PROTOBUF = MediaType.create("application", "x-protobuf");
+    static final MediaType X_PROTOBUF = MediaType.create("application", "x-protobuf");
     private static final Printer defaultJsonPrinter = JsonFormat.printer();
 
     private final Printer jsonPrinter;
@@ -156,6 +157,14 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             return Streams.stream((Iterable<?>) message)
                           .map(this::toJson)
                           .collect(Collectors.joining(",", "[", "]"));
+        }
+
+        if (message instanceof Map) {
+            final Map<?, ?> map = (Map<?, ?>) message;
+            return map.entrySet()
+                      .stream()
+                      .map(entry -> '"' + entry.getKey().toString() + "\":" + toJson(entry.getValue()))
+                      .collect(Collectors.joining(",", "{", "}"));
         }
 
         if (!(message instanceof MessageOrBuilder)) {
