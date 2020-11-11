@@ -1074,8 +1074,8 @@ public final class Flags {
 
     /**
      * Returns whether to allow
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A"/>TLS 1.2 Cipher Suite Block List</> for
-     * TLS negotiation.
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">TLS 1.2 Cipher Suite Block List</a> for
+     * TLS handshake.
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#tlsAllowUnsafeCiphers(boolean)}.
      *
