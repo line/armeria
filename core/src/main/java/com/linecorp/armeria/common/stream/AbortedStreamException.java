@@ -31,12 +31,15 @@ public final class AbortedStreamException extends RuntimeException {
     static final AbortedStreamException INSTANCE = new AbortedStreamException(false);
 
     /**
-     * Returns a {@link AbortedStreamException} which may be a singleton or a new instance, depending on
-     * {@link Flags#verboseExceptionSampler()}'s decision.
+     * Returns a newly-created {@link AbortedStreamException}.
+     *
+     * <p>This method used to return a singleton or a new instance, depending on
+     * {@link Flags#verboseExceptionSampler()}'s decision. That's why the name of this method is {@code get}.
+     * However, if there's a problem in certain circumstances, it is very hard to find the cause with
+     * the singleton {@link AbortedStreamException}. So we have changed to return a newly-created instance.
      */
     public static AbortedStreamException get() {
-        return Flags.verboseExceptionSampler().isSampled(AbortedStreamException.class) ?
-               new AbortedStreamException() : INSTANCE;
+        return new AbortedStreamException();
     }
 
     private AbortedStreamException() {}
