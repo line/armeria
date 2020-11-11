@@ -459,7 +459,6 @@ public final class ClientFactoryOptions
         return get(PROXY_CONFIG_SELECTOR);
     }
 
-
     /**
      * Returns whether to allow
      * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">TLS 1.2 Cipher Suite Block List</a> for
