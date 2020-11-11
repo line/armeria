@@ -32,10 +32,9 @@ final class ScalaPbRequestConverterFunctionProvider extends RequestConverterFunc
       requestType: Type,
       requestConverter: RequestConverterFunction): RequestConverterFunction = {
     val resultType = toResultType(requestType)
-    if (resultType != ResultType.UNKNOWN) {
+    if (resultType != ResultType.UNKNOWN)
       ScalaPbRequestConverterFunction(resultType)
-    } else {
+    else
       null
-    }
   }
 }

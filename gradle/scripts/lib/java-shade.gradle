@@ -70,7 +70,15 @@ configure(relocatedProjects) {
             description: 'Extracts the shaded test JAR.',
             dependsOn: tasks.shadedTestJar) {
 
-        from(zipTree(tasks.shadedTestJar.archivePath))
+        def archivePath = tasks.shadedTestJar.archivePath
+        if (project.hasFlags('scala')) {
+            def microVersionIndex = project.ext.defaultScalaVersions.lastIndexOf('.')
+            def scalaVersionSuffix = project.ext.defaultScalaVersions.substring(0, microVersionIndex)
+            def absolutePath = archivePath.getPath()
+
+            archivePath = new java.io.File(absolutePath.replaceFirst("-shaded", "-shaded_$scalaVersionSuffix"))
+        }
+        from(zipTree(archivePath))
         from(sourceSets.test.output.classesDirs) {
             // Add the JAR resources excluded in the 'shadedTestJar' task.
             include '**/*.jar'

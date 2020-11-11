@@ -24,7 +24,9 @@ dependencies {
 compileScala.targetCompatibility = 1.8
 ScalaCompileOptions.metaClass.useAnt = false
 
-project.ext.getLintTask().dependsOn tasks.checkScalafmtAll
+// Run `scalafmt` to automatically format scala code from all source sets
+// https://github.com/alenkacz/gradle-scalafmt#tasks
+project.ext.getLintTask().dependsOn tasks.checkScalafmt
 
 task aggregatedScaladocs(
         type: ScalaDoc,
@@ -43,3 +45,12 @@ task aggregatedScaladocs(
         }
     }
 }
+sourceSets {
+    test {
+        scala {
+            srcDirs "${protobuf.generatedFilesBaseDir}/test/scalapb"
+        }
+    }
+}
+
+

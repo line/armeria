@@ -43,9 +43,8 @@ class ScalaPbRequestAnnotatedServiceTest {
   }
 
   @AfterEach
-  def tearDown(): Unit = {
+  def tearDown(): Unit =
     server.stop()
-  }
 
   @Test
   def protobufRequest(): Unit = {
@@ -74,12 +73,13 @@ class ScalaPbRequestAnnotatedServiceTest {
     assertThat(response.contentUtf8).isEqualTo("Sum: 3")
   }
 
-  @Test
-  def jsonObjectRequest(): Unit = {
+  @CsvSource(Array("/json+object", "/json+object2"))
+  @ParameterizedTest
+  def jsonObjectRequest(path: String): Unit = {
     val simpleRequest1 = SimpleRequest(size = 1)
     val simpleRequest2 = SimpleRequest(size = 2)
     val jsonObject: String = toJson(Map("json1" -> simpleRequest1, "json2" -> simpleRequest2))
-    val request: HttpRequest = HttpRequest.of(HttpMethod.POST, "/json+object", MediaType.JSON, jsonObject)
+    val request: HttpRequest = HttpRequest.of(HttpMethod.POST, path, MediaType.JSON, jsonObject)
     val response: AggregatedHttpResponse = client.execute(request).aggregate.join
     assertThat(response.contentUtf8).isEqualTo("OK")
   }
@@ -88,9 +88,8 @@ class ScalaPbRequestAnnotatedServiceTest {
 object ScalaPbRequestAnnotatedServiceTest {
 
   val server = new ServerExtension() {
-    override protected def configure(sb: ServerBuilder): Unit = {
+    override protected def configure(sb: ServerBuilder): Unit =
       sb.annotatedService(new GreetingService)
-    }
   }
 
   private class GreetingService {
@@ -112,6 +111,14 @@ object ScalaPbRequestAnnotatedServiceTest {
     @Post("/json+object")
     @ConsumesJson
     def consumeJson3(request: Map[String, SimpleRequest]): String = {
+      assertThat(request("json1").size).isEqualTo(1)
+      assertThat(request("json2").size).isEqualTo(2)
+      "OK"
+    }
+
+    @Post("/json+object2")
+    @ConsumesJson
+    def consumeJson3(request: java.util.Map[String, SimpleRequest]): String = {
       assertThat(request.get("json1").size).isEqualTo(1)
       assertThat(request.get("json2").size).isEqualTo(2)
       "OK"

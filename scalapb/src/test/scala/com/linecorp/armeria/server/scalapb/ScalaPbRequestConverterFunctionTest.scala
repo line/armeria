@@ -103,13 +103,13 @@ class ScalaPbRequestConverterFunctionTest {
   def jsonArrayWithNoContentType(collection: Any, json: String, typeToken: TypeToken[_]): Unit = {
     val converter = ScalaPbRequestConverterFunction()
     val req = AggregatedHttpRequest.of(ctx.request.headers, HttpData.ofUtf8(json))
-    assertThatThrownBy(() => {
+    assertThatThrownBy { () =>
       converter.convertRequest(
         ctx,
         req,
         typeToken.getRawType,
         typeToken.getType.asInstanceOf[ParameterizedType])
-    }).isInstanceOf(classOf[FallthroughException])
+    }.isInstanceOf(classOf[FallthroughException])
   }
 }
 
@@ -157,28 +157,24 @@ private[scalapb] object ScalaPbRequestConverterFunctionTest {
 
   }
 
-  def toJson(messages: Iterable[GeneratedMessage]): String = {
+  def toJson(messages: Iterable[GeneratedMessage]): String =
     messages.map(printer.print).mkString("[", ",", "]")
-  }
 
-  def toJson(messages: java.util.Collection[SimpleRequest]): String = {
+  def toJson(messages: java.util.Collection[SimpleRequest]): String =
     messages
       .stream()
       .map(req => printer.print(req))
       .collect(Collectors.joining(",", "[", "]"))
-  }
 
-  def toJson(messages: Map[String, GeneratedMessage]): String = {
+  def toJson(messages: Map[String, GeneratedMessage]): String =
     messages
       .map { case (k, v) => s""""$k": ${printer.print(v)}""" }
       .mkString("{", ",", "}")
-  }
 
-  def toJson(messages: java.util.Map[String, SimpleRequest]): String = {
+  def toJson(messages: java.util.Map[String, SimpleRequest]): String =
     messages
       .entrySet()
       .stream()
       .map(entry => s""""${entry.getKey}": ${printer.print(entry.getValue)}""")
       .collect(Collectors.joining(",", "{", "}"))
-  }
 }

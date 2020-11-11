@@ -64,7 +64,7 @@ class ScalaPbResponseAnnotatedServiceTest {
   @CsvSource(Array("json", "protobuf+json"))
   @ParameterizedTest
   def protobufJsonResponse(contentType: String): Unit = {
-    val response: AggregatedHttpResponse = client.get('/' + contentType).aggregate.join
+    val response: AggregatedHttpResponse = client.get(s"/$contentType").aggregate.join
     assertThat(response.headers.contentType.subtype).isEqualTo(contentType)
     val simpleResponse = parser.fromJsonString[SimpleResponse](response.contentUtf8())
     Assertions.assertThat(simpleResponse.message).isEqualTo("Hello, Armeria!")
