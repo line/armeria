@@ -17,69 +17,61 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.BiFunction;
+import java.util.stream.Stream;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 
 /**
- * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to its {@link MappingKey}.
- * If there is no circuit breaker bound to the key, a new one is created by using the given circuit breaker
- * factory.
+ * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to a combination of host, method and/or
+ * path. If there is no circuit breaker bound to the key, a new one is created by using the given circuit
+ * breaker factory.
  */
 final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
-    static final CircuitBreakerMapping hostMapping =
-            new KeyedCircuitBreakerMapping(MappingKey.HOST, (host, method) -> CircuitBreaker.of(host));
+    static final CircuitBreakerMapping hostMapping = new KeyedCircuitBreakerMapping(
+            true, false, false, (host, method, path) -> CircuitBreaker.of(host));
 
     private final ConcurrentMap<String, CircuitBreaker> mapping = new ConcurrentHashMap<>();
 
-    private final MappingKey mappingKey;
-    private final BiFunction<String, String, ? extends CircuitBreaker> factory;
+    private final boolean isPerHost;
+    private final boolean isPerMethod;
+    private final boolean isPerPath;
+    private final CircuitBreakerFactory factory;
 
     /**
-     * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link MappingKey} and
+     * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link CircuitBreakerMappingBuilder} and
      * {@link CircuitBreaker} factory.
      */
-    KeyedCircuitBreakerMapping(MappingKey mappingKey,
-                               BiFunction<String, String, ? extends CircuitBreaker> factory) {
-        this.mappingKey = requireNonNull(mappingKey, "mappingKey");
+    KeyedCircuitBreakerMapping(
+            boolean perHost, boolean perMethod, boolean perPath, CircuitBreakerFactory factory) {
+        isPerHost = perHost;
+        isPerMethod = perMethod;
+        isPerPath = perPath;
         this.factory = requireNonNull(factory, "factory");
     }
 
     @Override
     public CircuitBreaker get(ClientRequestContext ctx, Request req) throws Exception {
-        final String key;
-        final String host;
-        final String method;
-        switch (mappingKey) {
-            case HOST:
-                key = host = host(ctx);
-                method = null;
-                break;
-            case METHOD:
-                host = null;
-                key = method = method(ctx);
-                break;
-            case HOST_AND_METHOD:
-                host = host(ctx);
-                method = method(ctx);
-                key = host + '#' + method;
-                break;
-            default:
-                // should never reach here.
-                throw new Error();
-        }
+        final String host = isPerHost ? host(ctx) : null;
+        final String method = isPerMethod ? method(ctx) : null;
+        final String path = isPerPath ? path(ctx) : null;
+        final String key = Stream.of(host, method, path)
+                                 .filter(Objects::nonNull)
+                                 .collect(joining("#"));
         final CircuitBreaker circuitBreaker = mapping.get(key);
         if (circuitBreaker != null) {
             return circuitBreaker;
         }
-        return mapping.computeIfAbsent(key, mapKey -> factory.apply(host, method));
+        return mapping.computeIfAbsent(key, mapKey -> factory.apply(host, method, path));
     }
 
     private static String host(ClientRequestContext ctx) {
@@ -101,9 +93,8 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
         return rpcReq != null ? rpcReq.method() : ctx.method().name();
     }
 
-    enum MappingKey {
-        HOST,
-        METHOD,
-        HOST_AND_METHOD
+    private static String path(ClientRequestContext ctx) {
+        final HttpRequest request = ctx.request();
+        return request == null ? "" : request.path();
     }
 }

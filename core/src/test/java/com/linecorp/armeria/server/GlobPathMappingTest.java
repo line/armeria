@@ -78,7 +78,7 @@ class GlobPathMappingTest {
     @Test
     void testPathValidation() {
         final Route route = glob("**");
-        assertThatThrownBy(() -> route.apply(create("not/an/absolute/path")))
+        assertThatThrownBy(() -> route.apply(create("not/an/absolute/path"), false))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -87,31 +87,31 @@ class GlobPathMappingTest {
         Route route = glob("baz");
         assertThat(route.paramNames()).isEmpty();
         // Should not create a param for 'bar'
-        assertThat(route.apply(create("/bar/baz")).pathParams()).isEmpty();
+        assertThat(route.apply(create("/bar/baz"), false).pathParams()).isEmpty();
 
         route = glob("/bar/baz/*");
         assertThat(route.paramNames()).containsExactly("0");
-        assertThat(route.apply(create("/bar/baz/qux")).pathParams())
+        assertThat(route.apply(create("/bar/baz/qux"), false).pathParams())
                 .containsEntry("0", "qux")
                 .hasSize(1);
 
         route = glob("/foo/**");
         assertThat(route.paramNames()).containsExactly("0");
-        assertThat(route.apply(create("/foo/bar/baz")).pathParams())
+        assertThat(route.apply(create("/foo/bar/baz"), false).pathParams())
                 .containsEntry("0", "bar/baz")
                 .hasSize(1);
-        assertThat(route.apply(create("/foo/")).pathParams())
+        assertThat(route.apply(create("/foo/"), false).pathParams())
                 .containsEntry("0", "")
                 .hasSize(1);
 
         route = glob("/**/*.js");
         assertThat(route.paramNames()).containsExactlyInAnyOrder("0", "1");
-        assertThat(route.apply(create("/lib/jquery.min.js")).pathParams())
+        assertThat(route.apply(create("/lib/jquery.min.js"), false).pathParams())
                 .containsEntry("0", "lib")
                 .containsEntry("1", "jquery.min")
                 .hasSize(2);
 
-        assertThat(route.apply(create("/lodash.js")).pathParams())
+        assertThat(route.apply(create("/lodash.js"), false).pathParams())
                 .containsEntry("0", "")
                 .containsEntry("1", "lodash")
                 .hasSize(2);
@@ -120,7 +120,7 @@ class GlobPathMappingTest {
     @Test
     void utf8() throws Exception {
         final Route route = glob("/foo/*");
-        final RoutingResult res = route.apply(create("/foo/%C2%A2"));
+        final RoutingResult res = route.apply(create("/foo/%C2%A2"), false);
         assertThat(res.path()).isEqualTo("/foo/%C2%A2");
         assertThat(res.decodedPath()).isEqualTo("/foo/¢");
         assertThat(res.pathParams()).containsEntry("0", "¢").hasSize(1);
@@ -129,7 +129,7 @@ class GlobPathMappingTest {
     private static void mustPass(String glob, String... paths) {
         final Route route = glob(glob);
         for (String p : paths) {
-            if (!route.apply(create(p)).isPresent()) {
+            if (!route.apply(create(p), false).isPresent()) {
                 fail('\'' + p + "' does not match '" + glob + "' or '" + route.paths().get(0) + "'.");
             }
         }
@@ -138,7 +138,7 @@ class GlobPathMappingTest {
     private static void mustFail(String glob, String... paths) {
         final Route route = glob(glob);
         for (String p : paths) {
-            if (route.apply(create(p)).isPresent()) {
+            if (route.apply(create(p), false).isPresent()) {
                 fail('\'' + p + "' matches '" + glob + "' or '" + route.paths().get(0) + "'.");
             }
         }
