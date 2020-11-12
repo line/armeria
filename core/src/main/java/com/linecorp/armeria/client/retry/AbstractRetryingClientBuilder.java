@@ -140,26 +140,6 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
         return responseTimeoutMillisForEachAttempt(responseTimeoutForEachAttempt.toMillis());
     }
 
-    /**
-     * Sets the maximum content length to be used in conjunction with a {@link RetryRuleWithContent}.
-     * This has no effect if a regular {@link RetryRule} is used instead.
-     *
-     * @return {@code this} to support method chaining.
-     *
-     * @deprecated Use {@link RetryConfigBuilder}::maxContentLength() instead.
-     */
-    @Deprecated
-    public AbstractRetryingClientBuilder<O> maxContentLength(int maxContentLength) {
-        checkState(
-                retryConfig != null,
-                "You are using a RetryConfigMapping, so you cannot set maxContentLength.");
-        checkArgument(maxContentLength >= 0,
-                      "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
-                      maxContentLength);
-        retryConfig.maxContentLength(maxContentLength);
-        return this;
-    }
-
     @Override
     public String toString() {
         return toStringHelper().toString();
