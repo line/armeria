@@ -66,18 +66,20 @@ class SslContextUtilTest {
         assumeThat(cipher).isNotNull();
 
         assertThatThrownBy(() -> {
-            ClientFactory.builder()
-                         .tlsCustomizer(builder -> {
-                             builder.ciphers(ImmutableList.of(cipher));
-                         }).build();
+            final ClientFactory factory =
+                    ClientFactory.builder()
+                                 .tlsCustomizer(builder -> builder.ciphers(ImmutableList.of(cipher)))
+                                 .build();
+            factory.closeAsync();
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Attempting to configure a server or HTTP/2 client without");
 
-        ClientFactory.builder()
-                     .tlsAllowUnsafeCiphers(true)
-                     .tlsCustomizer(builder -> {
-                         builder.ciphers(ImmutableList.of(cipher));
-                     }).build();
+        final ClientFactory factory =
+                ClientFactory.builder()
+                             .tlsAllowUnsafeCiphers(true)
+                             .tlsCustomizer(builder -> builder.ciphers(ImmutableList.of(cipher)))
+                             .build();
+        factory.closeAsync();
     }
 
     @Nullable
