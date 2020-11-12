@@ -37,15 +37,19 @@ import com.linecorp.armeria.common.Response;
 public final class RetryConfigBuilder<T extends Response> {
     private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
     private long responseTimeoutMillisForEachAttempt = Flags.defaultResponseTimeoutMillis();
-    @Nullable private final RetryRule retryRule;
-    @Nullable private final RetryRuleWithContent<T> retryRuleWithContent;
     private int maxContentLength;
+
+    @Nullable
+    private final RetryRule retryRule;
+
+    @Nullable
+    private final RetryRuleWithContent<T> retryRuleWithContent;
 
     /**
      * Returns a {@link RetryConfigBuilder} with this {@link RetryRule}.
      */
     RetryConfigBuilder(RetryRule retryRule) {
-        this.retryRule = requireNonNull(retryRule);
+        this.retryRule = requireNonNull(retryRule, "retryRule");
         retryRuleWithContent = null;
         maxContentLength = 0;
     }
@@ -55,7 +59,7 @@ public final class RetryConfigBuilder<T extends Response> {
      */
     RetryConfigBuilder(RetryRuleWithContent<T> retryRuleWithContent) {
         retryRule = null;
-        this.retryRuleWithContent = requireNonNull(retryRuleWithContent);
+        this.retryRuleWithContent = requireNonNull(retryRuleWithContent, "retryRuleWithContent");
         maxContentLength = Integer.MAX_VALUE;
     }
 
@@ -97,7 +101,9 @@ public final class RetryConfigBuilder<T extends Response> {
      * Sets responseTimeoutMillisForEachAttempt by converting responseTimeoutForEachAttempt to millis.
      */
     public RetryConfigBuilder<T> responseTimeoutForEachAttempt(Duration responseTimeoutMillisForEachAttempt) {
-        final long millis = requireNonNull(responseTimeoutMillisForEachAttempt).toMillis();
+        final long millis =
+                requireNonNull(responseTimeoutMillisForEachAttempt, "responseTimeoutMillisForEachAttempt")
+                        .toMillis();
         checkArgument(
                 millis >= 0,
                 "responseTimeoutForEachAttempt.toMillis(): %s (expected: >= 0)",

@@ -58,17 +58,26 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
 
     /**
+     * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryConfig}.
+     * The {@link RetryConfig} object encapsulates {@link RetryRule} or {@link RetryRuleWithContent},
+     * {@code maxContentLength}, {@code maxTotalAttempts} and {@code responseTimeoutMillisForEachAttempt}.
+     */
+    public static RetryingClientBuilder builder(RetryConfig<HttpResponse> retryConfig) {
+        return new RetryingClientBuilder(retryConfig);
+    }
+
+    /**
      * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryRule}.
      */
     public static RetryingClientBuilder builder(RetryRule retryRule) {
-        return new RetryingClientBuilder(retryRule);
+        return new RetryingClientBuilder(RetryConfig.<HttpResponse>builder(retryRule).build());
     }
 
     /**
      * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryRuleWithContent}.
      */
     public static RetryingClientBuilder builder(RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
-        return new RetryingClientBuilder(retryRuleWithContent);
+        return new RetryingClientBuilder(RetryConfig.builder(retryRuleWithContent).build());
     }
 
     /**
@@ -84,7 +93,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     public static RetryingClientBuilder builder(RetryRuleWithContent<HttpResponse> retryRuleWithContent,
                                                 int maxContentLength) {
         checkArgument(maxContentLength > 0, "maxContentLength: %s (expected: > 0)", maxContentLength);
-        return new RetryingClientBuilder(retryRuleWithContent, maxContentLength);
+        return new RetryingClientBuilder(
+                RetryConfig.builder(retryRuleWithContent).maxContentLength(maxContentLength).build());
     }
 
     /**
@@ -121,7 +131,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      *
      * @param retryRule the retry rule
      * @param maxTotalAttempts the maximum allowed number of total attempts
+     *
+     * @deprecated Use newDecorator(RetryConfig) instead.
      */
+    @Deprecated
     public static Function<? super HttpClient, RetryingClient>
     newDecorator(RetryRule retryRule, int maxTotalAttempts) {
         return builder(retryRule).maxTotalAttempts(maxTotalAttempts).newDecorator();
@@ -133,7 +146,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      *
      * @param retryRuleWithContent the retry rule
      * @param maxTotalAttempts the maximum allowed number of total attempts
+     *
+     * @deprecated Use newDecorator(RetryConfig) instead.
      */
+    @Deprecated
     public static Function<? super HttpClient, RetryingClient>
     newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent, int maxTotalAttempts) {
         return builder(retryRuleWithContent).maxTotalAttempts(maxTotalAttempts).newDecorator();
@@ -147,7 +163,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
+     *
+     * @deprecated Use newDecorator(RetryConfig) instead.
      */
+    @Deprecated
     public static Function<? super HttpClient, RetryingClient>
     newDecorator(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         return builder(retryRule).maxTotalAttempts(maxTotalAttempts)
@@ -163,7 +182,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
+     *
+     * @deprecated Use newDecorator(RetryConfig) instead.
      */
+    @Deprecated
     public static Function<? super HttpClient, RetryingClient>
     newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent, int maxTotalAttempts,
                  long responseTimeoutMillisForEachAttempt) {
@@ -171,6 +193,17 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                        .maxTotalAttempts(maxTotalAttempts)
                        .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
                        .newDecorator();
+    }
+
+    /**
+     * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
+     * requests.
+     * The {@link RetryConfig} object encapsulates {@link RetryRule} or {@link RetryRuleWithContent},
+     * {@code maxContentLength}, {@code maxTotalAttempts} and {@code responseTimeoutMillisForEachAttempt}.
+     */
+    public static Function<? super HttpClient, RetryingClient>
+    newDecorator(RetryConfig<HttpResponse> retryConfig) {
+        return builder(retryConfig).newDecorator();
     }
 
     /**

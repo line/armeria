@@ -203,9 +203,10 @@ class RetryingRpcClientTest {
 
     private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> rule, int maxAttempts) {
         return Clients.builder(server.httpUri(BINARY) + "/thrift")
-                      .rpcDecorator(RetryingRpcClient.builder(rule)
-                                                     .maxTotalAttempts(maxAttempts)
-                                                     .newDecorator())
+                      .rpcDecorator(
+                              RetryingRpcClient.builder(
+                                      RetryConfig.builder(rule).maxTotalAttempts(maxAttempts).build())
+                                               .newDecorator())
                       .build(HelloService.Iface.class);
     }
 

@@ -38,23 +38,17 @@ import com.linecorp.armeria.common.Response;
  */
 public abstract class AbstractRetryingClientBuilder<O extends Response> {
 
-    @Nullable private final RetryConfigBuilder<O> retryConfig;
+    @Nullable
+    private final RetryConfigBuilder<O> retryConfig;
 
-    @Nullable private final RetryConfigMapping<O> mapping;
-
-    /**
-     * Creates a new builder with the specified {@link RetryRule}.
-     */
-    AbstractRetryingClientBuilder(RetryRule retryRule) {
-        retryConfig = RetryConfig.builder(requireNonNull(retryRule, "retryRule"));
-        mapping = null;
-    }
+    @Nullable
+    private final RetryConfigMapping<O> mapping;
 
     /**
-     * Creates a new builder with the specified {@link RetryRuleWithContent}.
+     * Creates a new builder with the specified {@link RetryConfig}.
      */
-    AbstractRetryingClientBuilder(RetryRuleWithContent<O> retryRuleWithContent) {
-        retryConfig = RetryConfig.builder(requireNonNull(retryRuleWithContent, "retryRuleWithContent"));
+    AbstractRetryingClientBuilder(RetryConfig<O> retryConfig) {
+        this.retryConfig = requireNonNull(retryConfig, "retryConfig").toBuilder();
         mapping = null;
     }
 
@@ -74,7 +68,8 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
         return mapping;
     }
 
-    @Nullable final RetryConfig<O> retryConfig() {
+    @Nullable
+    final RetryConfig<O> retryConfig() {
         if (retryConfig == null) {
             return null;
         }
@@ -86,7 +81,10 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      * {@link Flags#defaultMaxTotalAttempts()} will be used.
      *
      * @return {@code this} to support method chaining.
+     *
+     * @deprecated Use {@link RetryConfigBuilder}::maxTotalAttempts() instead.
      */
+    @Deprecated
     public AbstractRetryingClientBuilder<O> maxTotalAttempts(int maxTotalAttempts) {
         checkState(retryConfig != null, "You are using a RetryConfigMapping. You cannot set maxTotalAttempts.");
         checkArgument(maxTotalAttempts > 0,
@@ -105,7 +103,10 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      * @return {@code this} to support method chaining.
      *
      * @see <a href="https://armeria.dev/docs/client-retry#per-attempt-timeout">Per-attempt timeout</a>
+     *
+     * @deprecated Use {@link RetryConfigBuilder}::responseTimeoutMillisForEachAttempt() instead.
      */
+    @Deprecated
     public AbstractRetryingClientBuilder<O> responseTimeoutMillisForEachAttempt(
             long responseTimeoutMillisForEachAttempt) {
         checkState(retryConfig != null,
@@ -124,7 +125,10 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      * @return {@code this} to support method chaining.
      *
      * @see <a href="https://armeria.dev/docs/client-retry#per-attempt-timeout">Per-attempt timeout</a>
+     *
+     * @deprecated Use {@link RetryConfigBuilder}::responseTimeoutForEachAttempt() instead.
      */
+    @Deprecated
     public AbstractRetryingClientBuilder<O> responseTimeoutForEachAttempt(
             Duration responseTimeoutForEachAttempt) {
         checkState(
@@ -141,7 +145,10 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      * This has no effect if a regular {@link RetryRule} is used instead.
      *
      * @return {@code this} to support method chaining.
+     *
+     * @deprecated Use {@link RetryConfigBuilder}::maxContentLength() instead.
      */
+    @Deprecated
     public AbstractRetryingClientBuilder<O> maxContentLength(int maxContentLength) {
         checkState(
                 retryConfig != null,

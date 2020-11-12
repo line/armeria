@@ -30,25 +30,10 @@ public final class RetryingClientBuilder extends AbstractRetryingClientBuilder<H
     private boolean useRetryAfter;
 
     /**
-     * Creates a new builder with the specified {@link RetryRule}.
+     * Creates a new builder with the specified {@link RetryConfig}.
      */
-    RetryingClientBuilder(RetryRule retryRule) {
-        super(retryRule);
-    }
-
-    /**
-     * Creates a new builder with the specified {@link RetryRuleWithContent}.
-     */
-    RetryingClientBuilder(RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
-        super(retryRuleWithContent);
-    }
-
-    /**
-     * Creates a new builder with the specified {@link RetryRuleWithContent} and maxContentLength.
-     */
-    RetryingClientBuilder(RetryRuleWithContent<HttpResponse> retryRuleWithContent, int maxContentLength) {
-        super(retryRuleWithContent);
-        maxContentLength(maxContentLength);
+    RetryingClientBuilder(RetryConfig<HttpResponse> retryConfig) {
+        super(retryConfig);
     }
 
     /**

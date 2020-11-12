@@ -77,7 +77,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     AbstractRetryingClient(
             Client<I, O> delegate, RetryConfigMapping<O> mapping, @Nullable RetryConfig<O> retryConfig) {
         super(delegate);
-        this.mapping = requireNonNull(mapping);
+        this.mapping = requireNonNull(mapping, "mapping");
         this.retryConfig = retryConfig;
     }
 

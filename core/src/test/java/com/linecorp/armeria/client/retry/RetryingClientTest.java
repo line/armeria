@@ -793,10 +793,12 @@ class RetryingClientTest {
     private WebClient client(RetryRule retryRule, long responseTimeoutMillis,
                              long responseTimeoutForEach, int maxTotalAttempts) {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(retryRule)
-                              .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                RetryingClient.builder(
+                        RetryConfig.<HttpResponse>builder(retryRule)
+                                   .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                                   .maxTotalAttempts(maxTotalAttempts)
+                                   .build())
                               .useRetryAfter(true)
-                              .maxTotalAttempts(maxTotalAttempts)
                               .newDecorator();
 
         return WebClient.builder(server.httpUri())

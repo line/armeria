@@ -51,7 +51,10 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      *
      * @param retryRuleWithContent the retry rule
      * @param maxTotalAttempts the maximum number of total attempts
+     *
+     * @deprecated Use newDecorator(RetryConfig) instead.
      */
+    @Deprecated
     public static Function<? super RpcClient, RetryingRpcClient>
     newDecorator(RetryRuleWithContent<RpcResponse> retryRuleWithContent, int maxTotalAttempts) {
         return builder(retryRuleWithContent).maxTotalAttempts(maxTotalAttempts).newDecorator();
@@ -65,7 +68,10 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * @param maxTotalAttempts the maximum number of total attempts
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
+     *
+     * @deprecated Use newDecorator(RetryConfig) instead.
      */
+    @Deprecated
     public static Function<? super RpcClient, RetryingRpcClient>
     newDecorator(RetryRuleWithContent<RpcResponse> retryRuleWithContent,
                  int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
@@ -73,6 +79,17 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                 .maxTotalAttempts(maxTotalAttempts)
                 .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
                 .newDecorator();
+    }
+
+    /**
+     * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
+     * RPC requests.
+     * The {@link RetryConfig} object encapsulates {@link RetryRuleWithContent},
+     * {@code maxContentLength}, {@code maxTotalAttempts} and {@code responseTimeoutMillisForEachAttempt}.
+     */
+    public static Function<? super RpcClient, RetryingRpcClient>
+    newDecorator(RetryConfig<RpcResponse> retryConfig) {
+        return builder(retryConfig).newDecorator();
     }
 
     /**
@@ -90,7 +107,16 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryRuleWithContent}.
      */
     public static RetryingRpcClientBuilder builder(RetryRuleWithContent<RpcResponse> retryRuleWithContent) {
-        return new RetryingRpcClientBuilder(retryRuleWithContent);
+        return new RetryingRpcClientBuilder(RetryConfig.builder(retryRuleWithContent).build());
+    }
+
+    /**
+     * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryConfig}.
+     * The {@link RetryConfig} object encapsulates {@link RetryRuleWithContent},
+     * {@code maxContentLength}, {@code maxTotalAttempts} and {@code responseTimeoutMillisForEachAttempt}.
+     */
+    public static RetryingRpcClientBuilder builder(RetryConfig<RpcResponse> retryConfig) {
+        return new RetryingRpcClientBuilder(retryConfig);
     }
 
     /**
