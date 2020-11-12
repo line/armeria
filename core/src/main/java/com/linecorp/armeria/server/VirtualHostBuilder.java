@@ -39,6 +39,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -100,7 +101,7 @@ public final class VirtualHostBuilder {
     @Nullable
     private SelfSignedCertificate selfSignedCertificate;
     private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
-    private final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
+    private final List<RouteDecoratingService> routeDecoratingServices = new LinkedList<>();
     @Nullable
     private Function<? super VirtualHost, ? extends Logger> accessLoggerMapper;
 
