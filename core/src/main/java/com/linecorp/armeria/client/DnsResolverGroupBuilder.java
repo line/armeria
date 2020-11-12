@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -38,6 +39,7 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.BiDnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
@@ -353,8 +355,15 @@ public final class DnsResolverGroupBuilder {
             if (dnsServerAddressStreamProvider != null) {
                 builder.nameServerProvider(dnsServerAddressStreamProvider);
             }
-            if (dnsQueryLifecycleObserverFactory != null) {
-                builder.dnsQueryLifecycleObserverFactory(dnsQueryLifecycleObserverFactory);
+            if (dnsQueryLifecycleObserverFactory == null) {
+                builder.dnsQueryLifecycleObserverFactory(new DefaultDnsQueryLifecycleObserverFactory(
+                        meterRegistry, new MeterIdPrefix("armeria.client.dns.queries")));
+            } else {
+                builder.dnsQueryLifecycleObserverFactory(
+                        new BiDnsQueryLifecycleObserverFactory(
+                        new DefaultDnsQueryLifecycleObserverFactory(
+                        meterRegistry, new MeterIdPrefix("armeria.client.dns.queries")),
+                        dnsQueryLifecycleObserverFactory));
             }
             if (searchDomains != null) {
                 builder.searchDomains(searchDomains);
@@ -369,6 +378,6 @@ public final class DnsResolverGroupBuilder {
         final String cacheSpec = firstNonNull(this.cacheSpec, Flags.dnsCacheSpec());
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
                                                   queryTimeoutMillis, refreshBackoff, resolvedAddressTypes,
-                                                  cacheSpec, meterRegistry);
+                                                  cacheSpec);
     }
 }

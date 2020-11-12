@@ -49,11 +49,18 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     private static final Pattern NXDOMAIN_EXCEPTION = Pattern.compile("\\bNXDOMAIN\\b");
     private static final Pattern CNAME_EXCEPTION = Pattern.compile("\\bCNAME\\b/");
     private static final Pattern NO_MATCHING_EXCEPTION = Pattern.compile("\\bmatching\\b");
-    private static final Pattern UNRECOGNIZED_TYPE_EXCEPTION = Pattern.compile("\\bunrecognized\b/");
+    private static final Pattern UNRECOGNIZED_TYPE_EXCEPTION = Pattern.compile("\\bunrecognized\\b/");
+    private static final Tag TAG_SUCCESS = Tag.of(RESULT_TAG, "success");
+    private static final Tag TAG_FAILURE = Tag.of(RESULT_TAG, "failure");
 
     private final MeterRegistry meterRegistry;
     private final MeterIdPrefix meterIdPrefix;
     private final Tag nameTag;
+    private final String meterIdPrefixWritten;
+    private final String meterIdPrefixCancelled;
+    private final String meterIdPrefixRedirected;
+    private final String meterIdPrefixCnamed;
+    private final String meterIdPrefixNoAnswer;
 
     private enum DnsExceptionTypes {
 
@@ -61,7 +68,6 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
         CNAME_NOT_FOUND,
         NO_MATCHING_RECORD,
         UNRECOGNIZED_TYPE,
-        NAME_SERVERS_EXHAUSTED,
         OTHERS,
         SERVER_TIMEOUT,
         RESOLVER_TIMEOUT;
@@ -83,11 +89,16 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
         this.meterRegistry = meterRegistry;
         meterIdPrefix = prefix;
         nameTag = Tag.of(NAME_TAG, question.name());
+        meterIdPrefixWritten = meterIdPrefix.name() + ".written";
+        meterIdPrefixCancelled = meterIdPrefix.name() + ".cancelled";
+        meterIdPrefixRedirected = meterIdPrefix.name() + ".redirected";
+        meterIdPrefixCnamed = meterIdPrefix.name() + ".cnamed";
+        meterIdPrefixNoAnswer = meterIdPrefix.name() + ".noanswer";
     }
 
     @Override
     public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
-        meterRegistry.counter(meterIdPrefix.name() + ".written",
+        meterRegistry.counter(meterIdPrefixWritten,
                               Arrays.asList(nameTag,
                               Tag.of(SERVER_TAG, dnsServerAddress.getAddress().getHostAddress())))
                               .increment();
@@ -95,13 +106,13 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public void queryCancelled(int queriesRemaining) {
-        meterRegistry.counter(meterIdPrefix.name() + ".cancelled",
+        meterRegistry.counter(meterIdPrefixCancelled,
                               Tags.of(nameTag)).increment();
     }
 
     @Override
     public DnsQueryLifecycleObserver queryRedirected(List<InetSocketAddress> nameServers) {
-        meterRegistry.counter(meterIdPrefix.name() + ".redirected",
+        meterRegistry.counter(meterIdPrefixRedirected,
                               Arrays.asList(nameTag, Tag.of(SERVERS_TAG,
                               nameServers.stream().map(addr -> addr.getAddress().getHostAddress())
                               .collect(Collectors.joining(","))))).increment();
@@ -110,7 +121,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public DnsQueryLifecycleObserver queryCNAMEd(DnsQuestion cnameQuestion) {
-        meterRegistry.counter(meterIdPrefix.name() + ".cnamed",
+        meterRegistry.counter(meterIdPrefixCnamed,
                               Arrays.asList(nameTag,
                               Tag.of(CNAME_TAG, cnameQuestion.name()))).increment();
         return this;
@@ -118,7 +129,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public DnsQueryLifecycleObserver queryNoAnswer(DnsResponseCode code) {
-        meterRegistry.counter(meterIdPrefix.name() + ".noanswer",
+        meterRegistry.counter(meterIdPrefixNoAnswer,
                               Arrays.asList(nameTag,
                               Tag.of(CODE_TAG, String.valueOf(code.intValue())))).increment();
         return this;
@@ -127,23 +138,26 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     @Override
     public void queryFailed(Throwable cause) {
         meterRegistry.counter(meterIdPrefix.name(),
-                              Arrays.asList(nameTag, Tag.of(RESULT_TAG, "failure"),
+                              Arrays.asList(nameTag, TAG_FAILURE,
                               Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause).lowerCasedName))).increment();
     }
 
     @Override
     public void querySucceed() {
         meterRegistry.counter(meterIdPrefix.name(),
-                              Arrays.asList(nameTag, Tag.of(RESULT_TAG, "success"),
+                              Arrays.asList(nameTag, TAG_SUCCESS,
                               Tag.of(CAUSE_TAG, "none"))).increment();
     }
 
     private static DnsExceptionTypes determineDnsExceptionTag(Throwable cause) {
         if (cause instanceof DnsTimeoutException) {
             return DnsExceptionTypes.SERVER_TIMEOUT;
-        } else if (cause instanceof DnsNameResolverTimeoutException) {
+        }
+
+        if (cause instanceof DnsNameResolverTimeoutException) {
             return DnsExceptionTypes.RESOLVER_TIMEOUT;
         }
+
         final String message = cause.getMessage();
         if (NXDOMAIN_EXCEPTION.matcher(message).find()) {
             return DnsExceptionTypes.NX_DOMAIN;
@@ -160,7 +174,6 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
         if (UNRECOGNIZED_TYPE_EXCEPTION.matcher(message).find()) {
             return DnsExceptionTypes.UNRECOGNIZED_TYPE;
         }
-
         return DnsExceptionTypes.OTHERS;
     }
 }
