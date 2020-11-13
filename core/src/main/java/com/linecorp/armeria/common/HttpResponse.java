@@ -570,43 +570,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * {@link SplitHttpResponse#headers()} will be completed before publishing the first {@link HttpData}.
      * {@link SplitHttpResponse#trailers()} might not complete until the entire response body is consumed
      * completely.
-     *
-     * <p>(Advanced users only) If you want to get pooled objects from {@link SplitHttpResponse#body()},
-     * you should call this method with {@link SubscriptionOption#WITH_POOLED_OBJECTS}.
-     * Note that if you specify {@link SubscriptionOption}s when subscribing to
-     * {@link SplitHttpResponse#body()}, {@link UnsupportedOperationException} will be raised.
-     */
-    @CheckReturnValue
-    default SplitHttpResponse split(SubscriptionOption... options) {
-        return new DefaultSplitHttpResponse(this, defaultSubscriberExecutor(), options);
-    }
-
-    /**
-     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject}s into
-     * {@link HttpHeaders} and {@link HttpData}.
-     * {@link SplitHttpResponse#headers()} will be completed before publishing the first {@link HttpData}.
-     * {@link SplitHttpResponse#trailers()} might not complete until the entire response body is consumed
-     * completely.
      */
     @CheckReturnValue
     default SplitHttpResponse split(EventExecutor executor) {
         return new DefaultSplitHttpResponse(this, executor);
-    }
-
-    /**
-     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject}s into
-     * {@link HttpHeaders} and {@link HttpData}.
-     * {@link SplitHttpResponse#headers()} will be completed before publishing the first {@link HttpData}.
-     * {@link SplitHttpResponse#trailers()} might not complete until the entire response body is consumed
-     * completely.
-     *
-     * <p>(Advanced users only) If you want to get pooled objects from {@link SplitHttpResponse#body()},
-     * you should call this method with {@link SubscriptionOption#WITH_POOLED_OBJECTS}.
-     * Note that if you specify {@link SubscriptionOption}s when subscribing to
-     * {@link SplitHttpResponse#body()}, {@link UnsupportedOperationException} will be raised.
-     */
-    @CheckReturnValue
-    default SplitHttpResponse split(EventExecutor executor, SubscriptionOption... options) {
-        return new DefaultSplitHttpResponse(this, executor, options);
     }
 }

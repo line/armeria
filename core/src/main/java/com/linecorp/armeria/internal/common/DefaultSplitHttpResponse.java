@@ -63,6 +63,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
     private static final ResponseHeaders HEADERS_WITH_UNKNOWN_STATUS = ResponseHeaders.of(HttpStatus.UNKNOWN);
     private static final HeadersFuture<HttpHeaders> EMPTY_TRAILERS;
+    private static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
     static {
         EMPTY_TRAILERS = new HeadersFuture<>();
@@ -72,20 +73,17 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     private final HeadersFuture<ResponseHeaders> headersFuture = new HeadersFuture<>();
     private final BodySubscriber bodySubscriber = new BodySubscriber();
     private final HttpResponse response;
-    private final EventExecutor executor;
-    private final boolean notifyCancellation;
+    private final EventExecutor upstreamExecutor;
 
     @Nullable
     private volatile HeadersFuture<HttpHeaders> trailersFuture;
     private volatile boolean wroteAny;
 
-    public DefaultSplitHttpResponse(HttpResponse response, EventExecutor executor,
-                                    SubscriptionOption... options) {
+    public DefaultSplitHttpResponse(HttpResponse response, EventExecutor executor) {
         this.response = requireNonNull(response, "response");
-        this.executor = requireNonNull(executor, "executor");
-        notifyCancellation = containsNotifyCancellation(options);
+        upstreamExecutor = requireNonNull(executor, "executor");
 
-        response.subscribe(bodySubscriber, executor, options);
+        response.subscribe(bodySubscriber, upstreamExecutor, SubscriptionOption.values());
     }
 
     @Override
@@ -129,8 +127,17 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor unused) {
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
+        subscribe(subscriber, executor, EMPTY_OPTIONS);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+
         if (!downstreamUpdater.compareAndSet(bodySubscriber, null, subscriber)) {
             subscriber.onSubscribe(NoopSubscription.get());
             subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
@@ -138,16 +145,10 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         }
 
         if (executor.inEventLoop()) {
-            bodySubscriber.initDownstream(subscriber);
+            bodySubscriber.initDownstream(subscriber, executor, options);
         } else {
-            executor.execute(() -> bodySubscriber.initDownstream(subscriber));
+            executor.execute(() -> bodySubscriber.initDownstream(subscriber, executor, options));
         }
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
-                          SubscriptionOption... unused) {
-        throw new UnsupportedOperationException("Use 'HttpResponse.split(executor, options)' instead.");
     }
 
     @Override
@@ -169,14 +170,31 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         // 1 is used for prefetching headers
         private long pendingRequests = 1;
 
+        private volatile boolean notifyCancellation;
+        private boolean usePooledObject;
+
         @Nullable
         volatile Subscriber<? super HttpData> downstream;
         @Nullable
         private volatile Subscription upstream;
+        @Nullable
+        private volatile EventExecutor executor;
 
         private volatile boolean cancelCalled;
 
-        private void initDownstream(Subscriber<? super HttpData> downstream) {
+        private void initDownstream(Subscriber<? super HttpData> downstream, EventExecutor executor,
+                                    SubscriptionOption... options) {
+            assert executor.inEventLoop();
+
+            this.executor = executor;
+            for (SubscriptionOption option : options) {
+                if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
+                    notifyCancellation = true;
+                } else if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
+                    usePooledObject = true;
+                }
+            }
+
             try {
                 downstream.onSubscribe(this);
                 if (cause != null) {
@@ -213,10 +231,10 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
                 return;
             }
-            if (executor.inEventLoop()) {
+            if (upstreamExecutor.inEventLoop()) {
                 request0(n);
             } else {
-                executor.execute(() -> request0(n));
+                upstreamExecutor.execute(() -> request0(n));
             }
         }
 
@@ -268,9 +286,23 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
             final Subscriber<? super HttpData> downstream = this.downstream;
             assert downstream != null;
             assert httpObject instanceof HttpData;
-            final HttpData data = (HttpData) httpObject;
+
+            final EventExecutor executor = this.executor;
+            if (executor.inEventLoop()) {
+                onNext0((HttpData) httpObject);
+            } else {
+                executor.execute(() ->onNext0((HttpData) httpObject));
+            }
+        }
+
+        private void onNext0(HttpData httpData) {
             wroteAny = true;
-            downstream.onNext(data);
+            if (!usePooledObject) {
+                try (HttpData pooled = httpData) {
+                    httpData = HttpData.wrap(pooled.array());
+                }
+            }
+            downstream.onNext(httpData);
         }
 
         /**
@@ -293,6 +325,15 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
         @Override
         public void onError(Throwable cause) {
+            final EventExecutor executor = this.executor;
+            if (executor.inEventLoop()) {
+                onError0(cause);
+            } else {
+                executor.execute(() -> onError(cause));
+            }
+        }
+
+        private void onError0(Throwable cause) {
             maybeCompleteHeaders(cause);
             final Subscriber<? super HttpData> downstream = this.downstream;
             if (downstream == null) {
@@ -305,6 +346,15 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
         @Override
         public void onComplete() {
+            final EventExecutor executor = this.executor;
+            if (executor.inEventLoop()) {
+                onComplete0();
+            } else {
+                executor.execute(this::onComplete0);
+            }
+        }
+
+        private void onComplete0() {
             maybeCompleteHeaders(null);
             final Subscriber<? super HttpData> downstream = this.downstream;
             if (downstream == null) {

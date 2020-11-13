@@ -36,6 +36,8 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
@@ -152,9 +154,10 @@ class DefaultSplitHttpResponseTest {
                                                                 HttpData.ofUtf8("Hello1"),
                                                                 HttpData.ofUtf8("Hello2"),
                                                                 HttpHeaders.of("grpc-status", 0)));
-        final SplitHttpResponse splitHttpResponse = response.split(SubscriptionOption.NOTIFY_CANCELLATION);
+        final SplitHttpResponse splitHttpResponse = response.split();
         final StreamMessage<HttpData> body = splitHttpResponse.body();
         final AtomicReference<Throwable> causeCaptor = new AtomicReference<>();
+
         body.subscribe(new Subscriber<HttpData>() {
 
             @Nullable
@@ -178,8 +181,69 @@ class DefaultSplitHttpResponseTest {
 
             @Override
             public void onComplete() {}
-        });
+        }, SubscriptionOption.NOTIFY_CANCELLATION);
 
         await().untilAtomic(causeCaptor, instanceOf(CancelledSubscriptionException.class));
+    }
+
+    @Test
+    void pooledObjects() {
+        final AtomicReference<HttpData> httpDataRef = new AtomicReference<>();
+        final ByteBuf buf = Unpooled.buffer(4).writeInt(0x01020304);
+        final HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), HttpData.wrap(buf));
+
+        response.split().body().subscribe(new Subscriber<HttpData>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(HttpData httpData) {
+                httpDataRef.set(httpData);
+            }
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {}
+        }, SubscriptionOption.WITH_POOLED_OBJECTS);
+
+        await().untilAsserted(() -> {
+            assertThat(httpDataRef.get().isPooled()).isTrue();
+            assertThat(httpDataRef.get().byteBuf()).isEqualTo(buf);
+            assertThat(httpDataRef.get().byteBuf().refCnt()).isOne();
+        });
+        buf.release();
+    }
+
+    @Test
+    void heapObjects() {
+        final AtomicReference<HttpData> httpDataRef = new AtomicReference<>();
+        final HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), HttpData.ofUtf8("ABC"));
+
+        response.split().body().subscribe(new Subscriber<HttpData>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(HttpData httpData) {
+                httpDataRef.set(httpData);
+            }
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {}
+        }, SubscriptionOption.WITH_POOLED_OBJECTS);
+
+        await().untilAsserted(() -> {
+            assertThat(httpDataRef.get().isPooled()).isFalse();
+            assertThat(httpDataRef.get().toStringUtf8()).isEqualTo("ABC");
+        });
     }
 }
