@@ -143,15 +143,6 @@ public final class RetryConfig<T extends Response> {
     }
 
     /**
-     * Returns the {@link RetryRuleWithContent} converted from the {@link RetryRule} of this config,
-     * could be null.
-     */
-    @Nullable
-    public RetryRule fromRetryRuleWithContent() {
-        return fromRetryRuleWithContent;
-    }
-
-    /**
      * Returns config's {@code maxContentLength}, which is non-zero only if
      * a {@link RetryRuleWithContent} is used.
      */
@@ -173,5 +164,14 @@ public final class RetryConfig<T extends Response> {
     public boolean requiresResponseTrailers() {
         return needsContentInRule() ?
                retryRuleWithContent().requiresResponseTrailers() : retryRule().requiresResponseTrailers();
+    }
+
+    /**
+     * Returns the {@link RetryRuleWithContent} converted from the {@link RetryRule} of this config,
+     * could be null.
+     */
+    @Nullable
+    RetryRule fromRetryRuleWithContent() {
+        return fromRetryRuleWithContent;
     }
 }
