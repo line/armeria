@@ -71,6 +71,7 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
+import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguration;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -400,6 +401,28 @@ class ArmeriaReactiveWebServerFactoryTest {
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
             }
+        });
+    }
+
+    @Test
+    void testHealthCheckServiceConfigurator() {
+        final ArmeriaReactiveWebServerFactory factory = factory();
+
+        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
+        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
+
+        rbd = new RootBeanDefinition(HealthCheckServiceConfigurator.class,
+                                     () -> builder -> builder.updatable(true));
+        beanFactory.registerBeanDefinition("healthCheckServiceConfigurator", rbd);
+
+        runEchoServer(factory, server -> {
+            final WebClient client = httpClient(server);
+
+            AggregatedHttpResponse res = client.get("/internal/healthcheck").aggregate().join();
+            assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
+
+            res = client.post("/internal/healthcheck", "{\"healthy\":false}").aggregate().join();
+            assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.SERVICE_UNAVAILABLE);
         });
     }
 

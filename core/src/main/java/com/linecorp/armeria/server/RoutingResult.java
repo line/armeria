@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 /**
- * The result returned by {@link Route#apply(RoutingContext)}.
+ * The result returned by {@link Route#apply(RoutingContext, boolean)}.
  */
 public final class RoutingResult {
 
@@ -38,8 +38,9 @@ public final class RoutingResult {
 
     /**
      * The empty {@link RoutingResult} whose {@link #type()} is {@link RoutingResultType#NOT_MATCHED} and
-     * {@link #isPresent()} returns {@code false}. It is returned by {@link Route#apply(RoutingContext)}
-     * when the {@link RoutingContext} did not match the conditions in the {@link Route}.
+     * {@link #isPresent()} returns {@code false}. It is returned by
+     * {@link Route#apply(RoutingContext, boolean)} when the {@link RoutingContext} did not match
+     * the conditions in the {@link Route}.
      */
     public static RoutingResult empty() {
         return EMPTY;

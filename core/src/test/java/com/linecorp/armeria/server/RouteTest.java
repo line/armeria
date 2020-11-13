@@ -146,13 +146,13 @@ class RouteTest {
                                  .methods(HttpMethod.GET, HttpMethod.POST)
                                  .build();
 
-        final RoutingResult getResult = route.apply(method(HttpMethod.GET));
-        final RoutingResult postResult = route.apply(method(HttpMethod.POST));
+        final RoutingResult getResult = route.apply(method(HttpMethod.GET), false);
+        final RoutingResult postResult = route.apply(method(HttpMethod.POST), false);
         assertThat(getResult.isPresent()).isTrue();
         assertThat(postResult.isPresent()).isTrue();
 
-        assertThat(route.apply(method(HttpMethod.PUT)).isPresent()).isFalse();
-        assertThat(route.apply(method(HttpMethod.DELETE)).isPresent()).isFalse();
+        assertThat(route.apply(method(HttpMethod.PUT), false).isPresent()).isFalse();
+        assertThat(route.apply(method(HttpMethod.DELETE), false).isPresent()).isFalse();
     }
 
     @Test
@@ -163,8 +163,8 @@ class RouteTest {
                                  .consumes(JSON_UTF_8)
                                  .build();
 
-        assertThat(route.apply(consumeType(HttpMethod.POST, JSON_UTF_8)).isPresent()).isTrue();
-        assertThat(route.apply(consumeType(HttpMethod.POST, MediaType.create("application", "json")))
+        assertThat(route.apply(consumeType(HttpMethod.POST, JSON_UTF_8), false).isPresent()).isTrue();
+        assertThat(route.apply(consumeType(HttpMethod.POST, MediaType.create("application", "json")), false)
                         .isPresent()).isFalse();
     }
 
@@ -176,23 +176,24 @@ class RouteTest {
                                  .produces(JSON_UTF_8)
                                  .build();
 
-        assertThat(route.apply(withAcceptHeader(HttpMethod.GET, "*/*")).isPresent()).isTrue();
-        assertThat(route.apply(withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8"))
+        assertThat(route.apply(withAcceptHeader(HttpMethod.GET, "*/*"), false).isPresent()).isTrue();
+        assertThat(route.apply(withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8"), false)
                         .isPresent()).isTrue();
 
         RoutingResult result;
 
         result = route.apply(
-                withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8;q=0.8,text/plain;q=0.9"));
+                withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8;q=0.8,text/plain;q=0.9"),
+                false);
         assertThat(result.isPresent()).isTrue();
         assertThat(result.score()).isEqualTo(-1);
 
         result = route.apply(
-                withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8,text/plain;q=0.9"));
+                withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8,text/plain;q=0.9"), false);
         assertThat(result.isPresent()).isTrue();
         assertThat(result.hasHighestScore()).isTrue();
 
-        assertThat(route.apply(withAcceptHeader(HttpMethod.GET, "application/x-www-form-urlencoded"))
+        assertThat(route.apply(withAcceptHeader(HttpMethod.GET, "application/x-www-form-urlencoded"), false)
                         .isPresent()).isFalse();
     }
 
@@ -204,15 +205,15 @@ class RouteTest {
                            .methods(HttpMethod.GET, HttpMethod.POST)
                            .build();
 
-        RoutingResult getResult = route.apply(method(HttpMethod.GET));
+        RoutingResult getResult = route.apply(method(HttpMethod.GET), false);
         assertThat(getResult.isPresent()).isTrue();
         // When there's no "Accept" header, it has the highest score.
         assertThat(getResult.hasHighestScore()).isTrue();
 
-        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8"));
+        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8"), false);
         assertThat(getResult.isPresent()).isTrue();
 
-        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "*/*"));
+        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "*/*"), false);
         assertThat(getResult.isPresent()).isTrue();
         assertThat(getResult.negotiatedResponseMediaType()).isNull();
 
@@ -223,13 +224,13 @@ class RouteTest {
                      .methods(HttpMethod.GET, HttpMethod.POST)
                      .produces(ANY_TYPE)
                      .build();
-        getResult = route.apply(method(HttpMethod.GET));
+        getResult = route.apply(method(HttpMethod.GET), false);
         assertThat(getResult.isPresent()).isTrue();
 
-        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8"));
+        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8"), false);
         assertThat(getResult.isPresent()).isFalse();
 
-        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "*/*"));
+        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "*/*"), false);
         assertThat(getResult.isPresent()).isTrue();
         // When the Route has empty producibleTypes, the result has the highest score.
         assertThat(getResult.hasHighestScore()).isTrue();
@@ -243,16 +244,16 @@ class RouteTest {
                      .produces(JSON_UTF_8)
                      .build();
 
-        getResult = route.apply(method(HttpMethod.GET));
+        getResult = route.apply(method(HttpMethod.GET), false);
         assertThat(getResult.isPresent()).isTrue();
 
-        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "*/*"));
+        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "*/*"), false);
         assertThat(getResult.isPresent()).isTrue();
         // When the Route has empty producibleTypes, the result has the highest score.
         assertThat(getResult.hasHighestScore()).isTrue();
         assertThat(getResult.negotiatedResponseMediaType()).isSameAs(JSON_UTF_8);
 
-        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "text/plain"));
+        getResult = route.apply(withAcceptHeader(HttpMethod.GET, "text/plain"), false);
         assertThat(getResult.isPresent()).isFalse();
     }
 

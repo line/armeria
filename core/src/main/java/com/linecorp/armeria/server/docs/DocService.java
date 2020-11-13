@@ -97,7 +97,7 @@ public final class DocService extends SimpleDecoratingHttpService {
             DocServicePlugin.class, DocService.class.getClassLoader()));
 
     static {
-        logger.info("Loaded {}: {}", DocServicePlugin.class.getSimpleName(), plugins);
+        logger.debug("Available {}s: {}", DocServicePlugin.class.getSimpleName(), plugins);
     }
 
     /**

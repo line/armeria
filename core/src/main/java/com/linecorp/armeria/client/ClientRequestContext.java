@@ -466,6 +466,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Cancels the response. Shortcut for {@code cancel(ResponseCancellationException.get())}.
      */
+    @Override
     default void cancel() {
         cancel(ResponseCancellationException.get());
     }
@@ -473,6 +474,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Times out the response. Shortcut for {@code cancel(ResponseTimeoutException.get())}.
      */
+    @Override
     default void timeoutNow() {
         cancel(ResponseTimeoutException.get());
     }

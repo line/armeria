@@ -88,4 +88,9 @@ public final class ObservableResponseConverterFunctionProvider implements Respon
         }
         return null;
     }
+
+    @Override
+    public String toString() {
+        return ObservableResponseConverterFunctionProvider.class.getSimpleName();
+    }
 }

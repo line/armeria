@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -28,6 +29,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.netty.channel.EventLoopGroup;
@@ -90,6 +92,8 @@ public final class DnsResolverGroupBuilder {
     private Integer ndots;
     @Nullable
     private Boolean decodeIdn;
+    @Nullable
+    private String cacheSpec;
 
     DnsResolverGroupBuilder() {}
 
@@ -292,6 +296,15 @@ public final class DnsResolverGroupBuilder {
         return this;
     }
 
+    /**
+     * Sets the cache spec for caching resolved addresses.
+     * {@link Flags#dnsCacheSpec()} is used by default.
+     */
+    public DnsResolverGroupBuilder cacheSpec(String cacheSpec) {
+        this.cacheSpec = requireNonNull(cacheSpec, "cacheSpec");
+        return this;
+    }
+
     RefreshingAddressResolverGroup build(EventLoopGroup eventLoopGroup) {
         final Consumer<DnsNameResolverBuilder> resolverConfigurator = builder -> {
             builder.channelType(TransportType.datagramChannelType(eventLoopGroup))
@@ -342,7 +355,9 @@ public final class DnsResolverGroupBuilder {
                 builder.decodeIdn(decodeIdn);
             }
         };
+        final String cacheSpec = firstNonNull(this.cacheSpec, Flags.dnsCacheSpec());
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
-                                                  queryTimeoutMillis, refreshBackoff, resolvedAddressTypes);
+                                                  queryTimeoutMillis, refreshBackoff, resolvedAddressTypes,
+                                                  cacheSpec);
     }
 }

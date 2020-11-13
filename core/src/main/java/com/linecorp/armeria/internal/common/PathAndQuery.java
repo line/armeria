@@ -218,7 +218,7 @@ public final class PathAndQuery {
         }
 
         // Reject the prohibited patterns.
-        if (firstPathComponentContainsColon(path) || pathContainsDoubleDots(path)) {
+        if (pathContainsDoubleDots(path)) {
             return null;
         }
 
@@ -369,26 +369,6 @@ public final class PathAndQuery {
         }
 
         return true;
-    }
-
-    /**
-     * According to RFC 3986 section 3.3, path can contain a colon, except the first segment.
-     *
-     * <p>Should allow the asterisk character in the path, query, or fragment components of a URL(RFC2396).
-     * @see <a href="https://tools.ietf.org/html/rfc3986#section-3.3">RFC 3986, section 3.3</a>
-     */
-    private static boolean firstPathComponentContainsColon(Bytes path) {
-        final int length = path.length;
-        for (int i = 1; i < length; i++) {
-            final byte b = path.data[i];
-            if (b == '/') {
-                break;
-            }
-            if (b == ':') {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static boolean pathContainsDoubleDots(Bytes path) {

@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.InvocationTargetException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -27,11 +31,18 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.MapMaker;
+
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.AsciiString;
 
@@ -74,6 +85,12 @@ final class AnnotatedServiceTypeUtil {
                     .put(Object.class, Function.identity())
                     .build();
 
+    /**
+     * "Cache" of converters from string to the Class in the key.
+     */
+    private static final Map<Class<?>, Function<String, ?>> convertExternalTypes =
+            new MapMaker().weakKeys().makeMap();
+
     private static final Map<String, Boolean> stringToBooleanMap =
             ImmutableMap.<String, Boolean>builder()
                     .put("true", true)
@@ -83,6 +100,72 @@ final class AnnotatedServiceTypeUtil {
                     .build();
 
     /**
+     * Try to get a public static method {@link MethodHandle} with a single {@link String} argument
+     * in {@code clazz}.
+     * @param <T> the expected result
+     * @param clazz the class being introspected
+     * @param methodName the method expected
+     * @return a function that takes a {@link String} and produces a {@link T}
+     */
+    @Nullable
+    private static <T> MethodHandle getPublicStaticMethodHandle(final Class<T> clazz,
+                                                                final String methodName) {
+        try {
+            final MethodType methodType = MethodType.methodType(clazz, String.class);
+            return MethodHandles.publicLookup().findStatic(clazz, methodName, methodType);
+        } catch (Throwable t) {
+            // No valid public static method found
+            return null;
+        }
+    }
+
+    /**
+     * Try to get a constructor {@link MethodHandle} with a single {@link String} argument in {@code clazz}.
+     * @param <T> the expected result
+     * @param clazz the class being introspected
+     * @return a function that takes a {@link String} and produces a {@link T}
+     */
+    @Nullable
+    private static <T> MethodHandle getStringConstructorMethodHandle(final Class<T> clazz) {
+        try {
+            final MethodType methodType = MethodType.methodType(void.class, String.class);
+            return MethodHandles.publicLookup().findConstructor(clazz, methodType);
+        } catch (Throwable t) {
+            // No valid constructor found
+            return null;
+        }
+    }
+
+    /**
+     * Try to get a function that can create an instance of type {@code clazz} with a single
+     * {@link String} argument.
+     * @param <T> the expected resulting type
+     * @param clazz the class being introspected
+     * @return a function that takes a {@link String} and produces a {@code T}
+     */
+    @SuppressWarnings("unchecked")
+    @Nullable
+    static <T> Function<String, T> getCreatorMethod(Class<T> clazz) {
+        final MethodHandle methodHandle = Stream.of("of", "valueOf", "fromString")
+                     .map((methodName) -> getPublicStaticMethodHandle(clazz, methodName))
+                     .filter(Objects::nonNull)
+                     .findFirst()
+                     .orElseGet(() -> getStringConstructorMethodHandle(clazz));
+        if (methodHandle == null) {
+            return null;
+        }
+        return (str) -> {
+            try {
+                return (T) methodHandle.invokeWithArguments(str);
+            } catch (InvocationTargetException e) {
+                return Exceptions.throwUnsafely(e.getCause());
+            } catch (Throwable t) {
+                return Exceptions.throwUnsafely(t);
+            }
+        };
+    }
+
+    /**
      * Converts the given {@code str} to {@code T} type object. e.g., "42" -> 42.
      *
      * @throws IllegalArgumentException if {@code str} can't be deserialized to {@code T} type object.
@@ -90,7 +173,10 @@ final class AnnotatedServiceTypeUtil {
     @SuppressWarnings("unchecked")
     static <T> T stringToType(String str, Class<T> clazz) {
         try {
-            final Function<String, ?> func = supportedElementTypes.get(clazz);
+            Function<String, ?> func = supportedElementTypes.get(clazz);
+            if (func == null) {
+                func = convertExternalTypes.computeIfAbsent(clazz, AnnotatedServiceTypeUtil::getCreatorMethod);
+            }
             if (func != null) {
                 return (T) func.apply(str);
             }
