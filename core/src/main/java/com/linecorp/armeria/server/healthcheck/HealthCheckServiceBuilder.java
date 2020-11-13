@@ -268,7 +268,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
         if (this.optOutFeatures == null) {
             this.optOutFeatures = EnumSet.noneOf(OptOutFeature.class);
         }
-        this.optOutFeatures.addAll(ImmutableSet.copyOf(optOutFeatures));
+        this.optOutFeatures.addAll(ImmutableSet.copyOf(requireNonNull(optOutFeatures, "optOutFeatures")));
         return this;
     }
 

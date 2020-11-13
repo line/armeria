@@ -55,7 +55,7 @@ public final class PrometheusExpositionServiceBuilder implements TransientServic
         if (this.optOutFeatures == null) {
             this.optOutFeatures = EnumSet.noneOf(OptOutFeature.class);
         }
-        this.optOutFeatures.addAll(ImmutableSet.copyOf(optOutFeatures));
+        this.optOutFeatures.addAll(ImmutableSet.copyOf(requireNonNull(optOutFeatures, "optOutFeatures")));
         return this;
     }
 
