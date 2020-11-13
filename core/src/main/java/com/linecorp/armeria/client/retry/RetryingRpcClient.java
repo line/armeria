@@ -21,6 +21,9 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.RpcClient;
@@ -33,6 +36,8 @@ import com.linecorp.armeria.common.RpcResponse;
  */
 public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, RpcResponse>
         implements RpcClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(RetryingRpcClient.class);
 
     /**
      * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
@@ -52,7 +57,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * @param retryRuleWithContent the retry rule
      * @param maxTotalAttempts the maximum number of total attempts
      *
-     * @deprecated Use newDecorator(RetryConfig) instead.
+     * @deprecated Use {@link #newDecorator(RetryConfig)} instead.
      */
     @Deprecated
     public static Function<? super RpcClient, RetryingRpcClient>
@@ -69,7 +74,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
      *
-     * @deprecated Use newDecorator(RetryConfig) instead.
+     * @deprecated Use {@link #newDecorator(RetryConfig)} instead.
      */
     @Deprecated
     public static Function<? super RpcClient, RetryingRpcClient>
@@ -168,6 +173,9 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                                                     (context, cause) -> RpcResponse.ofFailure(cause));
 
         final RetryConfig<RpcResponse> retryConfig = mapping().get(ctx, req);
+        if (!retryConfig.needsContentInRule()) {
+            logger.warn("RetryingRpcClient is being used with RetryRule (without content).");
+        }
         final RetryRuleWithContent<RpcResponse> retryRule =
                 retryConfig.needsContentInRule() ?
                 retryConfig.retryRuleWithContent() : RetryRuleUtil.fromRetryRule(retryConfig.retryRule());

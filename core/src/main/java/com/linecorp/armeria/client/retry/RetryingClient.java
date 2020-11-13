@@ -132,7 +132,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * @param retryRule the retry rule
      * @param maxTotalAttempts the maximum allowed number of total attempts
      *
-     * @deprecated Use newDecorator(RetryConfig) instead.
+     * @deprecated Use {@link #newDecorator(RetryConfig)} instead.
      */
     @Deprecated
     public static Function<? super HttpClient, RetryingClient>
@@ -147,7 +147,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * @param retryRuleWithContent the retry rule
      * @param maxTotalAttempts the maximum allowed number of total attempts
      *
-     * @deprecated Use newDecorator(RetryConfig) instead.
+     * @deprecated Use {@link #newDecorator(RetryConfig)} instead.
      */
     @Deprecated
     public static Function<? super HttpClient, RetryingClient>
@@ -164,7 +164,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
      *
-     * @deprecated Use newDecorator(RetryConfig) instead.
+     * @deprecated Use {@link #newDecorator(RetryConfig)} instead.
      */
     @Deprecated
     public static Function<? super HttpClient, RetryingClient>
@@ -183,7 +183,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * @param responseTimeoutMillisForEachAttempt response timeout for each attempt. {@code 0} disables
      *                                            the timeout
      *
-     * @deprecated Use newDecorator(RetryConfig) instead.
+     * @deprecated Use {@link #newDecorator(RetryConfig)} instead.
      */
     @Deprecated
     public static Function<? super HttpClient, RetryingClient>

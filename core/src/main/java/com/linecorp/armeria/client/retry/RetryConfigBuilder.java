@@ -67,6 +67,7 @@ public final class RetryConfigBuilder<T extends Response> {
      * Sets the maxContentLength to be used with a {@link RetryRuleWithContent}.
      */
     public RetryConfigBuilder<T> maxContentLength(int maxContentLength) {
+        requireNonNull(retryRuleWithContent, "retryRuleWithContent");
         checkArgument(maxContentLength > 0,
                       "maxContentLength: %s (expected: > 0)", maxContentLength);
         this.maxContentLength = maxContentLength;
@@ -119,14 +120,12 @@ public final class RetryConfigBuilder<T extends Response> {
         if (retryRule != null) {
             return new RetryConfig<>(retryRule, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
         }
-        if (retryRuleWithContent != null) {
-            return new RetryConfig<>(
-                    retryRuleWithContent,
-                    maxContentLength,
-                    maxTotalAttempts,
-                    responseTimeoutMillisForEachAttempt);
-        }
-        throw new IllegalStateException("RetryConfigBuilder must have a rule.");
+        assert retryRuleWithContent != null;
+        return new RetryConfig<>(
+                retryRuleWithContent,
+                maxContentLength,
+                maxTotalAttempts,
+                responseTimeoutMillisForEachAttempt);
     }
 
     @Override

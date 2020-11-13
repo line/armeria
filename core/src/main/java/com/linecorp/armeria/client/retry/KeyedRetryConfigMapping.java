@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.Response;
 final class KeyedRetryConfigMapping<T extends Response> implements RetryConfigMapping<T> {
     private final BiFunction<? super ClientRequestContext, Request, RetryConfig<T>> retryConfigFactory;
     private final BiFunction<? super ClientRequestContext, Request, String> keyFactory;
-    private final ConcurrentMap<String, RetryConfig<T>>  mapping = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, RetryConfig<T>> mapping = new ConcurrentHashMap<>();
 
     KeyedRetryConfigMapping(
             BiFunction<? super ClientRequestContext, Request, String> keyFactory,
@@ -41,10 +41,6 @@ final class KeyedRetryConfigMapping<T extends Response> implements RetryConfigMa
     @Override
     public RetryConfig<T> get(ClientRequestContext ctx, Request req) {
         final String key = keyFactory.apply(ctx, req);
-        final RetryConfig<T> config = mapping.get(key);
-        if (config != null) {
-            return config;
-        }
         return mapping.computeIfAbsent(key, mapKey -> retryConfigFactory.apply(ctx, req));
     }
 }

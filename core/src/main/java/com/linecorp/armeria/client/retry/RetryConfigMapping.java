@@ -38,7 +38,7 @@ public interface RetryConfigMapping<T extends Response> {
     }
 
     /**
-     * Returns tha {@link RetryConfig} that maps to the given context/request.
+     * Returns the {@link RetryConfig} that maps to the given context/request.
      */
     RetryConfig<T> get(ClientRequestContext ctx, Request req);
 }
