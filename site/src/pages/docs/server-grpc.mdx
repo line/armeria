@@ -126,7 +126,7 @@ See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewi
 <type://GrpcService> supports the [gRPC-Web][gRPC-Web] protocol,
 a small modification to the [gRPC][gRPC] wire format that can be used from a browser.
 Use the [gRPC-Web-Client][gRPC-Web-Client] to access the service from a browser.
-[gRPC-Web][gRPC-Web] does not support RPC methods with streaming requests.
+[gRPC-Web][gRPC-Web] does not support RPC methods with client-side/bi-directional streaming requests.
 
 If the origin of the Javascript and API server are different, [gRPC-Web-Client][gRPC-Web-Client] first sends `preflight`
 requests by the HTTP `OPTIONS` method, in order to determine whether the actual request is safe to send
