@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,22 +17,24 @@
 import Button from '@material-ui/core/Button';
 import Checkbox from '@material-ui/core/Checkbox';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@material-ui/core/Select';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { ChangeEvent } from 'react';
-import Dropdown, { Option } from 'react-dropdown';
 
 import jsonPrettify from '../../lib/json-prettify';
+import { SelectOption } from '../../lib/types';
 
 const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
 
 interface Props {
-  exampleHeaders: Option[];
+  exampleHeaders: SelectOption[];
   additionalHeadersOpen: boolean;
   additionalHeaders: string;
   stickyHeaders: boolean;
   onEditHttpHeadersClick: React.Dispatch<unknown>;
-  onSelectedHeadersChange: (selectedHeaders: Option) => void;
+  onSelectedHeadersChange: (e: ChangeEvent<{ value: unknown }>) => void;
   onHeadersFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onStickyHeadersChange: React.Dispatch<unknown>;
 }
@@ -48,11 +50,19 @@ const HttpHeaders: React.FunctionComponent<Props> = (props) => (
         {props.exampleHeaders.length > 0 && (
           <>
             <Typography variant="body2" paragraph />
-            <Dropdown
-              placeholder="Select an example headers..."
-              options={props.exampleHeaders}
+            <Select
+              fullWidth
+              displayEmpty
+              value=""
+              renderValue={() => 'Select example headers...'}
               onChange={props.onSelectedHeadersChange}
-            />
+            >
+              {props.exampleHeaders.map((header) => (
+                <MenuItem key={header.value} value={header.value}>
+                  {header.label}
+                </MenuItem>
+              ))}
+            </Select>
           </>
         )}
         <Typography variant="body2" paragraph />

@@ -19,16 +19,15 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.internal.client.DnsUtil.anyInterfaceSupportsIpV6;
 
 import java.net.InetSocketAddress;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -90,8 +89,6 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         return builder.build();
     }
 
-    private final ConcurrentMap<String, CompletableFuture<CacheEntry>> cache = new ConcurrentHashMap<>();
-
     private final int minTtl;
     private final int maxTtl;
     private final int negativeTtl;
@@ -99,11 +96,13 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
+    private final Cache<String, CompletableFuture<CacheEntry>> cache;
 
     RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
                                    int minTtl, int maxTtl, int negativeTtl, long queryTimeoutMillis,
                                    Backoff refreshBackoff,
-                                   @Nullable ResolvedAddressTypes resolvedAddressTypes) {
+                                   @Nullable ResolvedAddressTypes resolvedAddressTypes,
+                                   String cacheSpec) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
@@ -115,10 +114,11 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         } else {
             dnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
         }
+        cache = buildCache(cacheSpec);
     }
 
     @VisibleForTesting
-    ConcurrentMap<String, CompletableFuture<CacheEntry>> cache() {
+    Cache<String, CompletableFuture<CacheEntry>> cache() {
         return cache;
     }
 
@@ -137,16 +137,19 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     @Override
     public void close() {
         super.close();
-        while (!cache.isEmpty()) {
-            for (final Iterator<Entry<String, CompletableFuture<CacheEntry>>> i = cache.entrySet().iterator();
-                 i.hasNext();) {
-                final Entry<String, CompletableFuture<CacheEntry>> entry = i.next();
-                i.remove();
-                entry.getValue().handle((cacheEntry, cause) -> {
+        cache.invalidateAll();
+    }
+
+    private static Cache<String, CompletableFuture<CacheEntry>> buildCache(String cacheSpec) {
+        final Caffeine<Object, Object> b = Caffeine.from(cacheSpec);
+        b.removalListener((RemovalListener<String, CompletableFuture<CacheEntry>>) (key, value, cause) -> {
+            if (value != null) {
+                value.handle((cacheEntry, throwable) -> {
                     cacheEntry.clear();
                     return null;
                 });
             }
-        }
+        });
+        return b.build();
     }
 }
