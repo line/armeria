@@ -183,9 +183,11 @@ public final class AnnotatedService implements HttpService {
         }
 
         final ImmutableList<ResponseConverterFunction> backingConverters =
-                ImmutableList.<ResponseConverterFunction>builder().addAll(responseConverters)
-                                                                  .addAll(defaultResponseConverters)
-                                                                  .build();
+                ImmutableList
+                        .<ResponseConverterFunction>builder()
+                        .addAll(responseConverters)
+                        .addAll(defaultResponseConverters)
+                        .build();
         final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
                 ImmutableList
                         .<ResponseConverterFunction>builder()

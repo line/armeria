@@ -15,32 +15,30 @@ configure(projectsWithFlags('publish', 'java')) {
                     }
                 }
 
-                afterEvaluate {
-                    // Replace published jar with shaded when available. We manually create shading tasks instead of
-                    // applying the shadow plugin itself so need to do it ourselves.
-                    def jarOverrideFile = null
-                    def jarOverrideTask = null
-                    if (tasks.findByName('trimShadedJar')) {
-                        jarOverrideFile = tasks.trimShadedJar.outJarFiles.find() as File
-                        jarOverrideTask = tasks.trimShadedJar
-                    } else if (tasks.findByName('shadedJar')) {
-                        def archivePath = tasks.shadedJar.archivePath
-                        if (project.hasFlags('scala')) {
-                            def microVersionIndex = project.scalaVersion.lastIndexOf('.')
-                            def scalaVersionSuffix = project.scalaVersion.substring(0, microVersionIndex)
-                            def absolutePath = archivePath.getPath()
+                // Replace published jar with shaded when available. We manually create shading tasks instead of
+                // applying the shadow plugin itself so need to do it ourselves.
+                def jarOverrideFile = null
+                def jarOverrideTask = null
+                if (tasks.findByName('trimShadedJar')) {
+                    jarOverrideFile = tasks.trimShadedJar.outJarFiles.find() as File
+                    jarOverrideTask = tasks.trimShadedJar
+                } else if (tasks.findByName('shadedJar')) {
+                    def archivePath = tasks.shadedJar.archivePath
+                    if (project.hasFlags('scala')) {
+                        def microVersionIndex = project.ext.defaultScalaVersions.lastIndexOf('.')
+                        def scalaVersionSuffix = project.ext.defaultScalaVersions.substring(0, microVersionIndex)
+                        def absolutePath = archivePath.getPath()
 
-                            archivePath = new java.io.File(absolutePath.replaceFirst("-shaded", "-shaded_$scalaVersionSuffix"))
-                        }
-
-                        jarOverrideFile = archivePath
-                        jarOverrideTask = tasks.shadedJar
+                        archivePath = new java.io.File(absolutePath.replaceFirst("-shaded", "-shaded_$scalaVersionSuffix"))
                     }
-                    if (jarOverrideFile != null) {
-                        // For some reason this needs to be in afterEvaluate or dependencies are lost from the POM.
-                        def unshaded = artifacts.find {
-                            it.classifier == null && it.extension == 'jar'
-                        }
+
+                    jarOverrideFile = archivePath
+                    jarOverrideTask = tasks.shadedJar
+                }
+                if (jarOverrideFile != null) {
+                    // For some reason this needs to be in afterEvaluate or dependencies are lost from the POM.
+                    afterEvaluate {
+                        def unshaded = artifacts.find { it.classifier == null && it.extension == 'jar' }
                         artifacts.remove(unshaded)
                         artifact(jarOverrideFile).builtBy(jarOverrideTask)
                     }
