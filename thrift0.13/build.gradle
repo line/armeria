@@ -1,7 +1,7 @@
 dependencies {
     // Thrift
     api 'org.apache.thrift:libthrift'
-    api 'jakarta.annotation:jakarta.annotation-api'
+    api 'javax.annotation:javax.annotation-api'
 
     // Jetty, for testing TServlet interoperability.
     testImplementation 'org.eclipse.jetty:jetty-webapp'
