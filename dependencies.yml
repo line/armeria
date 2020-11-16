@@ -238,6 +238,9 @@ io.netty:
   # TODO: get netty-bom to claim this version!
   netty-tcnative-boringssl-static: { version: '2.0.34.Final' }
 
+io.netty.incubator:
+  netty-incubator-transport-native-io_uring: { version: '0.0.1.Final' }
+
 io.projectreactor:
   reactor-core:
     version: &REACTOR_VERSION '3.3.10.RELEASE'

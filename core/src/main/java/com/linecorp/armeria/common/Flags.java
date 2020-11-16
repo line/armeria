@@ -70,6 +70,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.incubator.channel.uring.IOUring;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
@@ -168,6 +169,8 @@ public final class Flags {
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
+    private static final boolean USE_IOURING = getBoolean("useIOUring", false,
+                                                          value -> isIOUringAvailable() || !value);
     @Nullable
     private static Boolean useOpenSsl;
     @Nullable
@@ -393,6 +396,10 @@ public final class Flags {
         return false;
     }
 
+    private static boolean isIOUringAvailable() {
+        return SystemInfo.isLinux() && IOUring.isAvailable();
+    }
+
     /**
      * Returns the {@link Sampler} that determines whether to retain the stack trace of the exceptions
      * that are thrown frequently by Armeria.
@@ -480,6 +487,18 @@ public final class Flags {
      */
     public static boolean useEpoll() {
         return USE_EPOLL;
+    }
+
+    /**
+     * Returns whether the JNI-based io_uring socket I/O is enabled. When enabled on Linux, Armeria
+     * uses io_uring directly for socket I/O. When disabled, the JNI-based {@code /dev/epoll} socket API
+     * or {@code java.nio} socket API is used instead.
+     *
+     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.useIOUring=true}
+     * JVM option to enable it.
+     */
+    public static boolean useIOUring() {
+        return USE_IOURING;
     }
 
     /**

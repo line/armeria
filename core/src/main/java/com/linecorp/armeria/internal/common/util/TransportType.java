@@ -41,6 +41,10 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.incubator.channel.uring.IOUringDatagramChannel;
+import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
+import io.netty.incubator.channel.uring.IOUringServerSocketChannel;
+import io.netty.incubator.channel.uring.IOUringSocketChannel;
 
 /**
  * Native transport types.
@@ -51,7 +55,10 @@ public enum TransportType {
         NioEventLoopGroup::new, NioEventLoopGroup.class, NioEventLoop.class),
 
     EPOLL(EpollServerSocketChannel.class, EpollSocketChannel.class, EpollDatagramChannel.class,
-          EpollEventLoopGroup::new, EpollEventLoopGroup.class, ChannelUtil.epollEventLoopClass());
+          EpollEventLoopGroup::new, EpollEventLoopGroup.class, ChannelUtil.epollEventLoopClass()),
+
+    IO_URING(IOUringServerSocketChannel.class, IOUringSocketChannel.class, IOUringDatagramChannel.class,
+             IOUringEventLoopGroup::new, IOUringEventLoopGroup.class, ChannelUtil.ioUringEventLoopClass());
 
     private final Class<? extends ServerChannel> serverChannelType;
     private final Class<? extends SocketChannel> socketChannelType;
@@ -76,7 +83,9 @@ public enum TransportType {
      * Returns the available {@link TransportType}.
      */
     public static TransportType detectTransportType() {
-        if (Flags.useEpoll()) {
+        if (Flags.useIOUring()) {
+            return IO_URING;
+        } else if (Flags.useEpoll()) {
             return EPOLL;
         } else {
             return NIO;
