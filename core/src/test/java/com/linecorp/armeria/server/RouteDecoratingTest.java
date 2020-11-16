@@ -103,19 +103,19 @@ class RouteDecoratingTest {
                   return delegate.serve(ctx, req);
               })
               .routeDecorator()
-              .pathPrefix("/assets/resources")
-              .build((delegate, ctx, req) -> {
-                  final HttpResponse response = delegate.serve(ctx, req);
-                  ctx.mutateAdditionalResponseHeaders(
-                          mutator -> mutator.add(HttpHeaderNames.CACHE_CONTROL, "public"));
-                  return response;
-              })
-              .routeDecorator()
               .pathPrefix("/assets/resources/private")
               .build((delegate, ctx, req) -> {
                   final HttpResponse response = delegate.serve(ctx, req);
                   ctx.mutateAdditionalResponseHeaders(
                           mutator -> mutator.add(HttpHeaderNames.CACHE_CONTROL, "private"));
+                  return response;
+              })
+              .routeDecorator()
+              .pathPrefix("/assets/resources")
+              .build((delegate, ctx, req) -> {
+                  final HttpResponse response = delegate.serve(ctx, req);
+                  ctx.mutateAdditionalResponseHeaders(
+                          mutator -> mutator.add(HttpHeaderNames.CACHE_CONTROL, "public"));
                   return response;
               });
         }
@@ -187,7 +187,7 @@ class RouteDecoratingTest {
             "/api/admin/1, , 401, ",
             "/assets/index.html, , 200, ",
             "/assets/resources/index.html, , 200, public",
-            "/assets/resources/private/profile.jpg, , 200, public",
+            "/assets/resources/private/profile.jpg, , 200, private",
     })
     void secured(String path, @Nullable String authorization, int status, String cacheControl) {
         final WebClient client = WebClient.of(authServer.httpUri());
