@@ -43,7 +43,7 @@ import com.linecorp.armeria.server.Server;
 public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
 
     private static final long DEFAULT_CHECK_INTERVAL_MILLIS = 10_000;
-    private static final HttpMethod DEFAULT_CHECK_METHOD = HttpMethod.HEAD;
+
     private final String serviceName;
 
     @Nullable
@@ -51,7 +51,7 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
     @Nullable
     private URI checkUri;
     private String checkInterval = DEFAULT_CHECK_INTERVAL_MILLIS + "ms";
-    private HttpMethod checkMethod = DEFAULT_CHECK_METHOD;
+    private HttpMethod checkMethod = HttpMethod.HEAD;
 
     /**
      * Creates a {@link ConsulUpdatingListenerBuilder} with a service name.
@@ -86,7 +86,7 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
 
     /**
      * Sets HTTP method for checking health by Consul agent.
-     * If not set {@value DEFAULT_CHECK_METHOD} is used by default.
+     * If not set {@code HttpMethod.HEAD} is used by default.
      *
      * <p>Note that the {@code checkMethod} should be configured with {@link #checkUri(String)}.
      * Otherwise, the {@link #build()} method will throw an {@link IllegalStateException}.
