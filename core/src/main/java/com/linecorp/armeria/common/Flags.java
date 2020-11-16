@@ -16,7 +16,6 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.InetAddress;
