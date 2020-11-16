@@ -80,7 +80,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
 
         final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         publisher.subscribe(deframer, ctx.eventLoop());
-        deframer.subscribe(trailersSubscriber(ctx), ctx.eventLoop());
+        deframer.subscribe(new TrailersSubscriber(ctx), ctx.eventLoop());
         final FilteredHttpResponse filteredHttpResponse = new FilteredHttpResponse(response, true) {
             @Override
             protected HttpObject filter(HttpObject obj) {
@@ -149,57 +149,63 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
         return filteredHttpResponse;
     }
 
-    private static Subscriber<DeframedMessage> trailersSubscriber(ClientRequestContext ctx) {
-        return new Subscriber<DeframedMessage>() {
-            @Override
-            public void onSubscribe(Subscription s) {
-                s.request(Long.MAX_VALUE);
-            }
+    private static final class TrailersSubscriber implements Subscriber<DeframedMessage> {
 
-            @Override
-            public void onNext(DeframedMessage message) {
-                if (message.type() >> 7 == 1) {
-                    final ByteBuf buf;
-                    try {
-                        buf = messageBuf(message, ctx.alloc());
-                    } catch (IOException e) {
-                        // Ignore silently
+        private final ClientRequestContext ctx;
+
+        TrailersSubscriber(ClientRequestContext ctx) {
+            this.ctx = ctx;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            // Backpressure is controlled by HttpDeframer.
+            s.request(Long.MAX_VALUE);
+        }
+
+        @Override
+        public void onNext(DeframedMessage message) {
+            if (message.type() >> 7 == 1) {
+                final ByteBuf buf;
+                try {
+                    buf = messageBuf(message, ctx.alloc());
+                } catch (IOException e) {
+                    // Ignore silently
+                    return;
+                }
+                try {
+                    final HttpHeaders trailers = parseGrpcWebTrailers(buf);
+                    if (trailers == null) {
                         return;
                     }
-                    try {
-                        final HttpHeaders trailers = parseGrpcWebTrailers(buf);
-                        if (trailers == null) {
-                            return;
-                        }
-                        GrpcWebTrailers.set(ctx, trailers);
-                    } finally {
-                        buf.release();
-                    }
+                    GrpcWebTrailers.set(ctx, trailers);
+                } finally {
+                    buf.release();
+                }
+            } else {
+                final ByteBuf buf = message.buf();
+                if (buf != null) {
+                    buf.release();
                 } else {
-                    final ByteBuf buf = message.buf();
-                    if (buf != null) {
-                        buf.release();
-                    } else {
-                        try {
-                            final InputStream stream = message.stream();
-                            assert stream != null;
-                            stream.close();
-                        } catch (IOException e) {
-                            // Ignore silently
-                        }
+                    try {
+                        final InputStream stream = message.stream();
+                        assert stream != null;
+                        stream.close();
+                    } catch (IOException e) {
+                        // Ignore silently
                     }
                 }
             }
+        }
 
-            @Override
-            public void onError(Throwable t) {
-                /* no-op */
-            }
+        @Override
+        public void onError(Throwable t) {
+            /* no-op */
+        }
 
-            @Override
-            public void onComplete() {
-                /* no-op */
-            }
-        };
+        @Override
+        public void onComplete() {
+            /* no-op */
+        }
     }
 }

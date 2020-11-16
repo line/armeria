@@ -230,31 +230,23 @@ class HttpDeframerTest {
         final RuntimeException cause = new RuntimeException("Error before subscribing");
         final Flux<HttpData> stream = Flux.error(cause);
         stream.subscribe(deframer);
-        final EventLoop eventLoop = this.eventLoop.get();
-        AtomicReference<Throwable> causeRef = new AtomicReference<>();
+        final EventLoop eventLoop = HttpDeframerTest.eventLoop.get();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         deframer.subscribe(new Subscriber<String>() {
             @Override
-            public void onSubscribe(Subscription s) {
-                System.out.println("s = " + s);
-            }
+            public void onSubscribe(Subscription s) {}
 
             @Override
-            public void onNext(String o) {
-                System.out.println("o = " + o);
-
-            }
+            public void onNext(String o) {}
 
             @Override
             public void onError(Throwable t) {
-                System.out.println("t = " + t);
                 assertThat(eventLoop.inEventLoop()).isTrue();
                 causeRef.set(t);
             }
 
             @Override
-            public void onComplete() {
-                System.out.println("completed");
-            }
+            public void onComplete() {}
         }, eventLoop);
         await().untilAtomic(causeRef, Matchers.is(cause));
     }

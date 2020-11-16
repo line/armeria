@@ -106,10 +106,6 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     private static final AtomicIntegerFieldUpdater<HttpDeframer> initializedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(HttpDeframer.class, "initialized");
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicIntegerFieldUpdater<HttpDeframer> cleanedUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(HttpDeframer.class, "cleaned");
-
     private final HttpDeframerHandler<T> handler;
     private final ByteBufDeframerInput input;
     private final Function<? super HttpData, ? extends ByteBuf> byteBufConverter;
@@ -123,7 +119,7 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     @Nullable
     private volatile Throwable cause;
     private volatile boolean cancelled;
-    private volatile int cleaned;
+    private volatile boolean completing;
     private volatile int initialized;
 
     /**
@@ -178,32 +174,45 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         final SubscriptionImpl subscriptionImpl = super.subscribe(subscription);
         if (subscriptionImpl == subscription) {
-            eventLoop = subscription.executor();
-            deferredInit();
+            final EventExecutor eventLoop = subscription.executor();
+            this.eventLoop = eventLoop;
+            deferredInit(eventLoop);
         }
         return subscriptionImpl;
     }
 
-    private void deferredInit() {
+    private void deferredInit(@Nullable EventExecutor eventLoop) {
         final Subscription upstream = this.upstream;
+
         if (upstream != null && eventLoop != null) {
             if (initializedUpdater.compareAndSet(this, 0, 1)) {
                 if (cancelled) {
                     upstream.cancel();
-                } else {
-                    final Throwable cause = this.cause;
-                    if (cause != null) {
-                        final EventExecutor eventLoop = this.eventLoop;
-                        if (eventLoop.inEventLoop()) {
-                            onError0(cause);
-                        } else {
-                            eventLoop.execute(() -> onError0(cause));
-                        }
-                    } else if (demand() > 0) {
-                        // The 'demand' will be decreased by 'DefaultStreamMessage
-                        // .notifySubscriberWithElements()'
-                        upstream.request(1);
+                    return;
+                }
+
+                final Throwable cause = this.cause;
+                if (cause != null) {
+                    if (eventLoop.inEventLoop()) {
+                        onError0(cause);
+                    } else {
+                        eventLoop.execute(() -> onError0(cause));
                     }
+                    return;
+                }
+
+                if (completing) {
+                    if (eventLoop.inEventLoop()) {
+                        onComplete0();
+                    } else {
+                        eventLoop.execute(this::onComplete0);
+                    }
+                    return;
+                }
+
+                if (demand() > 0) {
+                    // The 'demand' will be decreased by 'DefaultStreamMessage.notifySubscriberWithElements()'
+                    upstream.request(1);
                 }
             }
         }
@@ -227,7 +236,7 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     public void onSubscribe(Subscription subscription) {
         requireNonNull(subscription, "subscription");
         if (upstreamUpdater.compareAndSet(this, null, subscription)) {
-            deferredInit();
+            deferredInit(this.eventLoop);
         } else {
             subscription.cancel();
         }
@@ -271,46 +280,57 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     }
 
     @Override
-    public void onError(Throwable cause){
-            requireNonNull(cause, "cause");
-            if (cancelled) {
-                return;
-            }
+    public void onError(Throwable cause) {
+        requireNonNull(cause, "cause");
+        if (cancelled) {
+            return;
+        }
 
-            if (eventLoop == null) {
-                this.cause = cause;
+        final EventExecutor eventLoop = this.eventLoop;
+        if (eventLoop == null) {
+            this.cause = cause;
+        } else {
+            if (eventLoop.inEventLoop()) {
+                onError0(cause);
             } else {
-                final EventExecutor eventLoop = this.eventLoop;
-                if (eventLoop.inEventLoop()) {
-                    onError0(cause);
-                } else {
-                    eventLoop.execute(() -> onError0(cause));
-                }
+                eventLoop.execute(() -> onError0(cause));
             }
         }
+    }
 
-        private void onError0 (Throwable cause){
-            if (!(cause instanceof AbortedStreamException)) {
-                handler.processOnError(cause);
-            }
-
-            abort(cause);
-            cleanup();
+    private void onError0(Throwable cause) {
+        if (!(cause instanceof AbortedStreamException)) {
+            handler.processOnError(cause);
         }
 
-        @Override
-        public void onComplete () {
-            if (cancelled) {
-                return;
-            }
+        abort(cause);
+        cleanup();
+    }
 
-            cleanup();
-            close();
+    @Override
+    public void onComplete() {
+        if (cancelled) {
+            return;
         }
+
+        final EventExecutor eventLoop = this.eventLoop;
+        if (eventLoop == null) {
+            completing = true;
+        } else {
+            if (eventLoop.inEventLoop()) {
+                onComplete0();
+            } else {
+                eventLoop.execute(this::onComplete0);
+            }
+        }
+    }
+
+    private void onComplete0() {
+        cleanup();
+        close();
+    }
 
     private void cleanup() {
-            if (cleanedUpdater.compareAndSet(this, 0, 1)) {
-                input.close();
-            }
-        }
+        input.close();
+    }
 }
