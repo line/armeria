@@ -439,7 +439,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void onComplete() {
-        setClientStreamClosed();
+        setClientStreamClosed(true);
         if (!closeCalled) {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
@@ -495,9 +495,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (!listenerClosed) {
             listenerClosed = true;
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
-            setClientStreamClosed();
+            final boolean ok = newStatus.isOk();
+            setClientStreamClosed(ok);
             messageFramer.close();
-            if (newStatus.isOk()) {
+            if (ok) {
                 if (blockingExecutor != null) {
                     blockingExecutor.execute(this::invokeOnComplete);
                 } else {
@@ -551,9 +552,16 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
     }
 
-    private void setClientStreamClosed() {
+    private void setClientStreamClosed(boolean ok) {
         if (!clientStreamClosed) {
-            messageDeframer().close();
+            if (ok) {
+                messageDeframer().close();
+            } else {
+                // If ok is false, `listener.onHalfClose()` should not be called.
+                // Because it is called when receiving a client request successfully.
+                // 'messageDeframer.close()' invokes 'onComplete()' which triggers `listener.onHalfClose()`.
+                messageDeframer().abort();
+            }
             clientStreamClosed = true;
         }
     }
