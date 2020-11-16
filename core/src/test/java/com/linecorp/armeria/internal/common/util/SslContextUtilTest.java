@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
-import static com.linecorp.armeria.internal.common.util.SslContextUtil.HTTP2_BLACKLISTED_CIPHERS;
+import static com.linecorp.armeria.internal.common.util.SslContextUtil.BAD_HTTP2_CIPHERS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
@@ -62,7 +62,7 @@ class SslContextUtilTest {
 
     @Test
     void unsafeTlsCiphers() {
-        final String cipher = getBlackListedCipher();
+        final String cipher = getBadCipher();
         assumeThat(cipher).isNotNull();
 
         assertThatThrownBy(() -> {
@@ -83,8 +83,8 @@ class SslContextUtilTest {
     }
 
     @Nullable
-    private static String getBlackListedCipher() {
-        for (String cipher : HTTP2_BLACKLISTED_CIPHERS) {
+    private static String getBadCipher() {
+        for (String cipher : BAD_HTTP2_CIPHERS) {
             try {
                 final SslContext sslCtx = BouncyCastleKeyFactoryProvider.call(() -> {
                     final SslContextBuilder builder = SslContextBuilder.forClient();
