@@ -14,6 +14,7 @@ plugins {
 }
 
 dependencies {
+    // TODO(ikhoon): Copy ScalaPBJsonMarshaller and GrpcScalaDocServicePlugin
     implementation project(':grpc')
     implementation 'org.scala-lang:scala-library:%scala-version%'
     implementation "com.thesamet.scalapb:scalapb-runtime_%%:${managedVersions['com.thesamet.scalapb:scalapb-runtime_2.13']}"

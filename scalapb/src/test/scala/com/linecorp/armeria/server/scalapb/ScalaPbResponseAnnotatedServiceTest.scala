@@ -125,7 +125,8 @@ object ScalaPbResponseAnnotatedServiceTest {
   @RegisterExtension
   val server: ServerExtension = new ServerExtension() {
     override protected def configure(sb: ServerBuilder): Unit =
-      sb.annotatedService(new ScalaPbResponseAnnotatedServiceTest.GreetingService)
+      // A workaround for 'ambiguous reference to overloaded definition' in Scala 2.12.x
+      sb.annotatedService(new ScalaPbResponseAnnotatedServiceTest.GreetingService(), Array.emptyObjectArray: _*)
   }
 
   private var cause: Option[Throwable] = None

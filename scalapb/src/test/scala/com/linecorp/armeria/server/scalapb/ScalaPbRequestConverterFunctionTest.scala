@@ -31,8 +31,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.`extension`.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.{Arguments, ArgumentsProvider, ArgumentsSource}
+import scala.collection.mutable.ArrayBuffer
 import scalapb.GeneratedMessage
 import scalapb.json4s.Printer
+import sun.net.www.protocol.http.AuthenticatorKeys.getKey
 
 class ScalaPbRequestConverterFunctionTest {
 
@@ -160,21 +162,24 @@ private[scalapb] object ScalaPbRequestConverterFunctionTest {
   def toJson(messages: Iterable[GeneratedMessage]): String =
     messages.map(printer.print).mkString("[", ",", "]")
 
-  def toJson(messages: java.util.Collection[SimpleRequest]): String =
-    messages
-      .stream()
-      .map(req => printer.print(req))
-      .collect(Collectors.joining(",", "[", "]"))
+  def toJson(messages: java.util.Collection[SimpleRequest]): String = {
+    val buffer = new ArrayBuffer[String]()
+    messages.forEach { req =>
+      buffer += printer.print(req)
+    }
+    buffer.mkString("[", ",", "]")
+  }
 
   def toJson(messages: Map[String, GeneratedMessage]): String =
     messages
       .map { case (k, v) => s""""$k": ${printer.print(v)}""" }
       .mkString("{", ",", "}")
 
-  def toJson(messages: java.util.Map[String, SimpleRequest]): String =
-    messages
-      .entrySet()
-      .stream()
-      .map(entry => s""""${entry.getKey}": ${printer.print(entry.getValue)}""")
-      .collect(Collectors.joining(",", "{", "}"))
+  def toJson(messages: java.util.Map[String, SimpleRequest]): String = {
+    val buffer = new ArrayBuffer[String]()
+    messages.forEach { (key, req) =>
+      buffer += s""""${key}": ${printer.print(req)}"""
+    }
+    buffer.mkString("{", ",", "}")
+  }
 }

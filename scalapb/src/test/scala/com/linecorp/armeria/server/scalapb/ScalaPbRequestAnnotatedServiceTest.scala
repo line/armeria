@@ -89,7 +89,8 @@ object ScalaPbRequestAnnotatedServiceTest {
 
   val server = new ServerExtension() {
     override protected def configure(sb: ServerBuilder): Unit =
-      sb.annotatedService(new GreetingService)
+      // A workaround for 'ambiguous reference to overloaded definition' in Scala 2.12.x
+      sb.annotatedService(new GreetingService(), Array.emptyObjectArray: _*)
   }
 
   private class GreetingService {
@@ -124,5 +125,4 @@ object ScalaPbRequestAnnotatedServiceTest {
       "OK"
     }
   }
-
 }
