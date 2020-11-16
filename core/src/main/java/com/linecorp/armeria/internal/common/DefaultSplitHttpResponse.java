@@ -291,7 +291,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
             if (executor.inEventLoop()) {
                 onNext0((HttpData) httpObject);
             } else {
-                executor.execute(() ->onNext0((HttpData) httpObject));
+                executor.execute(() -> onNext0((HttpData) httpObject));
             }
         }
 

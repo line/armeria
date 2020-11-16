@@ -221,7 +221,8 @@ class DefaultSplitHttpResponseTest {
     @Test
     void heapObjects() {
         final AtomicReference<HttpData> httpDataRef = new AtomicReference<>();
-        final HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), HttpData.ofUtf8("ABC"));
+        final HttpResponse response = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
+                                                      HttpData.ofUtf8("ABC"));
 
         response.split().body().subscribe(new Subscriber<HttpData>() {
             @Override
