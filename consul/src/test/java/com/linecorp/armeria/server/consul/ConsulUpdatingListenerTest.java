@@ -16,7 +16,6 @@
 package com.linecorp.armeria.server.consul;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
@@ -78,11 +77,28 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
     }
 
     @Test
-    void shouldRaiseExceptionWhenCheckUrlMissed() {
-        assertThatThrownBy(ConsulUpdatingListener.builder(serviceName)
-                                                 .checkMethod(HttpMethod.POST)
-                                                 .checkIntervalMillis(1000)::build
-        ).isInstanceOf(IllegalStateException.class);
+    void testThatDefaultCheckMethodIsHead() {
+        final int port = unusedPorts(1)[0];
+        final Endpoint endpoint = Endpoint.of("127.0.0.1", port).withWeight(1);
+        final Server server = Server.builder()
+                                    .http(port)
+                                    .service("/echo", new EchoService())
+                                    .build();
+        final ServerListener listener =
+                ConsulUpdatingListener.builder("testThatDefaultCheckMethodIsHead")
+                                      .consulPort(consul().getHttpPort())
+                                      .consulToken(CONSUL_TOKEN)
+                                      .endpoint(endpoint)
+                                      .checkUri("http://" + endpoint.host() + ':' + endpoint.port() + "/echo")
+                                      .checkInterval(Duration.ofSeconds(1))
+                                      .build();
+        server.addListener(listener);
+        server.start().join();
+        await().atMost(10, TimeUnit.SECONDS)
+               .untilAsserted(() -> assertThat(
+                       client().healthyEndpoints("testThatDefaultCheckMethodIsHead").join().size()
+               ).isEqualTo(1));
+        server.stop();
     }
 
     @Test

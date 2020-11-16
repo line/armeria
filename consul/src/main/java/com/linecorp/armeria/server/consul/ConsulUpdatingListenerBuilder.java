@@ -43,6 +43,7 @@ import com.linecorp.armeria.server.Server;
 public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
 
     private static final long DEFAULT_CHECK_INTERVAL_MILLIS = 10_000;
+    private static final HttpMethod DEFAULT_CHECK_METHOD = HttpMethod.HEAD;
     private final String serviceName;
 
     @Nullable
@@ -50,8 +51,7 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
     @Nullable
     private URI checkUri;
     private String checkInterval = DEFAULT_CHECK_INTERVAL_MILLIS + "ms";
-    @Nullable
-    private HttpMethod checkMethod;
+    private HttpMethod checkMethod = DEFAULT_CHECK_METHOD;
 
     /**
      * Creates a {@link ConsulUpdatingListenerBuilder} with a service name.
@@ -86,9 +86,10 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
 
     /**
      * Sets HTTP method for checking health by Consul agent.
+     * If not set {@value DEFAULT_CHECK_METHOD} is used by default.
      *
      * <p>Note that the {@code checkMethod} should be configured with {@link #checkUri(String)}.
-     * Otherwise, the {@link #build()} method will throws {@link IllegalStateException}.
+     * Otherwise, the {@link #build()} method will throw an {@link IllegalStateException}.
      *
      * @param checkMethod the {@link HttpMethod} for checking health of service
      */
@@ -102,7 +103,7 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
      * If not set {@value DEFAULT_CHECK_INTERVAL_MILLIS} milliseconds is used by default.
      *
      * <p>Note that the {@code checkInterval} should be configured with {@link #checkUri(URI)}.
-     * Otherwise, the {@link #build()} method will throws {@link IllegalStateException}.
+     * Otherwise, the {@link #build()} method will throw an {@link IllegalStateException}.
      */
     public ConsulUpdatingListenerBuilder checkInterval(Duration checkInterval) {
         requireNonNull(checkInterval, "checkInterval");
@@ -173,11 +174,6 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
      * Consul when the {@link Server} starts.
      */
     public ConsulUpdatingListener build() {
-        if (checkUri == null) {
-            if (checkMethod != null) {
-                throw new IllegalStateException("'checkMethod' should declare with checkUri.");
-            }
-        }
         return new ConsulUpdatingListener(buildClient(), serviceName, serviceEndpoint, checkUri, checkMethod,
                                           checkInterval);
     }

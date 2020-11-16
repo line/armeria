@@ -67,8 +67,9 @@ public abstract class ConsulTestBase {
     @BeforeAll
     static void start() throws Throwable {
         // Initialize Consul embedded server for testing
+        // This EmbeddedConsul tested with Consul version above 1.4.0
         consul = ConsulStarterBuilder.consulStarter()
-                                     .withConsulVersion("1.8.4")
+                                     .withConsulVersion("1.9.0-beta1")
                                      .withCustomConfig(aclConfiguration(CONSUL_TOKEN))
                                      .withToken(CONSUL_TOKEN)
                                      .build().start();
@@ -104,7 +105,7 @@ public abstract class ConsulTestBase {
         return consulClient;
     }
 
-    private static int[] unusedPorts(int numPorts) {
+    protected static int[] unusedPorts(int numPorts) {
         final int[] ports = new int[numPorts];
         final Random random = ThreadLocalRandom.current();
         for (int i = 0; i < numPorts; i++) {
@@ -142,6 +143,13 @@ public abstract class ConsulTestBase {
 
     public static class EchoService extends AbstractHttpService {
         private HttpStatus responseStatus = HttpStatus.OK;
+
+        @Override
+        protected final HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
+            return HttpResponse.from(req.aggregate()
+                                        .thenApply(aReq -> HttpResponse.of(HttpStatus.OK))
+                                        .exceptionally(CompletionActions::log));
+        }
 
         @Override
         protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {

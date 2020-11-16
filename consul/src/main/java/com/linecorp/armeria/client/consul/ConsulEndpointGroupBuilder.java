@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
@@ -31,12 +32,22 @@ import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
 public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
     private static final long DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS = 10_000;
 
+    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
+
     private final String serviceName;
     private long registryFetchIntervalMillis = DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS;
     private boolean useHealthyEndpoints;
 
     ConsulEndpointGroupBuilder(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
+    }
+
+    /**
+     * Sets the {@link EndpointSelectionStrategy} of the {@link ConsulEndpointGroup}.
+     */
+    public ConsulEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
+        this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
+        return this;
     }
 
     /**
@@ -112,7 +123,7 @@ public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
      * Returns a newly-created {@link ConsulEndpointGroup}.
      */
     public ConsulEndpointGroup build() {
-        return new ConsulEndpointGroup(buildClient(), serviceName, registryFetchIntervalMillis,
-                                       useHealthyEndpoints);
+        return new ConsulEndpointGroup(selectionStrategy, buildClient(), serviceName,
+                                       registryFetchIntervalMillis, useHealthyEndpoints);
     }
 }

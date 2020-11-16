@@ -64,14 +64,14 @@ public final class ConsulUpdatingListener extends ServerListenerAdapter {
     private String serviceId;
 
     ConsulUpdatingListener(ConsulClient consulClient, String serviceName, @Nullable Endpoint endpoint,
-                           @Nullable URI checkUrl, @Nullable HttpMethod checkMethod, String checkInterval) {
+                           @Nullable URI checkUri, @Nullable HttpMethod checkMethod, String checkInterval) {
         this.consulClient = requireNonNull(consulClient, "consulClient");
         this.serviceName = requireNonNull(serviceName, "serviceName");
         this.endpoint = endpoint;
 
-        if (checkUrl != null) {
+        if (checkUri != null) {
             final Check check = new Check();
-            check.setHttp(checkUrl.toString());
+            check.setHttp(checkUri.toString());
             if (checkMethod != null) {
                 check.setMethod(checkMethod.name());
             }

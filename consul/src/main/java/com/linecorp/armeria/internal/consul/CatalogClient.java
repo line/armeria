@@ -18,15 +18,16 @@ package com.linecorp.armeria.internal.consul;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -61,18 +62,19 @@ final class CatalogClient {
     }
 
     /**
-     * Gets endpoint list with service name.
+     * Gets endpoint list by service name.
      */
     CompletableFuture<List<Endpoint>> endpoints(String serviceName) {
         requireNonNull(serviceName, "serviceName");
         return service(serviceName)
                 .thenApply(nodes -> nodes.stream()
-                                         .map(CatalogClient::convertToEndpoint)
+                                         .map(CatalogClient::toEndpoint)
+                                         .filter(Objects::nonNull)
                                          .collect(toImmutableList()));
     }
 
     /**
-     * Returns node list with service name.
+     * Returns node list by service name.
      */
     @VisibleForTesting
     CompletableFuture<List<Node>> service(String serviceName) {
@@ -83,23 +85,22 @@ final class CatalogClient {
                      .aggregate()
                      .thenApply(response -> {
                          try {
-                             return mapper.readValue(response.content().toStringUtf8(), collectionTypeForNode);
-                         } catch (JsonProcessingException e) {
+                             return mapper.readValue(response.content().array(), collectionTypeForNode);
+                         } catch (IOException e) {
                              return Exceptions.throwUnsafely(e);
                          }
                      });
     }
 
-    private static Endpoint convertToEndpoint(Node node) {
-        final String host;
+    @Nullable
+    private static Endpoint toEndpoint(Node node) {
         if (!Strings.isNullOrEmpty(node.serviceAddress)) {
-            host = node.serviceAddress;
+            return Endpoint.of(node.serviceAddress, node.servicePort);
         } else if (!Strings.isNullOrEmpty(node.address)) {
-            host = node.address;
+            return Endpoint.of(node.address, node.servicePort);
         } else {
-            host = "127.0.0.1";
+            return null;
         }
-        return Endpoint.of(host, node.servicePort);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

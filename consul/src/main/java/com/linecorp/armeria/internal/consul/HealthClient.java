@@ -22,7 +22,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +35,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
@@ -61,7 +65,7 @@ final class HealthClient {
     }
 
     /**
-     * Returns a healthy endpoint list with service name.
+     * Returns a healthy endpoint list by service name.
      */
     CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName) {
         requireNonNull(serviceName, "serviceName");
@@ -74,8 +78,7 @@ final class HealthClient {
                 .handle((response, cause) -> {
                     if (cause != null) {
                         logger.warn("Unexpected exception while fetching the registry from Consul: {}" +
-                                    " (serviceName: {})", client.uri(), serviceName,
-                                    cause);
+                                    " (serviceName: {})", client.uri(), serviceName, cause);
                         return null;
                     }
 
@@ -83,34 +86,32 @@ final class HealthClient {
                     final String content = response.contentUtf8();
                     if (!status.isSuccess()) {
                         logger.warn("Unexpected response from Consul: {} (status: {}, content: {}," +
-                                    " serviceName: {})", client.uri(), status,
-                                    content, serviceName);
+                                    " serviceName: {})", client.uri(), status, content, serviceName);
                         return null;
                     }
 
                     try {
                         return Arrays.stream(mapper.readValue(content, HealthService[].class))
                                      .map(HealthClient::toEndpoint)
+                                     .filter(Objects::nonNull)
                                      .collect(toImmutableList());
                     } catch (IOException e) {
                         logger.warn("Unexpected exception while parsing a response from Consul: {}" +
-                                    " (content: {}, serviceName: {})",
-                                    client.uri(), content, serviceName, e);
+                                    " (content: {}, serviceName: {})", client.uri(), content, serviceName, e);
                         return null;
                     }
                 });
     }
 
+    @Nullable
     private static Endpoint toEndpoint(HealthService healthService) {
-        final String host;
-        if (!healthService.service.address.isEmpty()) {
-            host = healthService.service.address;
-        } else if (!healthService.node.address.isEmpty()) {
-            host = healthService.node.address;
+        if (!Strings.isNullOrEmpty(healthService.service.address)) {
+            return Endpoint.of(healthService.service.address, healthService.service.port);
+        } else if (!Strings.isNullOrEmpty(healthService.node.address)) {
+            return Endpoint.of(healthService.node.address, healthService.service.port);
         } else {
-            host = "127.0.0.1";
+            return null;
         }
-        return Endpoint.of(host, healthService.service.port);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

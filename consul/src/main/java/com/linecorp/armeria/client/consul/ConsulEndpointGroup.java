@@ -32,14 +32,15 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.internal.consul.ConsulClient;
 
 import io.netty.channel.EventLoop;
 
 /**
  * A Consul-based {@link EndpointGroup} implementation that retrieves the list of {@link Endpoint}s
- * from Consul using <a href="https://www.consul.io/api">Consul's RESTful HTTP API</a> and
- * updates the {@link Endpoint}s periodically.
+ * from Consul using <a href="https://www.consul.io/api">Consul's HTTP API</a> and updates the
+ * {@link Endpoint}s periodically.
  */
 public final class ConsulEndpointGroup extends DynamicEndpointGroup {
 
@@ -69,8 +70,9 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
     @Nullable
     private volatile ScheduledFuture<?> scheduledFuture;
 
-    ConsulEndpointGroup(ConsulClient consulClient, String serviceName, long registryFetchIntervalMillis,
-                        boolean useHealthyEndpoints) {
+    ConsulEndpointGroup(EndpointSelectionStrategy selectionStrategy, ConsulClient consulClient,
+                        String serviceName, long registryFetchIntervalMillis, boolean useHealthyEndpoints) {
+        super(selectionStrategy);
         this.consulClient = requireNonNull(consulClient, "consulClient");
         this.serviceName = requireNonNull(serviceName, "serviceName");
         this.registryFetchIntervalMillis = registryFetchIntervalMillis;
