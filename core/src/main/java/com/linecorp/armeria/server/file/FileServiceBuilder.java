@@ -27,6 +27,8 @@ import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.CaffeineSpec;
+
 import com.linecorp.armeria.common.CacheControl;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -86,7 +88,9 @@ public final class FileServiceBuilder {
     }
 
     /**
-     * Sets the cache spec for caching file entries. If not set, {@code "maximumSize=1024"} is used by default.
+     * Sets the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the content
+     * of the {@link HttpFile}s read by the {@link FileService}.
+     * If not set, {@link Flags#fileServiceCacheSpec()} is used by default.
      */
     public FileServiceBuilder entryCacheSpec(String entryCacheSpec) {
         requireNonNull(entryCacheSpec, "entryCacheSpec");
