@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -24,7 +25,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -32,13 +35,18 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.EventLoop;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 class HttpDeframerTest {
+
+    @RegisterExtension
+    static EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Test
     void mapNToZero() {
@@ -213,6 +221,42 @@ class HttpDeframerTest {
                     .expectComplete()
                     .verify();
         assertThat(decoder.isReleased()).isTrue();
+    }
+
+    @Test
+    void deferredError() {
+        final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
+        final HttpDeframer<String> deframer = new HttpDeframer<>(decoder, ByteBufAllocator.DEFAULT);
+        final RuntimeException cause = new RuntimeException("Error before subscribing");
+        final Flux<HttpData> stream = Flux.error(cause);
+        stream.subscribe(deframer);
+        final EventLoop eventLoop = this.eventLoop.get();
+        AtomicReference<Throwable> causeRef = new AtomicReference<>();
+        deframer.subscribe(new Subscriber<String>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                System.out.println("s = " + s);
+            }
+
+            @Override
+            public void onNext(String o) {
+                System.out.println("o = " + o);
+
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                System.out.println("t = " + t);
+                assertThat(eventLoop.inEventLoop()).isTrue();
+                causeRef.set(t);
+            }
+
+            @Override
+            public void onComplete() {
+                System.out.println("completed");
+            }
+        }, eventLoop);
+        await().untilAtomic(causeRef, Matchers.is(cause));
     }
 
     private static final class FixedLengthDecoder implements HttpDeframerHandler<String> {

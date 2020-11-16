@@ -81,7 +81,7 @@ import io.netty.util.concurrent.EventExecutor;
  *       HttpDeframer<String> deframer = new HttpDeframer<>(decoder, ByteBufAllocator.DEFAULT);
  *       }</pre>
  *   </li>
- *   <li>Subscribe to a {@link HttpRequest} using the {@link HttpDeframer}.
+ *   <li>Subscribe to an {@link HttpRequest} using the {@link HttpDeframer}.
  *       <pre>{@code
  *       HttpRequest request = ...;
  *       request.subscribe(deframer);
@@ -106,6 +106,10 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     private static final AtomicIntegerFieldUpdater<HttpDeframer> initializedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(HttpDeframer.class, "initialized");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<HttpDeframer> cleanedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(HttpDeframer.class, "cleaned");
+
     private final HttpDeframerHandler<T> handler;
     private final ByteBufDeframerInput input;
     private final Function<? super HttpData, ? extends ByteBuf> byteBufConverter;
@@ -116,7 +120,10 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     private volatile EventExecutor eventLoop;
     @Nullable
     private volatile Subscription upstream;
+    @Nullable
+    private volatile Throwable cause;
     private volatile boolean cancelled;
+    private volatile int cleaned;
     private volatile int initialized;
 
     /**
@@ -181,8 +188,22 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
         final Subscription upstream = this.upstream;
         if (upstream != null && eventLoop != null) {
             if (initializedUpdater.compareAndSet(this, 0, 1)) {
-                if (demand() > 0) {
-                    upstream.request(1);
+                if (cancelled) {
+                    upstream.cancel();
+                } else {
+                    final Throwable cause = this.cause;
+                    if (cause != null) {
+                        final EventExecutor eventLoop = this.eventLoop;
+                        if (eventLoop.inEventLoop()) {
+                            onError0(cause);
+                        } else {
+                            eventLoop.execute(() -> onError0(cause));
+                        }
+                    } else if (demand() > 0) {
+                        // The 'demand' will be decreased by 'DefaultStreamMessage
+                        // .notifySubscriberWithElements()'
+                        upstream.request(1);
+                    }
                 }
             }
         }
@@ -228,6 +249,7 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
 
             whenConsumed().thenRun(() -> {
                 if (demand() > 0) {
+                    // The `demand` will be decreased by 'DefaultStreamMessage.notifySubscriberWithElements()'
                     upstream.request(1);
                 }
             });
@@ -249,42 +271,46 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     }
 
     @Override
-    public void onError(Throwable cause) {
-        requireNonNull(cause, "cause");
-        if (cancelled) {
-            return;
-        }
-        final EventExecutor eventLoop = this.eventLoop;
-        if (eventLoop != null && !eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> onError(cause));
-            return;
-        }
+    public void onError(Throwable cause){
+            requireNonNull(cause, "cause");
+            if (cancelled) {
+                return;
+            }
 
-        if (!(cause instanceof AbortedStreamException)) {
-            handler.processOnError(cause);
-        }
-
-        abort(cause);
-        cleanup();
-    }
-
-    @Override
-    public void onComplete() {
-        if (cancelled) {
-            return;
+            if (eventLoop == null) {
+                this.cause = cause;
+            } else {
+                final EventExecutor eventLoop = this.eventLoop;
+                if (eventLoop.inEventLoop()) {
+                    onError0(cause);
+                } else {
+                    eventLoop.execute(() -> onError0(cause));
+                }
+            }
         }
 
-        final EventExecutor eventLoop = this.eventLoop;
-        if (eventLoop != null && !eventLoop.inEventLoop()) {
-            eventLoop.execute(this::onComplete);
-            return;
+        private void onError0 (Throwable cause){
+            if (!(cause instanceof AbortedStreamException)) {
+                handler.processOnError(cause);
+            }
+
+            abort(cause);
+            cleanup();
         }
 
-        cleanup();
-        close();
-    }
+        @Override
+        public void onComplete () {
+            if (cancelled) {
+                return;
+            }
+
+            cleanup();
+            close();
+        }
 
     private void cleanup() {
-        input.close();
-    }
+            if (cleanedUpdater.compareAndSet(this, 0, 1)) {
+                input.close();
+            }
+        }
 }

@@ -32,7 +32,7 @@ import io.netty.buffer.ByteBuf;
 /**
  * A deframed message. For uncompressed messages, we have the entire buffer available and return it
  * as is in {@code buf} to optimize parsing. For compressed messages, we will parse incrementally
- * and thus return a {@link InputStream} in {@code stream}.
+ * and thus return an {@link InputStream} in {@code stream}.
  */
 @UnstableApi
 public final class DeframedMessage {
