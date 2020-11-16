@@ -410,8 +410,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
 
         if (NetUtil.isValidIpV6Address(ipAddr)) {
-            if (ipAddr.charAt(0) == '[') {
-                ipAddr = ipAddr.substring(1, ipAddr.length() - 1);
+            final boolean wrappedByBracket = ipAddr.charAt(0) == '[';
+            final int percentIdx = ipAddr.indexOf('%');
+            if (percentIdx < 0) {
+                if (wrappedByBracket) {
+                    ipAddr = ipAddr.substring(1, ipAddr.length() - 1);
+                }
+            } else {
+                ipAddr = ipAddr.substring(wrappedByBracket ? 1 : 0, percentIdx);
             }
             return withIpAddr(ipAddr, StandardProtocolFamily.INET6);
         }
