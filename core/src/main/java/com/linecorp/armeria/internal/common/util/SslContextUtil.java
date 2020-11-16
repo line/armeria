@@ -180,7 +180,7 @@ public final class SslContextUtil {
             if (BAD_HTTP2_CIPHERS.contains(cipher)) {
                 throw new IllegalStateException(
                         "Attempted to configure a server or HTTP/2 client with a TLS cipher that is not " +
-                        "allowed. Please remove any ciphers from the HTTP/2 cipher blacklist " +
+                        "allowed. Please remove any ciphers from the HTTP/2 cipher disallowed list " +
                         "https://httpwg.org/specs/rfc7540.html#BadCipherSuites");
             }
         }

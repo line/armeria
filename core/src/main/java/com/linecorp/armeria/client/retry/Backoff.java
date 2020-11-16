@@ -23,6 +23,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
@@ -33,6 +34,8 @@ public interface Backoff extends Unwrappable {
 
     /**
      * Returns the default {@link Backoff}.
+     *
+     * @see Flags#defaultBackoffSpec()
      */
     static Backoff ofDefault() {
         return defaultBackoff;
