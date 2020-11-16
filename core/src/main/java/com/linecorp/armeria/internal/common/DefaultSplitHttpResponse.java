@@ -163,9 +163,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
     private final class BodySubscriber implements Subscriber<HttpObject>, Subscription {
 
-        @Nullable
-        private Throwable cause;
-
         private boolean completing;
         // 1 is used for prefetching headers
         private long pendingRequests = 1;
@@ -179,6 +176,8 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         private volatile Subscription upstream;
         @Nullable
         private volatile EventExecutor executor;
+        @Nullable
+        private volatile Throwable cause;
 
         private volatile boolean cancelCalled;
 
@@ -197,10 +196,11 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
             try {
                 downstream.onSubscribe(this);
+                final Throwable cause = this.cause;
                 if (cause != null) {
-                    downstream.onError(cause);
+                    onError0(cause, downstream);
                 } else if (completing) {
-                    downstream.onComplete();
+                    onComplete0(downstream);
                 }
             } catch (Throwable t) {
                 throwIfFatal(t);
@@ -325,43 +325,46 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
         @Override
         public void onError(Throwable cause) {
+            maybeCompleteHeaders(cause);
             final EventExecutor executor = this.executor;
+            final Subscriber<? super HttpData> downstream = this.downstream;
+            if (executor == null || downstream == null) {
+                this.cause = cause;
+                return;
+            }
+
             if (executor.inEventLoop()) {
-                onError0(cause);
+                onError0(cause, downstream);
             } else {
-                executor.execute(() -> onError(cause));
+                executor.execute(() -> onError0(cause, downstream));
             }
         }
 
-        private void onError0(Throwable cause) {
-            maybeCompleteHeaders(cause);
-            final Subscriber<? super HttpData> downstream = this.downstream;
-            if (downstream == null) {
-                this.cause = cause;
-            } else {
-                downstream.onError(cause);
-                this.downstream = NoopSubscriber.get();
-            }
+        private void onError0(Throwable cause, Subscriber<? super HttpData> downstream) {
+            downstream.onError(cause);
+            this.downstream = NoopSubscriber.get();
         }
 
         @Override
         public void onComplete() {
+            maybeCompleteHeaders(null);
             final EventExecutor executor = this.executor;
+            final Subscriber<? super HttpData> downstream = this.downstream;
+
+            if (executor == null || downstream == null) {
+                completing = true;
+                return;
+            }
+
             if (executor.inEventLoop()) {
-                onComplete0();
+                onComplete0(downstream);
             } else {
-                executor.execute(this::onComplete0);
+                executor.execute(() -> onComplete0(downstream));
             }
         }
 
-        private void onComplete0() {
-            maybeCompleteHeaders(null);
-            final Subscriber<? super HttpData> downstream = this.downstream;
-            if (downstream == null) {
-                completing = true;
-            } else {
-                downstream.onComplete();
-            }
+        private void onComplete0(Subscriber<? super HttpData> downstream) {
+            downstream.onComplete();
         }
 
         private void maybeCompleteHeaders(@Nullable Throwable cause) {
@@ -378,19 +381,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
                 trailersFutureUpdater.compareAndSet(DefaultSplitHttpResponse.this, null, EMPTY_TRAILERS);
             }
         }
-    }
-
-    private static boolean containsNotifyCancellation(SubscriptionOption... options) {
-        if (options.length == 0) {
-            return false;
-        }
-
-        for (SubscriptionOption option : options) {
-            if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static final class HeadersFuture<T> extends UnmodifiableFuture<T> {
