@@ -31,15 +31,22 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
+import static java.util.Comparator.comparingDouble;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.Locale.LanguageRange;
 import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.math.IntMath;
 
 import io.netty.util.AsciiString;
@@ -174,11 +181,46 @@ class HttpHeadersBase
         }
     }
 
+    @Nullable
+    List<LanguageRange> acceptLanguages() {
+        final List<String> acceptHeaders = getAll(HttpHeaderNames.ACCEPT_LANGUAGE);
+        if (acceptHeaders.isEmpty()) {
+            return null;
+        }
+
+        try {
+            final List<LanguageRange> acceptLanguages = new ArrayList<>(4);
+            for (String acceptHeader : acceptHeaders) {
+                acceptLanguages.addAll(LanguageRange.parse(acceptHeader));
+            }
+            acceptLanguages.sort(comparingDouble(LanguageRange::getWeight).reversed());
+
+            return ImmutableList.copyOf(acceptLanguages);
+        } catch (IllegalArgumentException e) {
+            // If any port of any of the headers is ill-formed
+            return null;
+        }
+    }
+
+    @Nullable
+    Locale selectLocale(Collection<Locale> supportedLocales) {
+        requireNonNull(supportedLocales, "supportedLocales");
+        final List<LanguageRange> languageRanges = acceptLanguages();
+        if (languageRanges == null || supportedLocales.isEmpty()) {
+            return null;
+        }
+        return languageRanges
+                .stream()
+                .flatMap(it -> Locale.filter(ImmutableList.of(it), supportedLocales).stream())
+                .findFirst()
+                .orElse(null);
+    }
+
     HttpMethod method() {
         final String methodStr = get(HttpHeaderNames.METHOD);
         checkState(methodStr != null, ":method header does not exist.");
         return HttpMethod.isSupported(methodStr) ? HttpMethod.valueOf(methodStr)
-                                                 : HttpMethod.UNKNOWN;
+                : HttpMethod.UNKNOWN;
     }
 
     final void method(HttpMethod method) {

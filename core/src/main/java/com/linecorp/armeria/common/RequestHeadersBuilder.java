@@ -17,6 +17,7 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Locale.LanguageRange;
 import java.util.Map.Entry;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -89,6 +90,13 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
         requireNonNull(endpoint, "endpoint");
         return authority(endpoint.authority());
     }
+
+    /**
+     * Sets the {@code "accept-language"} header.
+     * @param acceptedLanguages the accepted languages.
+     * @return {@code this}
+     */
+    RequestHeadersBuilder acceptLanguages(Iterable<LanguageRange> acceptedLanguages);
 
     // Override the return type of the chaining methods in the superclass.
 

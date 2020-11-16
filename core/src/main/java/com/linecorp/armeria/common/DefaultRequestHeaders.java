@@ -16,6 +16,10 @@
 package com.linecorp.armeria.common;
 
 import java.net.URI;
+import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
+import java.util.Locale.LanguageRange;
 
 import javax.annotation.Nullable;
 
@@ -26,6 +30,8 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
     private HttpMethod method;
     @Nullable
     private URI uri;
+    @Nullable
+    private List<LanguageRange> acceptLanguages;
 
     DefaultRequestHeaders(HttpHeadersBase headers) {
         super(headers);
@@ -43,6 +49,23 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
         }
 
         return this.uri = super.uri();
+    }
+
+    @Nullable
+    @Override
+    public Locale selectLocale(final Collection<Locale> supportedLocales) {
+        return super.selectLocale(supportedLocales);
+    }
+
+    @Override
+    @Nullable
+    public List<LanguageRange> acceptLanguages() {
+        final List<LanguageRange> acceptLanguages = this.acceptLanguages;
+        if (acceptLanguages != null) {
+            return acceptLanguages;
+        }
+
+        return this.acceptLanguages = super.acceptLanguages();
     }
 
     @Override
