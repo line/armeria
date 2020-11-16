@@ -25,7 +25,6 @@ import com.linecorp.armeria.server.annotation.FallthroughException
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestConverterFunctionTest._
 import java.lang.reflect.ParameterizedType
 import java.util.stream
-import java.util.stream.Collectors
 import org.assertj.core.api.Assertions.{assertThat, assertThatThrownBy}
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.`extension`.ExtensionContext
@@ -34,14 +33,13 @@ import org.junit.jupiter.params.provider.{Arguments, ArgumentsProvider, Argument
 import scala.collection.mutable.ArrayBuffer
 import scalapb.GeneratedMessage
 import scalapb.json4s.Printer
-import sun.net.www.protocol.http.AuthenticatorKeys.getKey
 
 class ScalaPbRequestConverterFunctionTest {
 
   @Test
   def protobufToMessage(): Unit = {
     val converter = ScalaPbRequestConverterFunction()
-    val req = AggregatedHttpRequest.of(ctx.request.headers, HttpData.wrap(simpleRequest1.toByteArray));
+    val req = AggregatedHttpRequest.of(ctx.request.headers, HttpData.wrap(simpleRequest1.toByteArray))
     val requestObject = converter.convertRequest(ctx, req, classOf[SimpleRequest], null)
     assertThat(requestObject).isEqualTo(simpleRequest1)
   }
@@ -139,7 +137,6 @@ private[scalapb] object ScalaPbRequestConverterFunctionTest {
         Arguments.of(jset, toJson(jset), new TypeToken[java.util.Set[SimpleRequest]]() {})
       )
     }
-
   }
 
   private class JsonObjectRequestProvider extends ArgumentsProvider {
@@ -156,7 +153,6 @@ private[scalapb] object ScalaPbRequestConverterFunctionTest {
         Arguments.of(jmap, toJson(jmap), new TypeToken[java.util.Map[String, SimpleRequest]]() {})
       )
     }
-
   }
 
   def toJson(messages: Iterable[GeneratedMessage]): String =

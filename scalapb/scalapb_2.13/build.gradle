@@ -1,25 +1,15 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath "com.adtran:scala-multiversion-plugin:1.0.36"
-    }
-}
-
 plugins {
     id 'scala'
-    id "com.adtran.scala-multiversion-plugin" version "1.0.36"
     id 'cz.alenkacz.gradle.scalafmt' version '1.14.0'
 }
 
 dependencies {
     // TODO(ikhoon): Copy ScalaPBJsonMarshaller and GrpcScalaDocServicePlugin
     implementation project(':grpc')
-    implementation 'org.scala-lang:scala-library:%scala-version%'
-    implementation "com.thesamet.scalapb:scalapb-runtime_%%:${managedVersions['com.thesamet.scalapb:scalapb-runtime_2.13']}"
-    implementation "com.thesamet.scalapb:scalapb-runtime-grpc_%%:${managedVersions['com.thesamet.scalapb:scalapb-runtime-grpc_2.13']}"
-    implementation "com.thesamet.scalapb:scalapb-json4s_%%:${managedVersions['com.thesamet.scalapb:scalapb-json4s_2.13']}"
+    implementation 'org.scala-lang:scala-library:2.13.3'
+    implementation "com.thesamet.scalapb:scalapb-runtime_2.13:${managedVersions['com.thesamet.scalapb:scalapb-runtime_2.13']}"
+    implementation "com.thesamet.scalapb:scalapb-runtime-grpc_2.13:${managedVersions['com.thesamet.scalapb:scalapb-runtime-grpc_2.13']}"
+    implementation "com.thesamet.scalapb:scalapb-json4s_2.13:${managedVersions['com.thesamet.scalapb:scalapb-json4s_2.13']}"
 }
 
 compileScala.targetCompatibility = 1.8
@@ -46,6 +36,7 @@ task aggregatedScaladocs(
         }
     }
 }
+
 sourceSets {
     test {
         scala {
@@ -53,5 +44,3 @@ sourceSets {
         }
     }
 }
-
-

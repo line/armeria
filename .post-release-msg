@@ -2,8 +2,6 @@
 
    git checkout ${tag}
    ./gradlew --no-daemon clean publish site
-   # Publish scalapb for Scala 2.12 manually
-   ./gradlew :scalapb:publish -PscalaVersions=2.12.12
 
 2. Close and release the staging repository at:
 

@@ -23,16 +23,7 @@ configure(projectsWithFlags('publish', 'java')) {
                     jarOverrideFile = tasks.trimShadedJar.outJarFiles.find() as File
                     jarOverrideTask = tasks.trimShadedJar
                 } else if (tasks.findByName('shadedJar')) {
-                    def archivePath = tasks.shadedJar.archivePath
-                    if (project.hasFlags('scala')) {
-                        def microVersionIndex = project.ext.defaultScalaVersions.lastIndexOf('.')
-                        def scalaVersionSuffix = project.ext.defaultScalaVersions.substring(0, microVersionIndex)
-                        def absolutePath = archivePath.getPath()
-
-                        archivePath = new java.io.File(absolutePath.replaceFirst("-shaded", "-shaded_$scalaVersionSuffix"))
-                    }
-
-                    jarOverrideFile = archivePath
+                    jarOverrideFile = tasks.shadedJar.archivePath
                     jarOverrideTask = tasks.shadedJar
                 }
                 if (jarOverrideFile != null) {

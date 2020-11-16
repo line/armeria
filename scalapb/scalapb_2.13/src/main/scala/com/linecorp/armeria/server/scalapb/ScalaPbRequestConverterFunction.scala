@@ -35,8 +35,9 @@ import scalapb.json4s.Parser
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 /**
-  * A [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] which converts a Protocol Buffers or
-  * JSON body of the [[com.linecorp.armeria.common.AggregatedHttpRequest]] to an [[scalapb.GeneratedMessage]].
+  * A [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] which converts either
+  * a Protocol Buffers or JSON body of the [[com.linecorp.armeria.common.AggregatedHttpRequest]]
+  * to an [[scalapb.GeneratedMessage]].
   *
   * The built-in parser of [[scalapb.GeneratedMessage]] for Protocol Buffers is applied only when
   * the `content-type` of [[com.linecorp.armeria.common.RequestHeaders]] is either
