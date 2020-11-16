@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -298,9 +299,7 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
         private void onNext0(HttpData httpData) {
             wroteAny = true;
             if (!usePooledObject) {
-                try (HttpData pooled = httpData) {
-                    httpData = HttpData.wrap(pooled.array());
-                }
+                httpData = PooledObjects.copyAndClose(httpData);
             }
             downstream.onNext(httpData);
         }
