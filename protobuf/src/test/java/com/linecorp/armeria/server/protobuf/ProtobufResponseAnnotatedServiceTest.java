@@ -27,7 +27,6 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,6 +56,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.ProducesProtobuf;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
@@ -90,6 +90,12 @@ class ProtobufResponseAnnotatedServiceTest {
     private static class GreetingService {
         @Get("/default-content-type")
         public SimpleResponse noContentType() {
+            return SimpleResponse.newBuilder().setMessage("Hello, Armeria!").build();
+        }
+
+        @Get("/protobuf")
+        @ProducesProtobuf
+        public SimpleResponse produceProtobuf() {
             return SimpleResponse.newBuilder().setMessage("Hello, Armeria!").build();
         }
 
@@ -155,12 +161,13 @@ class ProtobufResponseAnnotatedServiceTest {
         }
     }
 
-    @Test
-    void protobufResponse() throws InvalidProtocolBufferException {
-        final AggregatedHttpResponse response = client.get("/default-content-type").aggregate().join();
+    @CsvSource({ "default-content-type", "protobuf" })
+    @ParameterizedTest
+    void protobufResponse(String path) throws InvalidProtocolBufferException {
+        final AggregatedHttpResponse response = client.get('/' + path).aggregate().join();
         assertThat(response.headers().contentType()).isEqualTo(MediaType.PROTOBUF);
         final SimpleResponse simpleResponse = SimpleResponse.parseFrom(response.content().array());
-        Assertions.assertThat(simpleResponse.getMessage()).isEqualTo("Hello, Armeria!");
+        assertThat(simpleResponse.getMessage()).isEqualTo("Hello, Armeria!");
     }
 
     @CsvSource({ "json", "protobuf+json" })
@@ -170,7 +177,7 @@ class ProtobufResponseAnnotatedServiceTest {
         assertThat(response.headers().contentType().subtype()).isEqualTo(contentType);
         final SimpleResponse.Builder simpleResponse = SimpleResponse.newBuilder();
         JsonFormat.parser().merge(response.contentUtf8(), simpleResponse);
-        Assertions.assertThat(simpleResponse.getMessage()).isEqualTo("Hello, Armeria!");
+        assertThat(simpleResponse.getMessage()).isEqualTo("Hello, Armeria!");
     }
 
     @CsvSource({ "/protobuf/stream", "/protobuf/publisher" })

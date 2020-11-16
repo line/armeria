@@ -43,8 +43,8 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  * {@code content-type: application/json; charset=utf-8} or {@code content-type: application/json-seq}.
  * The objects published from a {@link Publisher} or {@link Stream} would be converted into JSON Text Sequences
  * if a {@link ProducesJsonSequences} annotation is specified on an annotated service method.
- * Note that this {@link ResponseConverterFunction} is applied to the annotated service by default,
- * so you don't have to set explicitly unless you want to use your own {@link ObjectMapper}.
+ * Note that this {@link ResponseConverterFunction} is applied to an annotated service by default,
+ * so you don't have to specify this converter explicitly unless you want to use your own {@link ObjectMapper}.
  *
  * @see <a href="https://tools.ietf.org/html/rfc7464">JavaScript Object Notation (JSON) Text Sequences</a>
  */

@@ -13,16 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.server.annotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+import com.linecorp.armeria.common.MediaTypeNames;
+import com.linecorp.armeria.server.annotation.Consumes;
 
 /**
- * Provides the default {@link com.linecorp.armeria.server.annotation.ResponseConverterFunction}
- * which automatically converts a {@link com.google.protobuf.Message} into
- * an {@link com.linecorp.armeria.common.HttpResponse} and
- * the default {@link com.linecorp.armeria.server.annotation.RequestConverterFunction} which automatically
- * converts an {@link com.linecorp.armeria.common.AggregatedHttpRequest} into
- * a {@link com.google.protobuf.Message}.
+ * An alias for {@code @Consumes(MediaTypeNames.PROTOBUF)}.
  */
-@NonNullByDefault
-package com.linecorp.armeria.server.protobuf;
-
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ ElementType.TYPE, ElementType.METHOD })
+@Consumes(MediaTypeNames.PROTOBUF)
+public @interface ConsumesProtobuf {
+}

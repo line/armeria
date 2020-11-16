@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.protobuf.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
+import com.linecorp.armeria.server.annotation.ConsumesProtobuf;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -62,10 +63,20 @@ class ProtobufRequestAnnotatedServiceTest {
     }
 
     @Test
-    void protobufRequest() throws InvalidProtocolBufferException {
+    void defaultRequest() throws InvalidProtocolBufferException {
         final SimpleRequest simpleRequest = SimpleRequest.newBuilder().setPayload("Armeria").build();
         final AggregatedHttpResponse response =
                 client.post("/default-content-type", simpleRequest.toByteArray()).aggregate().join();
+
+        assertThat(response.contentUtf8()).isEqualTo("Hello, Armeria!");
+    }
+
+    @Test
+    void protobufRequest() throws InvalidProtocolBufferException {
+        final SimpleRequest simpleRequest = SimpleRequest.newBuilder().setPayload("Armeria").build();
+        final HttpRequest request = HttpRequest.of(HttpMethod.POST, "/protobuf",
+                                                   MediaType.PROTOBUF, simpleRequest.toByteArray());
+        final AggregatedHttpResponse response = client.execute(request).aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("Hello, Armeria!");
     }
@@ -113,13 +124,19 @@ class ProtobufRequestAnnotatedServiceTest {
     private static class GreetingService {
         @Post("/default-content-type")
         public String noContentType(SimpleRequest request) {
-            return "Hello, Armeria!";
+            return "Hello, " + request.getPayload() + '!';
         }
 
         @Post("/json")
         @ConsumesJson
         public String consumeJson(SimpleRequest request) {
-            return "Hello, Armeria!";
+            return "Hello, " + request.getPayload() + '!';
+        }
+
+        @Post("/protobuf")
+        @ConsumesProtobuf
+        public String consumeProtobuf(SimpleRequest request) {
+            return "Hello, " + request.getPayload() + '!';
         }
 
         @Post("/json+array")

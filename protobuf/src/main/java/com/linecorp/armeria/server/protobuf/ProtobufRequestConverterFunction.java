@@ -74,8 +74,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
  * However, {@link Collection} types such as {@code List<Message>} and {@code Set<Message>} are supported
  * when converted from <a href="https://tools.ietf.org/html/rfc7159#section-5">JSON array</a>.
  *
- * <p>Note that this {@link RequestConverterFunction} is applied to the annotated service by default,
- * so you don't have to set explicitly unless you want to use your own {@link Parser} and
+ * <p>Note that this {@link RequestConverterFunction} is applied to an annotated service by default,
+ * so you don't have to specify this converter explicitly unless you want to use your own {@link Parser} and
  * {@link ExtensionRegistry}.
  */
 @UnstableApi

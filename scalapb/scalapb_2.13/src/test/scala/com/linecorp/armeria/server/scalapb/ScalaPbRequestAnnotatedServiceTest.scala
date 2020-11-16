@@ -20,7 +20,7 @@ import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.{AggregatedHttpResponse, HttpMethod, HttpRequest, MediaType}
 import com.linecorp.armeria.scalapb.testing.messages.SimpleRequest
 import com.linecorp.armeria.server.ServerBuilder
-import com.linecorp.armeria.server.annotation.{ConsumesJson, Post}
+import com.linecorp.armeria.server.annotation.{ConsumesJson, ConsumesProtobuf, Post, ProducesProtobuf}
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestAnnotatedServiceTest.server
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestConverterFunctionTest.toJson
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
@@ -28,6 +28,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request
 import scalapb.json4s.Printer
 
 class ScalaPbRequestAnnotatedServiceTest {
@@ -47,9 +48,17 @@ class ScalaPbRequestAnnotatedServiceTest {
     server.stop()
 
   @Test
-  def protobufRequest(): Unit = {
+  def defaultRequest(): Unit = {
     val simpleRequest = SimpleRequest("Armeria")
     val response = client.post("/default-content-type", simpleRequest.toByteArray).aggregate.join
+    assertThat(response.contentUtf8).isEqualTo("Hello, Armeria!")
+  }
+
+  @Test
+  def protobufRequest(): Unit = {
+    val simpleRequest = SimpleRequest("Armeria")
+    val request = HttpRequest.of(HttpMethod.POST, "/protobuf", MediaType.PROTOBUF, simpleRequest.toByteArray)
+    val response = client.execute(request).aggregate.join
     assertThat(response.contentUtf8).isEqualTo("Hello, Armeria!")
   }
 
@@ -95,7 +104,11 @@ object ScalaPbRequestAnnotatedServiceTest {
 
   private class GreetingService {
     @Post("/default-content-type")
-    def noContentType(request: SimpleRequest): String = "Hello, Armeria!"
+    def noContentType(request: SimpleRequest): String = s"Hello, ${request.payload}!"
+
+    @Post("/protobuf")
+    @ConsumesProtobuf
+    def consumeProtobuf(request: SimpleRequest): String = s"Hello, ${request.payload}!"
 
     @Post("/json")
     @ConsumesJson

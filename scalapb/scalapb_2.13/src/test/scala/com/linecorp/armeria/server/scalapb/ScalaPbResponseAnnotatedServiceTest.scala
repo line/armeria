@@ -39,7 +39,7 @@ import scalapb.json4s.Parser
 class ScalaPbResponseAnnotatedServiceTest {
 
   private var client: WebClient = _
-  private var parser: Parser = new Parser()
+  private val parser: Parser = new Parser()
 
   @BeforeEach
   private def setUp(): Unit = {
@@ -53,9 +53,10 @@ class ScalaPbResponseAnnotatedServiceTest {
     ScalaPbResponseAnnotatedServiceTest.cause = None
   }
 
-  @Test
-  def protobufResponse(): Unit = {
-    val response: AggregatedHttpResponse = client.get("/default-content-type").aggregate.join
+  @CsvSource(Array("/default-content-type", "/protobuf"))
+  @ParameterizedTest
+  def protobufResponse(path: String): Unit = {
+    val response: AggregatedHttpResponse = client.get(path).aggregate.join
     assertThat(response.headers.contentType).isEqualTo(MediaType.PROTOBUF)
     val simpleResponse: SimpleResponse = SimpleResponse.parseFrom(response.content.array)
     assertThat(simpleResponse.message).isEqualTo("Hello, Armeria!")
@@ -135,6 +136,10 @@ object ScalaPbResponseAnnotatedServiceTest {
   class GreetingService {
     @Get("/default-content-type")
     def noContentType: SimpleResponse = SimpleResponse("Hello, Armeria!")
+
+    @Get("/protobuf")
+    @ProducesProtobuf
+    def produceProtobuf: SimpleResponse = SimpleResponse("Hello, Armeria!")
 
     @Get("/json")
     @ProducesJson

@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
-import com.linecorp.armeria.internal.server.annotation.CompositeConverterFunctions.CompositeResponseConverterFunction;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;

@@ -24,7 +24,6 @@ import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.FallthroughException
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestConverterFunctionTest._
 import java.lang.reflect.ParameterizedType
-import java.util.stream
 import org.assertj.core.api.Assertions.{assertThat, assertThatThrownBy}
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.`extension`.ExtensionContext
@@ -122,7 +121,7 @@ private[scalapb] object ScalaPbRequestConverterFunctionTest {
   private val printer: Printer = new Printer()
 
   private class JsonArrayRequestProvider extends ArgumentsProvider {
-    override def provideArguments(context: ExtensionContext): stream.Stream[Arguments] = {
+    override def provideArguments(context: ExtensionContext): java.util.stream.Stream[Arguments] = {
       val list = List(simpleRequest1, simpleRequest2)
       val vector = list.toVector
       val set = list.toSet
@@ -140,7 +139,7 @@ private[scalapb] object ScalaPbRequestConverterFunctionTest {
   }
 
   private class JsonObjectRequestProvider extends ArgumentsProvider {
-    override def provideArguments(context: ExtensionContext): stream.Stream[Arguments] = {
+    override def provideArguments(context: ExtensionContext): java.util.stream.Stream[Arguments] = {
       val map = Map("json1" -> simpleRequest1, "json2" -> simpleRequest2)
       val jmap = ImmutableMap
         .builder()

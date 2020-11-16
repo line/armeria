@@ -74,7 +74,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
-import com.linecorp.armeria.internal.server.annotation.CompositeConverterFunctions.CompositeRequestConverterFunction;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;

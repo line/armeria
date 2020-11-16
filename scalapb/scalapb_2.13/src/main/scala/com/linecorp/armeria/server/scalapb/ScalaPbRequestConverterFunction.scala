@@ -55,11 +55,11 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
   * See [[https://developers.google.com/protocol-buffers/docs/techniques#streaming Streaming Multiple Messages]]
   * for more information.
   * However, [[scala.Iterable]] types such as `List[scalapb.GeneratedMessage]` and
-  * `Set[scalapb.GeneratedMessage]` are supported when converted from
+  * `Set[scalapb.GeneratedMessage]` are supported only when converted from
   * [[https://tools.ietf.org/html/rfc7159#section-5 JSON array]].
   *
   * Note that this [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] is applied to
-  * the annotated service by default, so you don't have to set explicitly unless you want to
+  * an annotated service by default, so you don't have to specify this converter explicitly unless you want to
   * use your own [[scalapb.json4s.Parser]].
   */
 @UnstableApi
