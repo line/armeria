@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.Backoff;
@@ -310,8 +311,8 @@ public final class DnsResolverGroupBuilder {
     }
 
     /**
-     * Sets the cache spec for caching resolved addresses.
-     * {@link Flags#dnsCacheSpec()} is used by default.
+     * Sets the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the domain
+     * names and their resolved addresses. If not set, {@link Flags#dnsCacheSpec()} is used by default.
      */
     public DnsResolverGroupBuilder cacheSpec(String cacheSpec) {
         this.cacheSpec = requireNonNull(cacheSpec, "cacheSpec");
