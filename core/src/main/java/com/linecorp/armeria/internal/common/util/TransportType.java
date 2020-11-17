@@ -83,13 +83,7 @@ public enum TransportType {
      * Returns the available {@link TransportType}.
      */
     public static TransportType detectTransportType() {
-        if (Flags.useIOUring()) {
-            return IO_URING;
-        } else if (Flags.useEpoll()) {
-            return EPOLL;
-        } else {
-            return NIO;
-        }
+        return Flags.defaultTransportType();
     }
 
     /**
