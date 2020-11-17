@@ -24,7 +24,7 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import com.linecorp.armeria.common.SerializationFormat;
 
 /**
- * SPI Provider for links {@link SerializationFormat} -> {@link TProtocolFactory}.
+ * SPI Provider for links from {@link SerializationFormat} to {@link TProtocolFactory}.
  */
 @FunctionalInterface
 public interface ThriftProtocolFactoryProvider {
