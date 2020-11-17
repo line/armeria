@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -30,7 +31,7 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
  *                                                         OptOutFeature.METRIC_COLLECTION)
  *                                         .build());
  * }</pre>
- * then, every feature is opted out except logging from {@link LoggingService}.
+ * then, every feature is opted out for {@link HealthCheckService} except logging using {@link LoggingService}.
  */
 public enum OptOutFeature {
 

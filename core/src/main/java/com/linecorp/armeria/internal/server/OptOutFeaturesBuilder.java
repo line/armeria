@@ -54,7 +54,7 @@ public final class OptOutFeaturesBuilder implements TransientServiceBuilder {
     /**
      * Returns the {@link Set} of {@link OptOutFeature}s set so far. {@link Flags#optOutFeatures()} if not set.
      */
-    public Set<OptOutFeature> optOutFeatures() {
+    public Set<OptOutFeature> build() {
         if (optOutFeatures == null) {
             return Flags.optOutFeatures();
         }

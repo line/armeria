@@ -275,6 +275,6 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
                                       pingIntervalMillis, updateHandler,
-                                      optOutFeaturesBuilder.optOutFeatures());
+                                      optOutFeaturesBuilder.build());
     }
 }

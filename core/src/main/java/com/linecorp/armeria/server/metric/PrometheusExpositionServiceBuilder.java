@@ -52,6 +52,6 @@ public final class PrometheusExpositionServiceBuilder implements TransientServic
      * Returns a newly-created {@link PrometheusExpositionService} based on the properties of this builder.
      */
     public PrometheusExpositionService build() {
-        return new PrometheusExpositionService(collectorRegistry, optOutFeaturesBuilder.optOutFeatures());
+        return new PrometheusExpositionService(collectorRegistry, optOutFeaturesBuilder.build());
     }
 }
