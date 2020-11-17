@@ -112,11 +112,11 @@ class RetryingRpcClientTest {
                         (ctx, req) -> ctx.rpcRequest().params().contains("Alice") ?  "1" : "2",
                         (ctx, req) -> {
                             if (ctx.rpcRequest().params().contains("Alice")) {
-                                return RetryConfig.<RpcResponse>builder(retryOnException)
+                                return RetryConfig.builderForRpc(retryOnException)
                                         .maxTotalAttempts(3)
                                         .build();
                             } else {
-                                return RetryConfig.<RpcResponse>builder(retryOnException)
+                                return RetryConfig.builderForRpc(retryOnException)
                                         .maxTotalAttempts(5)
                                         .build();
                             }

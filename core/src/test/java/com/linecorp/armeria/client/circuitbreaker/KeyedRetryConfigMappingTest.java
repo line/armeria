@@ -43,19 +43,19 @@ class KeyedRetryConfigMappingTest {
         final BiFunction<ClientRequestContext, Request, RetryConfig<RpcResponse>> configFactory =
                 (ctx, req) -> {
             if (ctx.endpoint().host().equals("host1")) {
-                return RetryConfig.<RpcResponse>builder(RetryRule.onException())
+                return RetryConfig.builderForRpc(RetryRule.onException())
                                   .maxTotalAttempts(1).responseTimeoutMillisForEachAttempt(1000).build();
             } else if (ctx.endpoint().host().equals("host2")) {
                 if (ctx.path().equals("/path2")) {
-                    return RetryConfig.<RpcResponse>builder(
+                    return RetryConfig.builderForRpc(
                             RetryRuleWithContent.onResponse((c, r) -> completedFuture(true)))
                             .maxTotalAttempts(2).responseTimeoutMillisForEachAttempt(2000).build();
                 } else {
-                    return RetryConfig.<RpcResponse>builder(RetryRule.onException())
+                    return RetryConfig.builderForRpc(RetryRule.onException())
                                       .maxTotalAttempts(3).responseTimeoutMillisForEachAttempt(3000).build();
                 }
             } else {
-                return RetryConfig.<RpcResponse>builder(
+                return RetryConfig.builderForRpc(
                         RetryRuleWithContent.onResponse((c, r) -> completedFuture(false)))
                         .maxTotalAttempts(4).responseTimeoutMillisForEachAttempt(4000).build();
             }

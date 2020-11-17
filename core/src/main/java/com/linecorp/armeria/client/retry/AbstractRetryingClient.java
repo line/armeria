@@ -95,7 +95,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     /**
      * Returns the current {@link RetryConfigMapping} set for this client.
      */
-    protected RetryConfigMapping<O> mapping() {
+    protected final RetryConfigMapping<O> mapping() {
         return mapping;
     }
 

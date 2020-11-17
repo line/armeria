@@ -21,7 +21,9 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcResponse;
 
 /**
  * Holds retry config used by a {@link RetryingClient}.
@@ -32,17 +34,43 @@ public final class RetryConfig<T extends Response> {
 
     /**
      * Returns a new {@link RetryConfigBuilder} with the default values from Flags.
-     * Uses a {@link RetryRule}.
+     * Uses a {@code RetryRuleWithContent<RpcResponse>}.
      */
-    public static <T extends Response> RetryConfigBuilder<T> builder(RetryRule retryRule) {
+    public static RetryConfigBuilder<RpcResponse> builderForRpc(
+            RetryRuleWithContent<RpcResponse> retryRuleWithContent) {
+        return new RetryConfigBuilder<>(retryRuleWithContent);
+    }
+
+    /**
+     * Returns a new {@link RetryConfigBuilder} with the default values from Flags.
+     * Uses a {@code RetryRule}.
+     */
+    public static RetryConfigBuilder<RpcResponse> builderForRpc(RetryRule retryRule) {
         return new RetryConfigBuilder<>(retryRule);
     }
 
     /**
      * Returns a new {@link RetryConfigBuilder} with the default values from Flags.
-     * Uses a {@link RetryRuleWithContent} with unlimited content length.
+     * Uses a {@code RetryRuleWithContent<HttpResponse>}.
      */
-    public static <T extends Response> RetryConfigBuilder<T> builder(
+    public static RetryConfigBuilder<HttpResponse> builderForHttp(
+            RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
+        return new RetryConfigBuilder<>(retryRuleWithContent);
+    }
+
+    /**
+     * Returns a new {@link RetryConfigBuilder} with the default values from Flags.
+     * Uses a {@code RetryRule}.
+     */
+    public static RetryConfigBuilder<HttpResponse> builderForHttp(RetryRule retryRule) {
+        return new RetryConfigBuilder<>(retryRule);
+    }
+
+    static <T extends Response> RetryConfigBuilder<T> builder(RetryRule retryRule) {
+        return new RetryConfigBuilder<>(retryRule);
+    }
+
+    static <T extends Response> RetryConfigBuilder<T> builder(
             RetryRuleWithContent<T> retryRuleWithContent) {
         return new RetryConfigBuilder<>(retryRuleWithContent);
     }
