@@ -50,6 +50,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     private static final Pattern CNAME_EXCEPTION = Pattern.compile("\\bCNAME\\b/");
     private static final Pattern NO_MATCHING_EXCEPTION = Pattern.compile("\\bmatching\\b");
     private static final Pattern UNRECOGNIZED_TYPE_EXCEPTION = Pattern.compile("\\bunrecognized\\b/");
+    private static final Pattern NO_NS_RETURNED_EXCEPTION = Pattern.compile("\\bservers returned an answer\\b");
     private static final Tag TAG_SUCCESS = Tag.of(RESULT_TAG, "success");
     private static final Tag TAG_FAILURE = Tag.of(RESULT_TAG, "failure");
 
@@ -68,6 +69,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
         CNAME_NOT_FOUND,
         NO_MATCHING_RECORD,
         UNRECOGNIZED_TYPE,
+        NO_NAME_SERVER_FOUND,
         OTHERS,
         SERVER_TIMEOUT,
         RESOLVER_TIMEOUT;
@@ -173,6 +175,10 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
         if (UNRECOGNIZED_TYPE_EXCEPTION.matcher(message).find()) {
             return DnsExceptionTypes.UNRECOGNIZED_TYPE;
+        }
+
+        if (NO_NS_RETURNED_EXCEPTION.matcher(message).find()) {
+            return DnsExceptionTypes.NO_NAME_SERVER_FOUND;
         }
         return DnsExceptionTypes.OTHERS;
     }
