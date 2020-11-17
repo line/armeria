@@ -283,8 +283,8 @@ it.unimi.dsi:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
 
-jakarta.annotation:
-  jakarta.annotation-api: { version: '1.3.5' }
+javax.annotation:
+  javax.annotation-api: { version: '1.3.2' }
 
 javax.inject:
   javax.inject: { version: '1' }

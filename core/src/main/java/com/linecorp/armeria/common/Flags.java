@@ -37,7 +37,6 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
@@ -46,6 +45,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -55,13 +55,14 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.TransportType;
-import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
+import com.linecorp.armeria.server.file.FileService;
+import com.linecorp.armeria.server.file.FileServiceBuilder;
+import com.linecorp.armeria.server.file.HttpFile;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
@@ -345,33 +346,37 @@ public final class Flags {
     private static final String DEFAULT_ROUTE_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String ROUTE_CACHE_SPEC =
-            caffeineSpec("routeCache", DEFAULT_ROUTE_CACHE_SPEC);
+            nullableCaffeineSpec("routeCache", DEFAULT_ROUTE_CACHE_SPEC);
 
     private static final String DEFAULT_ROUTE_DECORATOR_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String ROUTE_DECORATOR_CACHE_SPEC =
-            caffeineSpec("routeDecoratorCache", DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
+            nullableCaffeineSpec("routeDecoratorCache", DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
 
     private static final String DEFAULT_PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String PARSED_PATH_CACHE_SPEC =
-            caffeineSpec("parsedPathCache", DEFAULT_PARSED_PATH_CACHE_SPEC);
+            nullableCaffeineSpec("parsedPathCache", DEFAULT_PARSED_PATH_CACHE_SPEC);
 
     private static final String DEFAULT_HEADER_VALUE_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String HEADER_VALUE_CACHE_SPEC =
-            caffeineSpec("headerValueCache", DEFAULT_HEADER_VALUE_CACHE_SPEC);
-
-    private static final String DEFAULT_FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
-    @Nullable
-    private static final String FILE_SERVICE_CACHE_SPEC =
-            caffeineSpec("fileServiceCache", DEFAULT_FILE_SERVICE_CACHE_SPEC);
+            nullableCaffeineSpec("headerValueCache", DEFAULT_HEADER_VALUE_CACHE_SPEC);
 
     private static final String DEFAULT_CACHED_HEADERS =
             ":authority,:scheme,:method,accept-encoding,content-type";
     private static final List<String> CACHED_HEADERS =
             CSV_SPLITTER.splitToList(getNormalized(
                     "cachedHeaders", DEFAULT_CACHED_HEADERS, CharMatcher.ascii()::matchesAllOf));
+
+    private static final String DEFAULT_FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
+    @Nullable
+    private static final String FILE_SERVICE_CACHE_SPEC =
+            nullableCaffeineSpec("fileServiceCache", DEFAULT_FILE_SERVICE_CACHE_SPEC);
+
+    private static final String DEFAULT_DNS_CACHE_SPEC = "maximumSize=4096";
+    private static final String DNS_CACHE_SPEC =
+            nonnullCaffeineSpec("dnsCacheSpec", DEFAULT_DNS_CACHE_SPEC);
 
     private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
     private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
@@ -936,8 +941,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the default value of the {@code backoffSpec} parameter when instantiating a {@link Backoff}
-     * using {@link Backoff#of(String)}. Note that this flag has no effect if a user specified the
+     * Returns the {@linkplain Backoff#of(String) Backoff specification string} of the default {@link Backoff}
+     * returned by {@link Backoff#ofDefault()}. Note that this flag has no effect if a user specified the
      * {@link Backoff} explicitly.
      *
      * <p>The default value of this flag is {@value DEFAULT_DEFAULT_BACKOFF_SPEC}. Specify the
@@ -960,10 +965,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code routeCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link CaffeineSpec} for routing a request. The {@link Cache}
-     * would hold the mappings of {@link RoutingContext} and the designated {@link ServiceConfig}
-     * for a request to improve server performance.
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
+     * request routing history for all {@link Service}s.
      *
      * <p>The default value of this flag is {@value DEFAULT_ROUTE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.routeCache=<spec>} JVM option to override the default value.
@@ -976,10 +979,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code routeDecoratorCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link CaffeineSpec} for mapping a route to decorator.
-     * The {@link Cache} would hold the mappings of {@link RoutingContext} and the designated
-     * dispatcher {@link Service}s for a request to improve server performance.
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
+     * request routing history for all route decorators.
      *
      * <p>The default value of this flag is {@value DEFAULT_ROUTE_DECORATOR_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.routeDecoratorCache=<spec>} JVM option to override the default value.
@@ -992,9 +993,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code parsedPathCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link CaffeineSpec} for mapping raw HTTP paths to parsed pair of
-     * path and query, after validation.
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
+     * results for parsing a raw HTTP path into a decoded pair of path and query string.
      *
      * <p>The default value of this flag is {@value DEFAULT_PARSED_PATH_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.parsedPathCache=<spec>} JVM option to override the default value.
@@ -1007,9 +1007,9 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code headerValueCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link CaffeineSpec} for mapping raw HTTP ASCII header values to
-     * {@link String}.
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
+     * results for converting a raw HTTP ASCII header value into a {@link String}. Only the header values
+     * whose corresponding header name is listed in {@link #cachedHeaders()} will be cached.
      *
      * <p>The default value of this flag is {@value DEFAULT_HEADER_VALUE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.headerValueCache=<spec>} JVM option to override the default value.
@@ -1022,8 +1022,22 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code fileServiceCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link CaffeineSpec} for caching file entries.
+     * Returns the list of HTTP header names whose corresponding values will be cached, as specified in
+     * {@link #headerValueCacheSpec()}. Only the header value whose corresponding header name is listed in this
+     * flag will be cached. It is not recommended to specify a header with high cardinality, which will defeat
+     * the purpose of caching.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_CACHED_HEADERS}. Specify the
+     * {@code -Dcom.linecorp.armeria.cachedHeaders=<comma separated list>} JVM option to override the default.
+     */
+    public static List<String> cachedHeaders() {
+        return CACHED_HEADERS;
+    }
+
+    /**
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the content
+     * of the {@link HttpFile}s read by a {@link FileService}. This value is used as the default of
+     * {@link FileServiceBuilder#entryCacheSpec(String)}.
      *
      * <p>The default value of this flag is {@value DEFAULT_FILE_SERVICE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.fileServiceCache=<spec>} JVM option to override the default value.
@@ -1036,14 +1050,18 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code cachedHeaders} parameter which contains a comma-separated list of
-     * headers whose values are cached using {@code headerValueCache}.
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the
+     * domain names and their resolved addresses. This value is used as the default of
+     * {@link DnsResolverGroupBuilder#cacheSpec(String)}.
      *
-     * <p>The default value of this flag is {@value DEFAULT_CACHED_HEADERS}. Specify the
-     * {@code -Dcom.linecorp.armeria.cachedHeaders=<csv>} JVM option to override the default value.
+     * <p>The default value of this flag is {@value DEFAULT_DNS_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.dnsCacheSpec=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.dnsCacheSpec=maximumSize=1024,expireAfterAccess=600s}.
+     *
+     * <p>This cache cannot be disabled with {@code "off"} unlike other cache specification flags.
      */
-    public static List<String> cachedHeaders() {
-        return CACHED_HEADERS;
+    public static String dnsCacheSpec() {
+        return DNS_CACHE_SPEC;
     }
 
     /**
@@ -1135,18 +1153,40 @@ public final class Flags {
     }
 
     @Nullable
-    private static String caffeineSpec(String name, String defaultValue) {
+    private static String nullableCaffeineSpec(String name, String defaultValue) {
+        return caffeineSpec(name, defaultValue, true);
+    }
+
+    private static String nonnullCaffeineSpec(String name, String defaultValue) {
+        final String spec = caffeineSpec(name, defaultValue, false);
+        assert spec != null; // Can never be null if allowOff is false.
+        return spec;
+    }
+
+    @Nullable
+    private static String caffeineSpec(String name, String defaultValue, boolean allowOff) {
         final String spec = get(name, defaultValue, value -> {
             try {
-                if (!"off".equals(value)) {
-                    CaffeineSpec.parse(value);
+                if ("off".equals(value)) {
+                    return allowOff;
                 }
+                CaffeineSpec.parse(value);
                 return true;
             } catch (Exception e) {
                 return false;
             }
         });
-        return "off".equals(spec) ? null : spec;
+
+        if (!"off".equals(spec)) {
+            return spec;
+        }
+
+        if (allowOff) {
+            return null;
+        }
+
+        // We specified 'off' as the default value for the flag which can't be 'off'.
+        throw new Error();
     }
 
     private static ExceptionVerbosity exceptionLoggingMode(String name, String defaultValue) {
