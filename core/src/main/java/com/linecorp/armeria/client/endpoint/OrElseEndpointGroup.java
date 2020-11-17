@@ -48,7 +48,7 @@ final class OrElseEndpointGroup
 
         initialEndpointsFuture = CompletableFuture
                 .anyOf(first.whenReady(), second.whenReady())
-                .thenApply(unused -> endpoints());
+                .thenApply(unused -> new LazyList<>(this::endpoints));
 
         selector = first.selectionStrategy().newSelector(this);
     }

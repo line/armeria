@@ -71,7 +71,7 @@ final class CompositeEndpointGroup
                 CompletableFuture.anyOf(this.endpointGroups.stream()
                                                            .map(EndpointGroup::whenReady)
                                                            .toArray(CompletableFuture[]::new))
-                                 .thenApply(unused -> endpoints());
+                                 .thenApply(unused -> new LazyList<>(this::endpoints));
 
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         selector = requireNonNull(selectionStrategy, "selectionStrategy").newSelector(this);

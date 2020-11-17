@@ -34,7 +34,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
-import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 
 /**
@@ -52,8 +51,9 @@ public class DynamicEndpointGroup
     private final AtomicReference<EndpointSelector> selector = new AtomicReference<>();
     private volatile List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
     private final Lock endpointsLock = new ReentrantLock();
-    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture =
-            new EventLoopCheckingFuture<>();
+
+    private final CompletableFuture<Void> initialEndpointsSet = new CompletableFuture<>();
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     /**
@@ -70,6 +70,7 @@ public class DynamicEndpointGroup
      */
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
+        initialEndpointsFuture = initialEndpointsSet.thenApply(unused -> new LazyList<>(this::endpoints));
     }
 
     @Override
@@ -135,7 +136,7 @@ public class DynamicEndpointGroup
         }
 
         notifyListeners(newEndpoints);
-        completeInitialEndpointsFuture(newEndpoints);
+        completeInitialEndpointsSet(newEndpoints);
     }
 
     /**
@@ -173,7 +174,7 @@ public class DynamicEndpointGroup
         }
 
         notifyListeners(newEndpoints);
-        completeInitialEndpointsFuture(newEndpoints);
+        completeInitialEndpointsSet(newEndpoints);
     }
 
     private static boolean hasChanges(List<Endpoint> oldEndpoints, List<Endpoint> newEndpoints) {
@@ -196,9 +197,9 @@ public class DynamicEndpointGroup
         return false;
     }
 
-    private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
-        if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
-            initialEndpointsFuture.complete(endpoints);
+    private void completeInitialEndpointsSet(List<Endpoint> endpoints) {
+        if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsSet.isDone()) {
+            initialEndpointsSet.complete(null);
         }
     }
 
