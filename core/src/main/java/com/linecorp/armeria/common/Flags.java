@@ -169,8 +169,8 @@ public final class Flags {
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
-    private static final boolean USE_IOURING = getBoolean("useIOUring", false,
-                                                          value -> isIOUringAvailable() || !value);
+    private static final boolean USE_IOURING = getBoolean("useIoUring", false,
+                                                          value -> isIoUringAvailable() || !value);
     @Nullable
     private static Boolean useOpenSsl;
     @Nullable
@@ -396,7 +396,7 @@ public final class Flags {
         return false;
     }
 
-    private static boolean isIOUringAvailable() {
+    private static boolean isIoUringAvailable() {
         return SystemInfo.isLinux() && IOUring.isAvailable();
     }
 
