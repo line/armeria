@@ -53,8 +53,8 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
-import com.linecorp.armeria.internal.common.util.TransportType;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -172,9 +172,9 @@ public final class Flags {
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
 
-    private static final String DEFAULT_TRANSPORT_TYPE_SPEC = USE_EPOLL ? "epoll" : "nio";
-    private static final String TRANSPORT_TYPE_SPEC = getNormalized("transportType",
-                                                                    DEFAULT_TRANSPORT_TYPE_SPEC,
+    private static final String DEFAULT_TRANSPORT_TYPE = USE_EPOLL ? "epoll" : "nio";
+    private static final String TRANSPORT_TYPE_NAME = getNormalized("transportType",
+                                                                    DEFAULT_TRANSPORT_TYPE,
                                                                     val -> {
                                                                         switch (val) {
                                                                             case "nio":
@@ -412,7 +412,7 @@ public final class Flags {
             }
         }
         TransportType type = null;
-        switch (TRANSPORT_TYPE_SPEC) {
+        switch (TRANSPORT_TYPE_NAME) {
             case "io_uring":
                 if (isIoUringAvailable()) {
                     logger.info("Using io_uring");
@@ -534,7 +534,7 @@ public final class Flags {
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useEpoll=false} JVM option to disable it.
      *
-     * @deprecated Use {@link #defaultTransportType()} and {@code -Dcom.linecorp.armeria.transportType=epoll}.
+     * @deprecated Use {@link #transportType()} and {@code -Dcom.linecorp.armeria.transportType=epoll}.
      */
     @Deprecated
     public static boolean useEpoll() {
@@ -544,12 +544,11 @@ public final class Flags {
     /**
      * Returns the {@link TransportType} that will be used for socket I/O in Armeria.
      *
-     * <p>The default value of this flag is {@link #DEFAULT_TRANSPORT_TYPE_SPEC}, which retains
-     * the transport type of socket I/O API which Armeria will be used.
-     * Specify the {@code -Dcom.linecorp.armeria.transportType=<nio|epoll|io_uring>} JVM option to override
-     * the default.</p>
+     * <p>The default value of this flag is {@code "epoll"} in Linux and {@code "nio"} for other operations
+     * systems. Specify the {@code -Dcom.linecorp.armeria.transportType=<nio|epoll|io_uring>} JVM option to
+     * override the default.</p>
      */
-    public static TransportType defaultTransportType() {
+    public static TransportType transportType() {
         return TRANSPORT_TYPE;
     }
 

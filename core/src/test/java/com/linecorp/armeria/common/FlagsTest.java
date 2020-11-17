@@ -33,7 +33,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.common.util.TransportType;
+import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
@@ -51,7 +51,7 @@ class FlagsTest {
         assumeThat(System.getenv("WSLENV")).isNull();
         assumeThat(System.getProperty("com.linecorp.armeria.useEpoll")).isEqualTo("false");
 
-        assertThat(Flags.defaultTransportType()).isEqualTo(TransportType.EPOLL);
+        assertThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
         assertThat(Epoll.isAvailable()).isTrue();
     }
 

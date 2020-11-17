@@ -22,8 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import com.linecorp.armeria.internal.common.util.TransportType;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AbstractEventLoop;
 import io.netty.channel.Channel;

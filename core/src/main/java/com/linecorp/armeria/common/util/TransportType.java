@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.util;
+package com.linecorp.armeria.common.util;
 
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
@@ -26,6 +26,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -83,7 +84,7 @@ public enum TransportType {
      * Returns the available {@link TransportType}.
      */
     public static TransportType detectTransportType() {
-        return Flags.defaultTransportType();
+        return Flags.transportType();
     }
 
     /**
