@@ -18,6 +18,12 @@ package com.linecorp.armeria.common.thrift;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
@@ -78,58 +84,52 @@ public final class ThriftProtocolFactories {
     public static final TProtocolFactory TEXT_NAMED_ENUM = TTextProtocolFactory.get(true);
 
     /**
-     * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
-     *
-     * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not for Thrift
+     * A way to lookup the related {@link TProtocolFactory} from a {@link SerializationFormat}.
+     * Users can add new entries at runtime using
+     * {@link #registerThriftProtocolFactory(SerializationFormat, TProtocolFactory)}.
      */
-    public static TProtocolFactory get(SerializationFormat serializationFormat) {
-        requireNonNull(serializationFormat, "serializationFormat");
+    private static final ConcurrentMap<SerializationFormat, TProtocolFactory> knownProtocolFactories =
+            new ConcurrentHashMap<>();
 
-        if (serializationFormat == ThriftSerializationFormats.BINARY) {
-            return BINARY;
-        }
+    /**
+     * Registers a new Thrift protocol. This operation cannot be undone.
+     *
+     * @param serializationFormat the handle for this new protocol
+     * @param protocolFactory a factory to instantiate this protocol
+     */
+    public static void registerThriftProtocolFactory(
+            SerializationFormat serializationFormat, TProtocolFactory protocolFactory) {
+        knownProtocolFactories.put(serializationFormat, protocolFactory);
+    }
 
-        if (serializationFormat == ThriftSerializationFormats.COMPACT) {
-            return COMPACT;
-        }
-
-        if (serializationFormat == ThriftSerializationFormats.JSON) {
-            return JSON;
-        }
-
-        if (serializationFormat == ThriftSerializationFormats.TEXT) {
-            return TEXT;
-        }
-
-        if (serializationFormat == ThriftSerializationFormats.TEXT_NAMED_ENUM) {
-            return TEXT_NAMED_ENUM;
-        }
-
-        throw new IllegalArgumentException("non-Thrift serializationFormat: " + serializationFormat);
+    static {
+        registerThriftProtocolFactory(ThriftSerializationFormats.BINARY, BINARY);
+        registerThriftProtocolFactory(ThriftSerializationFormats.COMPACT, COMPACT);
+        registerThriftProtocolFactory(ThriftSerializationFormats.JSON, JSON);
+        registerThriftProtocolFactory(ThriftSerializationFormats.TEXT, TEXT);
+        registerThriftProtocolFactory(ThriftSerializationFormats.TEXT_NAMED_ENUM, TEXT_NAMED_ENUM);
     }
 
     /**
-     * Returns the {@link SerializationFormat} for the specified {@link TProtocolFactory}.
+     * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
      *
-     * @throws IllegalArgumentException if the specified {@link TProtocolFactory} is not known by this class
+     * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not a
+     *         known Thrift serialization format
      */
-    public static SerializationFormat toSerializationFormat(TProtocolFactory protoFactory) {
-        requireNonNull(protoFactory, "protoFactory");
+    public static TProtocolFactory get(SerializationFormat serializationFormat) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        return Optional.ofNullable(knownProtocolFactories.get(serializationFormat))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Unsupported Thrift serializationFormat: " + serializationFormat));
+    }
 
-        if (protoFactory instanceof TBinaryProtocol.Factory) {
-            return ThriftSerializationFormats.BINARY;
-        } else if (protoFactory instanceof TCompactProtocol.Factory) {
-            return ThriftSerializationFormats.COMPACT;
-        } else if (protoFactory instanceof TJSONProtocol.Factory) {
-            return ThriftSerializationFormats.JSON;
-        } else if (protoFactory instanceof TTextProtocolFactory) {
-            final TTextProtocolFactory factory = (TTextProtocolFactory) protoFactory;
-            return factory.usesNamedEnums() ? ThriftSerializationFormats.TEXT_NAMED_ENUM
-                                            : ThriftSerializationFormats.TEXT;
-        } else {
-            throw new IllegalArgumentException(
-                    "unsupported TProtocolFactory: " + protoFactory.getClass().getName());
-        }
+    /**
+     * Retrieves all registered Thrift serialization formats.
+     *
+     * @return an unmodifiable view of the registered Thrift serialization formats set.
+     */
+    public static Set<SerializationFormat> getThriftSerializationFormats() {
+        return Collections.unmodifiableSet(knownProtocolFactories.keySet());
     }
 
     private ThriftProtocolFactories() {}

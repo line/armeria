@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.thrift;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.getThriftSerializationFormats;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -101,7 +102,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      * fluently.
      *
      * <p>The default SerializationFormat {@link ThriftSerializationFormats#BINARY} will be used when client
-     * does not specify one in the request, but also supports {@link ThriftSerializationFormats#values()}.
+     * does not specify one in the request,
+     * but also supports {@link ThriftProtocolFactories#getThriftSerializationFormats()}.
      * </p>
      *
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
@@ -144,10 +146,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      */
     public static THttpService of(Object implementation,
                                   SerializationFormat defaultSerializationFormat) {
-
-        return new THttpService(ThriftCallService.of(implementation),
-                                newSupportedSerializationFormats(defaultSerializationFormat,
-                                                                 ThriftSerializationFormats.values()));
+        return new THttpService(
+                ThriftCallService.of(implementation),
+                newSupportedSerializationFormats(defaultSerializationFormat, getThriftSerializationFormats()));
     }
 
     /**
@@ -227,8 +228,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             SerializationFormat defaultSerializationFormat) {
 
         final SerializationFormat[] supportedSerializationFormatArray = newSupportedSerializationFormats(
-                defaultSerializationFormat,
-                ThriftSerializationFormats.values());
+                defaultSerializationFormat, getThriftSerializationFormats());
 
         return delegate -> new THttpService(delegate, supportedSerializationFormatArray);
     }

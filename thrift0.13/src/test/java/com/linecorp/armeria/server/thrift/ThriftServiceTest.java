@@ -51,7 +51,6 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
-import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.thrift.text.ChildRpcDebugService;
 import com.linecorp.armeria.common.thrift.text.Response;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -720,7 +719,7 @@ class ThriftServiceTest {
     private static class SerializationFormatProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return ThriftSerializationFormats.values().stream().map(Arguments::of);
+            return ThriftProtocolFactories.getThriftSerializationFormats().stream().map(Arguments::of);
         }
     }
 

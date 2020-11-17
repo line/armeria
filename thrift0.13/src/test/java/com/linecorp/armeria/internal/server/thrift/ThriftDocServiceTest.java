@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.server.thrift;
 
+import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.getThriftSerializationFormats;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.COMPACT;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT;
@@ -45,7 +46,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.Entry;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.internal.testing.TestUtil;
@@ -134,7 +134,7 @@ public class ThriftDocServiceTest {
         if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
         }
-        final Set<SerializationFormat> allThriftFormats = ThriftSerializationFormats.values();
+        final Set<SerializationFormat> allThriftFormats = getThriftSerializationFormats();
         final List<Entry> entries = ImmutableList.of(
                 new EntryBuilder(HelloService.class)
                         .endpoint(EndpointInfo.builder("*", "/")

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.thrift;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
+import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.getThriftSerializationFormats;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.thrift.TException;
@@ -29,7 +30,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.service.test.thrift.tree.Branch;
 import com.linecorp.armeria.service.test.thrift.tree.IntLeaf;
@@ -68,7 +68,7 @@ class ThriftTreeStructureTest {
 
     @Test
     void testRecursiveUnionCodec() throws TException {
-        for (SerializationFormat format : ThriftSerializationFormats.values()) {
+        for (SerializationFormat format : getThriftSerializationFormats()) {
             final TreeService.Iface client = Clients.newClient(server.uri(HTTP, format).resolve("/tree"),
                                                                TreeService.Iface.class);
             assertThat(client.createTree(treeRequest)).isEqualTo("OK");

@@ -1,0 +1,2 @@
+com.linecorp.armeria.internal.common.thrift.ThriftSerializationFormatProvider
+com.linecorp.armeria.client.thrift.ThriftOverHttpClientTest

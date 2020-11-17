@@ -15,16 +15,10 @@
  */
 package com.linecorp.armeria.common.thrift;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.Set;
-
-import com.google.common.collect.ImmutableSet;
-
 import com.linecorp.armeria.common.SerializationFormat;
 
 /**
- * Thrift-related {@link SerializationFormat} instances.
+ * Out-of-the box supported Thrift-related {@link SerializationFormat} instances.
  */
 public final class ThriftSerializationFormats {
 
@@ -54,23 +48,6 @@ public final class ThriftSerializationFormats {
      * or backwards compatibility and should only be used in non-production use cases like debugging.
      */
     public static final SerializationFormat TEXT_NAMED_ENUM = SerializationFormat.of("ttext-named-enum");
-
-    private static final Set<SerializationFormat> THRIFT_FORMATS =
-            ImmutableSet.of(BINARY, COMPACT, JSON, TEXT, TEXT_NAMED_ENUM);
-
-    /**
-     * Returns the set of all known Thrift serialization formats.
-     */
-    public static Set<SerializationFormat> values() {
-        return THRIFT_FORMATS;
-    }
-
-    /**
-     * Returns whether the specified {@link SerializationFormat} is Thrift.
-     */
-    public static boolean isThrift(SerializationFormat format) {
-        return values().contains(requireNonNull(format, "format"));
-    }
 
     private ThriftSerializationFormats() {}
 }

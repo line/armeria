@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.client.thrift;
 
+import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.getThriftSerializationFormats;
+
 import java.lang.reflect.Proxy;
 import java.util.Set;
 
@@ -30,7 +32,6 @@ import com.linecorp.armeria.client.thrift.THttpClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 
 /**
  * A {@link DecoratingClientFactory} that creates a Thrift-over-HTTP client.
@@ -42,7 +43,7 @@ final class THttpClientFactory extends DecoratingClientFactory {
     static {
         final ImmutableSet.Builder<Scheme> builder = ImmutableSet.builder();
         for (SessionProtocol p : SessionProtocol.values()) {
-            for (SerializationFormat f : ThriftSerializationFormats.values()) {
+            for (SerializationFormat f : getThriftSerializationFormats()) {
                 builder.add(Scheme.of(f, p));
             }
         }

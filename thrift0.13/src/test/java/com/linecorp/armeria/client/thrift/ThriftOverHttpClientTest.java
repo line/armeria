@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import static com.linecorp.armeria.common.MediaType.create;
+import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.getThriftSerializationFormats;
+import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.registerThriftProtocolFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -25,6 +28,7 @@ import java.nio.ByteBuffer;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -33,6 +37,7 @@ import java.util.stream.Stream;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TTupleProtocol;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +47,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
@@ -62,12 +69,12 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SerializationFormatProvider;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.thrift.ThriftReply;
-import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -87,7 +94,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.netty.util.AsciiString;
 
 @SuppressWarnings("unchecked")
-class ThriftOverHttpClientTest {
+public class ThriftOverHttpClientTest extends SerializationFormatProvider {
 
     private static final boolean ENABLE_LOGGING_DECORATORS = false;
     private static final boolean ENABLE_CONNECTION_POOL_LOGGING = true;
@@ -181,6 +188,20 @@ class ThriftOverHttpClientTest {
         }
     }
 
+    @Override
+    protected Set<Entry> entries() {
+        return ImmutableSet.of(
+                new Entry("ttuple",
+                          create("application", "x-thrift").withParameter("protocol", "TTUPLE"),
+                          create("application", "vnd.apache.thrift.tuple"))
+        );
+    }
+
+    static {
+        // must be registered before configuring the ServerExtension
+        registerThriftProtocolFactory(SerializationFormat.of("ttuple"), new TTupleProtocol.Factory());
+    }
+
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
@@ -190,12 +211,12 @@ class ThriftOverHttpClientTest {
             sb.tlsSelfSigned();
 
             for (Handlers h : Handlers.values()) {
-                for (SerializationFormat defaultSerializationFormat : ThriftSerializationFormats.values()) {
-                    HttpService service = THttpService.of(h.handler(), defaultSerializationFormat);
+                for (SerializationFormat thriftSerializationFormat : getThriftSerializationFormats()) {
+                    HttpService service = THttpService.of(h.handler(), thriftSerializationFormat);
                     if (ENABLE_LOGGING_DECORATORS) {
                         service = service.decorate(LoggingService.newDecorator());
                     }
-                    sb.service(h.path(defaultSerializationFormat), service);
+                    sb.service(h.path(thriftSerializationFormat), service);
                 }
             }
 
@@ -739,8 +760,7 @@ class ThriftOverHttpClientTest {
     private static class ParametersProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return ThriftSerializationFormats.values().stream()
-                    .flatMap(serializationFormat -> Stream.of(
+            return getThriftSerializationFormats().stream().flatMap(serializationFormat -> Stream.of(
                             arguments(clientOptions.toBuilder()
                                                    .factory(clientFactoryWithUseHttp2Preface)
                                                    .build(),
