@@ -20,30 +20,41 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 /**
- * The opt-out features that are disabled for a {@link TransientService}.
+ * Specifies which features should be disabled for a {@link TransientService}.
+ * For example, if you do:
+ * <pre>{@code
+ * ServerBuilder sb = Server.builder();
+ * sb.service("/health", HealthCheckService.builder() // A TransientService
+ *                                         .optOutFeatures(OptOutFeature.GRACEFUL_SHUTDOWN,
+ *                                                         OptOutFeature.ACCESS_LOGGING,
+ *                                                         OptOutFeature.METRIC_COLLECTION)
+ *                                         .build());
+ * }</pre>
+ * then, every feature is opted out except logging from {@link LoggingService}.
  */
 public enum OptOutFeature {
 
     /**
-     * Whether graceful shutdown counts the requests to the {@link TransientService} as processing requests.
+     * Prevents a {@link Server} from counting the requests to the {@link TransientService}
+     * as processing requests for graceful shutdown.
      *
      * @see ServerBuilder#gracefulShutdownTimeoutMillis(long, long)
      */
     GRACEFUL_SHUTDOWN,
 
     /**
-     * Whether {@link MetricCollectingService} collects the metrics of the requests to the
+     * Prevents {@link MetricCollectingService} from collecting the metrics of the requests to the
      * {@link TransientService}.
      */
     METRIC_COLLECTION,
 
     /**
-     * Whether {@link LoggingService} logs the requests to the {@link TransientService}.
+     * Prevents {@link LoggingService} from logging the requests to the {@link TransientService}.
      */
     LOGGING,
 
     /**
-     * Whether {@link AccessLogWriter} produces the access logs of the requests to the
+     * Prevents {@link AccessLogWriter} from producing the access logs of the requests to the
      * {@link TransientService}.
      */
     ACCESS_LOGGING;

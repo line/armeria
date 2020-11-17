@@ -250,6 +250,8 @@ public final class ServiceConfig {
 
     /**
      * Returns the {@link Set} of {@link OptOutFeature}s that are disabled for the {@link #service()}.
+     * This method always returns an empty {@link Set} for a non-{@link TransientService}
+     * because only a {@link TransientService} can opt out using {@link OptOutFeature}s.
      */
     public Set<OptOutFeature> optOutFeatures() {
         return optOutFeatures;

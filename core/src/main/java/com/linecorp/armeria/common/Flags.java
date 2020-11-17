@@ -383,12 +383,12 @@ public final class Flags {
             Streams.stream(CSV_SPLITTER.split(getNormalized("optOutFeatures", DEFAULT_OPT_OUT_FEATURES, val -> {
                 try {
                     Streams.stream(CSV_SPLITTER.split(val))
-                           .forEach(feature -> OptOutFeature.valueOf(feature.toUpperCase()));
+                           .forEach(feature -> OptOutFeature.valueOf(Ascii.toUpperCase(feature)));
                     return true;
                 } catch (Exception e) {
                     return false;
                 }
-            }))).map(feature -> OptOutFeature.valueOf(feature.toUpperCase())).collect(toImmutableSet());
+            }))).map(feature -> OptOutFeature.valueOf(Ascii.toUpperCase(feature))).collect(toImmutableSet());
 
     static {
         if (!isEpollAvailable()) {

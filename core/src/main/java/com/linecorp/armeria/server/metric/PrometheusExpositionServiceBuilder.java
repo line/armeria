@@ -17,14 +17,7 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.EnumSet;
-import java.util.Set;
-
-import javax.annotation.Nullable;
-
-import com.google.common.collect.ImmutableSet;
-
-import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.internal.server.OptOutFeaturesBuilder;
 import com.linecorp.armeria.server.OptOutFeature;
 import com.linecorp.armeria.server.TransientServiceBuilder;
 
@@ -37,8 +30,7 @@ public final class PrometheusExpositionServiceBuilder implements TransientServic
 
     private final CollectorRegistry collectorRegistry;
 
-    @Nullable
-    private Set<OptOutFeature> optOutFeatures;
+    private final OptOutFeaturesBuilder optOutFeaturesBuilder = new OptOutFeaturesBuilder();
 
     PrometheusExpositionServiceBuilder(CollectorRegistry collectorRegistry) {
         this.collectorRegistry = requireNonNull(collectorRegistry, "collectorRegistry");
@@ -46,16 +38,13 @@ public final class PrometheusExpositionServiceBuilder implements TransientServic
 
     @Override
     public PrometheusExpositionServiceBuilder optOutFeatures(OptOutFeature... optOutFeatures) {
-        return optOutFeatures(ImmutableSet.copyOf(requireNonNull(optOutFeatures, "optOutFeatures")));
+        optOutFeaturesBuilder.optOutFeatures(optOutFeatures);
+        return this;
     }
 
     @Override
     public PrometheusExpositionServiceBuilder optOutFeatures(Iterable<OptOutFeature> optOutFeatures) {
-        requireNonNull(optOutFeatures, "optOutFeatures");
-        if (this.optOutFeatures == null) {
-            this.optOutFeatures = EnumSet.noneOf(OptOutFeature.class);
-        }
-        this.optOutFeatures.addAll(ImmutableSet.copyOf(requireNonNull(optOutFeatures, "optOutFeatures")));
+        optOutFeaturesBuilder.optOutFeatures(optOutFeatures);
         return this;
     }
 
@@ -63,13 +52,6 @@ public final class PrometheusExpositionServiceBuilder implements TransientServic
      * Returns a newly-created {@link PrometheusExpositionService} based on the properties of this builder.
      */
     public PrometheusExpositionService build() {
-        final Set<OptOutFeature> optOutFeatures;
-        if (this.optOutFeatures == null) {
-            optOutFeatures = Flags.optOutFeatures();
-        } else {
-            optOutFeatures = ImmutableSet.copyOf(this.optOutFeatures);
-        }
-
-        return new PrometheusExpositionService(collectorRegistry, optOutFeatures);
+        return new PrometheusExpositionService(collectorRegistry, optOutFeaturesBuilder.optOutFeatures());
     }
 }

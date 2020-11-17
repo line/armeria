@@ -19,20 +19,17 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.EnumSet;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.server.OptOutFeaturesBuilder;
 import com.linecorp.armeria.server.OptOutFeature;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
@@ -60,8 +57,8 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     private long pingIntervalMillis = TimeUnit.SECONDS.toMillis(DEFAULT_PING_INTERVAL_SECONDS);
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
-    @Nullable
-    private Set<OptOutFeature> optOutFeatures;
+
+    private final OptOutFeaturesBuilder optOutFeaturesBuilder = new OptOutFeaturesBuilder();
 
     HealthCheckServiceBuilder() {}
 
@@ -260,15 +257,13 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
 
     @Override
     public HealthCheckServiceBuilder optOutFeatures(OptOutFeature... optOutFeatures) {
-        return optOutFeatures(ImmutableSet.copyOf(requireNonNull(optOutFeatures, "optOutFeatures")));
+        optOutFeaturesBuilder.optOutFeatures(optOutFeatures);
+        return this;
     }
 
     @Override
     public HealthCheckServiceBuilder optOutFeatures(Iterable<OptOutFeature> optOutFeatures) {
-        if (this.optOutFeatures == null) {
-            this.optOutFeatures = EnumSet.noneOf(OptOutFeature.class);
-        }
-        this.optOutFeatures.addAll(ImmutableSet.copyOf(requireNonNull(optOutFeatures, "optOutFeatures")));
+        optOutFeaturesBuilder.optOutFeatures(optOutFeatures);
         return this;
     }
 
@@ -276,16 +271,10 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * Returns a newly created {@link HealthCheckService} built from the properties specified so far.
      */
     public HealthCheckService build() {
-        final Set<OptOutFeature> optOutFeatures;
-        if (this.optOutFeatures == null) {
-            optOutFeatures = Flags.optOutFeatures();
-        } else {
-            optOutFeatures = Sets.immutableEnumSet(this.optOutFeatures);
-        }
-
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      pingIntervalMillis, updateHandler, optOutFeatures);
+                                      pingIntervalMillis, updateHandler,
+                                      optOutFeaturesBuilder.optOutFeatures());
     }
 }
