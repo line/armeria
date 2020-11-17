@@ -18,7 +18,7 @@ package com.linecorp.armeria.internal.consul;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.net.URISyntaxException;
+import java.net.URI;
 
 import org.junit.jupiter.api.Test;
 
@@ -36,28 +36,9 @@ class ConsulClientBuilderTest extends ConsulTestBase {
     }
 
     @Test
-    void consulUriShouldContainsVersionPath() throws URISyntaxException {
-        assertThrows(IllegalArgumentException.class,
-                     () -> ConsulClient.builder().consulUri("http://localhost:8500"));
-        assertThrows(IllegalArgumentException.class,
-                     () -> ConsulClient.builder().consulUri("http://localhost:8500/"));
-        ConsulClient.builder().consulUri("http://localhost:8500/v1");
-    }
-
-    @Test
-    void consulUriShouldSetByJustOneWay() throws URISyntaxException {
-        final ConsulClientBuilder builder = ConsulClient.builder();
-        builder.consulPort(8585);
-        assertThrows(IllegalStateException.class, () -> builder.consulUri("http://localhost:8500/v1"));
-
-        final ConsulClientBuilder builder2 = ConsulClient.builder();
-        builder2.consulUri("http://localhost:8500/v1");
-        assertThrows(IllegalStateException.class, () -> builder2.consulPort(8585));
-    }
-
-    @Test
     void consulApiVersionCanNotStartsWithSlash() {
-        assertThrows(IllegalArgumentException.class, () -> ConsulClient.builder().consulApiVersion("/v1"));
-        ConsulClient.builder().consulApiVersion("v1");
+        assertThrows(IllegalArgumentException.class, () ->
+                ConsulClient.builder(URI.create("http://localhost:8500")).consulApiVersion("/v1"));
+        ConsulClient.builder(URI.create("http://localhost:8500")).consulApiVersion("v1");
     }
 }

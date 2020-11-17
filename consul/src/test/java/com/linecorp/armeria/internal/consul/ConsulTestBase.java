@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.consul;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.URI;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -74,9 +75,8 @@ public abstract class ConsulTestBase {
                                      .withToken(CONSUL_TOKEN)
                                      .build().start();
         // Initialize Consul client
-        consulClient = ConsulClient.builder()
+        consulClient = ConsulClient.builder(URI.create("http://127.0.0.1:" + consul.getHttpPort()))
                                    .consulToken(CONSUL_TOKEN)
-                                   .consulPort(consul.getHttpPort())
                                    .buildClient();
     }
 

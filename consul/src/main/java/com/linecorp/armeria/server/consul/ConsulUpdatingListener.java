@@ -46,11 +46,14 @@ public final class ConsulUpdatingListener extends ServerListenerAdapter {
     private static final Logger logger = LoggerFactory.getLogger(ConsulUpdatingListener.class);
 
     /**
-     * Returns a {@link ConsulUpdatingListenerBuilder} that builds {@link ConsulUpdatingListener}.
+     * Returns a newly-created {@link ConsulUpdatingListenerBuilder} with the specified {@code consulUri}
+     * and {@code serviceName} to build {@link ConsulUpdatingListener}.
+     *
+     * @param consulUri the URI of Consul API service
      * @param serviceName the service name which is registered into Consul.
      */
-    public static ConsulUpdatingListenerBuilder builder(String serviceName) {
-        return new ConsulUpdatingListenerBuilder(serviceName);
+    public static ConsulUpdatingListenerBuilder builder(URI consulUri, String serviceName) {
+        return new ConsulUpdatingListenerBuilder(consulUri, serviceName);
     }
 
     private final ConsulClient consulClient;

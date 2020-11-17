@@ -45,8 +45,8 @@ public final class ConsulClient {
 
     private static final CharSequence X_CONSUL_TOKEN = HttpHeaderNames.of("x-consul-token");
 
-    public static ConsulClientBuilder builder() {
-        return new ConsulClientBuilder();
+    public static ConsulClientBuilder builder(URI consulUri) {
+        return new ConsulClientBuilder(consulUri);
     }
 
     private final WebClient webClient;

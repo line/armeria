@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.consul;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
@@ -50,16 +51,23 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
      * Returns a {@link ConsulEndpointGroup} with the specified {@code serviceName}.
      * The returned {@link ConsulEndpointGroup} will retrieve the list of {@link Endpoint}s from
      * a local Consul agent at the default Consul service port.
+     *
+     * @param consulUri the URI of Consul API service
+     * @param serviceName the service name to register
      */
-    public static ConsulEndpointGroup of(String serviceName) {
-        return builder(serviceName).build();
+    public static ConsulEndpointGroup of(URI consulUri, String serviceName) {
+        return builder(consulUri, serviceName).build();
     }
 
     /**
-     * Returns a newly-created {@link ConsulEndpointGroupBuilder} with the specified {@code serviceName}.
+     * Returns a newly-created {@link ConsulEndpointGroupBuilder} with the specified {@code consulUri}
+     * and {@code serviceName} to build {@link ConsulEndpointGroupBuilder}.
+     *
+     * @param consulUri the URI of Consul API service
+     * @param serviceName the service name to register
      */
-    public static ConsulEndpointGroupBuilder builder(String serviceName) {
-        return new ConsulEndpointGroupBuilder(serviceName);
+    public static ConsulEndpointGroupBuilder builder(URI consulUri, String serviceName) {
+        return new ConsulEndpointGroupBuilder(consulUri, serviceName);
     }
 
     private final ConsulClient consulClient;

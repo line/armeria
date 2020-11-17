@@ -25,7 +25,6 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.Server;
 
@@ -33,8 +32,7 @@ import com.linecorp.armeria.server.Server;
  * Builds a new {@link ConsulUpdatingListener}, which registers the server to Consul cluster.
  * <h3>Examples</h3>
  * <pre>{@code
- * ConsulUpdatingListener listener = ConsulUpdatingListener.builder("myService")
- *                                                         .consulPort(8501")
+ * ConsulUpdatingListener listener = ConsulUpdatingListener.builder(consulUri, "myService")
  *                                                         .build();
  * ServerBuilder sb = Server.builder();
  * sb.serverListener(listener);
@@ -56,9 +54,11 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
     /**
      * Creates a {@link ConsulUpdatingListenerBuilder} with a service name.
      *
+     * @param consulUri the URI of Consul API service
      * @param serviceName the service name to register
      */
-    ConsulUpdatingListenerBuilder(String serviceName) {
+    ConsulUpdatingListenerBuilder(URI consulUri, String serviceName) {
+        super(consulUri);
         this.serviceName = requireNonNull(serviceName, "serviceName");
         checkArgument(!this.serviceName.isEmpty(), "serviceName can't be empty");
     }
@@ -132,31 +132,6 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
     public ConsulUpdatingListenerBuilder endpoint(Endpoint endpoint) {
         serviceEndpoint = requireNonNull(endpoint, "endpoint");
         return this;
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulUri(URI consulUri) {
-        return (ConsulUpdatingListenerBuilder) super.consulUri(consulUri);
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulUri(String consulUri) {
-        return (ConsulUpdatingListenerBuilder) super.consulUri(consulUri);
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulProtocol(SessionProtocol consulProtocol) {
-        return (ConsulUpdatingListenerBuilder) super.consulProtocol(consulProtocol);
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulAddress(String consulAddress) {
-        return (ConsulUpdatingListenerBuilder) super.consulAddress(consulAddress);
-    }
-
-    @Override
-    public ConsulUpdatingListenerBuilder consulPort(int consulPort) {
-        return (ConsulUpdatingListenerBuilder) super.consulPort(consulPort);
     }
 
     @Override

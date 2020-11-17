@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.consul;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,8 +49,8 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                                         .service("/echo", new EchoService())
                                         .build();
             final ServerListener listener =
-                    ConsulUpdatingListener.builder(serviceName)
-                                          .consulPort(consul().getHttpPort())
+                    ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                                   serviceName)
                                           .consulToken(CONSUL_TOKEN)
                                           .endpoint(endpoint)
                                           .checkUri("http://" + endpoint.host() +
@@ -71,8 +72,11 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
 
     @Test
     void testBuild() {
-        assertThat(ConsulUpdatingListener.builder(serviceName).build()).isNotNull();
-        assertThat(ConsulUpdatingListener.builder(serviceName)
+        assertThat(ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                                  serviceName)
+                                         .build()).isNotNull();
+        assertThat(ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                                  serviceName)
                                          .build()).isNotNull();
     }
 
@@ -85,8 +89,8 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                                     .service("/echo", new EchoService())
                                     .build();
         final ServerListener listener =
-                ConsulUpdatingListener.builder("testThatDefaultCheckMethodIsHead")
-                                      .consulPort(consul().getHttpPort())
+                ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                               "testThatDefaultCheckMethodIsHead")
                                       .consulToken(CONSUL_TOKEN)
                                       .endpoint(endpoint)
                                       .checkUri("http://" + endpoint.host() + ':' + endpoint.port() + "/echo")

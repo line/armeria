@@ -22,12 +22,18 @@ import java.net.URI;
 import java.time.Duration;
 
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
 
 /**
  * A builder class for {@link ConsulEndpointGroup}.
+ * <h3>Examples</h3>
+ * <pre>{@code
+ * ConsulEndpointGroup endpointGroup = ConsulEndpointGroup.builder(consulUri, "myService")
+ *                                                        .build();
+ * List<Endpoint> endpoints = endpointGroup.endpoints();
+ * sb.serverListener(listener);
+ * }</pre>
  */
 public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
     private static final long DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS = 10_000;
@@ -38,7 +44,8 @@ public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
     private long registryFetchIntervalMillis = DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS;
     private boolean useHealthyEndpoints;
 
-    ConsulEndpointGroupBuilder(String serviceName) {
+    ConsulEndpointGroupBuilder(URI consulUri, String serviceName) {
+        super(consulUri);
         this.serviceName = requireNonNull(serviceName, "serviceName");
     }
 
@@ -82,31 +89,6 @@ public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
     public ConsulEndpointGroupBuilder useHealthEndpoints(boolean useHealthyEndpoints) {
         this.useHealthyEndpoints = useHealthyEndpoints;
         return this;
-    }
-
-    @Override
-    public ConsulEndpointGroupBuilder consulUri(URI consulUri) {
-        return (ConsulEndpointGroupBuilder) super.consulUri(consulUri);
-    }
-
-    @Override
-    public ConsulEndpointGroupBuilder consulUri(String consulUri) {
-        return (ConsulEndpointGroupBuilder) super.consulUri(consulUri);
-    }
-
-    @Override
-    public ConsulEndpointGroupBuilder consulProtocol(SessionProtocol consulProtocol) {
-        return (ConsulEndpointGroupBuilder) super.consulProtocol(consulProtocol);
-    }
-
-    @Override
-    public ConsulEndpointGroupBuilder consulAddress(String consulAddress) {
-        return (ConsulEndpointGroupBuilder) super.consulAddress(consulAddress);
-    }
-
-    @Override
-    public ConsulEndpointGroupBuilder consulPort(int consulPort) {
-        return (ConsulEndpointGroupBuilder) super.consulPort(consulPort);
     }
 
     @Override

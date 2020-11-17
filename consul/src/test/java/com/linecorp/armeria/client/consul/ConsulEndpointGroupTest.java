@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.consul;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +29,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.consul.ConsulTestBase;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
@@ -46,11 +46,11 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
                                         .http(endpoint.port())
                                         .service("/", new EchoService())
                                         .build();
-            final ServerListener listener = ConsulUpdatingListener.builder(serviceName)
-                                                                  .consulUri("http://127.0.0.1:" +
-                                                                             consul().getHttpPort() + "/v1")
-                                                                  .consulToken(CONSUL_TOKEN)
-                                                                  .build();
+            final ServerListener listener =
+                    ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                                   serviceName)
+                                          .consulToken(CONSUL_TOKEN)
+                                          .build();
             server.addListener(listener);
             server.start().join();
             servers.add(server);
@@ -66,10 +66,8 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
     @Test
     void testConsulEndpointGroupWithClient() {
         try (ConsulEndpointGroup endpointGroup =
-                     ConsulEndpointGroup.builder(serviceName)
-                                        .consulProtocol(SessionProtocol.HTTP)
-                                        .consulAddress(consul().getAddress())
-                                        .consulPort(consul().getHttpPort())
+                     ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                                 serviceName)
                                         .consulApiVersion("v1")
                                         .consulToken(CONSUL_TOKEN)
                                         .registryFetchIntervalMillis(1000)
@@ -93,8 +91,8 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
     @Test
     void testConsulEndpointGroupWithUrl() {
         try (ConsulEndpointGroup endpointGroup =
-                     ConsulEndpointGroup.builder(serviceName)
-                                        .consulPort(consul().getHttpPort())
+                     ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                                 serviceName)
                                         .consulToken(CONSUL_TOKEN)
                                         .registryFetchInterval(Duration.ofSeconds(1))
                                         .build()) {
@@ -111,6 +109,20 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
             await().atMost(3, TimeUnit.SECONDS)
                    .untilAsserted(() ->
                                   assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
+        }
+    }
+
+    @Test
+    public void testSelectStrategy() {
+        try (ConsulEndpointGroup endpointGroup =
+                     ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                                 serviceName)
+                                        .consulToken(CONSUL_TOKEN)
+                                        .registryFetchInterval(Duration.ofSeconds(1))
+                                        .build()) {
+            await().atMost(3, TimeUnit.SECONDS)
+                   .untilAsserted(() -> assertThat(endpointGroup.selectNow(null))
+                           .isNotEqualTo(endpointGroup.selectNow(null)));
         }
     }
 }
