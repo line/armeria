@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.thrift;
 
 import static com.linecorp.armeria.common.MediaType.create;
 import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.getThriftSerializationFormats;
-import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.registerThriftProtocolFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -74,6 +73,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
@@ -94,7 +94,8 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.netty.util.AsciiString;
 
 @SuppressWarnings("unchecked")
-public class ThriftOverHttpClientTest extends SerializationFormatProvider {
+public class ThriftOverHttpClientTest extends SerializationFormatProvider
+        implements ThriftProtocolFactoryProvider {
 
     private static final boolean ENABLE_LOGGING_DECORATORS = false;
     private static final boolean ENABLE_CONNECTION_POOL_LOGGING = true;
@@ -197,9 +198,10 @@ public class ThriftOverHttpClientTest extends SerializationFormatProvider {
         );
     }
 
-    static {
-        // must be registered before configuring the ServerExtension
-        registerThriftProtocolFactory(SerializationFormat.of("ttuple"), new TTupleProtocol.Factory());
+    @Override
+    public Set<ThriftSerializationFormat> thriftSerializationFormats() {
+        return ImmutableSet.of(
+                new ThriftSerializationFormat(SerializationFormat.of("ttuple"), new TTupleProtocol.Factory()));
     }
 
     @RegisterExtension

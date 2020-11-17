@@ -27,8 +27,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import org.apache.thrift.protocol.TProtocolFactory;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Iterables;
@@ -36,6 +34,7 @@ import com.google.common.collect.Multimaps;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.RpcService;
 
@@ -114,7 +113,7 @@ public final class THttpServiceBuilder {
      * Adds other {@link SerializationFormat} to the builder. By default, all {@link SerializationFormat}s in
      * {@link ThriftSerializationFormats} are supported. If nothing is specified then they are added.
      * To add a new custom Thrift serialization format,
-     * use {@link ThriftProtocolFactories#registerThriftProtocolFactory(SerializationFormat, TProtocolFactory)}.
+     * define a new SPI {@link ThriftProtocolFactoryProvider}.
      *
      * <p>Currently, the only way to specify a serialization format at request time is by using the HTTP session
      * protocol and setting the {@code "Content-Type"} header to the appropriate

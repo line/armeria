@@ -1,0 +1,2 @@
+com.linecorp.armeria.common.thrift.DefaultThriftProtocolFactoryProvider
+com.linecorp.armeria.client.thrift.ThriftOverHttpClientTest

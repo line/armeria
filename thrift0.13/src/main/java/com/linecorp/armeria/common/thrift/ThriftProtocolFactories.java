@@ -16,20 +16,24 @@
 
 package com.linecorp.armeria.common.thrift;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider.ThriftSerializationFormat;
 import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
 
 /**
@@ -85,29 +89,20 @@ public final class ThriftProtocolFactories {
 
     /**
      * A way to lookup the related {@link TProtocolFactory} from a {@link SerializationFormat}.
-     * Users can add new entries at runtime using
-     * {@link #registerThriftProtocolFactory(SerializationFormat, TProtocolFactory)}.
+     * Entries are provided via registered SPI {@link ThriftProtocolFactoryProvider} implementations.
      */
-    private static final ConcurrentMap<SerializationFormat, TProtocolFactory> knownProtocolFactories =
-            new ConcurrentHashMap<>();
-
-    /**
-     * Registers a new Thrift protocol. This operation cannot be undone.
-     *
-     * @param serializationFormat the handle for this new protocol
-     * @param protocolFactory a factory to instantiate this protocol
-     */
-    public static void registerThriftProtocolFactory(
-            SerializationFormat serializationFormat, TProtocolFactory protocolFactory) {
-        knownProtocolFactories.put(serializationFormat, protocolFactory);
-    }
+    private static final Map<SerializationFormat, TProtocolFactory> knownProtocolFactories;
 
     static {
-        registerThriftProtocolFactory(ThriftSerializationFormats.BINARY, BINARY);
-        registerThriftProtocolFactory(ThriftSerializationFormats.COMPACT, COMPACT);
-        registerThriftProtocolFactory(ThriftSerializationFormats.JSON, JSON);
-        registerThriftProtocolFactory(ThriftSerializationFormats.TEXT, TEXT);
-        registerThriftProtocolFactory(ThriftSerializationFormats.TEXT_NAMED_ENUM, TEXT_NAMED_ENUM);
+        final List<ThriftProtocolFactoryProvider> providers = ImmutableList.copyOf(
+                ServiceLoader.load(ThriftProtocolFactoryProvider.class,
+                                   ThriftProtocolFactoryProvider.class.getClassLoader()));
+        knownProtocolFactories = providers
+                .stream()
+                .map(ThriftProtocolFactoryProvider::thriftSerializationFormats)
+                .flatMap(Set::stream)
+                .collect(toImmutableMap(ThriftSerializationFormat::getSerializationFormat,
+                                        ThriftSerializationFormat::getTProtocolFactory));
     }
 
     /**
@@ -126,10 +121,10 @@ public final class ThriftProtocolFactories {
     /**
      * Retrieves all registered Thrift serialization formats.
      *
-     * @return an unmodifiable view of the registered Thrift serialization formats set.
+     * @return an view of the registered Thrift serialization formats.
      */
     public static Set<SerializationFormat> getThriftSerializationFormats() {
-        return Collections.unmodifiableSet(knownProtocolFactories.keySet());
+        return knownProtocolFactories.keySet();
     }
 
     private ThriftProtocolFactories() {}
