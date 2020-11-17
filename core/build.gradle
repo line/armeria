@@ -113,7 +113,7 @@ dependencies {
     implementation "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
     implementation 'io.netty:netty-tcnative-boringssl-static'
     implementation 'io.netty:netty-handler-proxy'
-    implementation "io.netty.incubator:netty-incubator-transport-native-io_uring:${managedVersions['io.netty.incubator:netty-incubator-transport-native-io_uring']}:linux-x86_64"
+    optionalImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:${managedVersions['io.netty.incubator:netty-incubator-transport-native-io_uring']}:linux-x86_64"
 
     // Project Reactor
     testImplementation 'io.projectreactor:reactor-test'
