@@ -17,7 +17,7 @@ dependencies {
 compileScala.targetCompatibility = 1.8
 ScalaCompileOptions.metaClass.useAnt = false
 
-// Run `scalafmt` to automatically format scala code from all source sets
+// Run `scalafmt` to automatically format scala code from source sets
 // https://github.com/alenkacz/gradle-scalafmt#tasks
 project.ext.getLintTask().dependsOn tasks.checkScalafmt
 

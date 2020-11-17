@@ -20,7 +20,7 @@ import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.{AggregatedHttpResponse, HttpMethod, HttpRequest, MediaType}
 import com.linecorp.armeria.scalapb.testing.messages.SimpleRequest
 import com.linecorp.armeria.server.ServerBuilder
-import com.linecorp.armeria.server.annotation.{ConsumesJson, ConsumesProtobuf, Post, ProducesProtobuf}
+import com.linecorp.armeria.server.annotation.{ConsumesJson, ConsumesProtobuf, Post}
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestAnnotatedServiceTest.server
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestConverterFunctionTest.toJson
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
@@ -28,7 +28,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.request
 import scalapb.json4s.Printer
 
 class ScalaPbRequestAnnotatedServiceTest {

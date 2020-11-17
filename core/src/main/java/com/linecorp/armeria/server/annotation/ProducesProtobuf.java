@@ -21,7 +21,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.linecorp.armeria.common.MediaTypeNames;
-import com.linecorp.armeria.server.annotation.Produces;
 
 /**
  * An alias for {@code @Produces(MediaTypeNames.PROTOBUF)}.

@@ -127,15 +127,15 @@ class ProtobufRequestAnnotatedServiceTest {
             return "Hello, " + request.getPayload() + '!';
         }
 
-        @Post("/json")
-        @ConsumesJson
-        public String consumeJson(SimpleRequest request) {
-            return "Hello, " + request.getPayload() + '!';
-        }
-
         @Post("/protobuf")
         @ConsumesProtobuf
         public String consumeProtobuf(SimpleRequest request) {
+            return "Hello, " + request.getPayload() + '!';
+        }
+
+        @Post("/json")
+        @ConsumesJson
+        public String consumeJson(SimpleRequest request) {
             return "Hello, " + request.getPayload() + '!';
         }
 

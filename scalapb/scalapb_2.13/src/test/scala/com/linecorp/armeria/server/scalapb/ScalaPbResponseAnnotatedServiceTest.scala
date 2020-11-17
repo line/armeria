@@ -68,7 +68,7 @@ class ScalaPbResponseAnnotatedServiceTest {
     val response: AggregatedHttpResponse = client.get(s"/$contentType").aggregate.join
     assertThat(response.headers.contentType.subtype).isEqualTo(contentType)
     val simpleResponse = parser.fromJsonString[SimpleResponse](response.contentUtf8())
-    Assertions.assertThat(simpleResponse.message).isEqualTo("Hello, Armeria!")
+    assertThat(simpleResponse.message).isEqualTo("Hello, Armeria!")
   }
 
   @CsvSource(Array("/protobuf/stream", "/protobuf/publisher"))

@@ -19,9 +19,12 @@ dependencies {
 def scalapbProject = "${rootProject.projectDir}/scalapb/scalapb_2.13"
 tasks.compileScala.source "${scalapbProject}/src/main/scala"
 tasks.processResources.from "${scalapbProject}/src/main/resources"
+
+tasks.compileTestScala.dependsOn(":scalapb_2.13:compileTestScala")
 tasks.compileTestScala.source "${scalapbProject}/src/test/scala"
 tasks.compileTestScala.source "${scalapbProject}/gen-src/test/scalapb"
 tasks.processTestResources.from "${scalapbProject}/src/test/proto"
+
 tasks.sourcesJar.from "${scalapbProject}/src/main/scala"
 tasks.sourcesJar.from "${scalapbProject}/src/main/resources"
 tasks.scaladoc.source "${scalapbProject}/src/main/scala"
