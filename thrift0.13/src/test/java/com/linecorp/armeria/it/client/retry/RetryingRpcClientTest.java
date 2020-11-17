@@ -205,7 +205,7 @@ class RetryingRpcClientTest {
         return Clients.builder(server.httpUri(BINARY) + "/thrift")
                       .rpcDecorator(
                               RetryingRpcClient.builder(
-                                      RetryConfig.builder(rule).maxTotalAttempts(maxAttempts).build())
+                                      RetryConfig.builderForRpc(rule).maxTotalAttempts(maxAttempts).build())
                                                .newDecorator())
                       .build(HelloService.Iface.class);
     }
