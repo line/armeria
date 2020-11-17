@@ -21,14 +21,14 @@ package com.linecorp.armeria.server;
 public interface TransientServiceBuilder {
 
     /**
-     * Disables the specified {@link OptOutFeature}s for {@link TransientService}.
-     * All {@link OptOutFeature}s are disabled by default if unspecified.
+     * Enables the specified {@link TransientServiceOption}s for {@link TransientService}.
+     * All {@link TransientServiceOption}s are disabled by default if unspecified.
      */
-    TransientServiceBuilder optOutFeatures(OptOutFeature... optOutFeatures);
+    TransientServiceBuilder transientServiceOptions(TransientServiceOption... transientServiceOptions);
 
     /**
-     * Disables the specified {@link OptOutFeature}s for {@link TransientService}.
-     * All {@link OptOutFeature}s are disabled by default if unspecified.
+     * Enables the specified {@link TransientServiceOption}s for {@link TransientService}.
+     * All {@link TransientServiceOption}s are disabled by default if unspecified.
      */
-    TransientServiceBuilder optOutFeatures(Iterable<OptOutFeature> optOutFeatures);
+    TransientServiceBuilder transientServiceOptions(Iterable<TransientServiceOption> transientServiceOptions);
 }

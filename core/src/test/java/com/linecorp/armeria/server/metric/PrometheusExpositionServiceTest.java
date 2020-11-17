@@ -32,8 +32,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 
-import com.google.common.collect.ImmutableSet;
-
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -41,6 +39,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -64,7 +63,7 @@ class PrometheusExpositionServiceTest {
               .service("/disabled", PrometheusExpositionService.of(registry.getPrometheusRegistry()))
               .service("/enabled",
                        PrometheusExpositionService.builder(registry.getPrometheusRegistry())
-                                                  .optOutFeatures(ImmutableSet.of())
+                                                  .transientServiceOptions(TransientServiceOption.allOf())
                                                   .build());
             sb.accessLogWriter(logs::add, false);
             sb.decorator(LoggingService.builder().logger(logger).newDecorator());

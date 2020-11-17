@@ -43,13 +43,13 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
-import com.linecorp.armeria.server.OptOutFeature;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.FutureListener;
@@ -145,7 +145,7 @@ public final class HealthCheckService implements TransientHttpService {
     final Set<PendingResponse> pendingUnhealthyResponses;
     @Nullable
     private final HealthCheckUpdateHandler updateHandler;
-    private final Set<OptOutFeature> optOutFeatures;
+    private final Set<TransientServiceOption> transientServiceOptions;
 
     @Nullable
     private Server server;
@@ -155,12 +155,12 @@ public final class HealthCheckService implements TransientHttpService {
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
                        long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
                        long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
-                       Set<OptOutFeature> optOutFeatures) {
+                       Set<TransientServiceOption> transientServiceOptions) {
         serverHealth = new SettableHealthChecker(false);
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
                 .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
-        this.optOutFeatures = optOutFeatures;
+        this.transientServiceOptions = transientServiceOptions;
 
         if (maxLongPollingTimeoutMillis > 0 &&
             this.healthCheckers.stream().allMatch(ListenableHealthChecker.class::isInstance)) {
@@ -524,8 +524,8 @@ public final class HealthCheckService implements TransientHttpService {
     }
 
     @Override
-    public Set<OptOutFeature> optOutFeatures() {
-        return optOutFeatures;
+    public Set<TransientServiceOption> options() {
+        return transientServiceOptions;
     }
 
     private static final class PendingResponse {

@@ -32,12 +32,13 @@ import com.linecorp.armeria.common.Response;
 public interface TransientService<I extends Request, O extends Response> extends Service<I, O> {
 
     /**
-     * Returns the {@link Set} of {@link OptOutFeature}s that are disabled for this
-     * {@link TransientService}. This returns {@link Flags#optOutFeatures()} if you didn't
-     * specify any {@link OptOutFeature}s using {@link TransientServiceBuilder#optOutFeatures(OptOutFeature...)}
-     * when you create this {@link TransientService}.
+     * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for this
+     * {@link TransientService}. This returns {@link Flags#transientServiceOptions()} if you didn't
+     * specify any {@link TransientServiceOption}s using
+     * {@link TransientServiceBuilder#transientServiceOptions(TransientServiceOption...)} when you create
+     * this {@link TransientService}.
      */
-    default Set<OptOutFeature> optOutFeatures() {
-        return Flags.optOutFeatures();
+    default Set<TransientServiceOption> options() {
+        return Flags.transientServiceOptions();
     }
 }

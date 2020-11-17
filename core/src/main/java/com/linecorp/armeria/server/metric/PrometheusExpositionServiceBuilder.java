@@ -17,9 +17,9 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.internal.server.OptOutFeaturesBuilder;
-import com.linecorp.armeria.server.OptOutFeature;
+import com.linecorp.armeria.internal.server.TransientServiceOptionsBuilder;
 import com.linecorp.armeria.server.TransientServiceBuilder;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.prometheus.client.CollectorRegistry;
 
@@ -30,21 +30,24 @@ public final class PrometheusExpositionServiceBuilder implements TransientServic
 
     private final CollectorRegistry collectorRegistry;
 
-    private final OptOutFeaturesBuilder optOutFeaturesBuilder = new OptOutFeaturesBuilder();
+    private final TransientServiceOptionsBuilder
+            transientServiceOptionsBuilder = new TransientServiceOptionsBuilder();
 
     PrometheusExpositionServiceBuilder(CollectorRegistry collectorRegistry) {
         this.collectorRegistry = requireNonNull(collectorRegistry, "collectorRegistry");
     }
 
     @Override
-    public PrometheusExpositionServiceBuilder optOutFeatures(OptOutFeature... optOutFeatures) {
-        optOutFeaturesBuilder.optOutFeatures(optOutFeatures);
+    public PrometheusExpositionServiceBuilder transientServiceOptions(
+            TransientServiceOption... transientServiceOptions) {
+        transientServiceOptionsBuilder.transientServiceOptions(transientServiceOptions);
         return this;
     }
 
     @Override
-    public PrometheusExpositionServiceBuilder optOutFeatures(Iterable<OptOutFeature> optOutFeatures) {
-        optOutFeaturesBuilder.optOutFeatures(optOutFeatures);
+    public PrometheusExpositionServiceBuilder transientServiceOptions(
+            Iterable<TransientServiceOption> transientServiceOptions) {
+        transientServiceOptionsBuilder.transientServiceOptions(transientServiceOptions);
         return this;
     }
 
@@ -52,6 +55,6 @@ public final class PrometheusExpositionServiceBuilder implements TransientServic
      * Returns a newly-created {@link PrometheusExpositionService} based on the properties of this builder.
      */
     public PrometheusExpositionService build() {
-        return new PrometheusExpositionService(collectorRegistry, optOutFeaturesBuilder.build());
+        return new PrometheusExpositionService(collectorRegistry, transientServiceOptionsBuilder.build());
     }
 }

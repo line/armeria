@@ -329,7 +329,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             setDone(true);
             logBuilder().endResponse(cause);
             final ServiceConfig config = reqCtx.config();
-            if (!config.optOutFeatures().contains(OptOutFeature.ACCESS_LOGGING)) {
+            if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
                 reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
             }
         }
@@ -396,7 +396,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     if (tryComplete()) {
                         logBuilder().endResponse(cause);
                         final ServiceConfig config = reqCtx.config();
-                        if (!config.optOutFeatures().contains(OptOutFeature.ACCESS_LOGGING)) {
+                        if (config.transientServiceOptions().contains(
+                                TransientServiceOption.WITH_ACCESS_LOGGING)) {
                             reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
                         }
                     }
@@ -501,7 +502,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 if (tryComplete()) {
                     logBuilder().endResponse();
                     final ServiceConfig config = reqCtx.config();
-                    if (!config.optOutFeatures().contains(OptOutFeature.ACCESS_LOGGING)) {
+                    if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
                         reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
                     }
                 }

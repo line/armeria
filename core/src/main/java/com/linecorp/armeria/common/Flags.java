@@ -57,11 +57,11 @@ import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
-import com.linecorp.armeria.server.OptOutFeature;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientService;
+import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
@@ -377,18 +377,17 @@ public final class Flags {
 
     private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
 
-    private static final String DEFAULT_OPT_OUT_FEATURES =
-            "GRACEFUL_SHUTDOWN,METRIC_COLLECTION,LOGGING,ACCESS_LOGGING";
-    private static final Set<OptOutFeature> OPT_OUT_FEATURES =
-            Streams.stream(CSV_SPLITTER.split(getNormalized("optOutFeatures", DEFAULT_OPT_OUT_FEATURES, val -> {
+    private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
+            Streams.stream(CSV_SPLITTER.split(getNormalized("transientServiceOptions", "", val -> {
                 try {
                     Streams.stream(CSV_SPLITTER.split(val))
-                           .forEach(feature -> OptOutFeature.valueOf(Ascii.toUpperCase(feature)));
+                           .forEach(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)));
                     return true;
                 } catch (Exception e) {
                     return false;
                 }
-            }))).map(feature -> OptOutFeature.valueOf(Ascii.toUpperCase(feature))).collect(toImmutableSet());
+            }))).map(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)))
+                   .collect(toImmutableSet());
 
     static {
         if (!isEpollAvailable()) {
@@ -1105,16 +1104,17 @@ public final class Flags {
     }
 
     /**
-     * Returns the {@link Set} of {@link OptOutFeature}s that are disabled for a {@link TransientService}.
+     * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for a
+     * {@link TransientService}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_OPT_OUT_FEATURES}, which means all
-     * {@link OptOutFeature}s are disabled.
-     * Specify the {@code -Dcom.linecorp.armeria.optOutFeatures=<csv>} JVM option
+     * <p>The default value of this flag is an empty string, which means all
+     * {@link TransientServiceOption}s are disabled.
+     * Specify the {@code -Dcom.linecorp.armeria.transientServiceOptions=<csv>} JVM option
      * to override the default value. For example,
-     * {@code -Dcom.linecorp.armeria.optOutFeatures=GRACEFUL_SHUTDOWN,METRIC_COLLECTION}.
+     * {@code -Dcom.linecorp.armeria.transientServiceOptions=WITH_METRIC_COLLECTION,WITH_ACCESS_LOGGING}.
      */
-    public static Set<OptOutFeature> optOutFeatures() {
-        return OPT_OUT_FEATURES;
+    public static Set<TransientServiceOption> transientServiceOptions() {
+        return TRANSIENT_SERVICE_OPTIONS;
     }
 
     @Nullable

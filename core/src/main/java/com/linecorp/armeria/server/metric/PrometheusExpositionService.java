@@ -30,9 +30,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.OptOutFeature;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
@@ -50,7 +50,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
      * {@link CollectorRegistry}.
      */
     public static PrometheusExpositionService of(CollectorRegistry collectorRegistry) {
-        return new PrometheusExpositionService(collectorRegistry, Flags.optOutFeatures());
+        return new PrometheusExpositionService(collectorRegistry, Flags.transientServiceOptions());
     }
 
     /**
@@ -62,7 +62,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
     }
 
     private final CollectorRegistry collectorRegistry;
-    private final Set<OptOutFeature> optOutFeatures;
+    private final Set<TransientServiceOption> transientServiceOptions;
 
     /**
      * Creates a new instance.
@@ -73,12 +73,14 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
      */
     @Deprecated
     public PrometheusExpositionService(CollectorRegistry collectorRegistry) {
-        this(collectorRegistry, Flags.optOutFeatures());
+        this(collectorRegistry, Flags.transientServiceOptions());
     }
 
-    PrometheusExpositionService(CollectorRegistry collectorRegistry, Set<OptOutFeature> optOutFeatures) {
+    PrometheusExpositionService(CollectorRegistry collectorRegistry,
+                                Set<TransientServiceOption> transientServiceOptions) {
         this.collectorRegistry = requireNonNull(collectorRegistry, "collectorRegistry");
-        this.optOutFeatures = ImmutableSet.copyOf(requireNonNull(optOutFeatures, "optOutFeatures"));
+        this.transientServiceOptions =
+                ImmutableSet.copyOf(requireNonNull(transientServiceOptions, "transientServiceOptions"));
     }
 
     @Override
@@ -96,7 +98,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
     }
 
     @Override
-    public Set<OptOutFeature> optOutFeatures() {
-        return optOutFeatures;
+    public Set<TransientServiceOption> options() {
+        return transientServiceOptions;
     }
 }

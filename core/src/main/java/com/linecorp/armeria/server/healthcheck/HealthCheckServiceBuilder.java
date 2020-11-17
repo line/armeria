@@ -29,11 +29,11 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.server.OptOutFeaturesBuilder;
-import com.linecorp.armeria.server.OptOutFeature;
+import com.linecorp.armeria.internal.server.TransientServiceOptionsBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.TransientServiceBuilder;
+import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.auth.AuthService;
 
 /**
@@ -58,7 +58,8 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
 
-    private final OptOutFeaturesBuilder optOutFeaturesBuilder = new OptOutFeaturesBuilder();
+    private final TransientServiceOptionsBuilder
+            transientServiceOptionsBuilder = new TransientServiceOptionsBuilder();
 
     HealthCheckServiceBuilder() {}
 
@@ -256,14 +257,16 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     }
 
     @Override
-    public HealthCheckServiceBuilder optOutFeatures(OptOutFeature... optOutFeatures) {
-        optOutFeaturesBuilder.optOutFeatures(optOutFeatures);
+    public HealthCheckServiceBuilder transientServiceOptions(
+            TransientServiceOption... transientServiceOptions) {
+        transientServiceOptionsBuilder.transientServiceOptions(transientServiceOptions);
         return this;
     }
 
     @Override
-    public HealthCheckServiceBuilder optOutFeatures(Iterable<OptOutFeature> optOutFeatures) {
-        optOutFeaturesBuilder.optOutFeatures(optOutFeatures);
+    public HealthCheckServiceBuilder transientServiceOptions(
+            Iterable<TransientServiceOption> transientServiceOptions) {
+        transientServiceOptionsBuilder.transientServiceOptions(transientServiceOptions);
         return this;
     }
 
@@ -275,6 +278,6 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
                                       pingIntervalMillis, updateHandler,
-                                      optOutFeaturesBuilder.build());
+                                      transientServiceOptionsBuilder.build());
     }
 }
