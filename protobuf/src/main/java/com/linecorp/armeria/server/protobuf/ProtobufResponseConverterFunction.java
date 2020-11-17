@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.protobuf;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.isJson;
+import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.isProtobuf;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
@@ -104,7 +105,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             if (contentType == null) {
                 return HttpResponse.of(headers.toBuilder().contentType(MediaType.PROTOBUF).build(),
                                        toProtobuf(result), trailers);
-            } else if (contentType.is(MediaType.PROTOBUF) || contentType.is(X_PROTOBUF)) {
+            } else if (isProtobuf(contentType)) {
                 return HttpResponse.of(headers, toProtobuf(result), trailers);
             } else {
                 return ResponseConverterFunction.fallthrough();
@@ -167,14 +168,15 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
                       .collect(Collectors.joining(",", "{", "}"));
         }
 
-        if (!(message instanceof MessageOrBuilder)) {
+        if (!(message instanceof Message)) {
             throw new IllegalStateException(
                     "Unexpected message type : " + message.getClass() + " (expected: a subtype of " +
-                    MessageOrBuilder.class.getName() + ')');
+                    Message.class.getName() + ')');
         }
 
         try {
-            return jsonPrinter.print((MessageOrBuilder) message);
+            //noinspection OverlyStrongTypeCast
+            return jsonPrinter.print((Message) message);
         } catch (Exception e) {
             return Exceptions.throwUnsafely(e);
         }

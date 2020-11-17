@@ -160,8 +160,9 @@ object ScalaPbRequestConverterFunction {
 }
 
 /**
-  * A [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] which converts a Protocol Buffers or
-  * JSON body of the [[com.linecorp.armeria.common.AggregatedHttpRequest]] to an [[scalapb.GeneratedMessage]].
+  * A [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] which converts
+  * either a Protocol Buffers or JSON body of the [[com.linecorp.armeria.common.AggregatedHttpRequest]] to
+  * an [[scalapb.GeneratedMessage]].
   */
 @UnstableApi
 final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultType: ResultType.Value)

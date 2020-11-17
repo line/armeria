@@ -49,7 +49,8 @@ private[scalapb] object ScalaPbConverterUtil {
         val typeArguments = parameterizedType.getActualTypeArguments
         val firstType = typeArguments(0).asInstanceOf[Class[_]]
 
-        if (typeArguments.length == 1 && isProtobufMessage(firstType))
+        val typeArgumentsLength = typeArguments.length
+        if (typeArgumentsLength == 1 && isProtobufMessage(firstType))
           if (classOf[List[_]].isAssignableFrom(rawType))
             ResultType.SCALA_LIST_PROTOBUF
           else if (classOf[Vector[_]].isAssignableFrom(rawType))
@@ -62,7 +63,7 @@ private[scalapb] object ScalaPbConverterUtil {
             ResultType.SET_PROTOBUF
           else
             ResultType.UNKNOWN
-        else if (typeArguments.length == 2 &&
+        else if (typeArgumentsLength == 2 &&
           isProtobufMessage(typeArguments(1).asInstanceOf[Class[_]])) {
           if (!classOf[String].isAssignableFrom(firstType))
             throw new IllegalStateException(

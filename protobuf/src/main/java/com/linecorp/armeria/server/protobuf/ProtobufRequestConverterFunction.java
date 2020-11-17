@@ -212,7 +212,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         return RequestConverterFunction.fallthrough();
     }
 
-    private static boolean isProtobuf(@Nullable MediaType contentType) {
+    static boolean isProtobuf(@Nullable MediaType contentType) {
         return contentType == null ||
                contentType.is(MediaType.PROTOBUF) ||
                contentType.is(X_PROTOBUF) ||
