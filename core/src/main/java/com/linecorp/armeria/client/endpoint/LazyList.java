@@ -230,7 +230,6 @@ final class LazyList<E> implements List<E> {
 
     private List<E> setDelegate() {
         final List<E> supplied = ImmutableList.copyOf(delegateSupplier.get());
-        assert supplied != null;
         if (delegateUpdater.compareAndSet(this, null, supplied)) {
             return supplied;
         }
