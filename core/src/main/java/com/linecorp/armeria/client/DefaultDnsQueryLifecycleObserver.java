@@ -69,7 +69,6 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
         CNAME_NOT_FOUND,
         NO_MATCHING_RECORD,
         UNRECOGNIZED_TYPE,
-        NO_NAME_SERVER_FOUND,
         OTHERS,
         SERVER_TIMEOUT,
         RESOLVER_TIMEOUT;
@@ -139,9 +138,11 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public void queryFailed(Throwable cause) {
-        meterRegistry.counter(meterIdPrefix.name(),
-                              Arrays.asList(nameTag, TAG_FAILURE,
-                              Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause).lowerCasedName))).increment();
+        if (!NO_NS_RETURNED_EXCEPTION.matcher(cause.getMessage()).find()) {
+            meterRegistry.counter(meterIdPrefix.name(),
+                    Arrays.asList(nameTag, TAG_FAILURE,
+                    Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause).lowerCasedName))).increment();
+        }
     }
 
     @Override
@@ -175,10 +176,6 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
         if (UNRECOGNIZED_TYPE_EXCEPTION.matcher(message).find()) {
             return DnsExceptionTypes.UNRECOGNIZED_TYPE;
-        }
-
-        if (NO_NS_RETURNED_EXCEPTION.matcher(message).find()) {
-            return DnsExceptionTypes.NO_NAME_SERVER_FOUND;
         }
         return DnsExceptionTypes.OTHERS;
     }
