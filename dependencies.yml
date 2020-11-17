@@ -152,9 +152,12 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 com.thesamet.scalapb:
-  scalapb-runtime_2.13: { version: &SCALAPB_VERSION '0.10.8' }
+  scalapb-runtime_2.12: { version: &SCALAPB_VERSION '0.10.8' }
+  scalapb-runtime_2.13: { version: *SCALAPB_VERSION }
+  scalapb-runtime-grpc_2.12: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.13: { version: *SCALAPB_VERSION }
-  scalapb-json4s_2.13: { version: '0.10.1' }
+  scalapb-json4s_2.12: { version: &SCALAPB_JSON4S_VERSION '0.10.1' }
+  scalapb-json4s_2.13: { version: *SCALAPB_JSON4S_VERSION }
 
 # Akka is used only for testing in it:grpcweb module.
 com.typesafe.akka:

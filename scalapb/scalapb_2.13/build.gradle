@@ -4,14 +4,14 @@ plugins {
 }
 
 dependencies {
-    // TODO(ikhoon): Copy ScalaPBJsonMarshaller and GrpcScalaDocServicePlugin
+    // TODO(ikhoon): Copy ScalaPBJsonMarshaller and GrpcScalaDocServicePlugin from examples/grpc-scala
     implementation project(':grpc')
     implementation 'org.scala-lang:scala-library:2.13.3'
 
     // ScalaPB
-    api "com.thesamet.scalapb:scalapb-json4s_2.13:${managedVersions['com.thesamet.scalapb:scalapb-json4s_2.13']}"
-    implementation "com.thesamet.scalapb:scalapb-runtime_2.13:${managedVersions['com.thesamet.scalapb:scalapb-runtime_2.13']}"
-    implementation "com.thesamet.scalapb:scalapb-runtime-grpc_2.13:${managedVersions['com.thesamet.scalapb:scalapb-runtime-grpc_2.13']}"
+    api "com.thesamet.scalapb:scalapb-json4s_2.13"
+    implementation "com.thesamet.scalapb:scalapb-runtime_2.13"
+    implementation "com.thesamet.scalapb:scalapb-runtime-grpc_2.13"
 }
 
 compileScala.targetCompatibility = 1.8
