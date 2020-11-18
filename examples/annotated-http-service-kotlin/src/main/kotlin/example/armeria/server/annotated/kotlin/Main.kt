@@ -10,7 +10,7 @@ import kotlinx.coroutines.CoroutineName
 import org.slf4j.LoggerFactory
 import kotlin.concurrent.thread
 
-fun main(args: Array<String>) {
+fun main() {
     val server = newServer(8080)
     // To append a coroutine name to a thread name
     System.setProperty("kotlinx.coroutines.debug", "on")
