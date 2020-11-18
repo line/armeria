@@ -106,7 +106,7 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
      *
      * @see <a href="https://armeria.dev/docs/client-retry#per-attempt-timeout">Per-attempt timeout</a>
      *
-     * @deprecated Use {@link RetryConfigBuilder#responseTimeoutMillisForEachAttempt(long)}  instead.
+     * @deprecated Use {@link RetryConfigBuilder#responseTimeoutMillisForEachAttempt(long)} instead.
      */
     @Deprecated
     public AbstractRetryingClientBuilder<O> responseTimeoutMillisForEachAttempt(

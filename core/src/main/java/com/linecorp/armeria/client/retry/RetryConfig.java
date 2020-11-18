@@ -38,16 +38,14 @@ public final class RetryConfig<T extends Response> {
     private static final Logger logger = LoggerFactory.getLogger(RetryConfig.class);
 
     /**
-     * Returns a new {@link RetryConfigBuilder} with the default values from Flags.
-     * Uses a {@code RetryRule}.
+     * Returns a new {@link RetryConfigBuilder} with the specified {@code RetryRule}.
      */
     public static RetryConfigBuilder<HttpResponse> builder(RetryRule retryRule) {
         return new RetryConfigBuilder<>(retryRule);
     }
 
     /**
-     * Returns a new {@link RetryConfigBuilder} with the default values from Flags.
-     * Uses a {@code RetryRuleWithContent<HttpResponse>}.
+     * Returns a new {@link RetryConfigBuilder} with the specified {@code RetryRuleWithContent}.
      */
     public static RetryConfigBuilder<HttpResponse> builder(
             RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
@@ -55,16 +53,14 @@ public final class RetryConfig<T extends Response> {
     }
 
     /**
-     * Returns a new {@link RetryConfigBuilder} with the default values from Flags.
-     * Uses a {@code RetryRule}.
+     * Returns a new {@link RetryConfigBuilder} with the specified {@code RetryRule}.
      */
     public static RetryConfigBuilder<RpcResponse> builderForRpc(RetryRule retryRule) {
         return new RetryConfigBuilder<>(retryRule);
     }
 
     /**
-     * Returns a new {@link RetryConfigBuilder} with the default values from Flags.
-     * Uses a {@code RetryRuleWithContent<RpcResponse>}.
+     * Returns a new {@link RetryConfigBuilder} with the specified {@code RetryRuleWithContent}.
      */
     public static RetryConfigBuilder<RpcResponse> builderForRpc(
             RetryRuleWithContent<RpcResponse> retryRuleWithContent) {
@@ -97,13 +93,9 @@ public final class RetryConfig<T extends Response> {
     private RetryRuleWithContent<T> fromRetryRule;
 
     RetryConfig(RetryRule retryRule, int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+        this(requireNonNull(retryRule, "retryRule"), null,
+                maxTotalAttempts, responseTimeoutMillisForEachAttempt, 0);
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
-        this.retryRule = requireNonNull(retryRule, "retryRule");
-        this.maxTotalAttempts = maxTotalAttempts;
-        this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
-        maxContentLength = 0;
-        retryRuleWithContent = null;
-        fromRetryRuleWithContent = null;
     }
 
     RetryConfig(
@@ -111,13 +103,27 @@ public final class RetryConfig<T extends Response> {
             int maxContentLength,
             int maxTotalAttempts,
             long responseTimeoutMillisForEachAttempt) {
+        this(null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
+                maxTotalAttempts, responseTimeoutMillisForEachAttempt, maxContentLength);
+    }
+
+    private RetryConfig(
+            @Nullable RetryRule retryRule,
+            @Nullable RetryRuleWithContent<T> retryRuleWithContent,
+            int maxTotalAttempts,
+            long responseTimeoutMillisForEachAttempt,
+            int maxContentLength) {
         checkArguments(maxTotalAttempts, responseTimeoutMillisForEachAttempt);
-        this.maxContentLength = maxContentLength;
-        this.retryRuleWithContent = requireNonNull(retryRuleWithContent, "retryRuleWithContent");
-        fromRetryRuleWithContent = RetryRuleUtil.fromRetryRuleWithContent(retryRuleWithContent);
+        this.retryRule = retryRule;
+        this.retryRuleWithContent = retryRuleWithContent;
         this.maxTotalAttempts = maxTotalAttempts;
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
-        retryRule = null;
+        this.maxContentLength = maxContentLength;
+        if (retryRuleWithContent == null) {
+            fromRetryRuleWithContent = null;
+        } else {
+            fromRetryRuleWithContent = RetryRuleUtil.fromRetryRuleWithContent(retryRuleWithContent);
+        }
     }
 
     private static void checkArguments(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
@@ -214,7 +220,8 @@ public final class RetryConfig<T extends Response> {
     RetryRuleWithContent<T> fromRetryRule() {
         requireNonNull(retryRule, "retryRule");
         if (fromRetryRule == null) {
-            logger.warn("A RetryRuleWithContent is being generated from a RetryRule. " +
+            logger.warn(
+                    "A RetryRuleWithContent is being generated from a RetryRule. " +
                     "You are probably using a RetryRule with a RetryingRpcClient. " +
                     "Please ensure that this is intentional.");
             fromRetryRule = RetryRuleUtil.fromRetryRule(retryRule);
