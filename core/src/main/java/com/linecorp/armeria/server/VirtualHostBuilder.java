@@ -101,7 +101,7 @@ public final class VirtualHostBuilder {
     @Nullable
     private SelfSignedCertificate selfSignedCertificate;
     private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
-    private final List<RouteDecoratingService> routeDecoratingServices = new LinkedList<>();
+    private final LinkedList<RouteDecoratingService> routeDecoratingServices = new LinkedList<>();
     @Nullable
     private Function<? super VirtualHost, ? extends Logger> accessLoggerMapper;
 
@@ -592,7 +592,7 @@ public final class VirtualHostBuilder {
     }
 
     VirtualHostBuilder addRouteDecoratingService(RouteDecoratingService routeDecoratingService) {
-        routeDecoratingServices.add(0, routeDecoratingService);
+        routeDecoratingServices.addFirst(routeDecoratingService);
         return this;
     }
 
