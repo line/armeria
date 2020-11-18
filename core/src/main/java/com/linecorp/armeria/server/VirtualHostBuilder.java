@@ -351,7 +351,8 @@ public final class VirtualHostBuilder {
 
     /**
      * Returns a {@link VirtualHostDecoratingServiceBindingBuilder} which is for binding
-     * a {@code decorator} fluently.
+     * a {@code decorator} fluently. The specified decorator(s) is/are executed in reverse order of
+     * the insertion.
      */
     public VirtualHostDecoratingServiceBindingBuilder routeDecorator() {
         return new VirtualHostDecoratingServiceBindingBuilder(this);
@@ -619,6 +620,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates all {@link HttpService}s with the specified {@code decorator}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decorator the {@link Function} that decorates {@link HttpService}s
      */
@@ -628,6 +630,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates all {@link HttpService}s with the specified {@link DecoratingHttpServiceFunction}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
@@ -639,6 +642,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
@@ -650,6 +654,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
     public VirtualHostBuilder decorator(
             String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
@@ -658,6 +663,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@link Route}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param route the route being decorated
      * @param decorator the {@link Function} that decorates {@link HttpService}
@@ -671,6 +677,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@link Route}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param route the route being decorated
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
@@ -685,6 +692,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s under the specified directory.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
     public VirtualHostBuilder decoratorUnder(
             String prefix, Function<? super HttpService, ? extends HttpService> decorator) {
@@ -693,6 +701,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s under the specified directory.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
