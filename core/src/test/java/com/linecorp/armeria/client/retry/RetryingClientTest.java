@@ -465,19 +465,19 @@ class RetryingClientTest {
                 (ctx, req) -> {
                     if ("/500-always".equals(ctx.path())) {
                         return RetryConfig
-                                .<HttpResponse>builder(RetryRule.builder()
+                                .<HttpResponse>builder0(RetryRule.builder()
                                                                 .onStatus(HttpStatus.valueOf(500))
                                                                 .thenBackoff(backoff))
                                 .maxTotalAttempts(2).build();
                     } else if ("/501-always".equals(ctx.path())) {
                         return RetryConfig
-                                .<HttpResponse>builder(RetryRule.builder()
+                                .<HttpResponse>builder0(RetryRule.builder()
                                                                 .onStatus(HttpStatus.valueOf(501))
                                                                 .thenBackoff(backoff))
                                 .maxTotalAttempts(8).build();
                     } else {
                         return RetryConfig
-                                .<HttpResponse>builder(RetryRule.builder()
+                                .<HttpResponse>builder0(RetryRule.builder()
                                                                 .onStatus(HttpStatus.valueOf(400))
                                                                 .thenBackoff(backoff))
                                 .maxTotalAttempts(10).build();
@@ -794,7 +794,7 @@ class RetryingClientTest {
                              long responseTimeoutForEach, int maxTotalAttempts) {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
                 RetryingClient.builder(
-                        RetryConfig.<HttpResponse>builder(retryRule)
+                        RetryConfig.<HttpResponse>builder0(retryRule)
                                    .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
                                    .maxTotalAttempts(maxTotalAttempts)
                                    .build())

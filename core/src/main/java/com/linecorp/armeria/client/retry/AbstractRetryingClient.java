@@ -69,7 +69,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
             AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
 
     private final RetryConfigMapping<O> mapping;
-    private final RetryConfig retryConfig;
+
+    @Nullable
+    private final RetryConfig<O> retryConfig;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.

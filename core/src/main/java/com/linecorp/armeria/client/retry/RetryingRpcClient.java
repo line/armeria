@@ -21,9 +21,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.RpcClient;
@@ -36,8 +33,6 @@ import com.linecorp.armeria.common.RpcResponse;
  */
 public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, RpcResponse>
         implements RpcClient {
-
-    private static final Logger logger = LoggerFactory.getLogger(RetryingRpcClient.class);
 
     /**
      * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
@@ -112,7 +107,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryRuleWithContent}.
      */
     public static RetryingRpcClientBuilder builder(RetryRuleWithContent<RpcResponse> retryRuleWithContent) {
-        return new RetryingRpcClientBuilder(RetryConfig.builder(retryRuleWithContent).build());
+        return new RetryingRpcClientBuilder(RetryConfig.builder0(retryRuleWithContent).build());
     }
 
     /**
@@ -173,12 +168,9 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                                                     (context, cause) -> RpcResponse.ofFailure(cause));
 
         final RetryConfig<RpcResponse> retryConfig = mapping().get(ctx, req);
-        if (!retryConfig.needsContentInRule()) {
-            logger.warn("RetryingRpcClient is being used with RetryRule (without content).");
-        }
         final RetryRuleWithContent<RpcResponse> retryRule =
                 retryConfig.needsContentInRule() ?
-                retryConfig.retryRuleWithContent() : RetryRuleUtil.fromRetryRule(retryConfig.retryRule());
+                retryConfig.retryRuleWithContent() : retryConfig.fromRetryRule();
         res.handle((unused1, cause) -> {
             try {
                 retryRule.shouldRetry(derivedCtx, res, cause).handle((decision, unused3) -> {

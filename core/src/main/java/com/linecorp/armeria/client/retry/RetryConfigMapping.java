@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.Response;
 @FunctionalInterface
 public interface RetryConfigMapping<T extends Response> {
     /**
-     * Creates a {@link KeyedRetryConfigMapping} that maps keys created by {@code keyFactory} to
+     * Creates a {@link RetryConfigMapping} that maps keys created by {@code keyFactory} to
      * {@link RetryConfig}s created by {@code retryConfigFactory}.
      * The key produced by {@code keyFactory} is used to cache the corresponding {@link RetryConfig} produced
      * by {@code retryConfigFactory}. So if {@code keyFactory} produces a key that has been seen before,

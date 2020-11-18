@@ -70,14 +70,14 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryRule}.
      */
     public static RetryingClientBuilder builder(RetryRule retryRule) {
-        return new RetryingClientBuilder(RetryConfig.<HttpResponse>builder(retryRule).build());
+        return new RetryingClientBuilder(RetryConfig.<HttpResponse>builder0(retryRule).build());
     }
 
     /**
      * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryRuleWithContent}.
      */
     public static RetryingClientBuilder builder(RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
-        return new RetryingClientBuilder(RetryConfig.builder(retryRuleWithContent).build());
+        return new RetryingClientBuilder(RetryConfig.builder0(retryRuleWithContent).build());
     }
 
     /**
@@ -94,7 +94,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                 int maxContentLength) {
         checkArgument(maxContentLength > 0, "maxContentLength: %s (expected: > 0)", maxContentLength);
         return new RetryingClientBuilder(
-                RetryConfig.builder(retryRuleWithContent).maxContentLength(maxContentLength).build());
+                RetryConfig.builder0(retryRuleWithContent).maxContentLength(maxContentLength).build());
     }
 
     /**
