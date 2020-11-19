@@ -986,7 +986,9 @@ public final class VirtualHostBuilder {
     private static SslContext buildSslContext(
             Supplier<SslContextBuilder> sslContextBuilderSupplier,
             Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
-        return SslContextUtil.createSslContext(sslContextBuilderSupplier, false, tlsCustomizers);
+        return SslContextUtil
+                .createSslContext(sslContextBuilderSupplier,
+                        /* forceHttp1 */ false, /* tlsAllowUnsafeCiphers */ false, tlsCustomizers);
     }
 
     /**
