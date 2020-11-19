@@ -27,8 +27,8 @@ import java.lang.reflect.Type
 import javax.annotation.Nullable
 
 /**
-  * Provides a [[com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction]] to annotated services.
-  */
+ * Provides a [[com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction]] to annotated services.
+ */
 @UnstableApi
 final class ScalaPbResponseConverterFunctionProvider extends ResponseConverterFunctionProvider {
 

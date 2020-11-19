@@ -33,29 +33,29 @@ import scalapb.GeneratedMessage
 import scalapb.json4s.Printer
 
 /**
-  * A [[com.linecorp.armeria.server.annotation.ResponseConverterFunction]] which creates an
-  * [[com.linecorp.armeria.common.HttpResponse]] with `content-type: application/protobuf`
-  * or `content-type: application/json; charset=utf-8`.
-  * If the returned object is instance of [[scalapb.GeneratedMessage]], the object can be converted to
-  * either [[https://developers.google.com/protocol-buffers/docs/encoding Protocol Buffers]] or
-  * [[https://developers.google.com/protocol-buffers/docs/proto3#json JSON]] format.
-  *
-  * ===Conversion of multiple Protobuf messages===
-  * A sequence of Protocol Buffer messages can not be handled by this
-  * [[com.linecorp.armeria.server.annotation.ResponseConverterFunction]], because Protocol Buffers wire format
-  * is not self-delimiting.
-  * See [[https://developers.google.com/protocol-buffers/docs/techniques#streaming Streaming Multiple Messages]]
-  * for more information.
-  * However, [[org.reactivestreams.Publisher]], [[java.util.stream.Stream]], [[scala.Iterable]] and
-  * [[java.util.List]] are supported when converting to
-  * [[https://tools.ietf.org/html/rfc7159#section-5 JSON array]].
-  *
-  * Note that this [[com.linecorp.armeria.server.annotation.ResponseConverterFunction]] is applied to
-  * the annotated service by default, so you don't have to set explicitly unless you want to
-  * use your own [[scalapb.json4s.Printer]].
-  *
-  * @constructor Creates a new instance with the specified [[scalapb.json4s.Printer]].
-  */
+ * A [[com.linecorp.armeria.server.annotation.ResponseConverterFunction]] which creates an
+ * [[com.linecorp.armeria.common.HttpResponse]] with `content-type: application/protobuf`
+ * or `content-type: application/json; charset=utf-8`.
+ * If the returned object is an instance of [[scalapb.GeneratedMessage]], the object can be converted to
+ * either [[https://developers.google.com/protocol-buffers/docs/encoding Protocol Buffers]] or
+ * [[https://developers.google.com/protocol-buffers/docs/proto3#json JSON]] format.
+ *
+ * ===Conversion of multiple Protobuf messages===
+ * A sequence of Protocol Buffer messages can not be handled by this
+ * [[com.linecorp.armeria.server.annotation.ResponseConverterFunction]], because Protocol Buffers wire format
+ * is not self-delimiting.
+ * See [[https://developers.google.com/protocol-buffers/docs/techniques#streaming Streaming Multiple Messages]]
+ * for more information.
+ * However, [[org.reactivestreams.Publisher]], [[java.util.stream.Stream]], [[scala.Iterable]] and
+ * [[java.util.List]] are supported when converting to
+ * [[https://tools.ietf.org/html/rfc7159#section-5 JSON array]].
+ *
+ * Note that this [[com.linecorp.armeria.server.annotation.ResponseConverterFunction]] is applied to
+ * the annotated service by default, so you don't have to set explicitly unless you want to
+ * use your own [[scalapb.json4s.Printer]].
+ *
+ * @constructor Creates a new instance with the specified [[scalapb.json4s.Printer]].
+ */
 @UnstableApi
 final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonPrinter)
     extends ResponseConverterFunction {

@@ -35,33 +35,33 @@ import scalapb.json4s.Parser
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 /**
-  * A [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] which converts either
-  * a Protocol Buffers or JSON body of the [[com.linecorp.armeria.common.AggregatedHttpRequest]]
-  * to an [[scalapb.GeneratedMessage]].
-  *
-  * The built-in parser of [[scalapb.GeneratedMessage]] for Protocol Buffers is applied only when
-  * the `content-type` of [[com.linecorp.armeria.common.RequestHeaders]] is either
-  * one of [[com.linecorp.armeria.common.MediaType.PROTOBUF]] or
-  * [[com.linecorp.armeria.common.MediaType.OCTET_STREAM]] or
-  * `application/x-protobuf`.
-  * The [[scalapb.json4s.Parser]] for JSON is applied only when the `content-type` of
-  * the [[com.linecorp.armeria.common.RequestHeaders]] is either [[com.linecorp.armeria.common.MediaType.JSON]]
-  * or ends with `+json`.
-  *
-  * ===Conversion of multiple Protobuf messages===
-  * A sequence of Protocol Buffer messages can not be handled by this
-  * [[com.linecorp.armeria.server.annotation.RequestConverterFunction]],
-  * because Protocol Buffers wire format is not self-delimiting.
-  * See [[https://developers.google.com/protocol-buffers/docs/techniques#streaming Streaming Multiple Messages]]
-  * for more information.
-  * However, [[scala.Iterable]] types such as `List[scalapb.GeneratedMessage]` and
-  * `Set[scalapb.GeneratedMessage]` are supported only when converted from
-  * [[https://tools.ietf.org/html/rfc7159#section-5 JSON array]].
-  *
-  * Note that this [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] is applied to
-  * an annotated service by default, so you don't have to specify this converter explicitly unless you want to
-  * use your own [[scalapb.json4s.Parser]].
-  */
+ * A [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] which converts either
+ * a Protocol Buffers or JSON body of the [[com.linecorp.armeria.common.AggregatedHttpRequest]]
+ * to an [[scalapb.GeneratedMessage]].
+ *
+ * The built-in parser of [[scalapb.GeneratedMessage]] for Protocol Buffers is applied only when
+ * the `content-type` of [[com.linecorp.armeria.common.RequestHeaders]] is either
+ * one of [[com.linecorp.armeria.common.MediaType.PROTOBUF]] or
+ * [[com.linecorp.armeria.common.MediaType.OCTET_STREAM]] or
+ * `application/x-protobuf`.
+ * The [[scalapb.json4s.Parser]] for JSON is applied only when the `content-type` of
+ * the [[com.linecorp.armeria.common.RequestHeaders]] is either [[com.linecorp.armeria.common.MediaType.JSON]]
+ * or ends with `+json`.
+ *
+ * ===Conversion of multiple Protobuf messages===
+ * A sequence of Protocol Buffer messages can not be handled by this
+ * [[com.linecorp.armeria.server.annotation.RequestConverterFunction]],
+ * because Protocol Buffers wire format is not self-delimiting.
+ * See [[https://developers.google.com/protocol-buffers/docs/techniques#streaming Streaming Multiple Messages]]
+ * for more information.
+ * However, [[scala.Iterable]] types such as `List[scalapb.GeneratedMessage]` and
+ * `Set[scalapb.GeneratedMessage]` are supported only when converted from
+ * [[https://tools.ietf.org/html/rfc7159#section-5 JSON array]].
+ *
+ * Note that this [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] is applied to
+ * an annotated service by default, so you don't have to specify this converter explicitly unless you want to
+ * use your own [[scalapb.json4s.Parser]].
+ */
 @UnstableApi
 object ScalaPbRequestConverterFunction {
 
@@ -78,8 +78,8 @@ object ScalaPbRequestConverterFunction {
   private val mapper = new ObjectMapper
 
   /**
-    * Creates a new instance with the specified [[scalapb.json4s.Parser]].
-    */
+   * Creates a new instance with the specified [[scalapb.json4s.Parser]].
+   */
   def apply(jsonParser: Parser = defaultJsonParser): ScalaPbRequestConverterFunction =
     new ScalaPbRequestConverterFunction(jsonParser, ResultType.UNKNOWN)
 
@@ -87,8 +87,8 @@ object ScalaPbRequestConverterFunction {
     new ScalaPbRequestConverterFunction(defaultJsonParser, resultType)
 
   /**
-    * Returns a default instance from the specified [[scalapb.GeneratedMessage]]'s class.
-    */
+   * Returns a default instance from the specified [[scalapb.GeneratedMessage]]'s class.
+   */
   private def getDefaultInstance(clazz: Class[_]): GeneratedMessage = {
     val defaultInstance = defaultInstanceCache.computeIfAbsent(
       clazz,
@@ -109,8 +109,8 @@ object ScalaPbRequestConverterFunction {
   }
 
   /**
-    * Returns a [[java.lang.invoke.MethodHandle]] for [[scalapb.GeneratedMessageCompanion.merge()]].
-    */
+   * Returns a [[java.lang.invoke.MethodHandle]] for [[scalapb.GeneratedMessageCompanion.merge()]].
+   */
   private def getMergeMethod(clazz: Class[_]): MethodHandle = {
     val methodHandle: MethodHandle = methodCache.computeIfAbsent(
       clazz,
@@ -131,8 +131,8 @@ object ScalaPbRequestConverterFunction {
   }
 
   /**
-    * Returns a companion object used to convert JSON to a [[scalapb.GeneratedMessage]].
-    */
+   * Returns a companion object used to convert JSON to a [[scalapb.GeneratedMessage]].
+   */
   private def getCompanion[A <: GeneratedMessage](clazz: Class[_]): GeneratedMessageCompanion[A] = {
     val messageCompanion =
       companionCache
@@ -160,10 +160,10 @@ object ScalaPbRequestConverterFunction {
 }
 
 /**
-  * A [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] which converts
-  * either a Protocol Buffers or JSON body of the [[com.linecorp.armeria.common.AggregatedHttpRequest]] to
-  * an [[scalapb.GeneratedMessage]].
-  */
+ * A [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] which converts
+ * either a Protocol Buffers or JSON body of the [[com.linecorp.armeria.common.AggregatedHttpRequest]] to
+ * an [[scalapb.GeneratedMessage]].
+ */
 @UnstableApi
 final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultType: ResultType.Value)
     extends RequestConverterFunction {
