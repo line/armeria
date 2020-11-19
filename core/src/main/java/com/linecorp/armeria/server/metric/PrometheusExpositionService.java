@@ -98,7 +98,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
     }
 
     @Override
-    public Set<TransientServiceOption> options() {
+    public Set<TransientServiceOption> transientServiceOptions() {
         return transientServiceOptions;
     }
 }

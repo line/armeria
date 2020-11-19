@@ -122,7 +122,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_LOGGING) &&
+        if (ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_SERVICE_LOGGING) &&
             sampler.isSampled(ctx)) {
             logWhenComplete(logger, ctx, requestLogger, responseLogger);
         }

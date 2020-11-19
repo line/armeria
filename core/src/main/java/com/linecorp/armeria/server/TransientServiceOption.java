@@ -49,7 +49,7 @@ public enum TransientServiceOption {
     /**
      * Enables {@link LoggingService} to log the requests to the {@link TransientService}.
      */
-    WITH_LOGGING,
+    WITH_SERVICE_LOGGING,
 
     /**
      * Enables {@link AccessLogWriter} to produce the access logs of the requests to the
@@ -58,7 +58,7 @@ public enum TransientServiceOption {
     WITH_ACCESS_LOGGING;
 
     private static final Set<TransientServiceOption> allOf = Sets.immutableEnumSet(WITH_METRIC_COLLECTION,
-                                                                                   WITH_LOGGING,
+                                                                                   WITH_SERVICE_LOGGING,
                                                                                    WITH_ACCESS_LOGGING);
 
     /**

@@ -38,7 +38,7 @@ public interface TransientService<I extends Request, O extends Response> extends
      * {@link TransientServiceBuilder#transientServiceOptions(TransientServiceOption...)} when you create
      * this {@link TransientService}.
      */
-    default Set<TransientServiceOption> options() {
+    default Set<TransientServiceOption> transientServiceOptions() {
         return Flags.transientServiceOptions();
     }
 }

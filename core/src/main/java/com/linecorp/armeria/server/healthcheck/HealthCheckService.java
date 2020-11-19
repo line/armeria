@@ -524,7 +524,7 @@ public final class HealthCheckService implements TransientHttpService {
     }
 
     @Override
-    public Set<TransientServiceOption> options() {
+    public Set<TransientServiceOption> transientServiceOptions() {
         return transientServiceOptions;
     }
 

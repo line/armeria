@@ -102,7 +102,7 @@ public final class ServiceConfig {
         }
         @SuppressWarnings("unchecked")
         final Set<TransientServiceOption> transientServiceOptions =
-                (Set<TransientServiceOption>) transientService.options();
+                (Set<TransientServiceOption>) transientService.transientServiceOptions();
         return transientServiceOptions;
     }
 
