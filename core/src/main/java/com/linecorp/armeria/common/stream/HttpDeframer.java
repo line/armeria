@@ -236,7 +236,7 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     public void onSubscribe(Subscription subscription) {
         requireNonNull(subscription, "subscription");
         if (upstreamUpdater.compareAndSet(this, null, subscription)) {
-            deferredInit(this.eventLoop);
+            deferredInit(eventLoop);
         } else {
             subscription.cancel();
         }
