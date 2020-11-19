@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
@@ -43,6 +44,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
+import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -547,5 +549,30 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     default HttpResponseDuplicator toDuplicator(EventExecutor executor, long maxResponseLength) {
         requireNonNull(executor, "executor");
         return new DefaultHttpResponseDuplicator(this, executor, maxResponseLength);
+    }
+
+    /**
+     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject}s into
+     * {@link HttpHeaders} and {@link HttpData}.
+     * {@link SplitHttpResponse#headers()} will be
+     * completed before publishing the first {@link HttpData}.
+     * {@link SplitHttpResponse#trailers()} might not complete until the entire response body is consumed
+     * completely.
+     */
+    @CheckReturnValue
+    default SplitHttpResponse split() {
+        return split(defaultSubscriberExecutor());
+    }
+
+    /**
+     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject}s into
+     * {@link HttpHeaders} and {@link HttpData}.
+     * {@link SplitHttpResponse#headers()} will be completed before publishing the first {@link HttpData}.
+     * {@link SplitHttpResponse#trailers()} might not complete until the entire response body is consumed
+     * completely.
+     */
+    @CheckReturnValue
+    default SplitHttpResponse split(EventExecutor executor) {
+        return new DefaultSplitHttpResponse(this, executor);
     }
 }

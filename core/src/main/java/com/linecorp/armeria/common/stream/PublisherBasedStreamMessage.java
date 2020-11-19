@@ -37,6 +37,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -131,7 +132,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         executor.execute(() -> {
             try {
-                lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
+                lateSubscriber.onSubscribe(NoopSubscription.get());
                 lateSubscriber.onError(cause);
             } catch (Throwable t) {
                 throwIfFatal(t);
@@ -167,7 +168,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         abortable.abort(cause);
-        abortable.onSubscribe(NoopSubscription.INSTANCE);
+        abortable.onSubscribe(NoopSubscription.get());
     }
 
     @Override

@@ -29,10 +29,9 @@ import org.springframework.util.MultiValueMap;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.spring.web.reactive.ArmeriaHttpClientResponseSubscriber.ResponseBodyPublisher;
+import com.linecorp.armeria.common.SplitHttpResponse;
 
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import reactor.core.publisher.Flux;
@@ -53,12 +52,12 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
     private HttpHeaders httpHeaders;
 
     ArmeriaClientHttpResponse(ResponseHeaders headers,
-                              ResponseBodyPublisher publisher,
+                              SplitHttpResponse response,
                               DataBufferFactoryWrapper<?> factoryWrapper) {
         this.headers = requireNonNull(headers, "headers");
         status = headers.status();
 
-        body = Flux.from(publisher).cast(HttpData.class).map(factoryWrapper::toDataBuffer);
+        body = Flux.from(response.body()).map(factoryWrapper::toDataBuffer);
     }
 
     @Override
