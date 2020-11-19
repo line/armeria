@@ -52,8 +52,8 @@ public class DynamicEndpointGroup
     private final AtomicReference<EndpointSelector> selector = new AtomicReference<>();
     private volatile List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
     private final Lock endpointsLock = new ReentrantLock();
-    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture =
-            new EventLoopCheckingFuture<>();
+
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     /**
@@ -198,7 +198,7 @@ public class DynamicEndpointGroup
 
     private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
-            initialEndpointsFuture.complete(endpoints);
+            initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
         }
     }
 
