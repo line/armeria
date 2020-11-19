@@ -44,7 +44,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
  * - {@link EndpointGroup#whenReady()} is completed with the second endpoint group.
  * - The endpoint group of the  first {@link EndpointGroup} are set.
  * - {@link HealthCheckedEndpointGroup} is created.
- * 
+ *
  * In this case, the health check requests are sent to the second {@link EndpointGroup} to filter
  * unhealthy endpoints. However, because {@link EndpointGroup#endpoints()} returns the endpoint
  * group in the first {@link EndpointGroup}, there's always no matching.

@@ -71,9 +71,8 @@ public class DynamicEndpointGroup
      */
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
-        initialEndpointsSet.thenApply(unused -> {
+        initialEndpointsSet.thenAccept(unused -> {
             initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
-            return null;
         });
     }
 
