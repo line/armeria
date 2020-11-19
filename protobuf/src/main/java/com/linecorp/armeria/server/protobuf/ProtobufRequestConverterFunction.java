@@ -139,7 +139,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
 
         final MediaType contentType = request.contentType();
         final Charset charset = contentType == null ? StandardCharsets.UTF_8
-                                              : contentType.charset(StandardCharsets.UTF_8);
+                                                    : contentType.charset(StandardCharsets.UTF_8);
 
         if (resultType == ResultType.PROTOBUF ||
             (resultType == ResultType.UNKNOWN && Message.class.isAssignableFrom(expectedResultType))) {
