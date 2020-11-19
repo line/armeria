@@ -286,10 +286,9 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
             return;
         }
 
+        this.cause = cause;
         final EventExecutor eventLoop = this.eventLoop;
-        if (eventLoop == null) {
-            this.cause = cause;
-        } else {
+        if (eventLoop != null) {
             if (eventLoop.inEventLoop()) {
                 onError0(cause);
             } else {
@@ -313,10 +312,9 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
             return;
         }
 
+        completing = true;
         final EventExecutor eventLoop = this.eventLoop;
-        if (eventLoop == null) {
-            completing = true;
-        } else {
+        if (eventLoop != null) {
             if (eventLoop.inEventLoop()) {
                 onComplete0();
             } else {
