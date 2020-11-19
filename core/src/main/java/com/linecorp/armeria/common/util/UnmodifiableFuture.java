@@ -118,7 +118,7 @@ public class UnmodifiableFuture<T> extends EventLoopCheckingFuture<T> {
     }
 
     /**
-     * Completes with a non-exceptional @{code value}, unless already completed.
+     * Completes with a non-exceptional {@code value}, unless already completed.
      */
     protected void doComplete(@Nullable T value) {
         super.complete(value);
