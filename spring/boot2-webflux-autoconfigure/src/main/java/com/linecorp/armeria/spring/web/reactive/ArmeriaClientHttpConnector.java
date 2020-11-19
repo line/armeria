@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import org.springframework.core.io.buffer.DataBuffer;
@@ -34,7 +35,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
-import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.HttpResponse;
 
 import reactor.core.publisher.Mono;
 
@@ -83,10 +84,7 @@ final class ArmeriaClientHttpConnector implements ClientHttpConnector {
 
             final ArmeriaClientHttpRequest request = createRequest(method, uri);
             return requestCallback.apply(request)
-                                  .then(Mono.fromFuture(request.future()))
-                                  .map(ArmeriaHttpClientResponseSubscriber::new)
-                                  .flatMap(s -> Mono.fromFuture(s.headersFuture())
-                                                    .map(headers -> createResponse(headers, s)));
+                                  .then(Mono.fromFuture(request.future().thenCompose(this::createResponse)));
         } catch (NullPointerException | IllegalArgumentException e) {
             return Mono.error(e);
         }
@@ -110,8 +108,10 @@ final class ArmeriaClientHttpConnector implements ClientHttpConnector {
         return new ArmeriaClientHttpRequest(builder.build(), method, pathAndQuery, uri, factoryWrapper);
     }
 
-    private ArmeriaClientHttpResponse createResponse(ResponseHeaders headers,
-                                                     ArmeriaHttpClientResponseSubscriber s) {
-        return new ArmeriaClientHttpResponse(headers, s.toResponseBodyPublisher(), factoryWrapper);
+    private CompletableFuture<ArmeriaClientHttpResponse> createResponse(HttpResponse response) {
+        final ArmeriaHttpResponseBodyStream bodyStream =
+                new ArmeriaHttpResponseBodyStream(response, response.defaultSubscriberExecutor());
+        return bodyStream.headers().thenApply(
+                headers -> new ArmeriaClientHttpResponse(headers, bodyStream, factoryWrapper));
     }
 }

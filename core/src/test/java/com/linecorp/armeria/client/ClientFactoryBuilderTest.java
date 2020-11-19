@@ -128,7 +128,7 @@ class ClientFactoryBuilderTest {
     }
 
     @Test
-    @DisabledIfSystemProperty(named = "com.linecorp.armeria.useJdkDnsResolver",  matches = "true")
+    @DisabledIfSystemProperty(named = "com.linecorp.armeria.useJdkDnsResolver", matches = "true")
     void useRefreshingAddressResolverGroup() {
         final DefaultClientFactory clientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
         assertThat(clientFactory.addressResolverGroup()).isInstanceOf(RefreshingAddressResolverGroup.class);

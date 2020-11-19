@@ -377,6 +377,9 @@ public final class Flags {
 
     private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
 
+    private static final boolean
+            DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS = getBoolean("tlsAllowUnsafeCiphers", false);
+
     private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
             Streams.stream(CSV_SPLITTER.split(getNormalized("transientServiceOptions", "", val -> {
                 try {
@@ -542,7 +545,8 @@ public final class Flags {
         if (dumpOpenSslInfo) {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder::forClient,
-                    false,
+                    /* forceHttp1 */ false,
+                    /* tlsAllowUnsafeCiphers */ false,
                     ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
@@ -1101,6 +1105,19 @@ public final class Flags {
      */
     public static boolean validateHeaders() {
         return VALIDATE_HEADERS;
+    }
+
+    /**
+     * Returns whether to allow the bad cipher suites listed in
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#tlsAllowUnsafeCiphers(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.tlsAllowUnsafeCiphers=true} JVM option to enable it.
+     */
+    public static boolean tlsAllowUnsafeCiphers() {
+        return DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS;
     }
 
     /**

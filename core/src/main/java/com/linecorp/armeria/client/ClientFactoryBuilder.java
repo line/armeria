@@ -301,6 +301,21 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     */
+    public ClientFactoryBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
+        option(ClientFactoryOptions.TLS_ALLOW_UNSAFE_CIPHERS, tlsAllowUnsafeCiphers);
+        return this;
+    }
+
+    /**
      * Sets the factory that creates a {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      *
