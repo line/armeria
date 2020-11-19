@@ -47,11 +47,11 @@ public final class TransientServiceOptionsBuilder implements TransientServiceBui
     @Override
     public TransientServiceOptionsBuilder transientServiceOptions(
             Iterable<TransientServiceOption> transientServiceOptions) {
+        requireNonNull(transientServiceOptions, "transientServiceOptions");
         if (this.transientServiceOptions == null) {
             this.transientServiceOptions = EnumSet.noneOf(TransientServiceOption.class);
         }
-        this.transientServiceOptions.addAll(
-                ImmutableSet.copyOf(requireNonNull(transientServiceOptions, "transientServiceOptions")));
+        transientServiceOptions.forEach(this.transientServiceOptions::add);
         return this;
     }
 

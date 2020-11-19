@@ -17,7 +17,7 @@ package com.linecorp.armeria.server;
 
 import java.util.Set;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -57,9 +57,9 @@ public enum TransientServiceOption {
      */
     WITH_ACCESS_LOGGING;
 
-    private static final Set<TransientServiceOption> allOf = ImmutableSet.of(WITH_METRIC_COLLECTION,
-                                                                             WITH_LOGGING,
-                                                                             WITH_ACCESS_LOGGING);
+    private static final Set<TransientServiceOption> allOf = Sets.immutableEnumSet(WITH_METRIC_COLLECTION,
+                                                                                   WITH_LOGGING,
+                                                                                   WITH_ACCESS_LOGGING);
 
     /**
      * Returns all {@link TransientServiceOption}s.

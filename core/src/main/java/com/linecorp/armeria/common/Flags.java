@@ -44,6 +44,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientBuilder;
@@ -381,16 +382,19 @@ public final class Flags {
             DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS = getBoolean("tlsAllowUnsafeCiphers", false);
 
     private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
-            Streams.stream(CSV_SPLITTER.split(getNormalized("transientServiceOptions", "", val -> {
-                try {
-                    Streams.stream(CSV_SPLITTER.split(val))
-                           .forEach(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)));
-                    return true;
-                } catch (Exception e) {
-                    return false;
-                }
-            }))).map(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)))
-                   .collect(toImmutableSet());
+            Sets.immutableEnumSet(
+                    Streams.stream(CSV_SPLITTER.split(getNormalized(
+                            "transientServiceOptions", "", val -> {
+                                try {
+                                    Streams.stream(CSV_SPLITTER.split(val))
+                                           .forEach(feature -> TransientServiceOption
+                                                   .valueOf(Ascii.toUpperCase(feature)));
+                                    return true;
+                                } catch (Exception e) {
+                                    return false;
+                                }
+                            }))).map(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)))
+                           .collect(toImmutableSet()));
 
     static {
         if (!isEpollAvailable()) {
