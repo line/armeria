@@ -53,7 +53,6 @@ public class DynamicEndpointGroup
     private volatile List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
     private final Lock endpointsLock = new ReentrantLock();
 
-    private final CompletableFuture<Void> initialEndpointsSet = new CompletableFuture<>();
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
@@ -71,9 +70,6 @@ public class DynamicEndpointGroup
      */
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
-        initialEndpointsSet.thenAccept(unused -> {
-            initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
-        });
     }
 
     @Override
@@ -201,8 +197,8 @@ public class DynamicEndpointGroup
     }
 
     private void completeInitialEndpointsSet(List<Endpoint> endpoints) {
-        if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsSet.isDone()) {
-            initialEndpointsSet.complete(null);
+        if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
+            initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
         }
     }
 

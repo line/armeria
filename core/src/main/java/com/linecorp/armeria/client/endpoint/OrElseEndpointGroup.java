@@ -47,8 +47,13 @@ final class OrElseEndpointGroup
         second.addListener(unused -> notifyListeners(endpoints()));
 
         CompletableFuture.anyOf(first.whenReady(), second.whenReady())
-                         .thenAccept(unused -> {
-                             initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
+                         .handle((unused, cause) -> {
+                             if (cause != null) {
+                                 initialEndpointsFuture.completeExceptionally(cause);
+                             } else {
+                                initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
+                             }
+                             return null;
                          });
 
         selector = first.selectionStrategy().newSelector(this);
