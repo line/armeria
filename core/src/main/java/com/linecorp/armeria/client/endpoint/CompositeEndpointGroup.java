@@ -78,7 +78,7 @@ final class CompositeEndpointGroup
                                  initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
                              }
                              return null;
-                         });;
+                         });
 
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         selector = requireNonNull(selectionStrategy, "selectionStrategy").newSelector(this);
