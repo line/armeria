@@ -396,8 +396,6 @@ class GrpcServiceServerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.maxRequestLength(0);
-            sb.requestTimeoutMillis(0);
-            sb.idleTimeoutMillis(0);
 
             sb.service(
                     GrpcService.builder()
@@ -792,13 +790,10 @@ class GrpcServiceServerTest {
     }
 
     private static void clientSocketClosedBeforeHalfClose(String protocol) throws Exception {
-        final ClientFactory factory = ClientFactory.builder()
-                                                   .idleTimeoutMillis(0)
-                                                   .build();
+        final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
                 Clients.builder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + '/')
                        .factory(factory)
-                       .responseTimeoutMillis(0)
                        .build(UnitTestServiceStub.class);
         final AtomicReference<SimpleResponse> response = new AtomicReference<>();
         final StreamObserver<SimpleRequest> stream = stub.streamClientCancels(
@@ -819,7 +814,7 @@ class GrpcServiceServerTest {
         stream.onNext(SimpleRequest.getDefaultInstance());
         await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
         factory.close();
-        await().forever().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
+        await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StreamClientCancels");
