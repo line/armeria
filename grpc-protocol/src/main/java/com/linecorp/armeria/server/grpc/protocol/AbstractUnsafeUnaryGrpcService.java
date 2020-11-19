@@ -18,6 +18,9 @@ package com.linecorp.armeria.server.grpc.protocol;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -27,12 +30,13 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -41,6 +45,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.EventLoop;
 
 /**
  * An {@link AbstractUnsafeUnaryGrpcService} can be used to implement a gRPC service without depending on gRPC
@@ -71,7 +76,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
     protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
         final CompletableFuture<HttpResponse> responseFuture =
                 req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
-                   .thenCompose(msg -> deframeMessage(msg.content(), ctx.alloc()))
+                   .thenCompose(msg -> deframeMessage(msg.content(), ctx.eventLoop(), ctx.alloc()))
                    .thenCompose(this::handleMessage)
                    .thenApply(responseMessage -> {
                        final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
@@ -100,29 +105,41 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
         return HttpResponse.from(responseFuture);
     }
 
-    private static CompletableFuture<ByteBuf> deframeMessage(HttpData framed, ByteBufAllocator alloc) {
+    private static CompletableFuture<ByteBuf> deframeMessage(HttpData framed,
+                                                             EventLoop eventLoop,
+                                                             ByteBufAllocator alloc) {
         final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
-        try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
-                new Listener() {
-                    @Override
-                    public void messageRead(DeframedMessage message) {
-                        // Compression not supported.
-                        assert message.buf() != null;
-                        deframed.complete(message.buf());
-                    }
+        final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
+        final HttpDeframer<DeframedMessage> deframer = new HttpDeframer<>(handler, alloc);
 
-                    @Override
-                    public void endOfStream() {
-                        if (!deframed.isDone()) {
-                            deframed.complete(Unpooled.EMPTY_BUFFER);
-                        }
-                    }
-                },
-                Integer.MAX_VALUE,
-                alloc, false)) {
-            deframer.request(1);
-            deframer.deframe(framed, true);
-        }
+        StreamMessage.of(framed).subscribe(deframer, eventLoop);
+        deframer.subscribe(singleSubscriber(deframed), eventLoop);
         return deframed;
+    }
+
+    private static Subscriber<DeframedMessage> singleSubscriber(CompletableFuture<ByteBuf> deframed) {
+        return new Subscriber<DeframedMessage>()  {
+            @Override
+            public void onSubscribe(Subscription s) {
+               s.request(1);
+            }
+
+            @Override
+            public void onNext(DeframedMessage message) {
+                deframed.complete(message.buf());
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                deframed.completeExceptionally(t);
+            }
+
+            @Override
+            public void onComplete() {
+                if (!deframed.isDone()) {
+                    deframed.complete(Unpooled.EMPTY_BUFFER);
+                }
+            }
+        };
     }
 }

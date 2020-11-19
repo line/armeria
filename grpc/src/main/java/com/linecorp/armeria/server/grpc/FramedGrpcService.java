@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -206,7 +206,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
             ctx.whenRequestCancelling().thenRun(() -> call.close(Status.CANCELLED, new Metadata()));
-            req.subscribe(call.messageReader(), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+            req.subscribe(call.messageDeframer(), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
         }
         return res;
     }
@@ -257,7 +257,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public void serviceAdded(ServiceConfig cfg) {
-        if (maxInboundMessageSizeBytes == ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE) {
+        if (maxInboundMessageSizeBytes == ArmeriaMessageDeframerHandler.NO_MAX_INBOUND_MESSAGE_SIZE) {
             maxInboundMessageSizeBytes = (int) Math.min(cfg.maxRequestLength(), Integer.MAX_VALUE);
         }
 
