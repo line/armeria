@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 
 /**
@@ -41,7 +42,7 @@ final class CompositeEndpointGroup
 
     private final List<EndpointGroup> endpointGroups;
 
-    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
     private final AtomicBoolean dirty;
 
     private final EndpointSelectionStrategy selectionStrategy;
@@ -67,11 +68,13 @@ final class CompositeEndpointGroup
             });
         }
 
-        initialEndpointsFuture =
-                CompletableFuture.anyOf(this.endpointGroups.stream()
-                                                           .map(EndpointGroup::whenReady)
-                                                           .toArray(CompletableFuture[]::new))
-                                 .thenApply(unused -> new LazyList<>(this::endpoints));
+        CompletableFuture.anyOf(this.endpointGroups.stream()
+                                                   .map(EndpointGroup::whenReady)
+                                                   .toArray(CompletableFuture[]::new))
+                         .thenApply(unused -> {
+                             initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
+                             return null;
+                         });
 
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         selector = requireNonNull(selectionStrategy, "selectionStrategy").newSelector(this);

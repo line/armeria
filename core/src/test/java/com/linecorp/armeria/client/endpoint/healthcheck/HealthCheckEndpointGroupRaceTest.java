@@ -36,7 +36,20 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class HealthCheckEndpointGroupFlakyTest {
+/**
+ * When {@link EndpointGroup#orElse(EndpointGroup)} is used and the endpoint group is wrapped by
+ * {@link HealthCheckedEndpointGroup}, there was a chance that endpoints are not set forever
+ * before https://github.com/line/armeria/pull/3181 is merged.
+ * It happens when:
+ * - {@link EndpointGroup#whenReady()} is completed with the second endpoint group.
+ * - The endpoint group of the  first {@link EndpointGroup} are set.
+ * - {@link HealthCheckedEndpointGroup} is created.
+ * 
+ * In this case, the health check requests are sent to the second {@link EndpointGroup} to filter
+ * unhealthy endpoints. However, because {@link EndpointGroup#endpoints()} returns the endpoint
+ * group in the first {@link EndpointGroup}, there's always no matching.
+ */
+class HealthCheckEndpointGroupRaceTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {

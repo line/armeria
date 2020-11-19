@@ -35,7 +35,7 @@ final class OrElseEndpointGroup
     private final EndpointGroup first;
     private final EndpointGroup second;
 
-    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new CompletableFuture<>();
     private final EndpointSelector selector;
 
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
@@ -46,9 +46,11 @@ final class OrElseEndpointGroup
         first.addListener(unused -> notifyListeners(endpoints()));
         second.addListener(unused -> notifyListeners(endpoints()));
 
-        initialEndpointsFuture = CompletableFuture
-                .anyOf(first.whenReady(), second.whenReady())
-                .thenApply(unused -> new LazyList<>(this::endpoints));
+        CompletableFuture.anyOf(first.whenReady(), second.whenReady())
+                         .thenApply(unused -> {
+                             initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
+                             return null;
+                         });
 
         selector = first.selectionStrategy().newSelector(this);
     }

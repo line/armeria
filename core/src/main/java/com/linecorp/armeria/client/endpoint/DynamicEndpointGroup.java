@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 
 /**
@@ -53,7 +54,7 @@ public class DynamicEndpointGroup
     private final Lock endpointsLock = new ReentrantLock();
 
     private final CompletableFuture<Void> initialEndpointsSet = new CompletableFuture<>();
-    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
     /**
@@ -70,7 +71,10 @@ public class DynamicEndpointGroup
      */
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
-        initialEndpointsFuture = initialEndpointsSet.thenApply(unused -> new LazyList<>(this::endpoints));
+        initialEndpointsSet.thenApply(unused -> {
+            initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
+            return null;
+        });
     }
 
     @Override
