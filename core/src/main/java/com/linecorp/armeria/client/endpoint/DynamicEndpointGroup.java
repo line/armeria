@@ -135,7 +135,7 @@ public class DynamicEndpointGroup
         }
 
         notifyListeners(newEndpoints);
-        completeInitialEndpointsSet(newEndpoints);
+        completeInitialEndpointsFuture(newEndpoints);
     }
 
     /**
@@ -173,7 +173,7 @@ public class DynamicEndpointGroup
         }
 
         notifyListeners(newEndpoints);
-        completeInitialEndpointsSet(newEndpoints);
+        completeInitialEndpointsFuture(newEndpoints);
     }
 
     private static boolean hasChanges(List<Endpoint> oldEndpoints, List<Endpoint> newEndpoints) {
@@ -196,7 +196,7 @@ public class DynamicEndpointGroup
         return false;
     }
 
-    private void completeInitialEndpointsSet(List<Endpoint> endpoints) {
+    private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
             initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
         }
