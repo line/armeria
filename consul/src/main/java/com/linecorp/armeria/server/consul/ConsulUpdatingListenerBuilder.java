@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.consul.ConsulConfigSetters;
+import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.Server;
 
@@ -38,7 +40,7 @@ import com.linecorp.armeria.server.Server;
  * sb.serverListener(listener);
  * }</pre>
  */
-public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
+public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters {
 
     private static final long DEFAULT_CHECK_INTERVAL_MILLIS = 10_000;
 
@@ -50,6 +52,7 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
     private URI checkUri;
     private String checkInterval = DEFAULT_CHECK_INTERVAL_MILLIS + "ms";
     private HttpMethod checkMethod = HttpMethod.HEAD;
+    private final ConsulClientBuilder consulClientBuilder;
 
     /**
      * Creates a {@link ConsulUpdatingListenerBuilder} with a service name.
@@ -58,9 +61,9 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
      * @param serviceName the service name to register
      */
     ConsulUpdatingListenerBuilder(URI consulUri, String serviceName) {
-        super(consulUri);
         this.serviceName = requireNonNull(serviceName, "serviceName");
         checkArgument(!this.serviceName.isEmpty(), "serviceName can't be empty");
+        consulClientBuilder = ConsulClient.builder(consulUri);
     }
 
     /**
@@ -136,12 +139,14 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
 
     @Override
     public ConsulUpdatingListenerBuilder consulApiVersion(String consulApiVersion) {
-        return (ConsulUpdatingListenerBuilder) super.consulApiVersion(consulApiVersion);
+        consulClientBuilder.consulApiVersion(consulApiVersion);
+        return this;
     }
 
     @Override
     public ConsulUpdatingListenerBuilder consulToken(String consulToken) {
-        return (ConsulUpdatingListenerBuilder) super.consulToken(consulToken);
+        consulClientBuilder.consulToken(consulToken);
+        return this;
     }
 
     /**
@@ -149,7 +154,7 @@ public final class ConsulUpdatingListenerBuilder extends ConsulClientBuilder {
      * Consul when the {@link Server} starts.
      */
     public ConsulUpdatingListener build() {
-        return new ConsulUpdatingListener(buildClient(), serviceName, serviceEndpoint, checkUri, checkMethod,
-                                          checkInterval);
+        return new ConsulUpdatingListener(consulClientBuilder.build(), serviceName, serviceEndpoint,
+                                          checkUri, checkMethod, checkInterval);
     }
 }

@@ -22,6 +22,8 @@ import java.net.URI;
 import java.time.Duration;
 
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.consul.ConsulConfigSetters;
+import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
 
@@ -35,7 +37,7 @@ import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
  * sb.serverListener(listener);
  * }</pre>
  */
-public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
+public final class ConsulEndpointGroupBuilder implements ConsulConfigSetters {
     private static final long DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS = 10_000;
 
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
@@ -43,10 +45,11 @@ public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
     private final String serviceName;
     private long registryFetchIntervalMillis = DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS;
     private boolean useHealthyEndpoints;
+    private final ConsulClientBuilder consulClientBuilder;
 
     ConsulEndpointGroupBuilder(URI consulUri, String serviceName) {
-        super(consulUri);
         this.serviceName = requireNonNull(serviceName, "serviceName");
+        consulClientBuilder = ConsulClient.builder(consulUri);
     }
 
     /**
@@ -93,19 +96,21 @@ public final class ConsulEndpointGroupBuilder extends ConsulClientBuilder {
 
     @Override
     public ConsulEndpointGroupBuilder consulApiVersion(String consulApiVersion) {
-        return (ConsulEndpointGroupBuilder) super.consulApiVersion(consulApiVersion);
+        consulClientBuilder.consulApiVersion(consulApiVersion);
+        return this;
     }
 
     @Override
     public ConsulEndpointGroupBuilder consulToken(String consulToken) {
-        return (ConsulEndpointGroupBuilder) super.consulToken(consulToken);
+        consulClientBuilder.consulToken(consulToken);
+        return this;
     }
 
     /**
      * Returns a newly-created {@link ConsulEndpointGroup}.
      */
     public ConsulEndpointGroup build() {
-        return new ConsulEndpointGroup(selectionStrategy, buildClient(), serviceName,
+        return new ConsulEndpointGroup(selectionStrategy, consulClientBuilder.build(), serviceName,
                                        registryFetchIntervalMillis, useHealthyEndpoints);
     }
 }

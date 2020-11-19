@@ -70,14 +70,14 @@ public abstract class ConsulTestBase {
         // Initialize Consul embedded server for testing
         // This EmbeddedConsul tested with Consul version above 1.4.0
         consul = ConsulStarterBuilder.consulStarter()
-                                     .withConsulVersion("1.9.0-beta1")
+                                     .withConsulVersion("1.9.0-rc1")
                                      .withCustomConfig(aclConfiguration(CONSUL_TOKEN))
                                      .withToken(CONSUL_TOKEN)
                                      .build().start();
         // Initialize Consul client
         consulClient = ConsulClient.builder(URI.create("http://127.0.0.1:" + consul.getHttpPort()))
                                    .consulToken(CONSUL_TOKEN)
-                                   .buildClient();
+                                   .build();
     }
 
     @AfterAll

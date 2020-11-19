@@ -24,8 +24,10 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
-public class ConsulClientBuilder {
-    private static final String DEFAULT_CONSUL_API_VERSION = "v1";
+import com.linecorp.armeria.common.consul.ConsulConfigSetters;
+
+public class ConsulClientBuilder implements ConsulConfigSetters {
+    public static final String DEFAULT_CONSUL_API_VERSION = "v1";
     private static final Pattern CONSUL_API_VERSION_PATTERN = Pattern.compile("^v[0-9][-._a-zA-Z0-9]*$");
 
     private final URI consulUri;
@@ -37,10 +39,7 @@ public class ConsulClientBuilder {
         this.consulUri = requireNonNull(consulUri, "consulUri");
     }
 
-    /**
-     * Sets the specified Consul's API version.
-     * @param consulApiVersion the version of Consul API service, default: {@value #DEFAULT_CONSUL_API_VERSION}
-     */
+    @Override
     public ConsulClientBuilder consulApiVersion(String consulApiVersion) {
         requireNonNull(consulApiVersion, "consulApiVersion");
         checkArgument(CONSUL_API_VERSION_PATTERN.matcher(consulApiVersion).matches(),
@@ -50,10 +49,7 @@ public class ConsulClientBuilder {
         return this;
     }
 
-    /**
-     * Sets the specified token for Consul's API.
-     * @param consulToken the token for accessing Consul API, default: {@code null}
-     */
+    @Override
     public ConsulClientBuilder consulToken(String consulToken) {
         requireNonNull(consulToken, "consulToken");
         checkArgument(!consulToken.isEmpty(), "consulToken can't be empty");
@@ -61,7 +57,7 @@ public class ConsulClientBuilder {
         return this;
     }
 
-    protected final ConsulClient buildClient() {
+    public final ConsulClient build() {
         final URI uri;
         try {
             uri = new URI(consulUri.getScheme(), null, consulUri.getHost(), consulUri.getPort(),

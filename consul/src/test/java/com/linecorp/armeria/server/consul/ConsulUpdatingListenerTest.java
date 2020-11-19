@@ -91,6 +91,7 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
         final ServerListener listener =
                 ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
                                                "testThatDefaultCheckMethodIsHead")
+                                      .consulApiVersion("v1")
                                       .consulToken(CONSUL_TOKEN)
                                       .endpoint(endpoint)
                                       .checkUri("http://" + endpoint.host() + ':' + endpoint.port() + "/echo")
