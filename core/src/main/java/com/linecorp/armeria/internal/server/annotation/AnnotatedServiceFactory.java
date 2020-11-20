@@ -336,9 +336,8 @@ public final class AnnotatedServiceFactory {
         final Set<String> expectedParamNames = route.paramNames();
         List<AnnotatedValueResolver> resolvers;
         try {
-            resolvers = AnnotatedValueResolver.ofServiceMethod(method, expectedParamNames,
-                                                               AnnotatedValueResolver
-                                                                       .toRequestObjectResolvers(req));
+            resolvers = AnnotatedValueResolver.ofServiceMethod(
+                    method, expectedParamNames, AnnotatedValueResolver.toRequestObjectResolvers(req, method));
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
             //

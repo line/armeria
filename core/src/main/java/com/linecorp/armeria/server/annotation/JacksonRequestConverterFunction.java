@@ -49,8 +49,8 @@ import io.netty.util.AsciiString;
  * the {@link AggregatedHttpRequest} to an object using the default {@link ObjectMapper}.
  * The {@link RequestConverterFunction} is applied only when the {@code content-type} of the
  * {@link RequestHeaders} is {@link MediaType#JSON} or ends with {@code +json}.
- * Note that this {@link RequestConverterFunction} is applied to the annotated service by default,
- * so you don't have to set explicitly unless you want to use your own {@link ObjectMapper}.
+ * Note that this {@link RequestConverterFunction} is applied to an annotated service by default,
+ * so you don't have to specify this converter explicitly unless you want to use your own {@link ObjectMapper}.
  */
 public final class JacksonRequestConverterFunction implements RequestConverterFunction {
 
