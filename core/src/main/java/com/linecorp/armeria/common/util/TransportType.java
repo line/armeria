@@ -25,7 +25,6 @@ import javax.annotation.Nullable;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.netty.channel.EventLoop;
@@ -78,13 +77,6 @@ public enum TransportType {
         this.datagramChannelType = datagramChannelType;
         this.eventLoopGroupClasses = ImmutableSet.copyOf(eventLoopGroupClasses);
         this.eventLoopGroupConstructor = eventLoopGroupConstructor;
-    }
-
-    /**
-     * Returns the available {@link TransportType}.
-     */
-    public static TransportType detectTransportType() {
-        return Flags.transportType();
     }
 
     /**

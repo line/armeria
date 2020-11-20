@@ -391,41 +391,38 @@ public final class Flags {
     private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
 
     static {
-        if (!isIoUringAvailable()) {
-            final Throwable cause = IOUring.unavailabilityCause();
-            if (cause != null) {
-                logger.info("io_uring not available: {}", Exceptions.peel(cause).toString());
-            } else {
-                logger.info("io_uring not available: ?");
-            }
-        }
-        if (!isEpollAvailable()) {
-            final Throwable cause = Epoll.unavailabilityCause();
-            if (cause != null) {
-                logger.info("/dev/epoll not available: {}", Exceptions.peel(cause).toString());
-            } else {
-                if (HAS_WSLENV) {
-                    logger.info("/dev/epoll not available: WSL not supported");
-                } else {
-                    logger.info("/dev/epoll not available: ?");
-                }
-            }
-        }
         TransportType type = null;
         switch (TRANSPORT_TYPE_NAME) {
             case "io_uring":
                 if (isIoUringAvailable()) {
                     logger.info("Using io_uring");
                     type = TransportType.IO_URING;
+                } else {
+                    final Throwable cause = IOUring.unavailabilityCause();
+                    if (cause != null) {
+                        logger.info("io_uring not available: {}", Exceptions.peel(cause).toString());
+                    } else {
+                        logger.info("io_uring not available: ?");
+                    }
                 }
                 // fallthrough
             case "epoll":
                 if (isEpollAvailable() && type == null) {
                     logger.info("Using /dev/epoll");
                     type = TransportType.EPOLL;
+                } else {
+                    final Throwable cause = Epoll.unavailabilityCause();
+                    if (cause != null) {
+                        logger.info("/dev/epoll not available: {}", Exceptions.peel(cause).toString());
+                    } else {
+                        if (HAS_WSLENV) {
+                            logger.info("/dev/epoll not available: WSL not supported");
+                        } else {
+                            logger.info("/dev/epoll not available: ?");
+                        }
+                    }
                 }
                 // fallthrough
-            case "nio":
             default:
                 if (type == null) {
                     logger.info("Using nio");
