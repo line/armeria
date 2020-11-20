@@ -357,15 +357,16 @@ public final class DnsResolverGroupBuilder {
                 builder.nameServerProvider(dnsServerAddressStreamProvider);
             }
             assert meterRegistry != null;
-            if (dnsQueryLifecycleObserverFactory == null) {
-                builder.dnsQueryLifecycleObserverFactory(new DefaultDnsQueryLifecycleObserverFactory(
+            final DnsQueryLifecycleObserverFactory observerFactory =
+                    new DefaultDnsQueryLifecycleObserverFactory(
                         meterRegistry,
-                        new MeterIdPrefix("armeria.client.dns.queries")));
+                        new MeterIdPrefix("armeria.client.dns.queries"));
+            if (dnsQueryLifecycleObserverFactory == null) {
+                builder.dnsQueryLifecycleObserverFactory(observerFactory);
             } else {
                 builder.dnsQueryLifecycleObserverFactory(
                         new BiDnsQueryLifecycleObserverFactory(
-                                new DefaultDnsQueryLifecycleObserverFactory(
-                                        meterRegistry, new MeterIdPrefix("armeria.client.dns.queries")),
+                                observerFactory,
                                 dnsQueryLifecycleObserverFactory));
             }
             if (searchDomains != null) {
