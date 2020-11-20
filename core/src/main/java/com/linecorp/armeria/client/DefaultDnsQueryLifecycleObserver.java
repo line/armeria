@@ -47,9 +47,9 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     private static final String CNAME_TAG = "cname";
 
     private static final Pattern NXDOMAIN_EXCEPTION = Pattern.compile("\\bNXDOMAIN\\b");
-    private static final Pattern CNAME_EXCEPTION = Pattern.compile("\\bCNAME\\b/");
+    private static final Pattern CNAME_EXCEPTION = Pattern.compile("\\bCNAME\\b");
     private static final Pattern NO_MATCHING_EXCEPTION = Pattern.compile("\\bmatching\\b");
-    private static final Pattern UNRECOGNIZED_TYPE_EXCEPTION = Pattern.compile("\\bunrecognized\\b/");
+    private static final Pattern UNRECOGNIZED_TYPE_EXCEPTION = Pattern.compile("\\bunrecognized\\b");
     private static final Pattern NO_NS_RETURNED_EXCEPTION = Pattern.compile("\\bservers returned an answer\\b");
     private static final Tag TAG_SUCCESS = Tag.of(RESULT_TAG, "success");
     private static final Tag TAG_FAILURE = Tag.of(RESULT_TAG, "failure");
@@ -102,7 +102,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
         meterRegistry.counter(meterIdPrefixWritten,
                               Arrays.asList(nameTag,
                               Tag.of(SERVER_TAG, dnsServerAddress.getAddress().getHostAddress())))
-                              .increment();
+                     .increment();
     }
 
     @Override
@@ -116,7 +116,8 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
         meterRegistry.counter(meterIdPrefixRedirected,
                               Arrays.asList(nameTag, Tag.of(SERVERS_TAG,
                               nameServers.stream().map(addr -> addr.getAddress().getHostAddress())
-                              .collect(Collectors.joining(","))))).increment();
+                              .collect(Collectors.joining(",")))))
+                     .increment();
         return this;
     }
 
