@@ -108,20 +108,15 @@ public enum TransportType {
     }
 
     /**
-     * Returns whether the specified {@link EventLoop} supports any {@link TransportType}.
-     */
-    public static boolean isSupported(EventLoop eventLoop) {
-        final EventLoopGroup parent = eventLoop.parent();
-        if (parent == null) {
-            return false;
-        }
-        return isSupported(parent);
-    }
-
-    /**
      * Returns whether the specified {@link EventLoopGroup} supports any {@link TransportType}.
      */
     public static boolean isSupported(EventLoopGroup eventLoopGroup) {
+        if (eventLoopGroup instanceof EventLoop) {
+            eventLoopGroup = ((EventLoop) eventLoopGroup).parent();
+            if (eventLoopGroup == null) {
+                return false;
+            }
+        }
         return findOrNull(eventLoopGroup) != null;
     }
 
