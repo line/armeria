@@ -80,7 +80,15 @@ class RouteDecoratingTest {
               .routeDecorator().path("/abc").build(newDecorator(2))
               .routeDecorator().pathPrefix("/abc").build(newDecorator(3))
               .routeDecorator().pathPrefix("/abc/def").build(newDecorator(4))
-              .routeDecorator().path("glob:**def").build(newDecorator(5));
+              .routeDecorator().path("glob:**def").build(newDecorator(5))
+
+              .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .decorator("glob:fo*", newDecorator(10))
+              .decorator("glob:foo", newDecorator(11))
+
+              .service("/bar", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .decorator("glob:bar", newDecorator(10))
+              .decorator("glob:ba*", newDecorator(11));
         }
     };
 
@@ -174,7 +182,9 @@ class RouteDecoratingTest {
         return Stream.of(
                 Arguments.of("/abc", ImmutableList.of(2, 1)),
                 Arguments.of("/abc/def", ImmutableList.of(5, 3, 1)),
-                Arguments.of("/abc/def/ghi", ImmutableList.of(4, 3, 1)));
+                Arguments.of("/abc/def/ghi", ImmutableList.of(4, 3, 1)),
+                Arguments.of("/foo", ImmutableList.of(11, 10, 1)),
+                Arguments.of("/bar", ImmutableList.of(11, 10, 1)));
     }
 
     @ParameterizedTest
@@ -251,5 +261,19 @@ class RouteDecoratingTest {
             builder.add("dest", destHeader);
         }
         assertThat(client.execute(builder.build()).aggregate().join().contentUtf8()).isEqualTo(result);
+    }
+
+    void decorator() {
+        final Server server = Server.builder()
+                                   .decorator("glob:/**", newDecorator(1))
+                                   .decorator("glob:/foo/*", newDecorator(2))
+                                   .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                   .build();
+        server.start().join();
+
+        Server.builder()
+              .decorator("glob:/foo/*", newDecorator(3))
+              .decorator("glob:/**", newDecorator(4))
+              .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
     }
 }
