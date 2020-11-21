@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.common.thrift;
 
+import static java.util.Objects.requireNonNull;
+
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
 
 /**
@@ -73,6 +76,45 @@ public final class ThriftProtocolFactories {
      * {@link TProtocolFactory} for the Thrift TText protocol with named enums.
      */
     public static final TProtocolFactory TEXT_NAMED_ENUM = TTextProtocolFactory.get(true);
+
+    /**
+     * Alias for {@link ThriftSerializationFormats#get(SerializationFormat)}.
+     *
+     * @param serializationFormat a known serialization format
+     * @return the protocol factory linked to the input serializationFormat
+     * @deprecated use {@link ThriftSerializationFormats#get(SerializationFormat)}.
+     */
+    @Deprecated
+    public static TProtocolFactory get(SerializationFormat serializationFormat) {
+        return ThriftSerializationFormats.get(serializationFormat);
+    }
+
+    /**
+     * Returns the {@link SerializationFormat} for the specified {@link TProtocolFactory},
+     * as if it were registered by {@link DefaultThriftProtocolFactoryProvider}.
+     * Consider having your own {@link TProtocolFactory} to {@link SerializationFormat} mapping if necessary.
+     *
+     * @throws IllegalArgumentException if the specified {@link TProtocolFactory} did not match anything
+     * @deprecated this method cannot reliably work with custom protocol factories
+     */
+    @Deprecated
+    public static SerializationFormat toSerializationFormat(TProtocolFactory protoFactory) {
+        requireNonNull(protoFactory, "protoFactory");
+        if (protoFactory instanceof TBinaryProtocol.Factory) {
+            return ThriftSerializationFormats.BINARY;
+        } else if (protoFactory instanceof TCompactProtocol.Factory) {
+            return ThriftSerializationFormats.COMPACT;
+        } else if (protoFactory instanceof TJSONProtocol.Factory) {
+            return ThriftSerializationFormats.JSON;
+        } else if (protoFactory instanceof TTextProtocolFactory) {
+            final TTextProtocolFactory factory = (TTextProtocolFactory) protoFactory;
+            return factory.usesNamedEnums() ? ThriftSerializationFormats.TEXT_NAMED_ENUM
+                                            : ThriftSerializationFormats.TEXT;
+        } else {
+            throw new IllegalArgumentException(
+                    "unsupported TProtocolFactory: " + protoFactory.getClass().getName());
+        }
+    }
 
     private ThriftProtocolFactories() {}
 }
