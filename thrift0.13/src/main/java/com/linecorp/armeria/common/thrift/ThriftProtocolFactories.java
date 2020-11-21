@@ -16,28 +16,15 @@
 
 package com.linecorp.armeria.common.thrift;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static java.util.Objects.requireNonNull;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.ServiceLoader;
-import java.util.Set;
-
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 
-import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider.Entry;
 import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
 
 /**
- * Provides a set of the known {@link TProtocolFactory} instances.
+ * Holds a few known {@link TProtocolFactory} instances.
  */
 public final class ThriftProtocolFactories {
 
@@ -86,46 +73,6 @@ public final class ThriftProtocolFactories {
      * {@link TProtocolFactory} for the Thrift TText protocol with named enums.
      */
     public static final TProtocolFactory TEXT_NAMED_ENUM = TTextProtocolFactory.get(true);
-
-    /**
-     * A way to lookup the related {@link TProtocolFactory} from a {@link SerializationFormat}.
-     * Entries are provided via registered SPI {@link ThriftProtocolFactoryProvider} implementations.
-     */
-    private static final Map<SerializationFormat, TProtocolFactory> knownProtocolFactories;
-
-    static {
-        final List<ThriftProtocolFactoryProvider> providers = ImmutableList.copyOf(
-                ServiceLoader.load(ThriftProtocolFactoryProvider.class,
-                                   ThriftProtocolFactoryProvider.class.getClassLoader()));
-        knownProtocolFactories = providers
-                .stream()
-                .map(ThriftProtocolFactoryProvider::entries)
-                .flatMap(Set::stream)
-                .collect(toImmutableMap(Entry::getSerializationFormat,
-                                        Entry::getTProtocolFactory));
-    }
-
-    /**
-     * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
-     *
-     * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not a
-     *         known Thrift serialization format
-     */
-    public static TProtocolFactory get(SerializationFormat serializationFormat) {
-        requireNonNull(serializationFormat, "serializationFormat");
-        return Optional.ofNullable(knownProtocolFactories.get(serializationFormat))
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Unsupported Thrift serializationFormat: " + serializationFormat));
-    }
-
-    /**
-     * Retrieves all registered Thrift serialization formats.
-     *
-     * @return an view of the registered Thrift serialization formats.
-     */
-    public static Set<SerializationFormat> getThriftSerializationFormats() {
-        return knownProtocolFactories.keySet();
-    }
 
     private ThriftProtocolFactories() {}
 }

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.thrift;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.getThriftSerializationFormats;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -103,7 +102,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      *
      * <p>The default SerializationFormat {@link ThriftSerializationFormats#BINARY} will be used when client
      * does not specify one in the request,
-     * but also supports {@link ThriftProtocolFactories#getThriftSerializationFormats()}.
+     * but also supports {@link ThriftSerializationFormats#values()}.
      * </p>
      *
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
@@ -148,7 +147,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                                   SerializationFormat defaultSerializationFormat) {
         return new THttpService(
                 ThriftCallService.of(implementation),
-                newSupportedSerializationFormats(defaultSerializationFormat, getThriftSerializationFormats()));
+                newSupportedSerializationFormats(defaultSerializationFormat,
+                                                 ThriftSerializationFormats.values()));
     }
 
     /**
@@ -228,7 +228,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             SerializationFormat defaultSerializationFormat) {
 
         final SerializationFormat[] supportedSerializationFormatArray = newSupportedSerializationFormats(
-                defaultSerializationFormat, getThriftSerializationFormats());
+                defaultSerializationFormat, ThriftSerializationFormats.values());
 
         return delegate -> new THttpService(delegate, supportedSerializationFormatArray);
     }
@@ -424,7 +424,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
         try (HttpData content = req.content()) {
             final TByteBufTransport inTransport = new TByteBufTransport(content.byteBuf());
-            final TProtocol inProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(inTransport);
+            final TProtocol inProto = ThriftSerializationFormats.get(serializationFormat)
+                                                                .getProtocol(inTransport);
 
             final TMessage header;
             final TBase<?, ?> args;
@@ -651,7 +652,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         boolean success = false;
         try {
             final TTransport transport = new TByteBufTransport(buf);
-            final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
+            final TProtocol outProto = ThriftSerializationFormats.get(serializationFormat)
+                                                                 .getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.REPLY, seqId);
             outProto.writeMessageBegin(header);
             result.write(outProto);
@@ -698,7 +700,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         boolean success = false;
         try {
             final TTransport transport = new TByteBufTransport(buf);
-            final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
+            final TProtocol outProto = ThriftSerializationFormats.get(serializationFormat)
+                                                                 .getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.EXCEPTION, seqId);
             outProto.writeMessageBegin(header);
             appException.write(outProto);

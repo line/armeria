@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.thrift;
 
 import static com.linecorp.armeria.common.MediaType.create;
-import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.getThriftSerializationFormats;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -75,6 +74,7 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -215,7 +215,7 @@ public class ThriftOverHttpClientTest {
             sb.tlsSelfSigned();
 
             for (Handlers h : Handlers.values()) {
-                for (SerializationFormat thriftSerializationFormat : getThriftSerializationFormats()) {
+                for (SerializationFormat thriftSerializationFormat : ThriftSerializationFormats.values()) {
                     HttpService service = THttpService.of(h.handler(), thriftSerializationFormat);
                     if (ENABLE_LOGGING_DECORATORS) {
                         service = service.decorate(LoggingService.newDecorator());
@@ -764,7 +764,7 @@ public class ThriftOverHttpClientTest {
     private static class ParametersProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return getThriftSerializationFormats().stream().flatMap(serializationFormat -> Stream.of(
+            return ThriftSerializationFormats.values().stream().flatMap(serializationFormat -> Stream.of(
                             arguments(clientOptions.toBuilder()
                                                    .factory(clientFactoryWithUseHttp2Preface)
                                                    .build(),

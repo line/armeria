@@ -16,13 +16,13 @@
 
 package com.linecorp.armeria.server.thrift;
 
-import static com.linecorp.armeria.common.thrift.ThriftProtocolFactories.getThriftSerializationFormats;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.JSON;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 
 class THttpServiceBuilderTest {
@@ -44,6 +44,6 @@ class THttpServiceBuilderTest {
                                                  .build();
 
         assertThat(service.supportedSerializationFormats())
-                .containsExactlyInAnyOrderElementsOf(getThriftSerializationFormats());
+                .containsExactlyInAnyOrderElementsOf(ThriftSerializationFormats.values());
     }
 }

@@ -15,10 +15,24 @@
  */
 package com.linecorp.armeria.common.thrift;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.Objects.requireNonNull;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.ServiceLoader;
+import java.util.Set;
+
+import org.apache.thrift.protocol.TProtocolFactory;
+
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider.Entry;
 
 /**
- * Out-of-the box supported Thrift-related {@link SerializationFormat} instances.
+ * Registered Thrift-related {@link SerializationFormat} instances.
  */
 public final class ThriftSerializationFormats {
 
@@ -48,6 +62,53 @@ public final class ThriftSerializationFormats {
      * or backwards compatibility and should only be used in non-production use cases like debugging.
      */
     public static final SerializationFormat TEXT_NAMED_ENUM = SerializationFormat.of("ttext-named-enum");
+
+    /**
+     * A way to lookup the related {@link TProtocolFactory} from a {@link SerializationFormat}.
+     * Entries are provided via registered SPI {@link ThriftProtocolFactoryProvider} implementations.
+     */
+    private static final Map<SerializationFormat, TProtocolFactory> knownProtocolFactories;
+
+    static {
+        final List<ThriftProtocolFactoryProvider> providers = ImmutableList.copyOf(
+                ServiceLoader.load(ThriftProtocolFactoryProvider.class,
+                                   ThriftProtocolFactoryProvider.class.getClassLoader()));
+        knownProtocolFactories = providers
+                .stream()
+                .map(ThriftProtocolFactoryProvider::entries)
+                .flatMap(Set::stream)
+                .collect(toImmutableMap(Entry::getSerializationFormat,
+                                        Entry::getTProtocolFactory));
+    }
+
+    /**
+     * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
+     *
+     * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not a
+     *         known Thrift serialization format
+     */
+    public static TProtocolFactory get(SerializationFormat serializationFormat) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        return Optional.ofNullable(knownProtocolFactories.get(serializationFormat))
+                       .orElseThrow(() -> new IllegalArgumentException(
+                               "Unsupported Thrift serializationFormat: " + serializationFormat));
+    }
+
+    /**
+     * Retrieves all registered Thrift serialization formats.
+     *
+     * @return an view of the registered Thrift serialization formats.
+     */
+    public static Set<SerializationFormat> values() {
+        return knownProtocolFactories.keySet();
+    }
+
+    /**
+     * Returns whether the specified {@link SerializationFormat} is Thrift.
+     */
+    public static boolean isThrift(SerializationFormat format) {
+        return values().contains(requireNonNull(format, "format"));
+    }
 
     private ThriftSerializationFormats() {}
 }
