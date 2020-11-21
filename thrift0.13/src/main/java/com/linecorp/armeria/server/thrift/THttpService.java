@@ -101,8 +101,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      * fluently.
      *
      * <p>The default SerializationFormat {@link ThriftSerializationFormats#BINARY} will be used when client
-     * does not specify one in the request,
-     * but also supports {@link ThriftSerializationFormats#values()}.
+     * does not specify one in the request, but also supports {@link ThriftSerializationFormats#values()}.
      * </p>
      *
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
@@ -145,10 +144,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      */
     public static THttpService of(Object implementation,
                                   SerializationFormat defaultSerializationFormat) {
-        return new THttpService(
-                ThriftCallService.of(implementation),
-                newSupportedSerializationFormats(defaultSerializationFormat,
-                                                 ThriftSerializationFormats.values()));
+        return new THttpService(ThriftCallService.of(implementation),
+                                newSupportedSerializationFormats(defaultSerializationFormat,
+                                                                 ThriftSerializationFormats.values()));
     }
 
     /**
@@ -228,7 +226,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             SerializationFormat defaultSerializationFormat) {
 
         final SerializationFormat[] supportedSerializationFormatArray = newSupportedSerializationFormats(
-                defaultSerializationFormat, ThriftSerializationFormats.values());
+                defaultSerializationFormat,
+                ThriftSerializationFormats.values());
 
         return delegate -> new THttpService(delegate, supportedSerializationFormatArray);
     }
