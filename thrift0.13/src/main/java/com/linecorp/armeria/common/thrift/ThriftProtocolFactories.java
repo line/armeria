@@ -33,7 +33,7 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider.ThriftSerializationFormat;
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider.Entry;
 import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
 
 /**
@@ -99,10 +99,10 @@ public final class ThriftProtocolFactories {
                                    ThriftProtocolFactoryProvider.class.getClassLoader()));
         knownProtocolFactories = providers
                 .stream()
-                .map(ThriftProtocolFactoryProvider::thriftSerializationFormats)
+                .map(ThriftProtocolFactoryProvider::entries)
                 .flatMap(Set::stream)
-                .collect(toImmutableMap(ThriftSerializationFormat::getSerializationFormat,
-                                        ThriftSerializationFormat::getTProtocolFactory));
+                .collect(toImmutableMap(Entry::getSerializationFormat,
+                                        Entry::getTProtocolFactory));
     }
 
     /**

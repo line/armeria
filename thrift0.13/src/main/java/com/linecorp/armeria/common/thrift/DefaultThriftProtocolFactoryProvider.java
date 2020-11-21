@@ -23,19 +23,19 @@ import com.google.common.collect.ImmutableSet;
  * Default registered {@link ThriftProtocolFactoryProvider}.
  * It is not overridable but you may provide and register another implementation.
  */
-public final class DefaultThriftProtocolFactoryProvider implements ThriftProtocolFactoryProvider {
+public final class DefaultThriftProtocolFactoryProvider extends ThriftProtocolFactoryProvider {
     @Override
-    public Set<ThriftSerializationFormat> thriftSerializationFormats() {
+    protected Set<Entry> entries() {
         return ImmutableSet.of(
-                new ThriftSerializationFormat(
+                new Entry(
                         ThriftSerializationFormats.BINARY, ThriftProtocolFactories.BINARY),
-                new ThriftSerializationFormat(
+                new Entry(
                         ThriftSerializationFormats.COMPACT, ThriftProtocolFactories.COMPACT),
-                new ThriftSerializationFormat(
+                new Entry(
                         ThriftSerializationFormats.JSON, ThriftProtocolFactories.JSON),
-                new ThriftSerializationFormat(
+                new Entry(
                         ThriftSerializationFormats.TEXT, ThriftProtocolFactories.TEXT),
-                new ThriftSerializationFormat(
+                new Entry(
                         ThriftSerializationFormats.TEXT_NAMED_ENUM, ThriftProtocolFactories.TEXT_NAMED_ENUM)
         );
     }

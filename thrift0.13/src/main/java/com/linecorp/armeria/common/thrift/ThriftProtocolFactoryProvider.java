@@ -26,17 +26,15 @@ import com.linecorp.armeria.common.SerializationFormat;
 /**
  * SPI Provider for links from {@link SerializationFormat} to {@link TProtocolFactory}.
  */
-@FunctionalInterface
-public interface ThriftProtocolFactoryProvider {
+public abstract class ThriftProtocolFactoryProvider {
     /**
      * Pair of {@link SerializationFormat} and {@link TProtocolFactory}.
      */
-    final class ThriftSerializationFormat {
+    protected static final class Entry {
         private final SerializationFormat serializationFormat;
         private final TProtocolFactory tProtocolFactory;
 
-        public ThriftSerializationFormat(SerializationFormat serializationFormat,
-                                         TProtocolFactory tProtocolFactory) {
+        public Entry(SerializationFormat serializationFormat, TProtocolFactory tProtocolFactory) {
             this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
             this.tProtocolFactory = requireNonNull(tProtocolFactory, "tProtocolFactory");
         }
@@ -51,9 +49,9 @@ public interface ThriftProtocolFactoryProvider {
     }
 
     /**
-     * Accessed configured {@link ThriftSerializationFormat}s for this SPI provider.
+     * Accessed configured {@link Entry}s for this SPI provider.
      *
      * @return an immutable view
      */
-    Set<ThriftSerializationFormat> thriftSerializationFormats();
+    protected abstract Set<Entry> entries();
 }

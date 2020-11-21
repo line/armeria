@@ -94,8 +94,25 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.netty.util.AsciiString;
 
 @SuppressWarnings("unchecked")
-public class ThriftOverHttpClientTest extends SerializationFormatProvider
-        implements ThriftProtocolFactoryProvider {
+public class ThriftOverHttpClientTest {
+    public static class TestSerializationFormatProvider extends SerializationFormatProvider {
+        @Override
+        protected Set<SerializationFormatProvider.Entry> entries() {
+            return ImmutableSet.of(new SerializationFormatProvider.Entry(
+                    "ttuple",
+                    create("application", "x-thrift").withParameter("protocol", "TTUPLE"),
+                    create("application", "vnd.apache.thrift.tuple"))
+            );
+        }
+    }
+
+    public static class TestThriftProtocolFactoryProvider extends ThriftProtocolFactoryProvider {
+        @Override
+        public Set<ThriftProtocolFactoryProvider.Entry> entries() {
+            return ImmutableSet.of(new ThriftProtocolFactoryProvider.Entry(
+                    SerializationFormat.of("ttuple"), new TTupleProtocol.Factory()));
+        }
+    }
 
     private static final boolean ENABLE_LOGGING_DECORATORS = false;
     private static final boolean ENABLE_CONNECTION_POOL_LOGGING = true;
@@ -187,21 +204,6 @@ public class ThriftOverHttpClientTest extends SerializationFormatProvider
         String path(SerializationFormat serializationFormat) {
             return '/' + name() + '/' + serializationFormat.uriText();
         }
-    }
-
-    @Override
-    protected Set<Entry> entries() {
-        return ImmutableSet.of(
-                new Entry("ttuple",
-                          create("application", "x-thrift").withParameter("protocol", "TTUPLE"),
-                          create("application", "vnd.apache.thrift.tuple"))
-        );
-    }
-
-    @Override
-    public Set<ThriftSerializationFormat> thriftSerializationFormats() {
-        return ImmutableSet.of(
-                new ThriftSerializationFormat(SerializationFormat.of("ttuple"), new TTupleProtocol.Factory()));
     }
 
     @RegisterExtension
