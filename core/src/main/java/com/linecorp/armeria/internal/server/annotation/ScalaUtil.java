@@ -59,7 +59,7 @@ final class ScalaUtil {
 
     /**
      * A converter that converts {@link scala.concurrent.Future} to {@link CompletableFuture}.
-     * This nested class will be lazily initialized only when scala-library is in the classpath.
+     * This nested class is lazily initialized only when scala-library is in the classpath.
      */
     static final class FutureConverter {
 
