@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
@@ -102,7 +102,7 @@ public final class GrpcServiceBuilder {
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
-    private int maxInboundMessageSizeBytes = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
+    private int maxInboundMessageSizeBytes = ArmeriaMessageDeframerHandler.NO_MAX_INBOUND_MESSAGE_SIZE;
 
     private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 

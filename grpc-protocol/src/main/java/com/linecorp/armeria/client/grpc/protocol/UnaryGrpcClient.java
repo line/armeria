@@ -20,6 +20,9 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -27,6 +30,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -36,13 +40,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -118,9 +123,7 @@ public final class UnaryGrpcClient {
             if (grpcMessage != null) {
                 grpcMessage = StatusMessageEscaper.unescape(grpcMessage);
             }
-            throw new ArmeriaStatusException(
-                    Integer.parseInt(grpcStatus),
-                    grpcMessage);
+            throw new ArmeriaStatusException(Integer.parseInt(grpcStatus), grpcMessage);
         }
     }
 
@@ -159,32 +162,47 @@ public final class UnaryGrpcClient {
 
                            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
-                           try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(new Listener() {
-                               @Override
-                               public void messageRead(DeframedMessage unframed) {
-                                   final ByteBuf buf = unframed.buf();
-                                   // Compression not supported.
-                                   assert buf != null;
-                                   responseFuture.complete(HttpResponse.of(
-                                           msg.headers(),
-                                           HttpData.wrap(buf).withEndOfStream(),
-                                           msg.trailers()));
-                               }
+                           final ArmeriaMessageDeframerHandler handler =
+                                   new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
+                           final HttpDeframer<DeframedMessage> deframer =
+                                   new HttpDeframer<>(handler, ctx.alloc());
 
-                               @Override
-                               public void endOfStream() {
-                                   if (!responseFuture.isDone()) {
-                                       responseFuture.complete(HttpResponse.of(msg.headers(),
-                                                                               HttpData.empty(),
-                                                                               msg.trailers()));
-                                   }
-                               }
-                           }, Integer.MAX_VALUE, ctx.alloc(), false)) {
-                               deframer.request(1);
-                               deframer.deframe(msg.content(), true);
-                           }
+                           StreamMessage.of(msg.content()).subscribe(deframer, ctx.eventLoop());
+                           deframer.subscribe(singleSubscriber(msg, responseFuture), ctx.eventLoop());
                            return responseFuture;
                        }), ctx.eventLoop());
+        }
+
+        private static Subscriber<DeframedMessage> singleSubscriber(
+                AggregatedHttpResponse msg, CompletableFuture<HttpResponse> responseFuture) {
+
+            return new Subscriber<DeframedMessage>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    s.request(1);
+                }
+
+                @Override
+                public void onNext(DeframedMessage unframed) {
+                    final ByteBuf buf = unframed.buf();
+                    // Compression not supported.
+                    assert buf != null;
+                    responseFuture.complete(HttpResponse.of(msg.headers(), HttpData.wrap(buf), msg.trailers()));
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    responseFuture.completeExceptionally(t);
+                }
+
+                @Override
+                public void onComplete() {
+                    if (!responseFuture.isDone()) {
+                        responseFuture.complete(
+                                HttpResponse.of(msg.headers(), HttpData.empty(), msg.trailers()));
+                    }
+                }
+            };
         }
     }
 }

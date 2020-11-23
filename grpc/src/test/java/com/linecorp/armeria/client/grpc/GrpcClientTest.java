@@ -811,6 +811,7 @@ class GrpcClientTest {
         final Object actualResponse2 = queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(actualResponse2).withFailMessage("Unexpected response: %s", actualResponse2)
                                    .isEqualTo(goldenResponses.get(1));
+        call.request(1);
         assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(Status.OK);
         call.cancel("Cancelled after all of the requests are done", null);
 

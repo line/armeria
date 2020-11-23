@@ -40,7 +40,7 @@ mrJarVersions.each { version->
         enabled = (Integer.parseInt(JavaVersion.current().getMajorVersion()) >= version) &&
                 (!System.env.TEST_JAVA_VERSION || Integer.parseInt(System.env.TEST_JAVA_VERSION) >= version)
     }
-    
+
     configurations."java${version}Implementation".extendsFrom configurations.implementation
     configurations."java${version}TestImplementation".extendsFrom configurations.testImplementation
     configurations."java${version}TestRuntimeClasspath".extendsFrom configurations.testRuntimeClasspath
@@ -113,9 +113,6 @@ dependencies {
     implementation "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
     implementation 'io.netty:netty-tcnative-boringssl-static'
     implementation 'io.netty:netty-handler-proxy'
-
-    // Project Reactor
-    testImplementation 'io.projectreactor:reactor-test'
 
     // TestNG
     testImplementation 'org.testng:testng'

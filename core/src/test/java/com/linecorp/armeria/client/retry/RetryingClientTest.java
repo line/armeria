@@ -135,6 +135,30 @@ class RetryingClientTest {
                 }
             });
 
+            sb.service("/500-always", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                        throws Exception {
+                    return HttpResponse.of(HttpStatus.valueOf(500));
+                }
+            });
+
+            sb.service("/501-always", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                        throws Exception {
+                    return HttpResponse.of(HttpStatus.valueOf(501));
+                }
+            });
+
+            sb.service("/502-always", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
+                        throws Exception {
+                    return HttpResponse.of(HttpStatus.valueOf(502));
+                }
+            });
+
             sb.service("/500-then-success", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
@@ -434,6 +458,51 @@ class RetryingClientTest {
     }
 
     @Test
+    void honorRetryMapping() {
+        final Backoff backoff = Backoff.fixed(2000);
+        final RetryConfigMapping<HttpResponse> mapping = RetryConfigMapping.of(
+                (ctx, req) -> ctx.method() + "#" + ctx.path(),
+                (ctx, req) -> {
+                    if ("/500-always".equals(ctx.path())) {
+                        return RetryConfig
+                                .<HttpResponse>builder0(RetryRule.builder()
+                                                                .onStatus(HttpStatus.valueOf(500))
+                                                                .thenBackoff(backoff))
+                                .maxTotalAttempts(2).build();
+                    } else if ("/501-always".equals(ctx.path())) {
+                        return RetryConfig
+                                .<HttpResponse>builder0(RetryRule.builder()
+                                                                .onStatus(HttpStatus.valueOf(501))
+                                                                .thenBackoff(backoff))
+                                .maxTotalAttempts(8).build();
+                    } else {
+                        return RetryConfig
+                                .<HttpResponse>builder0(RetryRule.builder()
+                                                                .onStatus(HttpStatus.valueOf(400))
+                                                                .thenBackoff(backoff))
+                                .maxTotalAttempts(10).build();
+                    }
+                }
+        );
+        final WebClient client = client(mapping);
+
+        Stopwatch stopwatch = Stopwatch.createStarted();
+        assertThat(client.get("/500-always").aggregate().join().status())
+                .isEqualTo(HttpStatus.valueOf(500));
+        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(2), Duration.ofSeconds(6));
+
+        stopwatch = Stopwatch.createStarted();
+        assertThat(client.get("/501-always").aggregate().join().status())
+                .isEqualTo(HttpStatus.valueOf(501));
+        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(14), Duration.ofSeconds(28));
+
+        stopwatch = Stopwatch.createStarted();
+        assertThat(client.get("/502-always").aggregate().join().status())
+                .isEqualTo(HttpStatus.valueOf(502));
+        assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(0), Duration.ofSeconds(2));
+    }
+
+    @Test
     void retryWithContentOnUnprocessedException() {
         final Backoff backoff = Backoff.fixed(2000);
         final RetryRuleWithContent<HttpResponse> strategy =
@@ -710,13 +779,26 @@ class RetryingClientTest {
         return client(retryRule, 10000, 0, 100);
     }
 
+    private WebClient client(RetryConfigMapping<HttpResponse> mapping) {
+        final Function<? super HttpClient, RetryingClient> retryingDecorator =
+                RetryingClient.newDecoratorWithMapping(mapping);
+
+        return WebClient.builder(server.httpUri())
+                        .factory(clientFactory)
+                        .responseTimeoutMillis(0)
+                        .decorator(retryingDecorator)
+                        .build();
+    }
+
     private WebClient client(RetryRule retryRule, long responseTimeoutMillis,
                              long responseTimeoutForEach, int maxTotalAttempts) {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(retryRule)
-                              .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                RetryingClient.builder(
+                        RetryConfig.<HttpResponse>builder0(retryRule)
+                                   .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                                   .maxTotalAttempts(maxTotalAttempts)
+                                   .build())
                               .useRetryAfter(true)
-                              .maxTotalAttempts(maxTotalAttempts)
                               .newDecorator();
 
         return WebClient.builder(server.httpUri())

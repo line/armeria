@@ -36,6 +36,8 @@ import org.reactivestreams.tck.TestEnvironment.TestSubscriber;
 import org.testng.SkipException;
 import org.testng.annotations.Test;
 
+import com.linecorp.armeria.common.SplitHttpResponse;
+
 public abstract class StreamMessageVerification<T> extends PublisherVerification<T> {
 
     private final TestEnvironment env;
@@ -64,14 +66,18 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
 
-            if (!(stream instanceof PublisherBasedStreamMessage)) {
+            if (!(stream instanceof PublisherBasedStreamMessage || stream instanceof SplitHttpResponse)) {
                 // It's impossible for PublisherBasedStreamMessage to tell if the stream is
                 // closed or empty yet because Publisher doesn't have enough information.
                 assertThat(stream.isOpen()).isFalse();
                 assertThat(stream.isEmpty()).isTrue();
             }
 
-            assertThat(stream.whenComplete()).isNotDone();
+            if (!(stream instanceof SplitHttpResponse)) {
+                // SplitHttpResponse could complete early to read HTTP headers from HttpResponse before
+                // publishing body
+                assertThat(stream.whenComplete()).isNotDone();
+            }
             sub.requestEndOfStream();
 
             await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompleted());

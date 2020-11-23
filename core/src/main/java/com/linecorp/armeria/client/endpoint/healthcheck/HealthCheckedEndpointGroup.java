@@ -139,7 +139,12 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         clientOptions.factory().whenClosed().thenRun(this::closeAsync);
         delegate.addListener(this::updateCandidates);
-        updateCandidates(delegate.whenReady().join());
+        delegate.whenReady().join();
+        // There's a chance that delegate.endpoints() differs from delegate.whenReady().join() when
+        // the delegate updates its endpoint after initialized. Also, if the delegate's endpoints are never
+        // updated, delegate.addListener(this::updateCandidates) is never called.
+        // So we should use `delegate.endpoints()` to update candidates at this moment.
+        updateCandidates(delegate.endpoints());
 
         // Wait until the initial health of all endpoints are determined.
         final List<DefaultHealthCheckerContext> snapshot;

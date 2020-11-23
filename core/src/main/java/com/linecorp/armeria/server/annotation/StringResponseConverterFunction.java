@@ -35,11 +35,11 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * A {@link ResponseConverterFunction} which creates an {@link HttpResponse} when:
  * <ul>
- *   <li>the {@code result} is instance of {@link CharSequence}</li>
+ *   <li>the {@code result} is an instance of {@link CharSequence}</li>
  *   <li>the {@code "content-type"} of the {@link ResponseHeaders} is {@link MediaType#ANY_TEXT_TYPE}</li>
  * </ul>
- * Note that this {@link ResponseConverterFunction} is applied to the annotated service by default,
- * so you don't have to set explicitly.
+ * Note that this {@link ResponseConverterFunction} is applied to an annotated service by default,
+ * so you don't have to specify this converter explicitly.
  */
 public final class StringResponseConverterFunction implements ResponseConverterFunction {
 
