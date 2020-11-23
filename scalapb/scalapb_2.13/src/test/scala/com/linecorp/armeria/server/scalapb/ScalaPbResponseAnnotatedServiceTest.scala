@@ -18,15 +18,12 @@ package com.linecorp.armeria.server.scalapb
 
 import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet}
 import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common._
 import com.linecorp.armeria.scalapb.testing.messages.SimpleResponse
-import com.linecorp.armeria.server.annotation._
 import com.linecorp.armeria.server.scalapb.ScalaPbResponseAnnotatedServiceTest.server
 import com.linecorp.armeria.server.{ServerBuilder, ServiceRequestContext}
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import java.util.stream.Stream
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
-import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.api.{AfterEach, BeforeEach, Test}
@@ -34,7 +31,25 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
+import scala.concurrent.{ExecutionContext, Future}
 import scalapb.json4s.Parser
+import com.linecorp.armeria.common.{
+  AggregatedHttpResponse,
+  HttpRequest,
+  HttpResponse,
+  HttpStatus,
+  MediaType,
+  MediaTypeNames
+}
+import com.linecorp.armeria.server.annotation.{
+  Blocking,
+  ExceptionHandler,
+  ExceptionHandlerFunction,
+  Get,
+  Produces,
+  ProducesJson,
+  ProducesProtobuf
+}
 
 class ScalaPbResponseAnnotatedServiceTest {
 
@@ -44,7 +59,11 @@ class ScalaPbResponseAnnotatedServiceTest {
   @BeforeEach
   private def setUp(): Unit = {
     server.start()
-    client = WebClient.of(ScalaPbResponseAnnotatedServiceTest.server.httpUri)
+    client = WebClient
+      .builder(ScalaPbResponseAnnotatedServiceTest.server.httpUri)
+      .responseTimeoutMillis(0)
+      .build()
+
   }
 
   @AfterEach
@@ -56,6 +75,15 @@ class ScalaPbResponseAnnotatedServiceTest {
   @CsvSource(Array("/default-content-type", "/protobuf"))
   @ParameterizedTest
   def protobufResponse(path: String): Unit = {
+    val response: AggregatedHttpResponse = client.get(path).aggregate.join
+    assertThat(response.headers.contentType).isEqualTo(MediaType.PROTOBUF)
+    val simpleResponse: SimpleResponse = SimpleResponse.parseFrom(response.content.array)
+    assertThat(simpleResponse.message).isEqualTo("Hello, Armeria!")
+  }
+
+  @CsvSource(Array("/protobuf/future", "/protobuf/future+blocking"))
+  @ParameterizedTest
+  def protobufFutureResponse(path: String): Unit = {
     val response: AggregatedHttpResponse = client.get(path).aggregate.join
     assertThat(response.headers.contentType).isEqualTo(MediaType.PROTOBUF)
     val simpleResponse: SimpleResponse = SimpleResponse.parseFrom(response.content.array)
@@ -127,7 +155,7 @@ object ScalaPbResponseAnnotatedServiceTest {
   val server: ServerExtension = new ServerExtension() {
     override protected def configure(sb: ServerBuilder): Unit =
       // A workaround for 'ambiguous reference to overloaded definition' in Scala 2.12.x
-      sb.annotatedService(new ScalaPbResponseAnnotatedServiceTest.GreetingService(), Array.emptyObjectArray: _*)
+      sb.annotatedService(new GreetingService(), Array.emptyObjectArray: _*)
   }
 
   private var cause: Option[Throwable] = None
@@ -140,6 +168,24 @@ object ScalaPbResponseAnnotatedServiceTest {
     @Get("/protobuf")
     @ProducesProtobuf
     def produceProtobuf: SimpleResponse = SimpleResponse("Hello, Armeria!")
+
+    @Get("/protobuf/future")
+    @ProducesProtobuf
+    def produceProtobuf(implicit ec: ExecutionContext): Future[SimpleResponse] =
+      Future {
+        ServiceRequestContext.current()
+        SimpleResponse("Hello, Armeria!")
+      }
+
+    @Blocking
+    @Get("/protobuf/future+blocking")
+    @ProducesProtobuf
+    def blockingProduceProtobuf(implicit ec: ExecutionContext): Future[SimpleResponse] =
+      Future {
+        ServiceRequestContext.current()
+        assertThat(Thread.currentThread().getName).contains("blocking-tasks")
+        SimpleResponse("Hello, Armeria!")
+      }
 
     @Get("/json")
     @ProducesJson

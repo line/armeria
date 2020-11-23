@@ -1,8 +1,7 @@
-package example.armeria.grpc.scala
+package com.linecorp.armeria.server.scalapb
 
-import java.util.concurrent.TimeUnit
-import java.util.function.{Function => JFunction}
-import java.util.stream
+import armeria.scalapb.hello.{HelloReply, HelloRequest, HelloServiceGrpc}
+import armeria.scalapb.hello.HelloServiceGrpc.{HelloServiceBlockingStub, HelloServiceStub}
 import com.google.common.base.Stopwatch
 import com.linecorp.armeria.client.Clients
 import com.linecorp.armeria.client.grpc.GrpcClientOptions
@@ -10,14 +9,15 @@ import com.linecorp.armeria.common.SerializationFormat
 import com.linecorp.armeria.common.grpc.{GrpcJsonMarshaller, GrpcSerializationFormats}
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
 import com.linecorp.armeria.server.grpc.GrpcService
-import com.linecorp.armeria.server.ServerBuilder
+import com.linecorp.armeria.server.scalapb.HelloServiceImpl.toMessage
+import com.linecorp.armeria.server.{Server, ServerBuilder}
+import com.linecorp.armeria.server.scalapb.HelloServiceTest.{GrpcSerializationProvider, newClient}
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
-import example.armeria.grpc.scala.HelloServiceImpl.toMessage
-import example.armeria.grpc.scala.HelloServiceTest.{GrpcSerializationProvider, newClient}
-import example.armeria.grpc.scala.hello.HelloServiceGrpc.{HelloServiceBlockingStub, HelloServiceStub}
-import example.armeria.grpc.scala.hello.{HelloReply, HelloRequest, HelloServiceGrpc}
 import io.grpc.ServiceDescriptor
 import io.grpc.stub.StreamObserver
+import java.util.concurrent.TimeUnit
+import java.util.function.{Function => JFunction}
+import java.util.stream
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeAll
@@ -65,7 +65,6 @@ class HelloServiceTest {
       HelloRequest("Armeria"),
       new StreamObserver[HelloReply]() {
         private var sequence = 0
-
         override def onNext(value: HelloReply): Unit = {
           sequence += 1
           assertThat(value.message).isEqualTo(s"Hello, Armeria! (sequence: $sequence)")
@@ -152,15 +151,17 @@ class HelloServiceTest {
 
 object HelloServiceTest {
 
-  val server: ServerExtension = new ServerExtension() {
+  var server: ServerExtension = new ServerExtension() {
     override protected def configure(sb: ServerBuilder): Unit =
       sb.service(
         GrpcService
           .builder()
           .addService(HelloServiceGrpc.bindService(new HelloServiceImpl, ExecutionContext.global))
+          .supportedSerializationFormats(GrpcSerializationFormats.values)
           .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
           .enableUnframedRequests(true)
-          .build())
+          .build()
+      )
   }
 
   private def newClient[A](serializationFormat: SerializationFormat = GrpcSerializationFormats.PROTO)(implicit

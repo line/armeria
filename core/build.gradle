@@ -121,6 +121,9 @@ dependencies {
     api 'org.reactivestreams:reactive-streams'
     testImplementation 'org.reactivestreams:reactive-streams-tck'
 
+    // Scala
+    optionalImplementation 'org.scala-lang:scala-library:2.13.3'
+
     // Bouncy Castle
     implementation 'org.bouncycastle:bcprov-jdk15on'
 

@@ -88,6 +88,7 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 
 import io.netty.handler.codec.http.HttpConstants;
+import scala.concurrent.ExecutionContext;
 
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
@@ -176,8 +177,9 @@ final class AnnotatedValueResolver {
      * {@link Method}, {@code pathParams} and {@code objectResolvers}.
      */
     static List<AnnotatedValueResolver> ofServiceMethod(Method method, Set<String> pathParams,
-                                                        List<RequestObjectResolver> objectResolvers) {
-        return of(method, pathParams, objectResolvers, true, true);
+                                                        List<RequestObjectResolver> objectResolvers,
+                                                        boolean useBlockingExecutor) {
+        return of(method, pathParams, objectResolvers, true, true, useBlockingExecutor);
     }
 
     /**
@@ -187,7 +189,7 @@ final class AnnotatedValueResolver {
     static List<AnnotatedValueResolver> ofBeanConstructorOrMethod(Executable constructorOrMethod,
                                                                   Set<String> pathParams,
                                                                   List<RequestObjectResolver> objectResolvers) {
-        return of(constructorOrMethod, pathParams, objectResolvers, false, false);
+        return of(constructorOrMethod, pathParams, objectResolvers, false, false, false);
     }
 
     /**
@@ -199,7 +201,7 @@ final class AnnotatedValueResolver {
                                               List<RequestObjectResolver> objectResolvers) {
         // 'Field' is only used for converting a bean.
         // So we always need to pass 'implicitRequestObjectAnnotation' as false.
-        return of(field, field, field.getType(), pathParams, objectResolvers, false);
+        return of(field, field, field.getType(), pathParams, objectResolvers, false, false);
     }
 
     /**
@@ -213,7 +215,8 @@ final class AnnotatedValueResolver {
     private static List<AnnotatedValueResolver> of(Executable constructorOrMethod, Set<String> pathParams,
                                                    List<RequestObjectResolver> objectResolvers,
                                                    boolean implicitRequestObjectAnnotation,
-                                                   boolean isServiceMethod) {
+                                                   boolean isServiceMethod,
+                                                   boolean useBlockingExecutor) {
         final ImmutableList<Parameter> parameters =
                 Arrays.stream(constructorOrMethod.getParameters())
                       .filter(it -> !KotlinUtil.isContinuation(it.getType()))
@@ -261,7 +264,7 @@ final class AnnotatedValueResolver {
 
             resolver = of(constructorOrMethod,
                           headParameter, headParameter.getType(), pathParams, objectResolvers,
-                          implicitRequestObjectAnnotation);
+                          implicitRequestObjectAnnotation, useBlockingExecutor);
         } else if (!isServiceMethod && parametersSize == 1 &&
                    !AnnotationUtil.findDeclared(constructorOrMethod, RequestConverter.class).isEmpty()) {
             //
@@ -280,7 +283,7 @@ final class AnnotatedValueResolver {
             // @RequestConverter(BeanConverter.class)
             // void setter(Bean bean) { ... }
             //
-            resolver = of(headParameter, pathParams, objectResolvers, true);
+            resolver = of(headParameter, pathParams, objectResolvers, true, useBlockingExecutor);
         } else {
             //
             // There's no annotation. So there should be no @Default annotation, too.
@@ -309,7 +312,7 @@ final class AnnotatedValueResolver {
         } else {
             list = parameters.stream()
                              .map(p -> of(p, pathParams, objectResolvers,
-                                          implicitRequestObjectAnnotation))
+                                          implicitRequestObjectAnnotation, useBlockingExecutor))
                              .filter(Objects::nonNull)
                              .collect(toImmutableList());
         }
@@ -366,9 +369,9 @@ final class AnnotatedValueResolver {
     @Nullable
     static AnnotatedValueResolver of(Parameter parameter, Set<String> pathParams,
                                      List<RequestObjectResolver> objectResolvers,
-                                     boolean implicitRequestObjectAnnotation) {
+                                     boolean implicitRequestObjectAnnotation, boolean useBlockingExecutor) {
         return of(parameter, parameter, parameter.getType(), pathParams, objectResolvers,
-                  implicitRequestObjectAnnotation);
+                  implicitRequestObjectAnnotation, useBlockingExecutor);
     }
 
     /**
@@ -387,13 +390,15 @@ final class AnnotatedValueResolver {
      *                                        with {@link RequestObject} so that conversion is always done.
      *                                        {@code false} if an element has to be annotated with
      *                                        {@link RequestObject} explicitly to get converted.
+     * @param useBlockingExecutor whether to use blocking task executor
      */
     @Nullable
     private static AnnotatedValueResolver of(AnnotatedElement annotatedElement,
                                              AnnotatedElement typeElement, Class<?> type,
                                              Set<String> pathParams,
                                              List<RequestObjectResolver> objectResolvers,
-                                             boolean implicitRequestObjectAnnotation) {
+                                             boolean implicitRequestObjectAnnotation,
+                                             boolean useBlockingExecutor) {
         requireNonNull(annotatedElement, "annotatedElement");
         requireNonNull(typeElement, "typeElement");
         requireNonNull(type, "type");
@@ -433,7 +438,7 @@ final class AnnotatedValueResolver {
         //
         // void method1(@Default("a") ServiceRequestContext ctx) { ... }
         //
-        final AnnotatedValueResolver resolver = ofInjectableTypes(typeElement, type);
+        final AnnotatedValueResolver resolver = ofInjectableTypes(typeElement, type, useBlockingExecutor);
         if (resolver != null) {
             return resolver;
         }
@@ -550,16 +555,17 @@ final class AnnotatedValueResolver {
 
     @Nullable
     private static AnnotatedValueResolver ofInjectableTypes(AnnotatedElement annotatedElement,
-                                                            Class<?> type) {
+                                                            Class<?> type, boolean useBlockingExecutor) {
         // Unwrap Optional type to support a parameter like 'Optional<RequestContext> ctx'
         // which is always non-empty.
         if (type != Optional.class) {
-            return ofInjectableTypes0(annotatedElement, type, type);
+            return ofInjectableTypes0(annotatedElement, type, type, useBlockingExecutor);
         }
 
         final Type actual =
                 ((ParameterizedType) parameterizedTypeOf(annotatedElement)).getActualTypeArguments()[0];
-        final AnnotatedValueResolver resolver = ofInjectableTypes0(annotatedElement, type, actual);
+        final AnnotatedValueResolver resolver =
+                ofInjectableTypes0(annotatedElement, type, actual, useBlockingExecutor);
         if (resolver != null) {
             logger.warn("Unnecessary Optional is used at '{}'", annotatedElement);
         }
@@ -568,7 +574,8 @@ final class AnnotatedValueResolver {
 
     @Nullable
     private static AnnotatedValueResolver ofInjectableTypes0(AnnotatedElement annotatedElement,
-                                                             Class<?> type, Type actual) {
+                                                             Class<?> type, Type actual,
+                                                             boolean useBlockingExecutor) {
         if (actual == RequestContext.class || actual == ServiceRequestContext.class) {
             return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.context())
@@ -609,6 +616,18 @@ final class AnnotatedValueResolver {
                             return Cookies.of();
                         }
                         return Cookie.fromCookieHeader(value);
+                    })
+                    .build();
+        }
+
+        if (actual instanceof Class && ScalaUtil.isExecutionContext((Class<?>) actual)) {
+            return new Builder(annotatedElement, type)
+                    .resolver((unused, ctx) -> {
+                        if (useBlockingExecutor) {
+                            return ExecutionContext.fromExecutorService(ctx.context().blockingTaskExecutor());
+                        } else {
+                            return ExecutionContext.fromExecutorService(ctx.context().eventLoop());
+                        }
                     })
                     .build();
         }
