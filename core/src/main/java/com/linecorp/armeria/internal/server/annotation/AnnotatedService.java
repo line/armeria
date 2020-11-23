@@ -288,12 +288,11 @@ public final class AnnotatedService implements HttpService {
                 final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
                     composedFuture = f.thenComposeAsync(
-                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor(),
-                                                     responseType),
+                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor()),
                             ctx.blockingTaskExecutor());
                 } else {
                     composedFuture = f.thenCompose(
-                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop(), responseType));
+                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop()));
                 }
                 return composedFuture.handle(
                         (result, cause) -> {
@@ -316,6 +315,7 @@ public final class AnnotatedService implements HttpService {
     /**
      * Invokes the service method with arguments.
      */
+    @Nullable
     private Object invoke(ServiceRequestContext ctx, HttpRequest req,
                           @Nullable AggregatedHttpRequest aggregatedRequest) {
         try (SafeCloseable ignored = ctx.push()) {
@@ -420,17 +420,14 @@ public final class AnnotatedService implements HttpService {
     /**
      * Converts the specified {@code obj} with {@link CompletableFuture} based on the {@link ResponseType}.
      */
-    private static CompletionStage<?> toCompletionStage(Object obj, ExecutorService executor,
-                                                        ResponseType responseType) {
-        switch (responseType) {
-            case COMPLETION_STAGE:
-                return (CompletionStage<?>) obj;
-            case SCALA_FUTURE:
-                return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj,
-                                                                     executor);
-            default:
-                return CompletableFuture.completedFuture(obj);
+    private static CompletionStage<?> toCompletionStage(@Nullable Object obj, ExecutorService executor) {
+        if (obj instanceof CompletionStage) {
+            return (CompletionStage<?>) obj;
         }
+        if (obj != null && ScalaUtil.isScalaFuture(obj.getClass())) {
+            return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
+        }
+        return CompletableFuture.completedFuture(obj);
     }
 
     /**
