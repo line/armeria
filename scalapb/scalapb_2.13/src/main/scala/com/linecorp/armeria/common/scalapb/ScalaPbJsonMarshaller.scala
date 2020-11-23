@@ -71,7 +71,7 @@ final class ScalaPbJsonMarshaller private (
 }
 
 /**
- * A companion object for [[com.linecorp.armeria.scalapb.ScalaPBJsonMarshaller]].
+ * A companion object for [[com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller]].
  */
 object ScalaPbJsonMarshaller {
 
@@ -84,7 +84,7 @@ object ScalaPbJsonMarshaller {
   private val defaultInstance: ScalaPbJsonMarshaller = new ScalaPbJsonMarshaller()
 
   /**
-   * Returns a newly-created [[com.linecorp.armeria.scalapb.ScalaPBJsonMarshaller]].
+   * Returns a newly-created [[com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller]].
    */
   def apply(
       jsonPrinter: Printer = jsonDefaultPrinter,
