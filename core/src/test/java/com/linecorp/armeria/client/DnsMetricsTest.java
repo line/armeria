@@ -88,6 +88,9 @@ public class DnsMetricsTest {
                         server.addr().getHostString() + '}';
                 final String successMeterId =
                         "armeria.client.dns.queries#count{cause=none,name=foo.com.,result=success}";
+                final String otherExceptionId =
+                        "armeria.client.dns.queries#count{" +
+                                "cause=others,name=bar.com.,result=failure}";
                 assertThat(MoreMeters.measureAll(meterRegistry))
                         .doesNotContainKeys(writeMeterId, successMeterId);
 
@@ -96,7 +99,8 @@ public class DnsMetricsTest {
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
                             .containsEntry(writeMeterId, 1.0)
-                            .containsEntry(successMeterId, 1.0);
+                            .containsEntry(successMeterId, 1.0)
+                            .doesNotContainKey(otherExceptionId);
                 });
             }
         }
@@ -129,6 +133,9 @@ public class DnsMetricsTest {
                 final String timeoutMeterId =
                         "armeria.client.dns.queries#count{" +
                         "cause=resolver_timeout,name=foo.com.,result=failure}";
+                final String otherExceptionId =
+                        "armeria.client.dns.queries#count{" +
+                                "cause=others,name=bar.com.,result=failure}";
                 assertThat(MoreMeters.measureAll(meterRegistry))
                         .doesNotContainKeys(writeMeterId_ipv4_addr,writeMeterId_ipv6_addr, timeoutMeterId);
 
@@ -140,7 +147,8 @@ public class DnsMetricsTest {
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
                             .containsAnyOf(entry(writeMeterId_ipv6_addr, 1.0),
-                                           entry(writeMeterId_ipv4_addr, 1.0));
+                                           entry(writeMeterId_ipv4_addr, 1.0))
+                            .doesNotContainKey(otherExceptionId);
                 });
             }
         }
@@ -173,13 +181,18 @@ public class DnsMetricsTest {
                 final String nxDomainMeterId =
                         "armeria.client.dns.queries#count{" +
                         "cause=nx_domain,name=bar.com.,result=failure}";
+                final String otherExceptionId =
+                        "armeria.client.dns.queries#count{" +
+                                "cause=others,name=bar.com.,result=failure}";
+
                 assertThatThrownBy(() -> client.get("http://bar.com").aggregate().join())
                         .hasRootCauseInstanceOf(UnknownHostException.class);
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
                             .containsEntry(writtenMeterId, 2.0)
-                            .containsEntry(nxDomainMeterId, 2.0);
+                            .containsEntry(nxDomainMeterId, 2.0)
+                            .doesNotContainKey(otherExceptionId);
                 });
             }
         }
@@ -214,6 +227,9 @@ public class DnsMetricsTest {
                 final String nxDomainMeterId =
                         "armeria.client.dns.queries#count{" +
                                 "cause=nx_domain,name=bar.com.,result=failure}";
+                final String otherExceptionId =
+                        "armeria.client.dns.queries#count{" +
+                                "cause=others,name=bar.com.,result=failure}";
                 assertThat(MoreMeters.measureAll(meterRegistry)).doesNotContainKeys(
                         writtenMeterId, noAnswerMeterId, nxDomainMeterId, nxDomainMeterId);
 
@@ -223,7 +239,8 @@ public class DnsMetricsTest {
                 assertThat(MoreMeters.measureAll(meterRegistry))
                         .containsEntry(writtenMeterId, 2.0)
                         .containsEntry(noAnswerMeterId, 1.0)
-                        .containsEntry(nxDomainMeterId, 1.0);
+                        .containsEntry(nxDomainMeterId, 1.0)
+                        .doesNotContainKey(otherExceptionId);
             }
         }
     }
@@ -257,13 +274,17 @@ public class DnsMetricsTest {
                         "armeria.client.dns.queries.cnamed#count{cname=baz.com.,name=bar.com.}";
                 final String successMeterId =
                         "armeria.client.dns.queries#count{cause=none,name=bar.com.,result=success}";
+                final String otherExceptionId =
+                        "armeria.client.dns.queries#count{" +
+                                "cause=others,name=bar.com.,result=failure}";
                 client.get("http://bar.com:1/").aggregate();
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
                             .containsEntry(writtenMeterId, 2.0)
                             .containsEntry(cnamed, 1.0)
-                            .containsEntry(successMeterId, 2.0);
+                            .containsEntry(successMeterId, 2.0)
+                            .doesNotContainKey(otherExceptionId);
                 });
             }
         }
