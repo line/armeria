@@ -57,21 +57,30 @@ final class ScalaUtil {
         return SCALA_EXECUTION_CONTEXT != null && SCALA_EXECUTION_CONTEXT.isAssignableFrom(clazz);
     }
 
-    static <T> CompletableFuture<T> toCompletableFuture(scala.concurrent.Future<T> scalaFuture,
-                                                        ExecutorService executor) {
-        final CompletableFuture<T> completableFuture = new CompletableFuture<>();
+    /**
+     * A converter that converts {@link scala.concurrent.Future} to {@link CompletableFuture}.
+     * This nested class will be lazily initialized only when scala-library is in the classpath.
+     */
+    static final class FutureConverter {
 
-        scalaFuture.onComplete(value -> {
-            if (value.isSuccess()) {
-                completableFuture.complete(value.get());
-            } else {
-                final Failure<T> failure = (Failure<T>) value;
-                completableFuture.completeExceptionally(failure.exception());
-            }
-            return null;
-        }, ExecutionContext.fromExecutorService(executor));
+        static <T> CompletableFuture<T> toCompletableFuture(scala.concurrent.Future<T> scalaFuture,
+                                                            ExecutorService executor) {
+            final CompletableFuture<T> completableFuture = new CompletableFuture<>();
 
-        return completableFuture;
+            scalaFuture.onComplete(value -> {
+                if (value.isSuccess()) {
+                    completableFuture.complete(value.get());
+                } else {
+                    final Failure<T> failure = (Failure<T>) value;
+                    completableFuture.completeExceptionally(failure.exception());
+                }
+                return null;
+            }, ExecutionContext.fromExecutorService(executor));
+
+            return completableFuture;
+        }
+
+        private FutureConverter() {}
     }
 
     private ScalaUtil() {}

@@ -426,7 +426,8 @@ public final class AnnotatedService implements HttpService {
             case COMPLETION_STAGE:
                 return (CompletionStage<?>) obj;
             case SCALA_FUTURE:
-                return ScalaUtil.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
+                return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj,
+                                                                     executor);
             default:
                 return CompletableFuture.completedFuture(obj);
         }
