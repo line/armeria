@@ -63,7 +63,6 @@ class ScalaPbResponseAnnotatedServiceTest {
       .builder(ScalaPbResponseAnnotatedServiceTest.server.httpUri)
       .responseTimeoutMillis(0)
       .build()
-
   }
 
   @AfterEach
