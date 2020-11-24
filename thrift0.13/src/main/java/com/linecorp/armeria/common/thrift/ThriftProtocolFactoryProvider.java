@@ -21,6 +21,8 @@ import java.util.Set;
 
 import org.apache.thrift.protocol.TProtocolFactory;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.SerializationFormat;
 
 /**
@@ -31,20 +33,20 @@ public abstract class ThriftProtocolFactoryProvider {
      * Pair of {@link SerializationFormat} and {@link TProtocolFactory}.
      */
     protected static final class Entry {
-        private final SerializationFormat serializationFormat;
-        private final TProtocolFactory tProtocolFactory;
+        final SerializationFormat serializationFormat;
+        final TProtocolFactory tProtocolFactory;
 
         public Entry(SerializationFormat serializationFormat, TProtocolFactory tProtocolFactory) {
             this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
             this.tProtocolFactory = requireNonNull(tProtocolFactory, "tProtocolFactory");
         }
 
-        public SerializationFormat getSerializationFormat() {
-            return serializationFormat;
-        }
-
-        public TProtocolFactory getTProtocolFactory() {
-            return tProtocolFactory;
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("serializationFormat", serializationFormat)
+                              .add("tProtocolFactory", tProtocolFactory)
+                              .toString();
         }
     }
 

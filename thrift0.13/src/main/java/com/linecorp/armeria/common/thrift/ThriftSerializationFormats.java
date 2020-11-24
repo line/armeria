@@ -29,7 +29,6 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider.Entry;
 
 /**
  * Registered Thrift-related {@link SerializationFormat} instances.
@@ -77,8 +76,7 @@ public final class ThriftSerializationFormats {
                 .stream()
                 .map(ThriftProtocolFactoryProvider::entries)
                 .flatMap(Set::stream)
-                .collect(toImmutableMap(Entry::getSerializationFormat,
-                                        Entry::getTProtocolFactory));
+                .collect(toImmutableMap(e -> e.serializationFormat, e -> e.tProtocolFactory));
     }
 
     /**
