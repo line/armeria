@@ -324,7 +324,7 @@ public abstract class AbstractHttpRequestBuilder {
     /**
      * Creates a new {@link HttpRequest}.
      */
-    protected HttpRequest buildRequest() {
+    protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
         if (content == null || content.isEmpty()) {
             if (content != null) {

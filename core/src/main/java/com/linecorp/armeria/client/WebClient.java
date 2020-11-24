@@ -276,7 +276,15 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new {@link WebClientRequestPreparation}.
+     * Prepares to send a {@link HttpRequest} using fluent builder.
+     * <pre>{@code
+     * WebClient client = WebClient.of(...);
+     * HttpResponse response = client.prepare()
+     *                               .post("/foo")
+     *                               .header(HttpHeaderNames.AUTHORIZATION, ...)
+     *                               .content(MediaType.JSON, ...)
+     *                               .execute();
+     * }</pre>
      */
     default WebClientRequestPreparation prepare() {
         return new WebClientRequestPreparation(this);
