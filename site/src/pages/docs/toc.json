@@ -41,6 +41,7 @@
     "advanced-zipkin",
     "advanced-saml",
     "advanced-spring-webflux-integration",
-    "advanced-dropwizard-integration"
+    "advanced-dropwizard-integration",
+    "advanced-scalapb"
   ]
 }
