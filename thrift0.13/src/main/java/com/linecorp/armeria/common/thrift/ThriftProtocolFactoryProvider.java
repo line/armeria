@@ -53,7 +53,7 @@ public abstract class ThriftProtocolFactoryProvider {
     /**
      * Accessed configured {@link Entry}s for this SPI provider.
      *
-     * @return an immutable view
+     * @return an immutable set of configured entries
      */
     protected abstract Set<Entry> entries();
 }

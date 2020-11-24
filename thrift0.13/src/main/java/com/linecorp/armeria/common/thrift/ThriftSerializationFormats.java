@@ -15,12 +15,12 @@
  */
 package com.linecorp.armeria.common.thrift;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 
@@ -87,9 +87,9 @@ public final class ThriftSerializationFormats {
      */
     public static TProtocolFactory get(SerializationFormat serializationFormat) {
         requireNonNull(serializationFormat, "serializationFormat");
-        return Optional.ofNullable(knownProtocolFactories.get(serializationFormat))
-                       .orElseThrow(() -> new IllegalArgumentException(
-                               "Unsupported Thrift serializationFormat: " + serializationFormat));
+        final TProtocolFactory value = knownProtocolFactories.get(serializationFormat);
+        checkArgument(value != null, "Unsupported Thrift serializationFormat: %s", serializationFormat);
+        return value;
     }
 
     /**
