@@ -46,4 +46,13 @@ class DefaultCookieTest {
         final Cookie cookie = Cookie.of("a", "b").withMutations(mutator -> mutator.name("c").value("d"));
         assertThat(cookie).isEqualTo(Cookie.of("c", "d"));
     }
+
+    @Test
+    void trimDomainDot() {
+        Cookie cookie = Cookie.builder("a", "b").domain("foo.com.").build();
+        assertThat(cookie.domain()).isNull();
+
+        cookie = Cookie.builder("a", "b").domain(".foo.com").build();
+        assertThat(cookie.domain()).isEqualTo("foo.com");
+    }
 }

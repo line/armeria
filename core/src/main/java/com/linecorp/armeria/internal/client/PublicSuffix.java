@@ -28,11 +28,16 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Ascii;
+import com.google.common.base.CharMatcher;
+
 /**
  * Utility class to determine if a domain is a public suffix. List of rules taken from
  * <a href="https://publicsuffix.org/list/public_suffix_list.dat">Public Suffix List</a>.
  */
 public final class PublicSuffix {
+
+    private static final CharMatcher DOTS_MATCHER = CharMatcher.anyOf(".。．｡");
 
     public static PublicSuffix get() {
         return PublicSuffixHolder.INSTANCE;
@@ -144,6 +149,7 @@ public final class PublicSuffix {
      *               encoded, for example, using {@link java.net.IDN#toASCII(String)}.
      */
     public boolean isPublicSuffix(String domain) {
+        domain = Ascii.toLowerCase(DOTS_MATCHER.replaceFrom(domain, '.'));
         final String[] labels = domain.split("\\.");
         final int start = domain.charAt(0) == '.' ? 1 : 0;
         final int end = domain.charAt(domain.length() - 1) == '.' ? labels.length - 2 : labels.length - 1;

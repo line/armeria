@@ -50,6 +50,17 @@ public final class CookieBuilder {
         return value;
     }
 
+    @Nullable
+    private static String trimDomainDot(String domain) {
+        if (domain.charAt(domain.length() - 1) == '.') {
+            return null;
+        }
+        if (domain.charAt(0) == '.') {
+            return domain.substring(1);
+        }
+        return domain;
+    }
+
     private String name;
     private String value;
     private boolean valueQuoted;
@@ -115,7 +126,7 @@ public final class CookieBuilder {
      * Sets the domain of the {@link Cookie}.
      */
     public CookieBuilder domain(String domain) {
-        this.domain = validateAttributeValue(domain, "domain");
+        this.domain = trimDomainDot(validateAttributeValue(domain, "domain"));
         return this;
     }
 
