@@ -202,34 +202,28 @@ class PublicSuffixesTask extends DefaultTask {
     @Input
     final def days = (System.currentTimeMillis() / TimeUnit.DAYS.toMillis(7)).intValue()
     @OutputFile
-    final def publicSuffixesFile = project.file("${project.buildDir}/resources/main/com/linecorp/armeria/public_suffixes.txt")
+    final def publicSuffixesFile = project.file("${project.projectDir}/src/main/resources/com/linecorp/armeria/public_suffixes.txt")
 
     @TaskAction
     def run() {
         try {
             def tempFile = File.createTempFile("public_suffixes", null)
-            println "tempFile is created: ${tempFile}"
-
-            def url = 'https://publicsuffix.org/list/public_suffix_list.dat'
-            def req = new URL(url).openConnection()
-            if (req.getResponseCode() != 200) {
-                throw new Exception('Received a non-200 response from publicsuffix.org: ' +
-                        "${req.getResponseCode()}, ${req.getHeaderFields()}")
-            }
+            def req = (HttpURLConnection) new URL('https://publicsuffix.org/list/public_suffix_list.dat').openConnection()
             def res = req.getInputStream()
+            if (req.getResponseCode() != 200) {
+                println "received a non-200 response from publicsuffix.org: ${req.getResponseCode()}"
+                return
+            }
             res.eachLine('UTF-8') {
                 if (!it.isEmpty() && !it.startsWith("//")) {
                     tempFile.append(IDN.toASCII(it) + "\n")
                 }
             }
             publicSuffixesFile.delete()
-
-            println "public suffixes file is removed: ${publicSuffixesFile}"
             tempFile.renameTo(publicSuffixesFile)
-
-            println "tempFile is renamed"
+            println "public suffixes file is updated"
         } catch (Exception e) {
-            project.logger.info(e.getMessage())
+            println "an exception was thrown: ${e.getMessage()}"
         }
     }
 }

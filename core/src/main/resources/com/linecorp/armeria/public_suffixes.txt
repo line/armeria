@@ -6679,7 +6679,6 @@ iveco
 jaguar
 java
 jcb
-jcp
 jeep
 jetzt
 jewelry
@@ -7464,6 +7463,7 @@ app.banzaicloud.io
 betainabox.com
 bnr.la
 blackbaudcdn.net
+of.je
 boomla.net
 boxfuse.io
 square7.ch
@@ -7919,6 +7919,7 @@ myhome-server.de
 ddnss.org
 definima.net
 definima.io
+ondigitalocean.app
 bci.dnstrace.pro
 ddnsfree.com
 ddnsgeek.com
@@ -8358,6 +8359,9 @@ jele.cloud
 it1.eur.aruba.jenv-aruba.cloud
 it1.jenv-aruba.cloud
 it1-eur.jenv-arubabiz.cloud
+oxa.cloud
+tn.oxa.cloud
+uk.oxa.cloud
 primetel.cloud
 uk.primetel.cloud
 ca.reclaim.cloud
@@ -8428,6 +8432,7 @@ jelastic.regruhosting.ru
 enscaled.sg
 jele.site
 jelastic.team
+orangecloud.tn
 j.layershift.co.uk
 phx.enscaled.us
 mircloud.us
@@ -8774,6 +8779,9 @@ pantheonsite.io
 gotpantheon.com
 mypep.link
 perspecta.cloud
+lk3.ru
+ra-ru.ru
+zsew.ru
 on-web.fr
 bc.platform.sh
 ent.platform.sh
@@ -9020,7 +9028,7 @@ v.ua
 wafflecell.com
 idnblogger.com
 indowapblog.com
-bloghp.id
+bloger.id
 wblog.id
 wbq.me
 fastblog.net
