@@ -53,7 +53,7 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
 
     @Nullable
     @Override
-    public Locale selectLocale(final Collection<Locale> supportedLocales) {
+    public Locale selectLocale(Collection<Locale> supportedLocales) {
         return super.selectLocale(supportedLocales);
     }
 

@@ -220,7 +220,7 @@ class HttpHeadersBase
         final String methodStr = get(HttpHeaderNames.METHOD);
         checkState(methodStr != null, ":method header does not exist.");
         return HttpMethod.isSupported(methodStr) ? HttpMethod.valueOf(methodStr)
-                : HttpMethod.UNKNOWN;
+                                                 : HttpMethod.UNKNOWN;
     }
 
     final void method(HttpMethod method) {

@@ -133,7 +133,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
         requireNonNull(acceptLanguages, "acceptLanguages");
         final String acceptLanguagesValue = Streams
                 .stream(acceptLanguages)
-                .map(it -> ((it.getWeight() == 1.0d) ? it.getRange() : it.getRange() + ";q=" + it.getWeight()))
+                .map(it -> (it.getWeight() == 1.0d) ? it.getRange() : it.getRange() + ";q=" + it.getWeight())
                 .collect(Collectors.joining(", "));
         set(HttpHeaderNames.ACCEPT_LANGUAGE, acceptLanguagesValue);
         return self();
