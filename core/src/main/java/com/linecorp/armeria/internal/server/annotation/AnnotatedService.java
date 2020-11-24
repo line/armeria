@@ -418,7 +418,7 @@ public final class AnnotatedService implements HttpService {
     }
 
     /**
-     * Converts the specified {@code obj} with {@link CompletableFuture} based on the {@link ResponseType}.
+     * Converts the specified {@code obj} with {@link CompletableFuture}.
      */
     private static CompletionStage<?> toCompletionStage(@Nullable Object obj, ExecutorService executor) {
         if (obj instanceof CompletionStage) {
