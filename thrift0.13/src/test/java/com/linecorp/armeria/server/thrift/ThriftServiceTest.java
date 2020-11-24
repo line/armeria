@@ -709,11 +709,11 @@ class ThriftServiceTest {
     }
 
     private TProtocol inProto(SerializationFormat defaultSerializationFormat) {
-        return ThriftSerializationFormats.get(defaultSerializationFormat).getProtocol(in);
+        return ThriftSerializationFormats.tProtocolFactory(defaultSerializationFormat).getProtocol(in);
     }
 
     private TProtocol outProto(SerializationFormat defaultSerializationFormat) {
-        return ThriftSerializationFormats.get(defaultSerializationFormat).getProtocol(out);
+        return ThriftSerializationFormats.tProtocolFactory(defaultSerializationFormat).getProtocol(out);
     }
 
     private static class SerializationFormatProvider implements ArgumentsProvider {

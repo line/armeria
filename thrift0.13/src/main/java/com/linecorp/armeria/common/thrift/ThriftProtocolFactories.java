@@ -78,15 +78,15 @@ public final class ThriftProtocolFactories {
     public static final TProtocolFactory TEXT_NAMED_ENUM = TTextProtocolFactory.get(true);
 
     /**
-     * Alias for {@link ThriftSerializationFormats#get(SerializationFormat)}.
+     * Alias for {@link ThriftSerializationFormats#tProtocolFactory(SerializationFormat)}.
      *
      * @param serializationFormat a known serialization format
      * @return the protocol factory linked to the input serializationFormat
-     * @deprecated use {@link ThriftSerializationFormats#get(SerializationFormat)}.
+     * @deprecated use {@link ThriftSerializationFormats#tProtocolFactory(SerializationFormat)}.
      */
     @Deprecated
     public static TProtocolFactory get(SerializationFormat serializationFormat) {
-        return ThriftSerializationFormats.get(serializationFormat);
+        return ThriftSerializationFormats.tProtocolFactory(serializationFormat);
     }
 
     /**

@@ -85,7 +85,7 @@ public final class ThriftSerializationFormats {
      * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not a
      *         known Thrift serialization format
      */
-    public static TProtocolFactory get(SerializationFormat serializationFormat) {
+    public static TProtocolFactory tProtocolFactory(SerializationFormat serializationFormat) {
         requireNonNull(serializationFormat, "serializationFormat");
         final TProtocolFactory value = knownProtocolFactories.get(serializationFormat);
         checkArgument(value != null, "Unsupported Thrift serializationFormat: %s", serializationFormat);
