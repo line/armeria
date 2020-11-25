@@ -871,6 +871,7 @@ public final class ServerBuilder {
 
     /**
      * Returns a {@link DecoratingServiceBindingBuilder} which is for binding a {@code decorator} fluently.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
     public DecoratingServiceBindingBuilder routeDecorator() {
         return new DecoratingServiceBindingBuilder(this);
@@ -1178,6 +1179,7 @@ public final class ServerBuilder {
 
     /**
      * Decorates all {@link HttpService}s with the specified {@code decorator}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decorator the {@link Function} that decorates {@link HttpService}s
      */
@@ -1187,6 +1189,7 @@ public final class ServerBuilder {
 
     /**
      * Decorates all {@link HttpService}s with the specified {@link DecoratingHttpServiceFunction}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
@@ -1198,6 +1201,7 @@ public final class ServerBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
     public ServerBuilder decorator(
             String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
@@ -1206,6 +1210,7 @@ public final class ServerBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}.
@@ -1217,6 +1222,7 @@ public final class ServerBuilder {
 
     /**
      * Decorates {@link HttpService}s with the specified {@link Route}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param route the route being decorated
      * @param decorator the {@link Function} that decorates {@link HttpService} which matches
@@ -1231,6 +1237,7 @@ public final class ServerBuilder {
 
     /**
      * Decorates {@link HttpService}s with the specified {@link Route}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param route the route being decorated
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
@@ -1245,6 +1252,7 @@ public final class ServerBuilder {
 
     /**
      * Decorates {@link HttpService}s under the specified directory.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
@@ -1256,6 +1264,7 @@ public final class ServerBuilder {
 
     /**
      * Decorates {@link HttpService}s under the specified directory.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
     public ServerBuilder decoratorUnder(String prefix,
                                         Function<? super HttpService, ? extends HttpService> decorator) {
