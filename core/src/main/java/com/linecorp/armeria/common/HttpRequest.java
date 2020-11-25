@@ -360,7 +360,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      */
     @Nullable
     default Locale selectLocale(Locale... supportedLocales) {
-        return headers().selectLocale(ImmutableList.copyOf(supportedLocales));
+        return selectLocale(ImmutableList.copyOf(supportedLocales));
     }
 
     /**
