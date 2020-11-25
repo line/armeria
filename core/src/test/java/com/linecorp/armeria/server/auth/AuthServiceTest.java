@@ -458,6 +458,7 @@ class AuthServiceTest {
             authorization.append(entry.getValue());
             authorization.append('"');
         }
+        System.out.println(authorization.toString());
         request.addHeader(header.toString(), authorization.toString());
         return request;
     }
