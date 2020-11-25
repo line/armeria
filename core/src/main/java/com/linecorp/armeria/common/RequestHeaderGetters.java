@@ -22,6 +22,8 @@ import java.util.Locale.LanguageRange;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
+
 /**
  * Provides the getter methods to {@link RequestHeaders} and {@link RequestHeadersBuilder}.
  *
@@ -105,5 +107,7 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
      * @return The best matching {@link Locale} or {@code null} if no locale matches.
      */
     @Nullable
-    Locale selectLocale(Locale... supportedLocales);
+    default Locale selectLocale(Locale... supportedLocales) {
+        return selectLocale(ImmutableList.copyOf(supportedLocales));
+    }
 }

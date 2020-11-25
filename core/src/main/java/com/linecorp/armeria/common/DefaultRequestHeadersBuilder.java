@@ -153,11 +153,4 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
         final HttpHeadersBase getters = getters();
         return getters != null ? getters.selectLocale(supportedLocales) : null;
     }
-
-    @Nullable
-    @Override
-    public Locale selectLocale(Locale... supportedLocales) {
-        final HttpHeadersBase getters = getters();
-        return getters != null ? getters.selectLocale(ImmutableList.copyOf(supportedLocales)) : null;
-    }
 }

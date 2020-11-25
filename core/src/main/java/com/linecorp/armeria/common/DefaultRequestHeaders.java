@@ -22,8 +22,6 @@ import java.util.Locale.LanguageRange;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
-
 @SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
 final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestHeaders {
 
@@ -56,12 +54,6 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
     @Override
     public Locale selectLocale(Iterable<Locale> supportedLocales) {
         return super.selectLocale(supportedLocales);
-    }
-
-    @Nullable
-    @Override
-    public Locale selectLocale(Locale... supportedLocales) {
-        return super.selectLocale(ImmutableList.copyOf(supportedLocales));
     }
 
     @Override

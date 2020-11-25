@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Locale.LanguageRange;
 import java.util.Map.Entry;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.Endpoint;
 
 /**
@@ -97,6 +99,15 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
      * @return {@code this}
      */
     RequestHeadersBuilder acceptLanguages(Iterable<LanguageRange> acceptedLanguages);
+
+    /**
+     * Sets the {@code "accept-language"} header.
+     * @param acceptedLanguages the accepted languages.
+     * @return {@code this}
+     */
+    default RequestHeadersBuilder acceptLanguages(LanguageRange... acceptedLanguages) {
+        return acceptLanguages(ImmutableList.copyOf(acceptedLanguages));
+    }
 
     // Override the return type of the chaining methods in the superclass.
 
