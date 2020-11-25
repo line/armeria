@@ -18,7 +18,7 @@ package com.linecorp.armeria.common.consul;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 
 /**
- * Sets properties for building {@code ConsulClient}.
+ * Sets properties for building a Consul client.
  */
 public interface ConsulConfigSetters {
     /**

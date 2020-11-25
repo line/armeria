@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.consul.ConsulConfigSetters;
 
-public class ConsulClientBuilder implements ConsulConfigSetters {
+public final class ConsulClientBuilder implements ConsulConfigSetters {
     public static final String DEFAULT_CONSUL_API_VERSION = "v1";
     private static final Pattern CONSUL_API_VERSION_PATTERN = Pattern.compile("^v[0-9][-._a-zA-Z0-9]*$");
 
@@ -35,7 +35,7 @@ public class ConsulClientBuilder implements ConsulConfigSetters {
     @Nullable
     private String consulToken;
 
-    protected ConsulClientBuilder(URI consulUri) {
+    ConsulClientBuilder(URI consulUri) {
         this.consulUri = requireNonNull(consulUri, "consulUri");
     }
 
@@ -57,7 +57,7 @@ public class ConsulClientBuilder implements ConsulConfigSetters {
         return this;
     }
 
-    public final ConsulClient build() {
+    public ConsulClient build() {
         final URI uri;
         try {
             uri = new URI(consulUri.getScheme(), null, consulUri.getHost(), consulUri.getPort(),

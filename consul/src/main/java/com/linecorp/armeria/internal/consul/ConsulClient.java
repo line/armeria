@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * A client for accessing to Consul agent API server.
+ * A client for accessing a Consul agent API server.
  */
 public final class ConsulClient {
     private static final ObjectMapper objectMapper = new ObjectMapper();
