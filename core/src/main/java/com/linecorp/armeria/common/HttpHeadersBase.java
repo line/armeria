@@ -203,15 +203,24 @@ class HttpHeadersBase
     }
 
     @Nullable
-    Locale selectLocale(Collection<Locale> supportedLocales) {
+    Locale selectLocale(Iterable<Locale> supportedLocales) {
         requireNonNull(supportedLocales, "supportedLocales");
+        final Collection<Locale> localeCollection;
+        if (supportedLocales instanceof Collection) {
+            localeCollection = (Collection<Locale>) supportedLocales;
+        } else {
+            localeCollection = ImmutableList.copyOf(supportedLocales);
+        }
+        if (localeCollection.isEmpty()) {
+            return null;
+        }
         final List<LanguageRange> languageRanges = acceptLanguages();
-        if (languageRanges == null || supportedLocales.isEmpty()) {
+        if (languageRanges == null) {
             return null;
         }
         return languageRanges
                 .stream()
-                .flatMap(it -> Locale.filter(ImmutableList.of(it), supportedLocales).stream())
+                .flatMap(it -> Locale.filter(ImmutableList.of(it), localeCollection).stream())
                 .findFirst()
                 .orElse(null);
     }

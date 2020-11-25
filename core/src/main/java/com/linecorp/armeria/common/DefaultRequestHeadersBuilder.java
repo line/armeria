@@ -27,7 +27,8 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.Streams;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 
 final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<RequestHeadersBuilder>
         implements RequestHeadersBuilder {
@@ -131,8 +132,15 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     public RequestHeadersBuilder acceptLanguages(Iterable<LanguageRange> acceptLanguages) {
         requireNonNull(acceptLanguages, "acceptLanguages");
-        final String acceptLanguagesValue = Streams
-                .stream(acceptLanguages)
+        final Collection<LanguageRange> languageRangeCollection;
+        if (acceptLanguages instanceof Collection) {
+            languageRangeCollection = (Collection<LanguageRange>) acceptLanguages;
+        } else {
+            languageRangeCollection = ImmutableList.copyOf(acceptLanguages);
+        }
+        Preconditions.checkArgument(!languageRangeCollection.isEmpty(), "acceptLanguages cannot be empty");
+        final String acceptLanguagesValue = languageRangeCollection
+                .stream()
                 .map(it -> (it.getWeight() == 1.0d) ? it.getRange() : it.getRange() + ";q=" + it.getWeight())
                 .collect(Collectors.joining(", "));
         set(HttpHeaderNames.ACCEPT_LANGUAGE, acceptLanguagesValue);
@@ -141,8 +149,15 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
 
     @Nullable
     @Override
-    public Locale selectLocale(Collection<Locale> supportedLocales) {
+    public Locale selectLocale(Iterable<Locale> supportedLocales) {
         final HttpHeadersBase getters = getters();
         return getters != null ? getters.selectLocale(supportedLocales) : null;
+    }
+
+    @Nullable
+    @Override
+    public Locale selectLocale(Locale... supportedLocales) {
+        final HttpHeadersBase getters = getters();
+        return getters != null ? getters.selectLocale(ImmutableList.copyOf(supportedLocales)) : null;
     }
 }

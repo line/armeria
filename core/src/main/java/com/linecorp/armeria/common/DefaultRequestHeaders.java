@@ -16,12 +16,13 @@
 package com.linecorp.armeria.common;
 
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 @SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
 final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestHeaders {
@@ -53,8 +54,14 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
 
     @Nullable
     @Override
-    public Locale selectLocale(Collection<Locale> supportedLocales) {
+    public Locale selectLocale(Iterable<Locale> supportedLocales) {
         return super.selectLocale(supportedLocales);
+    }
+
+    @Nullable
+    @Override
+    public Locale selectLocale(Locale... supportedLocales) {
+        return super.selectLocale(ImmutableList.copyOf(supportedLocales));
     }
 
     @Override

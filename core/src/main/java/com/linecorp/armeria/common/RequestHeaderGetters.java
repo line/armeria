@@ -16,7 +16,6 @@
 package com.linecorp.armeria.common;
 
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
@@ -86,9 +85,25 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
      * and also referenced in <a href="https://tools.ietf.org/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
      * <p/>
      * See also {@link Locale#lookup} for another algorithm.
-     * @param supportedLocales a {@link Collection} of {@link Locale}s supported by the server.
+     * @param supportedLocales a {@link Iterable} of {@link Locale}s supported by the server.
      * @return The best matching {@link Locale} or {@code null} if no locale matches.
      */
     @Nullable
-    Locale selectLocale(Collection<Locale> supportedLocales);
+    Locale selectLocale(Iterable<Locale> supportedLocales);
+
+    /**
+     * Matches the {@link Locale}s supported by the server to
+     * the {@link HttpHeaderNames#ACCEPT_LANGUAGE} and returns the best match
+     * according to client preference. It does this via <s>Basic Filter</s>ing each
+     * {@link LanguageRange} and picking the first match. This is the "classic"
+     * algorithm described in
+     * <a href="https://tools.ietf.org/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
+     * and also referenced in <a href="https://tools.ietf.org/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     * <p/>
+     * See also {@link Locale#lookup} for another algorithm.
+     * @param supportedLocales {@link Locale}s supported by the server.
+     * @return The best matching {@link Locale} or {@code null} if no locale matches.
+     */
+    @Nullable
+    Locale selectLocale(Locale... supportedLocales);
 }
