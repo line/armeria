@@ -7,7 +7,8 @@ This page describes how to enable this.
 
 The metric data is collected using the [Micrometer](https://micrometer.io/) library.
 Please consult its documentation for information on how to expose the collected metrics to
-various monitoring systems (JMX, Prometheus, etc).
+various monitoring systems such as [Prometheus](https://prometheus.io/), 
+[Dropwizard Metrics](https://metrics.dropwizard.io/4.1.2/) and [Datadog](https://www.datadoghq.com/).
 
 </Tip>
 
@@ -37,25 +38,23 @@ you can use <type://GrpcMeterIdPrefixFunction> instead of <type://MeterIdPrefixF
 import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction;
 import com.linecorp.armeria.server.grpc.GrpcService;
 
-Server server = 
-        Server.builder()
-              .http(new InetSocketAddress(address, port))
-              .service(GrpcService.builder()
-                                  .addService(new MyHelloService())
-                                  .build())
-              .decorator(MetricCollectingService.newDecorator(
-                      GrpcMeterIdPrefixFunction.of("grpc.service")))
-              .build();
+Server.builder()
+      .http(new InetSocketAddress(address, port))
+      .service(GrpcService.builder()
+                          .addService(new MyHelloService())
+                          .build())
+      .decorator(MetricCollectingService.newDecorator(
+              GrpcMeterIdPrefixFunction.of("grpc.service")))
+      .build();
 ```
 
 In cases where more sophisticated filtering and/or mangling of the generated metrics are required,
 you can use the <type://ServerBuilder#meterRegistry(MeterRegistry)> method like this:
 
 ```java
-ServerBuilder serverBuilder = 
-        Server.builder()
-              // ...
-              .meterRegistry(myMeterRegistry);
+Server.builder()
+      // ...
+      .meterRegistry(myMeterRegistry);
 ```
 
 ## Collecting client-side metrics
@@ -104,3 +103,55 @@ Clients.builder(grpcUrl)
         // ...
        .build(HelloServiceBlockingStub.class);
 ```
+
+## Changing the default distribution summary config
+
+A [distribution summary](https://micrometer.io/docs/concepts#_distribution_summaries) is used to track 
+the distribution of events.
+Armeria provides a sensible default
+[DistributionStatisticConfig](https://javadoc.io/doc/io.micrometer/micrometer-core/latest/io/micrometer/core/instrument/distribution/DistributionStatisticConfig.html)
+for measuring the following metrics:
+- A length of the request content
+- A length of the response content
+- A duration of request
+- A duration of response
+
+If you want to override the default config,
+you can set your own `DistributionStatisticConfig` using <type://MoreMeters#setDistributionStatisticConfig(DistributionStatisticConfig)>.
+
+```java
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
+
+DistributionStatisticConfig myDistStatCfg =
+        DistributionStatisticConfig.builder()
+                                  .percentilesHistogram(false)
+                                  .sla()
+                                  .percentiles(PERCENTILES)
+                                  .percentilePrecision(10)
+                                  .minimumExpectedValue(1L)
+                                  .maximumExpectedValue(Long.MAX_VALUE)
+                                  .expiry(Duration.ofMinutes(10))
+                                  .bufferLength(10)
+                                  .build();
+MoreMeters.setDistributionStatisticConfig(myDistStatCfg);
+```
+
+## Excluding certain meters created by Armeria
+
+Micrometer's `MeterRegistry` can be configured with [meter filters](https://micrometer.io/docs/concepts#_meter_filters).
+If you need to control the exported meters, you can apply filters to the `MeterRegistry`.
+
+```java
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
+final MeterRegistry filteredMeterRegistry = new SimpleMeterRegistry();
+filteredMeterRegistry.config()
+        .meterFilter(MeterFilter.deny(id -> id.getTag("service").equals("SecretSvc")));
+        .meterFilter(MeterFilter.denyNameStartsWith("jvm"));
+
+Server.builder()
+      // ...
+      .meterRegistry(filteredMeterRegistry);
+```
+
+Please refer to <type://MeterIdPrefixFunction> to know what kinds of tags are used for the request metrics.
