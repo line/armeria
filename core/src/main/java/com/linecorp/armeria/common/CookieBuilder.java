@@ -50,6 +50,7 @@ public final class CookieBuilder {
         return value;
     }
 
+    // As per https://tools.ietf.org/html/rfc6265#section-4.1.2.3.
     @Nullable
     private static String trimDomainDot(String domain) {
         if (domain.charAt(domain.length() - 1) == '.') {

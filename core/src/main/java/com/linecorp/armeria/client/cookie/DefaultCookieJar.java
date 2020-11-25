@@ -33,8 +33,11 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.CookieBuilder;
 import com.linecorp.armeria.common.Cookies;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.util.NetUtil;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
 /**
  * A default in-memory {@link CookieJar} implementation.
@@ -56,7 +59,7 @@ final class DefaultCookieJar implements CookieJar {
 
     DefaultCookieJar(CookiePolicy cookiePolicy) {
         this.cookiePolicy = cookiePolicy;
-        store = new HashMap<>();
+        store = new Object2LongOpenHashMap<>();
         filter = new HashMap<>();
         lock = new ReentrantLock();
     }
@@ -69,7 +72,7 @@ final class DefaultCookieJar implements CookieJar {
         }
         final String host = uri.getHost();
         final String path = uri.getPath().isEmpty() ? "/" : uri.getPath();
-        final boolean secure = "https".equalsIgnoreCase(uri.getScheme());
+        final boolean secure = isSecure(uri.getScheme());
         final Set<Cookie> cookies = new HashSet<>();
         lock.lock();
         try {
@@ -80,9 +83,15 @@ final class DefaultCookieJar implements CookieJar {
         return Cookies.of(cookies);
     }
 
-    @Override
-    public void set(URI uri, Iterable<? extends Cookie> cookies) {
-        set(uri, cookies, System.currentTimeMillis());
+    private boolean isSecure(String scheme) {
+        final SessionProtocol parsedProtocol;
+        if (scheme.indexOf('+') >= 0) {
+            final Scheme parsedScheme = Scheme.tryParse(scheme);
+            parsedProtocol = parsedScheme != null ? parsedScheme.sessionProtocol() : null;
+        } else {
+            parsedProtocol = SessionProtocol.find(scheme);
+        }
+        return parsedProtocol != null && parsedProtocol.isTls();
     }
 
     @Override
@@ -109,16 +118,19 @@ final class DefaultCookieJar implements CookieJar {
     }
 
     @Override
-    public boolean isExpired(Cookie cookie) {
-        return isExpired(cookie, System.currentTimeMillis());
-    }
-
-    @Override
-    public boolean isExpired(Cookie cookie, long currentTimeMillis) {
-        if (!store.containsKey(cookie)) {
-            throw new IllegalArgumentException("cookie not found.");
+    public CookieState state(Cookie cookie, long currentTimeMillis) {
+        requireNonNull(cookie, "cookie");
+        lock.lock();
+        try {
+            final Long createdTimeMillis = store.get(cookie);
+            if (createdTimeMillis == null) {
+                return CookieState.NON_EXISTENT;
+            }
+            return isExpired(cookie, createdTimeMillis, currentTimeMillis) ?
+                   CookieState.EXPIRED : CookieState.EXISTENT;
+        } finally {
+            lock.unlock();
         }
-        return isExpired(cookie, store.get(cookie), currentTimeMillis);
     }
 
     private boolean isExpired(Cookie cookie, long createdTimeMillis, long currentTimeMillis) {
@@ -177,7 +189,7 @@ final class DefaultCookieJar implements CookieJar {
                         it.remove();
                         break;
                     }
-                    if (isExpired(cookie)) {
+                    if (state(cookie) == CookieState.EXPIRED) {
                         it.remove();
                         store.remove(cookie);
                         break;

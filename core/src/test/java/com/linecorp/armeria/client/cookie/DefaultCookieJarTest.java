@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.cookie;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.net.URI;
@@ -184,20 +183,21 @@ class DefaultCookieJarTest {
     }
 
     @Test
-    void isExpire() {
+    void cookieState() {
         final CookieJar cookieJar = new DefaultCookieJar();
         final URI foo = URI.create("http://foo.com");
         final Cookie cookie = Cookie.of("name", "value");
-        final CookieBuilder builder = Cookie.builder("name", "value");
+        final Cookie expectCookie = Cookie.builder("name", "value").domain("foo.com").path("/").build();
 
-        assertThatThrownBy(() -> cookieJar.isExpired(cookie)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(cookieJar.state(cookie)).isEqualTo(CookieJar.CookieState.NON_EXISTENT);
 
         cookieJar.set(foo, Cookies.of(cookie));
-        assertThat(cookieJar.isExpired(builder.domain("foo.com").path("/").build())).isFalse();
+        assertThat(cookieJar.state(expectCookie)).isEqualTo(CookieJar.CookieState.EXISTENT);
 
-        cookieJar.set(foo, Cookies.of(builder.maxAge(1).build()));
-        assertThat(cookieJar.isExpired(builder.domain("foo.com").path("/").build())).isFalse();
-        assertThat(cookieJar.isExpired(builder.domain("foo.com").path("/").build(),
-                                       System.currentTimeMillis() + 1000)).isTrue();
+        final Cookie expireCookie = expectCookie.toBuilder().maxAge(1).build();
+        cookieJar.set(foo, Cookies.of(cookie.toBuilder().maxAge(1).build()));
+        assertThat(cookieJar.state(expireCookie)).isEqualTo(CookieJar.CookieState.EXISTENT);
+        assertThat(cookieJar.state(expireCookie, System.currentTimeMillis() + 1000))
+                .isEqualTo(CookieJar.CookieState.EXPIRED);
     }
 }

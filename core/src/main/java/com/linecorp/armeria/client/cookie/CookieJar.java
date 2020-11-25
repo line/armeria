@@ -27,14 +27,26 @@ import com.linecorp.armeria.common.Cookies;
 public interface CookieJar {
 
     /**
+     * The possible states of a cookie in the jar.
+     */
+    enum CookieState {
+        EXISTENT,
+        EXPIRED,
+        NON_EXISTENT
+    }
+
+    /**
      * Returns the unexpired {@link Cookies} for the specified {@link URI}.
      */
     Cookies get(URI uri);
 
     /**
-     * Stores the specified {@link Cookies} for the {@link URI}.
+     * Stores the specified {@link Cookies} for the {@link URI}. This method is a shortcut for
+     * {@code set(uri, cookies, System.currentTimeMillis())}.
      */
-    void set(URI uri, Iterable<? extends Cookie> cookies);
+    default void set(URI uri, Iterable<? extends Cookie> cookies) {
+        set(uri, cookies, System.currentTimeMillis());
+    }
 
     /**
      * Stores the specified {@link Cookies} for the {@link URI} given the creation time.
@@ -42,14 +54,15 @@ public interface CookieJar {
     void set(URI uri, Iterable<? extends Cookie> cookies, long createdTimeMillis);
 
     /**
-     * Determines if a cookie is expired. Throws an {@link IllegalArgumentException} if the cookie is not
-     * found in the jar.
+     * Determines the state of a cookie. This method is a shortcut for
+     * {@code state(cookie, System.currentTimeMillis())}.
      */
-    boolean isExpired(Cookie cookie);
+    default CookieState state(Cookie cookie) {
+        return state(cookie, System.currentTimeMillis());
+    }
 
     /**
-     * Determines if a cookie is expired given the current time. Throws an {@link IllegalArgumentException}
-     * if the cookie is not found in the jar.
+     * Determines the state of a cookie given the current time.
      */
-    boolean isExpired(Cookie cookie, long currentTimeMillis);
+    CookieState state(Cookie cookie, long currentTimeMillis);
 }
