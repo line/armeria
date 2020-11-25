@@ -22,6 +22,7 @@ import java.security.KeyFactorySpi;
 import java.security.PrivilegedAction;
 import java.security.Provider;
 import java.security.Security;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Supplier;
@@ -40,6 +41,9 @@ public final class BouncyCastleKeyFactoryProvider extends Provider implements Co
     private static final long serialVersionUID = -834653615603942658L;
 
     private static final String PROVIDER_NAME = "ABCKFC";
+
+    private static final Map<ASN1ObjectIdentifier, AsymmetricKeyInfoConverter> keyInfoConverters =
+            new HashMap<>();
 
     /**
      * Invokes the specified {@link Runnable} with {@link BouncyCastleKeyFactoryProvider} enabled temporarily.
@@ -115,7 +119,16 @@ public final class BouncyCastleKeyFactoryProvider extends Provider implements Co
     }
 
     @Override
-    public void addKeyInfoConverter(ASN1ObjectIdentifier oid, AsymmetricKeyInfoConverter keyInfoConverter) {}
+    public void addKeyInfoConverter(ASN1ObjectIdentifier oid, AsymmetricKeyInfoConverter keyInfoConverter) {
+        synchronized (keyInfoConverters) {
+            keyInfoConverters.put(oid, keyInfoConverter);
+        }
+    }
+
+    @Override
+    public AsymmetricKeyInfoConverter getKeyInfoConverter(ASN1ObjectIdentifier oid) {
+        return keyInfoConverters.get(oid);
+    }
 
     @Override
     public void addAttributes(String key, Map<String, String> attributeMap) {

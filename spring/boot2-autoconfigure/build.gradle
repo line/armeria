@@ -3,19 +3,19 @@ dependencies {
     compileOnly project(':thrift0.13')
     implementation project(':logback')
 
-    implementation 'org.springframework.boot:spring-boot-autoconfigure'
-
     // TODO(anuraaga): Consider removing these since this module does not have related functionality.
     optionalApi 'io.micrometer:micrometer-registry-prometheus'
     optionalApi 'io.dropwizard.metrics:metrics-json'
 
     api 'javax.inject:javax.inject'
+    api 'org.springframework.boot:spring-boot-autoconfigure'
     compileOnly 'javax.validation:validation-api'
-    api 'org.springframework.boot:spring-boot-starter'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     testImplementation project(':grpc')
     testImplementation project(':thrift0.13')
+    testImplementation 'org.springframework.boot:spring-boot-starter'
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
 }

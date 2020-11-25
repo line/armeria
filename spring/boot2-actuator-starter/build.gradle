@@ -1,3 +1,4 @@
 dependencies {
     implementation project(':spring:boot2-actuator-autoconfigure')
+    api 'org.springframework.boot:spring-boot-starter-actuator'
 }

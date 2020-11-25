@@ -197,7 +197,9 @@ class Http2ClientSettingsTest {
                     public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
                                              ByteBuf debugData)
                             throws Http2Exception {
-                        assertThat(lastStreamId).isZero(); // 0: connection error
+                        // It's Integer.MAX_VALUE for connection error.
+                        // See https://github.com/netty/netty/pull/10775
+                        assertThat(lastStreamId).isEqualTo(Integer.MAX_VALUE);
                         assertThat(errorCode).isEqualTo(Http2Error.FRAME_SIZE_ERROR.code());
                         latch.countDown();
                     }

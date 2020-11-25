@@ -5,5 +5,5 @@ server.port: -1
 spring.profiles: local
 armeria:
   ports:
-    - port: 8080
+    - port: 0 # Specify the port you want
       protocol: HTTP
