@@ -632,10 +632,10 @@ public final class ClientFactoryBuilder {
                             dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
                         }
 
-                        final ClientFactoryOptionValue<?> opt = options
-                                .getOrDefault(ClientFactoryOptions.METER_REGISTRY,ClientFactoryOptions
-                                .METER_REGISTRY
-                                .newValue(ClientFactoryOptions.of().meterRegistry()));
+                        final ClientFactoryOptionValue<?> opt = options.getOrDefault(
+                                ClientFactoryOptions.METER_REGISTRY,
+                                ClientFactoryOptions.METER_REGISTRY.newValue(
+                                        ClientFactoryOptions.of().meterRegistry()));
 
                         return builder
                                 .meterRegistry((MeterRegistry) opt.value())
