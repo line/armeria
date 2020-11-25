@@ -26,8 +26,6 @@ final class Auth2Handler implements Authorizer<HttpRequest> {
         final OAuth2Token oAuth2Token = oAuth2TokenFunction.apply(req.headers());
         //get a token
         final OAuth2Token passToken = OAuth2Token.of("accessToken");
-        System.out.println(passToken.accessToken() + "____________");
-        System.out.println(req.headers());
         return CompletableFuture.supplyAsync(
                 () -> passToken.accessToken().equals(oAuth2Token.accessToken()));
     }
