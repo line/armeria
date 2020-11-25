@@ -198,19 +198,21 @@ on top of Armeria's an event loop or a blocking task executor.
 
 ```scala
 import com.linecorp.armeria.server.ServiceRequestContext
-import java.util.concurrent.Future
+import com.linecorp.armeria.server.annoation.Blocking
+import scala.concurrent.Future
 
 class MyAsyncService {
   @Post("/async")
-  def consumeJson(req: SimpleRequest)(implicit ec: ExecutionContext): Future[String] =
+  def asyncService(req: SimpleRequest)(implicit ec: ExecutionContext): Future[String] =
     Future {
       // This callback will be executed in Armeria's event loop
       assert(ServiceRequestContext.current() != null)
       "Hello, Armeria!"
     }
 
+  @Blocking
   @Post("/blocking-task")
-  def consumeJson(req: SimpleRequest)(implicit ec: ExecutionContext): Future[String] =
+  def blockingAsyncService(req: SimpleRequest)(implicit ec: ExecutionContext): Future[String] =
     Future {
       // This callback will be executed in Armeria's blocking task executor
       assert(ServiceRequestContext.current() != null)
