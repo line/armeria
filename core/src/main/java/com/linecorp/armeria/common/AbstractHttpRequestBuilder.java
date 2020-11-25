@@ -46,10 +46,14 @@ public abstract class AbstractHttpRequestBuilder {
     // TODO(tumile): Add content(Publisher).
 
     private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
-    private final HttpHeadersBuilder httpTrailersBuilder = HttpHeaders.builder();
-    private final QueryParamsBuilder queryParamsBuilder = QueryParams.builder();
-    private final Map<String, Object> pathParams = new HashMap<>();
-    private final List<Cookie> cookies = new ArrayList<>();
+    @Nullable
+    private HttpHeadersBuilder httpTrailers;
+    @Nullable
+    private QueryParamsBuilder queryParams;
+    @Nullable
+    private Map<String, Object> pathParams;
+    @Nullable
+    private List<Cookie> cookies;
     @Nullable
     private HttpData content;
     @Nullable
@@ -218,7 +222,10 @@ public abstract class AbstractHttpRequestBuilder {
     public AbstractHttpRequestBuilder trailers(
             Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
         requireNonNull(trailers, "trailers");
-        httpTrailersBuilder.set(trailers);
+        if (httpTrailers == null) {
+            httpTrailers = HttpHeaders.builder();
+        }
+        httpTrailers.set(trailers);
         return this;
     }
 
@@ -232,7 +239,12 @@ public abstract class AbstractHttpRequestBuilder {
      * }</pre>
      */
     public AbstractHttpRequestBuilder pathParam(String name, Object value) {
-        pathParams.put(requireNonNull(name, "name"), requireNonNull(value, "value"));
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        if (pathParams == null) {
+            pathParams = new HashMap<>();
+        }
+        pathParams.put(name, value);
         return this;
     }
 
@@ -246,7 +258,11 @@ public abstract class AbstractHttpRequestBuilder {
      * }</pre>
      */
     public AbstractHttpRequestBuilder pathParams(Map<String, ?> pathParams) {
-        this.pathParams.putAll(requireNonNull(pathParams, "pathParams"));
+        requireNonNull(pathParams, "pathParams");
+        if (this.pathParams == null) {
+            this.pathParams = new HashMap<>();
+        }
+        this.pathParams.putAll(pathParams);
         return this;
     }
 
@@ -269,7 +285,12 @@ public abstract class AbstractHttpRequestBuilder {
      * }</pre>
      */
     public AbstractHttpRequestBuilder queryParam(String name, Object value) {
-        queryParamsBuilder.setObject(requireNonNull(name, "name"), requireNonNull(value, "value"));
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        if (queryParams == null) {
+            queryParams = QueryParams.builder();
+        }
+        queryParams.setObject(name, value);
         return this;
     }
 
@@ -286,7 +307,10 @@ public abstract class AbstractHttpRequestBuilder {
     public AbstractHttpRequestBuilder queryParams(
             Iterable<? extends Entry<? extends String, String>> queryParams) {
         requireNonNull(queryParams, "queryParams");
-        queryParamsBuilder.set(queryParams);
+        if (this.queryParams == null) {
+            this.queryParams = QueryParams.builder();
+        }
+        this.queryParams.set(queryParams);
         return this;
     }
 
@@ -301,7 +325,11 @@ public abstract class AbstractHttpRequestBuilder {
      * @see Cookie
      */
     public AbstractHttpRequestBuilder cookie(Cookie cookie) {
-        cookies.add(requireNonNull(cookie, "cookie"));
+        requireNonNull(cookie, "cookie");
+        if (cookies == null) {
+            cookies = new ArrayList<>();
+        }
+        cookies.add(cookie);
         return this;
     }
 
@@ -317,7 +345,11 @@ public abstract class AbstractHttpRequestBuilder {
      * @see Cookies
      */
     public AbstractHttpRequestBuilder cookies(Iterable<? extends Cookie> cookies) {
-        requireNonNull(cookies, "cookies").forEach(this.cookies::add);
+        requireNonNull(cookies, "cookies");
+        if (this.cookies == null) {
+            this.cookies = new ArrayList<>();
+        }
+        cookies.forEach(this.cookies::add);
         return this;
     }
 
@@ -330,20 +362,20 @@ public abstract class AbstractHttpRequestBuilder {
             if (content != null) {
                 content.close();
             }
-            if (httpTrailersBuilder.isEmpty()) {
+            if (httpTrailers == null) {
                 return new EmptyFixedHttpRequest(requestHeaders);
             }
-            return new OneElementFixedHttpRequest(requestHeaders, httpTrailersBuilder.build());
+            return new OneElementFixedHttpRequest(requestHeaders, httpTrailers.build());
         }
-        if (httpTrailersBuilder.isEmpty()) {
+        if (httpTrailers == null) {
             return new OneElementFixedHttpRequest(requestHeaders, content);
         }
-        return new TwoElementFixedHttpRequest(requestHeaders, content, httpTrailersBuilder.build());
+        return new TwoElementFixedHttpRequest(requestHeaders, content, httpTrailers.build());
     }
 
     private RequestHeaders requestHeaders() {
         requestHeadersBuilder.path(buildPath());
-        if (!cookies.isEmpty()) {
+        if (cookies != null) {
             requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
         }
         if (content == null || content.isEmpty()) {
@@ -369,7 +401,8 @@ public abstract class AbstractHttpRequestBuilder {
                         break;
                     }
                     final String name = pathBuilder.substring(i + 1, j);
-                    checkState(pathParams.containsKey(name), "param " + name + " does not have a value.");
+                    checkState(pathParams != null && pathParams.containsKey(name),
+                               "param " + name + " does not have a value.");
                     final String value = pathParams.get(name).toString();
                     pathBuilder.replace(i, j + 1, value);
                     i += value.length() - 1;
@@ -379,7 +412,8 @@ public abstract class AbstractHttpRequestBuilder {
                         j++;
                     }
                     final String name = pathBuilder.substring(i + 1, j);
-                    checkState(pathParams.containsKey(name), "param " + name + " does not have a value.");
+                    checkState(pathParams != null && pathParams.containsKey(name),
+                               "param " + name + " does not have a value.");
                     final String value = pathParams.get(name).toString();
                     pathBuilder.replace(i, j, value);
                     i += value.length();
@@ -387,8 +421,8 @@ public abstract class AbstractHttpRequestBuilder {
                 i++;
             }
         }
-        if (!queryParamsBuilder.isEmpty()) {
-            pathBuilder.append('?').append(queryParamsBuilder.toQueryString());
+        if (queryParams != null) {
+            pathBuilder.append('?').append(queryParams.toQueryString());
         }
         return pathBuilder.toString();
     }
