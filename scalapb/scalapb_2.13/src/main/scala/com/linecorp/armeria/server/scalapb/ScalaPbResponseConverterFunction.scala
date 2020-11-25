@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.scalapb
 
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.collect.Iterables
-import com.linecorp.armeria.common._
+import com.linecorp.armeria.common.{HttpData, HttpHeaders, HttpResponse, MediaType, ResponseHeaders}
 import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
 import com.linecorp.armeria.server.ServiceRequestContext

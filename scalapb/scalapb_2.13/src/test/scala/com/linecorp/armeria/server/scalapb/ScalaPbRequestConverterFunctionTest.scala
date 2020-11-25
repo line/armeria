@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.scalapb
 
 import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet}
 import com.google.common.reflect.TypeToken
-import com.linecorp.armeria.common._
+import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpMethod, HttpRequest, MediaType}
 import com.linecorp.armeria.scalapb.testing.messages.SimpleRequest
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.FallthroughException
