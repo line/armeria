@@ -566,26 +566,32 @@ const DebugPage: React.FunctionComponent<Props> = ({
             </Button>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Tooltip title="Copy response">
-              <div>
-                <IconButton
-                  onClick={onCopy}
-                  disabled={debugResponse.length === 0}
-                >
-                  <FileCopyIcon />
-                </IconButton>
-              </div>
-            </Tooltip>
-            <Tooltip title="Clear response">
-              <div>
-                <IconButton
-                  onClick={onClear}
-                  disabled={debugResponse.length === 0}
-                >
-                  <DeleteSweepIcon />
-                </IconButton>
-              </div>
-            </Tooltip>
+            <Grid container spacing={1}>
+              <Grid item xs="auto">
+                <Tooltip title="Copy response">
+                  <div>
+                    <IconButton
+                      onClick={onCopy}
+                      disabled={debugResponse.length === 0}
+                    >
+                      <FileCopyIcon />
+                    </IconButton>
+                  </div>
+                </Tooltip>
+              </Grid>
+              <Grid item xs="auto">
+                <Tooltip title="Clear response">
+                  <div>
+                    <IconButton
+                      onClick={onClear}
+                      disabled={debugResponse.length === 0}
+                    >
+                      <DeleteSweepIcon />
+                    </IconButton>
+                  </div>
+                </Tooltip>
+              </Grid>
+            </Grid>
             <SyntaxHighlighter
               language="json"
               style={githubGist}
