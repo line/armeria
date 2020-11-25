@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * Returns a {@link RetryConfig} given the request context.
+ * Returns a {@link RetryConfig} given the {@link ClientRequestContext}.
  * Allows users to change retry behavior according to any context element, like host, method, path ...etc.
  */
 @FunctionalInterface
@@ -57,7 +57,7 @@ public interface RetryConfigMapping<T extends Response> {
     }
 
     /**
-     * Returns the {@link RetryConfig} that maps to the given context/request.
+     * Returns the {@link RetryConfig} that maps to the given {@link ClientRequestContext} and {@link Request}.
      */
     RetryConfig<T> get(ClientRequestContext ctx, Request req);
 }

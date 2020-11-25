@@ -41,6 +41,11 @@ final class KeyedRetryConfigMapping<T extends Response> implements RetryConfigMa
     @Override
     public RetryConfig<T> get(ClientRequestContext ctx, Request req) {
         final String key = keyFactory.apply(ctx, req);
-        return mapping.computeIfAbsent(key, mapKey -> retryConfigFactory.apply(ctx, req));
+        requireNonNull(key, "keyFactory.apply() returned null");
+        return mapping.computeIfAbsent(key, mapKey -> {
+            final RetryConfig<T> retryConfig = retryConfigFactory.apply(ctx, req);
+            requireNonNull(retryConfig, "retryConfigFactory.apply() returned null");
+            return retryConfig;
+        });
     }
 }

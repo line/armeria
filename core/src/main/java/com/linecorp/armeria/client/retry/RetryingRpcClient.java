@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
@@ -96,7 +97,8 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
      * Creates a new {@link RpcClient} decorator that handles failures of an invocation and retries
      * RPC requests.
      *
-     * @param mapping the mapping that returns a {@link RetryConfig} for a given context/request.
+     * @param mapping the mapping that returns a {@link RetryConfig} for a given {@link ClientRequestContext}
+     *        and {@link Request}.
      */
     public static Function<? super RpcClient, RetryingRpcClient>
     newDecorator(RetryConfigMapping<RpcResponse> mapping) {
@@ -112,7 +114,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
 
     /**
      * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryConfig}.
-     * The {@link RetryConfig} object encapsulates {@link RetryRuleWithContent},
+     * The {@link RetryConfig} encapsulates {@link RetryRuleWithContent},
      * {@code maxContentLength}, {@code maxTotalAttempts} and {@code responseTimeoutMillisForEachAttempt}.
      */
     public static RetryingRpcClientBuilder builder(RetryConfig<RpcResponse> retryConfig) {
