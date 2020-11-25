@@ -27,12 +27,29 @@ import com.linecorp.armeria.common.Cookies;
 public interface CookieJar {
 
     /**
-     * Returns the {@link Cookies} for the specified {@link URI}.
+     * Returns the unexpired {@link Cookies} for the specified {@link URI}.
      */
     Cookies get(URI uri);
 
     /**
      * Stores the specified {@link Cookies} for the {@link URI}.
      */
-    void set(URI uri, Cookies cookies);
+    void set(URI uri, Iterable<? extends Cookie> cookies);
+
+    /**
+     * Stores the specified {@link Cookies} for the {@link URI} given the creation time.
+     */
+    void set(URI uri, Iterable<? extends Cookie> cookies, long createdTimeMillis);
+
+    /**
+     * Determines if a cookie is expired. Throws an {@link IllegalArgumentException} if the cookie is not
+     * found in the jar.
+     */
+    boolean isExpired(Cookie cookie);
+
+    /**
+     * Determines if a cookie is expired given the current time. Throws an {@link IllegalArgumentException}
+     * if the cookie is not found in the jar.
+     */
+    boolean isExpired(Cookie cookie, long currentTimeMillis);
 }

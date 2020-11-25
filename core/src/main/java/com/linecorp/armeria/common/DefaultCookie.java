@@ -31,7 +31,6 @@
 package com.linecorp.armeria.common;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -59,7 +58,6 @@ final class DefaultCookie implements Cookie {
     private final boolean hostOnly;
     @Nullable
     private final String sameSite;
-    private final long createdMillis;
 
     DefaultCookie(String name, String value, boolean valueQuoted, @Nullable String domain,
                   @Nullable String path, long maxAge, boolean secure, boolean httpOnly, boolean hostOnly,
@@ -74,7 +72,6 @@ final class DefaultCookie implements Cookie {
         this.httpOnly = httpOnly;
         this.hostOnly = hostOnly;
         this.sameSite = sameSite;
-        createdMillis = System.currentTimeMillis();
     }
 
     @Override
@@ -125,18 +122,6 @@ final class DefaultCookie implements Cookie {
     @Override
     public boolean isHostOnly() {
         return hostOnly;
-    }
-
-    @Override
-    public boolean isExpired() {
-        if (maxAge == UNDEFINED_MAX_AGE) {
-            return false;
-        }
-        if (maxAge <= 0) {
-            return true;
-        }
-        final long timePassed = TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - createdMillis);
-        return timePassed > maxAge;
     }
 
     @Override

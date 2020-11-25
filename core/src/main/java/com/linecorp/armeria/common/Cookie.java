@@ -481,11 +481,6 @@ public interface Cookie extends Comparable<Cookie> {
     boolean isHostOnly();
 
     /**
-     * Returns whether this {@link Cookie} has been expired.
-     */
-    boolean isExpired();
-
-    /**
      * Encodes this {@link Cookie} into a single {@code "Cookie"} header value.
      * Note that you must use {@link #toCookieHeader(Collection)} when encoding more than one {@link Cookie},
      * because it is prohibited to send multiple {@code "Cookie"} headers in an HTTP request,

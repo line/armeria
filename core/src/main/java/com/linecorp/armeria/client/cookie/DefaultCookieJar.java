@@ -24,9 +24,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
-
-import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -35,12 +34,14 @@ import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.CookieBuilder;
 import com.linecorp.armeria.common.Cookies;
 
+import io.netty.util.NetUtil;
+
 /**
  * A default in-memory {@link CookieJar} implementation.
  */
 final class DefaultCookieJar implements CookieJar {
 
-    private final Set<Cookie> store;
+    private final Map<Cookie, Long> store;
     /**
      * Used to find cookies for a host that matches a domain. For example, if there is a domain example.com,
      * host example.com or foo.example.com will match all cookies in that entry.
@@ -55,7 +56,7 @@ final class DefaultCookieJar implements CookieJar {
 
     DefaultCookieJar(CookiePolicy cookiePolicy) {
         this.cookiePolicy = cookiePolicy;
-        store = new HashSet<>();
+        store = new HashMap<>();
         filter = new HashMap<>();
         lock = new ReentrantLock();
     }
@@ -80,7 +81,12 @@ final class DefaultCookieJar implements CookieJar {
     }
 
     @Override
-    public void set(URI uri, Cookies cookies) {
+    public void set(URI uri, Iterable<? extends Cookie> cookies) {
+        set(uri, cookies, System.currentTimeMillis());
+    }
+
+    @Override
+    public void set(URI uri, Iterable<? extends Cookie> cookies, long createdTimeMillis) {
         requireNonNull(uri, "uri");
         requireNonNull(cookies, "cookies");
         lock.lock();
@@ -89,8 +95,8 @@ final class DefaultCookieJar implements CookieJar {
                 cookie = ensureDomainAndPath(cookie, uri);
                 // remove similar cookie if present
                 store.remove(cookie);
-                if (!cookie.isExpired() && cookiePolicy.accept(uri, cookie)) {
-                    store.add(cookie);
+                if (!isExpired(cookie, 0, 0) && cookiePolicy.accept(uri, cookie)) {
+                    store.put(cookie, createdTimeMillis);
                     final Set<Cookie> cookieSet = filter.computeIfAbsent(cookie.domain(), s -> new HashSet<>());
                     // remove similar cookie if present
                     cookieSet.remove(cookie);
@@ -102,6 +108,30 @@ final class DefaultCookieJar implements CookieJar {
         }
     }
 
+    @Override
+    public boolean isExpired(Cookie cookie) {
+        return isExpired(cookie, System.currentTimeMillis());
+    }
+
+    @Override
+    public boolean isExpired(Cookie cookie, long currentTimeMillis) {
+        if (!store.containsKey(cookie)) {
+            throw new IllegalArgumentException("cookie not found.");
+        }
+        return isExpired(cookie, store.get(cookie), currentTimeMillis);
+    }
+
+    private boolean isExpired(Cookie cookie, long createdTimeMillis, long currentTimeMillis) {
+        if (cookie.maxAge() == Cookie.UNDEFINED_MAX_AGE) {
+            return false;
+        }
+        if (cookie.maxAge() <= 0) {
+            return true;
+        }
+        final long timePassed = TimeUnit.MILLISECONDS.toSeconds(currentTimeMillis - createdTimeMillis);
+        return timePassed >= cookie.maxAge();
+    }
+
     /**
      * Ensures this cookie has domain and path attributes, otherwise sets them to default values. If domain
      * is absent, the default is the request host, with {@code host-only} flag set to {@code true}. If path is
@@ -111,12 +141,17 @@ final class DefaultCookieJar implements CookieJar {
      */
     @VisibleForTesting
     Cookie ensureDomainAndPath(Cookie cookie, URI uri) {
+        final boolean validDomain = !Strings.isNullOrEmpty(cookie.domain());
+        final String cookiePath = cookie.path();
+        final boolean validPath = !Strings.isNullOrEmpty(cookiePath) && cookiePath.charAt(0) == '/';
+        if (validDomain && validPath) {
+            return cookie;
+        }
         final CookieBuilder cb = cookie.toBuilder();
-        if (Strings.isNullOrEmpty(cookie.domain())) {
+        if (!validDomain) {
             cb.domain(uri.getHost()).hostOnly(true);
         }
-        final String cookiePath = cookie.path();
-        if (Strings.isNullOrEmpty(cookiePath) || cookiePath.charAt(0) != '/') {
+        if (!validPath) {
             String path = uri.getPath();
             if (path.isEmpty()) {
                 path = "/";
@@ -133,24 +168,21 @@ final class DefaultCookieJar implements CookieJar {
 
     private void filterGet(Set<Cookie> cookies, String host, String path, boolean secure) {
         for (Map.Entry<String, Set<Cookie>> entry : filter.entrySet()) {
-            if (cookiePolicy.domainMatches(entry.getKey(), host)) {
+            if (domainMatches(entry.getKey(), host)) {
                 final Iterator<Cookie> it = entry.getValue().iterator();
                 while (it.hasNext()) {
                     final Cookie cookie = it.next();
-                    if (!store.contains(cookie)) {
+                    if (!store.containsKey(cookie)) {
                         // the cookie has been removed from the main store so remove it from filter also
                         it.remove();
                         break;
                     }
-                    if (cookie.isExpired()) {
+                    if (isExpired(cookie)) {
                         it.remove();
                         store.remove(cookie);
                         break;
                     }
-                    // if a cookie is host-only, host and domain have to be identical
-                    final boolean domainMatched = !cookie.isHostOnly() ||
-                            host.equalsIgnoreCase(cookie.domain());
-                    if (domainMatched && pathMatches(path, cookie.path()) && (secure || !cookie.isSecure())) {
+                    if (cookieMatches(cookie, host, path, secure)) {
                         cookies.add(cookie);
                     }
                 }
@@ -158,10 +190,21 @@ final class DefaultCookieJar implements CookieJar {
         }
     }
 
-    private boolean pathMatches(@Nullable String path, @Nullable String pathToMatch) {
-        if (path == null || pathToMatch == null) {
-            return false;
+    private static boolean domainMatches(String domain, String host) {
+        if (domain.equalsIgnoreCase(host)) {
+            return true;
         }
-        return path.startsWith(pathToMatch);
+        return host.endsWith(domain) && host.charAt(host.length() - domain.length() - 1) == '.' &&
+               !NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host);
+    }
+
+    private static boolean cookieMatches(Cookie cookie, String host, String path, boolean secure) {
+        // if a cookie is host-only, host and domain have to be identical
+        final boolean satisfiedHostOnly = !cookie.isHostOnly() || host.equalsIgnoreCase(cookie.domain());
+        final boolean satisfiedSecure = secure || !cookie.isSecure();
+        final String cookiePath = cookie.path();
+        assert cookiePath != null;
+        final boolean pathMatched = path.startsWith(cookiePath);
+        return satisfiedHostOnly && satisfiedSecure && pathMatched;
     }
 }
