@@ -31,8 +31,8 @@ Server.builder()
       .build();
 ```
 
-If you are interested in monitoring [gRPC status](https://grpc.github.io/grpc/core/md_doc_statuscodes.html),
-you can use <type://GrpcMeterIdPrefixFunction> instead of <type://MeterIdPrefixFunction>.
+If you are interested in monitoring [gRPC status](https://grpc.github.io/grpc/core/md_doc_statuscodes.html)
+for a gRPC service, you can use <type://GrpcMeterIdPrefixFunction> instead of <type://MeterIdPrefixFunction>.
 
 ```java
 import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction;
@@ -67,7 +67,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 
 // Decorate a WebClient with MetricCollectingClient
-WebClient.builder("httpUrl")
+WebClient.builder(httpUrl)
          .decorator(MetricCollectingClient.newDecorator(
                  MeterIdPrefixFunction.ofDefault("http.client")))
          .build();
@@ -107,8 +107,7 @@ Clients.builder(grpcUrl)
 ## Changing the default distribution summary config
 
 A [distribution summary](https://micrometer.io/docs/concepts#_distribution_summaries) is used to track 
-the distribution of events.
-Armeria provides a sensible default
+the distribution of events. Armeria provides a sensible default
 [DistributionStatisticConfig](https://javadoc.io/doc/io.micrometer/micrometer-core/latest/io/micrometer/core/instrument/distribution/DistributionStatisticConfig.html)
 for measuring the following metrics:
 - A length of the request content
@@ -139,14 +138,16 @@ MoreMeters.setDistributionStatisticConfig(myDistStatCfg);
 ## Excluding certain meters created by Armeria
 
 Micrometer's `MeterRegistry` can be configured with [meter filters](https://micrometer.io/docs/concepts#_meter_filters).
-If you need to control the exported meters, you can apply filters to the `MeterRegistry`.
+If you need to control the exported meters, you can apply sophisticated filters to the `MeterRegistry`.
 
 ```java
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 final MeterRegistry filteredMeterRegistry = new SimpleMeterRegistry();
-filteredMeterRegistry.config()
-        .meterFilter(MeterFilter.deny(id -> id.getTag("service").equals("SecretSvc")));
+filteredMeterRegistry
+        .config()
+        .meterFilter(MeterFilter.deny(id -> 
+                id.getTag("service").equals("MyHealthCheckService")));
         .meterFilter(MeterFilter.denyNameStartsWith("jvm"));
 
 Server.builder()
