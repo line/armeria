@@ -39,7 +39,7 @@ final class PrometheusSupport {
             if (meterRegistry instanceof PrometheusMeterRegistry) {
                 final CollectorRegistry prometheusRegistry =
                         ((PrometheusMeterRegistry) meterRegistry).getPrometheusRegistry();
-                server.service(metricsPath, new PrometheusExpositionService(prometheusRegistry));
+                server.service(metricsPath, PrometheusExpositionService.of(prometheusRegistry));
                 return true;
             }
 

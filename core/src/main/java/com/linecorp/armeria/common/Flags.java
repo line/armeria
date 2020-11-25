@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -24,6 +25,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.IntPredicate;
@@ -42,6 +44,8 @@ import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
@@ -57,6 +61,8 @@ import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.TransientService;
+import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
@@ -374,6 +380,21 @@ public final class Flags {
 
     private static final boolean
             DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS = getBoolean("tlsAllowUnsafeCiphers", false);
+
+    private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
+            Sets.immutableEnumSet(
+                    Streams.stream(CSV_SPLITTER.split(getNormalized(
+                            "transientServiceOptions", "", val -> {
+                                try {
+                                    Streams.stream(CSV_SPLITTER.split(val))
+                                           .forEach(feature -> TransientServiceOption
+                                                   .valueOf(Ascii.toUpperCase(feature)));
+                                    return true;
+                                } catch (Exception e) {
+                                    return false;
+                                }
+                            }))).map(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)))
+                           .collect(toImmutableSet()));
 
     static {
         if (!isEpollAvailable()) {
@@ -1101,6 +1122,20 @@ public final class Flags {
      */
     public static boolean tlsAllowUnsafeCiphers() {
         return DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS;
+    }
+
+    /**
+     * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for a
+     * {@link TransientService}.
+     *
+     * <p>The default value of this flag is an empty string, which means all
+     * {@link TransientServiceOption}s are disabled.
+     * Specify the {@code -Dcom.linecorp.armeria.transientServiceOptions=<csv>} JVM option
+     * to override the default value. For example,
+     * {@code -Dcom.linecorp.armeria.transientServiceOptions=WITH_METRIC_COLLECTION,WITH_ACCESS_LOGGING}.
+     */
+    public static Set<TransientServiceOption> transientServiceOptions() {
+        return TRANSIENT_SERVICE_OPTIONS;
     }
 
     @Nullable
