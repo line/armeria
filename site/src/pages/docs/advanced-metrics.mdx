@@ -1,73 +1,106 @@
 # Collecting metrics
 
-Armeria has built-in support for collecting metrics both on the server and client side. This page describes how to enable this.
+Armeria has built-in support for collecting metrics both on the server and client side.
+This page describes how to enable this.
 
-The metric data is collected using the [Micrometer](https://micrometer.io/) library. Please consult its documentation for information on how to expose the collected metrics to various monitoring systems (JMX, Prometheus, etc)
+<Tip>
 
-## Collecting server-side metrics (gRPC)
+The metric data is collected using the [Micrometer](https://micrometer.io/) library.
+Please consult its documentation for information on how to expose the collected metrics to
+various monitoring systems (JMX, Prometheus, etc).
+
+</Tip>
+
+## Collecting server-side metrics
+
+You can use <type://MetricCollectingService> with <type://MeterIdPrefixFunction> for collecting metrics
+of your services.
 
 ```java
-import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction;
+import com.linecorp.armeria.common.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 
-ServerBuilder serverBuilder = Server.builder()
-        .http(new InetSocketAddress(address, port))
-        .service(
-                GrpcService.builder()
-                        .addService(new MyHelloService())
-                        .build()
-        )
-        .decorator(MetricCollectingService.newDecorator(
-                GrpcMeterIdPrefixFunction.of("my.service"))
-        );
+Server.builder()
+      .http(new InetSocketAddress(address, port))
+      .service(new MyHttpService())
+      .decorator(MetricCollectingService.newDecorator(
+              MeterIdPrefixFunction.ofDefault("http.service")))
+      .build();
 ```
 
-In cases where more sophisticated filtering and/or mangling of the generated metrics are required, you can use the `meterRegistry()` method like this:
+If you are interested in monitoring [gRPC status](https://grpc.github.io/grpc/core/md_doc_statuscodes.html),
+you can use <type://GrpcMeterIdPrefixFunction> instead of <type://MeterIdPrefixFunction>.
 
 ```java
-ServerBuilder serverBuilder = Server.builder()
-        // ...
-        .meterRegistry(myMeterRegistry);
-```
-
-## Collecting client-side metrics (gRPC)
-
-This approach can used to collect metrics in a gRPC client:
-
-```java
-import com.linecorp.armeria.client.ClientOptions;
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction;
+import com.linecorp.armeria.server.grpc.GrpcService;
 
-return Clients.builder(grpcUrl)
-        .options(
-                ClientOptions.builder()
-                        .decorator(
-                                MetricCollectingClient.newDecorator(
-                                        GrpcMeterIdPrefixFunction.of("my.client")
-                                )
-                        )
-                        .build()
-        )
-        .build(HelloServiceBlockingStub.class);
+Server server = 
+        Server.builder()
+              .http(new InetSocketAddress(address, port))
+              .service(GrpcService.builder()
+                                  .addService(new MyHelloService())
+                                  .build())
+              .decorator(MetricCollectingService.newDecorator(
+                      GrpcMeterIdPrefixFunction.of("grpc.service")))
+              .build();
 ```
 
-Like with the server-side metrics described above, certain scenarios might require you to provide a custom meter registry. To accomplish this, override the `ClientFactory` in this way:
+In cases where more sophisticated filtering and/or mangling of the generated metrics are required,
+you can use the <type://ServerBuilder#meterRegistry(MeterRegistry)> method like this:
+
+```java
+ServerBuilder serverBuilder = 
+        Server.builder()
+              // ...
+              .meterRegistry(myMeterRegistry);
+```
+
+## Collecting client-side metrics
+
+This approach can used to collect metrics in a <type://WebClient> and a gRPC client:
+
+```java
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.metric.MetricCollectingClient;
+
+// Decorate a WebClient with MetricCollectingClient
+WebClient.builder("httpUrl")
+         .decorator(MetricCollectingClient.newDecorator(
+                 MeterIdPrefixFunction.ofDefault("http.client")))
+         .build();
+
+// Decorate a gRPC client with MetricCollectingClient
+Clients.builder(grpcUrl)
+       .decorator(MetricCollectingClient.newDecorator(
+               GrpcMeterIdPrefixFunction.of("grpc.client")))
+       .build(HelloServiceBlockingStub.class);
+```
+
+Like with the server-side metrics described above, certain scenarios might require you to 
+provide a custom meter registry. To accomplish this, override the <type://ClientFactory> in this way:
 
 ```java
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 
-ClientFactory clientFactory = ClientFactory.builder()
-        .meterRegistry(myMeterRegistry)
-        .build();
+ClientFactory clientFactory = 
+      ClientFactory.builder()
+                   .meterRegistry(myMeterRegistry)
+                   .build();
+                   
+// Set a cumster ClientFactory to a WebClient                   
+WebClient.builder(httpUrl)
+         .factory(clientFactory)
+          // ...
+         .build();
 
-return Clients.builder(grpcUrl)
-        .factory(clientFactory)
+// Set a cumster ClientFactory to a gRPC client
+Clients.builder(grpcUrl)
+       .factory(clientFactory)
         // ...
-        .build(HelloServiceBlockingStub.class);
+       .build(HelloServiceBlockingStub.class);
 ```
