@@ -22,7 +22,11 @@ import com.linecorp.armeria.server.annotation.{
   ResponseConverterFunction,
   ResponseConverterFunctionProvider
 }
-import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{ResultType, isStreamType, toResultType}
+import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{
+  ResultType,
+  isSupportedGenericType,
+  toResultType
+}
 import java.lang.reflect.Type
 import javax.annotation.Nullable
 
@@ -37,7 +41,7 @@ final class ScalaPbResponseConverterFunctionProvider extends ResponseConverterFu
       returnType: Type,
       responseConverter: ResponseConverterFunction,
       exceptionHandler: ExceptionHandlerFunction): ResponseConverterFunction =
-    if (toResultType(returnType) != ResultType.UNKNOWN || isStreamType(returnType))
+    if (toResultType(returnType) != ResultType.UNKNOWN || isSupportedGenericType(returnType))
       new ScalaPbResponseConverterFunction()
     else
       null

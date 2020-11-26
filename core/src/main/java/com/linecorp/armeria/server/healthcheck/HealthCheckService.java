@@ -49,6 +49,7 @@ import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.FutureListener;
@@ -144,6 +145,7 @@ public final class HealthCheckService implements TransientHttpService {
     final Set<PendingResponse> pendingUnhealthyResponses;
     @Nullable
     private final HealthCheckUpdateHandler updateHandler;
+    private final Set<TransientServiceOption> transientServiceOptions;
 
     @Nullable
     private Server server;
@@ -152,11 +154,13 @@ public final class HealthCheckService implements TransientHttpService {
     HealthCheckService(Iterable<HealthChecker> healthCheckers,
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
                        long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
-                       long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler) {
+                       long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
+                       Set<TransientServiceOption> transientServiceOptions) {
         serverHealth = new SettableHealthChecker(false);
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
                 .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
+        this.transientServiceOptions = transientServiceOptions;
 
         if (maxLongPollingTimeoutMillis > 0 &&
             this.healthCheckers.stream().allMatch(ListenableHealthChecker.class::isInstance)) {
@@ -517,6 +521,11 @@ public final class HealthCheckService implements TransientHttpService {
                 }
             }
         }
+    }
+
+    @Override
+    public Set<TransientServiceOption> transientServiceOptions() {
+        return transientServiceOptions;
     }
 
     private static final class PendingResponse {

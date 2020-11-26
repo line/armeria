@@ -1,28 +1,30 @@
-package example.armeria.grpc.scala
+package com.linecorp.armeria.server.scalapb
 
-import java.util.concurrent.TimeUnit
-import java.util.function.{Function => JFunction}
-import java.util.stream
+import armeria.scalapb.hello.{HelloReply, HelloRequest, HelloServiceGrpc}
+import armeria.scalapb.hello.HelloServiceGrpc.{HelloServiceBlockingStub, HelloServiceStub}
 import com.google.common.base.Stopwatch
 import com.linecorp.armeria.client.Clients
 import com.linecorp.armeria.client.grpc.GrpcClientOptions
 import com.linecorp.armeria.common.SerializationFormat
 import com.linecorp.armeria.common.grpc.{GrpcJsonMarshaller, GrpcSerializationFormats}
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
-import com.linecorp.armeria.server.Server
-import example.armeria.grpc.scala.HelloServiceImpl.toMessage
-import example.armeria.grpc.scala.HelloServiceTest.{GrpcSerializationProvider, newClient}
-import example.armeria.grpc.scala.hello.HelloServiceGrpc.{HelloServiceBlockingStub, HelloServiceStub}
-import example.armeria.grpc.scala.hello.{HelloReply, HelloRequest}
+import com.linecorp.armeria.server.grpc.GrpcService
+import com.linecorp.armeria.server.scalapb.HelloServiceImpl.toMessage
+import com.linecorp.armeria.server.{Server, ServerBuilder}
+import com.linecorp.armeria.server.scalapb.HelloServiceTest.{GrpcSerializationProvider, newClient}
+import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import io.grpc.ServiceDescriptor
 import io.grpc.stub.StreamObserver
+import java.util.concurrent.TimeUnit
+import java.util.function.{Function => JFunction}
+import java.util.stream
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.{Arguments, ArgumentsProvider, ArgumentsSource}
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 
@@ -63,7 +65,6 @@ class HelloServiceTest {
       HelloRequest("Armeria"),
       new StreamObserver[HelloReply]() {
         private var sequence = 0
-
         override def onNext(value: HelloReply): Unit = {
           sequence += 1
           assertThat(value.message).isEqualTo(s"Hello, Armeria! (sequence: $sequence)")
@@ -150,7 +151,18 @@ class HelloServiceTest {
 
 object HelloServiceTest {
 
-  var server: Server = _
+  var server: ServerExtension = new ServerExtension() {
+    override protected def configure(sb: ServerBuilder): Unit =
+      sb.service(
+        GrpcService
+          .builder()
+          .addService(HelloServiceGrpc.bindService(new HelloServiceImpl, ExecutionContext.global))
+          .supportedSerializationFormats(GrpcSerializationFormats.values)
+          .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
+          .enableUnframedRequests(true)
+          .build()
+      )
+  }
 
   private def newClient[A](serializationFormat: SerializationFormat = GrpcSerializationFormats.PROTO)(implicit
       tag: ClassTag[A]): A = {
@@ -158,20 +170,15 @@ object HelloServiceTest {
       _ => ScalaPbJsonMarshaller()
 
     Clients
-      .builder(uri(serializationFormat))
+      .builder(server.httpUri(serializationFormat))
       .option(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY.newValue(jsonMarshallerFactory))
       .build(tag.runtimeClass)
       .asInstanceOf[A]
   }
 
-  private def uri(serializationFormat: SerializationFormat = GrpcSerializationFormats.PROTO): String =
-    s"$serializationFormat+http://127.0.0.1:${server.activeLocalPort()}/"
-
   @BeforeAll
-  def beforeClass(): Unit = {
-    server = Main.newServer(0, 0)
-    server.start().join()
-  }
+  def beforeClass(): Unit =
+    server.start()
 
   private class GrpcSerializationProvider extends ArgumentsProvider {
     override def provideArguments(context: ExtensionContext): stream.Stream[_ <: Arguments] =

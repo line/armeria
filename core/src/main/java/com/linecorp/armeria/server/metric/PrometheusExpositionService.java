@@ -20,13 +20,19 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
+import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.TransientHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.prometheus.client.CollectorRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
@@ -35,20 +41,46 @@ import io.prometheus.client.exporter.common.TextFormat;
  * Exposes Prometheus metrics in <a href="https://prometheus.io/docs/instrumenting/exposition_formats/">text
  * format 0.0.4</a>.
  */
-public final class PrometheusExpositionService extends AbstractHttpService {
+public final class PrometheusExpositionService extends AbstractHttpService implements TransientHttpService {
 
     private static final MediaType CONTENT_TYPE_004 = MediaType.parse(TextFormat.CONTENT_TYPE_004);
 
+    /**
+     * Returns a new {@link PrometheusExpositionService} that exposes Prometheus metrics from the specified
+     * {@link CollectorRegistry}.
+     */
+    public static PrometheusExpositionService of(CollectorRegistry collectorRegistry) {
+        return new PrometheusExpositionService(collectorRegistry, Flags.transientServiceOptions());
+    }
+
+    /**
+     * Returns a new {@link PrometheusExpositionServiceBuilder} created with the specified
+     * {@link CollectorRegistry}.
+     */
+    public static PrometheusExpositionServiceBuilder builder(CollectorRegistry collectorRegistry) {
+        return new PrometheusExpositionServiceBuilder(collectorRegistry);
+    }
+
     private final CollectorRegistry collectorRegistry;
+    private final Set<TransientServiceOption> transientServiceOptions;
 
     /**
      * Creates a new instance.
      *
      * @param collectorRegistry Prometheus registry
+     *
+     * @deprecated Use {@link #of(CollectorRegistry)}.
      */
+    @Deprecated
     public PrometheusExpositionService(CollectorRegistry collectorRegistry) {
-        requireNonNull(collectorRegistry, "collectorRegistry");
-        this.collectorRegistry = collectorRegistry;
+        this(collectorRegistry, Flags.transientServiceOptions());
+    }
+
+    PrometheusExpositionService(CollectorRegistry collectorRegistry,
+                                Set<TransientServiceOption> transientServiceOptions) {
+        this.collectorRegistry = requireNonNull(collectorRegistry, "collectorRegistry");
+        this.transientServiceOptions =
+                ImmutableSet.copyOf(requireNonNull(transientServiceOptions, "transientServiceOptions"));
     }
 
     @Override
@@ -63,5 +95,10 @@ public final class PrometheusExpositionService extends AbstractHttpService {
     @Override
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         return doGet(ctx, req);
+    }
+
+    @Override
+    public Set<TransientServiceOption> transientServiceOptions() {
+        return transientServiceOptions;
     }
 }

@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package armeria.scalapb;
+
+service HelloService {
+  rpc Hello (HelloRequest) returns (HelloReply) {}
+  rpc LazyHello (HelloRequest) returns (HelloReply) {}
+  rpc BlockingHello (HelloRequest) returns (HelloReply) {}
+  rpc LotsOfReplies (HelloRequest) returns (stream HelloReply) {}
+  rpc LotsOfGreetings (stream HelloRequest) returns (HelloReply) {}
+  rpc BidiHello (stream HelloRequest) returns (stream HelloReply) {}
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}

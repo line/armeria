@@ -10,6 +10,8 @@ dependencies {
     api "com.thesamet.scalapb:scalapb-json4s_2.12"
     implementation "com.thesamet.scalapb:scalapb-runtime_2.12"
     implementation "com.thesamet.scalapb:scalapb-runtime-grpc_2.12"
+
+    testImplementation 'io.monix:monix-reactive_2.12'
 }
 
 // Use the sources from ':scalapb_2.13'.

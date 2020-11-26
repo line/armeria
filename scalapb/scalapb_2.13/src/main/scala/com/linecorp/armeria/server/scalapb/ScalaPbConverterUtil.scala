@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.MediaType
 import java.lang.invoke.{MethodHandle, MethodHandles, MethodType}
 import java.lang.reflect.{ParameterizedType, Type}
 import org.reactivestreams.Publisher
+import scala.concurrent.Future
 import scalapb.descriptors.{Descriptor, FieldDescriptor, PValue, Reads}
 import scalapb.json4s.Printer
 import scalapb.{GeneratedEnumCompanion, GeneratedMessage, GeneratedMessageCompanion}
@@ -80,7 +81,7 @@ private[scalapb] object ScalaPbConverterUtil {
       case _ => ResultType.UNKNOWN
     }
 
-  def isStreamType(tpe: Type): Boolean =
+  def isSupportedGenericType(tpe: Type): Boolean =
     tpe match {
       case parameterizedType: ParameterizedType =>
         val rawType = parameterizedType.getRawType.asInstanceOf[Class[_]]
@@ -89,7 +90,9 @@ private[scalapb] object ScalaPbConverterUtil {
 
         typeArguments.length == 1 &&
         isProtobufMessage(firstType) &&
-        (classOf[Publisher[_]].isAssignableFrom(rawType) ||
+        (classOf[Future[_]].isAssignableFrom(rawType) ||
+        classOf[java.util.concurrent.CompletionStage[_]].isAssignableFrom(rawType) ||
+        classOf[Publisher[_]].isAssignableFrom(rawType) ||
         classOf[java.util.stream.Stream[_]].isAssignableFrom(rawType))
       case _ => false
     }
