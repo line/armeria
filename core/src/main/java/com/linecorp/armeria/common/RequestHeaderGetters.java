@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull; 
+
 import java.net.URI;
 import java.util.List;
 import java.util.Locale;
@@ -108,6 +110,6 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
      */
     @Nullable
     default Locale selectLocale(Locale... supportedLocales) {
-        return selectLocale(ImmutableList.copyOf(supportedLocales));
+        return selectLocale(ImmutableList.copyOf(requireNonNull(supportedLocales, "supportedLocales")));
     }
 }
