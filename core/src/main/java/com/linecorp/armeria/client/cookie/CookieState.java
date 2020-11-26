@@ -19,7 +19,7 @@ package com.linecorp.armeria.client.cookie;
 import com.linecorp.armeria.common.Cookie;
 
 /**
- * The possible states of a cookie in the jar.
+ * The possible states of a {@link Cookie} in a {@link CookieJar}.
  *
  * @see CookieJar#state(Cookie)
  */

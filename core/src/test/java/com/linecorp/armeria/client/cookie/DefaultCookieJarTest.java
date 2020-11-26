@@ -196,8 +196,9 @@ class DefaultCookieJarTest {
 
         final Cookie expireCookie = expectCookie.toBuilder().maxAge(1).build();
         cookieJar.set(foo, Cookies.of(cookie.toBuilder().maxAge(1).build()));
-        assertThat(cookieJar.state(expireCookie)).isEqualTo(CookieState.EXISTENT);
-        assertThat(cookieJar.state(expireCookie, System.currentTimeMillis() + 1000))
-                .isEqualTo(CookieState.EXPIRED);
+
+        final long currentTimeMillis = System.currentTimeMillis();
+        assertThat(cookieJar.state(expireCookie, currentTimeMillis + 1000)).isEqualTo(CookieState.EXISTENT);
+        assertThat(cookieJar.state(expireCookie, currentTimeMillis + 1001)).isEqualTo(CookieState.EXPIRED);
     }
 }

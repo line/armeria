@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -127,8 +126,7 @@ final class DefaultCookieJar implements CookieJar {
             if (createdTimeMillis == Long.MIN_VALUE) {
                 return CookieState.NON_EXISTENT;
             }
-            final long timePassed = TimeUnit.MILLISECONDS.toSeconds(currentTimeMillis - createdTimeMillis);
-            return cookie.maxAge() != Cookie.UNDEFINED_MAX_AGE && timePassed >= cookie.maxAge() ?
+            return isExpired(cookie, createdTimeMillis, currentTimeMillis) ?
                    CookieState.EXPIRED : CookieState.EXISTENT;
         } finally {
             lock.unlock();
@@ -182,9 +180,7 @@ final class DefaultCookieJar implements CookieJar {
                         it.remove();
                         break;
                     }
-                    final long timePassed =
-                            TimeUnit.MILLISECONDS.toSeconds(currentTimeMillis - createdTimeMillis);
-                    if (cookie.maxAge() != Cookie.UNDEFINED_MAX_AGE && timePassed >= cookie.maxAge()) {
+                    if (isExpired(cookie, createdTimeMillis, currentTimeMillis)) {
                         it.remove();
                         store.removeLong(cookie);
                         break;
@@ -195,6 +191,11 @@ final class DefaultCookieJar implements CookieJar {
                 }
             }
         }
+    }
+
+    private static boolean isExpired(Cookie cookie, long createdTimeMillis, long currentTimeMillis) {
+        final long timePassed = currentTimeMillis - createdTimeMillis;
+        return cookie.maxAge() != Cookie.UNDEFINED_MAX_AGE && timePassed > cookie.maxAge() * 1000;
     }
 
     private static boolean domainMatches(String domain, String host) {
