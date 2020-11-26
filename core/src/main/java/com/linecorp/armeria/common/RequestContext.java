@@ -119,11 +119,10 @@ public interface RequestContext {
     ServiceRequestContext root();
 
     /**
-     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
-     * {@link #setAttr(AttributeKey, Object)}, {@link #setAttrIfAbsent(AttributeKey, Object)} or
-     * {@link #computeAttrIfAbsent(AttributeKey, Function)}.
+     * Returns the value associated with the given {@link AttributeKey} or {@code null} if there's no value
+     * set by {@link #setAttr(AttributeKey, Object)}.
      *
-     * <h3>Searching for attributes in a root context</h3>
+     * <h4>Searching for attributes in a root context</h4>
      *
      * <p>Note: This section applies only to a {@link ClientRequestContext}. A {@link ServiceRequestContext}
      * always has itself as a {@link #root()}.</p>
@@ -151,9 +150,8 @@ public interface RequestContext {
     <V> V attr(AttributeKey<V> key);
 
     /**
-     * Returns the value mapped to the given {@link AttributeKey} or {@code null} if there's no value set by
-     * {@link #setAttr(AttributeKey, Object)}, {@link #setAttrIfAbsent(AttributeKey, Object)} or
-     * {@link #computeAttrIfAbsent(AttributeKey, Function)}.
+     * Returns the value associated with the given {@link AttributeKey} or {@code null} if there's no value
+     * set by {@link #setAttr(AttributeKey, Object)}.
      *
      * <p>Unlike {@link #attr(AttributeKey)}, this does not search in {@link #root()}.</p>
      *
@@ -163,9 +161,31 @@ public interface RequestContext {
     <V> V ownAttr(AttributeKey<V> key);
 
     /**
+     * Returns {@code true} if and only if the value associated with the specified {@link AttributeKey} is
+     * not {@code null}.
+     *
+     * @see #hasOwnAttr(AttributeKey)
+     */
+    default boolean hasAttr(AttributeKey<?> key) {
+        return attr(key) != null;
+    }
+
+    /**
+     * Returns {@code true} if and only if the value associated with the specified {@link AttributeKey} is
+     * not {@code null}.
+     *
+     * <p>Unlike {@link #hasAttr(AttributeKey)}, this does not search in {@link #root()}.</p>
+     *
+     * @see #hasAttr(AttributeKey)
+     */
+    default boolean hasOwnAttr(AttributeKey<?> key) {
+        return ownAttr(key) != null;
+    }
+
+    /**
      * Returns the {@link Iterator} of all {@link Entry}s this context contains.
      *
-     * <h3>Searching for attributes in a root context</h3>
+     * <h4>Searching for attributes in a root context</h4>
      *
      * <p>Note: This section applies only to a {@link ClientRequestContext}. A {@link ServiceRequestContext}
      * always has itself as a {@link #root()}.</p>
@@ -233,35 +253,14 @@ public interface RequestContext {
 
     /**
      * Associates the specified value with the given {@link AttributeKey} in this context.
-     * If this context previously contained a mapping for the {@link AttributeKey},
-     * the old value is replaced by the specified value. Set {@code null} not to iterate the mapping from
-     * {@link #attrs()}.
-     */
-    <V> void setAttr(AttributeKey<V> key, @Nullable V value);
-
-    /**
-     * Associates the specified value with the given {@link AttributeKey} in this context only
-     * if this context does not contain a mapping for the {@link AttributeKey}.
+     * If this context previously contained a mapping for the {@link AttributeKey}, the old value is replaced
+     * by the specified value. Set {@code null} not to iterate the mapping from {@link #attrs()}.
      *
-     * @return {@code null} if there was no mapping for the {@link AttributeKey} or the old value if there's
-     *         a mapping for the {@link AttributeKey}.
+     * @return the old value that has been replaced if there's a mapping for the specified key in this context
+     *         or its {@link #root()}, or {@code null} otherwise.
      */
     @Nullable
-    <V> V setAttrIfAbsent(AttributeKey<V> key, V value);
-
-    /**
-     * If the specified {@link AttributeKey} is not already associated with a value (or is mapped
-     * to {@code null}), attempts to compute its value using the given mapping
-     * function and stores it into this context.
-     *
-     * <p>If the mapping function returns {@code null}, no mapping is recorded.</p>
-     *
-     * @return the current (existing or computed) value associated with
-     *         the specified {@link AttributeKey}, or {@code null} if the computed value is {@code null}
-     */
-    @Nullable
-    <V> V computeAttrIfAbsent(
-            AttributeKey<V> key, Function<? super AttributeKey<V>, ? extends V> mappingFunction);
+    <V> V setAttr(AttributeKey<V> key, @Nullable V value);
 
     /**
      * Returns the {@link HttpRequest} associated with this context, or {@code null} if there's no
@@ -366,17 +365,40 @@ public interface RequestContext {
     MeterRegistry meterRegistry();
 
     /**
-     * Triggers the current timeout immediately if a timeout was scheduled before.
-     * Otherwise, the current {@link Request} will be timed-out immediately after a timeout scheduler is
-     * initialized.
+     * Cancels the current {@link Request} with a {@link Throwable}.
+     */
+    void cancel(Throwable cause);
+
+    /**
+     * Cancels the current {@link Request}.
+     */
+    void cancel();
+
+    /**
+     * Times out the current {@link Request}.
      */
     void timeoutNow();
 
     /**
-     * Returns whether this {@link RequestContext} has been timed-out (e.g., when the
-     * corresponding request passes a deadline).
+     * Returns the cause of cancellation, {@code null} if the request has not been cancelled.
      */
-    boolean isTimedOut();
+    @Nullable
+    Throwable cancellationCause();
+
+    /**
+     * Returns whether this {@link RequestContext} has been cancelled.
+     */
+    default boolean isCancelled() {
+        return cancellationCause() != null;
+    }
+
+    /**
+     * Returns whether this {@link RequestContext} has been timed-out, that is the cancellation cause is an
+     * instance of {@link TimeoutException}.
+     */
+    default boolean isTimedOut() {
+        return cancellationCause() instanceof TimeoutException;
+    }
 
     /**
      * Returns the {@link ContextAwareEventLoop} that is handling the current {@link Request}.

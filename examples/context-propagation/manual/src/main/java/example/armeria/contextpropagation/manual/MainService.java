@@ -68,10 +68,14 @@ public class MainService implements HttpService {
 
                             final Stream.Builder<Long> nums = Stream.builder();
                             Arrays.stream(request.path().substring(1).split(",")).forEach(token -> {
-                                nums.add(Long.parseLong(token));
+                                if (!token.isEmpty()) {
+                                    nums.add(Long.parseLong(token));
+                                }
                             });
                             Arrays.stream(request.contentUtf8().split(",")).forEach(token -> {
-                                nums.add(Long.parseLong(token));
+                                if (!token.isEmpty()) {
+                                    nums.add(Long.parseLong(token));
+                                }
                             });
                             fetchFromFakeDb.join().forEach(nums::add);
 
@@ -80,8 +84,8 @@ public class MainService implements HttpService {
                                        .collect(Collectors.toList());
                         },
                         // Unless you know what you're doing, always use then*Async type methods with the
-                        // context executor to have the context mounted and stay on a single thread to reduce
-                        // concurrency issues.
+                        // context-aware executor to have the context mounted and stay on a single
+                        // thread to reduce concurrency issues.
                         ctxExecutor);
 
         final CompletableFuture<HttpResponse> response =
@@ -102,8 +106,8 @@ public class MainService implements HttpService {
                                                                    .collect(Collectors.joining("\n")));
                                         },
                                         // Unless you know what you're doing, always use then*Async type
-                                        // methods with the context executor to have the context mounted and
-                                        // stay on a single thread to reduce concurrency issues.
+                                        // methods with the context-aware executor to have the context
+                                        // mounted and stay on a single thread to reduce concurrency issues.
                                         ctxExecutor);
 
         return HttpResponse.from(response);

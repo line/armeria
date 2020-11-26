@@ -16,6 +16,7 @@
 package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.TimeUnit;
 
@@ -29,28 +30,30 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithoutMeterTest.NoMeterTestConfiguration;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = NoMeterTestConfiguration.class)
+@SpringBootTest(classes = NoMeterTestConfiguration.class, properties =
+        "management.metrics.export.defaults.enabled=true") // @AutoConfigureMetrics is not allowed for boot1.
 @ActiveProfiles({ "local", "autoConfTest" })
 public class ArmeriaAutoConfigurationWithoutMeterTest {
 
+    /**
+     * {@link MeterIdPrefixFunction} and {@link MeterRegistry} are not registered as bean.
+     */
     @SpringBootApplication
-    @Import(ArmeriaOkServiceConfiguration.class)
     public static class NoMeterTestConfiguration {
     }
 
@@ -66,13 +69,13 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
     }
 
     @Test
-    public void testHttpServiceRegistrationBean() throws Exception {
-        final WebClient client = WebClient.of(newUrl("h1c"));
-
-        final HttpResponse response = client.get("/ok");
-
-        final AggregatedHttpResponse msg = response.aggregate().get();
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.contentUtf8()).isEqualTo("ok");
+    public void test() {
+        await().untilAsserted(() -> {
+            final String metricReport = WebClient.of(newUrl("h1c"))
+                                                 .get("/internal/metrics")
+                                                 .aggregate().join()
+                                                 .contentUtf8();
+            assertThat(metricReport).contains("# TYPE armeria_server_connections gauge");
+        });
     }
 }

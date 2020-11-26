@@ -29,14 +29,17 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.server.TransientServiceOptionsBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.TransientServiceBuilder;
+import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.auth.AuthService;
 
 /**
  * Builds a {@link HealthCheckService}.
  */
-public final class HealthCheckServiceBuilder {
+public final class HealthCheckServiceBuilder implements TransientServiceBuilder {
 
     private static final int DEFAULT_LONG_POLLING_TIMEOUT_SECONDS = 60;
     private static final int DEFAULT_PING_INTERVAL_SECONDS = 5;
@@ -54,6 +57,9 @@ public final class HealthCheckServiceBuilder {
     private long pingIntervalMillis = TimeUnit.SECONDS.toMillis(DEFAULT_PING_INTERVAL_SECONDS);
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
+
+    private final TransientServiceOptionsBuilder
+            transientServiceOptionsBuilder = new TransientServiceOptionsBuilder();
 
     HealthCheckServiceBuilder() {}
 
@@ -250,6 +256,20 @@ public final class HealthCheckServiceBuilder {
         return this;
     }
 
+    @Override
+    public HealthCheckServiceBuilder transientServiceOptions(
+            TransientServiceOption... transientServiceOptions) {
+        transientServiceOptionsBuilder.transientServiceOptions(transientServiceOptions);
+        return this;
+    }
+
+    @Override
+    public HealthCheckServiceBuilder transientServiceOptions(
+            Iterable<TransientServiceOption> transientServiceOptions) {
+        transientServiceOptionsBuilder.transientServiceOptions(transientServiceOptions);
+        return this;
+    }
+
     /**
      * Returns a newly created {@link HealthCheckService} built from the properties specified so far.
      */
@@ -257,6 +277,7 @@ public final class HealthCheckServiceBuilder {
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      pingIntervalMillis, updateHandler);
+                                      pingIntervalMillis, updateHandler,
+                                      transientServiceOptionsBuilder.build());
     }
 }

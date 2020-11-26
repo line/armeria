@@ -119,7 +119,7 @@ public final class CorsConfig {
         // We do not consider the score of the routing result for simplicity. It'd be enough to find
         // whether the path is matched or not.
         return routes.isEmpty() ||
-               routes.stream().anyMatch(route -> route.apply(routingContext).isPresent());
+               routes.stream().anyMatch(route -> route.apply(routingContext, false).isPresent());
     }
 
     @Override

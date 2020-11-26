@@ -65,6 +65,12 @@ final class StreamingCallSubscriber extends AbstractSubscriber {
                     request(1);
                     return super.read(sink, byteCount);
                 }
+
+                @Override
+                public void close() throws IOException {
+                    cancel();
+                    super.close();
+                }
             }));
             responseCalled = true;
         }

@@ -54,9 +54,11 @@ import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -233,17 +235,17 @@ public final class GrpcStatus {
     }
 
     /**
-     * Extracts the gRPC status from the {@link HttpHeaders}, closing the {@link HttpStreamReader} for a
-     * successful response, then delivering the status to the {@link TransportStatusListener}.
+     * Extracts the gRPC status from the {@link HttpHeaders}, closing the {@link HttpStreamDeframerHandler}
+     * for a successful response, then delivering the status to the {@link TransportStatusListener}.
      */
     public static void reportStatus(HttpHeaders headers,
-                                    HttpStreamReader reader,
+                                    HttpDeframer<DeframedMessage> reader,
                                     TransportStatusListener transportStatusListener) {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
         if (status.getCode() == Status.OK.getCode()) {
             // Successful response, finish delivering messages before returning the status.
-            reader.closeDeframer();
+            reader.close();
         }
         final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
         if (grpcMessage != null) {

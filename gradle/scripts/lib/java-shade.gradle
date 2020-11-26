@@ -6,10 +6,11 @@ import java.util.concurrent.atomic.AtomicInteger
 buildscript {
     repositories {
         gradlePluginPortal()
+        google()
     }
     dependencies {
         classpath "com.github.jengelman.gradle.plugins:shadow:${managedVersions['com.github.jengelman.gradle.plugins:shadow']}"
-        classpath "net.sf.proguard:proguard-gradle:${managedVersions['net.sf.proguard:proguard-gradle']}"
+        classpath "com.guardsquare:proguard-gradle:${managedVersions['com.guardsquare:proguard-gradle']}"
     }
 }
 

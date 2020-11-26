@@ -46,8 +46,10 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +59,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import io.grpc.MethodDescriptor;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 
@@ -65,11 +68,11 @@ import io.grpc.ServerServiceDefinition;
  * documentation generation.
  */
 final class HandlerRegistry {
-    private final List<ServerServiceDefinition> services;
-    private final Map<String, ServerMethodDefinition<?, ?>> methods;
+    private final ImmutableList<ServerServiceDefinition> services;
+    private final ImmutableMap<String, ServerMethodDefinition<?, ?>> methods;
 
-    private HandlerRegistry(List<ServerServiceDefinition> services,
-                            Map<String, ServerMethodDefinition<?, ?>> methods) {
+    private HandlerRegistry(ImmutableList<ServerServiceDefinition> services,
+                            ImmutableMap<String, ServerMethodDefinition<?, ?>> methods) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
     }
@@ -87,25 +90,98 @@ final class HandlerRegistry {
         return methods;
     }
 
-    static class Builder {
-        // Store per-service first, to make sure services are added/replaced atomically.
-        private final HashMap<String, ServerServiceDefinition> services =
-                new HashMap<String, ServerServiceDefinition>();
+    static final class Builder {
+        private final List<Entry> entries = new ArrayList<>();
 
         Builder addService(ServerServiceDefinition service) {
-            services.put(service.getServiceDescriptor().getName(), service);
+            entries.add(new Entry(service.getServiceDescriptor().getName(), service, null));
             return this;
         }
 
-        HandlerRegistry build() {
-            final ImmutableMap.Builder<String, ServerMethodDefinition<?, ?>> mapBuilder =
-                    ImmutableMap.builder();
-            for (ServerServiceDefinition service : services.values()) {
-                for (ServerMethodDefinition<?, ?> method : service.getMethods()) {
-                    mapBuilder.put(method.getMethodDescriptor().getFullMethodName(), method);
+        Builder addService(String path, ServerServiceDefinition service,
+                           @Nullable MethodDescriptor<?, ?> methodDescriptor) {
+            entries.add(new Entry(normalizePath(path, methodDescriptor == null), service, methodDescriptor));
+            return this;
+        }
+
+        private static String normalizePath(String path, boolean isServicePath) {
+            if (path.isEmpty()) {
+                return path;
+            }
+
+            if (path.charAt(0) == '/') {
+                path = path.substring(1);
+            }
+            if (path.isEmpty()) {
+                return path;
+            }
+
+            if (isServicePath) {
+                final int lastCharIndex = path.length() - 1;
+                if (path.charAt(lastCharIndex) == '/') {
+                    path = path.substring(0, lastCharIndex);
                 }
             }
-            return new HandlerRegistry(ImmutableList.copyOf(services.values()), mapBuilder.build());
+
+            return path;
+        }
+
+        List<Entry> entries() {
+            return entries;
+        }
+
+        HandlerRegistry build() {
+            // Store per-service first, to make sure services are added/replaced atomically.
+            final Map<String, ServerServiceDefinition> services = new HashMap<>();
+            final Map<String, ServerMethodDefinition<?, ?>> methods = new HashMap<>();
+
+            for (Entry entry : entries) {
+                final ServerServiceDefinition service = entry.service();
+                final String path = entry.path();
+                services.put(path, service);
+                final MethodDescriptor<?, ?> methodDescriptor = entry.method();
+                if (methodDescriptor == null) {
+                    for (ServerMethodDefinition<?, ?> method : service.getMethods()) {
+                        final String fullMethodName = method.getMethodDescriptor().getFullMethodName();
+                        methods.put(path + '/' + extractMethodName(fullMethodName), method);
+                    }
+                } else {
+                    final ServerMethodDefinition<?, ?> method =
+                            service.getMethods().stream()
+                                   .filter(method0 -> method0.getMethodDescriptor() == methodDescriptor)
+                                   .findFirst()
+                                   .orElseThrow(() -> new IllegalArgumentException(
+                                           "Failed to retrieve " + methodDescriptor + " in " + service));
+                    methods.put(path, method);
+                }
+            }
+            return new HandlerRegistry(ImmutableList.copyOf(services.values()), ImmutableMap.copyOf(methods));
+        }
+    }
+
+    static final class Entry {
+        private final String path;
+        private final ServerServiceDefinition service;
+        @Nullable
+        private final MethodDescriptor<?, ?> method;
+
+        Entry(String path, ServerServiceDefinition service, @Nullable MethodDescriptor<?, ?> method) {
+            this.path = path;
+            this.service = service;
+            this.method = method;
+        }
+
+        String path() {
+            return path;
+        }
+
+        ServerServiceDefinition service() {
+            return service;
+        }
+
+        @Nullable
+        MethodDescriptor<?, ?> method() {
+            return method;
         }
     }
 }

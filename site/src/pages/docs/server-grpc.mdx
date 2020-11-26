@@ -125,16 +125,23 @@ See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewi
 
 <type://GrpcService> supports the [gRPC-Web][gRPC-Web] protocol,
 a small modification to the [gRPC][gRPC] wire format that can be used from a browser.
-Use the unofficial [gRPC-Web-Client][gRPC-Web-Client] to access the service from a browser.
-[gRPC-Web][gRPC-Web] does not support RPC methods with streaming requests.
+Use the [gRPC-Web-Client][the official gRPC-Web client] to access the service from a browser.
 
-If the origin of the Javascript and API server are different, [gRPC-Web-Client][gRPC-Web-Client] first sends `preflight`
+<Tip>
+
+[gRPC-Web-Client][the official gRPC-Web client] does not support client-side
+(or bi-directional) streaming yet but only server-side streaming.
+See [here](https://github.com/grpc/grpc-web/issues/24) for more information.
+
+</Tip>
+
+If the origin of the Javascript and API server are different, [gRPC-Web-Client][the official gRPC-Web client] first sends `preflight`
 requests by the HTTP `OPTIONS` method, in order to determine whether the actual request is safe to send
 in terms of CORS. Armeria provides <type://CorsService> to handle this requests, so you need to decorate it when
 you build a <type://GrpcService>:
 
 ```java
-import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 
@@ -271,6 +278,6 @@ For more information, see the official [gRPC Server Reflection tutorial](https:/
 
 [gRPC]: https://grpc.io/
 [gRPC-Web]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
-[gRPC-Web-Client]: https://github.com/improbable-eng/grpc-web
+[the official gRPC-Web client]: https://github.com/grpc/grpc-web
 [Protobuf-JSON]: https://developers.google.com/protocol-buffers/docs/proto3#json
 [the gRPC-Java README]: https://github.com/grpc/grpc-java/blob/master/README.md#download

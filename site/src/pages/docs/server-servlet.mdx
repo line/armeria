@@ -9,7 +9,16 @@ All HTTP requests and responses go through Armeria. As a result, you get the fol
 
 ## Embedding Apache Tomcat
 
-Add a <type://TomcatService> to a <type://ServerBuilder>:
+You need the `armeria-tomcat9` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-tomcat9' },
+  ]}
+/>
+
+Then, add a <type://TomcatService> to a <type://ServerBuilder>:
 
 ```java
 import com.linecorp.armeria.server.ServerBuilder;
@@ -29,11 +38,21 @@ For more information, please refer to the API documentation of <type://TomcatSer
 
 ## Embedding Jetty
 
-Unlike Apache Tomcat, you need more dependencies and bootstrap code due to its modular design:
-- org.eclipse.jetty:jetty-webapp
-- org.eclipse.jetty:jetty-annotations
-- org.eclipse.jetty:apache-jsp
-- org.eclipse.jetty:apache-jstl
+You need `armeria-jetty9`, additional `jetty` dependencies and bootstrap code due to its modular design:
+
+<RequiredDependencies
+  boms={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' },
+    { groupId: 'org.eclipse.jetty', artifactId: 'jetty-bom' },
+  ]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-jetty9' },
+    { groupId: 'org.eclipse.jetty', artifactId: 'jetty-webapp' },
+    { groupId: 'org.eclipse.jetty', artifactId: 'jetty-annotations' },
+    { groupId: 'org.eclipse.jetty', artifactId: 'apache-jsp' },
+    { groupId: 'org.eclipse.jetty', artifactId: 'apache-jstl' },
+  ]}
+/>
 
 ```java
 import com.linecorp.armeria.server.ServerBuilder;

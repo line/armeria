@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -123,6 +123,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             jsonMarshallers =
                     registry.services().stream()
                             .map(ServerServiceDefinition::getServiceDescriptor)
+                            .distinct()
                             .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
         }
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
@@ -204,8 +205,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
-            ctx.whenRequestTimingOut().thenRun(() -> call.close(Status.CANCELLED, new Metadata()));
-            req.subscribe(call.messageReader(), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+            ctx.whenRequestCancelling().thenRun(() -> call.close(Status.CANCELLED, new Metadata()));
+            req.subscribe(call.messageDeframer(), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
         }
         return res;
     }
@@ -256,7 +257,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public void serviceAdded(ServiceConfig cfg) {
-        if (maxInboundMessageSizeBytes == ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE) {
+        if (maxInboundMessageSizeBytes == ArmeriaMessageDeframerHandler.NO_MAX_INBOUND_MESSAGE_SIZE) {
             maxInboundMessageSizeBytes = (int) Math.min(cfg.maxRequestLength(), Integer.MAX_VALUE);
         }
 
@@ -342,7 +343,16 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public List<ServerServiceDefinition> services() {
-        return registry.services();
+        final List<ServerServiceDefinition> services = registry.services();
+        assert services instanceof ImmutableList;
+        return services;
+    }
+
+    @Override
+    public Map<String, ServerMethodDefinition<?, ?>> methods() {
+        final Map<String, ServerMethodDefinition<?, ?>> methods = registry.methods();
+        assert methods instanceof ImmutableMap;
+        return methods;
     }
 
     @Override

@@ -39,7 +39,7 @@ proxying all server calls to the actual Armeria server.
 Use [npm-check-updates](https://www.npmjs.com/package/npm-check-updates)
 
 ```console
-$ npx npm-check-updates --semverLevel major
+$ npx npm-check-updates --target latest
 ```
 
 ## Updating licenses

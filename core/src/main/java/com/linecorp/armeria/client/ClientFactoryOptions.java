@@ -79,6 +79,19 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("TLS_CUSTOMIZER", b -> { /* no-op */ });
 
     /**
+     * Whether to allow the bad cipher suites listed in
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information.
+     */
+    public static final ClientFactoryOption<Boolean> TLS_ALLOW_UNSAFE_CIPHERS =
+            ClientFactoryOption.define("tlsAllowUnsafeCiphers", Flags.tlsAllowUnsafeCiphers());
+
+    /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      */
@@ -146,7 +159,7 @@ public final class ClientFactoryOptions
      * The PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      */
     public static final ClientFactoryOption<Long> PING_INTERVAL_MILLIS =
@@ -403,7 +416,7 @@ public final class ClientFactoryOptions
      * Returns the PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      */
     public long pingIntervalMillis() {
@@ -445,5 +458,19 @@ public final class ClientFactoryOptions
      */
     public ProxyConfigSelector proxyConfigSelector() {
         return get(PROXY_CONFIG_SELECTOR);
+    }
+
+    /**
+     * Returns whether to allow the bad cipher suites listed in
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information.
+     */
+    public boolean tlsAllowUnsafeCiphers() {
+        return get(TLS_ALLOW_UNSAFE_CIPHERS);
     }
 }

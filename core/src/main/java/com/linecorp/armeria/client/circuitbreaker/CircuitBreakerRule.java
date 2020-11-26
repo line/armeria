@@ -64,7 +64,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
  *                           .thenSuccess(),
  *         // Everything else is reported as a failure
  *         ClientBreakerRule.builder().thenFailure());
- * }</pre></p>
+ * }</pre>
  */
 @FunctionalInterface
 public interface CircuitBreakerRule {
@@ -243,7 +243,7 @@ public interface CircuitBreakerRule {
      * >     ...
      * >     return CompletableFuture.completedFuture(CircuitBreakerDecision.success())
      * > }
-     * }</pre></p>
+     * }</pre>
      *
      * @param ctx the {@link ClientRequestContext} of this request
      * @param cause the {@link Throwable} which is raised while sending a request. {@code null} if there's no

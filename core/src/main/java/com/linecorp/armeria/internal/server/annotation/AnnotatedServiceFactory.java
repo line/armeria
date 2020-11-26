@@ -193,7 +193,8 @@ public final class AnnotatedServiceFactory {
             // Set a default HTTP status code for a response depending on the return type of the method.
             final Class<?> returnType = method.getReturnType();
             return returnType == Void.class ||
-                   returnType == void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+                   returnType == void.class ||
+                   KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
         }
 
         final int statusCode = statusCodeAnnotation.value();
@@ -240,6 +241,14 @@ public final class AnnotatedServiceFactory {
                                                 List<RequestConverterFunction> baseRequestConverters,
                                                 List<ResponseConverterFunction> baseResponseConverters,
                                                 List<ExceptionHandlerFunction> baseExceptionHandlers) {
+
+        if (KotlinUtil.getCallKotlinSuspendingMethod() == null && KotlinUtil.maybeSuspendingFunction(method)) {
+            throw new IllegalArgumentException(
+                    "Kotlin suspending functions are supported " +
+                    "only when you added 'armeria-kotlin' as a dependency.\n" +
+                    "See https://armeria.dev/docs/server-annotated-service#kotlin-coroutines-support " +
+                    "for more information.");
+        }
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
@@ -311,8 +320,8 @@ public final class AnnotatedServiceFactory {
                 AnnotationUtil.findFirst(object.getClass(), Blocking.class) != null;
 
         return routes.stream().map(route -> {
-            final List<AnnotatedValueResolver> resolvers = getAnnotatedValueResolvers(req, route, method,
-                                                                                      clazz);
+            final List<AnnotatedValueResolver> resolvers =
+                    getAnnotatedValueResolvers(req, route, method, clazz, needToUseBlockingTaskExecutor);
             return new AnnotatedServiceElement(
                     route,
                     new AnnotatedService(object, method, resolvers, eh, res, route, responseHeaders,
@@ -323,13 +332,14 @@ public final class AnnotatedServiceFactory {
 
     private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
                                                                            Route route, Method method,
-                                                                           Class<?> clazz) {
+                                                                           Class<?> clazz,
+                                                                           boolean useBlockingExecutor) {
         final Set<String> expectedParamNames = route.paramNames();
         List<AnnotatedValueResolver> resolvers;
         try {
-            resolvers = AnnotatedValueResolver.ofServiceMethod(method, expectedParamNames,
-                                                               AnnotatedValueResolver
-                                                                       .toRequestObjectResolvers(req));
+            resolvers = AnnotatedValueResolver.ofServiceMethod(
+                    method, expectedParamNames,
+                    AnnotatedValueResolver.toRequestObjectResolvers(req, method), useBlockingExecutor);
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
             //
@@ -374,7 +384,7 @@ public final class AnnotatedServiceFactory {
                                            .stream()
                                            .map(Annotation::annotationType)
                                            .anyMatch(a -> a == Path.class ||
-                                       HTTP_METHOD_MAP.containsKey(a)))
+                                                          HTTP_METHOD_MAP.containsKey(a)))
                 .sorted(Comparator.comparingInt(AnnotatedServiceFactory::order))
                 .collect(toImmutableList());
     }

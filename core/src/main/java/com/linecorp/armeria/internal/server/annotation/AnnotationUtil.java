@@ -82,7 +82,7 @@ final class AnnotationUtil {
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
 
     static {
-        // Add well known JDK annotations with cyclic dependencies which will always be blacklisted.
+        // Add well known JDK annotations with cyclic dependencies which will always be blocklisted.
         knownCyclicAnnotationTypes.add(Documented.class);
         knownCyclicAnnotationTypes.add(Retention.class);
         knownCyclicAnnotationTypes.add(Target.class);
@@ -235,7 +235,7 @@ final class AnnotationUtil {
             return false;
         }
         if (!visitedAnnotationTypes.add(actualAnnotationType)) {
-            blacklistAnnotation(actualAnnotationType);
+            disallowedListAnnotation(actualAnnotationType);
             return false;
         }
 
@@ -337,7 +337,7 @@ final class AnnotationUtil {
             return false;
         }
         if (!visitedAnnotationTypes.add(annotationType)) {
-            blacklistAnnotation(annotationType);
+            disallowedListAnnotation(annotationType);
             return false;
         }
 
@@ -355,7 +355,7 @@ final class AnnotationUtil {
         return true;
     }
 
-    private static void blacklistAnnotation(Class<? extends Annotation> annotationType) {
+    private static void disallowedListAnnotation(Class<? extends Annotation> annotationType) {
         if (!knownCyclicAnnotationTypes.add(annotationType)) {
             return;
         }
@@ -374,9 +374,10 @@ final class AnnotationUtil {
             }
 
             if (ifaceNames.isEmpty()) {
-                logger.debug("Blacklisting an annotation with a cyclic reference: {}", typeName);
+                logger.debug("Disallowed listing an annotation with a cyclic reference: {}", typeName);
             } else {
-                logger.debug("Blacklisting an annotation with a cyclic reference: {}{}", typeName, ifaceNames);
+                logger.debug("Disallowed listing an annotation with a cyclic reference: {}{}",
+                             typeName, ifaceNames);
             }
         }
     }

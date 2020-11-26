@@ -195,6 +195,14 @@ one of the following supported types:
     - `LocalDate`, `LocalDateTime` and `LocalTime`,
     - `OffsetDateTime` and `OffsetTime`
     - `ZonedDateTime`, `ZoneId` and `ZoneOffset`
+- Custom types with either of the following public static methods/constructor taking a single `String` parameter.
+  Note that these are scanned for in the order below. The first matching method being is used,
+  and if that method throws an exception, no other methods will be tried and that exception will
+  be propagated.
+  - `public static T of(String)`
+  - `public static T valueOf(String)`
+  - `public static T fromString(String)`
+  - `public T(String)` (constructor)
 
 Note that you can omit the value of <type://@Param> if you compiled your code with `-parameters` javac
 option. In this case the variable name is used as the value.
@@ -1428,3 +1436,86 @@ for more information about RPC and HTTP service names, and how to use it.
 </Tip>
 
 [Publisher]: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html
+
+## Kotlin coroutines support
+
+You can implement annotated services with [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html)
+by adding the following dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-kotlin' },
+  ]}
+/>
+
+Then, define the suspending function:
+
+```kotlin
+class MyAnnotatedService {
+    @Get("/users/{name}")
+    suspend fun getUserToken(@Param("name") name: String): String {
+        val user = myReactiveRepository.findByName(name).await()
+        return user.token
+    }
+}
+```
+
+Note that you can omit the value of <type://@Param> if you compiled your Kotlin code with [`java-parameters`](https://kotlinlang.org/docs/reference/compiler-reference.html#-java-parameters) option.
+
+```kotlin
+class MyAnnotatedService {
+    @Get("/users/{name}")
+    suspend fun getUserToken(@Param name: String): String { ... }
+}
+```
+
+### Coroutine dispatcher
+
+By default, Armeria uses a context-aware event loop as a [coroutine dispatcher](https://kotlin.github.io/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-coroutine-dispatcher/).
+A context-aware blocking executor is used as a dispatcher if you annotate a service method with <type://@Blocking> or enable <type://AnnotatedServiceBindingBuilder#useBlockingTaskExecutor(boolean)>.
+
+```kotlin
+serverBuilder
+    .annotatedService()
+    // Enable `useBlockingTaskExecutor`.
+    .useBlockingTaskExecutor(true)
+    .build(MyAnnotatedService())
+
+// or
+
+import com.linecorp.armeria.server.annotation.Blocking
+
+class MyAnnotatedService {
+    @Blocking
+    @Get("/blocking/users/{name}")
+    suspend fun getUserTokenBlocking(@Param("name") name: String): String {
+        val id = myReactiveClient.getId(name).await()
+        val user = myBlockingRepository.findById(id)
+        return user.token
+    }
+}
+```
+
+<Tip>
+
+If you use [Logback integration](/docs/advanced-logging) or [Zipkin integration](/docs/advanced-zipkin),
+coroutines should be executed in a thread that is aware of <type://RequestContext>.
+
+</Tip>
+
+### `CoroutineContextService` decorator
+
+Armeria provides a way to configure a coroutine context of annotated service methods
+using <type://CoroutineContextService> decorator.
+
+```kotlin
+import com.linecorp.armeria.server.kotlin.CoroutineContextService
+
+serverBuilder
+    .annotatedService()
+    .decorator(CoroutineContextService.newDecorator { ctx ->
+        CoroutineName(ctx.config().defaultServiceName() ?: "none")
+    })
+    .build(MyAnnotatedService())
+```

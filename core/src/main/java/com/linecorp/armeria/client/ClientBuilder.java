@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
  * {@link WebClient}, it is recommended to use the {@link WebClientBuilder} or
  * factory methods in {@link WebClient}.
  *
- * <h3>How are decorators and HTTP headers configured?</h3>
+ * <h2>How are decorators and HTTP headers configured?</h2>
  *
  * <p>Unlike other options, when a user calls {@link #option(ClientOption, Object)} or {@code options()} with
  * a {@link ClientOptions#DECORATION} or a {@link ClientOptions#HEADERS}, this builder will not simply

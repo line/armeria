@@ -75,7 +75,8 @@ class AnnotatedValueResolverTest {
 
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolverTest.class);
 
-    static final List<RequestObjectResolver> objectResolvers = toRequestObjectResolvers(ImmutableList.of());
+    static final List<RequestObjectResolver> objectResolvers =
+            toRequestObjectResolvers(ImmutableList.of(), AnnotatedValueResolverTest.class.getMethods()[0]);
 
     // A string which is the same as the parameter will be returned.
     static final Set<String> pathParams = ImmutableSet.of("var1");
@@ -142,7 +143,7 @@ class AnnotatedValueResolverTest {
         getAllMethods(Service.class).forEach(method -> {
             try {
                 final List<AnnotatedValueResolver> elements =
-                        AnnotatedValueResolver.ofServiceMethod(method, pathParams, objectResolvers);
+                        AnnotatedValueResolver.ofServiceMethod(method, pathParams, objectResolvers, false);
                 elements.forEach(AnnotatedValueResolverTest::testResolver);
             } catch (NoAnnotatedParameterException ignored) {
                 // Ignore this exception because MixedBean class has not annotated method.

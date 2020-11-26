@@ -17,8 +17,8 @@ package com.linecorp.armeria.server.eureka;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_DATA_CENTER_NAME;
-import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_LEASE_DURATION;
-import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_LEASE_RENEWAL_INTERVAL;
+import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_LEASE_DURATION_SECONDS;
+import static com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder.DEFAULT_LEASE_RENEWAL_INTERVAL_SECONDS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
@@ -46,8 +46,8 @@ final class InstanceInfoBuilder {
      */
     static final PortWrapper disabledPort = new PortWrapper(false, 0);
 
-    private int renewalIntervalSeconds = DEFAULT_LEASE_RENEWAL_INTERVAL;
-    private int leaseDurationSeconds = DEFAULT_LEASE_DURATION;
+    private int renewalIntervalSeconds = DEFAULT_LEASE_RENEWAL_INTERVAL_SECONDS;
+    private int leaseDurationSeconds = DEFAULT_LEASE_DURATION_SECONDS;
 
     @Nullable
     private String hostname;

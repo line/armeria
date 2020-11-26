@@ -103,6 +103,41 @@ class ThriftDocServicePluginTest {
     }
 
     @Test
+    public void multiplePaths() {
+        final Server server =
+                Server.builder()
+                      .service(Route.builder()
+                                    .exact("/foo1")
+                                    .build(),
+                               THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                      ThriftSerializationFormats.COMPACT))
+                      .service(Route.builder()
+                                    .exact("/foo2")
+                                    .build(),
+                               THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                      ThriftSerializationFormats.COMPACT))
+                      .build();
+        final ServiceSpecification specification = generator.generateSpecification(
+                ImmutableSet.copyOf(server.serviceConfigs()),
+                unifyFilter((plugin, service, method) -> true,
+                            (plugin, service, method) -> false));
+
+        final ServiceInfo fooServiceInfo = specification.services().iterator().next();
+        final Map<String, MethodInfo> methods =
+                fooServiceInfo.methods().stream()
+                              .collect(toImmutableMap(MethodInfo::name, Function.identity()));
+        final MethodInfo bar4 = methods.get("bar4");
+        assertThat(bar4.endpoints())
+                .containsExactlyInAnyOrder(
+                        EndpointInfo.builder("*", "/foo1")
+                                    .defaultFormat(ThriftSerializationFormats.COMPACT)
+                                    .build(),
+                        EndpointInfo.builder("*", "/foo2")
+                                    .defaultFormat(ThriftSerializationFormats.COMPACT)
+                                    .build());
+    }
+
+    @Test
     void include() {
 
         // 1. Nothing specified: include all.

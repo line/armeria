@@ -81,6 +81,11 @@ public final class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheck
     }
 
     @Override
+    public HealthCheckedEndpointGroupBuilder retryIntervalMillis(long retryIntervalMillis) {
+        return (HealthCheckedEndpointGroupBuilder) super.retryIntervalMillis(retryIntervalMillis);
+    }
+
+    @Override
     public HealthCheckedEndpointGroupBuilder retryBackoff(Backoff retryBackoff) {
         return (HealthCheckedEndpointGroupBuilder) super.retryBackoff(retryBackoff);
     }

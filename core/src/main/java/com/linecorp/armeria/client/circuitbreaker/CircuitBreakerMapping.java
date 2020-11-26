@@ -22,7 +22,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.MappingKey;
 import com.linecorp.armeria.common.Request;
 
 /**
@@ -30,12 +29,18 @@ import com.linecorp.armeria.common.Request;
  */
 @FunctionalInterface
 public interface CircuitBreakerMapping {
-
     /**
      * Returns the default {@link CircuitBreakerMapping}.
      */
     static CircuitBreakerMapping ofDefault() {
         return KeyedCircuitBreakerMapping.hostMapping;
+    }
+
+    /**
+     * Returns a builder that builds a {@link CircuitBreakerMapping} by setting host, method and/or path.
+     */
+    static CircuitBreakerMappingBuilder builder() {
+        return new CircuitBreakerMappingBuilder();
     }
 
     /**
@@ -45,7 +50,7 @@ public interface CircuitBreakerMapping {
      */
     static CircuitBreakerMapping perMethod(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return new KeyedCircuitBreakerMapping(MappingKey.METHOD, (host, method) -> factory.apply(method));
+        return builder().perMethod().build((host, method, path) -> factory.apply(method));
     }
 
     /**
@@ -55,7 +60,17 @@ public interface CircuitBreakerMapping {
      */
     static CircuitBreakerMapping perHost(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return new KeyedCircuitBreakerMapping(MappingKey.HOST, (host, method) -> factory.apply(host));
+        return builder().perHost().build((host, method, path) -> factory.apply(host));
+    }
+
+    /**
+     * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with the request path.
+     *
+     * @param factory the function that takes a path and creates a new {@link CircuitBreaker}
+     */
+    static CircuitBreakerMapping perPath(Function<String, ? extends CircuitBreaker> factory) {
+        requireNonNull(factory, "factory");
+        return builder().perPath().build((host, method, path) -> factory.apply(path));
     }
 
     /**
@@ -68,7 +83,7 @@ public interface CircuitBreakerMapping {
     static CircuitBreakerMapping perHostAndMethod(
             BiFunction<String, String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return new KeyedCircuitBreakerMapping(MappingKey.HOST_AND_METHOD, factory);
+        return builder().perHost().perMethod().build((host, method, path) -> factory.apply(host, method));
     }
 
     /**

@@ -101,6 +101,10 @@ public class HttpServerPathTest {
                 HttpStatus.OK);
         // Should allow the asterisk character in the path
         TEST_URLS.put("/service/foo*bar4", HttpStatus.OK);
+        // Should allow the colon character in the path
+        TEST_URLS.put("/gwturl#user:45/comments", HttpStatus.OK);
+        TEST_URLS.put("/service:name/hello", HttpStatus.OK);
+        TEST_URLS.put("/service::::name/hello", HttpStatus.OK);
 
         // OK as long as double dots are not used as a 'parent directory'
         TEST_URLS.put("/..service/foobar1", HttpStatus.OK);
@@ -116,9 +120,6 @@ public class HttpServerPathTest {
         TEST_URLS.put("/\\\\", HttpStatus.BAD_REQUEST);
         TEST_URLS.put("/service/foo>bar", HttpStatus.BAD_REQUEST);
         TEST_URLS.put("/service/foo<bar", HttpStatus.BAD_REQUEST);
-        TEST_URLS.put("/gwturl#user:45/comments", HttpStatus.BAD_REQUEST);
-        TEST_URLS.put("/service:name/hello", HttpStatus.BAD_REQUEST);
-        TEST_URLS.put("/service::::name/hello", HttpStatus.BAD_REQUEST);
     }
 
     @Test(timeout = 10000)

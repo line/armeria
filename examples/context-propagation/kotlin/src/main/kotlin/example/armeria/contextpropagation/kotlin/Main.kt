@@ -21,7 +21,7 @@ import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server.Server
 
-fun main(args: Array<String>) {
+fun main() {
     val backend = Server.builder()
         .service("/square/{num}") { ctx, _ ->
             val num = ctx.pathParam("num")?.toLong()

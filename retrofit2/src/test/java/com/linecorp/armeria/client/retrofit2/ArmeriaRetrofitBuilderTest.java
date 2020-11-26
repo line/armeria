@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.retrofit2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -64,6 +65,7 @@ class ArmeriaRetrofitBuilderTest {
             });
             sb.service("/slow", (ctx, req) ->
                     HttpResponse.delayed(HttpResponse.of("\"OK\""), Duration.ofSeconds(2)));
+            sb.service("/void", (ctx, req) -> HttpResponse.of(200));
         }
     };
 
@@ -124,6 +126,7 @@ class ArmeriaRetrofitBuilderTest {
                 .builder(server.httpUri())
                 .addHeader(HttpHeaderNames.AUTHORIZATION, "Bearer: access-token")
                 .addConverterFactory(converterFactory)
+                .streaming(true)
                 .build()
                 .create(Service.class);
         assertThat(secretService.secret().join()).isEqualTo("OK");
@@ -152,11 +155,33 @@ class ArmeriaRetrofitBuilderTest {
         assertThat(serviceWithCustomOptions.slow().join()).isEqualTo("OK");
     }
 
+    @Test
+    void streamingResponseIsCompleteWhenVoidReturnType() {
+        final CompletableFuture<Void> future = new CompletableFuture<>();
+        final Service service = ArmeriaRetrofit.builder(server.httpUri())
+                                               .streaming(true)
+                                               .decorator((delegate, ctx, req) -> {
+                                                   final HttpResponse response = delegate.execute(ctx, req);
+                                                   response.whenComplete().handle((unused, unused2) -> {
+                                                       future.complete(null);
+                                                       return null;
+                                                   });
+                                                   return response;
+                                               })
+                                               .build()
+                                               .create(Service.class);
+        service.voidReturn().join();
+        await().until(future::isDone);
+    }
+
     interface Service {
         @GET("/secret")
         CompletableFuture<String> secret();
 
         @GET("/slow")
         CompletableFuture<String> slow();
+
+        @GET("/void")
+        CompletableFuture<Void> voidReturn();
     }
 }

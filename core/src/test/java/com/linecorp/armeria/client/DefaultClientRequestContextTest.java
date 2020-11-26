@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
@@ -142,7 +142,7 @@ class DefaultClientRequestContextTest {
     @Test
     void derivedContextMustNotCallCustomizers() {
         final AtomicInteger counter = new AtomicInteger();
-        try (SafeCloseable unused = Clients.withContextCustomizer(unused2 -> counter.incrementAndGet())) {
+        try (SafeCloseable ignored = Clients.withContextCustomizer(unused2 -> counter.incrementAndGet())) {
             final DefaultClientRequestContext ctx = newContext();
             assertThat(counter).hasValue(1);
 
@@ -188,7 +188,7 @@ class DefaultClientRequestContextTest {
                 // The context captured by the second captor is also captured by the first captor.
                 assertThat(ctxCaptor1.getAll()).containsExactly(ctx1, ctx2);
                 assertThat(ctxCaptor2.getAll()).containsExactly(ctx2);
-                try (ClientRequestContextCaptor ctxCaptor3 = Clients.newContextCaptor()) {
+                try (ClientRequestContextCaptor ignored = Clients.newContextCaptor()) {
                     ctx3 = newContext();
                     assertThat(ctxCaptor1.getAll()).containsExactly(ctx1, ctx2, ctx3);
                     assertThat(ctxCaptor2.getAll()).containsExactly(ctx2, ctx3);
@@ -217,7 +217,7 @@ class DefaultClientRequestContextTest {
                         HttpMethod.POST, "/foo",
                         HttpHeaderNames.SCHEME, "http",
                         HttpHeaderNames.AUTHORITY, "example.com:8080")),
-                null, new TimeoutScheduler(0), System.nanoTime(), SystemInfo.currentTimeMicros());
+                null, new CancellationScheduler(0), System.nanoTime(), SystemInfo.currentTimeMicros());
         ctx.init(Endpoint.of("example.com", 8080));
         return ctx;
     }
@@ -265,7 +265,7 @@ class DefaultClientRequestContextTest {
     }
 
     @Test
-    void setResponseTimeoutAfter() throws InterruptedException {
+    void setResponseTimeoutAfter() {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final DefaultClientRequestContext ctx = (DefaultClientRequestContext) ClientRequestContext.of(req);
         final long tolerance = 500;

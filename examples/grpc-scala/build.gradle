@@ -6,11 +6,10 @@ plugins {
 dependencies {
     implementation project(':core')
     implementation project(':grpc')
-    implementation 'org.scala-lang:scala-library'
+    implementation project(':scalapb_2.13')
     implementation "com.thesamet.scalapb:scalapb-runtime_2.13"
     implementation "com.thesamet.scalapb:scalapb-runtime-grpc_2.13"
     implementation "com.thesamet.scalapb:scalapb-json4s_2.13"
-    implementation 'com.fasterxml.jackson.module:jackson-module-scala_2.13'
     implementation 'io.monix:monix-reactive_2.13'
 
     runtimeOnly 'org.slf4j:slf4j-simple'

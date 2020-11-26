@@ -22,16 +22,21 @@ import static com.linecorp.armeria.common.MediaType.create;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
 
 import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableBiMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
@@ -39,6 +44,8 @@ import com.google.common.collect.Multimap;
  * Serialization format of a remote procedure call and its reply.
  */
 public final class SerializationFormat implements Comparable<SerializationFormat> {
+
+    private static final Logger logger = LoggerFactory.getLogger(SerializationFormat.class);
 
     private static final BiMap<String, SerializationFormat> uriTextToFormats;
     private static final Set<SerializationFormat> values;
@@ -67,10 +74,15 @@ public final class SerializationFormat implements Comparable<SerializationFormat
                                    "unknown", create("application", "x-unknown")));
 
         // Load all serialization formats from the providers.
-        ServiceLoader.load(SerializationFormatProvider.class,
-                           SerializationFormatProvider.class.getClassLoader())
-                     .forEach(p -> p.entries().forEach(e -> register(mutableUriTextToFormats,
+        final List<SerializationFormatProvider> providers = ImmutableList.copyOf(
+                ServiceLoader.load(SerializationFormatProvider.class,
+                                   SerializationFormatProvider.class.getClassLoader()));
+        if (!providers.isEmpty()) {
+            logger.debug("Available {}s: {}", SerializationFormatProvider.class.getSimpleName(), providers);
+
+            providers.forEach(p -> p.entries().forEach(e -> register(mutableUriTextToFormats,
                                                                      mutableSimplifiedMediaTypeToFormats, e)));
+        }
 
         uriTextToFormats = ImmutableBiMap.copyOf(mutableUriTextToFormats);
         values = uriTextToFormats.values();

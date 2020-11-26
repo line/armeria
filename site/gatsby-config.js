@@ -42,14 +42,16 @@ module.exports = {
     {
       resolve: 'gatsby-plugin-less',
       options: {
-        javascriptEnabled: true,
-        modifyVars: {
-          hack: `true; @import '${path.resolve(
-            __dirname,
-            'src',
-            'styles',
-            'antd-overrides.less',
-          )}';`,
+        lessOptions: {
+          javascriptEnabled: true,
+          modifyVars: {
+            hack: `true; @import '${path.resolve(
+              __dirname,
+              'src',
+              'styles',
+              'antd-overrides.less',
+            )}';`,
+          },
         },
       },
     },

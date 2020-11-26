@@ -54,9 +54,11 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
+import com.linecorp.armeria.server.healthcheck.HealthCheckServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 import com.linecorp.armeria.spring.Ssl;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -79,16 +81,22 @@ public final class ArmeriaConfigurationUtil {
     private static final Pattern DATA_SIZE_PATTERN = Pattern.compile("^([+]?\\d+)([a-zA-Z]{0,2})$");
 
     /**
-     * Sets graceful shutdown timeout, health check services and {@link MeterRegistry} for the specified
+     * Sets graceful shutdown timeout, health check service and {@link MeterRegistry} for the specified
      * {@link ServerBuilder}.
      */
-    public static void configureServerWithArmeriaSettings(ServerBuilder server, ArmeriaSettings settings,
-                                                          MeterRegistry meterRegistry,
-                                                          List<HealthChecker> healthCheckers) {
+    public static void configureServerWithArmeriaSettings(
+            ServerBuilder server,
+            ArmeriaSettings settings,
+            MeterRegistry meterRegistry,
+            List<HealthChecker> healthCheckers,
+            List<HealthCheckServiceConfigurator> healthCheckServiceConfigurators,
+            MeterIdPrefixFunction meterIdPrefixFunction) {
+
         requireNonNull(server, "server");
         requireNonNull(settings, "settings");
         requireNonNull(meterRegistry, "meterRegistry");
         requireNonNull(healthCheckers, "healthCheckers");
+        requireNonNull(healthCheckServiceConfigurators, "healthCheckServiceConfigurators");
 
         if (settings.getGracefulShutdownQuietPeriodMillis() >= 0 &&
             settings.getGracefulShutdownTimeoutMillis() >= 0) {
@@ -101,35 +109,44 @@ public final class ArmeriaConfigurationUtil {
 
         final String healthCheckPath = settings.getHealthCheckPath();
         if (!Strings.isNullOrEmpty(healthCheckPath)) {
-            server.service(healthCheckPath, HealthCheckService.of(healthCheckers));
+            final HealthCheckServiceBuilder builder = HealthCheckService.builder().checkers(healthCheckers);
+            healthCheckServiceConfigurators.forEach(configurator -> configurator.configure(builder));
+            server.service(healthCheckPath, builder.build());
+        } else if (!healthCheckServiceConfigurators.isEmpty()) {
+            logger.warn("{}s exist but they are disabled by the empty 'health-check-path' property." +
+                        " configurators: {}",
+                        HealthCheckServiceConfigurator.class.getSimpleName(),
+                        healthCheckServiceConfigurators);
         }
 
         server.meterRegistry(meterRegistry);
 
-        if (settings.isEnableMetrics() && !Strings.isNullOrEmpty(settings.getMetricsPath())) {
-            final boolean hasPrometheus = hasAllClasses(
-                    "io.micrometer.prometheus.PrometheusMeterRegistry",
-                    "io.prometheus.client.CollectorRegistry");
+        if (settings.isEnableMetrics()) {
+            server.decorator(MetricCollectingService.newDecorator(meterIdPrefixFunction));
 
-            final boolean addedPrometheusExposition;
-            if (hasPrometheus) {
-                addedPrometheusExposition = PrometheusSupport.addExposition(settings, server, meterRegistry);
-            } else {
-                addedPrometheusExposition = false;
-            }
+            if (!Strings.isNullOrEmpty(settings.getMetricsPath())) {
+                final boolean hasPrometheus = hasAllClasses(
+                        "io.micrometer.prometheus.PrometheusMeterRegistry",
+                        "io.prometheus.client.CollectorRegistry");
 
-            if (!addedPrometheusExposition) {
-                final boolean hasDropwizard = hasAllClasses(
-                        "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
-                        "com.codahale.metrics.MetricRegistry",
-                        "com.codahale.metrics.json.MetricsModule");
-                if (hasDropwizard) {
-                    DropwizardSupport.addExposition(settings, server, meterRegistry);
+                final boolean addedPrometheusExposition;
+                if (hasPrometheus) {
+                    addedPrometheusExposition =
+                            PrometheusSupport.addExposition(settings, server, meterRegistry);
+                } else {
+                    addedPrometheusExposition = false;
+                }
+
+                if (!addedPrometheusExposition) {
+                    final boolean hasDropwizard = hasAllClasses(
+                            "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
+                            "com.codahale.metrics.MetricRegistry",
+                            "com.codahale.metrics.json.MetricsModule");
+                    if (hasDropwizard) {
+                        DropwizardSupport.addExposition(settings, server, meterRegistry);
+                    }
                 }
             }
-
-            server.decorator(MetricCollectingService.newDecorator(
-                    MeterIdPrefixFunction.ofDefault("armeria.server")));
         }
 
         if (settings.getSsl() != null) {

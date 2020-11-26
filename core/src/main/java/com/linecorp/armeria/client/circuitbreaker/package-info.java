@@ -18,7 +18,7 @@
  * Failure detection and fallback mechanism based on
  * <a href="https://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker pattern</a>.
  *
- * <h1>Setup Client with Circuit Breaker</h1>
+ * <h2>Setup Client with Circuit Breaker</h2>
  * <h2>Example</h2>
  * <pre>{@code
  * Iface helloClient =
@@ -28,7 +28,7 @@
  *            .build(Iface.class);
  * }</pre>
  *
- * <h1>A Unit of Failure Detection</h1>
+ * <h2>A Unit of Failure Detection</h2>
  * You can specify a unit of failure detection from the following:
  * <ul>
  *     <li>per remote service (as shown in the example above)</li>
@@ -46,7 +46,7 @@
  *            .build(AsyncIface.class);
  * }</pre>
  *
- * <h1>Fallback</h1>
+ * <h2>Fallback</h2>
  * Once a failure is detected, A {@link com.linecorp.armeria.client.circuitbreaker.FailFastException} is thrown
  * from the client. You can write a fallback code by catching the exception.
  * <h2>Example</h2>
@@ -76,7 +76,7 @@
  * });
  * }</pre>
  *
- * <h1>Circuit States and Transitions</h1>
+ * <h2>Circuit States and Transitions</h2>
  * The circuit breaker provided by this package is implemented as a finite state machine consisting of the
  * following states and transitions.
  *
@@ -97,7 +97,7 @@
  *     another trial request will be sent again.</li>
  * </ul>
  *
- * <h1>Circuit Breaker Configurations</h1>
+ * <h2>Circuit Breaker Configurations</h2>
  * The behavior of a circuit breaker can be modified via
  * {@link com.linecorp.armeria.client.circuitbreaker.CircuitBreakerBuilder}.
  *

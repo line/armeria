@@ -25,7 +25,7 @@ import org.springframework.context.annotation.Configuration;
 import com.linecorp.armeria.server.Server;
 
 /**
- * Spring Boot {@link Configuration} that provides Armeria integration.
+ * Spring Boot {@code Configuration} that provides Armeria integration.
  */
 @Configuration
 @ConditionalOnBean(Server.class)

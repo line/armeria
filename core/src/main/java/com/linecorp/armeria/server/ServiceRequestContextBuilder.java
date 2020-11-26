@@ -40,8 +40,8 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
-import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -65,29 +65,30 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      */
     private static final ServerListener rejectingListener = new ServerListenerAdapter() {
         @Override
-        public void serverStarting(Server server) throws Exception {
+        public void serverStarting(Server server) {
             throw new UnsupportedOperationException();
         }
     };
 
-    private static final TimeoutTask noopTimeoutTask = new TimeoutTask() {
+    private static final CancellationTask noopCancellationTask = new CancellationTask() {
         @Override
         public boolean canSchedule() {
             return true;
         }
 
         @Override
-        public void run() { /* no-op */ }
+        public void run(Throwable cause) { /* no-op */ }
     };
 
     /**
-     * A timeout scheduler that has been timed-out.
+     * A cancellation scheduler that has been finished.
      */
-    private static final TimeoutScheduler noopRequestTimeoutScheduler = new TimeoutScheduler(0);
+    private static final CancellationScheduler noopRequestCancellationScheduler = new CancellationScheduler(0);
 
     static {
-        noopRequestTimeoutScheduler.init(ImmediateEventExecutor.INSTANCE, noopTimeoutTask, 0);
-        noopRequestTimeoutScheduler.timeoutNow();
+        noopRequestCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0,
+                                              RequestTimeoutException.get());
+        noopRequestCancellationScheduler.finishNow();
     }
 
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
@@ -233,14 +234,15 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
-        final TimeoutScheduler requestTimeoutScheduler;
+        final CancellationScheduler requestCancellationScheduler;
         if (timedOut()) {
-            requestTimeoutScheduler = noopRequestTimeoutScheduler;
+            requestCancellationScheduler = noopRequestCancellationScheduler;
         } else {
-            requestTimeoutScheduler = new TimeoutScheduler(0);
+            requestCancellationScheduler = new CancellationScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                requestTimeoutScheduler.init(eventLoop(), noopTimeoutTask, 0);
+                requestCancellationScheduler.init(eventLoop(), noopCancellationTask, 0,
+                                                  RequestTimeoutException.get());
                 latch.countDown();
             });
 
@@ -254,7 +256,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         return new DefaultServiceRequestContext(
                 serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
                 routingResult, req, sslSession(), proxiedAddresses, clientAddress,
-                requestTimeoutScheduler,
+                requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
                 HttpHeaders.of(), HttpHeaders.of());

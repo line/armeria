@@ -47,6 +47,11 @@ public class ServiceRequestContextWrapper
         super(delegate);
     }
 
+    @Override
+    public ServiceRequestContext root() {
+        return delegate().root();
+    }
+
     @Nonnull
     @Override
     public HttpRequest request() {
@@ -129,18 +134,51 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public CompletableFuture<Throwable> whenRequestCancelling() {
+        return delegate().whenRequestCancelling();
+    }
+
+    @Override
+    public CompletableFuture<Throwable> whenRequestCancelled() {
+        return delegate().whenRequestCancelled();
+    }
+
+    @Deprecated
+    @Override
     public CompletableFuture<Void> whenRequestTimingOut() {
         return delegate().whenRequestTimingOut();
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Void> whenRequestTimedOut() {
         return delegate().whenRequestTimedOut();
     }
 
     @Override
+    public void cancel(Throwable cause) {
+        delegate().cancel(cause);
+    }
+
+    @Override
+    public void cancel() {
+        delegate().cancel();
+    }
+
+    @Override
     public void timeoutNow() {
         delegate().timeoutNow();
+    }
+
+    @Nullable
+    @Override
+    public Throwable cancellationCause() {
+        return delegate().cancellationCause();
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return delegate().isCancelled();
     }
 
     @Override

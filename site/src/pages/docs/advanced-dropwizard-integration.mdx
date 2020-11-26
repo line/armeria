@@ -24,51 +24,23 @@ application integrates with Armeria, you can leverage the following:
 Armeria can be plugged in as the underlying HTTP server for a Dropwizard application by adding
 the following dependency:
 
-<Tabs>
-  <TabPane tab="Gradle" key="gradle">
-    <CodeBlock language="groovy" filename="build.gradle">{`
-      dependencyManagement {
-          imports {
-              mavenBom 'com.linecorp.armeria:armeria-bom:${versions['com.linecorp.armeria:armeria-bom']}'
-              mavenBom 'io.dropwizard:dropwizard-bom:${versions['io.dropwizard:dropwizard-core']}'
-          }
-      }\n
-      dependencies {
-          implementation 'com.linecorp.armeria:armeria-dropwizard2'
-      }
-    `}</CodeBlock>
-  </TabPane>
-  <TabPane tab="Maven" key="maven">
-    <CodeBlock language="xml" filename="pom.xml">{`
-      <dependencyManagement>
-        <dependencies>
-          <dependency>
-            <groupId>com.linecorp.armeria</groupId>
-            <artifactId>armeria-bom</artifactId>
-            <version>${versions['com.linecorp.armeria:armeria-bom']}</version>
-            <type>pom</type>
-            <scope>import</scope>
-          </dependency>
-          <dependency>
-            <groupId>io.dropwizard</groupId>
-            <artifactId>dropwizard-bom</artifactId>
-            <version>${versions['io.dropwizard:dropwizard-core']}</version>
-            <type>pom</type>
-            <scope>import</scope>
-          </dependency>
-        </dependencies>
-      </dependencyManagement>\n
-      <dependency>
-          <groupId>com.linecorp.armeria</groupId>
-          <artifactId>armeria-dropwizard2</artifactId>
-      </dependency>
-    `}</CodeBlock>
-  </TabPane>
-</Tabs>
+<RequiredDependencies
+  boms={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' },
+    {
+      groupId: 'io.dropwizard',
+      artifactId: 'dropwizard-bom',
+      version: `${versions['io.dropwizard:dropwizard-core']}`,
+    },
+  ]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-dropwizard2' },
+  ]}
+/>
 
 The above dependencies import a new `ServerFactory` for Dropwizard to run on by referring to the `armeria` type
-server in the Dropwizard configuration file. A user can customize the server configuration with `the same properties
-provided by [Dropwizard](https://www.dropwizard.io/en/stable/manual/configuration.html#simple>)'s `SimpleServerFactory`.
+server in the Dropwizard configuration file. A user can customize the server configuration with the same properties
+provided by [Dropwizard](https://www.dropwizard.io/en/stable/manual/configuration.html#simple)'s `SimpleServerFactory`.
 The following is a simple example for configuring the server:
 
 ```yaml

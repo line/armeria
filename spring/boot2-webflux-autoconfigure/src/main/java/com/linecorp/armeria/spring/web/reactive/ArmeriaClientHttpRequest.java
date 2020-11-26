@@ -106,6 +106,16 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
         return uri;
     }
 
+    @Nullable
+    @SuppressWarnings("override") // To be compatible with Spring 5.2.X
+    public <T> T getNativeRequest() {
+        if (request == null) {
+            return null;
+        }
+        //noinspection unchecked
+        return (T) request;
+    }
+
     @Override
     public DataBufferFactory bufferFactory() {
         return factoryWrapper.delegate();
@@ -141,7 +151,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
             assert request == null : request;
             request = supplier.get();
             future.complete(client.execute(request));
-            return Mono.fromFuture(request.whenComplete());
+            return Mono.empty();
         });
     }
 

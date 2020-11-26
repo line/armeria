@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.grpc;
 
+import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.UncheckedIOException;
@@ -24,6 +25,8 @@ import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -39,10 +42,11 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -58,6 +62,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.EventLoop;
 
 class GrpcWebTextTest {
 
@@ -92,7 +97,7 @@ class GrpcWebTextTest {
         protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
             final CompletableFuture<HttpResponse> responseFuture =
                     req.aggregate()
-                       .thenCompose(msg -> deframeMessage(msg.content(), ctx.alloc()))
+                       .thenCompose(msg -> deframeMessage(msg.content(), ctx.eventLoop(), ctx.alloc()))
                        .thenCompose(TestService::handleMessage)
                        .thenApply(responseMessage -> {
                            final HttpResponseWriter streaming = HttpResponse.streaming();
@@ -159,30 +164,45 @@ class GrpcWebTextTest {
             return buf;
         }
 
-        private static CompletableFuture<ByteBuf> deframeMessage(HttpData framed, ByteBufAllocator alloc) {
+        private static CompletableFuture<ByteBuf> deframeMessage(HttpData framed,
+                                                                 EventLoop eventLoop,
+                                                                 ByteBufAllocator alloc) {
             final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
-            try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
-                    new Listener() {
-                        @Override
-                        public void messageRead(DeframedMessage message) {
-                            // Compression not supported.
-                            assert message.buf() != null;
-                            deframed.complete(message.buf());
-                        }
-
-                        @Override
-                        public void endOfStream() {
-                            if (!deframed.isDone()) {
-                                deframed.complete(Unpooled.EMPTY_BUFFER);
-                            }
-                        }
-                    },
-                    Integer.MAX_VALUE,
-                    alloc, true)) {
-                deframer.request(1);
-                deframer.deframe(framed, true);
-            }
+            final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
+            final HttpDeframer<DeframedMessage> deframer = newHttpDeframer(handler, alloc, true);
+            StreamMessage.of(framed).subscribe(deframer, eventLoop);
+            deframer.subscribe(singleSubscriber(deframed), eventLoop);
             return deframed;
+        }
+
+        private static Subscriber<DeframedMessage> singleSubscriber(CompletableFuture<ByteBuf> deframed) {
+            return new Subscriber<DeframedMessage>() {
+                @Override
+                public void onSubscribe(Subscription s) {
+                    s.request(1);
+                }
+
+                @Override
+                public void onNext(DeframedMessage message) {
+                    // Compression not supported.
+                    assert message.buf() != null;
+                    deframed.complete(message.buf());
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    if (!deframed.isDone()) {
+                        deframed.completeExceptionally(t);
+                    }
+                }
+
+                @Override
+                public void onComplete() {
+                    if (!deframed.isDone()) {
+                        deframed.complete(Unpooled.EMPTY_BUFFER);
+                    }
+                }
+            };
         }
 
         private static CompletableFuture<ByteBuf> handleMessage(ByteBuf message) {

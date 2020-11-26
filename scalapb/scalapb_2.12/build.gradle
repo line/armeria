@@ -1,0 +1,53 @@
+plugins {
+    id 'scala'
+}
+
+dependencies {
+    implementation project(':grpc')
+    implementation 'org.scala-lang:scala-library:2.12.12'
+
+    // ScalaPB
+    api "com.thesamet.scalapb:scalapb-json4s_2.12"
+    implementation "com.thesamet.scalapb:scalapb-runtime_2.12"
+    implementation "com.thesamet.scalapb:scalapb-runtime-grpc_2.12"
+
+    testImplementation 'io.monix:monix-reactive_2.12'
+}
+
+// Use the sources from ':scalapb_2.13'.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
+def scalapbProject = "${rootProject.projectDir}/scalapb/scalapb_2.13"
+tasks.compileScala.source "${scalapbProject}/src/main/scala"
+tasks.processResources.from "${scalapbProject}/src/main/resources"
+
+tasks.compileTestScala.dependsOn(":scalapb_2.13:compileTestScala")
+tasks.compileTestScala.source "${scalapbProject}/src/test/scala"
+tasks.compileTestScala.source "${scalapbProject}/gen-src/test/scalapb"
+tasks.processTestResources.from "${scalapbProject}/src/test/proto"
+
+tasks.sourcesJar.from "${scalapbProject}/src/main/scala"
+tasks.sourcesJar.from "${scalapbProject}/src/main/resources"
+tasks.scaladoc.source "${scalapbProject}/src/main/scala"
+
+compileScala.targetCompatibility = 1.8
+ScalaCompileOptions.metaClass.useAnt = false
+
+task aggregatedScaladocs(
+        type: ScalaDoc,
+        description: 'Generate scaladocs from all child projects',
+        group: 'Documentation') {
+    destinationDir = file("$buildDir/docs/scaladoc")
+    title = "$project.name $version API"
+
+    subprojects.each { proj ->
+        proj.tasks.withType(ScalaDoc).each {
+            source += proj.sourceSets.main.allJava
+            source += proj.sourceSets.main.allScala
+            classpath += proj.sourceSets.main.compileClasspath
+            excludes += scaladoc.excludes
+            includes += scaladoc.includes
+        }
+    }
+}

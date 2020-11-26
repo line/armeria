@@ -128,7 +128,7 @@ public interface RetryRule {
     /**
      * Returns a newly created a {@link RetryRule} that will retry with
      * the {@linkplain Backoff#ofDefault() default backoff} if an {@link Exception} is raised and
-     * that is instance of the specified {@code exception}.
+     * that is an instance of the specified {@code exception}.
      */
     static RetryRule onException(Class<? extends Throwable> exception) {
         return builder().onException(exception).thenBackoff();
@@ -251,7 +251,8 @@ public interface RetryRule {
      *         return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
      *     }
      *
-     *     ResponseHeaders responseHeaders = ctx.log().partial().responseHeaders();
+     *     ResponseHeaders responseHeaders = ctx.log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS)
+     *                                          .responseHeaders();
      *     if (responseHeaders.status().codeClass() == HttpStatusClass.SERVER_ERROR) {
      *         return CompletableFuture.completedFuture(RetryDecision.retry(backoff));
      *     }

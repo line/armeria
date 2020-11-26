@@ -47,7 +47,9 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class LoggingServiceTest {
@@ -86,8 +88,29 @@ class LoggingServiceTest {
     void defaultsError() throws Exception {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final IllegalStateException cause = new IllegalStateException("Failed");
-        ctx.logBuilder().endResponse(cause);
+        final Logger logger = errorResponse(ctx, cause);
+        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
+                            matches(".*cause=java\\.lang\\.IllegalStateException: Failed.*"),
+                            same(cause));
+    }
 
+    @Test
+    void httpStatusAndResponseExceptionsAreNotLogged() throws Exception {
+        ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        Logger logger = errorResponse(ctx, HttpResponseException.of(200));
+        // Note that unlike defaultsError(), same(cause) is not specified when warn(...) is called.
+        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
+                            matches(".*cause=com\\.linecorp\\.armeria\\.server\\.HttpResponseException.*"));
+
+        ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        logger = errorResponse(ctx, HttpStatusException.of(200));
+        // Note that unlike defaultsError(), same(cause) is not specified when warn(...) is called.
+        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
+                            matches(".*cause=com\\.linecorp\\.armeria\\.server\\.HttpStatusException.*"));
+    }
+
+    private Logger errorResponse(ServiceRequestContext ctx, Exception cause) throws Exception {
+        ctx.logBuilder().endResponse(cause);
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isWarnEnabled()).thenReturn(true);
 
@@ -102,9 +125,7 @@ class LoggingServiceTest {
         verify(logger).isWarnEnabled();
         verify(logger).warn(eq(REQUEST_FORMAT), same(ctx),
                             matches(".*headers=\\[:method=GET, :path=/].*"));
-        verify(logger).warn(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*cause=java\\.lang\\.IllegalStateException: Failed.*"),
-                            same(cause));
+        return logger;
     }
 
     @Test

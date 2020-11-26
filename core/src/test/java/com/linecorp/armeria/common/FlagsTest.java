@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.invoke.MethodHandle;
@@ -34,6 +33,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
@@ -51,7 +51,7 @@ class FlagsTest {
         assumeThat(System.getenv("WSLENV")).isNull();
         assumeThat(System.getProperty("com.linecorp.armeria.useEpoll")).isEqualTo("false");
 
-        assertThat(Flags.useEpoll()).isTrue();
+        assertThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
         assertThat(Epoll.isAvailable()).isTrue();
     }
 
@@ -103,7 +103,7 @@ class FlagsTest {
             // Reload every class in common package.
             try {
                 // Classes do not have an inner class.
-                final String replaced = name.replace('.', File.separatorChar) + ".class";
+                final String replaced = name.replace('.', '/') + ".class";
                 final URL url = getClass().getClassLoader().getResource(replaced);
                 final URLConnection connection = url.openConnection();
                 final InputStream input = connection.getInputStream();

@@ -312,7 +312,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(BasicToken token) {
         requireNonNull(token, "token");
-        headers.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
         return this;
     }
 
@@ -322,7 +322,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(OAuth1aToken token) {
         requireNonNull(token, "token");
-        headers.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
         return this;
     }
 
@@ -332,7 +332,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(OAuth2Token token) {
         requireNonNull(token, "token");
-        headers.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
         return this;
     }
 

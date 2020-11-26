@@ -154,6 +154,35 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     }
 
     /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per request path with the specified
+     * {@link CircuitBreakerRule}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a request path and creates a new {@link CircuitBreaker}.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerPathDecorator(Function<String, ? extends CircuitBreaker> factory, CircuitBreakerRule rule) {
+        return newDecorator(CircuitBreakerMapping.perPath(factory), rule);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per request path with the specified
+     * {@link CircuitBreakerRuleWithContent}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a request path and creates a new {@link CircuitBreaker}.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerPathDecorator(Function<String, ? extends CircuitBreaker> factory,
+                        CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perPath(factory), ruleWithContent);
+    }
+
+    /**
      * Creates a new decorator that binds one {@link CircuitBreaker} per host and {@link HttpMethod} with
      * the specified {@link CircuitBreakerRule}.
      *
@@ -161,7 +190,10 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      * unrelated services.
      *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
+     *
+     * @deprecated Use newDecorator(), building a CircuitBreakerMapping using CircuitBreakerMapping.Builder().
      */
+    @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
     newPerHostAndMethodDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
                                  CircuitBreakerRule rule) {
@@ -176,7 +208,10 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      * unrelated services.
      *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}.
+     *
+     * @deprecated Use newDecorator(), building a CircuitBreakerMapping using CircuitBreakerMapping.Builder().
      */
+    @Deprecated
     public static Function<? super HttpClient, CircuitBreakerClient>
     newPerHostAndMethodDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
                                  CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {

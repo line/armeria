@@ -35,11 +35,12 @@ export default class GrpcUnframedTransport extends Transport {
     method: Method,
     headers: { [name: string]: string },
     bodyJson?: string,
+    endpointPath?: string,
   ): Promise<string> {
     if (!bodyJson) {
       throw new Error('A gRPC request must have body.');
     }
-    const endpoint = this.findDebugMimeTypeEndpoint(method);
+    const endpoint = this.getDebugMimeTypeEndpoint(method, endpointPath);
 
     const hdrs = new Headers();
     hdrs.set('content-type', GRPC_UNFRAMED_MIME_TYPE);

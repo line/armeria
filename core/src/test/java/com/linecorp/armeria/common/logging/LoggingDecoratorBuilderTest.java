@@ -65,13 +65,23 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void logger() {
-        assertThatThrownBy(() -> builder.logger(null))
+        assertThatThrownBy(() -> builder.logger((Logger) null))
                 .isInstanceOf(NullPointerException.class);
         assertThat(builder.logger()).isNull();
 
         final Logger logger = mock(Logger.class);
         builder.logger(logger);
         assertThat(builder.logger()).isEqualTo(logger);
+    }
+
+    @Test
+    void loggerName() {
+        assertThatThrownBy(() -> builder.logger((String) null))
+                .isInstanceOf(NullPointerException.class);
+        assertThat(builder.logger()).isNull();
+
+        builder.logger("com.example.Foo");
+        assertThat(builder.logger().getName()).isEqualTo("com.example.Foo");
     }
 
     @Test

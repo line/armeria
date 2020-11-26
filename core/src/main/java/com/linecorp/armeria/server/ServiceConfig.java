@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Set;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -55,6 +56,7 @@ public final class ServiceConfig {
 
     private final AccessLogWriter accessLogWriter;
     private final boolean shutdownAccessLogWriterOnStop;
+    private final Set<TransientServiceOption> transientServiceOptions;
     private final boolean handlesCorsPreflight;
 
     /**
@@ -65,7 +67,8 @@ public final class ServiceConfig {
                   long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
                   AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
         this(null, route, service, defaultServiceName, defaultLogName, requestTimeoutMillis, maxRequestLength,
-             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
+             verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop,
+             extractTransientServiceOptions(service));
     }
 
     /**
@@ -74,7 +77,8 @@ public final class ServiceConfig {
     private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, HttpService service,
                           @Nullable String defaultServiceName, @Nullable String defaultLogName,
                           long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
-                          AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
+                          AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
+                          Set<TransientServiceOption> transientServiceOptions) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
@@ -85,8 +89,21 @@ public final class ServiceConfig {
         this.verboseResponses = verboseResponses;
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
+        this.transientServiceOptions = requireNonNull(transientServiceOptions, "transientServiceOptions");
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
+    }
+
+    private static Set<TransientServiceOption> extractTransientServiceOptions(HttpService service) {
+        @SuppressWarnings("rawtypes")
+        final TransientService transientService = service.as(TransientService.class);
+        if (transientService == null) {
+            return TransientServiceOption.allOf();
+        }
+        @SuppressWarnings("unchecked")
+        final Set<TransientServiceOption> transientServiceOptions =
+                (Set<TransientServiceOption>) transientService.transientServiceOptions();
+        return transientServiceOptions;
     }
 
     static long validateRequestTimeoutMillis(long requestTimeoutMillis) {
@@ -108,7 +125,7 @@ public final class ServiceConfig {
         requireNonNull(virtualHost, "virtualHost");
         return new ServiceConfig(virtualHost, route, service, defaultServiceName, defaultLogName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -116,7 +133,7 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, service.decorate(decorator),
                                  defaultServiceName, defaultLogName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
     }
 
     /**
@@ -228,6 +245,16 @@ public final class ServiceConfig {
      */
     public boolean shutdownAccessLogWriterOnStop() {
         return shutdownAccessLogWriterOnStop;
+    }
+
+    /**
+     * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for the {@link #service()}.
+     * This method always returns {@link TransientServiceOption#allOf()} for a non-{@link TransientService}
+     * because only a {@link TransientService} can opt in and out using
+     * {@link TransientServiceBuilder#transientServiceOptions(TransientServiceOption...)}.
+     */
+    public Set<TransientServiceOption> transientServiceOptions() {
+        return transientServiceOptions;
     }
 
     /**

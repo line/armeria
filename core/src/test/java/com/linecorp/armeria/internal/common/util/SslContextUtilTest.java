@@ -15,18 +15,29 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import static com.linecorp.armeria.internal.common.util.SslContextUtil.BAD_HTTP2_CIPHERS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.util.Set;
 
+import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
+
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
+import io.netty.util.ReferenceCountUtil;
 
 class SslContextUtilTest {
 
@@ -47,5 +58,52 @@ class SslContextUtilTest {
         } else {
             assertThat(supportedProtocols).contains("TLSv1.2");
         }
+    }
+
+    @Test
+    void unsafeTlsCiphers() {
+        final String cipher = getBadCipher();
+        assumeThat(cipher).isNotNull();
+
+        assertThatThrownBy(() -> {
+            final ClientFactory factory =
+                    ClientFactory.builder()
+                                 .tlsCustomizer(builder -> builder.ciphers(ImmutableList.of(cipher)))
+                                 .build();
+            factory.closeAsync();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Attempting to configure a server or HTTP/2 client without");
+
+        final ClientFactory factory =
+                ClientFactory.builder()
+                             .tlsAllowUnsafeCiphers(true)
+                             .tlsCustomizer(builder -> builder.ciphers(ImmutableList.of(cipher)))
+                             .build();
+        factory.closeAsync();
+    }
+
+    @Nullable
+    private static String getBadCipher() {
+        for (String cipher : BAD_HTTP2_CIPHERS) {
+            try {
+                final SslContext sslCtx = BouncyCastleKeyFactoryProvider.call(() -> {
+                    final SslContextBuilder builder = SslContextBuilder.forClient();
+                    final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
+                    builder.sslProvider(provider);
+                    builder.protocols("TLSv1.2").ciphers(ImmutableList.of(cipher));
+
+                    try {
+                        return builder.build();
+                    } catch (SSLException e) {
+                        return Exceptions.throwUnsafely(e);
+                    }
+                });
+                ReferenceCountUtil.release(sslCtx);
+                return cipher;
+            } catch (Exception e) {
+                continue;
+            }
+        }
+        return null;
     }
 }

@@ -5,10 +5,10 @@ JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jd
 JRE8_VERSION='AdoptOpenJDK-8u242b08'
 JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.6%2B10/OpenJDK11U-jre_x64_linux_hotspot_11.0.6_10.tar.gz'
 JRE11_VERSION='AdoptOpenJDK-11.0.6_10'
-JRE13_URL='https://github.com/AdoptOpenJDK/openjdk13-binaries/releases/download/jdk-13.0.2%2B8/OpenJDK13U-jdk_x64_linux_hotspot_13.0.2_8.tar.gz'
-JRE13_VERSION='AdoptOpenJDK-13.0.2_8'
-BUILD_JDK_URL="$JRE13_URL"
-BUILD_JDK_VERSION="$JRE13_VERSION"
+JDK14_URL='https://github.com/AdoptOpenJDK/openjdk14-binaries/releases/download/jdk-14%2B36/OpenJDK14U-jdk_x64_linux_hotspot_14_36.tar.gz'
+JDK14_VERSION='AdoptOpenJDK-14_36'
+BUILD_JDK_URL="$JDK14_URL"
+BUILD_JDK_VERSION="$JDK14_VERSION"
 
 function msg() {
   echo -ne "\033[1;32m"
@@ -43,10 +43,10 @@ java11)
   TEST_JAVA_VERSION='11'
   COVERAGE=1
   ;;
-java13|site|leak)
-  TEST_JRE_URL="$JRE13_URL"
-  TEST_JRE_VERSION="$JRE13_VERSION"
-  TEST_JAVA_VERSION='13'
+java14|site|leak)
+  TEST_JRE_URL="$JDK14_URL"
+  TEST_JRE_VERSION="$JDK14_VERSION"
+  TEST_JAVA_VERSION='14'
   ;;
 *)
   echo "Unknown profile: $PROFILE" >&2

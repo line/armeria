@@ -113,6 +113,11 @@ This product contains a modified part of Twitter Commons, distributed by Twitter
   * License: license/LICENSE.twitter.al20.txt (Apache License v2.0)
   * Homepage: https://twitter.github.io/commons/
 
+This product contains a modified part of OkHttp, distributed by Square, Inc:
+
+  * License: license/LICENSE.okhttp.al20.txt (Apache License v2.0)
+  * Homepage: https://square.github.io/okhttp
+
 
 Dependencies
 ============
@@ -197,10 +202,10 @@ This product depends on Jackson, distributed by FasterXML, LLC:
   * License: licenses/LICENSE.jackson.al20.txt (Apache License v2.0)
   * Homepage: http://wiki.fasterxml.com/JacksonHome
 
-This product depends on jakarta.annotation API, distributed by the Eclipse Project for Common Annotations project:
+This product depends on javax.annotation API, distributed by GlassFish Community:
 
-  * License: licenses/LICENSE.jakarta-annotation.epl20.txt (Eclipse Public License v2.0)
-  * Homepage: https://github.com/eclipse-ee4j/common-annotations-api
+  * License: licenses/LICENSE.javax-annotation.cddl11.txt (CDDL + GPLv2 with classpath exception)
+  * Homepage: https://github.com/javaee/javax.annotation/
 
 This product depends on javax.inject API, distributed by the JSR-330 Expert Group:
 

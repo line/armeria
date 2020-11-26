@@ -1,0 +1,5 @@
+dependencies {
+    implementation project(':spring:boot2-starter')
+    implementation project(':spring:boot2-webflux-starter')
+    testImplementation('org.springframework.boot:spring-boot-starter-test')
+}
