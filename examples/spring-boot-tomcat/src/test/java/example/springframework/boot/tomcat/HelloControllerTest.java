@@ -7,9 +7,11 @@ import javax.inject.Inject;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+@ActiveProfiles("testbed")
 @WebMvcTest(HelloController.class)
 class HelloControllerTest {
     @Inject

@@ -107,7 +107,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
     }
 
     @Nullable
-    @SuppressWarnings("override")
+    @SuppressWarnings("override") // To be compatible with Spring 5.2.X
     public <T> T getNativeRequest() {
         if (request == null) {
             return null;

@@ -9,12 +9,14 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.test.context.ActiveProfiles;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
 
+@ActiveProfiles("testbed")
 @SpringBootTest(
         classes = {
                 HelloConfiguration.class,
