@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -77,6 +78,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.incubator.channel.uring.IOUring;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
@@ -175,6 +177,22 @@ public final class Flags {
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
+
+    private static final String DEFAULT_TRANSPORT_TYPE = USE_EPOLL ? "epoll" : "nio";
+    private static final String TRANSPORT_TYPE_NAME = getNormalized("transportType",
+                                                                    DEFAULT_TRANSPORT_TYPE,
+                                                                    val -> {
+                                                                        switch (val) {
+                                                                            case "nio":
+                                                                            case "epoll":
+                                                                            case "io_uring":
+                                                                                return true;
+                                                                            default:
+                                                                                return false;
+                                                                        }
+                                                                    });
+    private static final TransportType TRANSPORT_TYPE;
+
     @Nullable
     private static Boolean useOpenSsl;
     @Nullable
@@ -397,20 +415,46 @@ public final class Flags {
                            .collect(toImmutableSet()));
 
     static {
-        if (!isEpollAvailable()) {
-            final Throwable cause = Epoll.unavailabilityCause();
-            if (cause != null) {
-                logger.info("/dev/epoll not available: {}", Exceptions.peel(cause).toString());
-            } else {
-                if (HAS_WSLENV) {
-                    logger.info("/dev/epoll not available: WSL not supported");
+        TransportType type = null;
+        switch (TRANSPORT_TYPE_NAME) {
+            case "io_uring":
+                if (isIoUringAvailable()) {
+                    logger.info("Using io_uring");
+                    type = TransportType.IO_URING;
                 } else {
-                    logger.info("/dev/epoll not available: ?");
+                    final Throwable cause = IOUring.unavailabilityCause();
+                    if (cause != null) {
+                        logger.info("io_uring not available: {}", Exceptions.peel(cause).toString());
+                    } else {
+                        logger.info("io_uring not available: ?");
+                    }
                 }
-            }
-        } else if (USE_EPOLL) {
-            logger.info("Using /dev/epoll");
+                // fallthrough
+            case "epoll":
+                if (isEpollAvailable() && type == null) {
+                    logger.info("Using /dev/epoll");
+                    type = TransportType.EPOLL;
+                } else {
+                    final Throwable cause = Epoll.unavailabilityCause();
+                    if (cause != null) {
+                        logger.info("/dev/epoll not available: {}", Exceptions.peel(cause).toString());
+                    } else {
+                        if (HAS_WSLENV) {
+                            logger.info("/dev/epoll not available: WSL not supported");
+                        } else {
+                            logger.info("/dev/epoll not available: ?");
+                        }
+                    }
+                }
+                // fallthrough
+            default:
+                if (type == null) {
+                    logger.info("Using nio");
+                    type = TransportType.NIO;
+                }
+                break;
         }
+        TRANSPORT_TYPE = type;
     }
 
     private static boolean isEpollAvailable() {
@@ -420,6 +464,10 @@ public final class Flags {
             return Epoll.isAvailable() && !HAS_WSLENV;
         }
         return false;
+    }
+
+    private static boolean isIoUringAvailable() {
+        return SystemInfo.isLinux() && IOUring.isAvailable();
     }
 
     /**
@@ -506,9 +554,23 @@ public final class Flags {
      *
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useEpoll=false} JVM option to disable it.
+     *
+     * @deprecated Use {@link #transportType()} and {@code -Dcom.linecorp.armeria.transportType=epoll}.
      */
+    @Deprecated
     public static boolean useEpoll() {
         return USE_EPOLL;
+    }
+
+    /**
+     * Returns the {@link TransportType} that will be used for socket I/O in Armeria.
+     *
+     * <p>The default value of this flag is {@code "epoll"} in Linux and {@code "nio"} for other operations
+     * systems. Specify the {@code -Dcom.linecorp.armeria.transportType=<nio|epoll|io_uring>} JVM option to
+     * override the default.</p>
+     */
+    public static TransportType transportType() {
+        return TRANSPORT_TYPE;
     }
 
     /**

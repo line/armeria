@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.util;
+package com.linecorp.armeria.common.util;
 
 import java.util.Set;
 import java.util.concurrent.ThreadFactory;
@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -41,6 +41,10 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.incubator.channel.uring.IOUringDatagramChannel;
+import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
+import io.netty.incubator.channel.uring.IOUringServerSocketChannel;
+import io.netty.incubator.channel.uring.IOUringSocketChannel;
 
 /**
  * Native transport types.
@@ -51,7 +55,10 @@ public enum TransportType {
         NioEventLoopGroup::new, NioEventLoopGroup.class, NioEventLoop.class),
 
     EPOLL(EpollServerSocketChannel.class, EpollSocketChannel.class, EpollDatagramChannel.class,
-          EpollEventLoopGroup::new, EpollEventLoopGroup.class, ChannelUtil.epollEventLoopClass());
+          EpollEventLoopGroup::new, EpollEventLoopGroup.class, ChannelUtil.epollEventLoopClass()),
+
+    IO_URING(IOUringServerSocketChannel.class, IOUringSocketChannel.class, IOUringDatagramChannel.class,
+             IOUringEventLoopGroup::new, IOUringEventLoopGroup.class, ChannelUtil.ioUringEventLoopClass());
 
     private final Class<? extends ServerChannel> serverChannelType;
     private final Class<? extends SocketChannel> socketChannelType;
@@ -70,17 +77,6 @@ public enum TransportType {
         this.datagramChannelType = datagramChannelType;
         this.eventLoopGroupClasses = ImmutableSet.copyOf(eventLoopGroupClasses);
         this.eventLoopGroupConstructor = eventLoopGroupConstructor;
-    }
-
-    /**
-     * Returns the available {@link TransportType}.
-     */
-    public static TransportType detectTransportType() {
-        if (Flags.useEpoll()) {
-            return EPOLL;
-        } else {
-            return NIO;
-        }
     }
 
     /**
@@ -112,20 +108,15 @@ public enum TransportType {
     }
 
     /**
-     * Returns whether the specified {@link EventLoop} supports any {@link TransportType}.
-     */
-    public static boolean isSupported(EventLoop eventLoop) {
-        final EventLoopGroup parent = eventLoop.parent();
-        if (parent == null) {
-            return false;
-        }
-        return isSupported(parent);
-    }
-
-    /**
      * Returns whether the specified {@link EventLoopGroup} supports any {@link TransportType}.
      */
     public static boolean isSupported(EventLoopGroup eventLoopGroup) {
+        if (eventLoopGroup instanceof EventLoop) {
+            eventLoopGroup = ((EventLoop) eventLoopGroup).parent();
+            if (eventLoopGroup == null) {
+                return false;
+            }
+        }
         return findOrNull(eventLoopGroup) != null;
     }
 

@@ -33,10 +33,12 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
 
 public final class ChannelUtil {
 
     private static final Class<? extends EventLoopGroup> EPOLL_EVENT_LOOP_CLASS;
+    private static final Class<? extends EventLoopGroup> IOURING_EVENT_LOOP_CLASS;
 
     static {
         try {
@@ -44,6 +46,10 @@ public final class ChannelUtil {
             EPOLL_EVENT_LOOP_CLASS = (Class<? extends EventLoopGroup>)
                     Class.forName("io.netty.channel.epoll.EpollEventLoop", false,
                                   EpollEventLoopGroup.class.getClassLoader());
+            //noinspection unchecked
+            IOURING_EVENT_LOOP_CLASS = (Class<? extends EventLoopGroup>)
+                    Class.forName("io.netty.incubator.channel.uring.IOUringEventLoop", false,
+                                  IOUringEventLoopGroup.class.getClassLoader());
         } catch (Exception e) {
             throw new IllegalStateException("failed to locate EpollEventLoop class", e);
         }
@@ -54,6 +60,10 @@ public final class ChannelUtil {
 
     public static Class<? extends EventLoopGroup> epollEventLoopClass() {
         return EPOLL_EVENT_LOOP_CLASS;
+    }
+
+    public static Class<? extends EventLoopGroup> ioUringEventLoopClass() {
+        return IOURING_EVENT_LOOP_CLASS;
     }
 
     public static CompletableFuture<Void> close(Iterable<? extends Channel> channels) {
