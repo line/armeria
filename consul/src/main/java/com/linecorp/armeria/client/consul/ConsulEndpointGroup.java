@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.consul.ConsulClient;
 
 import io.netty.channel.EventLoop;
@@ -43,6 +44,7 @@ import io.netty.channel.EventLoop;
  * from Consul using <a href="https://www.consul.io/api">Consul's HTTP API</a> and updates the
  * {@link Endpoint}s periodically.
  */
+@UnstableApi
 public final class ConsulEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsulEndpointGroup.class);

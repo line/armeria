@@ -17,6 +17,8 @@
  * Automatic service registration and discovery with <a href="https://consul.io/">Consul</a>.
  **/
 @NonNullByDefault
+@UnstableApi
 package com.linecorp.armeria.server.consul;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

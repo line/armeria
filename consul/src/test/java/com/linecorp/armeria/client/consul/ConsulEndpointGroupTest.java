@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListener;
 
-public class ConsulEndpointGroupTest extends ConsulTestBase {
+class ConsulEndpointGroupTest extends ConsulTestBase {
 
     static final List<Server> servers = new ArrayList<>();
 
@@ -113,7 +113,7 @@ public class ConsulEndpointGroupTest extends ConsulTestBase {
     }
 
     @Test
-    public void testSelectStrategy() {
+    void testSelectStrategy() {
         try (ConsulEndpointGroup endpointGroup =
                      ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
                                                  serviceName)

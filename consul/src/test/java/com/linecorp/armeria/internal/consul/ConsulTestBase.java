@@ -71,6 +71,7 @@ public abstract class ConsulTestBase {
         // This EmbeddedConsul tested with Consul version above 1.4.0
         consul = ConsulStarterBuilder.consulStarter()
                                      .withConsulVersion("1.9.0")
+                                     .withWaitTimeout(120)
                                      .withCustomConfig(aclConfiguration(CONSUL_TOKEN))
                                      .withToken(CONSUL_TOKEN)
                                      .build().start();
@@ -141,7 +142,7 @@ public abstract class ConsulTestBase {
                         .toString();
     }
 
-    public static class EchoService extends AbstractHttpService {
+     public static class EchoService extends AbstractHttpService {
         private HttpStatus responseStatus = HttpStatus.OK;
 
         @Override

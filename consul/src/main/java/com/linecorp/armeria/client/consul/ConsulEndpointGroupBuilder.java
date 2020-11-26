@@ -22,6 +22,7 @@ import java.net.URI;
 import java.time.Duration;
 
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.consul.ConsulConfigSetters;
 import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
  * sb.serverListener(listener);
  * }</pre>
  */
+@UnstableApi
 public final class ConsulEndpointGroupBuilder implements ConsulConfigSetters {
     private static final long DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS = 10_000;
 

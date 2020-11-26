@@ -17,6 +17,8 @@
  * Consul-based {@link com.linecorp.armeria.client.endpoint.EndpointGroup} implementation.
  */
 @NonNullByDefault
+@UnstableApi
 package com.linecorp.armeria.client.consul;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

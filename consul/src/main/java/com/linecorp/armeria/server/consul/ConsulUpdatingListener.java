@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.consul.Check;
 import com.linecorp.armeria.internal.consul.ConsulClient;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.server.ServerPort;
  * A {@link ServerListener} which registers the current {@link Server} to
  * <a href="https://www.consul.io">Consul</a>.
  */
+@UnstableApi
 public final class ConsulUpdatingListener extends ServerListenerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsulUpdatingListener.class);

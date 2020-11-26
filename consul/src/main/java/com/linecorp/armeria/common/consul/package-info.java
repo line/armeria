@@ -18,6 +18,8 @@
  * Various classes used internally. Anything in this package can be changed or removed at any time.
  */
 @NonNullByDefault
+@UnstableApi
 package com.linecorp.armeria.common.consul;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

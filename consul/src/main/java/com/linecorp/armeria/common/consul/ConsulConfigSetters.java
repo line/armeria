@@ -15,11 +15,13 @@
  */
 package com.linecorp.armeria.common.consul;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 
 /**
  * Sets properties for building a Consul client.
  */
+@UnstableApi
 public interface ConsulConfigSetters {
     /**
      * Sets the specified Consul's API version.

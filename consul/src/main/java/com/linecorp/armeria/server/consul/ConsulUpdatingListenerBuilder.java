@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.consul.ConsulConfigSetters;
 import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
@@ -40,6 +41,7 @@ import com.linecorp.armeria.server.Server;
  * sb.serverListener(listener);
  * }</pre>
  */
+@UnstableApi
 public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters {
 
     private static final long DEFAULT_CHECK_INTERVAL_MILLIS = 10_000;
