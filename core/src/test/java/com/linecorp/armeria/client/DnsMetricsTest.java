@@ -117,7 +117,7 @@ public class DnsMetricsTest {
                     .domainNameResolverCustomizer(builder -> {
                         builder.dnsServerAddressStreamProvider(dnsServerList(server));
                         builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                        builder.queryTimeout(Duration.ofSeconds(1));
+                        builder.queryTimeout(Duration.ofSeconds(5));
                     })
                     .meterRegistry(meterRegistry)
                     .build()) {
