@@ -121,7 +121,9 @@ public class ArmeriaServerCallTest {
                 false,
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
-                               .build());
+                               .build(),
+                /* exceptionMappings */ null
+        );
         call.setListener(listener);
         call.messageDeframer().onSubscribe(subscription);
 
@@ -172,7 +174,9 @@ public class ArmeriaServerCallTest {
                 false,
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
-                               .build());
+                               .build(),
+                /* exceptionMappings */ null
+                );
 
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.onNext(new DeframedMessage(buf, 0));

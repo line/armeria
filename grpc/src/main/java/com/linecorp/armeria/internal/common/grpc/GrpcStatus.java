@@ -31,12 +31,20 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.nio.channels.ClosedChannelException;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Base64;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +75,7 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 
 /**
- * Utilities for handling {@link Status} in Armeria.
+ * Internal Utilities for handling {@link Status} in Armeria.
  */
 public final class GrpcStatus {
 
@@ -77,8 +85,17 @@ public final class GrpcStatus {
      * Converts the {@link Throwable} to a {@link Status}, taking into account exceptions specific to Armeria as
      * well and the protocol package.
      */
-    public static Status fromThrowable(Throwable t) {
+    public static Status fromThrowable(
+            @Nullable List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings, Throwable t) {
         t = unwrap(requireNonNull(t, "t"));
+
+        if (exceptionMappings != null) {
+            for (Map.Entry<Class<? extends Throwable>, Status> exceptionMapping : exceptionMappings) {
+                if (exceptionMapping.getKey().isInstance(t)) {
+                    return exceptionMapping.getValue().withCause(t);
+                }
+            }
+        }
 
         final Status s = Status.fromThrowable(t);
         if (s.getCode() != Code.UNKNOWN) {
@@ -111,6 +128,56 @@ public final class GrpcStatus {
             return Status.RESOURCE_EXHAUSTED.withCause(t);
         }
         return s;
+    }
+
+    /**
+     * Converts the specified {@link Status} to a new user-specified {@link Status}
+     * using the specified exception mapping rules.
+     * The {@link Status#getCause()} of the specified {@link Status} is copied to a new derived {@link Status}.
+     * Returns the given {@link Status} as is if fails to find a mapping rule.
+     */
+    public static Status fromMappingRule(
+            @Nullable List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings, Status status) {
+        requireNonNull(status, "status");
+
+        final Throwable cause = status.getCause();
+        if (exceptionMappings != null && cause != null) {
+            final Throwable unwrapped = unwrap(cause);
+            for (Map.Entry<Class<? extends Throwable>, Status> exceptionMapping : exceptionMappings) {
+                if (exceptionMapping.getKey().isInstance(unwrapped)) {
+                    return exceptionMapping.getValue().withCause(cause);
+                }
+            }
+        }
+        return status;
+    }
+
+    public static void addExceptionMapping(
+            LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings,
+            Class<? extends Throwable> exceptionType, Status status) {
+        requireNonNull(exceptionMappings, "exceptionMappings");
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(status, "status");
+
+        final ListIterator<Map.Entry<Class<? extends Throwable>, Status>> it =
+                exceptionMappings.listIterator();
+
+        while (it.hasNext()) {
+            final Map.Entry<Class<? extends Throwable>, Status> next = it.next();
+            final Class<? extends Throwable> oldExceptionType = next.getKey();
+            checkArgument(oldExceptionType != exceptionType, "%s is already added with %s",
+                          oldExceptionType,
+                          next.getValue());
+
+            if (oldExceptionType.isAssignableFrom(exceptionType)) {
+                // exceptionType is subtype of oldExceptionType. exceptionType needs a higher priority.
+                it.previous();
+                it.add(new SimpleImmutableEntry<>(exceptionType, status));
+                return;
+            }
+        }
+
+        exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, status));
     }
 
     private static Throwable unwrap(Throwable t) {

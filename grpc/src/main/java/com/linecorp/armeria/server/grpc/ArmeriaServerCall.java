@@ -24,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -108,9 +109,12 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
     private final boolean unsafeWrapRequestBuffers;
+    private final ResponseHeaders defaultHeaders;
+
     @Nullable
     private final Executor blockingExecutor;
-    private final ResponseHeaders defaultHeaders;
+    @Nullable
+    private final List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
 
     // Only set once.
     @Nullable
@@ -152,7 +156,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       @Nullable GrpcJsonMarshaller jsonMarshaller,
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
-                      ResponseHeaders defaultHeaders) {
+                      ResponseHeaders defaultHeaders,
+                      @Nullable List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
@@ -163,7 +168,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         requireNonNull(decompressorRegistry, "decompressorRegistry");
 
         final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(decompressorRegistry, this, maxInboundMessageSizeBytes)
+                new HttpStreamDeframerHandler(decompressorRegistry, this,
+                                              exceptionMappings, maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         messageDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
         handler.setDeframer(messageDeframer);
@@ -179,6 +185,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         blockingExecutor = useBlockingTaskExecutor ?
                            MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
+        this.exceptionMappings = exceptionMappings;
 
         res.whenComplete().handleAsync((unused, t) -> {
             if (!closeCalled) {
@@ -283,10 +290,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             });
         } catch (RuntimeException e) {
-            close(GrpcStatus.fromThrowable(e), new Metadata());
+            close(convertThrowableToStatus(e), new Metadata());
             throw e;
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), new Metadata());
+            close(convertThrowableToStatus(t), new Metadata());
             throw new RuntimeException(t);
         }
     }
@@ -297,7 +304,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 listener.onReady();
             }
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), new Metadata());
+            close(convertThrowableToStatus(t), new Metadata());
         }
     }
 
@@ -316,9 +323,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private void doClose(Status status, Metadata metadata) {
+        final Status newStatus = GrpcStatus.fromMappingRule(exceptionMappings, status);
         if (cancelled) {
             // No need to write anything to client if cancelled already.
-            closeListener(status);
+            closeListener(newStatus);
             return;
         }
 
@@ -327,7 +335,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         final HttpHeaders trailers = statusToTrailers(
                 ctx, sendHeadersCalled ? HttpHeaders.builder() : defaultHeaders.toBuilder(),
-                status, metadata);
+                newStatus, metadata);
         try {
             if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
                 GrpcWebTrailers.set(ctx, trailers);
@@ -342,7 +350,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             }
         } finally {
-            closeListener(status);
+            closeListener(newStatus);
         }
     }
 
@@ -431,7 +439,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             }
         } catch (Throwable e) {
             upstream.cancel();
-            close(GrpcStatus.fromThrowable(e), new Metadata());
+            close(convertThrowableToStatus(e), new Metadata());
         }
     }
 
@@ -441,7 +449,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             listener.onMessage(request);
         } catch (Throwable t) {
             upstream.cancel();
-            close(GrpcStatus.fromThrowable(t), new Metadata());
+            close(convertThrowableToStatus(t), new Metadata());
         }
     }
 
@@ -464,7 +472,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void onError(Throwable t) {
         if (!closeCalled && !(t instanceof AbortedStreamException)) {
-            close(GrpcStatus.fromThrowable(t), new Metadata());
+            close(convertThrowableToStatus(t), new Metadata());
         }
     }
 
@@ -481,7 +489,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 listener.onReady();
             }
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), new Metadata());
+            close(convertThrowableToStatus(t), new Metadata());
         }
     }
 
@@ -555,9 +563,13 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // A custom error when dealing with client cancel or transport issues should be
                 // returned. We have already closed the listener, so it will not receive any more
                 // callbacks as designed.
-                close(GrpcStatus.fromThrowable(t), new Metadata());
+                close(convertThrowableToStatus(t), new Metadata());
             }
         }
+    }
+
+    private Status convertThrowableToStatus(Throwable t) {
+        return GrpcStatus.fromThrowable(exceptionMappings, t);
     }
 
     private void setClientStreamClosed(boolean ok) {

@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.client.grpc;
 import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -47,6 +49,7 @@ import io.grpc.ClientCall;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.MethodDescriptor;
+import io.grpc.Status;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
@@ -62,25 +65,30 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     private final MeterRegistry meterRegistry;
     private final SessionProtocol sessionProtocol;
     private final SerializationFormat serializationFormat;
+    private final String advertisedEncodingsHeader;
+
     @Nullable
     private final GrpcJsonMarshaller jsonMarshaller;
-    private final String advertisedEncodingsHeader;
+    @Nullable
+    private final List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
 
     ArmeriaChannel(ClientBuilderParams params,
                    HttpClient httpClient,
                    MeterRegistry meterRegistry,
                    SessionProtocol sessionProtocol,
                    SerializationFormat serializationFormat,
-                   @Nullable GrpcJsonMarshaller jsonMarshaller) {
+                   @Nullable GrpcJsonMarshaller jsonMarshaller,
+                   @Nullable List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
         this.params = params;
         this.httpClient = httpClient;
         this.meterRegistry = meterRegistry;
         this.sessionProtocol = sessionProtocol;
         this.serializationFormat = serializationFormat;
-        this.jsonMarshaller = jsonMarshaller;
-
         advertisedEncodingsHeader = String.join(
                 ",", DecompressorRegistry.getDefaultInstance().getAdvertisedMessageEncodings());
+
+        this.jsonMarshaller = jsonMarshaller;
+        this.exceptionMappings = exceptionMappings;
     }
 
     @Override
@@ -124,7 +132,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 serializationFormat,
                 jsonMarshaller,
                 unsafeWrapResponseBuffers,
-                advertisedEncodingsHeader);
+                advertisedEncodingsHeader,
+                exceptionMappings);
     }
 
     @Override

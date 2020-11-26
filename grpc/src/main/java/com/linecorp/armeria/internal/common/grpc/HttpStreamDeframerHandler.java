@@ -19,6 +19,9 @@ package com.linecorp.armeria.internal.common.grpc;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+import java.util.Map;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -39,16 +42,21 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
 
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
+    @Nullable
+    private final List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
 
     @Nullable
     private HttpDeframer<DeframedMessage> deframer;
 
-    public HttpStreamDeframerHandler(DecompressorRegistry decompressorRegistry,
-                                     TransportStatusListener transportStatusListener,
-                                     int maxMessageSizeBytes) {
+    public HttpStreamDeframerHandler(
+            DecompressorRegistry decompressorRegistry,
+            TransportStatusListener transportStatusListener,
+            @Nullable List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings,
+            int maxMessageSizeBytes) {
         super(maxMessageSizeBytes);
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
+        this.exceptionMappings = exceptionMappings;
     }
 
     /**
@@ -104,7 +112,7 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
             try {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
-                transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(t));
+                transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(exceptionMappings, t));
             }
         }
     }
@@ -121,7 +129,7 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
 
     @Override
     public void processOnError(Throwable cause) {
-        transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
+        transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(exceptionMappings, cause));
     }
 
     @Override

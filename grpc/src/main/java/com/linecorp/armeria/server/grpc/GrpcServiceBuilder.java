@@ -22,6 +22,10 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -33,8 +37,10 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
@@ -45,6 +51,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -62,6 +69,7 @@ import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
+import io.grpc.Status;
 import io.grpc.protobuf.services.ProtoReflectionService;
 
 /**
@@ -99,6 +107,10 @@ public final class GrpcServiceBuilder {
 
     @Nullable
     private ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
+
+    @VisibleForTesting
+    @Nullable
+    LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -443,6 +455,39 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Adds exception mappings that map {@link Throwable}s to gRPC {@link Status}es.
+     * The mappings are used to handle a {@link Throwable} when it is raised.
+     */
+    public GrpcServiceBuilder addExceptionMapping(
+            Iterable<? extends Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
+        requireNonNull(exceptionMappings, "exceptionMappings");
+        checkArgument(!Iterables.isEmpty(exceptionMappings), "exceptionMappings should not be empty.");
+
+        for (Map.Entry<Class<? extends Throwable>, Status> exceptionMapping : exceptionMappings) {
+           addExceptionMapping(exceptionMapping.getKey(), exceptionMapping.getValue());
+        }
+        return this;
+    }
+
+    /**
+     * Adds an exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
+     * The mapping is used to handle a {@link Throwable} when it is raised.
+     */
+    public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(status, "status");
+
+        if (exceptionMappings == null) {
+            exceptionMappings = new LinkedList<>();
+            exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, status));
+            return this;
+        }
+
+        GrpcStatus.addExceptionMapping(exceptionMappings, exceptionType, status);
+        return this;
+    }
+
+    /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
      * {@linkplain ServerBuilder#service(HttpServiceWithRoutes, Function[])
@@ -467,6 +512,11 @@ public final class GrpcServiceBuilder {
             handlerRegistry = registryBuilder.build();
         }
 
+        List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings = null;
+        if (this.exceptionMappings != null) {
+            exceptionMappings = ImmutableList.copyOf(this.exceptionMappings);
+        }
+
         final GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
                 handlerRegistry
@@ -480,6 +530,7 @@ public final class GrpcServiceBuilder {
                 supportedSerializationFormats,
                 jsonMarshallerFactory,
                 protoReflectionServiceInterceptor,
+                exceptionMappings,
                 maxOutboundMessageSizeBytes,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,

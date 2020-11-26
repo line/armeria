@@ -368,7 +368,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
                 }
             } catch (Throwable e) {
                 failure = e;
-                if (GrpcStatus.fromThrowable(e).getCode() == Status.CANCELLED.getCode()) {
+                if (GrpcStatus.fromThrowable(null, e).getCode() == Status.CANCELLED.getCode()) {
                     // Stream was cancelled by client, responseStream.onError() might be called already or
                     // will be called soon by inbounding StreamObserver.
                     chunks.clear();

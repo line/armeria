@@ -23,6 +23,8 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -111,6 +113,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final boolean unsafeWrapResponseBuffers;
     @Nullable
     private final Executor executor;
+    @Nullable
+    private final List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
     private final String advertisedEncodingsHeader;
     private final DecompressorRegistry decompressorRegistry;
     private final int maxInboundMessageSizeBytes;
@@ -143,7 +147,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             SerializationFormat serializationFormat,
             @Nullable GrpcJsonMarshaller jsonMarshaller,
             boolean unsafeWrapResponseBuffers,
-            String advertisedEncodingsHeader) {
+            String advertisedEncodingsHeader,
+            @Nullable List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
         this.ctx = ctx;
         this.endpointGroup = endpointGroup;
         this.httpClient = httpClient;
@@ -162,6 +167,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapResponseBuffers);
         executor = callOptions.getExecutor();
+        this.exceptionMappings = exceptionMappings;
 
         req.whenComplete().handle((unused1, unused2) -> {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
@@ -213,12 +219,13 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         final HttpResponse res = initContextAndExecuteWithFallback(
                 httpClient, ctx, endpointGroup, HttpResponse::from,
-                (unused, cause) -> HttpResponse.ofFailure(GrpcStatus.fromThrowable(cause)
+                (unused, cause) -> HttpResponse.ofFailure(GrpcStatus.fromThrowable(exceptionMappings, cause)
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
         final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(decompressorRegistry, this, maxInboundMessageSizeBytes);
+                new HttpStreamDeframerHandler(decompressorRegistry, this, exceptionMappings,
+                                              maxInboundMessageSizeBytes);
         responseReader = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
         handler.setDeframer(responseReader);
         responseReader.subscribe(this, ctx.eventLoop());
@@ -320,7 +327,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                         assert listener != null;
                         listener.onReady();
                     } catch (Throwable t) {
-                        close(GrpcStatus.fromThrowable(t), new Metadata());
+                        close(GrpcStatus.fromThrowable(exceptionMappings, t), new Metadata());
                     }
                 }
             });
@@ -390,7 +397,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 listener.onMessage(msg);
             }
         } catch (Throwable t) {
-            req.close(GrpcStatus.fromThrowable(t).asException());
+            req.close(GrpcStatus.fromThrowable(exceptionMappings, t).asException());
             throw t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t);
         }
 

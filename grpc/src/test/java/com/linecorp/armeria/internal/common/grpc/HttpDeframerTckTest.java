@@ -68,7 +68,8 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
         final StreamMessage<HttpData> source = StreamMessage.of(data);
 
         final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), noopListener, -1);
+                new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), noopListener,
+                                              null, -1);
         final HttpDeframer<DeframedMessage> deframer =
                         new HttpDeframer<>(handler, ByteBufAllocator.DEFAULT);
 
@@ -80,7 +81,8 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
     public Publisher<DeframedMessage> createFailedPublisher() {
         final Flux<HttpData> source = Flux.error(new RuntimeException());
         final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), noopListener, -1);
+                new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), noopListener,
+                                              null, -1);
         final HttpDeframer<DeframedMessage> reader = new HttpDeframer<>(handler, ByteBufAllocator.DEFAULT);
         source.subscribe(reader);
         return reader;
