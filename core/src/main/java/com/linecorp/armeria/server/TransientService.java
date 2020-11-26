@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.Set;
+
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -27,4 +30,15 @@ import com.linecorp.armeria.common.Response;
  */
 @FunctionalInterface
 public interface TransientService<I extends Request, O extends Response> extends Service<I, O> {
+
+    /**
+     * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for this
+     * {@link TransientService}. This returns {@link Flags#transientServiceOptions()} if you didn't
+     * specify any {@link TransientServiceOption}s using
+     * {@link TransientServiceBuilder#transientServiceOptions(TransientServiceOption...)} when you create
+     * this {@link TransientService}.
+     */
+    default Set<TransientServiceOption> transientServiceOptions() {
+        return Flags.transientServiceOptions();
+    }
 }

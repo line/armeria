@@ -328,7 +328,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         if (tryComplete()) {
             setDone(true);
             logBuilder().endResponse(cause);
-            reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+            final ServiceConfig config = reqCtx.config();
+            if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
+                reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
+            }
         }
     }
 
@@ -392,7 +395,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     // Write an access log always with a cause. Respect the first specified cause.
                     if (tryComplete()) {
                         logBuilder().endResponse(cause);
-                        reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+                        final ServiceConfig config = reqCtx.config();
+                        if (config.transientServiceOptions().contains(
+                                TransientServiceOption.WITH_ACCESS_LOGGING)) {
+                            reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
+                        }
                     }
                 }
             });
@@ -494,7 +501,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             if (endOfStream) {
                 if (tryComplete()) {
                     logBuilder().endResponse();
-                    reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+                    final ServiceConfig config = reqCtx.config();
+                    if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
+                        reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
+                    }
                 }
             } else {
                 assert subscription != null;

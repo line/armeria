@@ -26,6 +26,7 @@ import org.springframework.boot.actuate.autoconfigure.web.server.LocalManagement
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -38,6 +39,7 @@ import com.linecorp.armeria.server.Server;
 @SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
 @ActiveProfiles({ "local", "managedMetricPath" })
 @DirtiesContext
+@AutoConfigureMetrics
 @EnableAutoConfiguration
 @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
 class PrometheusMetricExposureTest {

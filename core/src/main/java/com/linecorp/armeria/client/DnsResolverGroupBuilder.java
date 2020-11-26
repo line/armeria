@@ -32,7 +32,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.internal.common.util.TransportType;
+import com.linecorp.armeria.common.util.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;

@@ -56,6 +56,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.spotify.futures.CompletableFutures;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -65,7 +66,6 @@ import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.internal.common.util.TransportType;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.Gauge;
@@ -468,7 +468,7 @@ public final class Server implements ListenableAsyncCloseable {
             });
 
             b.group(bossGroup, config.workerGroup());
-            b.channel(TransportType.detectTransportType().serverChannelType());
+            b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
             b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts,
                                                               gracefulShutdownSupport));

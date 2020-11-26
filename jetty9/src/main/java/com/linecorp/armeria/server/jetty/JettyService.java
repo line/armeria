@@ -311,7 +311,9 @@ public final class JettyService implements HttpService {
         });
 
         return new MetaData.Request(aHeaders.get(HttpHeaderNames.METHOD), uri,
-                                    HttpVersion.HTTP_1_1, jHeaders, aReq.content().length());
+                                    ctx.sessionProtocol().isMultiplex() ? HttpVersion.HTTP_2
+                                                                        : HttpVersion.HTTP_1_1,
+                                    jHeaders, aReq.content().length());
     }
 
     private static ResponseHeaders toResponseHeaders(ArmeriaHttpTransport transport) {

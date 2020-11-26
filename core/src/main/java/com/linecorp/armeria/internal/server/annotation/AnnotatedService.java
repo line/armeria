@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -150,6 +151,8 @@ public final class AnnotatedService implements HttpService {
             responseType = ResponseType.COMPLETION_STAGE;
         } else if (isKotlinSuspendingMethod) {
             responseType = ResponseType.KOTLIN_COROUTINES;
+        } else if (ScalaUtil.isScalaFuture(returnType)) {
+            responseType = ResponseType.SCALA_FUTURE;
         } else {
             responseType = ResponseType.OTHER_OBJECTS;
         }
@@ -279,14 +282,17 @@ public final class AnnotatedService implements HttpService {
                     return f.thenApply(httpResponseApplyFunction);
                 }
 
-            case KOTLIN_COROUTINES:
             case COMPLETION_STAGE:
+            case KOTLIN_COROUTINES:
+            case SCALA_FUTURE:
                 final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
-                    composedFuture = f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
-                                                        ctx.blockingTaskExecutor());
+                    composedFuture = f.thenComposeAsync(
+                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor()),
+                            ctx.blockingTaskExecutor());
                 } else {
-                    composedFuture = f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)));
+                    composedFuture = f.thenCompose(
+                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop()));
                 }
                 return composedFuture.handle(
                         (result, cause) -> {
@@ -309,6 +315,7 @@ public final class AnnotatedService implements HttpService {
     /**
      * Invokes the service method with arguments.
      */
+    @Nullable
     private Object invoke(ServiceRequestContext ctx, HttpRequest req,
                           @Nullable AggregatedHttpRequest aggregatedRequest) {
         try (SafeCloseable ignored = ctx.push()) {
@@ -411,12 +418,14 @@ public final class AnnotatedService implements HttpService {
     }
 
     /**
-     * Wraps the specified {@code obj} with {@link CompletableFuture} if it is not an instance of
-     * {@link CompletionStage}.
+     * Converts the specified {@code obj} with {@link CompletableFuture}.
      */
-    private static CompletionStage<?> toCompletionStage(Object obj) {
+    private static CompletionStage<?> toCompletionStage(@Nullable Object obj, ExecutorService executor) {
         if (obj instanceof CompletionStage) {
             return (CompletionStage<?>) obj;
+        }
+        if (obj != null && ScalaUtil.isScalaFuture(obj.getClass())) {
+            return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
         }
         return CompletableFuture.completedFuture(obj);
     }
@@ -585,6 +594,6 @@ public final class AnnotatedService implements HttpService {
      * Response type classification of the annotated {@link Method}.
      */
     private enum ResponseType {
-        HTTP_RESPONSE, COMPLETION_STAGE, KOTLIN_COROUTINES, OTHER_OBJECTS
+        HTTP_RESPONSE, COMPLETION_STAGE, KOTLIN_COROUTINES, SCALA_FUTURE, OTHER_OBJECTS
     }
 }

@@ -13,7 +13,6 @@ dependencies {
     optionalImplementation 'io.grpc:grpc-kotlin-stub'
     optionalImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
 
-
     api 'org.curioswitch.curiostack:protobuf-jackson'
 
     testImplementation 'com.google.api:gax-grpc'

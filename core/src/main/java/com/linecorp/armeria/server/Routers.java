@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 /**
  * A factory that creates a {@link Router} instance.
@@ -85,8 +86,8 @@ public final class Routers {
     public static Router<RouteDecoratingService> ofRouteDecoratingService(
             List<RouteDecoratingService> routeDecoratingServices) {
         return wrapRouteDecoratingServiceRouter(
-                defaultRouter(routeDecoratingServices, null, RouteDecoratingService::route,
-                              (route1, route2) -> {/* noop */}, true),
+                sequentialRouter(routeDecoratingServices, null, RouteDecoratingService::route,
+                                 (route1, route2) -> {/* noop */}, true),
                 resolveAmbiguousRoutes(routeDecoratingServices.stream()
                                                               .map(RouteDecoratingService::route)
                                                               .collect(toImmutableList())));
@@ -170,6 +171,18 @@ public final class Routers {
             builder.add(router(addingTrie, group, fallbackValue, routeResolver, isRouteDecorator));
         }
         return builder.build();
+    }
+
+    /**
+     * Returns only the sequential implementation of {@link Router}.
+     */
+    private static <V> Router<V> sequentialRouter(Iterable<V> values, @Nullable V fallbackValue,
+                                                  Function<V, Route> routeResolver,
+                                                  BiConsumer<Route, Route> rejectionHandler,
+                                                  boolean isRouteDecorator) {
+        rejectDuplicateMapping(values, routeResolver, rejectionHandler);
+        return router(false, Lists.newArrayList(values), fallbackValue, routeResolver,
+                      isRouteDecorator);
     }
 
     private static <V> void rejectDuplicateMapping(

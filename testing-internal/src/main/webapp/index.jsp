@@ -10,5 +10,6 @@
 <p>Context path: <%= request.getContextPath() %></p>
 <p>Request URI: <%= request.getRequestURI() %></p>
 <p>Scheme: <%= request.getScheme() %></p>
+<p>Protocol: <%= request.getProtocol() %></p>
 </body>
 </html>
