@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import static java.util.Objects.requireNonNull; 
+import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.util.List;
