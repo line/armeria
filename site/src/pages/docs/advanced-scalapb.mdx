@@ -63,14 +63,14 @@ Server.builder()
       .http(httpPort)
       .https(httpsPort)
       .service(grpcService)
-      // Add DocService for browsing the list gRPC services and 
+      // Add DocService for browsing the list of gRPC services and 
       // invoking a service operation from a web form.
       // See https://armeria.dev/docs/server-docservice for more information.
-      .serviceUnder( "/docs", new DocService())
+      .serviceUnder("/docs", new DocService())
       .build()
 ```
 
-Please consult [gRPC service](https://armeria.dev/docs/server-grpc) for more information.
+Please see [gRPC service](https://armeria.dev/docs/server-grpc) for more information.
 
 ## Calling a gRPC service
 
@@ -95,14 +95,14 @@ val reply = helloService.hello(request)
 assert(reply.message == "Hello, Armerian World!")
 ```
 
-Please consult [gRPC client](https://armeria.dev/docs/client-grpc) for more information.
+Please see [gRPC client](https://armeria.dev/docs/client-grpc) for more information.
 
 ## Supporting ScalaPB in annotated services. 
 
 ### Converting an HTTP request to a ScalaPB's `GeneratedMesage` 
 
 - A Protocol Buffers is automatically converted to a `GeneratedMessage` only when
-  the content type is either one of followings:
+  the content type is one of followings:
   - `application/probuf` 
   - `application/octet-stream`
   - `application/x-protobuf`
@@ -166,7 +166,6 @@ class GreetingService {
   @ProducesProtobuf
   def produceProtobuf: SimpleResponse = SimpleResponse("Hello, Armeria!")
 
-
   // Convert 'SimpleResponse' into JSON format
   @Get("/json")
   @ProducesJson
@@ -194,7 +193,7 @@ The following collection types can be converted to JSON array:
 ### Injecting an [ExecutionContext](https://www.scala-lang.org/api/current/scala/concurrent/ExecutionContext.html) to an annotated service method
 
 An `ExecutionContext` could be automatically injected as a method parameter to execute an asynchronous service
-on top of Armeria's an event loop or a blocking task executor.
+on top of an Armeria's event loop or blocking task executor.
 
 ```scala
 import com.linecorp.armeria.server.ServiceRequestContext
@@ -205,7 +204,7 @@ class MyAsyncService {
   @Post("/async")
   def asyncService(req: SimpleRequest)(implicit ec: ExecutionContext): Future[String] =
     Future {
-      // This callback will be executed in Armeria's event loop
+      // This callback will be executed in an Armeria's event loop
       assert(ServiceRequestContext.current() != null)
       "Hello, Armeria!"
     }
@@ -214,7 +213,7 @@ class MyAsyncService {
   @Post("/blocking-task")
   def blockingAsyncService(req: SimpleRequest)(implicit ec: ExecutionContext): Future[String] =
     Future {
-      // This callback will be executed in Armeria's blocking task executor
+      // This callback will be executed in an Armeria's blocking task executor
       assert(ServiceRequestContext.current() != null)
       // Perform a long running task
       "Hello, Armeria!"
