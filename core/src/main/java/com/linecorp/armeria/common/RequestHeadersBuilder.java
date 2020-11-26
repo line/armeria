@@ -106,7 +106,8 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
      * @return {@code this}
      */
     default RequestHeadersBuilder acceptLanguages(LanguageRange... acceptedLanguages) {
-        return acceptLanguages(ImmutableList.copyOf(acceptedLanguages));
+        return acceptLanguages(ImmutableList.copyOf(
+                requireNonNull(acceptedLanguages, "acceptedLanguages")));
     }
 
     // Override the return type of the chaining methods in the superclass.
