@@ -45,7 +45,8 @@ import io.micrometer.core.instrument.MeterRegistry;
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = NoMeterTestConfiguration.class)
+@SpringBootTest(classes = NoMeterTestConfiguration.class, properties =
+        "management.metrics.export.defaults.enabled=true") // @AutoConfigureMetrics is not allowed for boot1.
 @ActiveProfiles({ "local", "autoConfTest" })
 public class ArmeriaAutoConfigurationWithoutMeterTest {
 
