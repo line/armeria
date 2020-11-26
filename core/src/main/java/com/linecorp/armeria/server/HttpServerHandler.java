@@ -405,8 +405,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             // Keep track of the number of unfinished requests and
             // clean up the request stream when response stream ends.
-            final boolean isTransient = service.as(TransientService.class) != null;
-            if (!isTransient) {
+            final boolean isTransientService =
+                    serviceCfg.service().as(TransientService.class) != null;
+            if (!isTransientService) {
                 gracefulShutdownSupport.inc();
             }
             unfinishedRequests.put(req, res);
@@ -442,7 +443,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         req.abort(cause);
                     }
                     // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
-                    if (!isTransient) {
+                    if (!isTransientService) {
                         gracefulShutdownSupport.dec();
                     }
                     unfinishedRequests.remove(req);

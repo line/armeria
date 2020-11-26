@@ -434,6 +434,9 @@ public abstract class TomcatService implements HttpService {
             }
         }
 
+        // Set the protocol, as documented in https://tools.ietf.org/html/rfc3875#section-4.1.16
+        coyoteReq.protocol().setString(ctx.sessionProtocol().isMultiplex() ? "HTTP/2.0" : "HTTP/1.1");
+
         // Set the method.
         final HttpMethod method = req.method();
         coyoteReq.method().setString(method.name());

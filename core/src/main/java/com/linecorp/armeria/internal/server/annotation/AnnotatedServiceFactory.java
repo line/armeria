@@ -320,8 +320,8 @@ public final class AnnotatedServiceFactory {
                 AnnotationUtil.findFirst(object.getClass(), Blocking.class) != null;
 
         return routes.stream().map(route -> {
-            final List<AnnotatedValueResolver> resolvers = getAnnotatedValueResolvers(req, route, method,
-                                                                                      clazz);
+            final List<AnnotatedValueResolver> resolvers =
+                    getAnnotatedValueResolvers(req, route, method, clazz, needToUseBlockingTaskExecutor);
             return new AnnotatedServiceElement(
                     route,
                     new AnnotatedService(object, method, resolvers, eh, res, route, responseHeaders,
@@ -332,13 +332,14 @@ public final class AnnotatedServiceFactory {
 
     private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
                                                                            Route route, Method method,
-                                                                           Class<?> clazz) {
+                                                                           Class<?> clazz,
+                                                                           boolean useBlockingExecutor) {
         final Set<String> expectedParamNames = route.paramNames();
         List<AnnotatedValueResolver> resolvers;
         try {
-            resolvers = AnnotatedValueResolver.ofServiceMethod(method, expectedParamNames,
-                                                               AnnotatedValueResolver
-                                                                       .toRequestObjectResolvers(req));
+            resolvers = AnnotatedValueResolver.ofServiceMethod(
+                    method, expectedParamNames,
+                    AnnotatedValueResolver.toRequestObjectResolvers(req, method), useBlockingExecutor);
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
             //

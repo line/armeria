@@ -30,12 +30,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.actuate.autoconfigure.web.server.LocalManagementPort;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
@@ -58,7 +58,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
-import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationTest.TestConfiguration;
 
 import io.prometheus.client.exporter.common.TextFormat;
@@ -71,6 +70,7 @@ import reactor.test.StepVerifier;
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
+@AutoConfigureMetrics
 @EnableAutoConfiguration
 @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
 @Timeout(unit = TimeUnit.MILLISECONDS, value = 30_000L)
@@ -80,7 +80,7 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
     private static final TypeReference<Map<String, Object>> JSON_MAP =
             new TypeReference<Map<String, Object>>() {};
 
-    private static final String TEST_LOGGER_NAME = "com.linecorp.armeria.spring.actuate.testing.TestLogger";
+    static final String TEST_LOGGER_NAME = "com.linecorp.armeria.spring.actuate.testing.TestLogger";
 
     // We use this logger to test the /loggers endpoint, so set the name manually instead of using class name.
     @SuppressWarnings("unused")
@@ -254,6 +254,7 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
     @SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
     @ActiveProfiles({ "local", "autoConfTest", "autoConfTestCors" })
     @DirtiesContext
+    @AutoConfigureMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     @Timeout(10)
@@ -287,50 +288,6 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
             assertThat(res.headers().contains(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE)).isTrue();
             assertThat(res.status()).isNotEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
         }
-    }
-
-    @Nested
-    @SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
-    @ActiveProfiles({ "local", "secureTest" })
-    @DirtiesContext
-    @EnableAutoConfiguration
-    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
-    class ArmeriaSpringActuatorAutoConfigurationSecureTest {
-
-        @SpringBootApplication
-        class TestConfiguration {}
-
-        @LocalManagementPort
-        private Integer actuatorPort;
-        @Inject
-        private Server server;
-        @Inject
-        private ArmeriaSettings settings;
-
-        @Test
-        void normal() throws Exception {
-            server.activePorts().values().stream()
-                  .map(p -> p.localAddress().getPort())
-                  .forEach(port -> {
-                      final int statusCode = actuatorPort.equals(port) ? 200 : 404;
-                      assertStatus(port, "/actuator", statusCode);
-                      assertStatus(port, "/actuator/health", statusCode);
-                      assertStatus(port, "/actuator/loggers/" + TEST_LOGGER_NAME, statusCode);
-                      assertStatus(port, "/actuator/prometheus", statusCode);
-                      assertStatus(port, settings.getDocsPath(), statusCode);
-                      assertStatus(port, settings.getHealthCheckPath(), statusCode);
-                      assertStatus(port, settings.getMetricsPath(), statusCode);
-                  });
-        }
-    }
-
-    private static void assertStatus(int port, String url, int statusCode) {
-        final WebClient client = WebClient.of(newUrl("http", port));
-        final HttpResponse response = client.get(url);
-
-        final AggregatedHttpResponse httpResponse = response.aggregate().join();
-        assertThat(httpResponse.status().code()).isEqualTo(statusCode);
     }
 
     private static String newUrl(String scheme, int port) {

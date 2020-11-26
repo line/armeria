@@ -140,11 +140,12 @@ class DefaultSplitHttpResponseTest {
                                                                 HttpData.ofUtf8("Hello2"),
                                                                 HttpHeaders.of("grpc-status", 0)));
         final SplitHttpResponse splitHttpResponse = response.split();
+        // HTTP headers is prefetched before subscribing to HTTP body.
+        assertThat(splitHttpResponse.headers().join()).isEqualTo(ResponseHeaders.of(HttpStatus.OK));
         StepVerifier.create(splitHttpResponse.body())
                     .thenCancel()
                     .verify();
 
-        assertThat(splitHttpResponse.headers().join()).isEqualTo(ResponseHeaders.of(HttpStatus.OK));
         assertThat(splitHttpResponse.trailers().join().isEmpty()).isTrue();
     }
 

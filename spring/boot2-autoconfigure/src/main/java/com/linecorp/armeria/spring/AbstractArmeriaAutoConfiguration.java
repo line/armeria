@@ -96,14 +96,6 @@ public abstract class AbstractArmeriaAutoConfiguration {
                 configurators -> configurators.forEach(
                         configurator -> configurator.configure(docServiceBuilder)));
 
-        final String docsPath = armeriaSettings.getDocsPath();
-        configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
-                                           meterRegistry.orElse(Metrics.globalRegistry),
-                                           healthCheckers.orElseGet(Collections::emptyList),
-                                           healthCheckServiceConfigurators.orElseGet(Collections::emptyList),
-                                           meterIdPrefixFunction.orElse(
-                                                   MeterIdPrefixFunction.ofDefault("armeria.server")));
-
         armeriaServerConfigurators.ifPresent(
                 configurators -> configurators.forEach(
                         configurator -> configurator.configure(serverBuilder)));
@@ -111,6 +103,14 @@ public abstract class AbstractArmeriaAutoConfiguration {
         armeriaServerBuilderConsumers.ifPresent(
                 consumers -> consumers.forEach(
                         consumer -> consumer.accept(serverBuilder)));
+
+        final String docsPath = armeriaSettings.getDocsPath();
+        configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
+                                           meterRegistry.orElse(Metrics.globalRegistry),
+                                           healthCheckers.orElseGet(Collections::emptyList),
+                                           healthCheckServiceConfigurators.orElseGet(Collections::emptyList),
+                                           meterIdPrefixFunction.orElse(
+                                                   MeterIdPrefixFunction.ofDefault("armeria.server")));
 
         if (!Strings.isNullOrEmpty(docsPath)) {
             serverBuilder.serviceUnder(docsPath, docServiceBuilder.build());

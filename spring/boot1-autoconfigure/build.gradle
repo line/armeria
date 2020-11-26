@@ -26,12 +26,6 @@ dependencies {
 
     api 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
-    api("org.springframework.boot:spring-boot-starter") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly SPRING_BOOT_VERSION
-        }
-    }
     api("org.springframework.boot:spring-boot-autoconfigure") {
         version {
             // Will fail the build if the override doesn't work
@@ -47,10 +41,12 @@ dependencies {
 
     testImplementation project(':grpc')
     testImplementation project(':thrift0.13')
-    testImplementation("org.springframework.boot:spring-boot-starter-test") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly SPRING_BOOT_VERSION
+    [ 'spring-boot-starter', 'spring-boot-starter-test' ].each {
+        testImplementation("org.springframework.boot:$it") {
+            version {
+                // Will fail the build if the override doesn't work
+                strictly SPRING_BOOT_VERSION
+            }
         }
     }
 }

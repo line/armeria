@@ -38,7 +38,7 @@ class WebClientBuilderTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) {
             sb.service("/echo-path", (ctx, req) -> {
                 String pathAndQuery = ctx.path();
                 if (ctx.query() != null) {
@@ -51,7 +51,18 @@ class WebClientBuilderTest {
     };
 
     @Test
-    void uriWithNonePlusProtocol() throws Exception {
+    void prepareExecute() {
+        final String response = WebClient.of("http://127.0.0.1:" + server.httpPort())
+                                         .prepare()
+                                         .get("/echo-path")
+                                         .queryParam("bar", 1)
+                                         .execute()
+                                         .aggregate().join().contentUtf8();
+        assertThat(response).isEqualTo("/echo-path?bar=1");
+    }
+
+    @Test
+    void uriWithNonePlusProtocol() {
         final WebClient client = WebClient.builder("none+https://google.com/").build();
         assertThat(client.uri().toString()).isEqualTo("https://google.com/");
     }

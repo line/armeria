@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
@@ -82,26 +83,50 @@ import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
+import com.linecorp.armeria.server.annotation.RequestConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 
 import io.netty.handler.codec.http.HttpConstants;
+import scala.concurrent.ExecutionContext;
 
 final class AnnotatedValueResolver {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedValueResolver.class);
 
-    private static final List<RequestObjectResolver> defaultRequestConverters = ImmutableList.of(
-            (resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
-                final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
-                if (factory == null) {
-                    return RequestConverterFunction.fallthrough();
-                } else {
-                    return factory.create(resolverContext);
-                }
-            },
-            RequestObjectResolver.of(new JacksonRequestConverterFunction()),
-            RequestObjectResolver.of(new StringRequestConverterFunction()),
-            RequestObjectResolver.of(new ByteArrayRequestConverterFunction()));
+    private static final List<RequestConverterFunction> defaultRequestConverterFunctions = ImmutableList.of(
+            new JacksonRequestConverterFunction(),
+            new StringRequestConverterFunction(),
+            new ByteArrayRequestConverterFunction());
+
+    private static final List<RequestObjectResolver> defaultRequestObjectResolvers;
+
+    static {
+        final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builderWithExpectedSize(4);
+        builder.add((resolverContext, expectedResultType, expectedParameterizedResultType, beanFactoryId) -> {
+            final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
+            if (factory == null) {
+                return RequestConverterFunction.fallthrough();
+            } else {
+                return factory.create(resolverContext);
+            }
+        });
+        for (RequestConverterFunction function : defaultRequestConverterFunctions) {
+            builder.add(RequestObjectResolver.of(function));
+        }
+
+        defaultRequestObjectResolvers = builder.build();
+    }
+
+    static final List<RequestConverterFunctionProvider> requestConverterFunctionProviders =
+            ImmutableList.copyOf(ServiceLoader.load(RequestConverterFunctionProvider.class,
+                                                    AnnotatedService.class.getClassLoader()));
+
+    static {
+        if (!requestConverterFunctionProviders.isEmpty()) {
+            logger.debug("Available {}s: {}", RequestConverterFunctionProvider.class.getSimpleName(),
+                         requestConverterFunctionProviders);
+        }
+    }
 
     private static final Object[] emptyArguments = new Object[0];
 
@@ -123,11 +148,27 @@ final class AnnotatedValueResolver {
      * Returns a list of {@link RequestObjectResolver} that default request converters are added.
      */
     static List<RequestObjectResolver> toRequestObjectResolvers(
-            List<RequestConverterFunction> converters) {
+            List<RequestConverterFunction> converters, Method method) {
         final ImmutableList.Builder<RequestObjectResolver> builder = ImmutableList.builder();
         // Wrap every converters received from a user with a default object resolver.
         converters.stream().map(RequestObjectResolver::of).forEach(builder::add);
-        builder.addAll(defaultRequestConverters);
+        if (!requestConverterFunctionProviders.isEmpty()) {
+            final ImmutableList<RequestConverterFunction> merged =
+                    ImmutableList.<RequestConverterFunction>builder().addAll(converters)
+                                                                     .addAll(defaultRequestConverterFunctions)
+                                                                     .build();
+            final CompositeRequestConverterFunction composed = new CompositeRequestConverterFunction(merged);
+            for (Type type : method.getGenericParameterTypes()) {
+                for (RequestConverterFunctionProvider provider : requestConverterFunctionProviders) {
+                    final RequestConverterFunction func =
+                            provider.createRequestConverterFunction(type, composed);
+                    if (func != null) {
+                        builder.add(RequestObjectResolver.of(func));
+                    }
+                }
+            }
+        }
+        builder.addAll(defaultRequestObjectResolvers);
         return builder.build();
     }
 
@@ -136,8 +177,9 @@ final class AnnotatedValueResolver {
      * {@link Method}, {@code pathParams} and {@code objectResolvers}.
      */
     static List<AnnotatedValueResolver> ofServiceMethod(Method method, Set<String> pathParams,
-                                                        List<RequestObjectResolver> objectResolvers) {
-        return of(method, pathParams, objectResolvers, true, true);
+                                                        List<RequestObjectResolver> objectResolvers,
+                                                        boolean useBlockingExecutor) {
+        return of(method, pathParams, objectResolvers, true, true, useBlockingExecutor);
     }
 
     /**
@@ -147,7 +189,7 @@ final class AnnotatedValueResolver {
     static List<AnnotatedValueResolver> ofBeanConstructorOrMethod(Executable constructorOrMethod,
                                                                   Set<String> pathParams,
                                                                   List<RequestObjectResolver> objectResolvers) {
-        return of(constructorOrMethod, pathParams, objectResolvers, false, false);
+        return of(constructorOrMethod, pathParams, objectResolvers, false, false, false);
     }
 
     /**
@@ -159,7 +201,7 @@ final class AnnotatedValueResolver {
                                               List<RequestObjectResolver> objectResolvers) {
         // 'Field' is only used for converting a bean.
         // So we always need to pass 'implicitRequestObjectAnnotation' as false.
-        return of(field, field, field.getType(), pathParams, objectResolvers, false);
+        return of(field, field, field.getType(), pathParams, objectResolvers, false, false);
     }
 
     /**
@@ -173,7 +215,8 @@ final class AnnotatedValueResolver {
     private static List<AnnotatedValueResolver> of(Executable constructorOrMethod, Set<String> pathParams,
                                                    List<RequestObjectResolver> objectResolvers,
                                                    boolean implicitRequestObjectAnnotation,
-                                                   boolean isServiceMethod) {
+                                                   boolean isServiceMethod,
+                                                   boolean useBlockingExecutor) {
         final ImmutableList<Parameter> parameters =
                 Arrays.stream(constructorOrMethod.getParameters())
                       .filter(it -> !KotlinUtil.isContinuation(it.getType()))
@@ -221,7 +264,7 @@ final class AnnotatedValueResolver {
 
             resolver = of(constructorOrMethod,
                           headParameter, headParameter.getType(), pathParams, objectResolvers,
-                          implicitRequestObjectAnnotation);
+                          implicitRequestObjectAnnotation, useBlockingExecutor);
         } else if (!isServiceMethod && parametersSize == 1 &&
                    !AnnotationUtil.findDeclared(constructorOrMethod, RequestConverter.class).isEmpty()) {
             //
@@ -240,7 +283,7 @@ final class AnnotatedValueResolver {
             // @RequestConverter(BeanConverter.class)
             // void setter(Bean bean) { ... }
             //
-            resolver = of(headParameter, pathParams, objectResolvers, true);
+            resolver = of(headParameter, pathParams, objectResolvers, true, useBlockingExecutor);
         } else {
             //
             // There's no annotation. So there should be no @Default annotation, too.
@@ -269,7 +312,7 @@ final class AnnotatedValueResolver {
         } else {
             list = parameters.stream()
                              .map(p -> of(p, pathParams, objectResolvers,
-                                          implicitRequestObjectAnnotation))
+                                          implicitRequestObjectAnnotation, useBlockingExecutor))
                              .filter(Objects::nonNull)
                              .collect(toImmutableList());
         }
@@ -326,9 +369,9 @@ final class AnnotatedValueResolver {
     @Nullable
     static AnnotatedValueResolver of(Parameter parameter, Set<String> pathParams,
                                      List<RequestObjectResolver> objectResolvers,
-                                     boolean implicitRequestObjectAnnotation) {
+                                     boolean implicitRequestObjectAnnotation, boolean useBlockingExecutor) {
         return of(parameter, parameter, parameter.getType(), pathParams, objectResolvers,
-                  implicitRequestObjectAnnotation);
+                  implicitRequestObjectAnnotation, useBlockingExecutor);
     }
 
     /**
@@ -347,13 +390,15 @@ final class AnnotatedValueResolver {
      *                                        with {@link RequestObject} so that conversion is always done.
      *                                        {@code false} if an element has to be annotated with
      *                                        {@link RequestObject} explicitly to get converted.
+     * @param useBlockingExecutor whether to use blocking task executor
      */
     @Nullable
     private static AnnotatedValueResolver of(AnnotatedElement annotatedElement,
                                              AnnotatedElement typeElement, Class<?> type,
                                              Set<String> pathParams,
                                              List<RequestObjectResolver> objectResolvers,
-                                             boolean implicitRequestObjectAnnotation) {
+                                             boolean implicitRequestObjectAnnotation,
+                                             boolean useBlockingExecutor) {
         requireNonNull(annotatedElement, "annotatedElement");
         requireNonNull(typeElement, "typeElement");
         requireNonNull(type, "type");
@@ -393,7 +438,7 @@ final class AnnotatedValueResolver {
         //
         // void method1(@Default("a") ServiceRequestContext ctx) { ... }
         //
-        final AnnotatedValueResolver resolver = ofInjectableTypes(typeElement, type);
+        final AnnotatedValueResolver resolver = ofInjectableTypes(typeElement, type, useBlockingExecutor);
         if (resolver != null) {
             return resolver;
         }
@@ -510,16 +555,17 @@ final class AnnotatedValueResolver {
 
     @Nullable
     private static AnnotatedValueResolver ofInjectableTypes(AnnotatedElement annotatedElement,
-                                                            Class<?> type) {
+                                                            Class<?> type, boolean useBlockingExecutor) {
         // Unwrap Optional type to support a parameter like 'Optional<RequestContext> ctx'
         // which is always non-empty.
         if (type != Optional.class) {
-            return ofInjectableTypes0(annotatedElement, type, type);
+            return ofInjectableTypes0(annotatedElement, type, type, useBlockingExecutor);
         }
 
         final Type actual =
                 ((ParameterizedType) parameterizedTypeOf(annotatedElement)).getActualTypeArguments()[0];
-        final AnnotatedValueResolver resolver = ofInjectableTypes0(annotatedElement, type, actual);
+        final AnnotatedValueResolver resolver =
+                ofInjectableTypes0(annotatedElement, type, actual, useBlockingExecutor);
         if (resolver != null) {
             logger.warn("Unnecessary Optional is used at '{}'", annotatedElement);
         }
@@ -528,7 +574,8 @@ final class AnnotatedValueResolver {
 
     @Nullable
     private static AnnotatedValueResolver ofInjectableTypes0(AnnotatedElement annotatedElement,
-                                                             Class<?> type, Type actual) {
+                                                             Class<?> type, Type actual,
+                                                             boolean useBlockingExecutor) {
         if (actual == RequestContext.class || actual == ServiceRequestContext.class) {
             return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> ctx.context())
@@ -569,6 +616,18 @@ final class AnnotatedValueResolver {
                             return Cookies.of();
                         }
                         return Cookie.fromCookieHeader(value);
+                    })
+                    .build();
+        }
+
+        if (actual instanceof Class && ScalaUtil.isExecutionContext((Class<?>) actual)) {
+            return new Builder(annotatedElement, type)
+                    .resolver((unused, ctx) -> {
+                        if (useBlockingExecutor) {
+                            return ExecutionContext.fromExecutorService(ctx.context().blockingTaskExecutor());
+                        } else {
+                            return ExecutionContext.fromExecutorService(ctx.context().eventLoop());
+                        }
                     })
                     .build();
         }

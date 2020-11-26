@@ -14,39 +14,40 @@
  * under the License.
  */
 
-package example.armeria.grpc.scala
-
-import java.util.{Map => JMap, Set => JSet}
+package com.linecorp.armeria.server.scalapb
 
 import com.google.common.collect.ImmutableSet
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin
 import com.linecorp.armeria.server.docs.{DocServiceFilter, DocServicePlugin, ServiceSpecification}
-import com.linecorp.armeria.server.grpc._
 import com.linecorp.armeria.server.{Service, ServiceConfig}
+import java.util.{Map => JMap, Set => JSet}
 import scalapb.GeneratedMessage
 import scalapb.json4s.Printer
 
 /**
- * A [[DocServicePlugin]] implementation that supports [[scalapb.GeneratedMessage]] for [[GrpcService]].
+ * A [[com.linecorp.armeria.server.docs.DocServicePlugin]] implementation that supports
+ * [[scalapb.GeneratedMessage]] for [[com.linecorp.armeria.server.grpc.GrpcService]].
  */
-class GrpcScalaDocServicePlugin extends DocServicePlugin {
+class ScalaPbGrpcDocServicePlugin extends DocServicePlugin {
 
-  private val grpcDocServicePlugin = new GrpcDocServicePlugin
-  private val printer = new Printer().includingDefaultValueFields
+  private val grpcDocServicePlugin: GrpcDocServicePlugin = new GrpcDocServicePlugin
+  private val printer: Printer = new Printer().includingDefaultValueFields
 
-  override def name = "grpc-scala"
+  override def name = "armeria-scalapb"
 
   override def supportedServiceTypes(): JSet[Class[_ <: Service[_, _]]] =
     grpcDocServicePlugin.supportedServiceTypes
 
-  override def generateSpecification(serviceConfigs: JSet[ServiceConfig],
-                                     filter: DocServiceFilter): ServiceSpecification =
+  override def generateSpecification(
+      serviceConfigs: JSet[ServiceConfig],
+      filter: DocServiceFilter): ServiceSpecification =
     grpcDocServicePlugin.generateSpecification(serviceConfigs, filter)
 
   override def loadDocStrings(serviceConfigs: JSet[ServiceConfig]): JMap[String, String] =
     grpcDocServicePlugin.loadDocStrings(serviceConfigs)
 
-  override def supportedExampleRequestTypes: JSet[Class[_]] = ImmutableSet.of(classOf[GeneratedMessage])
+  override def supportedExampleRequestTypes: JSet[Class[_]] =
+    ImmutableSet.of(classOf[GeneratedMessage])
 
   override def serializeExampleRequest(serviceName: String, methodName: String, exampleRequest: Any): String =
     printer.print(exampleRequest.asInstanceOf[GeneratedMessage])

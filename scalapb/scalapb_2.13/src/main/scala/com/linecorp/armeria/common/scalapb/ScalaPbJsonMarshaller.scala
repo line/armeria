@@ -14,34 +14,35 @@
  * under the License.
  */
 
-package example.armeria.grpc.scala
-
-import java.io.{InputStream, OutputStream}
-import java.util.concurrent.ConcurrentMap
+package com.linecorp.armeria.common.scalapb
 
 import com.google.common.collect.MapMaker
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller
-import example.armeria.grpc.scala.ScalaPBJsonMarshaller.{jsonDefaultParser, jsonDefaultPrinter, messageCompanionCache}
+import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller.{
+  jsonDefaultParser,
+  jsonDefaultPrinter,
+  messageCompanionCache
+}
 import io.grpc.MethodDescriptor.Marshaller
+import java.io.{InputStream, OutputStream}
+import java.util.concurrent.ConcurrentMap
+import scala.io.{Codec, Source}
 import scalapb.json4s.{Parser, Printer}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
-import scala.io.{Codec, Source}
-
 /**
- * A [[GrpcJsonMarshaller]] that serializes and deserializes a [[GeneratedMessage]] to and from
- * JSON.
+ * A [[com.linecorp.armeria.common.grpc.GrpcJsonMarshaller]] that serializes and deserializes
+ * a [[scalapb.GeneratedMessage]] to and from JSON.
  */
-class ScalaPBJsonMarshaller private (
-  jsonPrinter: Printer = jsonDefaultPrinter,
-  jsonParser: Parser = jsonDefaultParser
+final class ScalaPbJsonMarshaller private (
+    jsonPrinter: Printer = jsonDefaultPrinter,
+    jsonParser: Parser = jsonDefaultParser
 ) extends GrpcJsonMarshaller {
 
   override def serializeMessage[A](marshaller: Marshaller[A], message: A, os: OutputStream): Unit = {
-    if (!message.isInstanceOf[GeneratedMessage]) {
+    if (!message.isInstanceOf[GeneratedMessage])
       throw new IllegalStateException(
         s"Unexpected message type: ${message.getClass} (expected: ${classOf[GeneratedMessage]})")
-    }
     val msg = message.asInstanceOf[GeneratedMessage]
     os.write(jsonPrinter.print(msg).getBytes())
   }
@@ -55,22 +56,24 @@ class ScalaPBJsonMarshaller private (
 
   private def getMessageCompanion[A](marshaller: Marshaller[A]): GeneratedMessageCompanion[GeneratedMessage] = {
     val companion = messageCompanionCache.get(marshaller)
-    if (companion != null) {
+    if (companion != null)
       companion
-    } else {
-      messageCompanionCache.computeIfAbsent(marshaller, key => {
-        val field = key.getClass.getDeclaredField("companion")
-        field.setAccessible(true)
-        field.get(marshaller).asInstanceOf[GeneratedMessageCompanion[GeneratedMessage]]
-      })
-    }
+    else
+      messageCompanionCache.computeIfAbsent(
+        marshaller,
+        key => {
+          val field = key.getClass.getDeclaredField("companion")
+          field.setAccessible(true)
+          field.get(marshaller).asInstanceOf[GeneratedMessageCompanion[GeneratedMessage]]
+        }
+      )
   }
 }
 
 /**
- * A companion object for [[ScalaPBJsonMarshaller]].
+ * A companion object for [[com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller]].
  */
-object ScalaPBJsonMarshaller {
+object ScalaPbJsonMarshaller {
 
   private val messageCompanionCache: ConcurrentMap[Marshaller[_], GeneratedMessageCompanion[GeneratedMessage]] =
     new MapMaker().weakKeys().makeMap()
@@ -78,17 +81,16 @@ object ScalaPBJsonMarshaller {
   private val jsonDefaultPrinter: Printer = new Printer().includingDefaultValueFields
   private val jsonDefaultParser: Parser = new Parser()
 
-  private val defaultInstance: ScalaPBJsonMarshaller = new ScalaPBJsonMarshaller()
+  private val defaultInstance: ScalaPbJsonMarshaller = new ScalaPbJsonMarshaller()
 
   /**
-   * Returns a newly-created [[ScalaPBJsonMarshaller]].
+   * Returns a newly-created [[com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller]].
    */
-  def apply(jsonPrinter: Printer = jsonDefaultPrinter,
-            jsonParser: Parser = jsonDefaultParser): ScalaPBJsonMarshaller = {
-    if (jsonPrinter == jsonDefaultPrinter && jsonParser == jsonDefaultParser) {
+  def apply(
+      jsonPrinter: Printer = jsonDefaultPrinter,
+      jsonParser: Parser = jsonDefaultParser): ScalaPbJsonMarshaller =
+    if (jsonPrinter == jsonDefaultPrinter && jsonParser == jsonDefaultParser)
       defaultInstance
-    } else {
-      new ScalaPBJsonMarshaller(jsonPrinter, jsonParser)
-    }
-  }
+    else
+      new ScalaPbJsonMarshaller(jsonPrinter, jsonParser)
 }

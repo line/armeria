@@ -1,0 +1,4 @@
+dependencies {
+    implementation 'com.google.protobuf:protobuf-java'
+    api 'com.google.protobuf:protobuf-java-util'
+}

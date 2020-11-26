@@ -271,6 +271,13 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
+     * Returns a new {@link HttpRequestBuilder}.
+     */
+    static HttpRequestBuilder builder() {
+        return new HttpRequestBuilder();
+    }
+
+    /**
      * Returns the initial HTTP/2 headers of this request.
      */
     RequestHeaders headers();
