@@ -25,6 +25,7 @@ import org.apache.thrift.protocol.TProtocolFactory;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
+import com.linecorp.armeria.internal.common.thrift.DefaultThriftProtocolFactoryProvider;
 
 /**
  * Holds a few known {@link TProtocolFactory} instances.
@@ -78,15 +79,15 @@ public final class ThriftProtocolFactories {
     public static final TProtocolFactory TEXT_NAMED_ENUM = TTextProtocolFactory.get(true);
 
     /**
-     * Alias for {@link ThriftSerializationFormats#tProtocolFactory(SerializationFormat)}.
+     * Alias for {@link ThriftSerializationFormats#protocolFactory(SerializationFormat)}.
      *
      * @param serializationFormat a known serialization format
      * @return the protocol factory linked to the input serializationFormat
-     * @deprecated use {@link ThriftSerializationFormats#tProtocolFactory(SerializationFormat)}.
+     * @deprecated Use {@link ThriftSerializationFormats#protocolFactory(SerializationFormat)}.
      */
     @Deprecated
     public static TProtocolFactory get(SerializationFormat serializationFormat) {
-        return ThriftSerializationFormats.tProtocolFactory(serializationFormat);
+        return ThriftSerializationFormats.protocolFactory(serializationFormat);
     }
 
     /**

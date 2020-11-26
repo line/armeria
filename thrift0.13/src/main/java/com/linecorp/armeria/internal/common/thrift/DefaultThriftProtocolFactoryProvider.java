@@ -13,11 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.thrift;
+package com.linecorp.armeria.internal.common.thrift;
 
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 
 /**
  * Default registered {@link ThriftProtocolFactoryProvider}.

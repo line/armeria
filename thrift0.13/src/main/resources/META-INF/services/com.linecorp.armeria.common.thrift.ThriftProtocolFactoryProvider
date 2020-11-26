@@ -1,1 +1,1 @@
-com.linecorp.armeria.common.thrift.DefaultThriftProtocolFactoryProvider
+com.linecorp.armeria.internal.common.thrift.DefaultThriftProtocolFactoryProvider

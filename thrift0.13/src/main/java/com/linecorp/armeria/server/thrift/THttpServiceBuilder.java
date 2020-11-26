@@ -124,7 +124,7 @@ public final class THttpServiceBuilder {
 
     /**
      * Adds other {@link SerializationFormat}s to the builder. If nothing is specified then all
-     * {@link SerializationFormat}s return by {@link ThriftSerializationFormats#values()}
+     * {@link SerializationFormat}s returned by {@link ThriftSerializationFormats#values()}
      * are added.
      *
      * <p>Currently, the only way to specify a serialization format at request time is by using the HTTP session

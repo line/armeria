@@ -31,7 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.SerializationFormat;
 
 /**
- * Registered Thrift-related {@link SerializationFormat} instances.
+ * Provides Thrift-related {@link SerializationFormat} instances and their {@link TProtocolFactory}s.
  */
 public final class ThriftSerializationFormats {
 
@@ -85,7 +85,7 @@ public final class ThriftSerializationFormats {
      * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not a
      *         known Thrift serialization format
      */
-    public static TProtocolFactory tProtocolFactory(SerializationFormat serializationFormat) {
+    public static TProtocolFactory protocolFactory(SerializationFormat serializationFormat) {
         requireNonNull(serializationFormat, "serializationFormat");
         final TProtocolFactory value = knownProtocolFactories.get(serializationFormat);
         checkArgument(value != null, "Unsupported Thrift serializationFormat: %s", serializationFormat);

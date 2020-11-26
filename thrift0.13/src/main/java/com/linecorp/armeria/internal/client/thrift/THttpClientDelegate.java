@@ -82,7 +82,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                         SerializationFormat serializationFormat) {
         super(httpClient);
         this.serializationFormat = serializationFormat;
-        protocolFactory = ThriftSerializationFormats.tProtocolFactory(serializationFormat);
+        protocolFactory = ThriftSerializationFormats.protocolFactory(serializationFormat);
         mediaType = serializationFormat.mediaType();
     }
 

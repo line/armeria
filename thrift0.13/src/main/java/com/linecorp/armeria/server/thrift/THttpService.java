@@ -423,7 +423,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
         try (HttpData content = req.content()) {
             final TByteBufTransport inTransport = new TByteBufTransport(content.byteBuf());
-            final TProtocol inProto = ThriftSerializationFormats.tProtocolFactory(serializationFormat)
+            final TProtocol inProto = ThriftSerializationFormats.protocolFactory(serializationFormat)
                                                                 .getProtocol(inTransport);
 
             final TMessage header;
@@ -651,7 +651,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         boolean success = false;
         try {
             final TTransport transport = new TByteBufTransport(buf);
-            final TProtocol outProto = ThriftSerializationFormats.tProtocolFactory(serializationFormat)
+            final TProtocol outProto = ThriftSerializationFormats.protocolFactory(serializationFormat)
                                                                  .getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.REPLY, seqId);
             outProto.writeMessageBegin(header);
@@ -699,7 +699,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         boolean success = false;
         try {
             final TTransport transport = new TByteBufTransport(buf);
-            final TProtocol outProto = ThriftSerializationFormats.tProtocolFactory(serializationFormat)
+            final TProtocol outProto = ThriftSerializationFormats.protocolFactory(serializationFormat)
                                                                  .getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.EXCEPTION, seqId);
             outProto.writeMessageBegin(header);
