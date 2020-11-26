@@ -276,7 +276,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Prepares to send a {@link HttpRequest} using fluent builder.
+     * Prepares to send an {@link HttpRequest} using fluent builder.
      * <pre>{@code
      * WebClient client = WebClient.of(...);
      * HttpResponse response = client.prepare()
