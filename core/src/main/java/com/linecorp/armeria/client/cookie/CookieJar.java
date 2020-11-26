@@ -27,15 +27,6 @@ import com.linecorp.armeria.common.Cookies;
 public interface CookieJar {
 
     /**
-     * The possible states of a cookie in the jar.
-     */
-    enum CookieState {
-        EXISTENT,
-        EXPIRED,
-        NON_EXISTENT
-    }
-
-    /**
      * Returns the unexpired {@link Cookies} for the specified {@link URI}.
      */
     Cookies get(URI uri);

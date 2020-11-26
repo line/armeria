@@ -44,7 +44,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
  */
 final class DefaultCookieJar implements CookieJar {
 
-    private final Map<Cookie, Long> store;
+    private final Object2LongOpenHashMap<Cookie> store;
     /**
      * Used to find cookies for a host that matches a domain. For example, if there is a domain example.com,
      * host example.com or foo.example.com will match all cookies in that entry.
@@ -103,8 +103,9 @@ final class DefaultCookieJar implements CookieJar {
             for (Cookie cookie : cookies) {
                 cookie = ensureDomainAndPath(cookie, uri);
                 // remove similar cookie if present
-                store.remove(cookie);
-                if (!isExpired(cookie, 0, 0) && cookiePolicy.accept(uri, cookie)) {
+                store.removeLong(cookie);
+                if ((cookie.maxAge() == Cookie.UNDEFINED_MAX_AGE || cookie.maxAge() > 0) &&
+                    cookiePolicy.accept(uri, cookie)) {
                     store.put(cookie, createdTimeMillis);
                     final Set<Cookie> cookieSet = filter.computeIfAbsent(cookie.domain(), s -> new HashSet<>());
                     // remove similar cookie if present
@@ -122,26 +123,16 @@ final class DefaultCookieJar implements CookieJar {
         requireNonNull(cookie, "cookie");
         lock.lock();
         try {
-            final Long createdTimeMillis = store.get(cookie);
-            if (createdTimeMillis == null) {
+            final long createdTimeMillis = store.getOrDefault(cookie, Long.MIN_VALUE);
+            if (createdTimeMillis == Long.MIN_VALUE) {
                 return CookieState.NON_EXISTENT;
             }
-            return isExpired(cookie, createdTimeMillis, currentTimeMillis) ?
+            final long timePassed = TimeUnit.MILLISECONDS.toSeconds(currentTimeMillis - createdTimeMillis);
+            return cookie.maxAge() != Cookie.UNDEFINED_MAX_AGE && timePassed >= cookie.maxAge() ?
                    CookieState.EXPIRED : CookieState.EXISTENT;
         } finally {
             lock.unlock();
         }
-    }
-
-    private boolean isExpired(Cookie cookie, long createdTimeMillis, long currentTimeMillis) {
-        if (cookie.maxAge() == Cookie.UNDEFINED_MAX_AGE) {
-            return false;
-        }
-        if (cookie.maxAge() <= 0) {
-            return true;
-        }
-        final long timePassed = TimeUnit.MILLISECONDS.toSeconds(currentTimeMillis - createdTimeMillis);
-        return timePassed >= cookie.maxAge();
     }
 
     /**
@@ -179,19 +170,23 @@ final class DefaultCookieJar implements CookieJar {
     }
 
     private void filterGet(Set<Cookie> cookies, String host, String path, boolean secure) {
+        final long currentTimeMillis = System.currentTimeMillis();
         for (Map.Entry<String, Set<Cookie>> entry : filter.entrySet()) {
             if (domainMatches(entry.getKey(), host)) {
                 final Iterator<Cookie> it = entry.getValue().iterator();
                 while (it.hasNext()) {
                     final Cookie cookie = it.next();
-                    if (!store.containsKey(cookie)) {
+                    final long createdTimeMillis = store.getOrDefault(cookie, Long.MIN_VALUE);
+                    if (createdTimeMillis == Long.MIN_VALUE) {
                         // the cookie has been removed from the main store so remove it from filter also
                         it.remove();
                         break;
                     }
-                    if (state(cookie) == CookieState.EXPIRED) {
+                    final long timePassed =
+                            TimeUnit.MILLISECONDS.toSeconds(currentTimeMillis - createdTimeMillis);
+                    if (cookie.maxAge() != Cookie.UNDEFINED_MAX_AGE && timePassed >= cookie.maxAge()) {
                         it.remove();
-                        store.remove(cookie);
+                        store.removeLong(cookie);
                         break;
                     }
                     if (cookieMatches(cookie, host, path, secure)) {

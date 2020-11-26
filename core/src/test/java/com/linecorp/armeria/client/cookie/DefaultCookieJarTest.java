@@ -189,15 +189,15 @@ class DefaultCookieJarTest {
         final Cookie cookie = Cookie.of("name", "value");
         final Cookie expectCookie = Cookie.builder("name", "value").domain("foo.com").path("/").build();
 
-        assertThat(cookieJar.state(cookie)).isEqualTo(CookieJar.CookieState.NON_EXISTENT);
+        assertThat(cookieJar.state(cookie)).isEqualTo(CookieState.NON_EXISTENT);
 
         cookieJar.set(foo, Cookies.of(cookie));
-        assertThat(cookieJar.state(expectCookie)).isEqualTo(CookieJar.CookieState.EXISTENT);
+        assertThat(cookieJar.state(expectCookie)).isEqualTo(CookieState.EXISTENT);
 
         final Cookie expireCookie = expectCookie.toBuilder().maxAge(1).build();
         cookieJar.set(foo, Cookies.of(cookie.toBuilder().maxAge(1).build()));
-        assertThat(cookieJar.state(expireCookie)).isEqualTo(CookieJar.CookieState.EXISTENT);
+        assertThat(cookieJar.state(expireCookie)).isEqualTo(CookieState.EXISTENT);
         assertThat(cookieJar.state(expireCookie, System.currentTimeMillis() + 1000))
-                .isEqualTo(CookieJar.CookieState.EXPIRED);
+                .isEqualTo(CookieState.EXPIRED);
     }
 }
