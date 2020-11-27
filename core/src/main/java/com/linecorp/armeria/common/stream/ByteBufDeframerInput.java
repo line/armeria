@@ -181,6 +181,10 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
 
     @Override
     public void close() {
+        if (closed) {
+            return;
+        }
+
         closed = true;
         for (;;) {
             final ByteBuf buf = queue.poll();
