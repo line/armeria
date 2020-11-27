@@ -99,8 +99,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private final MethodDescriptor<I, O> method;
 
-    private final HttpDeframer<DeframedMessage> messageDeframer;
-    private final ArmeriaMessageFramer messageFramer;
+    private final HttpDeframer<DeframedMessage> requestDeframer;
+    private final ArmeriaMessageFramer responseFramer;
 
     private final HttpResponseWriter res;
     private final CompressorRegistry compressorRegistry;
@@ -165,10 +165,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final HttpStreamDeframerHandler handler =
                 new HttpStreamDeframerHandler(decompressorRegistry, this, maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
-        messageDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
-        handler.setDeframer(messageDeframer);
-        messageDeframer.subscribe(this, ctx.eventLoop());
-        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
+        requestDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
+        handler.setDeframer(requestDeframer);
+        requestDeframer.subscribe(this, ctx.eventLoop());
+        responseFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
 
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
@@ -232,7 +232,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 compressor = Codec.Identity.NONE;
             }
         }
-        messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
+        responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
 
         ResponseHeaders headers = defaultHeaders;
 
@@ -272,7 +272,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         try {
-            res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
+            res.write(responseFramer.writePayload(marshaller.serializeResponse(message)));
             res.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
                     if (blockingExecutor != null) {
@@ -333,7 +333,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 GrpcWebTrailers.set(ctx, trailers);
                 // Normal trailers are not supported in grpc-web and must be encoded as a message.
                 final ByteBuf serialized = serializeTrailersAsMessage(ctx.alloc(), trailers);
-                if (res.tryWrite(messageFramer.writePayload(serialized, true))) {
+                if (res.tryWrite(responseFramer.writePayload(serialized, true))) {
                     res.close();
                 }
             } else {
@@ -358,7 +358,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public synchronized void setMessageCompression(boolean messageCompression) {
-        messageFramer.setMessageCompression(messageCompression);
+        responseFramer.setMessageCompression(messageCompression);
         this.messageCompression = messageCompression;
     }
 
@@ -367,7 +367,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(!sendHeadersCalled, "sendHeaders has been called");
         compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
-        messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
+        responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
     }
 
     @Override
@@ -509,12 +509,12 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             if (!clientStreamClosed) {
                 clientStreamClosed = true;
                 if (ok) {
-                    messageDeframer.close();
+                    requestDeframer.close();
                 } else {
                     // If ok is false, `listener.onHalfClose()` should not be called.
                     // Because it is called when receiving a client request successfully.
                     // 'messageDeframer.close()' invokes 'onComplete()' which triggers `listener.onHalfClose()`.
-                    messageDeframer.abort();
+                    requestDeframer.abort();
                 }
             }
 
@@ -593,7 +593,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     HttpDeframer<DeframedMessage> messageDeframer() {
-        return messageDeframer;
+        return requestDeframer;
     }
 
     void setListener(Listener<I> listener) {

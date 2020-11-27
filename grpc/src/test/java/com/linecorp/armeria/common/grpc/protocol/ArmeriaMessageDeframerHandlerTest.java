@@ -78,7 +78,7 @@ class ArmeriaMessageDeframerHandlerTest {
 
     @AfterEach
     void tearDown() throws Exception {
-        deframer.close();
+        deframer.abort();
         deframedMessage.buf().release();
     }
 
