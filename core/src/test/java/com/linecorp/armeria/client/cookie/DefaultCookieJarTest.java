@@ -186,19 +186,20 @@ class DefaultCookieJarTest {
     void cookieState() {
         final CookieJar cookieJar = new DefaultCookieJar();
         final URI foo = URI.create("http://foo.com");
-        final Cookie cookie = Cookie.of("name", "value");
-        final Cookie expectCookie = Cookie.builder("name", "value").domain("foo.com").path("/").build();
+        Cookie cookie = Cookie.of("name", "value");
+        Cookie expectCookie = Cookie.builder("name", "value").domain("foo.com").path("/").build();
 
         assertThat(cookieJar.state(cookie)).isEqualTo(CookieState.NON_EXISTENT);
 
         cookieJar.set(foo, Cookies.of(cookie));
         assertThat(cookieJar.state(expectCookie)).isEqualTo(CookieState.EXISTENT);
 
-        final Cookie expireCookie = expectCookie.toBuilder().maxAge(1).build();
-        cookieJar.set(foo, Cookies.of(cookie.toBuilder().maxAge(1).build()));
-
+        cookie = cookie.toBuilder().maxAge(1).build();
+        expectCookie = expectCookie.toBuilder().maxAge(1).build();
         final long currentTimeMillis = System.currentTimeMillis();
-        assertThat(cookieJar.state(expireCookie, currentTimeMillis + 1000)).isEqualTo(CookieState.EXISTENT);
-        assertThat(cookieJar.state(expireCookie, currentTimeMillis + 1001)).isEqualTo(CookieState.EXPIRED);
+
+        cookieJar.set(foo, Cookies.of(cookie), currentTimeMillis);
+        assertThat(cookieJar.state(expectCookie, currentTimeMillis + 1000)).isEqualTo(CookieState.EXISTENT);
+        assertThat(cookieJar.state(expectCookie, currentTimeMillis + 1001)).isEqualTo(CookieState.EXPIRED);
     }
 }
