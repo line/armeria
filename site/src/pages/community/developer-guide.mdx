@@ -301,7 +301,8 @@ public void doSomething(String value) {
 However, when the 'normal' execution path is very simple, this may also look beautiful:
 
 ```java
-public void doSomething(String value) {
+@Nullable
+public String doSomething(String value) {
     if (value != null) {
         return value.trim();
     } else {
