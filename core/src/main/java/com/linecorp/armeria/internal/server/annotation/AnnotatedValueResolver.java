@@ -98,6 +98,11 @@ final class AnnotatedValueResolver {
             new StringRequestConverterFunction(),
             new ByteArrayRequestConverterFunction());
 
+    private static final ConcurrentMap<Class<?>, EnumConverter<?>> enumConverters =
+            new MapMaker().weakKeys().makeMap();
+
+    private static final Object[] emptyArguments = new Object[0];
+
     private static final List<RequestObjectResolver> defaultRequestObjectResolvers;
 
     static {
@@ -127,8 +132,6 @@ final class AnnotatedValueResolver {
                          requestConverterFunctionProviders);
         }
     }
-
-    private static final Object[] emptyArguments = new Object[0];
 
     /**
      * Returns an array of arguments which are resolved by each {@link AnnotatedValueResolver} of the
@@ -764,9 +767,6 @@ final class AnnotatedValueResolver {
     private final BeanFactoryId beanFactoryId;
 
     private final AggregationStrategy aggregationStrategy;
-
-    private static final ConcurrentMap<Class<?>, EnumConverter<?>> enumConverters =
-            new MapMaker().weakKeys().makeMap();
 
     private AnnotatedValueResolver(@Nullable Class<? extends Annotation> annotationType,
                                    @Nullable String httpElementName,
