@@ -31,13 +31,15 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
     private final ByteBufAllocator alloc;
     private final Queue<ByteBuf> queue;
 
+    private boolean closed;
+
     ByteBufDeframerInput(ByteBufAllocator alloc) {
         this.alloc = alloc;
         queue = new ArrayDeque<>();
     }
 
     void add(ByteBuf byteBuf) {
-        if (byteBuf.isReadable()) {
+        if (!closed && byteBuf.isReadable()) {
             queue.add(byteBuf);
         } else {
             byteBuf.release();
@@ -179,6 +181,7 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
 
     @Override
     public void close() {
+        closed = true;
         for (;;) {
             final ByteBuf buf = queue.poll();
             if (buf != null) {
