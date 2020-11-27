@@ -59,7 +59,7 @@ Server.builder()
 
 ## Collecting client-side metrics
 
-This approach can used to collect metrics in a <type://WebClient> and a gRPC client:
+This approach can used to collect metrics for a <type://WebClient> and a gRPC client:
 
 ```java
 import com.linecorp.armeria.client.Clients;
@@ -79,7 +79,7 @@ Clients.builder(grpcUrl)
        .build(HelloServiceBlockingStub.class);
 ```
 
-Like with the server-side metrics described above, certain scenarios might require you to 
+Like the server-side metrics described above, certain scenarios might require you to 
 provide a custom meter registry. To accomplish this, override the <type://ClientFactory> in this way:
 
 ```java
@@ -119,19 +119,20 @@ If you want to override the default config,
 you can set your own `DistributionStatisticConfig` using <type://MoreMeters#setDistributionStatisticConfig(DistributionStatisticConfig)>.
 
 ```java
+import com.linecorp.armeria.common.metric.MoreMeters;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 
 DistributionStatisticConfig myDistStatCfg =
         DistributionStatisticConfig.builder()
-                                  .percentilesHistogram(false)
-                                  .sla()
-                                  .percentiles({ 0, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0 })
-                                  .percentilePrecision(10)
-                                  .minimumExpectedValue(1L)
-                                  .maximumExpectedValue(Long.MAX_VALUE)
-                                  .expiry(Duration.ofMinutes(10))
-                                  .bufferLength(10)
-                                  .build();
+                                   .percentilesHistogram(false)
+                                   .sla()
+                                   .percentiles({ 0, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0 })
+                                   .percentilePrecision(10)
+                                   .minimumExpectedValue(1L)
+                                   .maximumExpectedValue(Long.MAX_VALUE)
+                                   .expiry(Duration.ofMinutes(10))
+                                   .bufferLength(10)
+                                   .build();
 MoreMeters.setDistributionStatisticConfig(myDistStatCfg);
 ```
 
