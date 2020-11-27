@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
