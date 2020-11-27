@@ -82,17 +82,6 @@ final class DefaultCookieJar implements CookieJar {
         return Cookies.of(cookies);
     }
 
-    private boolean isSecure(String scheme) {
-        final SessionProtocol parsedProtocol;
-        if (scheme.indexOf('+') >= 0) {
-            final Scheme parsedScheme = Scheme.tryParse(scheme);
-            parsedProtocol = parsedScheme != null ? parsedScheme.sessionProtocol() : null;
-        } else {
-            parsedProtocol = SessionProtocol.find(scheme);
-        }
-        return parsedProtocol != null && parsedProtocol.isTls();
-    }
-
     @Override
     public void set(URI uri, Iterable<? extends Cookie> cookies, long createdTimeMillis) {
         requireNonNull(uri, "uri");
@@ -121,16 +110,13 @@ final class DefaultCookieJar implements CookieJar {
     public CookieState state(Cookie cookie, long currentTimeMillis) {
         requireNonNull(cookie, "cookie");
         lock.lock();
-        try {
-            final long createdTimeMillis = store.getOrDefault(cookie, Long.MIN_VALUE);
-            if (createdTimeMillis == Long.MIN_VALUE) {
-                return CookieState.NON_EXISTENT;
-            }
-            return isExpired(cookie, createdTimeMillis, currentTimeMillis) ?
-                   CookieState.EXPIRED : CookieState.EXISTENT;
-        } finally {
-            lock.unlock();
+        final long createdTimeMillis = store.getOrDefault(cookie, Long.MIN_VALUE);
+        lock.unlock();
+        if (createdTimeMillis == Long.MIN_VALUE) {
+            return CookieState.NON_EXISTENT;
         }
+        return isExpired(cookie, createdTimeMillis, currentTimeMillis) ?
+               CookieState.EXPIRED : CookieState.EXISTENT;
     }
 
     /**
@@ -191,6 +177,17 @@ final class DefaultCookieJar implements CookieJar {
                 }
             }
         }
+    }
+
+    private static boolean isSecure(String scheme) {
+        final SessionProtocol parsedProtocol;
+        if (scheme.indexOf('+') >= 0) {
+            final Scheme parsedScheme = Scheme.tryParse(scheme);
+            parsedProtocol = parsedScheme != null ? parsedScheme.sessionProtocol() : null;
+        } else {
+            parsedProtocol = SessionProtocol.find(scheme);
+        }
+        return parsedProtocol != null && parsedProtocol.isTls();
     }
 
     private static boolean isExpired(Cookie cookie, long createdTimeMillis, long currentTimeMillis) {
