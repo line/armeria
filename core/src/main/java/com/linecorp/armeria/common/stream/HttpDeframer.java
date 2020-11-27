@@ -278,6 +278,10 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     }
 
     private void cancelAndCleanup() {
+        if (cancelled) {
+            return;
+        }
+
         cancelled = true;
         final Subscription upstream = this.upstream;
         if (upstream != null) {
