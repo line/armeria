@@ -765,7 +765,8 @@ final class AnnotatedValueResolver {
 
     private final AggregationStrategy aggregationStrategy;
 
-    private static final ConcurrentMap<Class<?>, EnumConverter<?>> enumConverters = new MapMaker().makeMap();
+    private static final ConcurrentMap<Class<?>, EnumConverter<?>> enumConverters =
+            new MapMaker().weakKeys().makeMap();
 
     private AnnotatedValueResolver(@Nullable Class<? extends Annotation> annotationType,
                                    @Nullable String httpElementName,

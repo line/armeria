@@ -49,7 +49,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -70,6 +69,7 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
@@ -136,7 +136,7 @@ public final class AnnotatedServiceFactory {
     /**
      * An instance map for reusing converters, exception handlers and decorators.
      */
-    private static final ConcurrentMap<Class<?>, Object> instanceCache = new ConcurrentHashMap<>();
+    private static final ConcurrentMap<Class<?>, Object> instanceCache = new MapMaker().weakKeys().makeMap();
 
     /**
      * A default {@link ExceptionHandlerFunction}.
