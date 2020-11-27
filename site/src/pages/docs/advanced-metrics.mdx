@@ -125,7 +125,7 @@ DistributionStatisticConfig myDistStatCfg =
         DistributionStatisticConfig.builder()
                                   .percentilesHistogram(false)
                                   .sla()
-                                  .percentiles(PERCENTILES)
+                                  .percentiles({ 0, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0 })
                                   .percentilePrecision(10)
                                   .minimumExpectedValue(1L)
                                   .maximumExpectedValue(Long.MAX_VALUE)
@@ -141,18 +141,13 @@ Micrometer's `MeterRegistry` can be configured with [meter filters](https://micr
 If you need to control the exported meters, you can apply sophisticated filters to the `MeterRegistry`.
 
 ```java
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 
-final MeterRegistry filteredMeterRegistry = new SimpleMeterRegistry();
-filteredMeterRegistry
-        .config()
-        .meterFilter(MeterFilter.deny(id -> 
-                id.getTag("service").equals("MyHealthCheckService")));
-        .meterFilter(MeterFilter.denyNameStartsWith("jvm"));
-
-Server.builder()
-      // ...
-      .meterRegistry(filteredMeterRegistry);
+Metrics.globalRegistry
+       .config()
+       .meterFilter(MeterFilter.deny(id -> 
+               id.getTag("service").equals("MyHealthCheckService")));
+       .meterFilter(MeterFilter.denyNameStartsWith("jvm"));
 ```
 
-Please refer to <type://MeterIdPrefixFunction> to know what kinds of tags are used for the request metrics.
+Please refer to <type://MeterIdPrefixFunction> to learn what kinds of tags are used for request metrics.
