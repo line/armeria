@@ -96,7 +96,8 @@ public final class ThriftProtocolFactories {
      * Consider having your own {@link TProtocolFactory} to {@link SerializationFormat} mapping if necessary.
      *
      * @throws IllegalArgumentException if the specified {@link TProtocolFactory} did not match anything
-     * @deprecated this method cannot reliably work with custom protocol factories
+     * @deprecated This method has been deprecated without a replacement since it cannot reliably work
+     *             with custom protocol factories.
      */
     @Deprecated
     public static SerializationFormat toSerializationFormat(TProtocolFactory protoFactory) {
