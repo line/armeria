@@ -365,7 +365,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                           new Metadata());
                 } else {
                     GrpcWebTrailers.set(ctx, trailers);
-                    GrpcStatus.reportStatus(trailers, responseReader, this);
+                    GrpcStatus.reportStatus(trailers, this);
                 }
             } finally {
                 buf.release();

@@ -447,7 +447,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public void onComplete() {
-        setClientStreamClosed(true);
+        clientStreamClosed = true;
         if (!closeCalled) {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
@@ -502,10 +502,22 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private void closeListener(Status newStatus) {
         if (!listenerClosed) {
             listenerClosed = true;
+
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
+
             final boolean ok = newStatus.isOk();
-            setClientStreamClosed(ok);
-            messageFramer.close();
+            if (!clientStreamClosed) {
+                clientStreamClosed = true;
+                if (ok) {
+                    messageDeframer.close();
+                } else {
+                    // If ok is false, `listener.onHalfClose()` should not be called.
+                    // Because it is called when receiving a client request successfully.
+                    // 'messageDeframer.close()' invokes 'onComplete()' which triggers `listener.onHalfClose()`.
+                    messageDeframer.abort();
+                }
+            }
+
             if (ok) {
                 if (blockingExecutor != null) {
                     blockingExecutor.execute(this::invokeOnComplete);
@@ -557,20 +569,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // callbacks as designed.
                 close(GrpcStatus.fromThrowable(t), new Metadata());
             }
-        }
-    }
-
-    private void setClientStreamClosed(boolean ok) {
-        if (!clientStreamClosed) {
-            if (ok) {
-                messageDeframer().close();
-            } else {
-                // If ok is false, `listener.onHalfClose()` should not be called.
-                // Because it is called when receiving a client request successfully.
-                // 'messageDeframer.close()' invokes 'onComplete()' which triggers `listener.onHalfClose()`.
-                messageDeframer().abort();
-            }
-            clientStreamClosed = true;
         }
     }
 

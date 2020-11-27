@@ -72,7 +72,7 @@ class ArmeriaMessageDeframerHandlerTest {
     void setUp() {
         final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(MAX_MESSAGE_SIZE)
                 .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
-        deframer = new HttpDeframer<>(handler, UnpooledByteBufAllocator.DEFAULT);
+        deframer = HttpDeframer.of(handler, UnpooledByteBufAllocator.DEFAULT);
         deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
     }
 
