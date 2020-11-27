@@ -139,6 +139,13 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
         this.handler = requireNonNull(handler, "handler");
         input = new ByteBufDeframerInput(requireNonNull(alloc, "alloc"));
         this.byteBufConverter = requireNonNull(byteBufConverter, "byteBufConverter");
+
+        whenComplete().handle((unused1, unused2)  -> {
+            // In addition to 'onComplete()', 'onError()' and 'cancel()',
+            // make sure to call 'cleanup()' even when 'abort()' or 'close()' is invoked directly
+            cleanup();
+            return null;
+        });
     }
 
     private void process(HttpObject data) throws Exception {
@@ -271,6 +278,10 @@ public final class HttpDeframer<T> extends DefaultStreamMessage<T> implements Pr
     }
 
     private void cancelAndCleanup() {
+        if (cancelled) {
+            return;
+        }
+
         cancelled = true;
         final Subscription upstream = this.upstream;
         if (upstream != null) {
