@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
 import com.linecorp.armeria.internal.common.thrift.DefaultThriftProtocolFactoryProvider;
 
 /**
- * Holds a few known {@link TProtocolFactory} instances.
+ * Provides a set of well known {@link TProtocolFactory}s.
  */
 public final class ThriftProtocolFactories {
 
