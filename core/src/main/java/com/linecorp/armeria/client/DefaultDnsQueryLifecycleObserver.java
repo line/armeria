@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
@@ -38,6 +39,7 @@ import io.netty.resolver.dns.DnsQueryLifecycleObserver;
  * A {@link DnsQueryLifecycleObserver} that helps capture custom dns metrics.
  */
 final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
+
     private static final String NAME_TAG = "name";
     private static final String RESULT_TAG = "result";
     private static final String SERVERS_TAG = "servers";
@@ -99,58 +101,53 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
-        meterRegistry.counter(meterIdPrefixWritten,
-                              Arrays.asList(nameTag,
-                              Tag.of(SERVER_TAG, dnsServerAddress.getAddress().getHostAddress())))
-                     .increment();
+        final List<Tag> tags =
+                ImmutableList.of(nameTag, Tag.of(SERVER_TAG, dnsServerAddress.getAddress().getHostAddress()));
+        meterRegistry.counter(meterIdPrefixWritten, tags).increment();
     }
 
     @Override
     public void queryCancelled(int queriesRemaining) {
-        meterRegistry.counter(meterIdPrefixCancelled,
-                              Tags.of(nameTag)).increment();
+        meterRegistry.counter(meterIdPrefixCancelled, Tags.of(nameTag)).increment();
     }
 
     @Override
     public DnsQueryLifecycleObserver queryRedirected(List<InetSocketAddress> nameServers) {
-        meterRegistry.counter(meterIdPrefixRedirected,
-                              Arrays.asList(nameTag, Tag.of(SERVERS_TAG,
-                              nameServers.stream().map(addr -> addr.getAddress().getHostAddress())
-                              .collect(Collectors.joining(",")))))
-                     .increment();
+        final String servers = nameServers.stream()
+                                          .map(addr -> addr.getAddress().getHostAddress())
+                                          .collect(Collectors.joining(","));
+        final List<Tag> tags = ImmutableList.of(nameTag, Tag.of(SERVERS_TAG, servers));
+        meterRegistry.counter(meterIdPrefixRedirected, tags).increment();
         return this;
     }
 
     @Override
     public DnsQueryLifecycleObserver queryCNAMEd(DnsQuestion cnameQuestion) {
-        meterRegistry.counter(meterIdPrefixCnamed,
-                              Arrays.asList(nameTag,
-                              Tag.of(CNAME_TAG, cnameQuestion.name()))).increment();
+        final List<Tag> tags = ImmutableList.of(nameTag, Tag.of(CNAME_TAG, cnameQuestion.name()));
+        meterRegistry.counter(meterIdPrefixCnamed, tags).increment();
         return this;
     }
 
     @Override
     public DnsQueryLifecycleObserver queryNoAnswer(DnsResponseCode code) {
-        meterRegistry.counter(meterIdPrefixNoAnswer,
-                              Arrays.asList(nameTag,
-                              Tag.of(CODE_TAG, String.valueOf(code.intValue())))).increment();
+        final List<Tag> tags = ImmutableList.of(nameTag, Tag.of(CODE_TAG, String.valueOf(code.intValue())));
+        meterRegistry.counter(meterIdPrefixNoAnswer, tags).increment();
         return this;
     }
 
     @Override
     public void queryFailed(Throwable cause) {
         if (!NO_NS_RETURNED_EXCEPTION.matcher(cause.getMessage()).find()) {
-            meterRegistry.counter(meterIdPrefix.name(),
-                    Arrays.asList(nameTag, TAG_FAILURE,
-                    Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause).lowerCasedName))).increment();
+            final List<Tag> tags = ImmutableList.of(
+                    nameTag, TAG_FAILURE, Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause).lowerCasedName));
+            meterRegistry.counter(meterIdPrefix.name(), tags).increment();
         }
     }
 
     @Override
     public void querySucceed() {
-        meterRegistry.counter(meterIdPrefix.name(),
-                              Arrays.asList(nameTag, TAG_SUCCESS,
-                              Tag.of(CAUSE_TAG, "none"))).increment();
+        final List<Tag> tags = ImmutableList.of(nameTag, TAG_SUCCESS, Tag.of(CAUSE_TAG, "none"));
+        meterRegistry.counter(meterIdPrefix.name(), tags).increment();
     }
 
     private static DnsExceptionTypes determineDnsExceptionTag(Throwable cause) {

@@ -23,6 +23,7 @@ import static io.netty.handler.codec.dns.DnsRecordType.SRV;
 import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.entry;
 import static org.awaitility.Awaitility.await;
 
@@ -55,6 +56,7 @@ import io.netty.handler.codec.dns.DnsOpCode;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.ReferenceCountUtil;
@@ -66,22 +68,23 @@ public class DnsMetricsTest {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
-                        .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4")),
+                                         .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4")),
                 new DefaultDnsQuestion("foo.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1"))
         ))) {
             final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
-            try (ClientFactory factory = ClientFactory.builder()
-                    .domainNameResolverCustomizer(builder -> {
-                        builder.dnsServerAddressStreamProvider(dnsServerList(server));
-                        builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                    })
-                    .meterRegistry(meterRegistry)
-                    .build()) {
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(builder -> {
+                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                      })
+                                      .meterRegistry(meterRegistry)
+                                      .build()) {
 
                 final WebClient client = WebClient.builder()
-                        .factory(factory)
-                        .build();
+                                                  .factory(factory)
+                                                  .build();
 
                 final String writeMeterId =
                         "armeria.client.dns.queries.written#count{name=foo.com.,server=" +
@@ -90,7 +93,7 @@ public class DnsMetricsTest {
                         "armeria.client.dns.queries#count{cause=none,name=foo.com.,result=success}";
                 final String otherExceptionId =
                         "armeria.client.dns.queries#count{" +
-                                "cause=others,name=bar.com.,result=failure}";
+                        "cause=others,name=bar.com.,result=failure}";
                 assertThat(MoreMeters.measureAll(meterRegistry))
                         .doesNotContainKeys(writeMeterId, successMeterId);
 
@@ -113,18 +116,19 @@ public class DnsMetricsTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
         ), new AlwaysTimeoutHandler())) {
             final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
-            try (ClientFactory factory = ClientFactory.builder()
-                    .domainNameResolverCustomizer(builder -> {
-                        builder.dnsServerAddressStreamProvider(dnsServerList(server));
-                        builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                        builder.queryTimeout(Duration.ofSeconds(5));
-                    })
-                    .meterRegistry(meterRegistry)
-                    .build()) {
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(builder -> {
+                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
+                                      })
+                                      .meterRegistry(meterRegistry)
+                                      .build()) {
 
                 final WebClient client2 = WebClient.builder()
-                        .factory(factory)
-                        .build();
+                                                   .factory(factory)
+                                                   .build();
 
                 final String writeMeterId_ipv4_addr =
                         "armeria.client.dns.queries.written#count{name=foo.com.,server=127.0.0.1}";
@@ -135,14 +139,16 @@ public class DnsMetricsTest {
                         "cause=resolver_timeout,name=foo.com.,result=failure}";
                 final String otherExceptionId =
                         "armeria.client.dns.queries#count{" +
-                                "cause=others,name=bar.com.,result=failure}";
+                        "cause=others,name=bar.com.,result=failure}";
                 assertThat(MoreMeters.measureAll(meterRegistry))
-                        .doesNotContainKeys(writeMeterId_ipv4_addr,writeMeterId_ipv6_addr, timeoutMeterId);
+                        .doesNotContainKeys(writeMeterId_ipv4_addr, writeMeterId_ipv6_addr, timeoutMeterId);
 
-                assertThatThrownBy(() -> client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com"))
-                        .aggregate().join())
-                        .hasCauseInstanceOf(UnprocessedRequestException.class)
-                        .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
+                final Throwable cause = catchThrowable(
+                        () -> client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com"))
+                                     .aggregate().join());
+                assertThat(cause.getCause()).isInstanceOf(UnprocessedRequestException.class);
+                assertThat(cause.getCause().getCause())
+                        .isInstanceOfAny(DnsTimeoutException.class, DnsNameResolverTimeoutException.class);
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
@@ -162,18 +168,19 @@ public class DnsMetricsTest {
         ))) {
             final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
 
-            try (ClientFactory factory = ClientFactory.builder()
-                    .domainNameResolverCustomizer(builder -> {
-                        builder.dnsServerAddressStreamProvider(dnsServerList(server));
-                        builder.searchDomains();
-                        builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                    })
-                    .meterRegistry(meterRegistry)
-                    .build()) {
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(builder -> {
+                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.searchDomains();
+                                          builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                      })
+                                      .meterRegistry(meterRegistry)
+                                      .build()) {
 
                 final WebClient client = WebClient.builder()
-                        .factory(factory)
-                        .build();
+                                                  .factory(factory)
+                                                  .build();
 
                 final String writtenMeterId =
                         "armeria.client.dns.queries.written#count{name=bar.com.,server=" +
@@ -183,7 +190,7 @@ public class DnsMetricsTest {
                         "cause=nx_domain,name=bar.com.,result=failure}";
                 final String otherExceptionId =
                         "armeria.client.dns.queries#count{" +
-                                "cause=others,name=bar.com.,result=failure}";
+                        "cause=others,name=bar.com.,result=failure}";
 
                 assertThatThrownBy(() -> client.get("http://bar.com").aggregate().join())
                         .hasRootCauseInstanceOf(UnknownHostException.class);
@@ -206,18 +213,19 @@ public class DnsMetricsTest {
         ))) {
             final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
 
-            try (ClientFactory factory = ClientFactory.builder()
-                    .domainNameResolverCustomizer(builder -> {
-                        builder.dnsServerAddressStreamProvider(dnsServerList(server));
-                        builder.searchDomains();
-                        builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                    })
-                    .meterRegistry(meterRegistry)
-                    .build()) {
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(builder -> {
+                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.searchDomains();
+                                          builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                      })
+                                      .meterRegistry(meterRegistry)
+                                      .build()) {
 
                 final WebClient client = WebClient.builder()
-                        .factory(factory)
-                        .build();
+                                                  .factory(factory)
+                                                  .build();
 
                 final String writtenMeterId =
                         "armeria.client.dns.queries.written#count{name=bar.com.,server=" +
@@ -226,10 +234,10 @@ public class DnsMetricsTest {
                         "armeria.client.dns.queries.noanswer#count{code=10,name=bar.com.}";
                 final String nxDomainMeterId =
                         "armeria.client.dns.queries#count{" +
-                                "cause=nx_domain,name=bar.com.,result=failure}";
+                        "cause=nx_domain,name=bar.com.,result=failure}";
                 final String otherExceptionId =
                         "armeria.client.dns.queries#count{" +
-                                "cause=others,name=bar.com.,result=failure}";
+                        "cause=others,name=bar.com.,result=failure}";
                 assertThat(MoreMeters.measureAll(meterRegistry)).doesNotContainKeys(
                         writtenMeterId, noAnswerMeterId, nxDomainMeterId, nxDomainMeterId);
 
@@ -254,29 +262,30 @@ public class DnsMetricsTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "127.0.0.1"))
         ))) {
             final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
-            try (ClientFactory factory = ClientFactory.builder()
-                    .domainNameResolverCustomizer(builder -> {
-                        builder.dnsServerAddressStreamProvider(dnsServerList(server));
-                        builder.searchDomains();
-                        builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
-                    })
-                    .meterRegistry(meterRegistry)
-                    .build()) {
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(builder -> {
+                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.searchDomains();
+                                          builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                      })
+                                      .meterRegistry(meterRegistry)
+                                      .build()) {
 
                 final WebClient client = WebClient.builder()
-                        .factory(factory)
-                        .build();
+                                                  .factory(factory)
+                                                  .build();
 
                 final String writtenMeterId =
                         "armeria.client.dns.queries.written#count{name=bar.com.,server=" +
-                                server.addr().getHostString() + '}';
+                        server.addr().getHostString() + '}';
                 final String cnamed =
                         "armeria.client.dns.queries.cnamed#count{cname=baz.com.,name=bar.com.}";
                 final String successMeterId =
                         "armeria.client.dns.queries#count{cause=none,name=bar.com.,result=success}";
                 final String otherExceptionId =
                         "armeria.client.dns.queries#count{" +
-                                "cause=others,name=bar.com.,result=failure}";
+                        "cause=others,name=bar.com.,result=failure}";
                 client.get("http://bar.com:1/").aggregate();
 
                 await().untilAsserted(() -> {
