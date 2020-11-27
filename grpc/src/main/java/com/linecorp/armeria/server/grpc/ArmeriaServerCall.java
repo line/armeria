@@ -513,7 +513,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 } else {
                     // If ok is false, `listener.onHalfClose()` should not be called.
                     // Because it is called when receiving a client request successfully.
-                    // 'messageDeframer.close()' invokes 'onComplete()' which triggers `listener.onHalfClose()`.
+                    // 'requestDeframer.close()' invokes 'onComplete()' which triggers `listener.onHalfClose()`.
                     requestDeframer.abort();
                 }
             }

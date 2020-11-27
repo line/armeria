@@ -455,8 +455,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         } else {
             req.abort(status.asRuntimeException(metadata));
         }
-        if (responseDeframer != null) {
-            responseDeframer.close();
+        if (upstream != null) {
+            upstream.cancel();
         }
 
         try (SafeCloseable ignored = ctx.push()) {
