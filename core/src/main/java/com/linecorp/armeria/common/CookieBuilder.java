@@ -50,6 +50,18 @@ public final class CookieBuilder {
         return value;
     }
 
+    // As per https://tools.ietf.org/html/rfc6265#section-4.1.2.3.
+    @Nullable
+    private static String trimDomainDot(String domain) {
+        if (domain.charAt(domain.length() - 1) == '.') {
+            return null;
+        }
+        if (domain.charAt(0) == '.') {
+            return domain.substring(1);
+        }
+        return domain;
+    }
+
     private String name;
     private String value;
     private boolean valueQuoted;
@@ -60,6 +72,7 @@ public final class CookieBuilder {
     long maxAge = Cookie.UNDEFINED_MAX_AGE;
     private boolean secure;
     private boolean httpOnly;
+    private boolean hostOnly;
     @Nullable
     private String sameSite;
 
@@ -81,6 +94,7 @@ public final class CookieBuilder {
         maxAge = cookie.maxAge();
         secure = cookie.isSecure();
         httpOnly = cookie.isHttpOnly();
+        hostOnly = cookie.isHostOnly();
         sameSite = cookie.sameSite();
     }
 
@@ -113,7 +127,7 @@ public final class CookieBuilder {
      * Sets the domain of the {@link Cookie}.
      */
     public CookieBuilder domain(String domain) {
-        this.domain = validateAttributeValue(domain, "domain");
+        this.domain = trimDomainDot(validateAttributeValue(domain, "domain"));
         return this;
     }
 
@@ -158,6 +172,14 @@ public final class CookieBuilder {
     }
 
     /**
+     * Sets whether the {@link Cookie} should only match its original host in domain matching.
+     */
+    public CookieBuilder hostOnly(boolean hostOnly) {
+        this.hostOnly = hostOnly;
+        return this;
+    }
+
+    /**
      * Sets the <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-03#section-4.1.2.7"
      * >{@code SameSite}</a> attribute of the {@link Cookie}. The value is supposed to be one of {@code "Lax"},
      * {@code "Strict"} or {@code "None"}. Note that this attribute is server-side only.
@@ -171,6 +193,7 @@ public final class CookieBuilder {
      * Returns a newly created {@link Cookie} with the properties set so far.
      */
     public Cookie build() {
-        return new DefaultCookie(name, value, valueQuoted, domain, path, maxAge, secure, httpOnly, sameSite);
+        return new DefaultCookie(name, value, valueQuoted, domain, path, maxAge, secure, httpOnly,
+                                 hostOnly, sameSite);
     }
 }

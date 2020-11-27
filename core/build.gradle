@@ -1,3 +1,5 @@
+import java.util.concurrent.TimeUnit
+
 String releaseFlagFromVersion(String src) {
     // Java 9+ are 9, 10, etc, before was 1.8, 1.7, etc.
     if (src.contains('.')) {
@@ -197,3 +199,42 @@ if (tasks.findByName('trimShadedJar')) {
         dontnote
     }
 }
+
+class PublicSuffixesTask extends DefaultTask {
+    // Rebuild up to once in 7 days, unless cleaned.
+    @Input
+    final def days = (System.currentTimeMillis() / TimeUnit.DAYS.toMillis(7)).intValue()
+    @OutputFile
+    final def publicSuffixesFile = project.file("${project.projectDir}/src/main/resources/com/linecorp/armeria/public_suffixes.txt")
+
+    @TaskAction
+    def run() {
+        try {
+            def tempFile = File.createTempFile("public_suffixes", null)
+            def req = (HttpURLConnection) new URL('https://publicsuffix.org/list/public_suffix_list.dat').openConnection()
+            def res = req.getInputStream()
+            if (req.getResponseCode() != 200) {
+                println "received a non-200 response from publicsuffix.org: ${req.getResponseCode()}"
+                return
+            }
+            def sortedSet = new TreeSet<String>()
+            res.eachLine('UTF-8') {
+                if (!it.isEmpty() && !it.startsWith("//")) {
+                    sortedSet.add(IDN.toASCII(it))
+                }
+            }
+            sortedSet.each {
+                tempFile.append(it)
+                tempFile.append("\n")
+            }
+            publicSuffixesFile.delete()
+            tempFile.renameTo(publicSuffixesFile)
+            println "public suffixes file is updated"
+        } catch (Exception e) {
+            println "an exception was thrown: ${e}"
+        }
+    }
+}
+
+task publicSuffixes(type: PublicSuffixesTask)
+tasks.classes.dependsOn publicSuffixes
