@@ -102,9 +102,4 @@ public interface HttpDeframer<T> extends Processor<HttpObject, T>, StreamMessage
                                   Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
         return new DefaultHttpDeframer<>(handler, alloc, byteBufConverter);
     }
-
-    /**
-     * Temp.
-     */
-    void close();
 }

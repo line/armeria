@@ -508,14 +508,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             final boolean ok = newStatus.isOk();
             if (!clientStreamClosed) {
                 clientStreamClosed = true;
-                if (ok) {
-                    requestDeframer.close();
-                } else {
-                    // If ok is false, `listener.onHalfClose()` should not be called.
-                    // Because it is called when receiving a client request successfully.
-                    // 'requestDeframer.close()' invokes 'onComplete()' which triggers `listener.onHalfClose()`.
-                    requestDeframer.abort();
-                }
+                requestDeframer.abort();
             }
 
             if (ok) {
