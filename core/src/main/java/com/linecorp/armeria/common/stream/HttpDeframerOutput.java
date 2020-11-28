@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.common.stream;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * An output of {@link HttpDeframer} which holds the decoded data.
  */
+@UnstableApi
 @FunctionalInterface
 public interface HttpDeframerOutput<T> {
     /**
