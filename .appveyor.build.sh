@@ -150,7 +150,7 @@ fi
 msg "Building .."
 case "$PROFILE" in
 site)
-  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 :site:lint :site:site
+  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 :site:siteLint :site:site
   ;;
 leak)
   echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 -Pleak -PnoLint test
