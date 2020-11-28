@@ -108,9 +108,8 @@ public final class GrpcServiceBuilder {
     @Nullable
     private ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
 
-    @VisibleForTesting
     @Nullable
-    LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
+    private LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -455,7 +454,7 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds exception mappings that map {@link Throwable}s to gRPC {@link Status}es.
+     * Adds the specified exception mappings that map {@link Throwable}s to gRPC {@link Status}es.
      * The mappings are used to handle a {@link Throwable} when it is raised.
      */
     public GrpcServiceBuilder addExceptionMapping(
@@ -470,7 +469,7 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds an exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
+     * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
      * The mapping is used to handle a {@link Throwable} when it is raised.
      */
     public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {

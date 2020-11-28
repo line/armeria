@@ -75,7 +75,7 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 
 /**
- * Internal Utilities for handling {@link Status} in Armeria.
+ * Utilities for handling {@link Status} in Armeria.
  */
 public final class GrpcStatus {
 
