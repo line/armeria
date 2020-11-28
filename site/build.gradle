@@ -35,11 +35,6 @@ node {
     }
 }
 
-task npmPreferOffline(type: NpmTask) {
-    args = ['config', 'set', 'prefer-offline', 'true']
-}
-tasks.npmInstall.dependsOn tasks.npmPreferOffline
-
 task npmClean(type: NpmTask) {
     dependsOn tasks.npmInstall
     args = ['run', 'clean']
