@@ -18,16 +18,17 @@ package com.linecorp.armeria.internal.consul;
 import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.client.ClientDecoration;
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.retry.RetryConfig;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -39,9 +40,10 @@ import com.linecorp.armeria.common.HttpResponse;
 public final class ConsulClient {
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private static final ClientOptions retryingClientOptions =
-            ClientOptions.of(ClientOptions.DECORATION.newValue(ClientDecoration.of(
-                    RetryingClient.newDecorator(RetryRule.failsafe(), 3))));
+    private static final Function<? super HttpClient, RetryingClient> retryingClientDecorator =
+            RetryingClient.newDecorator(RetryConfig.builder(RetryRule.failsafe())
+                                                   .maxTotalAttempts(3)
+                                                   .build());
 
     private static final CharSequence X_CONSUL_TOKEN = HttpHeaderNames.of("x-consul-token");
 
@@ -55,8 +57,8 @@ public final class ConsulClient {
     private final HealthClient healthClient;
 
     ConsulClient(URI uri, @Nullable String token) {
-        final WebClientBuilder builder = WebClient.builder(uri);
-        builder.options(retryingClientOptions);
+        final WebClientBuilder builder = WebClient.builder(uri)
+                                                  .decorator(retryingClientDecorator);
         if (token != null) {
             builder.addHeader(X_CONSUL_TOKEN, token);
         }
