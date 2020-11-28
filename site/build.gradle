@@ -48,7 +48,7 @@ task apiIndex(type: ApiIndexTask) {
 }
 task contributorList(type: ContributorListTask)
 
-project.ext.getGenerateSourcesTask().configure {
+task generateSiteSources {
     dependsOn tasks.npmInstall
     dependsOn tasks.versionIndex
     dependsOn tasks.apiIndex
@@ -56,14 +56,14 @@ project.ext.getGenerateSourcesTask().configure {
 }
 
 task develop(type: NpmTask) {
-    dependsOn tasks.generateSources
+    dependsOn tasks.generateSiteSources
     args = ['run', 'develop']
 }
 
 final def lintEnabled = !rootProject.hasProperty('noLint')
 if (lintEnabled) {
     task eslint(type: NpmTask) {
-        dependsOn tasks.generateSources
+        dependsOn tasks.generateSiteSources
         args = ['run', 'lint']
         inputs.dir('src')
         inputs.file('.eslintrc.js')
@@ -71,7 +71,7 @@ if (lintEnabled) {
         inputs.file('package-lock.json')
     }
 
-    project.ext.getLintTask().configure {
+    task siteLint {
         dependsOn tasks.eslint
     }
 }
@@ -79,9 +79,9 @@ if (lintEnabled) {
 // Note that this task is not triggered by the 'build' task
 // because it takes long to build a site.
 task site(type: NpmTask) {
-    dependsOn tasks.generateSources
+    dependsOn tasks.generateSiteSources
     if (lintEnabled) {
-        dependsOn tasks.lint
+        dependsOn tasks.siteLint
     }
     args = ['run', 'build']
     inputs.dir('src')
