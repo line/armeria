@@ -166,11 +166,10 @@ public final class GrpcStatus {
             final Map.Entry<Class<? extends Throwable>, Status> next = it.next();
             final Class<? extends Throwable> oldExceptionType = next.getKey();
             checkArgument(oldExceptionType != exceptionType, "%s is already added with %s",
-                          oldExceptionType,
-                          next.getValue());
+                          oldExceptionType, next.getValue());
 
             if (oldExceptionType.isAssignableFrom(exceptionType)) {
-                // exceptionType is subtype of oldExceptionType. exceptionType needs a higher priority.
+                // exceptionType is a subtype of oldExceptionType. exceptionType needs a higher priority.
                 it.previous();
                 it.add(new SimpleImmutableEntry<>(exceptionType, status));
                 return;

@@ -79,8 +79,8 @@ class GrpcStatusMappingTest {
     @ParameterizedTest
     void serverExceptionMapping(RuntimeException exception, Status status) {
         exceptionRef.set(exception);
-        TestServiceBlockingStub client = Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
-                                                           TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client = Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
+                                                                 TestServiceBlockingStub.class);
         assertStatus(() -> client.emptyCall(Empty.getDefaultInstance()), status);
         assertStatus(() -> client.unaryCall(SimpleRequest.getDefaultInstance()), status);
     }
@@ -102,7 +102,7 @@ class GrpcStatusMappingTest {
         assertStatus(() -> client.emptyCall(Empty.getDefaultInstance()), status);
     }
 
-    void assertStatus(ThrowingCallable task, Status status) {
+    private static void assertStatus(ThrowingCallable task, Status status) {
         final Throwable cause = catchThrowable(task);
         final StatusRuntimeException statusException = (StatusRuntimeException) cause;
         assertThat(statusException.getStatus().getCode()).isEqualTo(status.getCode());

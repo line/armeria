@@ -168,8 +168,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         requireNonNull(decompressorRegistry, "decompressorRegistry");
 
         final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(decompressorRegistry, this,
-                                              exceptionMappings, maxInboundMessageSizeBytes)
+                new HttpStreamDeframerHandler(decompressorRegistry, this, exceptionMappings,
+                                              maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         messageDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
         handler.setDeframer(messageDeframer);
@@ -483,7 +483,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
             // Based on the implementation of ServerCalls of gRPC-Java, onReady() is called only by
             // onHalfClose() of UnaryServerCallListener, which is used for UNARY and SERVER_STREAMING.
-            // https://github.com/grpc/grpc-java/blob/9b73e2365da502a466b01544f102cd487e374428/stub/src/main/java/io/grpc/stub/ServerCalls.java#L188
+            // https://github.com/grpc/grpc-java/blob/9b73e2365da502a466b01544f102cd487e374428/stub/src/main
+            // /java/io/grpc/stub/ServerCalls.java#L188
             final MethodType methodType = method.getType();
             if (methodType == MethodType.UNARY || methodType == MethodType.SERVER_STREAMING) {
                 listener.onReady();
@@ -597,7 +598,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
             trailersBuilder.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
-                               Base64.getEncoder().encodeToString(proto.toByteArray()));
+                                Base64.getEncoder().encodeToString(proto.toByteArray()));
         }
 
         final HttpHeaders additionalTrailers = ctx.additionalResponseTrailers();
