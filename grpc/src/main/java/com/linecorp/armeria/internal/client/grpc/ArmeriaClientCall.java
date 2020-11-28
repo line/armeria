@@ -104,11 +104,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final HttpRequestWriter req;
     private final MethodDescriptor<I, O> method;
     private final CallOptions callOptions;
-    private final ArmeriaMessageFramer messageFramer;
+    private final ArmeriaMessageFramer requestFramer;
     private final GrpcMessageMarshaller<I, O> marshaller;
     private final CompressorRegistry compressorRegistry;
     @Nullable
-    private HttpDeframer<DeframedMessage> responseReader;
+    private HttpDeframer<DeframedMessage> responseDeframer;
     private final SerializationFormat serializationFormat;
     private final boolean unsafeWrapResponseBuffers;
     @Nullable
@@ -163,7 +163,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
 
-        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
+        requestFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapResponseBuffers);
         executor = callOptions.getExecutor();
@@ -196,7 +196,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         } else {
             compressor = Identity.NONE;
         }
-        messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
+        requestFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
         listener = responseListener;
 
         final long remainingNanos;
@@ -226,11 +226,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         final HttpStreamDeframerHandler handler =
                 new HttpStreamDeframerHandler(decompressorRegistry, this, exceptionMappings,
                                               maxInboundMessageSizeBytes);
-        responseReader = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
-        handler.setDeframer(responseReader);
-        responseReader.subscribe(this, ctx.eventLoop());
+        responseDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
+        handler.setDeframer(responseDeframer);
+        responseDeframer.subscribe(this, ctx.eventLoop());
 
-        res.subscribe(responseReader, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+        res.subscribe(responseDeframer, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
         responseListener.onReady();
     }
 
@@ -320,7 +320,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, message), null);
             }
             final ByteBuf serialized = marshaller.serializeRequest(message);
-            req.write(messageFramer.writePayload(serialized));
+            req.write(requestFramer.writePayload(serialized));
             req.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
                     try (SafeCloseable ignored = ctx.push()) {
@@ -338,7 +338,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public synchronized void setMessageCompression(boolean enabled) {
-        messageFramer.setMessageCompression(enabled);
+        requestFramer.setMessageCompression(enabled);
     }
 
     @Override
@@ -372,7 +372,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                           new Metadata());
                 } else {
                     GrpcWebTrailers.set(ctx, trailers);
-                    GrpcStatus.reportStatus(trailers, responseReader, this);
+                    GrpcStatus.reportStatus(trailers, this);
                 }
             } finally {
                 buf.release();
@@ -462,8 +462,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         } else {
             req.abort(status.asRuntimeException(metadata));
         }
-        if (responseReader != null) {
-            responseReader.close();
+        if (upstream != null) {
+            upstream.cancel();
         }
 
         try (SafeCloseable ignored = ctx.push()) {

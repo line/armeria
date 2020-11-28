@@ -307,18 +307,25 @@ public final class GrpcStatus {
     }
 
     /**
-     * Extracts the gRPC status from the {@link HttpHeaders}, closing the {@link HttpStreamDeframerHandler}
-     * for a successful response, then delivering the status to the {@link TransportStatusListener}.
+     * Extracts the gRPC status from the {@link HttpHeaders} and delivers the status
+     * to the {@link TransportStatusListener} when the response is completed.
      */
-    public static void reportStatus(HttpHeaders headers,
-                                    HttpDeframer<DeframedMessage> reader,
-                                    TransportStatusListener transportStatusListener) {
+    public static void reportStatusLater(HttpHeaders headers,
+                                         HttpDeframer<DeframedMessage> deframer,
+                                         TransportStatusListener transportStatusListener) {
+        deframer.whenComplete().handle((unused1, unused2) -> {
+            reportStatus(headers, transportStatusListener);
+            return null;
+        });
+    }
+
+    /**
+     * Extracts the gRPC status from the {@link HttpHeaders} and delivers the status
+     * to the {@link TransportStatusListener} immediately.
+     */
+    public static void reportStatus(HttpHeaders headers, TransportStatusListener transportStatusListener) {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
-        if (status.getCode() == Status.OK.getCode()) {
-            // Successful response, finish delivering messages before returning the status.
-            reader.close();
-        }
         final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
         if (grpcMessage != null) {
             status = status.withDescription(StatusMessageEscaper.unescape(grpcMessage));
@@ -329,7 +336,6 @@ public final class GrpcStatus {
         }
 
         final Metadata metadata = MetadataUtil.copyFromHeaders(headers);
-
         transportStatusListener.transportReportStatus(status, metadata);
     }
 

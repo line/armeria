@@ -91,12 +91,7 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
             assert deframer != null;
-            // A gRPC client could not receive messages fully yet.
-            // Let ArmeriaClientCall be closed when the gRPC client has been consumed all messages.
-            deframer.whenComplete().handle((unused1, unused2) -> {
-                GrpcStatus.reportStatus(headers, deframer, transportStatusListener);
-                return null;
-            });
+            GrpcStatus.reportStatusLater(headers, deframer, transportStatusListener);
         }
 
         // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
@@ -122,8 +117,7 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
             assert deframer != null;
-            deframer.whenConsumed()
-                    .thenRun(() -> GrpcStatus.reportStatus(headers, deframer, transportStatusListener));
+            GrpcStatus.reportStatusLater(headers, deframer, transportStatusListener);
         }
     }
 

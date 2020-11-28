@@ -165,7 +165,7 @@ public final class UnaryGrpcClient {
                            final ArmeriaMessageDeframerHandler handler =
                                    new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
                            final HttpDeframer<DeframedMessage> deframer =
-                                   new HttpDeframer<>(handler, ctx.alloc());
+                                   HttpDeframer.of(handler, ctx.alloc());
 
                            StreamMessage.of(msg.content()).subscribe(deframer, ctx.eventLoop());
                            deframer.subscribe(singleSubscriber(msg, responseFuture), ctx.eventLoop());

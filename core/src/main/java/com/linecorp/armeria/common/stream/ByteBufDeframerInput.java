@@ -24,7 +24,6 @@ import java.util.Queue;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.ReferenceCountUtil;
 
 final class ByteBufDeframerInput implements HttpDeframerInput {
 
@@ -38,12 +37,14 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
         queue = new ArrayDeque<>();
     }
 
-    void add(ByteBuf byteBuf) {
-        if (!closed && byteBuf.isReadable()) {
-            queue.add(byteBuf);
-        } else {
+    boolean add(ByteBuf byteBuf) {
+        if (closed || !byteBuf.isReadable()) {
             byteBuf.release();
+            return false;
         }
+
+        queue.add(byteBuf);
+        return true;
     }
 
     @Override
@@ -171,7 +172,7 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
             }
         }
 
-        ReferenceCountUtil.release(value);
+        value.release();
         throw newEndOfInputException();
     }
 

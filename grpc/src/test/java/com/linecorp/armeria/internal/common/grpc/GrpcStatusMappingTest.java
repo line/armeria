@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.common.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.assertj.core.api.Assertions.registerCustomDateFormat;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
@@ -54,9 +53,7 @@ import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
-import io.grpc.ForwardingClientCall;
 import io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
-import io.grpc.ForwardingClientCallListener;
 import io.grpc.ForwardingClientCallListener.SimpleForwardingClientCallListener;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
@@ -126,14 +123,14 @@ class GrpcStatusMappingTest {
                        .build(TestServiceBlockingStub.class)
                 .withInterceptors(new ClientInterceptor() {
                     @Override
-                    public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
-                            MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
-                        return new SimpleForwardingClientCall<ReqT, RespT>(next.newCall(method, callOptions)) {
+                    public <I, O> ClientCall<I, O> interceptCall(
+                            MethodDescriptor<I, O> method, CallOptions callOptions, Channel next) {
+                        return new SimpleForwardingClientCall<I, O>(next.newCall(method, callOptions)) {
                             @Override
-                            public void start(Listener<RespT> responseListener, Metadata headers) {
-                                super.start(new SimpleForwardingClientCallListener<RespT>(responseListener) {
+                            public void start(Listener<O> responseListener, Metadata headers) {
+                                super.start(new SimpleForwardingClientCallListener<O>(responseListener) {
                                     @Override
-                                    public void onMessage(RespT message) {
+                                    public void onMessage(O message) {
                                         throw exception;
                                     }
                                 }, headers);
