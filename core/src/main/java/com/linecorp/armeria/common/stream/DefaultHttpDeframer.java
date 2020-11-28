@@ -209,7 +209,7 @@ final class DefaultHttpDeframer<T>
                 }
             } else if (obj instanceof HttpData) {
                 final HttpData data = (HttpData) obj;
-                final ByteBuf byteBuf = byteBufConverter.apply((HttpData) data);
+                final ByteBuf byteBuf = byteBufConverter.apply(data);
                 requireNonNull(byteBuf, "byteBufConverter.apply() returned null");
                 if (input.add(byteBuf)) {
                     handler.process(input, this);
