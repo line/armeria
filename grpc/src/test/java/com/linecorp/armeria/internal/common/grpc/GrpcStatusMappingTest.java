@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.common.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.Assertions.registerCustomDateFormat;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Map.Entry;
@@ -49,6 +50,16 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.CallOptions;
+import io.grpc.Channel;
+import io.grpc.ClientCall;
+import io.grpc.ClientInterceptor;
+import io.grpc.ForwardingClientCall;
+import io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
+import io.grpc.ForwardingClientCallListener;
+import io.grpc.ForwardingClientCallListener.SimpleForwardingClientCallListener;
+import io.grpc.Metadata;
+import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -87,7 +98,7 @@ class GrpcStatusMappingTest {
 
     @ArgumentsSource(ExceptionMappingsProvider.class)
     @ParameterizedTest
-    void clientExceptionMapping(RuntimeException exception, Status status) {
+    void clientExceptionMapping_decorator(RuntimeException exception, Status status) {
         final ClientOptionValue<Iterable<? extends Entry<Class<? extends Throwable>, Status>>> exceptionMaps =
                 GrpcClientOptions.GRPC_EXCEPTION_MAPPINGS.newValue(
                         ImmutableList.of(new SimpleImmutableEntry<>(exception.getClass(), status)));
@@ -100,6 +111,37 @@ class GrpcStatusMappingTest {
                        .option(exceptionMaps)
                        .build(TestServiceBlockingStub.class);
         assertStatus(() -> client.emptyCall(Empty.getDefaultInstance()), status);
+    }
+
+    @ArgumentsSource(ExceptionMappingsProvider.class)
+    @ParameterizedTest
+    void clientExceptionMapping_interceptor(RuntimeException exception, Status status) {
+        final ClientOptionValue<Iterable<? extends Entry<Class<? extends Throwable>, Status>>> exceptionMaps =
+                GrpcClientOptions.GRPC_EXCEPTION_MAPPINGS.newValue(
+                        ImmutableList.of(new SimpleImmutableEntry<>(exception.getClass(), status)));
+
+        final TestServiceBlockingStub client =
+                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
+                       .option(exceptionMaps)
+                       .build(TestServiceBlockingStub.class)
+                .withInterceptors(new ClientInterceptor() {
+                    @Override
+                    public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
+                            MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
+                        return new SimpleForwardingClientCall<ReqT, RespT>(next.newCall(method, callOptions)) {
+                            @Override
+                            public void start(Listener<RespT> responseListener, Metadata headers) {
+                                super.start(new SimpleForwardingClientCallListener<RespT>(responseListener) {
+                                    @Override
+                                    public void onMessage(RespT message) {
+                                        throw exception;
+                                    }
+                                }, headers);
+                            }
+                        };
+                    }
+                });
+        assertStatus(() -> client.unaryCall2(SimpleRequest.getDefaultInstance()), status);
     }
 
     private static void assertStatus(ThrowingCallable task, Status status) {
@@ -132,6 +174,12 @@ class GrpcStatusMappingTest {
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             throw exceptionRef.get();
+        }
+
+        @Override
+        public void unaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.getDefaultInstance());
+            responseObserver.onCompleted();
         }
     }
 

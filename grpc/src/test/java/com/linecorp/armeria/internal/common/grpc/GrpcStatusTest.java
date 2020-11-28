@@ -134,5 +134,10 @@ class GrpcStatusTest {
         final Status status = Status.DEADLINE_EXCEEDED.withCause(new A1Exception());
         final Status newStatus = GrpcStatus.fromMappingRule(exceptionMappings, status);
         assertThat(newStatus).isSameAs(status);
+
+        // Should return the same instance if the code and cause are equal.
+        final Status status1 = Status.PERMISSION_DENIED.withCause(new A3Exception());
+        final Status newStatus1 = GrpcStatus.fromMappingRule(exceptionMappings, status1);
+        assertThat(newStatus1).isSameAs(status1);
     }
 }

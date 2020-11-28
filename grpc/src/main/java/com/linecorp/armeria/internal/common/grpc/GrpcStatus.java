@@ -145,7 +145,12 @@ public final class GrpcStatus {
             final Throwable unwrapped = unwrap(cause);
             for (Map.Entry<Class<? extends Throwable>, Status> exceptionMapping : exceptionMappings) {
                 if (exceptionMapping.getKey().isInstance(unwrapped)) {
-                    return exceptionMapping.getValue().withCause(cause);
+                    final Status mappedStatus = exceptionMapping.getValue();
+                    if (mappedStatus.getCode() == status.getCode()) {
+                        return status;
+                    } else {
+                        return mappedStatus.withCause(cause);
+                    }
                 }
             }
         }
@@ -237,7 +242,8 @@ public final class GrpcStatus {
      * http-grpc-status-mapping.md</a>. Never returns a status for which {@code status.isOk()} is
      * {@code true}.
      *
-     * <p>Copied from <a href="https://github.com/grpc/grpc-java/blob/master/core/src/main/java/io/grpc/internal/GrpcUtil.java">
+     * <p>Copied from
+     * <a href="https://github.com/grpc/grpc-java/blob/master/core/src/main/java/io/grpc/internal/GrpcUtil.java">
      * GrpcUtil.java</a>
      */
     public static Status httpStatusToGrpcStatus(int httpStatusCode) {
