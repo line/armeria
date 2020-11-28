@@ -144,7 +144,7 @@ echo_and_run ./gradlew -version
 
 # Create the symlinks for npm caches
 msg "Setting up frontend caches .."
-echo_and_run npm config set prefer-offline true
+echo prefer-offline=true > "$HOME/.npmrc"
 for FRONTEND_MODULE in docs-client site; do
   echo_and_run mkdir -p "$FRONTEND_MODULE/.gradle"
   for FRONTEND_CACHE in npm nodejs; do
