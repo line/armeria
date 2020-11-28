@@ -59,8 +59,8 @@ export JAVA_HOME="$HOME/jdk/build-$BUILD_JDK_VERSION"
 export JAVA_TEST_HOME="$HOME/jdk/test-$TEST_JAVA_VERSION-$TEST_JRE_VERSION"
 export PATH="$JAVA_HOME/bin:$PATH"
 
-msg "HOME: $HOME"
-msg "PWD: $PWD"
+msg "User home directory: $HOME"
+msg "Current working directory: $PWD"
 
 # Restore the home directory from the cache if necessary.
 if [[ -d /var/cache/appveyor ]] && \
