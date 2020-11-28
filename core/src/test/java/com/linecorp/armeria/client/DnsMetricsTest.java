@@ -33,6 +33,7 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -153,7 +154,7 @@ public class DnsMetricsTest {
                         () -> client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com"))
                                      .aggregate().join());
                 assertThat(cause.getCause()).isInstanceOf(UnprocessedRequestException.class);
-                assertThat(cause.getCause().getCause())
+                assertThat(Throwables.getRootCause(cause))
                         .isInstanceOfAny(DnsTimeoutException.class, DnsNameResolverTimeoutException.class);
 
                 await().untilAsserted(() -> {
