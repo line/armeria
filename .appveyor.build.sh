@@ -142,19 +142,6 @@ echo_and_run "$JAVA_HOME/bin/java" -version
 echo_and_run "$JAVA_TEST_HOME/bin/java" -version
 echo_and_run ./gradlew -version
 
-# Create the symlinks for npm caches
-msg "Setting up frontend caches .."
-echo prefer-offline=true > "$HOME/.npmrc"
-for FRONTEND_MODULE in docs-client site; do
-  echo_and_run mkdir -p "$FRONTEND_MODULE/.gradle"
-  for FRONTEND_CACHE in npm nodejs; do
-    echo_and_run mkdir -p "$HOME/.gradle/caches/$FRONTEND_MODULE/$FRONTEND_CACHE"
-    echo_and_run ln -sv \
-      "$HOME/.gradle/caches/$FRONTEND_MODULE/$FRONTEND_CACHE" \
-      "$FRONTEND_MODULE/.gradle/$FRONTEND_CACHE"
-  done
-done
-
 # Run the build.
 if [[ "$COVERAGE" -eq 1 ]]; then
   GRADLE_CLI_OPTS="$GRADLE_CLI_OPTS -Pcoverage"
