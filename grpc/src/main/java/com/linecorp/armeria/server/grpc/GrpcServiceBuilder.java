@@ -566,8 +566,11 @@ public final class GrpcServiceBuilder {
             handlerRegistry = registryBuilder.build();
         }
 
+        final GrpcStatusFunction statusFunction;
         if (exceptionMappings != null) {
             statusFunction = toGrpcStatusFunction(exceptionMappings);
+        } else {
+            statusFunction = this.statusFunction;
         }
 
         final GrpcService grpcService = new FramedGrpcService(
