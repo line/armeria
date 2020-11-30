@@ -112,7 +112,7 @@ public final class GrpcServiceBuilder {
     private LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
 
     @Nullable
-    private GrpcStatusFunction exceptionMappingFunction;
+    private GrpcStatusFunction statusFunction;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -462,12 +462,12 @@ public final class GrpcServiceBuilder {
      *
      * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
      */
-    public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction exceptionMappingFunction) {
-        requireNonNull(exceptionMappingFunction, "exceptionMappingFunction");
+    public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction statusFunction) {
+        requireNonNull(statusFunction, "statusFunction");
         checkState(exceptionMappings == null,
                    "exceptionMapping() and addExceptionMapping() are mutually exclusive.");
 
-        this.exceptionMappingFunction = exceptionMappingFunction;
+        this.statusFunction = statusFunction;
         return this;
     }
 
@@ -481,7 +481,7 @@ public final class GrpcServiceBuilder {
         requireNonNull(exceptionType, "exceptionType");
         requireNonNull(status, "status");
 
-        checkState(exceptionMappingFunction == null,
+        checkState(statusFunction == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
 
         if (exceptionMappings == null) {
@@ -567,7 +567,7 @@ public final class GrpcServiceBuilder {
         }
 
         if (exceptionMappings != null) {
-            exceptionMappingFunction = toGrpcStatusFunction(exceptionMappings);
+            statusFunction = toGrpcStatusFunction(exceptionMappings);
         }
 
         final GrpcService grpcService = new FramedGrpcService(
@@ -583,7 +583,7 @@ public final class GrpcServiceBuilder {
                 supportedSerializationFormats,
                 jsonMarshallerFactory,
                 protoReflectionServiceInterceptor,
-                exceptionMappingFunction,
+                statusFunction,
                 maxOutboundMessageSizeBytes,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,

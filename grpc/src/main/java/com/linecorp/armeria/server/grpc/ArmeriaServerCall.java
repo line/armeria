@@ -114,7 +114,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Nullable
     private final Executor blockingExecutor;
     @Nullable
-    private final GrpcStatusFunction exceptionHandler;
+    private final GrpcStatusFunction statusFunction;
 
     // Only set once.
     @Nullable
@@ -157,7 +157,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
                       ResponseHeaders defaultHeaders,
-                      @Nullable GrpcStatusFunction exceptionHandler) {
+                      @Nullable GrpcStatusFunction statusFunction) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
@@ -168,7 +168,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         requireNonNull(decompressorRegistry, "decompressorRegistry");
 
         final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(decompressorRegistry, this, exceptionHandler,
+                new HttpStreamDeframerHandler(decompressorRegistry, this, statusFunction,
                                               maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         requestDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
@@ -185,7 +185,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         blockingExecutor = useBlockingTaskExecutor ?
                            MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
-        this.exceptionHandler = exceptionHandler;
+        this.statusFunction = statusFunction;
 
         res.whenComplete().handleAsync((unused, t) -> {
             if (!closeCalled) {
@@ -290,10 +290,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             });
         } catch (RuntimeException e) {
-            close(convertThrowableToStatus(e), new Metadata());
+            close(e, new Metadata());
             throw e;
         } catch (Throwable t) {
-            close(convertThrowableToStatus(t), new Metadata());
+            close(t, new Metadata());
             throw new RuntimeException(t);
         }
     }
@@ -304,7 +304,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 listener.onReady();
             }
         } catch (Throwable t) {
-            close(convertThrowableToStatus(t), new Metadata());
+            close(t, new Metadata());
         }
     }
 
@@ -322,8 +322,13 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
     }
 
+    private void close(Throwable exception, Metadata metadata) {
+        final Status status = GrpcStatus.fromThrowable(statusFunction, exception);
+        close(status, metadata);
+    }
+
     private void doClose(Status status, Metadata metadata) {
-        final Status newStatus = GrpcStatus.fromMappingFunction(exceptionHandler, status);
+        final Status newStatus = GrpcStatus.fromStatusFunction(statusFunction, status);
         if (cancelled) {
             // No need to write anything to client if cancelled already.
             closeListener(newStatus);
@@ -439,7 +444,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             }
         } catch (Throwable e) {
             upstream.cancel();
-            close(convertThrowableToStatus(e), new Metadata());
+            close(e, new Metadata());
         }
     }
 
@@ -449,7 +454,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             listener.onMessage(request);
         } catch (Throwable t) {
             upstream.cancel();
-            close(convertThrowableToStatus(t), new Metadata());
+            close(t, new Metadata());
         }
     }
 
@@ -472,7 +477,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void onError(Throwable t) {
         if (!closeCalled && !(t instanceof AbortedStreamException)) {
-            close(convertThrowableToStatus(t), new Metadata());
+            close(t, new Metadata());
         }
     }
 
@@ -489,7 +494,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 listener.onReady();
             }
         } catch (Throwable t) {
-            close(convertThrowableToStatus(t), new Metadata());
+            close(t, new Metadata());
         }
     }
 
@@ -568,13 +573,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // A custom error when dealing with client cancel or transport issues should be
                 // returned. We have already closed the listener, so it will not receive any more
                 // callbacks as designed.
-                close(convertThrowableToStatus(t), new Metadata());
+                close(t, new Metadata());
             }
         }
-    }
-
-    private Status convertThrowableToStatus(Throwable t) {
-        return GrpcStatus.fromThrowable(exceptionHandler, t);
     }
 
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.

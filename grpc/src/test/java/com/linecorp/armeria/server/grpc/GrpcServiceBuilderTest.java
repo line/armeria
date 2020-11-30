@@ -97,21 +97,21 @@ class GrpcServiceBuilderTest {
                                  new SimpleImmutableEntry<>(B2Exception.class, Status.NOT_FOUND),
                                  new SimpleImmutableEntry<>(B1Exception.class, Status.UNAUTHENTICATED));
 
-        final GrpcStatusFunction mappingFunction = toGrpcStatusFunction(exceptionMappings);
+        final GrpcStatusFunction statusFunction = toGrpcStatusFunction(exceptionMappings);
 
-        Status status = GrpcStatus.fromThrowable(mappingFunction, new A3Exception());
+        Status status = GrpcStatus.fromThrowable(statusFunction, new A3Exception());
         assertThat(status.getCode()).isEqualTo(Status.UNAUTHENTICATED.getCode());
 
-        status = GrpcStatus.fromThrowable(mappingFunction, new A2Exception());
+        status = GrpcStatus.fromThrowable(statusFunction, new A2Exception());
         assertThat(status.getCode()).isEqualTo(Status.UNIMPLEMENTED.getCode());
 
-        status = GrpcStatus.fromThrowable(mappingFunction, new A1Exception());
+        status = GrpcStatus.fromThrowable(statusFunction, new A1Exception());
         assertThat(status.getCode()).isEqualTo(Status.RESOURCE_EXHAUSTED.getCode());
 
-        status = GrpcStatus.fromThrowable(mappingFunction, new B2Exception());
+        status = GrpcStatus.fromThrowable(statusFunction, new B2Exception());
         assertThat(status.getCode()).isEqualTo(Status.NOT_FOUND.getCode());
 
-        status = GrpcStatus.fromThrowable(mappingFunction, new B1Exception());
+        status = GrpcStatus.fromThrowable(statusFunction, new B1Exception());
         assertThat(status.getCode()).isEqualTo(Status.UNAUTHENTICATED.getCode());
     }
 
@@ -119,17 +119,17 @@ class GrpcServiceBuilderTest {
     void mapStatus() {
         final LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings = new LinkedList<>();
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A2Exception.class, Status.PERMISSION_DENIED);
-        final GrpcStatusFunction mappingFunction = toGrpcStatusFunction(exceptionMappings);
+        final GrpcStatusFunction statusFunction = toGrpcStatusFunction(exceptionMappings);
 
         for (Throwable ex : ImmutableList.of(new A2Exception(), new A3Exception())) {
             final Status status = Status.UNKNOWN.withCause(ex);
-            final Status newStatus = GrpcStatus.fromMappingFunction(mappingFunction, status);
+            final Status newStatus = GrpcStatus.fromStatusFunction(statusFunction, status);
             assertThat(newStatus.getCode()).isEqualTo(Status.PERMISSION_DENIED.getCode());
             assertThat(newStatus.getCause()).isEqualTo(ex);
         }
 
         final Status status = Status.DEADLINE_EXCEEDED.withCause(new A1Exception());
-        final Status newStatus = GrpcStatus.fromMappingFunction(mappingFunction, status);
+        final Status newStatus = GrpcStatus.fromStatusFunction(statusFunction, status);
         assertThat(newStatus).isSameAs(status);
     }
 }

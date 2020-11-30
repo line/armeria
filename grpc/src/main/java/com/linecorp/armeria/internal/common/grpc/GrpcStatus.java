@@ -86,15 +86,15 @@ public final class GrpcStatus {
 
     /**
      * Converts the {@link Throwable} to a {@link Status}.
-     * If the specified {@code exceptionMappingFunction} returns {@code null},
+     * If the specified {@code statusFunction} returns {@code null},
      * the built-in exception mapping rule, which takes into account exceptions specific to Armeria as well
      * and the protocol package, is used by default.
      */
-    public static Status fromThrowable(@Nullable GrpcStatusFunction exceptionMappingFunction, Throwable t) {
+    public static Status fromThrowable(@Nullable GrpcStatusFunction statusFunction, Throwable t) {
         t = unwrap(requireNonNull(t, "t"));
 
-        if (exceptionMappingFunction != null) {
-            final Status status = exceptionMappingFunction.apply(t);
+        if (statusFunction != null) {
+            final Status status = statusFunction.apply(t);
             if (status != null) {
                 return status;
             }
@@ -138,15 +138,14 @@ public final class GrpcStatus {
      * using the specified {@link GrpcStatusFunction}.
      * Returns the given {@link Status} as is if the {@link GrpcStatusFunction} returns {@code null}.
      */
-    public static Status fromMappingFunction(
-            @Nullable GrpcStatusFunction exceptionMappingFunction, Status status) {
+    public static Status fromStatusFunction(@Nullable GrpcStatusFunction statusFunction, Status status) {
         requireNonNull(status, "status");
 
-        if (exceptionMappingFunction != null) {
+        if (statusFunction != null) {
             final Throwable cause = status.getCause();
             if (cause != null) {
                 final Throwable unwrapped = unwrap(cause);
-                final Status newStatus = exceptionMappingFunction.apply(unwrapped);
+                final Status newStatus = statusFunction.apply(unwrapped);
                 if (newStatus != null) {
                     return newStatus;
                 }

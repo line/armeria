@@ -41,7 +41,7 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
     @Nullable
-    private final GrpcStatusFunction exceptionHandler;
+    private final GrpcStatusFunction statusFunction;
 
     @Nullable
     private HttpDeframer<DeframedMessage> deframer;
@@ -49,12 +49,12 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
     public HttpStreamDeframerHandler(
             DecompressorRegistry decompressorRegistry,
             TransportStatusListener transportStatusListener,
-            @Nullable GrpcStatusFunction exceptionHandler,
+            @Nullable GrpcStatusFunction statusFunction,
             int maxMessageSizeBytes) {
         super(maxMessageSizeBytes);
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
-        this.exceptionHandler = exceptionHandler;
+        this.statusFunction = statusFunction;
     }
 
     /**
@@ -105,7 +105,7 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
             try {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
-                transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(exceptionHandler, t));
+                transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(statusFunction, t));
             }
         }
     }
@@ -121,7 +121,7 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
 
     @Override
     public void processOnError(Throwable cause) {
-        transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(exceptionHandler, cause));
+        transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(statusFunction, cause));
     }
 
     @Override
