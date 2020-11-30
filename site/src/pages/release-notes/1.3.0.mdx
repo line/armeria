@@ -4,7 +4,7 @@ date: 2020-11-30
 
 ## 🌟 New features
 
-- You can now use <a href="https://unixism.net/loti/what_is_io_uring.html">io_uring</a> for efficient I/O
+- You can now use [io_uring](https://unixism.net/loti/what_is_io_uring.html) for efficient I/O
   processing in Linux. #3182
   - Specify the `-Dcom.linecorp.armeria.transportType=io_uring` JVM option to enable it.
   - Netty's `io_uring` transport is currently experimental, so you should be careful using the feature.
@@ -20,7 +20,7 @@ date: 2020-11-30
     ```
   - Currently, <type://HealthCheckService> and <type://PrometheusExpositionService> are
     <typeplural://TransientService>.
-- You can now use Protobuf's `Message` and <a href="https://github.com/scalapb/ScalaPB">ScalaPB's</a>
+- You can now use Protobuf's `Message` and [ScalaPB's](https://github.com/scalapb/ScalaPB)
   `GeneratedMessage` as a request/response object in an annotated service. #3088 #3124 #3192
   - Use `armeria-protobuf`, `armeria-scalapb_2.12` or `armeria-scalapb_2.13` dependencies.
   - See [Supporting ScalaPB in annotated services](/docs/advanced-scalapb#supporting-scalapb-in-annotated-services)
@@ -84,7 +84,7 @@ date: 2020-11-30
 
   headersFuture.thenApply(headers -> {
       if (headers.contentType() == MediaType.JSON_SEQ) {
-          // Subscribe to a stream of HttpData to JSON
+          // Subscribe to a stream of HttpData.
           Flux.from(bodyStream)
               .map(httpData -> {
                   // Convert HttpData to your domain object
@@ -119,16 +119,6 @@ date: 2020-11-30
     </appender>
     ...
   </configuration>
-
-  <prefix>...</prefix> <!-- The default prefix -->
-  <export>...</export>
-  <exports>...</exports>
-
-  <exportGroup>
-    <prefix>...</prefix> <!-- The prefix for the export group. -->
-    <export>...</export>
-    <exports>...</exports>
-  </exportGroup>
   ```
 - You can now use the unsafe TLS cipher using <type://ClientFactoryBuilder#tlsAllowUnsafeCiphers(boolean)>.
   #3157 #3172
@@ -234,7 +224,7 @@ date: 2020-11-30
   #31356
   - Use <type://CircuitBreakerClient#newDecorator(CircuitBreakerMapping,CircuitBreakerRule)> with the customized
     <type://CircuitBreakerMapping> using <type://CircuitBreakerMapping#builder()>.
-- The response timeout and max total attempts setters in <type://RetryingClientBuilder> is now deprecated.
+- The response timeout and max total attempts setters in <type://RetryingClientBuilder> are now deprecated.
   #3128 #3145
   - The static factory methods that take those parameters in <type://RetryingClient> are now deprecated as well.
   - Use <type://RetryConfigMapping> and <type://RetryConfig>.
