@@ -19,12 +19,13 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.grpc.GrpcStatus.toGrpcStatusFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.LinkedList;
-import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -37,9 +38,9 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
@@ -48,9 +49,9 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -109,6 +110,9 @@ public final class GrpcServiceBuilder {
 
     @Nullable
     private LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
+
+    @Nullable
+    private GrpcStatusFunction exceptionMappingFunction;
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -453,27 +457,33 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds the specified exception mappings that map {@link Throwable}s to gRPC {@link Status}es.
-     * The mappings are used to handle a {@link Throwable} when it is raised.
+     * Sets the specified {@link GrpcStatusFunction} that maps a {@link Throwable} to a gRPC {@link Status}.
+     * The mapping function are used to handle a {@link Throwable} when it is raised.
+     *
+     * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
      */
-    public GrpcServiceBuilder addExceptionMapping(
-            Iterable<? extends Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
-        requireNonNull(exceptionMappings, "exceptionMappings");
-        checkArgument(!Iterables.isEmpty(exceptionMappings), "exceptionMappings should not be empty.");
+    public GrpcServiceBuilder exceptionMapping(
+            GrpcStatusFunction exceptionMapping) {
+        requireNonNull(exceptionMapping, "exceptionMapping");
+        checkState(exceptionMappings == null,
+                   "exceptionMapping() and addExceptionMapping() are mutually exclusive.");
 
-        for (Map.Entry<Class<? extends Throwable>, Status> exceptionMapping : exceptionMappings) {
-           addExceptionMapping(exceptionMapping.getKey(), exceptionMapping.getValue());
-        }
+        exceptionMappingFunction = exceptionMapping;
         return this;
     }
 
     /**
      * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
      * The mapping is used to handle a {@link Throwable} when it is raised.
+     *
+     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
      */
     public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {
         requireNonNull(exceptionType, "exceptionType");
         requireNonNull(status, "status");
+
+        checkState(exceptionMappingFunction == null,
+                   "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
 
         if (exceptionMappings == null) {
             exceptionMappings = new LinkedList<>();
@@ -481,8 +491,36 @@ public final class GrpcServiceBuilder {
             return this;
         }
 
-        GrpcStatus.addExceptionMapping(exceptionMappings, exceptionType, status);
+        addExceptionMapping(exceptionMappings, exceptionType, status);
         return this;
+    }
+
+    @VisibleForTesting
+    static void addExceptionMapping(
+            LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings,
+            Class<? extends Throwable> exceptionType, Status status) {
+        requireNonNull(exceptionMappings, "exceptionMappings");
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(status, "status");
+
+        final ListIterator<Map.Entry<Class<? extends Throwable>, Status>> it =
+                exceptionMappings.listIterator();
+
+        while (it.hasNext()) {
+            final Map.Entry<Class<? extends Throwable>, Status> next = it.next();
+            final Class<? extends Throwable> oldExceptionType = next.getKey();
+            checkArgument(oldExceptionType != exceptionType, "%s is already added with %s",
+                          oldExceptionType, next.getValue());
+
+            if (oldExceptionType.isAssignableFrom(exceptionType)) {
+                // exceptionType is a subtype of oldExceptionType. exceptionType needs a higher priority.
+                it.previous();
+                it.add(new SimpleImmutableEntry<>(exceptionType, status));
+                return;
+            }
+        }
+
+        exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, status));
     }
 
     /**
@@ -510,9 +548,8 @@ public final class GrpcServiceBuilder {
             handlerRegistry = registryBuilder.build();
         }
 
-        List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings = null;
-        if (this.exceptionMappings != null) {
-            exceptionMappings = ImmutableList.copyOf(this.exceptionMappings);
+        if (exceptionMappings != null) {
+            exceptionMappingFunction = toGrpcStatusFunction(exceptionMappings);
         }
 
         final GrpcService grpcService = new FramedGrpcService(
@@ -528,7 +565,7 @@ public final class GrpcServiceBuilder {
                 supportedSerializationFormats,
                 jsonMarshallerFactory,
                 protoReflectionServiceInterceptor,
-                exceptionMappings,
+                exceptionMappingFunction,
                 maxOutboundMessageSizeBytes,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,

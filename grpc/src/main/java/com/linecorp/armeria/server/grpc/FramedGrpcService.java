@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -90,7 +91,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     @Nullable
     private final ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
     @Nullable
-    private final List<Entry<Class<? extends Throwable>, Status>> exceptionMappings;
+    private final GrpcStatusFunction exceptionHandler;
     private final int maxOutboundMessageSizeBytes;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
@@ -108,7 +109,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       Set<SerializationFormat> supportedSerializationFormats,
                       Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory,
                       @Nullable ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor,
-                      @Nullable List<Entry<Class<? extends Throwable>, Status>> exceptionMappings,
+                      @Nullable GrpcStatusFunction exceptionHandler,
                       int maxOutboundMessageSizeBytes,
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
@@ -130,7 +131,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                             .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
         }
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
-        this.exceptionMappings = exceptionMappings;
+        this.exceptionHandler = exceptionHandler;
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
@@ -197,7 +198,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     return HttpResponse.of(
                             (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    GrpcStatus.fromThrowable(exceptionMappings, e), new Metadata()));
+                                    GrpcStatus.fromThrowable(exceptionHandler, e), new Metadata()));
                 }
             }
         }
@@ -238,13 +239,13 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 unsafeWrapRequestBuffers,
                 useBlockingTaskExecutor,
                 defaultHeaders.get(serializationFormat),
-                exceptionMappings);
+                exceptionHandler);
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = ctx.push()) {
             listener = methodDef.getServerCallHandler().startCall(call, MetadataUtil.copyFromHeaders(headers));
         } catch (Throwable t) {
             call.setListener(new EmptyListener<>());
-            call.close(GrpcStatus.fromThrowable(exceptionMappings, t), new Metadata());
+            call.close(GrpcStatus.fromThrowable(exceptionHandler, t), new Metadata());
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
                     " - this is likely a bug in the stub implementation.");

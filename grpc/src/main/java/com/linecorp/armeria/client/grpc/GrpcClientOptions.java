@@ -16,13 +16,11 @@
 
 package com.linecorp.armeria.client.grpc;
 
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
-import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
@@ -38,7 +36,6 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.ServiceDescriptor;
-import io.grpc.Status;
 
 /**
  * {@link ClientOption}s to control gRPC-specific behavior.
@@ -116,13 +113,6 @@ public final class GrpcClientOptions {
     public static final ClientOption<Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller>>
             GRPC_JSON_MARSHALLER_FACTORY = ClientOption.define("GRPC_JSON_MARSHALLER_FACTORY",
                                                                GrpcJsonMarshaller::of);
-
-    /**
-     * The exception mappings that map a {@link Throwable} to a gRPC {@link Status}.
-     * The mappings are used to handle a {@link Throwable} when it is raised.
-     */
-    public static final ClientOption<Iterable<? extends Map.Entry<Class<? extends Throwable>, Status>>>
-            GRPC_EXCEPTION_MAPPINGS = ClientOption.define("GRPC_EXCEPTION_MAPPINGS", ImmutableList.of());
 
     private GrpcClientOptions() {}
 }

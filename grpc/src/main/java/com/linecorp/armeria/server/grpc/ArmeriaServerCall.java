@@ -24,7 +24,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -47,6 +46,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -114,7 +114,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Nullable
     private final Executor blockingExecutor;
     @Nullable
-    private final List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
+    private final GrpcStatusFunction exceptionHandler;
 
     // Only set once.
     @Nullable
@@ -157,7 +157,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
                       ResponseHeaders defaultHeaders,
-                      @Nullable List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
+                      @Nullable GrpcStatusFunction exceptionHandler) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
@@ -168,7 +168,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         requireNonNull(decompressorRegistry, "decompressorRegistry");
 
         final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(decompressorRegistry, this, exceptionMappings,
+                new HttpStreamDeframerHandler(decompressorRegistry, this, exceptionHandler,
                                               maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         requestDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
@@ -185,7 +185,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         blockingExecutor = useBlockingTaskExecutor ?
                            MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
-        this.exceptionMappings = exceptionMappings;
+        this.exceptionHandler = exceptionHandler;
 
         res.whenComplete().handleAsync((unused, t) -> {
             if (!closeCalled) {
@@ -323,7 +323,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private void doClose(Status status, Metadata metadata) {
-        final Status newStatus = GrpcStatus.fromMappingRule(exceptionMappings, status);
+        final Status newStatus = GrpcStatus.fromMappingFunction(exceptionHandler, status);
         if (cancelled) {
             // No need to write anything to client if cancelled already.
             closeListener(newStatus);
@@ -574,7 +574,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private Status convertThrowableToStatus(Throwable t) {
-        return GrpcStatus.fromThrowable(exceptionMappings, t);
+        return GrpcStatus.fromThrowable(exceptionHandler, t);
     }
 
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.

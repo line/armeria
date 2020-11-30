@@ -24,15 +24,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
-
-import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientDecoration;
@@ -49,11 +45,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 
 import io.grpc.Channel;
 import io.grpc.ServiceDescriptor;
-import io.grpc.Status;
 import io.grpc.stub.AbstractStub;
 
 /**
@@ -108,26 +102,13 @@ final class GrpcClientFactory extends DecoratingClientFactory {
             jsonMarshaller = null;
         }
 
-        final Iterable<? extends Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings =
-                options.get(GrpcClientOptions.GRPC_EXCEPTION_MAPPINGS);
-        final LinkedList<Map.Entry<Class<? extends Throwable>, Status>> sortedExceptionMappings;
-        if (!Iterables.isEmpty(exceptionMappings)) {
-            sortedExceptionMappings = new LinkedList<>();
-            for (Map.Entry<Class<? extends Throwable>, Status> mapping : exceptionMappings) {
-                GrpcStatus.addExceptionMapping(sortedExceptionMappings, mapping.getKey(), mapping.getValue());
-            }
-        } else {
-            sortedExceptionMappings = null;
-        }
-
         final ArmeriaChannel channel = new ArmeriaChannel(
                 newParams,
                 httpClient,
                 meterRegistry(),
                 scheme.sessionProtocol(),
                 serializationFormat,
-                jsonMarshaller,
-                sortedExceptionMappings);
+                jsonMarshaller);
 
         final Method stubFactoryMethod = findStubFactoryMethod(clientType, enclosingClass);
         try {

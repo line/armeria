@@ -31,18 +31,15 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.nio.channels.ClosedChannelException;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Base64;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
@@ -50,6 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
@@ -58,6 +56,7 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
@@ -85,15 +84,23 @@ public final class GrpcStatus {
      * Converts the {@link Throwable} to a {@link Status}, taking into account exceptions specific to Armeria as
      * well and the protocol package.
      */
-    public static Status fromThrowable(
-            @Nullable List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings, Throwable t) {
+    public static Status fromThrowable(Throwable t) {
+       return fromThrowable(null, t);
+    }
+
+    /**
+     * Converts the {@link Throwable} to a {@link Status}.
+     * If the specified {@code exceptionMappingFunction} returns {@code null},
+     * the built-in exception mapping rule, which takes into account exceptions specific to Armeria as well
+     * and the protocol package, is used by default.
+     */
+    public static Status fromThrowable(@Nullable GrpcStatusFunction exceptionMappingFunction, Throwable t) {
         t = unwrap(requireNonNull(t, "t"));
 
-        if (exceptionMappings != null) {
-            for (Map.Entry<Class<? extends Throwable>, Status> exceptionMapping : exceptionMappings) {
-                if (exceptionMapping.getKey().isInstance(t)) {
-                    return exceptionMapping.getValue().withCause(t);
-                }
+        if (exceptionMappingFunction != null) {
+            final Status status = exceptionMappingFunction.apply(t);
+            if (status != null) {
+                return status;
             }
         }
 
@@ -132,56 +139,43 @@ public final class GrpcStatus {
 
     /**
      * Converts the specified {@link Status} to a new user-specified {@link Status}
-     * using the specified exception mapping rules.
-     * The {@link Status#getCause()} of the specified {@link Status} is copied to a new derived {@link Status}.
-     * Returns the given {@link Status} as is if fails to find a mapping rule.
+     * using the specified {@link GrpcStatusFunction}.
+     * The {@link Status#getCause()} of the specified {@link Status} is copied to a new {@link Status}.
+     * Returns the given {@link Status} as is if the {@link GrpcStatusFunction} returns {@code null}.
      */
-    public static Status fromMappingRule(
-            @Nullable List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings, Status status) {
+    public static Status fromMappingFunction(
+            @Nullable GrpcStatusFunction exceptionMappingFunction, Status status) {
         requireNonNull(status, "status");
 
-        final Throwable cause = status.getCause();
-        if (exceptionMappings != null && cause != null) {
-            final Throwable unwrapped = unwrap(cause);
-            for (Map.Entry<Class<? extends Throwable>, Status> exceptionMapping : exceptionMappings) {
-                if (exceptionMapping.getKey().isInstance(unwrapped)) {
-                    final Status mappedStatus = exceptionMapping.getValue();
-                    if (mappedStatus.getCode() == status.getCode()) {
-                        return status;
-                    } else {
-                        return mappedStatus.withCause(cause);
-                    }
+        if (exceptionMappingFunction != null) {
+            final Throwable cause = status.getCause();
+            if (cause != null) {
+                final Throwable unwrapped = unwrap(cause);
+                final Status newStatus = exceptionMappingFunction.apply(unwrapped);
+                if (newStatus != null) {
+                    return newStatus;
                 }
             }
         }
         return status;
     }
 
-    public static void addExceptionMapping(
-            LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings,
-            Class<? extends Throwable> exceptionType, Status status) {
-        requireNonNull(exceptionMappings, "exceptionMappings");
-        requireNonNull(exceptionType, "exceptionType");
-        requireNonNull(status, "status");
+    /**
+     * Converts the specified exception mappings to {@link GrpcStatusFunction}.
+     */
+    public static GrpcStatusFunction toGrpcStatusFunction(
+            List<Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
+        final List<Map.Entry<Class<? extends Throwable>, Status>> mappings =
+                ImmutableList.copyOf(exceptionMappings);
 
-        final ListIterator<Map.Entry<Class<? extends Throwable>, Status>> it =
-                exceptionMappings.listIterator();
-
-        while (it.hasNext()) {
-            final Map.Entry<Class<? extends Throwable>, Status> next = it.next();
-            final Class<? extends Throwable> oldExceptionType = next.getKey();
-            checkArgument(oldExceptionType != exceptionType, "%s is already added with %s",
-                          oldExceptionType, next.getValue());
-
-            if (oldExceptionType.isAssignableFrom(exceptionType)) {
-                // exceptionType is a subtype of oldExceptionType. exceptionType needs a higher priority.
-                it.previous();
-                it.add(new SimpleImmutableEntry<>(exceptionType, status));
-                return;
+        return throwable -> {
+            for (Map.Entry<Class<? extends Throwable>, Status> mapping : mappings) {
+                if (mapping.getKey().isInstance(throwable)) {
+                    return mapping.getValue().withCause(throwable);
+                }
             }
-        }
-
-        exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, status));
+            return null;
+        };
     }
 
     private static Throwable unwrap(Throwable t) {
