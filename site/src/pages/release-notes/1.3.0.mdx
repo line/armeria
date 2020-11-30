@@ -43,7 +43,7 @@ date: 2020-11-30
   HttpRequest request = ...;
   request.subscribe(deframer);
   ```
-  See <type://HttpDeframer> for more information.
+  - See <type://HttpDeframer> for more information.
 - You can now apply <type://CircuitBreaker> per request path. #3134, #3135
   ```java
   CircuitBreakerFactory factory = ...
@@ -180,8 +180,8 @@ date: 2020-11-30
                               .factory(factory)
                               .decorator(CookieClient.newDecorator())
                               .build();
-  client.get(...); // The cookies that are received from the origin server are added to the
-                   // request headers.
+  client.get(...); // The cookies that are received from the origin server
+                   // are added to the request headers.
   ```
 - You can now use the custom Thrift protocol by using <type://ThriftProtocolFactoryProvider> and SPI. #3183
   ```java
@@ -194,8 +194,8 @@ date: 2020-11-30
   }
   ```
 - You can now collect more detailed DNS metrics. #1887 #2935
-  - `armeria.client.dns.queries#count{...,result=success}"`
-  - `armeria.client.dns.queries#count{...,result=failure}"`
+  - `armeria.client.dns.queries#count{...,result=success}`
+  - `armeria.client.dns.queries#count{...,result=failure}`
   - `armeria.client.dns.queries.written#count{...}`
   - `armeria.client.dns.queries.cancelled#count{...}`
   - `armeria.client.dns.queries.redirected#count{...}`
