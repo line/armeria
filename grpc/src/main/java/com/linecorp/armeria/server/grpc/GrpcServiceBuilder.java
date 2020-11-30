@@ -19,12 +19,12 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.common.grpc.GrpcStatus.toGrpcStatusFunction;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
@@ -521,6 +521,26 @@ public final class GrpcServiceBuilder {
 
         exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, status));
     }
+
+    /**
+     * Converts the specified exception mappings to {@link GrpcStatusFunction}.
+     */
+    @VisibleForTesting
+    static GrpcStatusFunction toGrpcStatusFunction(
+            List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
+        final List<Map.Entry<Class<? extends Throwable>, Status>> mappings =
+                ImmutableList.copyOf(exceptionMappings);
+
+        return throwable -> {
+            for (Map.Entry<Class<? extends Throwable>, Status> mapping : mappings) {
+                if (mapping.getKey().isInstance(throwable)) {
+                    return mapping.getValue().withCause(throwable);
+                }
+            }
+            return null;
+        };
+    }
+
 
     /**
      * Constructs a new {@link GrpcService} that can be bound to

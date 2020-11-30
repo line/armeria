@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.server.grpc.GrpcServiceBuilder.toGrpcStatusFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -96,7 +97,7 @@ class GrpcServiceBuilderTest {
                                  new SimpleImmutableEntry<>(B2Exception.class, Status.NOT_FOUND),
                                  new SimpleImmutableEntry<>(B1Exception.class, Status.UNAUTHENTICATED));
 
-        final GrpcStatusFunction mappingFunction = GrpcStatus.toGrpcStatusFunction(exceptionMappings);
+        final GrpcStatusFunction mappingFunction = toGrpcStatusFunction(exceptionMappings);
 
         Status status = GrpcStatus.fromThrowable(mappingFunction, new A3Exception());
         assertThat(status.getCode()).isEqualTo(Status.UNAUTHENTICATED.getCode());
@@ -118,8 +119,7 @@ class GrpcServiceBuilderTest {
     void mapStatus() {
         final LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings = new LinkedList<>();
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A2Exception.class, Status.PERMISSION_DENIED);
-
-        final GrpcStatusFunction mappingFunction = GrpcStatus.toGrpcStatusFunction(exceptionMappings);
+        final GrpcStatusFunction mappingFunction = toGrpcStatusFunction(exceptionMappings);
 
         for (Throwable ex : ImmutableList.of(new A2Exception(), new A3Exception())) {
             final Status status = Status.UNKNOWN.withCause(ex);

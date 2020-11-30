@@ -139,7 +139,6 @@ public final class GrpcStatus {
     /**
      * Converts the specified {@link Status} to a new user-specified {@link Status}
      * using the specified {@link GrpcStatusFunction}.
-     * The {@link Status#getCause()} of the specified {@link Status} is copied to a new {@link Status}.
      * Returns the given {@link Status} as is if the {@link GrpcStatusFunction} returns {@code null}.
      */
     public static Status fromMappingFunction(
@@ -157,24 +156,6 @@ public final class GrpcStatus {
             }
         }
         return status;
-    }
-
-    /**
-     * Converts the specified exception mappings to {@link GrpcStatusFunction}.
-     */
-    public static GrpcStatusFunction toGrpcStatusFunction(
-            List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
-        final List<Map.Entry<Class<? extends Throwable>, Status>> mappings =
-                ImmutableList.copyOf(exceptionMappings);
-
-        return throwable -> {
-            for (Map.Entry<Class<? extends Throwable>, Status> mapping : mappings) {
-                if (mapping.getKey().isInstance(throwable)) {
-                    return mapping.getValue().withCause(throwable);
-                }
-            }
-            return null;
-        };
     }
 
     private static Throwable unwrap(Throwable t) {
