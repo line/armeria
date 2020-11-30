@@ -86,6 +86,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
         final RetryConfig<O> config = mapping.get(ctx, req);
+        requireNonNull(config, "mapping.get() returned null");
+
         final State state = new State(
                 config.maxTotalAttempts(),
                 config.responseTimeoutMillisForEachAttempt(),
@@ -121,8 +123,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     protected final RetryRule retryRule() {
         checkState(retryConfig != null, "No retryRule set. Are you using RetryConfigMapping?");
-        checkState(retryConfig.retryRule() != null, "retryRule is not set.");
-        return retryConfig.retryRule();
+        final RetryRule retryRule = retryConfig.retryRule();
+        checkState(retryRule != null, "retryRule is not set.");
+        return retryRule;
     }
 
     /**
@@ -132,8 +135,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     protected final RetryRuleWithContent<O> retryRuleWithContent() {
         checkState(retryConfig != null, "No retryRuleWithContent set. Are you using RetryConfigMapping?");
-        checkState(retryConfig.retryRuleWithContent() != null, "retryRuleWithContent is not set.");
-        return retryConfig.retryRuleWithContent();
+        final RetryRuleWithContent<O> retryRuleWithContent = retryConfig.retryRuleWithContent();
+        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
+        return retryRuleWithContent;
     }
 
     /**

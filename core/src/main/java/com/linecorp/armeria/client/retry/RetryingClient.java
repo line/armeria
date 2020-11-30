@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -210,7 +211,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
      * Creates a new {@link HttpClient} decorator that handles failures of an invocation and retries HTTP
      * requests.
      *
-     * @param mapping the mapping that returns a {@link RetryConfig} for a given context/request.
+     * @param mapping the mapping that returns a {@link RetryConfig} for a given {@link ClientRequestContext}
+     *        and {@link Request}.
      */
     public static Function<? super HttpClient, RetryingClient>
     newDecoratorWithMapping(RetryConfigMapping<HttpResponse> mapping) {
