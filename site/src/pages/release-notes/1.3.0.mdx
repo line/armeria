@@ -25,7 +25,7 @@ date: 2020-11-30
   - Use `armeria-protobuf`, `armeria-scalapb_2.12` or `armeria-scalapb_2.13` dependencies.
   - See [Supporting ScalaPB in annotated services](/docs/advanced-scalapb#supporting-scalapb-in-annotated-services)
     for more information.
-- You can now use Scala `Future` in annotated service. #3189
+- You can now use Scala `Future` in an annotated service. #3189
   ```scala
   @Get("/items/{id}")
   def items(@Param id: Int)(implicit ec: ExecutionContext): Future[String] = {
