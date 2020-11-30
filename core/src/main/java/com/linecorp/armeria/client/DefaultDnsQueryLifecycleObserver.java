@@ -101,7 +101,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     @Override
     public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
         final List<Tag> tags =
-                ImmutableList.of(nameTag, Tag.of(SERVER_TAG, dnsServerAddress.getAddress().getHostAddress()));
+                ImmutableList.of(nameTag, Tag.of(SERVER_TAG, getHostAddress(dnsServerAddress)));
         meterRegistry.counter(meterIdPrefixWritten, tags).increment();
     }
 
@@ -113,11 +113,20 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     @Override
     public DnsQueryLifecycleObserver queryRedirected(List<InetSocketAddress> nameServers) {
         final String servers = nameServers.stream()
-                                          .map(addr -> addr.getAddress().getHostAddress())
+                                          .map(addr -> getHostAddress(addr))
                                           .collect(Collectors.joining(","));
         final List<Tag> tags = ImmutableList.of(nameTag, Tag.of(SERVERS_TAG, servers));
         meterRegistry.counter(meterIdPrefixRedirected, tags).increment();
         return this;
+    }
+
+    /**
+     * Returns the IP address of the given {@link InetSocketAddress}, stripping the scope ID if necessary.
+     */
+    private static String getHostAddress(InetSocketAddress addr) {
+        final String value = addr.getAddress().getHostAddress();
+        final int percentIdx = value.indexOf('%');
+        return percentIdx < 0 ? value : value.substring(0, percentIdx);
     }
 
     @Override

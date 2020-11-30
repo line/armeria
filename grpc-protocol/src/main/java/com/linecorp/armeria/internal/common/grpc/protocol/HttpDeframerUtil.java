@@ -35,9 +35,9 @@ public final class HttpDeframerUtil {
             ByteBufAllocator alloc, boolean decodeBase64) {
         if (decodeBase64) {
             final Base64Decoder base64Decoder = new Base64Decoder(alloc);
-            return new HttpDeframer<>(handler, alloc, data -> base64Decoder.decode(data.byteBuf()));
+            return HttpDeframer.of(handler, alloc, data -> base64Decoder.decode(data.byteBuf()));
         } else {
-            return new HttpDeframer<>(handler, alloc, HttpData::byteBuf);
+            return HttpDeframer.of(handler, alloc, HttpData::byteBuf);
         }
     }
 

@@ -40,7 +40,6 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -88,8 +87,14 @@ final class AnnotatedServiceTypeUtil {
     /**
      * "Cache" of converters from string to the Class in the key.
      */
-    private static final Map<Class<?>, Function<String, ?>> convertExternalTypes =
-            new MapMaker().weakKeys().makeMap();
+    private static final ClassValue<Function<String, ?>> convertExternalTypes =
+            new ClassValue<Function<String, ?>>() {
+                @Nullable
+                @Override
+                protected Function<String, ?> computeValue(Class<?> type) {
+                    return getCreatorMethod(type);
+                }
+            };
 
     private static final Map<String, Boolean> stringToBooleanMap =
             ImmutableMap.<String, Boolean>builder()
@@ -175,7 +180,7 @@ final class AnnotatedServiceTypeUtil {
         try {
             Function<String, ?> func = supportedElementTypes.get(clazz);
             if (func == null) {
-                func = convertExternalTypes.computeIfAbsent(clazz, AnnotatedServiceTypeUtil::getCreatorMethod);
+                func = convertExternalTypes.get(clazz);
             }
             if (func != null) {
                 return (T) func.apply(str);

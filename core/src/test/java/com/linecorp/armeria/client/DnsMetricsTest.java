@@ -33,6 +33,7 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -88,7 +89,7 @@ public class DnsMetricsTest {
 
                 final String writeMeterId =
                         "armeria.client.dns.queries.written#count{name=foo.com.,server=" +
-                        server.addr().getHostString() + '}';
+                        getHostAddress(server) + '}';
                 final String successMeterId =
                         "armeria.client.dns.queries#count{cause=none,name=foo.com.,result=success}";
                 final String otherExceptionId =
@@ -107,6 +108,12 @@ public class DnsMetricsTest {
                 });
             }
         }
+    }
+
+    private static String getHostAddress(TestDnsServer server) {
+        final String value = server.addr().getAddress().getHostAddress();
+        final int percentIdx = value.indexOf('%');
+        return percentIdx < 0 ? value : value.substring(0, percentIdx);
     }
 
     @Test
@@ -147,7 +154,7 @@ public class DnsMetricsTest {
                         () -> client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com"))
                                      .aggregate().join());
                 assertThat(cause.getCause()).isInstanceOf(UnprocessedRequestException.class);
-                assertThat(cause.getCause().getCause())
+                assertThat(Throwables.getRootCause(cause))
                         .isInstanceOfAny(DnsTimeoutException.class, DnsNameResolverTimeoutException.class);
 
                 await().untilAsserted(() -> {
@@ -184,7 +191,7 @@ public class DnsMetricsTest {
 
                 final String writtenMeterId =
                         "armeria.client.dns.queries.written#count{name=bar.com.,server=" +
-                        server.addr().getHostString() + '}';
+                        getHostAddress(server) + '}';
                 final String nxDomainMeterId =
                         "armeria.client.dns.queries#count{" +
                         "cause=nx_domain,name=bar.com.,result=failure}";
@@ -229,7 +236,7 @@ public class DnsMetricsTest {
 
                 final String writtenMeterId =
                         "armeria.client.dns.queries.written#count{name=bar.com.,server=" +
-                        server.addr().getHostString() + '}';
+                        getHostAddress(server) + '}';
                 final String noAnswerMeterId =
                         "armeria.client.dns.queries.noanswer#count{code=10,name=bar.com.}";
                 final String nxDomainMeterId =
@@ -278,7 +285,7 @@ public class DnsMetricsTest {
 
                 final String writtenMeterId =
                         "armeria.client.dns.queries.written#count{name=bar.com.,server=" +
-                        server.addr().getHostString() + '}';
+                        getHostAddress(server) + '}';
                 final String cnamed =
                         "armeria.client.dns.queries.cnamed#count{cname=baz.com.,name=bar.com.}";
                 final String successMeterId =
