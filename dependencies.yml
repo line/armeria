@@ -3,7 +3,7 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.11.3
+  - com.fasterxml.jackson:jackson-bom:2.12.0
   - io.dropwizard.metrics:metrics-bom:4.1.15
   - io.grpc:grpc-bom:1.33.1
   - io.micrometer:micrometer-bom:1.6.1
@@ -35,13 +35,13 @@ com.auth0:
 com.fasterxml.jackson.core:
   jackson-annotations:
     javadocs:
-    - https://fasterxml.github.io/jackson-annotations/javadoc/2.11/
+    - https://fasterxml.github.io/jackson-annotations/javadoc/2.12/
   jackson-core:
     javadocs:
-    - https://fasterxml.github.io/jackson-core/javadoc/2.11/
+    - https://fasterxml.github.io/jackson-core/javadoc/2.12/
   jackson-databind:
     javadocs:
-    - https://fasterxml.github.io/jackson-databind/javadoc/2.11/
+    - https://fasterxml.github.io/jackson-databind/javadoc/2.12/
 
 com.github.ben-manes.caffeine:
   caffeine:
@@ -130,7 +130,7 @@ com.netflix.eureka:
   eureka-test-utils: {version: *EUREKA_VERSION }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.37' }
+  checkstyle: { version: '8.38' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.1' }
@@ -175,7 +175,7 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '2.0.15'
+    version: &DROPWIZARD_VERSION '2.0.16'
     javadocs:
     - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.13/
   dropwizard-jackson: { version: *DROPWIZARD_VERSION }
@@ -327,7 +327,7 @@ net.javacrumbs.future-converter:
   future-converter-rxjava2-java8: { version: 1.2.0 }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.21.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.22.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 com.guardsquare:
@@ -447,7 +447,7 @@ org.hibernate.validator:
 
 org.jctools:
   jctools-core:
-    version: '3.1.0'
+    version: '3.2.0'
     relocations:
     - from: org.jctools
       to: com.linecorp.armeria.internal.shaded.jctools
@@ -458,7 +458,7 @@ org.jetbrains.kotlin:
   kotlin-allopen: { version: &KOTLIN_VERSION '1.4.20' }
 
 org.jetbrains.kotlinx:
-  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.4.1' }
+  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.4.2' }
   kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
@@ -472,7 +472,7 @@ org.jsoup:
   jsoup: { version: '1.13.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.6.0' }
+  mockito-core: { version: &MOCKITO_VERSION '3.6.28' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -521,7 +521,7 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.3.1.RELEASE' }
+  spring-web: { version: '5.3.1' }
 
 org.springframework.boot:
   spring-boot-starter:
