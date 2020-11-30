@@ -541,7 +541,6 @@ public final class GrpcServiceBuilder {
         };
     }
 
-
     /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
