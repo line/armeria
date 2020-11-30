@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.LinkedList;
-import java.util.Map.Entry;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +56,7 @@ class GrpcServiceBuilderTest {
 
     @Test
     void duplicatedExceptionMappings() {
-        final LinkedList<Entry<Class<? extends Throwable>, Status>> exceptionMappings = new LinkedList<>();
+        final LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings = new LinkedList<>();
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class, Status.RESOURCE_EXHAUSTED);
 
         assertThatThrownBy(() -> {
@@ -67,7 +67,7 @@ class GrpcServiceBuilderTest {
 
     @Test
     void sortExceptionMappings() {
-        final LinkedList<Entry<Class<? extends Throwable>, Status>> exceptionMappings = new LinkedList<>();
+        final LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings = new LinkedList<>();
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class, Status.RESOURCE_EXHAUSTED);
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A2Exception.class, Status.UNIMPLEMENTED);
 
@@ -116,7 +116,7 @@ class GrpcServiceBuilderTest {
 
     @Test
     void mapStatus() {
-        final LinkedList<Entry<Class<? extends Throwable>, Status>> exceptionMappings = new LinkedList<>();
+        final LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings = new LinkedList<>();
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A2Exception.class, Status.PERMISSION_DENIED);
 
         final GrpcStatusFunction mappingFunction = GrpcStatus.toGrpcStatusFunction(exceptionMappings);

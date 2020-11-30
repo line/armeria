@@ -39,7 +39,6 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
@@ -164,7 +163,7 @@ public final class GrpcStatus {
      * Converts the specified exception mappings to {@link GrpcStatusFunction}.
      */
     public static GrpcStatusFunction toGrpcStatusFunction(
-            List<Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
+            List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
         final List<Map.Entry<Class<? extends Throwable>, Status>> mappings =
                 ImmutableList.copyOf(exceptionMappings);
 
