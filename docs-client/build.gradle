@@ -20,6 +20,12 @@ node {
     npmVersion = '6.14.5'
     download = true
     npmInstallCommand = "ci"
+
+    // Change the cache location under Gradle user home directory so that it's cached by CI.
+    if (System.getenv('CI') != null) {
+        workDir = file("${gradle.gradleUserHomeDir}/caches/nodejs/${project.name}")
+        npmWorkDir = file("${gradle.gradleUserHomeDir}/caches/npm/${project.name}")
+    }
 }
 
 task buildWeb(type: NpmTask) {
