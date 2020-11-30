@@ -462,13 +462,12 @@ public final class GrpcServiceBuilder {
      *
      * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
      */
-    public GrpcServiceBuilder exceptionMapping(
-            GrpcStatusFunction exceptionMapping) {
-        requireNonNull(exceptionMapping, "exceptionMapping");
+    public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction exceptionMappingFunction) {
+        requireNonNull(exceptionMappingFunction, "exceptionMappingFunction");
         checkState(exceptionMappings == null,
                    "exceptionMapping() and addExceptionMapping() are mutually exclusive.");
 
-        exceptionMappingFunction = exceptionMapping;
+        this.exceptionMappingFunction = exceptionMappingFunction;
         return this;
     }
 

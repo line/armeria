@@ -618,8 +618,7 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion();
         assertThat(responseObserver.getValues()).isEmpty();
-        assertThat(GrpcStatus.fromThrowable(null, responseObserver.getError()).getCode())
-                .isEqualTo(Code.CANCELLED);
+        assertThat(GrpcStatus.fromThrowable(responseObserver.getError()).getCode()).isEqualTo(Code.CANCELLED);
 
         final RequestLog log = requestLogQueue.take();
         assertThat(log.isComplete()).isTrue();
@@ -653,8 +652,7 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(responseObserver.getValues()).hasSize(1);
-        assertThat(GrpcStatus.fromThrowable(null, responseObserver.getError()).getCode())
-                .isEqualTo(Code.CANCELLED);
+        assertThat(GrpcStatus.fromThrowable(responseObserver.getError()).getCode()).isEqualTo(Code.CANCELLED);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.params()).containsExactly(request);
@@ -1222,7 +1220,7 @@ class GrpcClientTest {
         recorder.awaitCompletion();
 
         assertThat(recorder.getError()).isNotNull();
-        assertThat(GrpcStatus.fromThrowable(null, recorder.getError()).getCode())
+        assertThat(GrpcStatus.fromThrowable(recorder.getError()).getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
 
         checkRequestLogError((headers, rpcReq, cause) -> {
@@ -1415,9 +1413,8 @@ class GrpcClientTest {
         final ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
         verify(responseObserver,
                timeout(operationTimeoutMillis())).onError(captor.capture());
-        assertThat(GrpcStatus.fromThrowable(null, captor.getValue()).getCode())
-                .isEqualTo(Status.UNKNOWN.getCode());
-        assertThat(GrpcStatus.fromThrowable(null, captor.getValue()).getDescription()).isEqualTo(errorMessage);
+        assertThat(GrpcStatus.fromThrowable(captor.getValue()).getCode()).isEqualTo(Status.UNKNOWN.getCode());
+        assertThat(GrpcStatus.fromThrowable(captor.getValue()).getDescription()).isEqualTo(errorMessage);
         verifyNoMoreInteractions(responseObserver);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
