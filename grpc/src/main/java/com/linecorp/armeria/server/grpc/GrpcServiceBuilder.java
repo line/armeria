@@ -458,7 +458,6 @@ public final class GrpcServiceBuilder {
 
     /**
      * Sets the specified {@link GrpcStatusFunction} that maps a {@link Throwable} to a gRPC {@link Status}.
-     * The mapping function are used to handle a {@link Throwable} when it is raised.
      *
      * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
      */
