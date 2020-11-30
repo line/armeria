@@ -93,6 +93,22 @@ date: 2020-11-30
       }
   });
   ```
+- You can now customize for mapping an exception to a gRPC status. #3197
+  ```java
+  GrpcService.builder()
+             .addExceptionMapping(AccessDeniedException.class, Status.UNAUTHENTICATED);
+  // Or, use GrpcStatusFunction.
+  GrpcService.builder()
+             .exceptionMapping(cause -> {
+                 if (cause instanceof AccessDeniedException) {
+                     return Status.UNAUTHENTICATED;
+                 }
+                 if (cause instanceof FileNotFoundException) {
+                     return Status.NOT_FOUND;
+                 }
+                 return null; // Return null to use Armeria's default exception mapping.
+             });
+  ```
 - You can now specify the Caffeine spec for the DNS resolver cache. #2970 #3007
 - You can now specify a prefix for MDC keys using the `<prefix>` element. #3086 #3112
   ```xml
