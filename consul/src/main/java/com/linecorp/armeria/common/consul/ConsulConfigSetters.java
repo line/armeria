@@ -26,7 +26,7 @@ public interface ConsulConfigSetters {
     /**
      * Sets the specified Consul's API version.
      * @param consulApiVersion the version of Consul API service, default: {@value
-     * ConsulClientBuilder#DEFAULT_CONSUL_API_VERSION}
+     *                         ConsulClientBuilder#DEFAULT_CONSUL_API_VERSION}
      */
     ConsulConfigSetters consulApiVersion(String consulApiVersion);
 

@@ -87,7 +87,7 @@ public final class ConsulEndpointGroupBuilder implements ConsulConfigSetters {
 
     /**
      * Sets whether to use <a href="https://www.consul.io/api/health.html">Health HTTP endpoint</a>.
-     * make sure that your target endpoints are health-checked by Consul before enabling this feature.
+     * Make sure that your target endpoints are health-checked by Consul before enabling this feature.
      *
      * @see ConsulUpdatingListenerBuilder#checkUri(URI)
      */

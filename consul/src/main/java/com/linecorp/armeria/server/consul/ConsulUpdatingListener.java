@@ -65,8 +65,9 @@ public final class ConsulUpdatingListener extends ServerListenerAdapter {
     private final Endpoint endpoint;
     @Nullable
     private final Check check;
+
     @Nullable
-    private String serviceId;
+    private volatile String serviceId;
 
     ConsulUpdatingListener(ConsulClient consulClient, String serviceName, @Nullable Endpoint endpoint,
                            @Nullable URI checkUri, @Nullable HttpMethod checkMethod, String checkInterval) {
