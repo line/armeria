@@ -316,22 +316,28 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void close(Status status, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(status, metadata);
+            doClose(GrpcStatus.fromStatusFunction(statusFunction, status), metadata);
         } else {
-            ctx.eventLoop().execute(() -> doClose(status, metadata));
+            ctx.eventLoop().execute(() -> {
+                doClose(GrpcStatus.fromStatusFunction(statusFunction, status), metadata);
+            });
         }
     }
 
     private void close(Throwable exception, Metadata metadata) {
-        final Status status = GrpcStatus.fromThrowable(statusFunction, exception);
-        close(status, metadata);
+        if (ctx.eventLoop().inEventLoop()) {
+            doClose(GrpcStatus.fromThrowable(statusFunction, exception), metadata);
+        } else {
+            ctx.eventLoop().execute(() -> {
+                doClose(GrpcStatus.fromThrowable(statusFunction, exception), metadata);
+            });
+        }
     }
 
     private void doClose(Status status, Metadata metadata) {
-        final Status newStatus = GrpcStatus.fromStatusFunction(statusFunction, status);
         if (cancelled) {
             // No need to write anything to client if cancelled already.
-            closeListener(newStatus);
+            closeListener(status);
             return;
         }
 
@@ -340,7 +346,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         final HttpHeaders trailers = statusToTrailers(
                 ctx, sendHeadersCalled ? HttpHeaders.builder() : defaultHeaders.toBuilder(),
-                newStatus, metadata);
+                status, metadata);
         try {
             if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
                 GrpcWebTrailers.set(ctx, trailers);
@@ -355,7 +361,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             }
         } finally {
-            closeListener(newStatus);
+            closeListener(status);
         }
     }
 
