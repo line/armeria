@@ -218,7 +218,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .asRuntimeException()));
 
         final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(decompressorRegistry, this, maxInboundMessageSizeBytes);
+                new HttpStreamDeframerHandler(decompressorRegistry, this, null, maxInboundMessageSizeBytes);
         responseDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
         handler.setDeframer(responseDeframer);
         responseDeframer.subscribe(this, ctx.eventLoop());
@@ -390,8 +390,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 listener.onMessage(msg);
             }
         } catch (Throwable t) {
-            req.close(GrpcStatus.fromThrowable(t).asException());
-            throw t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t);
+            final Status status = GrpcStatus.fromThrowable(t);
+            req.close(status.asException());
+            close(status, new Metadata());
         }
 
         notifyExecutor();
@@ -438,8 +439,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private void close(Status status, Metadata metadata) {
         final Deadline deadline = callOptions.getDeadline();
         if (status.getCode() == Code.CANCELLED && deadline != null && deadline.isExpired()) {
-            status = Status.DEADLINE_EXCEEDED.augmentDescription(
-                    "ClientCall was cancelled at or after deadline.");
+            status = Status.DEADLINE_EXCEEDED;
             // Replace trailers to prevent mixing sources of status and trailers.
             metadata = new Metadata();
         }
