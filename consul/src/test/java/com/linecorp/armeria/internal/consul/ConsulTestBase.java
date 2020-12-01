@@ -15,11 +15,15 @@
  */
 package com.linecorp.armeria.internal.consul;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.awaitility.Awaitility.await;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -83,7 +87,12 @@ public abstract class ConsulTestBase {
             builder.withConsulBinaryDownloadDirectory(Paths.get(downloadPath));
         }
 
-        consul = builder.build().start();
+        // A workaround for 'Cannot run program "**/embedded_consul/consul" error=26, Text file busy'
+        await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+            assertThatCode(() -> {
+                consul = builder.build().start();
+            }).doesNotThrowAnyException();
+        });
         // Initialize Consul client
         consulClient = ConsulClient.builder(URI.create("http://127.0.0.1:" + consul.getHttpPort()))
                                    .consulToken(CONSUL_TOKEN)
