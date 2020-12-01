@@ -45,7 +45,6 @@ import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-
 public abstract class ConsulTestBase {
 
     protected static final String CONSUL_TOKEN = UUID.randomUUID().toString();
@@ -120,7 +119,7 @@ public abstract class ConsulTestBase {
         final int[] ports = new int[numPorts];
         final Random random = ThreadLocalRandom.current();
         for (int i = 0; i < numPorts; i++) {
-            for (; ; ) {
+            for (;;) {
                 final int candidatePort = random.nextInt(64512) + 1024;
                 try (ServerSocket ss = new ServerSocket()) {
                     ss.bind(new InetSocketAddress("127.0.0.1", candidatePort));
