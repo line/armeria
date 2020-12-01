@@ -125,7 +125,7 @@ executor.scheduleWithFixedDelay(() -> {
     HttpRequest req = HttpRequest.of(HttpMethod.POST, "/expire_stall_sessions");
     ServiceRequestContext ctx = ServiceRequestContext.of(req);
     try {
-        HttpResponse res = sessionManagementService.servce(ctx, req);
+        HttpResponse res = sessionManagementService.service(ctx, req);
         AggregatedHttpResponse aggregatedRes = res.aggregate().get();
         if (aggregatedRes.status().code() != 200) {
             System.err.println("Failed to expire stall sessions: " +
