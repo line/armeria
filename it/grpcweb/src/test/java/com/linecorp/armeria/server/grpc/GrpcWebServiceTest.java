@@ -91,7 +91,7 @@ class GrpcWebServiceTest {
             final HelloReply armeria =
                     blockingStub.sayHello(HelloRequest.newBuilder().setName("Armeria").build());
             assertThat(armeria.getMessage()).isEqualTo("Hello, Armeria");
-            final RequestLog requestLog = captor.get().log().ensureComplete();
+            final RequestLog requestLog = captor.get().log().whenComplete().join();
             assertThat(requestLog.responseContent().toString()).contains("Hello, Armeria");
         }
     }

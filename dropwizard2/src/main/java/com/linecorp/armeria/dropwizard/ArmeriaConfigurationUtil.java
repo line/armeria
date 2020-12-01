@@ -340,8 +340,8 @@ final class ArmeriaConfigurationUtil {
         }
 
         return EncodingService.builder()
-                              .encodableContentTypePredicate(encodableContentTypePredicate)
-                              .encodableRequestHeadersPredicate(encodableRequestHeadersPredicate)
+                              .encodableContentTypes(encodableContentTypePredicate)
+                              .encodableRequestHeaders(encodableRequestHeadersPredicate)
                               .minBytesToForceChunkedEncoding(minBytesToForceChunkedAndEncoding)
                               .newDecorator();
     }

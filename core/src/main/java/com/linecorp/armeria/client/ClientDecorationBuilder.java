@@ -63,6 +63,15 @@ public final class ClientDecorationBuilder {
     }
 
     /**
+     * Clears all HTTP-level and RPC-level decorators set so far.
+     */
+    public ClientDecorationBuilder clear() {
+        decorators.clear();
+        rpcDecorators.clear();
+        return this;
+    }
+
+    /**
      * Adds the specified RPC-level {@code decorator}.
      *
      * @param decorator the {@link Function} that transforms an {@link RpcClient} to another

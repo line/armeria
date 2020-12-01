@@ -27,17 +27,19 @@ import com.linecorp.armeria.common.RpcResponse;
  */
 public final class RetryingRpcClientBuilder extends AbstractRetryingClientBuilder<RpcResponse> {
 
-    RetryingRpcClientBuilder(RetryRuleWithContent<RpcResponse> retryRuleWithContent) {
-        super(retryRuleWithContent);
+    RetryingRpcClientBuilder(RetryConfig<RpcResponse> retryConfig) {
+        super(retryConfig);
+    }
+
+    RetryingRpcClientBuilder(RetryConfigMapping<RpcResponse> mapping) {
+        super(mapping);
     }
 
     /**
      * Returns a newly-created {@link RetryingRpcClient} based on the properties of this builder.
      */
     public RetryingRpcClient build(RpcClient delegate) {
-        return new RetryingRpcClient(
-                delegate, retryRuleWithContent(), maxTotalAttempts(),
-                responseTimeoutMillisForEachAttempt());
+        return new RetryingRpcClient(delegate, mapping());
     }
 
     /**

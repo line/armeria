@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -37,13 +39,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -83,10 +83,6 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 public final class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
 
-    static final ServiceLoader<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
-            ServiceLoader.load(ResponseConverterFunctionProvider.class,
-                               AnnotatedService.class.getClassLoader());
-
     /**
      * A default {@link ResponseConverterFunction}s.
      */
@@ -95,8 +91,22 @@ public final class AnnotatedService implements HttpService {
                              new StringResponseConverterFunction(),
                              new ByteArrayResponseConverterFunction());
 
+    static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
+            ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
+                                                    AnnotatedService.class.getClassLoader()));
+
+    static {
+        if (!responseConverterFunctionProviders.isEmpty()) {
+            logger.debug("Available {}s: {}", ResponseConverterFunctionProvider.class.getSimpleName(),
+                         responseConverterFunctionProviders);
+        }
+    }
+
     private final Object object;
     private final Method method;
+    @Nullable
+    private final MethodHandle callKotlinSuspendingMethod;
+    private final boolean isKotlinSuspendingMethod;
     private final List<AnnotatedValueResolver> resolvers;
 
     private final AggregationStrategy aggregationStrategy;
@@ -121,6 +131,7 @@ public final class AnnotatedService implements HttpService {
                      boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
+        isKotlinSuspendingMethod = KotlinUtil.isSuspendingFunction(method);
         this.resolvers = requireNonNull(resolvers, "resolvers");
         exceptionHandler =
                 new CompositeExceptionHandlerFunction(object.getClass().getSimpleName(), method.getName(),
@@ -138,9 +149,14 @@ public final class AnnotatedService implements HttpService {
             responseType = ResponseType.HTTP_RESPONSE;
         } else if (CompletionStage.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.COMPLETION_STAGE;
+        } else if (isKotlinSuspendingMethod) {
+            responseType = ResponseType.KOTLIN_COROUTINES;
+        } else if (ScalaUtil.isScalaFuture(returnType)) {
+            responseType = ResponseType.SCALA_FUTURE;
         } else {
             responseType = ResponseType.OTHER_OBJECTS;
         }
+        callKotlinSuspendingMethod = KotlinUtil.getCallKotlinSuspendingMethod();
 
         ServiceName serviceName = AnnotationUtil.findFirst(method, ServiceName.class);
         if (serviceName == null) {
@@ -168,12 +184,15 @@ public final class AnnotatedService implements HttpService {
             actualType = method.getGenericReturnType();
         }
 
-        final List<ResponseConverterFunction> backingConverters =
-                new Builder<ResponseConverterFunction>().addAll(responseConverters)
-                                                        .addAll(defaultResponseConverters)
-                                                        .build();
+        final ImmutableList<ResponseConverterFunction> backingConverters =
+                ImmutableList
+                        .<ResponseConverterFunction>builder()
+                        .addAll(responseConverters)
+                        .addAll(defaultResponseConverters)
+                        .build();
         final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
-                new Builder<ResponseConverterFunction>()
+                ImmutableList
+                        .<ResponseConverterFunction>builder()
                         .addAll(backingConverters)
                         // It is the last converter to try to convert the result object into an HttpResponse
                         // after aggregating the published object from a Publisher or Stream.
@@ -242,8 +261,6 @@ public final class AnnotatedService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        ctx.logBuilder().name(serviceName(), methodName());
-
         final CompletableFuture<AggregatedHttpRequest> f;
         if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
             f = req.aggregate();
@@ -266,12 +283,16 @@ public final class AnnotatedService implements HttpService {
                 }
 
             case COMPLETION_STAGE:
+            case KOTLIN_COROUTINES:
+            case SCALA_FUTURE:
                 final CompletableFuture<?> composedFuture;
                 if (useBlockingTaskExecutor) {
-                    composedFuture = f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
-                                                        ctx.blockingTaskExecutor());
+                    composedFuture = f.thenComposeAsync(
+                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor()),
+                            ctx.blockingTaskExecutor());
                 } else {
-                    composedFuture = f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)));
+                    composedFuture = f.thenCompose(
+                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop()));
                 }
                 return composedFuture.handle(
                         (result, cause) -> {
@@ -280,7 +301,6 @@ public final class AnnotatedService implements HttpService {
                             }
                             return convertResponse(ctx, req, null, result, HttpHeaders.of());
                         });
-
             default:
                 final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
                         msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg), HttpHeaders.of());
@@ -295,12 +315,21 @@ public final class AnnotatedService implements HttpService {
     /**
      * Invokes the service method with arguments.
      */
+    @Nullable
     private Object invoke(ServiceRequestContext ctx, HttpRequest req,
                           @Nullable AggregatedHttpRequest aggregatedRequest) {
         try (SafeCloseable ignored = ctx.push()) {
             final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedRequest);
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
-            return method.invoke(object, arguments);
+            if (isKotlinSuspendingMethod) {
+                assert callKotlinSuspendingMethod != null;
+                return callKotlinSuspendingMethod.invoke(
+                        method, object, arguments,
+                        useBlockingTaskExecutor ? ctx.blockingTaskExecutor() : ctx.eventLoop(),
+                        ctx);
+            } else {
+                return method.invoke(object, arguments);
+            }
         } catch (Throwable cause) {
             return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
         }
@@ -389,12 +418,14 @@ public final class AnnotatedService implements HttpService {
     }
 
     /**
-     * Wraps the specified {@code obj} with {@link CompletableFuture} if it is not an instance of
-     * {@link CompletionStage}.
+     * Converts the specified {@code obj} with {@link CompletableFuture}.
      */
-    private static CompletionStage<?> toCompletionStage(Object obj) {
+    private static CompletionStage<?> toCompletionStage(@Nullable Object obj, ExecutorService executor) {
         if (obj instanceof CompletionStage) {
             return (CompletionStage<?>) obj;
+        }
+        if (obj != null && ScalaUtil.isScalaFuture(obj.getClass())) {
+            return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
         }
         return CompletableFuture.completedFuture(obj);
     }
@@ -465,50 +496,6 @@ public final class AnnotatedService implements HttpService {
                 return cause;
             }
             return HttpResponseException.of(handleExceptionWithContext(exceptionHandler, ctx, req, cause));
-        }
-    }
-
-    /**
-     * A {@link ResponseConverterFunction} which wraps a list of {@link ResponseConverterFunction}s.
-     */
-    private static final class CompositeResponseConverterFunction implements ResponseConverterFunction {
-
-        private final List<ResponseConverterFunction> functions;
-
-        CompositeResponseConverterFunction(List<ResponseConverterFunction> functions) {
-            this.functions = ImmutableList.copyOf(functions);
-        }
-
-        @Override
-        public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            ResponseHeaders headers,
-                                            @Nullable Object result,
-                                            HttpHeaders trailers) throws Exception {
-            if (result instanceof HttpResponse) {
-                return (HttpResponse) result;
-            }
-            try (SafeCloseable ignored = ctx.push()) {
-                for (final ResponseConverterFunction func : functions) {
-                    try {
-                        return func.convertResponse(ctx, headers, result, trailers);
-                    } catch (FallthroughException ignore) {
-                        // Do nothing.
-                    } catch (Exception e) {
-                        throw new IllegalStateException(
-                                "Response converter " + func.getClass().getName() +
-                                " cannot convert a result to HttpResponse: " + result, e);
-                    }
-                }
-            }
-            // There is no response converter which is able to convert 'null' result to a response.
-            // In this case, a response with the specified HTTP headers would be sent.
-            // If you want to force to send '204 No Content' for this case, add
-            // 'NullToNoContentResponseConverterFunction' to the list of response converters.
-            if (result == null) {
-                return HttpResponse.of(headers, HttpData.empty(), trailers);
-            }
-            throw new IllegalStateException(
-                    "No response converter exists for a result: " + result.getClass().getName());
         }
     }
 
@@ -607,6 +594,6 @@ public final class AnnotatedService implements HttpService {
      * Response type classification of the annotated {@link Method}.
      */
     private enum ResponseType {
-        HTTP_RESPONSE, COMPLETION_STAGE, OTHER_OBJECTS
+        HTTP_RESPONSE, COMPLETION_STAGE, KOTLIN_COROUTINES, SCALA_FUTURE, OTHER_OBJECTS
     }
 }

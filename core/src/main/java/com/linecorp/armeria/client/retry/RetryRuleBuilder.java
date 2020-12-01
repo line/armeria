@@ -24,7 +24,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
@@ -116,19 +115,6 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code responseHeadersFilter} for a {@link RetryRule} which will retry
-     * if the {@code responseHeadersFilter} returns {@code true}.
-     *
-     * @deprecated Use {@link #onResponseHeaders(BiPredicate)}.
-     */
-    @Deprecated
-    @Override
-    public RetryRuleBuilder onResponseHeaders(
-            Predicate<? super ResponseHeaders> responseHeadersFilter) {
-        return (RetryRuleBuilder) super.onResponseHeaders(responseHeadersFilter);
-    }
-
-    /**
      * Adds the specified {@code responseTrailersFilter} for a {@link RetryRuleWithContent} which will retry
      * if the {@code responseTrailersFilter} returns {@code true}. Note that using this method makes the entire
      * response buffered, which may lead to excessive memory usage.
@@ -136,20 +122,6 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     @Override
     public RetryRuleBuilder onResponseTrailers(
             BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
-        return (RetryRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
-    }
-
-    /**
-     * Adds the specified {@code responseTrailersFilter} for a {@link RetryRuleWithContent} which will retry
-     * if the {@code responseTrailersFilter} returns {@code true}. Note that using this method makes the entire
-     * response buffered, which may lead to excessive memory usage.
-     *
-     * @deprecated Use {@link #onResponseTrailers(BiPredicate)}.
-     */
-    @Deprecated
-    @Override
-    public RetryRuleBuilder onResponseTrailers(
-            Predicate<? super HttpHeaders> responseTrailersFilter) {
         return (RetryRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
     }
 
@@ -209,18 +181,6 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code statusFilter} for a {@link RetryRule} which will retry
-     * if a response status matches the specified {@code statusFilter}.
-     *
-     * @deprecated Use {@link #onStatus(BiPredicate)}.
-     */
-    @Deprecated
-    @Override
-    public RetryRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
-        return (RetryRuleBuilder) super.onStatus(statusFilter);
-    }
-
-    /**
      * Adds the specified exception type for a {@link RetryRule} which will retry
      * if an {@link Exception} is raised and it is an instance of the specified {@code exception}.
      */
@@ -236,18 +196,6 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     @Override
     public RetryRuleBuilder onException(
             BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
-        return (RetryRuleBuilder) super.onException(exceptionFilter);
-    }
-
-    /**
-     * Adds the specified {@code exceptionFilter} for a {@link RetryRule} which will retry
-     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
-     *
-     * @deprecated Use {@link #onException(BiPredicate)}.
-     */
-    @Deprecated
-    @Override
-    public RetryRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
         return (RetryRuleBuilder) super.onException(exceptionFilter);
     }
 

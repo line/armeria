@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -24,6 +25,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.IntPredicate;
@@ -37,15 +39,17 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -53,18 +57,19 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
-import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.TransientService;
+import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
+import com.linecorp.armeria.server.file.FileService;
+import com.linecorp.armeria.server.file.FileServiceBuilder;
+import com.linecorp.armeria.server.file.HttpFile;
 
-import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.config.NamingConvention;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -73,6 +78,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.incubator.channel.uring.IOUring;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
@@ -171,6 +177,22 @@ public final class Flags {
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
+
+    private static final String DEFAULT_TRANSPORT_TYPE = USE_EPOLL ? "epoll" : "nio";
+    private static final String TRANSPORT_TYPE_NAME = getNormalized("transportType",
+                                                                    DEFAULT_TRANSPORT_TYPE,
+                                                                    val -> {
+                                                                        switch (val) {
+                                                                            case "nio":
+                                                                            case "epoll":
+                                                                            case "io_uring":
+                                                                                return true;
+                                                                            default:
+                                                                                return false;
+                                                                        }
+                                                                    });
+    private static final TransportType TRANSPORT_TYPE;
+
     @Nullable
     private static Boolean useOpenSsl;
     @Nullable
@@ -330,33 +352,37 @@ public final class Flags {
     private static final String DEFAULT_ROUTE_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String ROUTE_CACHE_SPEC =
-            caffeineSpec("routeCache", DEFAULT_ROUTE_CACHE_SPEC);
+            nullableCaffeineSpec("routeCache", DEFAULT_ROUTE_CACHE_SPEC);
 
     private static final String DEFAULT_ROUTE_DECORATOR_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String ROUTE_DECORATOR_CACHE_SPEC =
-            caffeineSpec("routeDecoratorCache", DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
+            nullableCaffeineSpec("routeDecoratorCache", DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
 
     private static final String DEFAULT_PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String PARSED_PATH_CACHE_SPEC =
-            caffeineSpec("parsedPathCache", DEFAULT_PARSED_PATH_CACHE_SPEC);
+            nullableCaffeineSpec("parsedPathCache", DEFAULT_PARSED_PATH_CACHE_SPEC);
 
     private static final String DEFAULT_HEADER_VALUE_CACHE_SPEC = "maximumSize=4096";
     @Nullable
     private static final String HEADER_VALUE_CACHE_SPEC =
-            caffeineSpec("headerValueCache", DEFAULT_HEADER_VALUE_CACHE_SPEC);
-
-    private static final String DEFAULT_FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
-    @Nullable
-    private static final String FILE_SERVICE_CACHE_SPEC =
-            caffeineSpec("fileServiceCache", DEFAULT_FILE_SERVICE_CACHE_SPEC);
+            nullableCaffeineSpec("headerValueCache", DEFAULT_HEADER_VALUE_CACHE_SPEC);
 
     private static final String DEFAULT_CACHED_HEADERS =
             ":authority,:scheme,:method,accept-encoding,content-type";
     private static final List<String> CACHED_HEADERS =
             CSV_SPLITTER.splitToList(getNormalized(
                     "cachedHeaders", DEFAULT_CACHED_HEADERS, CharMatcher.ascii()::matchesAllOf));
+
+    private static final String DEFAULT_FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
+    @Nullable
+    private static final String FILE_SERVICE_CACHE_SPEC =
+            nullableCaffeineSpec("fileServiceCache", DEFAULT_FILE_SERVICE_CACHE_SPEC);
+
+    private static final String DEFAULT_DNS_CACHE_SPEC = "maximumSize=4096";
+    private static final String DNS_CACHE_SPEC =
+            nonnullCaffeineSpec("dnsCacheSpec", DEFAULT_DNS_CACHE_SPEC);
 
     private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
     private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
@@ -370,23 +396,65 @@ public final class Flags {
 
     private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
 
-    private static final boolean USE_LEGACY_METER_NAMES = getBoolean("useLegacyMeterNames", false);
+    private static final boolean
+            DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS = getBoolean("tlsAllowUnsafeCiphers", false);
+
+    private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
+            Sets.immutableEnumSet(
+                    Streams.stream(CSV_SPLITTER.split(getNormalized(
+                            "transientServiceOptions", "", val -> {
+                                try {
+                                    Streams.stream(CSV_SPLITTER.split(val))
+                                           .forEach(feature -> TransientServiceOption
+                                                   .valueOf(Ascii.toUpperCase(feature)));
+                                    return true;
+                                } catch (Exception e) {
+                                    return false;
+                                }
+                            }))).map(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)))
+                           .collect(toImmutableSet()));
 
     static {
-        if (!isEpollAvailable()) {
-            final Throwable cause = Epoll.unavailabilityCause();
-            if (cause != null) {
-                logger.info("/dev/epoll not available: {}", Exceptions.peel(cause).toString());
-            } else {
-                if (HAS_WSLENV) {
-                    logger.info("/dev/epoll not available: WSL not supported");
+        TransportType type = null;
+        switch (TRANSPORT_TYPE_NAME) {
+            case "io_uring":
+                if (isIoUringAvailable()) {
+                    logger.info("Using io_uring");
+                    type = TransportType.IO_URING;
                 } else {
-                    logger.info("/dev/epoll not available: ?");
+                    final Throwable cause = IOUring.unavailabilityCause();
+                    if (cause != null) {
+                        logger.info("io_uring not available: {}", Exceptions.peel(cause).toString());
+                    } else {
+                        logger.info("io_uring not available: ?");
+                    }
                 }
-            }
-        } else if (USE_EPOLL) {
-            logger.info("Using /dev/epoll");
+                // fallthrough
+            case "epoll":
+                if (isEpollAvailable() && type == null) {
+                    logger.info("Using /dev/epoll");
+                    type = TransportType.EPOLL;
+                } else {
+                    final Throwable cause = Epoll.unavailabilityCause();
+                    if (cause != null) {
+                        logger.info("/dev/epoll not available: {}", Exceptions.peel(cause).toString());
+                    } else {
+                        if (HAS_WSLENV) {
+                            logger.info("/dev/epoll not available: WSL not supported");
+                        } else {
+                            logger.info("/dev/epoll not available: ?");
+                        }
+                    }
+                }
+                // fallthrough
+            default:
+                if (type == null) {
+                    logger.info("Using nio");
+                    type = TransportType.NIO;
+                }
+                break;
         }
+        TRANSPORT_TYPE = type;
     }
 
     private static boolean isEpollAvailable() {
@@ -396,6 +464,10 @@ public final class Flags {
             return Epoll.isAvailable() && !HAS_WSLENV;
         }
         return false;
+    }
+
+    private static boolean isIoUringAvailable() {
+        return SystemInfo.isLinux() && IOUring.isAvailable();
     }
 
     /**
@@ -482,9 +554,23 @@ public final class Flags {
      *
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useEpoll=false} JVM option to disable it.
+     *
+     * @deprecated Use {@link #transportType()} and {@code -Dcom.linecorp.armeria.transportType=epoll}.
      */
+    @Deprecated
     public static boolean useEpoll() {
         return USE_EPOLL;
+    }
+
+    /**
+     * Returns the {@link TransportType} that will be used for socket I/O in Armeria.
+     *
+     * <p>The default value of this flag is {@code "epoll"} in Linux and {@code "nio"} for other operations
+     * systems. Specify the {@code -Dcom.linecorp.armeria.transportType=<nio|epoll|io_uring>} JVM option to
+     * override the default.</p>
+     */
+    public static TransportType transportType() {
+        return TRANSPORT_TYPE;
     }
 
     /**
@@ -525,7 +611,8 @@ public final class Flags {
         if (dumpOpenSslInfo) {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder::forClient,
-                    false,
+                    /* forceHttp1 */ false,
+                    /* tlsAllowUnsafeCiphers */ false,
                     ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
@@ -771,7 +858,7 @@ public final class Flags {
      * Returns the default value for the PING interval.
      * A <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame
      * is sent for HTTP/2 server and client or
-     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1 client.
      *
      * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
@@ -875,8 +962,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the default value of the {@code backoffSpec} parameter when instantiating a {@link Backoff}
-     * using {@link Backoff#of(String)}. Note that this flag has no effect if a user specified the
+     * Returns the {@linkplain Backoff#of(String) Backoff specification string} of the default {@link Backoff}
+     * returned by {@link Backoff#ofDefault()}. Note that this flag has no effect if a user specified the
      * {@link Backoff} explicitly.
      *
      * <p>The default value of this flag is {@value DEFAULT_DEFAULT_BACKOFF_SPEC}. Specify the
@@ -899,10 +986,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code routeCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link CaffeineSpec} for routing a request. The {@link Cache}
-     * would hold the mappings of {@link RoutingContext} and the designated {@link ServiceConfig}
-     * for a request to improve server performance.
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
+     * request routing history for all {@link Service}s.
      *
      * <p>The default value of this flag is {@value DEFAULT_ROUTE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.routeCache=<spec>} JVM option to override the default value.
@@ -915,10 +1000,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code routeDecoratorCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link CaffeineSpec} for mapping a route to decorator.
-     * The {@link Cache} would hold the mappings of {@link RoutingContext} and the designated
-     * dispatcher {@link Service}s for a request to improve server performance.
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
+     * request routing history for all route decorators.
      *
      * <p>The default value of this flag is {@value DEFAULT_ROUTE_DECORATOR_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.routeDecoratorCache=<spec>} JVM option to override the default value.
@@ -931,9 +1014,8 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code parsedPathCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link CaffeineSpec} for mapping raw HTTP paths to parsed pair of
-     * path and query, after validation.
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
+     * results for parsing a raw HTTP path into a decoded pair of path and query string.
      *
      * <p>The default value of this flag is {@value DEFAULT_PARSED_PATH_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.parsedPathCache=<spec>} JVM option to override the default value.
@@ -946,9 +1028,9 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code headerValueCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link CaffeineSpec} for mapping raw HTTP ASCII header values to
-     * {@link String}.
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the recent
+     * results for converting a raw HTTP ASCII header value into a {@link String}. Only the header values
+     * whose corresponding header name is listed in {@link #cachedHeaders()} will be cached.
      *
      * <p>The default value of this flag is {@value DEFAULT_HEADER_VALUE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.headerValueCache=<spec>} JVM option to override the default value.
@@ -961,8 +1043,22 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code fileServiceCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link CaffeineSpec} for caching file entries.
+     * Returns the list of HTTP header names whose corresponding values will be cached, as specified in
+     * {@link #headerValueCacheSpec()}. Only the header value whose corresponding header name is listed in this
+     * flag will be cached. It is not recommended to specify a header with high cardinality, which will defeat
+     * the purpose of caching.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_CACHED_HEADERS}. Specify the
+     * {@code -Dcom.linecorp.armeria.cachedHeaders=<comma separated list>} JVM option to override the default.
+     */
+    public static List<String> cachedHeaders() {
+        return CACHED_HEADERS;
+    }
+
+    /**
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the content
+     * of the {@link HttpFile}s read by a {@link FileService}. This value is used as the default of
+     * {@link FileServiceBuilder#entryCacheSpec(String)}.
      *
      * <p>The default value of this flag is {@value DEFAULT_FILE_SERVICE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.fileServiceCache=<spec>} JVM option to override the default value.
@@ -975,14 +1071,18 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code cachedHeaders} parameter which contains a comma-separated list of
-     * headers whose values are cached using {@code headerValueCache}.
+     * Returns the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the
+     * domain names and their resolved addresses. This value is used as the default of
+     * {@link DnsResolverGroupBuilder#cacheSpec(String)}.
      *
-     * <p>The default value of this flag is {@value DEFAULT_CACHED_HEADERS}. Specify the
-     * {@code -Dcom.linecorp.armeria.cachedHeaders=<csv>} JVM option to override the default value.
+     * <p>The default value of this flag is {@value DEFAULT_DNS_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.dnsCacheSpec=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.dnsCacheSpec=maximumSize=1024,expireAfterAccess=600s}.
+     *
+     * <p>This cache cannot be disabled with {@code "off"} unlike other cache specification flags.
      */
-    public static List<String> cachedHeaders() {
-        return CACHED_HEADERS;
+    public static String dnsCacheSpec() {
+        return DNS_CACHE_SPEC;
     }
 
     /**
@@ -1074,32 +1174,67 @@ public final class Flags {
     }
 
     /**
-     * Returns whether to switch back to Armeria's legacy {@link Meter} and {@link Tag} naming convention
-     * that is not compliant with Micrometer's default {@link NamingConvention}.
+     * Returns whether to allow the bad cipher suites listed in
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#tlsAllowUnsafeCiphers(boolean)}.
      *
-     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.useLegacyMeterNames=true}
-     * JVM option to enable it.</p>
-     *
-     * @deprecated This property will be removed without a replacement.
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.tlsAllowUnsafeCiphers=true} JVM option to enable it.
      */
-    @Deprecated
-    public static boolean useLegacyMeterNames() {
-        return USE_LEGACY_METER_NAMES;
+    public static boolean tlsAllowUnsafeCiphers() {
+        return DEFAULT_TLS_ALLOW_UNSAFE_CIPHERS;
+    }
+
+    /**
+     * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for a
+     * {@link TransientService}.
+     *
+     * <p>The default value of this flag is an empty string, which means all
+     * {@link TransientServiceOption}s are disabled.
+     * Specify the {@code -Dcom.linecorp.armeria.transientServiceOptions=<csv>} JVM option
+     * to override the default value. For example,
+     * {@code -Dcom.linecorp.armeria.transientServiceOptions=WITH_METRIC_COLLECTION,WITH_ACCESS_LOGGING}.
+     */
+    public static Set<TransientServiceOption> transientServiceOptions() {
+        return TRANSIENT_SERVICE_OPTIONS;
     }
 
     @Nullable
-    private static String caffeineSpec(String name, String defaultValue) {
+    private static String nullableCaffeineSpec(String name, String defaultValue) {
+        return caffeineSpec(name, defaultValue, true);
+    }
+
+    private static String nonnullCaffeineSpec(String name, String defaultValue) {
+        final String spec = caffeineSpec(name, defaultValue, false);
+        assert spec != null; // Can never be null if allowOff is false.
+        return spec;
+    }
+
+    @Nullable
+    private static String caffeineSpec(String name, String defaultValue, boolean allowOff) {
         final String spec = get(name, defaultValue, value -> {
             try {
-                if (!"off".equals(value)) {
-                    CaffeineSpec.parse(value);
+                if ("off".equals(value)) {
+                    return allowOff;
                 }
+                CaffeineSpec.parse(value);
                 return true;
             } catch (Exception e) {
                 return false;
             }
         });
-        return "off".equals(spec) ? null : spec;
+
+        if (!"off".equals(spec)) {
+            return spec;
+        }
+
+        if (allowOff) {
+            return null;
+        }
+
+        // We specified 'off' as the default value for the flag which can't be 'off'.
+        throw new Error();
     }
 
     private static ExceptionVerbosity exceptionLoggingMode(String name, String defaultValue) {

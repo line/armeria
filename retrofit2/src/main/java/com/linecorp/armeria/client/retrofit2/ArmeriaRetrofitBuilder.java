@@ -103,7 +103,7 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
      *   <li>Whether the connection is secured (HTTPS or HTTPS)</li>
      *   <li>Host name</li>
      *   <li>Port number</li>
-     * </ul></p>
+     * </ul>
      *
      * <p>You can use this method to create a customized non-base {@link WebClient}, for example to send
      * an additional header, override the timeout or enforce HTTP/1:
@@ -119,14 +119,14 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
      *                                    .factory(defaultWebClient.factory())
      *                                    .options(defaultWebClient.options())
      *                                    // Set a custom header.
-     *                                    .setHttpHeader(HttpHeaderNames.AUTHORIZATION,
-     *                                                   "bearer my-access-token")
+     *                                    .setHeader(HttpHeaderNames.AUTHORIZATION,
+     *                                               "bearer my-access-token")
      *                                    // Override the timeout.
      *                                    .responseTimeout(Duration.ofSeconds(30))
      *                                    .build();
      *                })
      *                .build();
-     * }</pre></p>
+     * }</pre>
      *
      * <p>Note that the specified {@link BiFunction} is not used for sending requests to the base URL's
      * authority. The default {@link WebClient} specified with {@link ArmeriaRetrofit#of(WebClient)} or
@@ -134,10 +134,10 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
      * <pre>{@code
      * // No need to use 'nonBaseClientFactory()' method.
      * ArmeriaRetrofit.of(WebClient.builder("http://example.com/")
-     *                             .setHttpHeader(HttpHeaderNames.AUTHORIZATION,
-     *                                            "bearer my-access-token")
+     *                             .setHeader(HttpHeaderNames.AUTHORIZATION,
+     *                                        "bearer my-access-token")
      *                             .build());
-     * }</pre></p>
+     * }</pre>
      */
     public ArmeriaRetrofitBuilder nonBaseClientFactory(
             BiFunction<? super SessionProtocol, ? super Endpoint, ? extends WebClient> nonBaseClientFactory) {
@@ -350,36 +350,49 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ArmeriaRetrofitBuilder clearDecorators() {
+        return (ArmeriaRetrofitBuilder) super.clearDecorators();
+    }
+
+    /**
+     * Raises an {@link UnsupportedOperationException} because this builder doesn't support RPC-level but only
+     * HTTP-level decorators.
+     */
+    @Override
     public ArmeriaRetrofitBuilder rpcDecorator(
             Function<? super RpcClient, ? extends RpcClient> decorator) {
         return (ArmeriaRetrofitBuilder) super.rpcDecorator(decorator);
     }
 
+    /**
+     * Raises an {@link UnsupportedOperationException} because this builder doesn't support RPC-level but only
+     * HTTP-level decorators.
+     */
     @Override
     public ArmeriaRetrofitBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         return (ArmeriaRetrofitBuilder) super.rpcDecorator(decorator);
     }
 
     @Override
-    public ArmeriaRetrofitBuilder addHttpHeader(CharSequence name, Object value) {
-        return (ArmeriaRetrofitBuilder) super.addHttpHeader(name, value);
+    public ArmeriaRetrofitBuilder addHeader(CharSequence name, Object value) {
+        return (ArmeriaRetrofitBuilder) super.addHeader(name, value);
     }
 
     @Override
-    public ArmeriaRetrofitBuilder addHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (ArmeriaRetrofitBuilder) super.addHttpHeaders(httpHeaders);
+    public ArmeriaRetrofitBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (ArmeriaRetrofitBuilder) super.addHeaders(headers);
     }
 
     @Override
-    public ArmeriaRetrofitBuilder setHttpHeader(CharSequence name, Object value) {
-        return (ArmeriaRetrofitBuilder) super.setHttpHeader(name, value);
+    public ArmeriaRetrofitBuilder setHeader(CharSequence name, Object value) {
+        return (ArmeriaRetrofitBuilder) super.setHeader(name, value);
     }
 
     @Override
-    public ArmeriaRetrofitBuilder setHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (ArmeriaRetrofitBuilder) super.setHttpHeaders(httpHeaders);
+    public ArmeriaRetrofitBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (ArmeriaRetrofitBuilder) super.setHeaders(headers);
     }
 
     @Override

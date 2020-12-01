@@ -208,11 +208,30 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    @SafeVarargs
     @Override
+    @SafeVarargs
     public final VirtualHostAnnotatedServiceBindingBuilder decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
         defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder defaultServiceName(String defaultServiceName) {
+        defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder defaultLogName(String defaultLogName) {
+        defaultServiceConfigSetters.defaultLogName(defaultLogName);
         return this;
     }
 

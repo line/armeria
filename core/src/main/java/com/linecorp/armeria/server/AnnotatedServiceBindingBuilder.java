@@ -161,10 +161,17 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
         return this;
     }
 
-    @SafeVarargs
     @Override
+    @SafeVarargs
     public final AnnotatedServiceBindingBuilder decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
+        defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         defaultServiceConfigSetters.decorators(decorators);
         return this;
     }
@@ -203,6 +210,18 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
                                                           boolean shutdownOnStop) {
         defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder defaultServiceName(String defaultServiceName) {
+        defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder defaultLogName(String defaultLogName) {
+        defaultServiceConfigSetters.defaultLogName(defaultLogName);
         return this;
     }
 

@@ -58,7 +58,7 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.TimeoutScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -100,8 +100,7 @@ public final class DefaultClientRequestContext
 
     private final ClientOptions options;
     private final RequestLogBuilder log;
-    private final TimeoutScheduler responseTimeoutScheduler;
-
+    private final CancellationScheduler responseCancellationScheduler;
     private long writeTimeoutMillis;
     @Nullable
     private Runnable responseTimeoutHandler;
@@ -137,11 +136,11 @@ public final class DefaultClientRequestContext
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            TimeoutScheduler responseTimeoutScheduler,
+            CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
-             responseTimeoutScheduler, requestStartTimeNanos, requestStartTimeMicros);
+             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -164,7 +163,7 @@ public final class DefaultClientRequestContext
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq,
-             serviceRequestContext(), /* responseTimeoutScheduler */ null,
+             serviceRequestContext(), /* responseCancellationScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros);
     }
 
@@ -173,7 +172,7 @@ public final class DefaultClientRequestContext
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable ServiceRequestContext root, @Nullable TimeoutScheduler responseTimeoutScheduler,
+            @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
 
@@ -185,15 +184,15 @@ public final class DefaultClientRequestContext
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
-        if (responseTimeoutScheduler == null) {
-            this.responseTimeoutScheduler =
-                    new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
+        if (responseCancellationScheduler == null) {
+            this.responseCancellationScheduler =
+                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
         } else {
-            this.responseTimeoutScheduler = responseTimeoutScheduler;
+            this.responseCancellationScheduler = responseCancellationScheduler;
         }
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
-        additionalRequestHeaders = options.get(ClientOptions.HTTP_HEADERS);
+        additionalRequestHeaders = options.get(ClientOptions.HEADERS);
         customizers = copyThreadLocalCustomizers();
     }
 
@@ -370,9 +369,8 @@ public final class DefaultClientRequestContext
         root = ctx.root();
 
         log = RequestLog.builder(this);
-        responseTimeoutScheduler =
-                new TimeoutScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
-
+        responseCancellationScheduler =
+                new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
@@ -498,24 +496,25 @@ public final class DefaultClientRequestContext
 
     @Override
     public long responseTimeoutMillis() {
-        return TimeUnit.NANOSECONDS.toMillis(responseTimeoutScheduler.timeoutNanos());
+        return TimeUnit.NANOSECONDS.toMillis(responseCancellationScheduler.timeoutNanos());
     }
 
     @Override
     public void clearResponseTimeout() {
-        responseTimeoutScheduler.clearTimeout();
+        responseCancellationScheduler.clearTimeout();
     }
 
     @Override
     public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
-        responseTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                                 TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+        responseCancellationScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
+                                                      TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
     }
 
     @Override
     public void setResponseTimeout(TimeoutMode mode, Duration responseTimeout) {
-        responseTimeoutScheduler.setTimeoutNanos(requireNonNull(mode, "mode"),
-                                                 requireNonNull(responseTimeout, "responseTimeout").toNanos());
+        responseCancellationScheduler.setTimeoutNanos(
+                requireNonNull(mode, "mode"),
+                requireNonNull(responseTimeout, "responseTimeout").toNanos());
     }
 
     @Override
@@ -572,28 +571,42 @@ public final class DefaultClientRequestContext
         return log;
     }
 
-    TimeoutScheduler responseTimeoutScheduler() {
-        return responseTimeoutScheduler;
+    CancellationScheduler responseCancellationScheduler() {
+        return responseCancellationScheduler;
     }
 
     @Override
-    public void timeoutNow() {
-        responseTimeoutScheduler.timeoutNow();
+    public void cancel(Throwable cause) {
+        requireNonNull(cause, "cause");
+        responseCancellationScheduler.finishNow(cause);
+    }
+
+    @Nullable
+    @Override
+    public Throwable cancellationCause() {
+        return responseCancellationScheduler.cause();
     }
 
     @Override
-    public boolean isTimedOut() {
-        return responseTimeoutScheduler.isTimedOut();
+    public CompletableFuture<Throwable> whenResponseCancelling() {
+        return responseCancellationScheduler.whenCancelling();
     }
 
+    @Override
+    public CompletableFuture<Throwable> whenResponseCancelled() {
+        return responseCancellationScheduler.whenCancelled();
+    }
+
+    @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
-        return responseTimeoutScheduler.whenTimingOut();
+        return responseCancellationScheduler.whenTimingOut();
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
-        return responseTimeoutScheduler.whenTimedOut();
+        return responseCancellationScheduler.whenTimedOut();
     }
 
     @Override

@@ -41,9 +41,9 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -96,7 +96,7 @@ public class GrpcMetricsIntegrationTest {
                                   .addService(new TestServiceImpl())
                                   .enableUnframedRequests(true)
                                   .build(),
-                       MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("server")),
+                       MetricCollectingService.newDecorator(GrpcMeterIdPrefixFunction.of("server")),
                        LoggingService.newDecorator());
         }
     };
@@ -106,7 +106,7 @@ public class GrpcMetricsIntegrationTest {
 
     @AfterClass
     public static void closeClientFactory() {
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Rule
@@ -125,29 +125,44 @@ public class GrpcMetricsIntegrationTest {
         // Chance that get() returns NPE before the metric is first added, so ignore exceptions.
         given().ignoreExceptions().untilAsserted(() -> assertThat(
                 findServerMeter("UnaryCall", "requests", COUNT,
-                                "result", "success", "http.status", "200")).isEqualTo(4.0));
+                                "result", "success", "http.status", "200", "grpc.status", "0")).isEqualTo(4.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
                 findServerMeter("UnaryCall", "requests", COUNT,
-                                "result", "failure", "http.status", "200")).isEqualTo(3.0));
+                                "result", "failure", "http.status", "200", "grpc.status", "2")).isEqualTo(3.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
                 findClientMeter("UnaryCall", "requests", COUNT,
-                                "result", "success")).isEqualTo(4.0));
+                                "result", "success", "grpc.status", "0")).isEqualTo(4.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
                 findClientMeter("UnaryCall", "requests", COUNT,
-                                "result", "failure")).isEqualTo(3.0));
+                                "result", "failure", "grpc.status", "2")).isEqualTo(3.0));
 
         assertThat(findServerMeter("UnaryCall", "request.length", COUNT,
-                                   "http.status", "200")).isEqualTo(7.0);
+                                   "http.status", "200", "grpc.status", "0")).isEqualTo(4.0);
+        assertThat(findServerMeter("UnaryCall", "request.length", COUNT,
+                                   "http.status", "200", "grpc.status", "2")).isEqualTo(3.0);
         assertThat(findServerMeter("UnaryCall", "request.length", TOTAL,
-                                   "http.status", "200")).isEqualTo(7.0 * 14);
-        assertThat(findClientMeter("UnaryCall", "request.length", COUNT)).isEqualTo(7.0);
-        assertThat(findClientMeter("UnaryCall", "request.length", TOTAL)).isEqualTo(7.0 * 14);
+                                   "http.status", "200", "grpc.status", "0")).isEqualTo(4.0 * 14);
+        assertThat(findServerMeter("UnaryCall", "request.length", TOTAL,
+                                   "http.status", "200", "grpc.status", "2")).isEqualTo(3.0 * 14);
+        assertThat(findClientMeter("UnaryCall", "request.length", COUNT, "grpc.status", "0")).isEqualTo(4.0);
+        assertThat(findClientMeter("UnaryCall", "request.length", COUNT, "grpc.status", "2")).isEqualTo(3.0);
+        assertThat(findClientMeter("UnaryCall", "request.length", TOTAL, "grpc.status", "0"))
+                .isEqualTo(4.0 * 14);
+        assertThat(findClientMeter("UnaryCall", "request.length", TOTAL, "grpc.status", "2"))
+                .isEqualTo(3.0 * 14);
         assertThat(findServerMeter("UnaryCall", "response.length", COUNT,
-                                   "http.status", "200")).isEqualTo(7.0);
+                                   "http.status", "200", "grpc.status", "0")).isEqualTo(4.0);
+        assertThat(findServerMeter("UnaryCall", "response.length", COUNT,
+                                   "http.status", "200", "grpc.status", "2")).isEqualTo(3.0);
         assertThat(findServerMeter("UnaryCall", "response.length", TOTAL,
-                                   "http.status", "200")).isEqualTo(4.0 * 5 /* + 3 * 0 */);
-        assertThat(findClientMeter("UnaryCall", "response.length", COUNT)).isEqualTo(7.0);
-        assertThat(findClientMeter("UnaryCall", "response.length", TOTAL)).isEqualTo(4.0 * 5 /* + 3 * 0 */);
+                                   "http.status", "200", "grpc.status", "0")).isEqualTo(4.0 * 5);
+        // Failed calls do not have response length.
+
+        assertThat(findClientMeter("UnaryCall", "response.length", COUNT, "grpc.status", "0")).isEqualTo(4.0);
+        assertThat(findClientMeter("UnaryCall", "response.length", COUNT, "grpc.status", "2")).isEqualTo(3.0);
+        assertThat(findClientMeter("UnaryCall", "response.length", TOTAL, "grpc.status", "0"))
+                .isEqualTo(4.0 * 5);
+        // Failed calls do not have response length.
     }
 
     @Test
@@ -163,19 +178,19 @@ public class GrpcMetricsIntegrationTest {
         // Chance that get() returns NPE before the metric is first added, so ignore exceptions.
         given().ignoreExceptions().untilAsserted(() -> assertThat(
                 findServerMeter("UnaryCall2", "requests", COUNT,
-                                "result", "success", "http.status", "200")).isEqualTo(4.0));
+                                "result", "success", "http.status", "200", "grpc.status", "0")).isEqualTo(4.0));
         given().ignoreExceptions().untilAsserted(() -> assertThat(
                 findServerMeter("UnaryCall2", "requests", COUNT,
-                                "result", "failure", "http.status", "500")).isEqualTo(3.0));
+                                "result", "failure", "http.status", "500", "grpc.status", "2")).isEqualTo(3.0));
 
         assertThat(findServerMeter("UnaryCall2", "response.length", COUNT,
-                                   "http.status", "200")).isEqualTo(4.0);
+                                   "http.status", "200", "grpc.status", "0")).isEqualTo(4.0);
         assertThat(findServerMeter("UnaryCall2", "response.length", COUNT,
-                                   "http.status", "500")).isEqualTo(3.0);
+                                   "http.status", "500", "grpc.status", "2")).isEqualTo(3.0);
         assertThat(findServerMeter("UnaryCall2", "response.length", TOTAL,
-                                   "http.status", "200")).isEqualTo(0.0);
+                                   "http.status", "200", "grpc.status", "0")).isEqualTo(0.0);
         assertThat(findServerMeter("UnaryCall2", "response.length", TOTAL,
-                                   "http.status", "500")).isEqualTo(225.0);
+                                   "http.status", "500", "grpc.status", "2")).isEqualTo(225.0);
     }
 
     @Nullable
@@ -206,7 +221,7 @@ public class GrpcMetricsIntegrationTest {
                 Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
                        .factory(clientFactory)
                        .decorator(MetricCollectingClient.newDecorator(
-                               MeterIdPrefixFunction.ofDefault("client")))
+                               GrpcMeterIdPrefixFunction.of("client")))
                        .build(TestServiceBlockingStub.class);
 
         final SimpleRequest request =
@@ -225,7 +240,7 @@ public class GrpcMetricsIntegrationTest {
         final WebClient client =
                 Clients.builder(server.httpUri())
                        .factory(clientFactory)
-                       .addHttpHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
+                       .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
                        .build(WebClient.class);
 
         final SimpleRequest request =

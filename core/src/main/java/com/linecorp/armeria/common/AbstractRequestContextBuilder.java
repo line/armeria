@@ -80,9 +80,9 @@ public abstract class AbstractRequestContextBuilder {
     private EventLoop eventLoop;
     private ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
     @Nullable
-    private InetSocketAddress remoteAddress;
+    private SocketAddress remoteAddress;
     @Nullable
-    private InetSocketAddress localAddress;
+    private SocketAddress localAddress;
     @Nullable
     private SSLSession sslSession;
     private boolean requestStartTimeSet;
@@ -258,7 +258,7 @@ public abstract class AbstractRequestContextBuilder {
     /**
      * Returns the remote socket address of the connection.
      */
-    protected final InetSocketAddress remoteAddress() {
+    protected final SocketAddress remoteAddress() {
         if (remoteAddress == null) {
             if (server) {
                 remoteAddress = new InetSocketAddress(NetUtil.LOCALHOST, randomClientPort());
@@ -274,7 +274,7 @@ public abstract class AbstractRequestContextBuilder {
      * Sets the remote socket address of the connection. If not set, it is auto-generated with the localhost
      * IP address (e.g. {@code "127.0.0.1"} or {@code "::1"}).
      */
-    public AbstractRequestContextBuilder remoteAddress(InetSocketAddress remoteAddress) {
+    public AbstractRequestContextBuilder remoteAddress(SocketAddress remoteAddress) {
         this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
         return this;
     }
@@ -282,7 +282,7 @@ public abstract class AbstractRequestContextBuilder {
     /**
      * Returns the local socket address of the connection.
      */
-    protected final InetSocketAddress localAddress() {
+    protected final SocketAddress localAddress() {
         if (localAddress == null) {
             if (server) {
                 localAddress = new InetSocketAddress(NetUtil.LOCALHOST,
@@ -298,7 +298,7 @@ public abstract class AbstractRequestContextBuilder {
      * Sets the local socket address of the connection. If not set, it is auto-generated with the localhost
      * IP address (e.g. {@code "127.0.0.1"} or {@code "::1"}).
      */
-    public AbstractRequestContextBuilder localAddress(InetSocketAddress localAddress) {
+    public AbstractRequestContextBuilder localAddress(SocketAddress localAddress) {
         this.localAddress = requireNonNull(localAddress, "localAddress");
         return this;
     }
@@ -512,11 +512,11 @@ public abstract class AbstractRequestContextBuilder {
         private final ChannelId id = DefaultChannelId.newInstance();
         private final EventLoop eventLoop;
         private final ByteBufAllocator alloc;
-        private final InetSocketAddress remoteAddress;
-        private final InetSocketAddress localAddress;
+        private final SocketAddress remoteAddress;
+        private final SocketAddress localAddress;
 
         FakeChannel(EventLoop eventLoop, ByteBufAllocator alloc,
-                    InetSocketAddress remoteAddress, InetSocketAddress localAddress) {
+                    SocketAddress remoteAddress, SocketAddress localAddress) {
             this.eventLoop = eventLoop;
             this.alloc = alloc;
             this.remoteAddress = remoteAddress;

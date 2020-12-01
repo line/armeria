@@ -19,6 +19,8 @@ package com.linecorp.armeria.server;
 import java.time.Duration;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 interface ServiceConfigSetters {
@@ -78,17 +80,33 @@ interface ServiceConfigSetters {
     ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator);
 
     /**
-     * Decorates an {@link HttpService} with the given {@code decorators},
-     * as though they had been passed sequentially to {@link #decorator(Function)}.
+     * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
      *
      * @param decorators the {@link Function}s that decorate the {@link HttpService}
      */
-    default ServiceConfigSetters decorators(
-            Function<? super HttpService, ? extends HttpService>... decorators) {
-        ServiceConfigSetters ret = this;
-        for (Function<? super HttpService, ? extends HttpService> decorator : decorators) {
-            ret = ret.decorator(decorator);
-        }
-        return ret;
-    }
+    ServiceConfigSetters decorators(Function<? super HttpService, ? extends HttpService>... decorators);
+
+    /**
+     * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
+     *
+     * @param decorators the {@link Function}s that decorate the {@link HttpService}
+     */
+    ServiceConfigSetters decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators);
+
+    /**
+     * Sets the default value of the {@link RequestLog#serviceName()} property which is used when
+     * no service name was set via {@link RequestLogBuilder#name(String, String)}.
+     *
+     * @param defaultServiceName the default service name.
+     */
+    ServiceConfigSetters defaultServiceName(String defaultServiceName);
+
+    /**
+     * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
+     * {@link RequestLogBuilder#name(String, String)}.
+     *
+     * @param defaultLogName the default log name.
+     */
+    ServiceConfigSetters defaultLogName(String defaultLogName);
 }

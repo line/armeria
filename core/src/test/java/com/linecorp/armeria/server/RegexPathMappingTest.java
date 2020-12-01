@@ -26,13 +26,6 @@ import org.junit.jupiter.api.Test;
 class RegexPathMappingTest {
 
     @Test
-    void loggerAndMetricName() throws Exception {
-        final RegexPathMapping regexPathMapping = new RegexPathMapping(Pattern.compile("foo/bar"));
-        assertThat(regexPathMapping.loggerName()).isEqualTo("regex.foo_bar");
-        assertThat(regexPathMapping.meterTag()).isEqualTo("regex:foo/bar");
-    }
-
-    @Test
     void patternString() {
         final RegexPathMapping regexPathMapping1 = new RegexPathMapping(Pattern.compile("foo/bar"));
         assertThat(regexPathMapping1.patternString()).isEqualTo("foo/bar");

@@ -51,7 +51,7 @@ public final class ServiceInfo {
 
     private final String name;
     private final Set<MethodInfo> methods;
-    private final List<HttpHeaders> exampleHttpHeaders;
+    private final List<HttpHeaders> exampleHeaders;
     @Nullable
     private final String docString;
 
@@ -77,13 +77,12 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
-                       Iterable<HttpHeaders> exampleHttpHeaders,
+                       Iterable<HttpHeaders> exampleHeaders,
                        @Nullable String docString) {
 
         this.name = requireNonNull(name, "name");
         this.methods = mergeEndpoints(requireNonNull(methods));
-        this.exampleHttpHeaders = ImmutableList.copyOf(requireNonNull(exampleHttpHeaders,
-                                                                      "exampleHttpHeaders"));
+        this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
         this.docString = Strings.emptyToNull(docString);
     }
 
@@ -107,7 +106,7 @@ public final class ServiceInfo {
      * Merges the {@link MethodInfo}s with the same method name and {@link HttpMethod} pair
      * into a single {@link MethodInfo}. Note that only the {@link EndpointInfo}s are merged
      * because the {@link MethodInfo}s being merged always have the same
-     * {@code exampleHttpHeaders} and {@code exampleRequests}.
+     * {@code exampleHeaders} and {@code exampleRequests}.
      */
     @VisibleForTesting
     static Set<MethodInfo> mergeEndpoints(Iterable<MethodInfo> methodInfos) {
@@ -122,7 +121,7 @@ public final class ServiceInfo {
                             Sets.union(value.endpoints(), methodInfo.endpoints());
                     return new MethodInfo(value.name(), value.returnTypeSignature(),
                                           value.parameters(), value.exceptionTypeSignatures(),
-                                          endpointInfos, value.exampleHttpHeaders(),
+                                          endpointInfos, value.exampleHeaders(),
                                           value.exampleRequests(), value.examplePaths(), value.exampleQueries(),
                                           value.httpMethod(), value.docString());
                 }
@@ -172,8 +171,8 @@ public final class ServiceInfo {
      * Returns the example HTTP headers of the service.
      */
     @JsonProperty
-    public List<HttpHeaders> exampleHttpHeaders() {
-        return exampleHttpHeaders;
+    public List<HttpHeaders> exampleHeaders() {
+        return exampleHeaders;
     }
 
     @Override
@@ -198,10 +197,10 @@ public final class ServiceInfo {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("name", name)
-                .add("methods", methods)
-                .add("exampleHttpHeaders", exampleHttpHeaders)
-                .add("docstring", docString)
-                .toString();
+                          .add("name", name)
+                          .add("methods", methods)
+                          .add("exampleHeaders", exampleHeaders)
+                          .add("docstring", docString)
+                          .toString();
     }
 }

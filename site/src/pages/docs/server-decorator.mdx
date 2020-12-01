@@ -61,7 +61,7 @@ public class AuthService extends SimpleDecoratingHttpService {
             return HttpResponse.of(HttpStatus.UNAUTHORIZED);
         }
 
-        HttpService delegate = delegate();
+        HttpService delegate = unwrap();
         return delegate.serve(ctx, req);
     }
 }
@@ -92,7 +92,7 @@ public class MyRpcService extends DecoratingService<RpcRequest, RpcResponse,
         // This method has been greatly simplified for easier understanding.
         // In reality, we will have to do this asynchronously.
         RpcRequest rpcReq = convertToRpcRequest(req);
-        RpcResponse rpcRes = delegate().serve(ctx, rpcReq);
+        RpcResponse rpcRes = unwrap().serve(ctx, rpcReq);
         return convertToHttpResponse(rpcRes);
     }
 

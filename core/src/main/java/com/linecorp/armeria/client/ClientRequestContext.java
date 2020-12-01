@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
@@ -297,8 +296,8 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Returns the amount of time allowed until receiving the {@link Response} completely
-     * since the transfer of the {@link Response} started. This value is initially set from
-     * {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
+     * since the transfer of the {@link Response} started or the {@link Request} was fully sent. This value is
+     * initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      */
     long responseTimeoutMillis();
 
@@ -315,6 +314,7 @@ public interface ClientRequestContext extends RequestContext {
      * This value is initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <table>
+     * <caption>timeout mode description</caption>
      * <tr><th>Timeout mode</th><th>description</th></tr>
      * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
      *     <td>Sets a given amount of timeout from the current time.</td></tr>
@@ -374,6 +374,7 @@ public interface ClientRequestContext extends RequestContext {
      * This value is initially set from {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
      *
      * <table>
+     * <caption>timeout mode description</caption>
      * <tr><th>Timeout mode</th><th>description</th></tr>
      * <tr><td>{@link TimeoutMode#SET_FROM_NOW}</td>
      *     <td>Sets a given amount of timeout from the current time.</td></tr>
@@ -427,52 +428,56 @@ public interface ClientRequestContext extends RequestContext {
     }
 
     /**
-     * Returns {@link Response} timeout handler which is executed when
-     * the {@link Response} is not completely received within the allowed {@link #responseTimeoutMillis()}
-     * or the default {@link ClientOptions#RESPONSE_TIMEOUT_MILLIS}.
-     *
-     * @deprecated Use {@link #whenResponseTimingOut()} or {@link #whenResponseTimedOut()}
+     * Returns a {@link CompletableFuture} which is completed with a {@link Throwable} cancellation cause when
+     * the {@link ClientRequestContext} is about to get cancelled. If the response is handled successfully
+     * without cancellation, the {@link CompletableFuture} won't complete.
      */
-    @Deprecated
-    @Nullable
-    default Runnable responseTimeoutHandler() {
-        return null;
-    }
+    CompletableFuture<Throwable> whenResponseCancelling();
 
     /**
-     * Sets a handler to run when the response times out. {@code responseTimeoutHandler} must abort
-     * the response, e.g., by calling {@link HttpResponseWriter#abort(Throwable)}.
-     * If not set, the response will be closed with {@link ResponseTimeoutException}.
-     *
-     * <p>For example,
-     * <pre>{@code
-     * HttpResponseWriter res = HttpResponse.streaming();
-     * ctx.setResponseTimeoutHandler(() -> {
-     *    res.abort(new IllegalStateException("Server is in a bad state."));
-     * });
-     * ...
-     * }</pre>
-     *
-     * @deprecated Use {@link #whenResponseTimingOut()} or {@link #whenResponseTimedOut()}
+     * Returns a {@link CompletableFuture} which is completed with a {@link Throwable} cancellation cause after
+     * the {@link ClientRequestContext} has been cancelled. {@link #isCancelled()} will always return
+     * {@code true} when the returned {@link CompletableFuture} is completed. If the response is handled
+     * successfully without cancellation, the {@link CompletableFuture} won't complete.
      */
-    @Deprecated
-    default void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
-        whenResponseTimingOut().thenRun(responseTimeoutHandler);
-    }
+    CompletableFuture<Throwable> whenResponseCancelled();
 
     /**
-     * Returns a {@link CompletableFuture} which is completed when {@link ClientRequestContext} is about to
-     * get timed out.
+     * Returns a {@link CompletableFuture} which is completed when the {@link ClientRequestContext} is about to
+     * get timed out. If the response is handled successfully or not cancelled by timeout, the
+     * {@link CompletableFuture} won't complete.
+     *
+     * @deprecated Use {@link #whenResponseCancelling()} instead.
      */
+    @Deprecated
     CompletableFuture<Void> whenResponseTimingOut();
 
     /**
-     * Returns a {@link CompletableFuture} which is completed after {@link ClientRequestContext} has been
-     * timed out (e.g., when the corresponding request passes a deadline).
-     * {@link #isTimedOut()} will always return {@code true} when the returned
-     * {@link CompletableFuture} is completed.
+     * Returns a {@link CompletableFuture} which is completed after the {@link ClientRequestContext} has been
+     * timed out. {@link #isTimedOut()} will always return {@code true} when the returned
+     * {@link CompletableFuture} is completed. If the response is handled successfully or not cancelled by
+     * timeout, the {@link CompletableFuture} won't complete.
+     *
+     * @deprecated Use {@link #whenResponseCancelled()} instead.
      */
+    @Deprecated
     CompletableFuture<Void> whenResponseTimedOut();
+
+    /**
+     * Cancels the response. Shortcut for {@code cancel(ResponseCancellationException.get())}.
+     */
+    @Override
+    default void cancel() {
+        cancel(ResponseCancellationException.get());
+    }
+
+    /**
+     * Times out the response. Shortcut for {@code cancel(ResponseTimeoutException.get())}.
+     */
+    @Override
+    default void timeoutNow() {
+        cancel(ResponseTimeoutException.get());
+    }
 
     /**
      * Returns the maximum length of the received {@link Response}.

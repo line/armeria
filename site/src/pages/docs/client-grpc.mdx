@@ -45,7 +45,7 @@ assert reply.getMessage().equals("Hello, Armerian World!");
 ```
 
 Note that we added the serialization format of the call using the `+` operator in the scheme part of the URI.
-Because we are calling a [gRPC] server, we can choose: `gproto` or `gjson`. If you are using [gRPC-web], 
+Because we are calling a [gRPC] server, we can choose: `gproto` or `gjson`. If you are using [gRPC-Web],
 you can use `gproto-web`, `gproto-web-text` or `gjson-web`.
 
 Since we specified `HelloServiceBlockingStub.class` as the client type, `Clients.newClient()` will return a

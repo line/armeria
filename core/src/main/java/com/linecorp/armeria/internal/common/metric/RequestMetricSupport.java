@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.common.metric;
 
 import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSummary;
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
-import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -26,12 +25,8 @@ import java.util.concurrent.atomic.LongAdder;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
@@ -44,7 +39,6 @@ import com.linecorp.armeria.server.RequestTimeoutException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.netty.util.AttributeKey;
 
@@ -73,30 +67,11 @@ public final class RequestMetricSupport {
            .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server));
     }
 
-    /**
-     * Appends {@link HttpStatus} to {@link Tag}.
-     */
-    public static void appendHttpStatusTag(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
-        requireNonNull(tagListBuilder, "tagListBuilder");
-        requireNonNull(log, "log");
-        // Add the 'httpStatus' tag.
-        final HttpStatus status;
-        if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-            status = log.responseHeaders().status();
-        } else {
-            status = HttpStatus.UNKNOWN;
-        }
-        tagListBuilder.add(Tag.of(Flags.useLegacyMeterNames() ? "httpStatus" : "http.status",
-                                  status.codeAsText()));
-    }
-
     private static void onRequest(RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix activeRequestsId =
-                meterIdPrefixFunction.activeRequestPrefix(registry, log)
-                                     .append(Flags.useLegacyMeterNames() ? "activeRequests"
-                                                                         : "active.requests");
+                meterIdPrefixFunction.activeRequestPrefix(registry, log).append("active.requests");
 
         final ActiveRequestMetrics activeRequestMetrics = MicrometerUtil.register(
                 registry, activeRequestsId, ActiveRequestMetrics.class,
@@ -259,21 +234,11 @@ public final class RequestMetricSupport {
             success = parent.counter(requests, idPrefix.tags("result", "success"));
             failure = parent.counter(requests, idPrefix.tags("result", "failure"));
 
-            requestDuration = newTimer(
-                    parent, idPrefix.name(Flags.useLegacyMeterNames() ? "requestDuration"
-                                                                      : "request.duration"), idPrefix.tags());
-            requestLength = newDistributionSummary(
-                    parent, idPrefix.name(Flags.useLegacyMeterNames() ? "requestLength"
-                                                                      : "request.length"), idPrefix.tags());
-            responseDuration = newTimer(
-                    parent, idPrefix.name(Flags.useLegacyMeterNames() ? "responseDuration"
-                                                                      : "response.duration"), idPrefix.tags());
-            responseLength = newDistributionSummary(
-                    parent, idPrefix.name(Flags.useLegacyMeterNames() ? "responseLength"
-                                                                      : "response.length"), idPrefix.tags());
-            totalDuration = newTimer(
-                    parent, idPrefix.name(Flags.useLegacyMeterNames() ? "totalDuration"
-                                                                      : "total.duration"), idPrefix.tags());
+            requestDuration = newTimer(parent, idPrefix.name("request.duration"), idPrefix.tags());
+            requestLength = newDistributionSummary(parent, idPrefix.name("request.length"), idPrefix.tags());
+            responseDuration = newTimer(parent, idPrefix.name("response.duration"), idPrefix.tags());
+            responseLength = newDistributionSummary(parent, idPrefix.name("response.length"), idPrefix.tags());
+            totalDuration = newTimer(parent, idPrefix.name("total.duration"), idPrefix.tags());
         }
 
         @Override
@@ -339,21 +304,13 @@ public final class RequestMetricSupport {
             this.idPrefix = idPrefix;
 
             connectionAcquisitionDuration = newTimer(
-                    parent, idPrefix.name(Flags.useLegacyMeterNames() ? "connectionAcquisitionDuration"
-                                                                      : "connection.acquisition.duration"),
-                    idPrefix.tags());
+                    parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags());
             dnsResolutionDuration = newTimer(
-                    parent, idPrefix.name(Flags.useLegacyMeterNames() ? "dnsResolutionDuration"
-                                                                      : "dns.resolution.duration"),
-                    idPrefix.tags());
+                    parent, idPrefix.name("dns.resolution.duration"), idPrefix.tags());
             socketConnectDuration = newTimer(
-                    parent, idPrefix.name(Flags.useLegacyMeterNames() ? "socketConnectDuration"
-                                                                      : "socket.connect.duration"),
-                    idPrefix.tags());
+                    parent, idPrefix.name("socket.connect.duration"), idPrefix.tags());
             pendingAcquisitionDuration = newTimer(
-                    parent, idPrefix.name(Flags.useLegacyMeterNames() ? "pendingAcquisitionDuration"
-                                                                      : "pending.acquisition.duration"),
-                    idPrefix.tags());
+                    parent, idPrefix.name("pending.acquisition.duration"), idPrefix.tags());
 
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
@@ -367,10 +324,7 @@ public final class RequestMetricSupport {
                 return actualRequests;
             }
 
-            final Counter counter =
-                    parent.counter(idPrefix.name(Flags.useLegacyMeterNames() ? "actualRequests"
-                                                                             : "actual.requests"),
-                                   idPrefix.tags());
+            final Counter counter = parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
             if (actualRequestsUpdater.compareAndSet(this, null, counter)) {
                 return counter;
             }

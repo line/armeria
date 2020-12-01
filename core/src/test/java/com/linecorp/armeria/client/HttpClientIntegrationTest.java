@@ -413,8 +413,8 @@ class HttpClientIntegrationTest {
 
     private static void testEndpointWithAlternateAuthority(EndpointGroup group) {
         final WebClient client = WebClient.builder(SessionProtocol.HTTP, group)
-                                          .setHttpHeader(HttpHeaderNames.AUTHORITY,
-                                                         "255.255.255.255.xip.io")
+                                          .setHeader(HttpHeaderNames.AUTHORITY,
+                                                     "255.255.255.255.xip.io")
                                           .build();
 
         final AggregatedHttpResponse res = client.get("/hello/world").aggregate().join();
@@ -451,7 +451,7 @@ class HttpClientIntegrationTest {
     private static void testHeaderOverridableByClientOption(String path, AsciiString headerName,
                                                             String headerValue) throws Exception {
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .setHttpHeader(headerName, headerValue)
+                                          .setHeader(headerName, headerValue)
                                           .build();
 
         final AggregatedHttpResponse response = client.get(path).aggregate().get();
@@ -649,7 +649,7 @@ class HttpClientIntegrationTest {
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test
@@ -665,7 +665,7 @@ class HttpClientIntegrationTest {
                 AggregatedHttpRequest.of(HttpMethod.GET, "/hello/world")).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test
@@ -681,7 +681,7 @@ class HttpClientIntegrationTest {
                 AggregatedHttpRequest.of(HttpMethod.GET, "/hello/world")).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @ParameterizedTest

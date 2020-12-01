@@ -52,7 +52,7 @@ public final class GrpcTrailersUtil {
     }
 
     /**
-     * Serializes the specified {@link HttpHeaders} to send as a body in grpc-web.
+     * Serializes the specified {@link HttpHeaders} to send as a body in gRPC-Web.
      */
     public static ByteBuf serializeTrailersAsMessage(ByteBufAllocator alloc, HttpHeaders trailers) {
         final ByteBuf serialized = alloc.buffer();

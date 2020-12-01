@@ -62,13 +62,8 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     final void cleanup(SubscriptionImpl subscription) {
         final CloseEvent closeEvent = this.closeEvent;
-        this.closeEvent = null;
-        if (closeEvent != null) {
-            notifySubscriberOfCloseEvent(subscription, closeEvent);
-            // Close event will cleanup.
-            return;
-        }
-        cleanupObjects();
+        assert closeEvent != null;
+        notifySubscriberOfCloseEvent(subscription, closeEvent);
     }
 
     final int requested() {
@@ -84,6 +79,12 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
         final SubscriptionImpl subscription = this.subscription;
         // A user cannot access subscription without subscribing.
         assert subscription != null;
+
+        if (closeEvent != null) {
+            // The subscription has been closed. An additional request should be ignored.
+            // https://github.com/reactive-streams/reactive-streams-jvm#3.6
+            return;
+        }
 
         if (subscription.needsDirectInvocation()) {
             doRequest(subscription, n);
@@ -137,7 +138,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
-            cleanup(subscription);
+            cleanupObjects();
         }
     }
 

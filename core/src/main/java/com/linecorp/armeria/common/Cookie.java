@@ -474,6 +474,13 @@ public interface Cookie extends Comparable<Cookie> {
     String sameSite();
 
     /**
+     * Returns whether this {@link Cookie} should only match its original host in domain matching. If this
+     * returns {@code true}, should {@link #domain()} returns a non-null value, it's going to be the original
+     * request host.
+     */
+    boolean isHostOnly();
+
+    /**
      * Encodes this {@link Cookie} into a single {@code "Cookie"} header value.
      * Note that you must use {@link #toCookieHeader(Collection)} when encoding more than one {@link Cookie},
      * because it is prohibited to send multiple {@code "Cookie"} headers in an HTTP request,

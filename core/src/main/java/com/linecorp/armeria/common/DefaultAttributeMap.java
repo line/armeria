@@ -40,7 +40,6 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -132,19 +131,13 @@ final class DefaultAttributeMap {
     }
 
     @Nullable
-    <T> T setAttrIfAbsent(AttributeKey<T> key, @Nullable T value) {
-        final DefaultAttribute<T> result = setAttr(key, value, true);
-        if (result.getValue() != value) {
-            return result.getValue();
-        }
-        return null;
+    @SuppressWarnings("unchecked")
+    <T> T setAttr(AttributeKey<T> key, @Nullable T value) {
+        return (T) setAttr(key, value, SetAttrMode.OLD_VALUE);
     }
 
-    <T> void setAttr(AttributeKey<T> key, @Nullable T value) {
-        setAttr(key, value, false);
-    }
-
-    private <T> DefaultAttribute<T> setAttr(AttributeKey<T> key, @Nullable T value, boolean setIfAbsent) {
+    @Nullable
+    private <T> Object setAttr(AttributeKey<T> key, @Nullable T value, SetAttrMode mode) {
         requireNonNull(key, "key");
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = attributes();
 
@@ -160,7 +153,7 @@ final class DefaultAttributeMap {
             head.next = attr;
             if (attributes.compareAndSet(i, null, head)) {
                 // We were able to add it so finish the job.
-                return attr;
+                return getSetAttrResultForNewAttr(mode, attr);
             }
 
             head = attributes.get(i);
@@ -173,22 +166,45 @@ final class DefaultAttributeMap {
                 if (next != null && next.key == key) {
                     @SuppressWarnings("unchecked")
                     final DefaultAttribute<T> attr = (DefaultAttribute<T>) next;
-                    if (setIfAbsent && next.getValue() != null) {
-                        return attr;
-                    }
-
-                    attr.setValue(value);
-                    return attr;
+                    final T oldValue = attr.setValue(value);
+                    return getSetAttrResultForExistingAttr(mode, attr, oldValue);
                 }
 
                 if (next == null) {
                     final DefaultAttribute<T> attr = new DefaultAttribute<>(key, value);
                     curr.next = attr;
-                    return attr;
+                    return getSetAttrResultForNewAttr(mode, attr);
                 }
 
                 curr = next;
             }
+        }
+    }
+
+    @Nullable
+    private <T> Object getSetAttrResultForNewAttr(SetAttrMode mode, DefaultAttribute<T> attr) {
+        switch (mode) {
+            case OLD_VALUE:
+                return rootAttributeMap != null ? rootAttributeMap.ownAttr(attr.getKey()) : null;
+            case CUR_ATTR:
+                return attr;
+            default:
+                // Never reaches here.
+                throw new Error();
+        }
+    }
+
+    @Nullable
+    private static <T> Object getSetAttrResultForExistingAttr(SetAttrMode mode, DefaultAttribute<T> attr,
+                                                              @Nullable T oldValue) {
+        switch (mode) {
+            case OLD_VALUE:
+                return oldValue;
+            case CUR_ATTR:
+                return attr;
+            default:
+                // Never reaches here.
+                throw new Error();
         }
     }
 
@@ -203,52 +219,6 @@ final class DefaultAttributeMap {
         }
         assert attributes != null;
         return attributes;
-    }
-
-    @Nullable
-    <T> T computeAttrIfAbsent(
-            AttributeKey<T> key, Function<? super AttributeKey<T>, ? extends T> mappingFunction) {
-        requireNonNull(key, "key");
-        requireNonNull(mappingFunction, "mappingFunction");
-        final AtomicReferenceArray<DefaultAttribute<?>> attributes = attributes();
-
-        final int i = index(key);
-        DefaultAttribute<?> head = attributes.get(i);
-        if (head == null) {
-            head = new DefaultAttribute<>();
-            if (!attributes.compareAndSet(i, null, head)) {
-                head = attributes.get(i);
-            }
-        }
-
-        synchronized (head) {
-            DefaultAttribute<?> curr = head;
-            for (;;) {
-                final DefaultAttribute<?> next = curr.next;
-                if (next != null && next.key == key) {
-                    @SuppressWarnings("unchecked")
-                    final DefaultAttribute<T> attr = (DefaultAttribute<T>) next;
-                    final T current = attr.getValue();
-                    if (current != null) {
-                        return current;
-                    }
-
-                    final T computed = mappingFunction.apply(key);
-                    attr.setValue(computed);
-                    return computed;
-                }
-
-                if (next == null) {
-                    final T computed = mappingFunction.apply(key);
-                    if (computed != null) {
-                        curr.next = new DefaultAttribute<>(key, computed);
-                    }
-                    return computed;
-                }
-
-                curr = next;
-            }
-        }
     }
 
     Iterator<Entry<AttributeKey<?>, Object>> attrs() {
@@ -295,6 +265,11 @@ final class DefaultAttributeMap {
     @Override
     public String toString() {
         return Iterators.toString(attrs());
+    }
+
+    private enum SetAttrMode {
+        OLD_VALUE,
+        CUR_ATTR
     }
 
     @VisibleForTesting
@@ -414,8 +389,8 @@ final class DefaultAttributeMap {
             return rootAttrs.hasNext();
         }
 
-        @SuppressWarnings("unchecked")
         @Override
+        @SuppressWarnings({ "unchecked", "rawtypes" })
         public Entry<AttributeKey<?>, Object> next() {
             return new CopyOnWriteAttribute(rootAttrs.next());
         }
@@ -506,7 +481,10 @@ final class DefaultAttributeMap {
         public T setValue(T value) {
             final Entry<AttributeKey<T>, T> childAttr = this.childAttr;
             if (childAttr == null) {
-                this.childAttr = setAttr(rootAttr.getKey(), value, false);
+                @SuppressWarnings("unchecked")
+                final Entry<AttributeKey<T>, T> newChildAttr = (Entry<AttributeKey<T>, T>)
+                        setAttr(rootAttr.getKey(), value, SetAttrMode.CUR_ATTR);
+                this.childAttr = newChildAttr;
                 return rootAttr.getValue();
             }
 

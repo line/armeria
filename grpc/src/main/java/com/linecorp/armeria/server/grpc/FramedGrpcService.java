@@ -48,7 +48,8 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -89,6 +90,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final Map<String, GrpcJsonMarshaller> jsonMarshallers;
     @Nullable
     private final ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
+    @Nullable
+    private final GrpcStatusFunction statusFunction;
     private final int maxOutboundMessageSizeBytes;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
@@ -106,6 +109,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       Set<SerializationFormat> supportedSerializationFormats,
                       Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory,
                       @Nullable ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor,
+                      @Nullable GrpcStatusFunction statusFunction,
                       int maxOutboundMessageSizeBytes,
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
@@ -123,9 +127,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             jsonMarshallers =
                     registry.services().stream()
                             .map(ServerServiceDefinition::getServiceDescriptor)
+                            .distinct()
                             .collect(toImmutableMap(ServiceDescriptor::getName, jsonMarshallerFactory));
         }
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
+        this.statusFunction = statusFunction;
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
@@ -192,13 +198,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     return HttpResponse.of(
                             (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    GrpcStatus.fromThrowable(e), new Metadata()));
+                                    GrpcStatus.fromThrowable(statusFunction, e), new Metadata()));
                 }
             }
         }
 
-        final int methodIndex = methodName.lastIndexOf('/') + 1;
-        ctx.logBuilder().name(method.getMethodDescriptor().getServiceName(), methodName.substring(methodIndex));
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
                                RequestLogProperty.RESPONSE_CONTENT);
 
@@ -206,8 +210,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
-            ctx.whenRequestTimingOut().thenRun(() -> call.close(Status.CANCELLED, new Metadata()));
-            req.subscribe(call.messageReader(), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+            ctx.whenRequestCancelling().thenRun(() -> call.close(Status.CANCELLED, new Metadata()));
+            req.subscribe(call.messageDeframer(), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
         }
         return res;
     }
@@ -234,13 +238,14 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 jsonMarshallers.get(methodDescriptor.getServiceName()),
                 unsafeWrapRequestBuffers,
                 useBlockingTaskExecutor,
-                defaultHeaders.get(serializationFormat));
+                defaultHeaders.get(serializationFormat),
+                statusFunction);
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = ctx.push()) {
             listener = methodDef.getServerCallHandler().startCall(call, MetadataUtil.copyFromHeaders(headers));
         } catch (Throwable t) {
             call.setListener(new EmptyListener<>());
-            call.close(GrpcStatus.fromThrowable(t), new Metadata());
+            call.close(GrpcStatus.fromThrowable(statusFunction, t), new Metadata());
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
                     " - this is likely a bug in the stub implementation.");
@@ -258,7 +263,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public void serviceAdded(ServiceConfig cfg) {
-        if (maxInboundMessageSizeBytes == ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE) {
+        if (maxInboundMessageSizeBytes == ArmeriaMessageDeframerHandler.NO_MAX_INBOUND_MESSAGE_SIZE) {
             maxInboundMessageSizeBytes = (int) Math.min(cfg.maxRequestLength(), Integer.MAX_VALUE);
         }
 
@@ -344,7 +349,16 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public List<ServerServiceDefinition> services() {
-        return registry.services();
+        final List<ServerServiceDefinition> services = registry.services();
+        assert services instanceof ImmutableList;
+        return services;
+    }
+
+    @Override
+    public Map<String, ServerMethodDefinition<?, ?>> methods() {
+        final Map<String, ServerMethodDefinition<?, ?>> methods = registry.methods();
+        assert methods instanceof ImmutableMap;
+        return methods;
     }
 
     @Override

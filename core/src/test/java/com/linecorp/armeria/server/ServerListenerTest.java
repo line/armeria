@@ -43,19 +43,19 @@ public class ServerListenerTest {
             final ServerListener sl =
                     ServerListener.builder()
                                   // add a callback.
-                                  .addStartingCallback((Server server) ->
+                                  .whenStarting((Server server) ->
                                           STARTING_AT = System.currentTimeMillis())
                                   // add multiple callbacks, one by one.
-                                  .addStartedCallback((Server server) ->
+                                  .whenStarted((Server server) ->
                                           STARTED_AT = -1)
-                                  .addStartedCallback((Server server) ->
+                                  .whenStarted((Server server) ->
                                           STARTED_AT = System.currentTimeMillis())
                                   // add multiple callbacks at once, with vargs api.
-                                  .addStoppingCallbacks((Server server) ->
+                                  .whenStopping((Server server) ->
                                                     STOPPING_AT = System.currentTimeMillis(),
-                                                    (Server server) -> STARTING_AT = 0L)
+                                                (Server server) -> STARTING_AT = 0L)
                                   // add multiple callbacks at once, with iterable api.
-                                  .addStoppedCallbacks(
+                                  .whenStopped(
                                     Lists.newArrayList((Server server) ->
                                                     STOPPED_AT = System.currentTimeMillis(),
                                                     (Server server) -> STARTED_AT = 0L))

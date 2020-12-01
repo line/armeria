@@ -126,6 +126,11 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientOptionsBuilder clearDecorators() {
+        return (ClientOptionsBuilder) super.clearDecorators();
+    }
+
+    @Override
     public ClientOptionsBuilder rpcDecorator(
             Function<? super RpcClient, ? extends RpcClient> decorator) {
         return (ClientOptionsBuilder) super.rpcDecorator(decorator);
@@ -137,25 +142,25 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
-    public ClientOptionsBuilder addHttpHeader(CharSequence name, Object value) {
-        return (ClientOptionsBuilder) super.addHttpHeader(name, value);
+    public ClientOptionsBuilder addHeader(CharSequence name, Object value) {
+        return (ClientOptionsBuilder) super.addHeader(name, value);
     }
 
     @Override
-    public ClientOptionsBuilder addHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (ClientOptionsBuilder) super.addHttpHeaders(httpHeaders);
+    public ClientOptionsBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (ClientOptionsBuilder) super.addHeaders(headers);
     }
 
     @Override
-    public ClientOptionsBuilder setHttpHeader(CharSequence name, Object value) {
-        return (ClientOptionsBuilder) super.setHttpHeader(name, value);
+    public ClientOptionsBuilder setHeader(CharSequence name, Object value) {
+        return (ClientOptionsBuilder) super.setHeader(name, value);
     }
 
     @Override
-    public ClientOptionsBuilder setHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (ClientOptionsBuilder) super.setHttpHeaders(httpHeaders);
+    public ClientOptionsBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (ClientOptionsBuilder) super.setHeaders(headers);
     }
 
     @Override

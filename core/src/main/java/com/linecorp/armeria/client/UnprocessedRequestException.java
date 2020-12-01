@@ -47,11 +47,8 @@ public final class UnprocessedRequestException extends RuntimeException {
 
     /**
      * Creates a new instance with the specified {@code cause}.
-     *
-     * @deprecated Use {@link #of(Throwable)}.
      */
-    @Deprecated
-    public UnprocessedRequestException(Throwable cause) {
+    private UnprocessedRequestException(Throwable cause) {
         super(requireNonNull(cause, "cause").toString(), cause);
     }
 

@@ -41,9 +41,9 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
-import com.linecorp.armeria.internal.common.TimeoutScheduler.TimeoutTask;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.ChannelFuture;
@@ -110,8 +110,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             return;
         }
 
-        // Schedule the initial request timeout with the timeoutNanos in the TimeoutScheduler
-        reqCtx.requestTimeoutScheduler().init(reqCtx.eventLoop(), newTimeoutTask(), 0);
+        // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
+        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(), 0,
+                                                   RequestTimeoutException.get());
 
         // Start consuming.
         subscription.request(1);
@@ -256,7 +257,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         if (cancel && subscription != null) {
             subscription.cancel();
         }
-        reqCtx.requestTimeoutScheduler().clearTimeout(false);
+        reqCtx.requestCancellationScheduler().clearTimeout(false);
         final State oldState = state;
         state = State.DONE;
         return oldState;
@@ -295,7 +296,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
     @Override
     public void onComplete() {
-        if (reqCtx.requestTimeoutScheduler().isTimedOut()) {
+        if (reqCtx.requestCancellationScheduler().isFinished()) {
             // We have already returned a failed response due to a timeout.
             return;
         }
@@ -327,7 +328,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         if (tryComplete()) {
             setDone(true);
             logBuilder().endResponse(cause);
-            reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+            final ServiceConfig config = reqCtx.config();
+            if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
+                reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
+            }
         }
     }
 
@@ -391,7 +395,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     // Write an access log always with a cause. Respect the first specified cause.
                     if (tryComplete()) {
                         logBuilder().endResponse(cause);
-                        reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+                        final ServiceConfig config = reqCtx.config();
+                        if (config.transientServiceOptions().contains(
+                                TransientServiceOption.WITH_ACCESS_LOGGING)) {
+                            reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
+                        }
                     }
                 }
             });
@@ -399,20 +407,19 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         ctx.flush();
     }
 
-    private TimeoutTask newTimeoutTask() {
-        return new TimeoutTask() {
+    private CancellationTask newCancellationTask() {
+        return new CancellationTask() {
             @Override
             public boolean canSchedule() {
                 return state != State.DONE;
             }
 
             @Override
-            public void run() {
+            public void run(Throwable cause) {
                 // This method will be invoked only when `canSchedule()` returns true.
                 assert state != State.DONE;
 
-                failAndRespond(RequestTimeoutException.get(), serviceUnavailableResponse,
-                               Http2Error.INTERNAL_ERROR, true);
+                failAndRespond(cause, serviceUnavailableResponse, Http2Error.INTERNAL_ERROR, true);
             }
         };
     }
@@ -494,7 +501,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             if (endOfStream) {
                 if (tryComplete()) {
                     logBuilder().endResponse();
-                    reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
+                    final ServiceConfig config = reqCtx.config();
+                    if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
+                        reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
+                    }
                 }
             } else {
                 assert subscription != null;

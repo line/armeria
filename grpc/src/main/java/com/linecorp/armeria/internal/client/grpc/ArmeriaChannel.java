@@ -15,11 +15,11 @@
  */
 package com.linecorp.armeria.internal.client.grpc;
 
+import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
+
 import java.net.URI;
 
 import javax.annotation.Nullable;
-
-import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
@@ -92,16 +92,13 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                                   HttpHeaderNames.TE, HttpHeaderValues.TRAILERS));
         final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req);
 
-        final String fullMethodName = method.getFullMethodName();
-        final int methodIndex = fullMethodName.lastIndexOf('/') + 1;
-        ctx.logBuilder().name(method.getServiceName(), fullMethodName.substring(methodIndex));
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
                                RequestLogProperty.RESPONSE_CONTENT);
 
         final ClientOptions options = options();
         final int maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);
-        final int maxInboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES);
+        final int maxInboundMessageSizeBytes = maxInboundMessageSizeBytes(options);
         final boolean unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
 
         final HttpClient client;
@@ -120,8 +117,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 req,
                 method,
                 maxOutboundMessageSizeBytes,
-                maxInboundMessageSizeBytes > 0 ? maxInboundMessageSizeBytes
-                                               : Ints.saturatedCast(options.maxResponseLength()),
+                maxInboundMessageSizeBytes,
                 callOptions,
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),

@@ -43,7 +43,7 @@ public class AbstractClientOptionsBuilder {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
     private final ClientDecorationBuilder decoration = ClientDecoration.builder();
-    private final HttpHeadersBuilder httpHeaders = HttpHeaders.builder();
+    private final HttpHeadersBuilder headers = HttpHeaders.builder();
 
     /**
      * Creates a new instance.
@@ -106,9 +106,9 @@ public class AbstractClientOptionsBuilder {
         final ClientOption<?> opt = optionValue.option();
         if (opt == ClientOptions.DECORATION) {
             decoration.add((ClientDecoration) optionValue.value());
-        } else if (opt == ClientOptions.HTTP_HEADERS) {
+        } else if (opt == ClientOptions.HEADERS) {
             final HttpHeaders h = (HttpHeaders) optionValue.value();
-            setHttpHeaders(h);
+            setHeaders(h);
         } else {
             options.put(opt, optionValue);
         }
@@ -237,6 +237,14 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
+     * Clears all HTTP-level and RPC-level decorators set so far.
+     */
+    public AbstractClientOptionsBuilder clearDecorators() {
+        decoration.clear();
+        return this;
+    }
+
+    /**
      * Adds the specified RPC-level {@code decorator}.
      *
      * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
@@ -260,40 +268,40 @@ public class AbstractClientOptionsBuilder {
     /**
      * Adds the specified HTTP header.
      */
-    public AbstractClientOptionsBuilder addHttpHeader(CharSequence name, Object value) {
+    public AbstractClientOptionsBuilder addHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        httpHeaders.addObject(HttpHeaderNames.of(name), value);
+        headers.addObject(HttpHeaderNames.of(name), value);
         return this;
     }
 
     /**
      * Adds the specified HTTP headers.
      */
-    public AbstractClientOptionsBuilder addHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        requireNonNull(httpHeaders, "httpHeaders");
-        this.httpHeaders.addObject(httpHeaders);
+    public AbstractClientOptionsBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        requireNonNull(headers, "headers");
+        this.headers.addObject(headers);
         return this;
     }
 
     /**
      * Sets the specified HTTP header.
      */
-    public AbstractClientOptionsBuilder setHttpHeader(CharSequence name, Object value) {
+    public AbstractClientOptionsBuilder setHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        httpHeaders.setObject(HttpHeaderNames.of(name), value);
+        headers.setObject(HttpHeaderNames.of(name), value);
         return this;
     }
 
     /**
      * Sets the specified HTTP headers.
      */
-    public AbstractClientOptionsBuilder setHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        requireNonNull(httpHeaders, "httpHeaders");
-        this.httpHeaders.setObject(httpHeaders);
+    public AbstractClientOptionsBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        requireNonNull(headers, "headers");
+        this.headers.setObject(headers);
         return this;
     }
 
@@ -304,7 +312,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(BasicToken token) {
         requireNonNull(token, "token");
-        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
         return this;
     }
 
@@ -314,7 +322,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(OAuth1aToken token) {
         requireNonNull(token, "token");
-        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
         return this;
     }
 
@@ -324,7 +332,7 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder auth(OAuth2Token token) {
         requireNonNull(token, "token");
-        httpHeaders.set(HttpHeaderNames.AUTHORIZATION, token.toHeaderValue());
+        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
         return this;
     }
 
@@ -345,7 +353,7 @@ public class AbstractClientOptionsBuilder {
         final int numOpts = optVals.size();
         final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + 2]);
         optValArray[numOpts] = ClientOptions.DECORATION.newValue(decoration.build());
-        optValArray[numOpts + 1] = ClientOptions.HTTP_HEADERS.newValue(httpHeaders.build());
+        optValArray[numOpts + 1] = ClientOptions.HEADERS.newValue(headers.build());
 
         if (baseOptions != null) {
             return ClientOptions.of(baseOptions, optValArray);

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.server.RouteUtil.ROOT_LOGGER_NAME;
-
 import java.util.List;
 import java.util.Set;
 
@@ -40,16 +38,6 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     @Override
     public Set<String> paramNames() {
         return ImmutableSet.of();
-    }
-
-    @Override
-    public String loggerName() {
-        return ROOT_LOGGER_NAME;
-    }
-
-    @Override
-    public String meterTag() {
-        return "catch-all";
     }
 
     @Override

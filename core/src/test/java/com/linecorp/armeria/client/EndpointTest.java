@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.net.StandardProtocolFamily;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -105,30 +107,48 @@ class EndpointTest {
         assertThatThrownBy(() -> foo.withWeight(-1)).isInstanceOf(IllegalArgumentException.class);
     }
 
-    @Test
-    void hostWithIpAddr() {
-        final Endpoint foo = Endpoint.of("foo.com").withIpAddr("192.168.0.1");
-        assertThat(foo.authority()).isEqualTo("foo.com");
-        assertThat(foo.ipAddr()).isEqualTo("192.168.0.1");
-        assertThat(foo.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
-        assertThat(foo.hasIpAddr()).isTrue();
-        assertThat(foo.toUri("none+http").toString()).isEqualTo("none+http://foo.com");
-        assertThat(foo.withIpAddr(null).ipAddr()).isNull();
-        assertThat(foo.withIpAddr(null).toUri("none+http").toString()).isEqualTo("none+http://foo.com");
-        assertThat(foo.withIpAddr("::1").authority()).isEqualTo("foo.com");
-        assertThat(foo.withIpAddr("::1").ipAddr()).isEqualTo("::1");
-        assertThat(foo.withIpAddr("::1").ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
-        assertThat(foo.withIpAddr("::1").hasIpAddr()).isTrue();
-        assertThat(foo.withIpAddr("::1").toUri("none+http").toString()).isEqualTo("none+http://foo.com");
-        assertThat(foo.withIpAddr("192.168.0.1")).isSameAs(foo);
-        assertThat(foo.withIpAddr("192.168.0.2").authority()).isEqualTo("foo.com");
-        assertThat(foo.withIpAddr("192.168.0.2").ipAddr()).isEqualTo("192.168.0.2");
-        assertThat(foo.withIpAddr("192.168.0.2").ipFamily()).isEqualTo(StandardProtocolFamily.INET);
-        assertThat(foo.withIpAddr("192.168.0.2").hasIpAddr()).isTrue();
-        assertThat(foo.withIpAddr("192.168.0.2").toUri("none+http").toString())
+    @ParameterizedTest
+    @CsvSource({
+            "::1, ::1, INET6",
+            "[::1], ::1, INET6",
+            "::1%eth0, ::1, INET6",
+            "[::1%eth0], ::1, INET6",
+            "192.168.0.1, 192.168.0.1, INET"
+    })
+    void hostWithIpAddr(String specifiedIpAddr, String normalizedIpAddr,
+                         StandardProtocolFamily expectedIpFamily) {
+        final Endpoint foo = Endpoint.of("foo.com");
+        assertThat(foo.withIpAddr(specifiedIpAddr).authority()).isEqualTo("foo.com");
+        assertThat(foo.withIpAddr(specifiedIpAddr).ipAddr()).isEqualTo(normalizedIpAddr);
+        assertThat(foo.withIpAddr(specifiedIpAddr).ipFamily()).isEqualTo(expectedIpFamily);
+        assertThat(foo.withIpAddr(specifiedIpAddr).hasIpAddr()).isTrue();
+        assertThat(foo.withIpAddr(specifiedIpAddr).toUri("none+http").toString())
                 .isEqualTo("none+http://foo.com");
+    }
 
-        assertThatThrownBy(() -> foo.withIpAddr("no-ip")).isInstanceOf(IllegalArgumentException.class);
+    @Test
+    void hostWithIpAddrRemoved() {
+        final Endpoint foo = Endpoint.of("foo.com").withIpAddr("192.168.0.1");
+        assertThat(foo.withIpAddr(null).ipAddr()).isNull();
+        assertThat(foo.withIpAddr(null).ipFamily()).isNull();
+        assertThat(foo.withIpAddr(null).hasIpAddr()).isFalse();
+        assertThat(foo.withIpAddr(null).toUri("none+http").toString()).isEqualTo("none+http://foo.com");
+    }
+
+    @Test
+    void hostWithIpAddrUnchanged() {
+        final Endpoint foo = Endpoint.of("foo.com").withIpAddr("192.168.0.1");
+        assertThat(foo.withIpAddr("192.168.0.1")).isSameAs(foo);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "no-ip", "[::1", "::1]", "[::1]%eth0", "[::1]:8080", "192.168.0.1:8080", "[192.168.0.1]",
+            "[192.168.0.1", "192.168.0.1]", "192.168.0.1%eth0", "[192.168.0.1%eth0]", "%eth0"
+    })
+    void hostWithBadIpAddr(String specifiedIpAddr) {
+        final Endpoint foo = Endpoint.of("foo.com");
+        assertThatThrownBy(() -> foo.withIpAddr(specifiedIpAddr)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

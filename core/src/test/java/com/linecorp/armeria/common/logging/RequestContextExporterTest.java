@@ -49,9 +49,9 @@ class RequestContextExporterTest {
         ctx.logBuilder().endResponse();
         final RequestContextExporter exporter =
                 RequestContextExporter.builder()
-                                      .addKeyPattern("*")
-                                      .addAttribute("attrs.attr1", ATTR1)
-                                      .addAttribute("attrs.attr2", ATTR2)
+                                      .keyPattern("*")
+                                      .attr("attrs.attr1", ATTR1)
+                                      .attr("attrs.attr2", ATTR2)
                                       .build();
 
         assertThat(exporter.export(ctx)).containsOnlyKeys(
@@ -82,7 +82,7 @@ class RequestContextExporterTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final RequestContextExporter exporter =
                 RequestContextExporter.builder()
-                                      .addAttribute("attrs.attr1", ATTR1)
+                                      .attr("attrs.attr1", ATTR1)
                                       .build();
 
         assertThat(exporter.export(ctx)).doesNotContainKeys("attrs.attr1");
@@ -130,9 +130,9 @@ class RequestContextExporterTest {
         ctx.setAttr(ATTR2, "2");
         final RequestContextExporter exporter =
                 RequestContextExporter.builder()
-                                      .addAttribute("attrs.attr1-1", ATTR1)
-                                      .addAttribute("attrs.attr1-2", ATTR1)
-                                      .addAttribute("attrs.attr2", ATTR2)
+                                      .attr("attrs.attr1-1", ATTR1)
+                                      .attr("attrs.attr1-2", ATTR1)
+                                      .attr("attrs.attr2", ATTR2)
                                       .build();
 
         assertThat(exporter.export(ctx)).containsOnlyKeys(
@@ -148,12 +148,12 @@ class RequestContextExporterTest {
         ctx.setAttr(ATTR3, new Foo("foo"));
         final RequestContextExporter exporter = RequestContextExporter
                 .builder()
-                .addAttribute("attrs.attr1", ATTR1)
-                .addAttribute("my_attr2", ATTR1)
-                .addRequestHeader(HttpHeaderNames.METHOD, "request_method")
-                .addKeyPattern("request_id=req.id")
-                .addKeyPattern("foo=attr:" + Foo.class.getName() + "#ATTR3")
-                .addKeyPattern("bar=attr:" + Foo.class.getName() + "#ATTR3:" + FooStringifier.class.getName())
+                .attr("attrs.attr1", ATTR1)
+                .attr("my_attr2", ATTR1)
+                .requestHeader(HttpHeaderNames.METHOD, "request_method")
+                .keyPattern("request_id=req.id")
+                .keyPattern("foo=attr:" + Foo.class.getName() + "#ATTR3")
+                .keyPattern("bar=attr:" + Foo.class.getName() + "#ATTR3:" + FooStringifier.class.getName())
                 .build();
         final Map<String, String> export;
         try (SafeCloseable ignored = ctx.push()) {
@@ -162,6 +162,47 @@ class RequestContextExporterTest {
         assertThat(export).containsOnlyKeys("request_id", "request_method",
                                             "attrs.attr1", "my_attr2",
                                             "foo", "bar");
+    }
+
+    @Test
+    void exportGroup() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx.setAttr(ATTR1, "1");
+        ctx.setAttr(ATTR2, "2");
+        final RequestContextExporter exporter =
+                RequestContextExporter
+                        .builder()
+                        .exportGroup(
+                                ExportGroup
+                                        .builder()
+                                        .keyPattern("client.*")
+                                        .requestHeader(HttpHeaderNames.METHOD)
+                                        .attr("attrs.attr1-1", ATTR1)
+                                        .attr("attrs.attr1-2", ATTR1)
+                                        .build()
+                        )
+                        .exportGroup(
+                                ExportGroup
+                                        .builder()
+                                        .prefix("armeria.")
+                                        .keyPattern("client.*")
+                                        .requestHeader(HttpHeaderNames.METHOD, "request_method")
+                                        .attr("attrs.attr1-1", ATTR1)
+                                        .attr("attrs.attr1-2", ATTR1)
+                                        .build()
+                        )
+                        .build();
+
+        assertThat(exporter.export(ctx)).containsOnlyKeys(
+                "client.ip",
+                "req.headers.:method",
+                "attrs.attr1-1",
+                "attrs.attr1-2",
+                "armeria.client.ip",
+                "armeria.request_method",
+                "armeria.attrs.attr1-1",
+                "armeria.attrs.attr1-2"
+        );
     }
 
     static final class Foo {

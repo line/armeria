@@ -56,8 +56,8 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftCall;
-import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
@@ -82,7 +82,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                         SerializationFormat serializationFormat) {
         super(httpClient);
         this.serializationFormat = serializationFormat;
-        protocolFactory = ThriftProtocolFactories.get(serializationFormat);
+        protocolFactory = ThriftSerializationFormats.protocolFactory(serializationFormat);
         mediaType = serializationFormat.mediaType();
     }
 
@@ -93,7 +93,6 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         final List<Object> args = call.params();
         final CompletableRpcResponse reply = new CompletableRpcResponse();
 
-        ctx.logBuilder().name(call.serviceType().getName(), call.method());
         ctx.logBuilder().serializationFormat(serializationFormat);
 
         final ThriftFunction func;

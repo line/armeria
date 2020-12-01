@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
@@ -43,6 +44,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
+import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -391,6 +393,47 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new HTTP response of the redirect to specific location.
+     */
+    static HttpResponse ofRedirect(HttpStatus redirectStatus, String location) {
+        requireNonNull(redirectStatus, "redirectStatus");
+        requireNonNull(location, "location");
+        if (redirectStatus.compareTo(HttpStatus.MULTIPLE_CHOICES) < 0 ||
+            redirectStatus.compareTo(HttpStatus.TEMPORARY_REDIRECT) > 0) {
+            throw new IllegalArgumentException("redirectStatus: " + redirectStatus + " (expected: 300 .. 307)");
+        }
+
+        return of(ResponseHeaders.of(redirectStatus, HttpHeaderNames.LOCATION, location));
+    }
+
+    /**
+     * Creates a new HTTP response of the redirect to specific location using string format.
+     */
+    static HttpResponse ofRedirect(HttpStatus redirectStatus, String format, Object... args) {
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+
+        return ofRedirect(redirectStatus, String.format(format, args));
+    }
+
+    /**
+     * Creates a new HTTP response of the temporary redirect to specific location.
+     */
+    static HttpResponse ofRedirect(String location) {
+        return ofRedirect(HttpStatus.TEMPORARY_REDIRECT, location);
+    }
+
+    /**
+     * Creates a new HTTP response of the temporary redirect to specific location using string format.
+     */
+    static HttpResponse ofRedirect(String format, Object... args) {
+        requireNonNull(format, "format");
+        requireNonNull(args, "args");
+
+        return ofRedirect(HttpStatus.TEMPORARY_REDIRECT, String.format(format, args));
+    }
+
+    /**
      * Creates a new failed HTTP response.
      */
     static HttpResponse ofFailure(Throwable cause) {
@@ -506,5 +549,30 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     default HttpResponseDuplicator toDuplicator(EventExecutor executor, long maxResponseLength) {
         requireNonNull(executor, "executor");
         return new DefaultHttpResponseDuplicator(this, executor, maxResponseLength);
+    }
+
+    /**
+     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject}s into
+     * {@link HttpHeaders} and {@link HttpData}.
+     * {@link SplitHttpResponse#headers()} will be
+     * completed before publishing the first {@link HttpData}.
+     * {@link SplitHttpResponse#trailers()} might not complete until the entire response body is consumed
+     * completely.
+     */
+    @CheckReturnValue
+    default SplitHttpResponse split() {
+        return split(defaultSubscriberExecutor());
+    }
+
+    /**
+     * Returns a new {@link SplitHttpResponse} which splits a stream of {@link HttpObject}s into
+     * {@link HttpHeaders} and {@link HttpData}.
+     * {@link SplitHttpResponse#headers()} will be completed before publishing the first {@link HttpData}.
+     * {@link SplitHttpResponse#trailers()} might not complete until the entire response body is consumed
+     * completely.
+     */
+    @CheckReturnValue
+    default SplitHttpResponse split(EventExecutor executor) {
+        return new DefaultSplitHttpResponse(this, executor);
     }
 }

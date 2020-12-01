@@ -811,6 +811,7 @@ class GrpcClientTest {
         final Object actualResponse2 = queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(actualResponse2).withFailMessage("Unexpected response: %s", actualResponse2)
                                    .isEqualTo(goldenResponses.get(1));
+        call.request(1);
         assertThat(queue.poll(operationTimeoutMillis(), TimeUnit.MILLISECONDS)).isEqualTo(Status.OK);
         call.cancel("Cancelled after all of the requests are done", null);
 
@@ -870,7 +871,7 @@ class GrpcClientTest {
         TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
-                        ClientOptions.HTTP_HEADERS.newValue(
+                        ClientOptions.HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
         final AtomicReference<Metadata> headers = new AtomicReference<>();
@@ -1089,7 +1090,7 @@ class GrpcClientTest {
         final TestServiceStub stub =
                 Clients.newDerivedClient(
                         asyncStub,
-                        ClientOptions.HTTP_HEADERS.newValue(
+                        ClientOptions.HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
         final List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);

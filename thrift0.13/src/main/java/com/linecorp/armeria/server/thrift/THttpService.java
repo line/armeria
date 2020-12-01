@@ -144,7 +144,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      */
     public static THttpService of(Object implementation,
                                   SerializationFormat defaultSerializationFormat) {
-
         return new THttpService(ThriftCallService.of(implementation),
                                 newSupportedSerializationFormats(defaultSerializationFormat,
                                                                  ThriftSerializationFormats.values()));
@@ -424,7 +423,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
         try (HttpData content = req.content()) {
             final TByteBufTransport inTransport = new TByteBufTransport(content.byteBuf());
-            final TProtocol inProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(inTransport);
+            final TProtocol inProto = ThriftSerializationFormats.protocolFactory(serializationFormat)
+                                                                .getProtocol(inTransport);
 
             final TMessage header;
             final TBase<?, ?> args;
@@ -482,7 +482,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
                 return;
             }
-            ctx.logBuilder().name(f.serviceType().getName(), methodName);
 
             // Decode the invocation parameters.
             try {
@@ -652,7 +651,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         boolean success = false;
         try {
             final TTransport transport = new TByteBufTransport(buf);
-            final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
+            final TProtocol outProto = ThriftSerializationFormats.protocolFactory(serializationFormat)
+                                                                 .getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.REPLY, seqId);
             outProto.writeMessageBegin(header);
             result.write(outProto);
@@ -699,7 +699,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         boolean success = false;
         try {
             final TTransport transport = new TByteBufTransport(buf);
-            final TProtocol outProto = ThriftProtocolFactories.get(serializationFormat).getProtocol(transport);
+            final TProtocol outProto = ThriftSerializationFormats.protocolFactory(serializationFormat)
+                                                                 .getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.EXCEPTION, seqId);
             outProto.writeMessageBegin(header);
             appException.write(outProto);

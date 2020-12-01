@@ -22,11 +22,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.StringJoiner;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -39,9 +37,6 @@ import com.linecorp.armeria.common.QueryParams;
 
 final class DefaultRoute implements Route {
 
-    private static final Joiner loggerNameJoiner = Joiner.on('_');
-    private static final Joiner meterTagJoiner = Joiner.on(',');
-
     private final PathMapping pathMapping;
     private final Set<HttpMethod> methods;
     private final Set<MediaType> consumes;
@@ -49,9 +44,7 @@ final class DefaultRoute implements Route {
     private final List<RoutingPredicate<QueryParams>> paramPredicates;
     private final List<RoutingPredicate<HttpHeaders>> headerPredicates;
 
-    private final String loggerName;
-    private final String meterTag;
-
+    private final int hashCode;
     private final int complexity;
 
     DefaultRoute(PathMapping pathMapping, Set<HttpMethod> methods,
@@ -66,11 +59,8 @@ final class DefaultRoute implements Route {
         this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
         this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
 
-        loggerName = generateLoggerName(pathMapping.loggerName(), methods, consumes, produces,
-                                        paramPredicates, headerPredicates);
-
-        meterTag = generateMeterTag(pathMapping.meterTag(), methods, consumes, produces,
-                                    paramPredicates, headerPredicates);
+        hashCode = Objects.hash(this.pathMapping, this.methods, this.consumes, this.produces,
+                                this.paramPredicates, this.headerPredicates);
 
         int complexity = 0;
         if (!consumes.isEmpty()) {
@@ -89,13 +79,16 @@ final class DefaultRoute implements Route {
     }
 
     @Override
-    public RoutingResult apply(RoutingContext routingCtx) {
+    public RoutingResult apply(RoutingContext routingCtx, boolean isRouteDecorator) {
         final RoutingResultBuilder builder = pathMapping.apply(requireNonNull(routingCtx, "routingCtx"));
         if (builder == null) {
             return RoutingResult.empty();
         }
 
         if (!methods.contains(routingCtx.method())) {
+            if (isRouteDecorator) {
+                return RoutingResult.empty();
+            }
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
             if (routingCtx.deferredStatusException() == null) {
@@ -119,6 +112,9 @@ final class DefaultRoute implements Route {
                 }
             }
             if (!contentTypeMatched) {
+                if (isRouteDecorator) {
+                    return RoutingResult.empty();
+                }
                 routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
                 return emptyOrCorsPreflightResult(routingCtx, builder);
             }
@@ -158,6 +154,9 @@ final class DefaultRoute implements Route {
                 }
             }
             if (!found) {
+                if (isRouteDecorator) {
+                    return RoutingResult.empty();
+                }
                 routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
                 return emptyOrCorsPreflightResult(routingCtx, builder);
             }
@@ -198,16 +197,6 @@ final class DefaultRoute implements Route {
     }
 
     @Override
-    public String loggerName() {
-        return loggerName;
-    }
-
-    @Override
-    public String meterTag() {
-        return meterTag;
-    }
-
-    @Override
     public String patternString() {
         return pathMapping.patternString();
     }
@@ -242,100 +231,9 @@ final class DefaultRoute implements Route {
         return produces;
     }
 
-    private static String generateLoggerName(String prefix, Set<HttpMethod> methods,
-                                             Set<MediaType> consumes, Set<MediaType> produces,
-                                             List<RoutingPredicate<QueryParams>> paramPredicates,
-                                             List<RoutingPredicate<HttpHeaders>> headerPredicates) {
-        final StringJoiner name = new StringJoiner(".");
-        name.add(prefix);
-
-        // Skip if the methods is knownMethods because it's verbose.
-        if (!HttpMethod.knownMethods().equals(methods)) {
-            name.add(loggerNameJoiner.join(methods.stream().sorted().iterator()));
-        }
-
-        // The following three cases should be different to each other.
-        // Each name would be produced as follows:
-        //
-        // consumes: text/plain, text/html               -> consumes.text_plain.text_html
-        // consumes: text/plain, produces: text/html -> consumes.text_plain.produces.text_html
-        // produces: text/plain, text/html               -> produces.text_plain.text_html
-
-        if (!consumes.isEmpty()) {
-            name.add("consumes");
-            consumes.forEach(e -> name.add(e.type() + '_' + e.subtype()));
-        }
-        if (!produces.isEmpty()) {
-            name.add("produces");
-            produces.forEach(e -> name.add(e.type() + '_' + e.subtype()));
-        }
-        if (!paramPredicates.isEmpty()) {
-            name.add("params");
-            name.add(loggerNameJoiner.join(
-                    paramPredicates.stream().map(RoutingPredicate::name).sorted().distinct().iterator()));
-        }
-        if (!headerPredicates.isEmpty()) {
-            name.add("headers");
-            name.add(loggerNameJoiner.join(
-                    headerPredicates.stream().map(RoutingPredicate::name).sorted().distinct().iterator()));
-        }
-        return name.toString();
-    }
-
-    private static String generateMeterTag(String parentTag, Set<HttpMethod> methods,
-                                           Set<MediaType> consumes, Set<MediaType> produces,
-                                           List<RoutingPredicate<QueryParams>> paramPredicates,
-                                           List<RoutingPredicate<HttpHeaders>> headerPredicates) {
-
-        final StringJoiner name = new StringJoiner(",");
-        name.add(parentTag);
-
-        // Skip if the methods is knownMethods because it's verbose.
-        if (!HttpMethod.knownMethods().equals(methods)) {
-            name.add("methods:" + meterTagJoiner.join(methods.stream().sorted().iterator()));
-        }
-
-        // The following three cases should be different to each other.
-        // Each name would be produced as follows:
-        //
-        // consumes: text/plain, text/html               -> "consumes:text/plain,text/html"
-        // consumes: text/plain, produces: text/html -> "consumes:text/plain,produces:text/html"
-        // produces: text/plain, text/html               -> "produces:text/plain,text/html"
-
-        addMediaTypes(name, "consumes", consumes);
-        addMediaTypes(name, "produces", produces);
-
-        if (!paramPredicates.isEmpty()) {
-            name.add("params");
-            name.add(meterTagJoiner.join(
-                    paramPredicates.stream().map(RoutingPredicate::name).sorted().distinct().iterator()));
-        }
-        if (!headerPredicates.isEmpty()) {
-            name.add("headers");
-            name.add(meterTagJoiner.join(
-                    headerPredicates.stream().map(RoutingPredicate::name).sorted().distinct().iterator()));
-        }
-        return name.toString();
-    }
-
-    private static void addMediaTypes(StringJoiner builder, String prefix, Set<MediaType> mediaTypes) {
-        if (!mediaTypes.isEmpty()) {
-            final StringBuilder buf = new StringBuilder();
-            buf.append(prefix).append(':');
-            for (MediaType t : mediaTypes) {
-                buf.append(t.type());
-                buf.append('/');
-                buf.append(t.subtype());
-                buf.append(',');
-            }
-            buf.setLength(buf.length() - 1);
-            builder.add(buf.toString());
-        }
-    }
-
     @Override
     public int hashCode() {
-        return meterTag.hashCode();
+        return hashCode;
     }
 
     @Override
@@ -359,6 +257,6 @@ final class DefaultRoute implements Route {
 
     @Override
     public String toString() {
-        return meterTag;
+        return patternString();
     }
 }

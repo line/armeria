@@ -51,7 +51,7 @@ public final class OAuth2Token {
     /**
      * Returns the string that is sent as the value of the {@link HttpHeaderNames#AUTHORIZATION} header.
      */
-    public String toHeaderValue() {
+    public String asHeaderValue() {
         return "Bearer " + accessToken;
     }
 

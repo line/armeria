@@ -116,7 +116,7 @@ public final class ServiceSpecification {
     private final Set<EnumInfo> enums;
     private final Set<StructInfo> structs;
     private final Set<ExceptionInfo> exceptions;
-    private final List<HttpHeaders> exampleHttpHeaders;
+    private final List<HttpHeaders> exampleHeaders;
 
     /**
      * Creates a new instance.
@@ -135,15 +135,14 @@ public final class ServiceSpecification {
                                 Iterable<EnumInfo> enums,
                                 Iterable<StructInfo> structs,
                                 Iterable<ExceptionInfo> exceptions,
-                                Iterable<HttpHeaders> exampleHttpHeaders) {
+                                Iterable<HttpHeaders> exampleHeaders) {
 
         this.services = Streams.stream(requireNonNull(services, "services"))
                                .collect(toImmutableSortedSet(comparing(ServiceInfo::name)));
         this.enums = collectNamedTypeInfo(enums, "enums");
         this.structs = collectNamedTypeInfo(structs, "structs");
         this.exceptions = collectNamedTypeInfo(exceptions, "exceptions");
-        this.exampleHttpHeaders = ImmutableList.copyOf(requireNonNull(exampleHttpHeaders,
-                                                                      "exampleHttpHeaders"));
+        this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
     }
 
     private static <T extends NamedTypeInfo> Set<T> collectNamedTypeInfo(Iterable<T> values, String name) {
@@ -187,7 +186,7 @@ public final class ServiceSpecification {
      * Returns the example HTTP headers of the services in this specification.
      */
     @JsonProperty
-    public List<HttpHeaders> exampleHttpHeaders() {
-        return exampleHttpHeaders;
+    public List<HttpHeaders> exampleHeaders() {
+        return exampleHeaders;
     }
 }

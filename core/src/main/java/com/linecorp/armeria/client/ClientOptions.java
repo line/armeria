@@ -123,8 +123,8 @@ public final class ClientOptions
     /**
      * The additional HTTP headers to send with requests.
      */
-    public static final ClientOption<HttpHeaders> HTTP_HEADERS =
-            ClientOption.define("HTTP_HEADERS", HttpHeaders.of(), newHeaders -> {
+    public static final ClientOption<HttpHeaders> HEADERS =
+            ClientOption.define("HEADERS", HttpHeaders.of(), newHeaders -> {
                 for (AsciiString name : PROHIBITED_HEADER_NAMES) {
                     if (newHeaders.contains(name)) {
                         throw new IllegalArgumentException("prohibited header name: " + name);
@@ -255,8 +255,8 @@ public final class ClientOptions
      * Returns the additional HTTP headers to send with requests. Used only when the underlying
      * {@link SessionProtocol} is HTTP.
      */
-    public HttpHeaders httpHeaders() {
-        return get(HTTP_HEADERS);
+    public HttpHeaders headers() {
+        return get(HEADERS);
     }
 
     /**

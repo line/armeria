@@ -84,7 +84,7 @@ public final class RequestContextExportingAppender
      */
     public void addBuiltIn(BuiltInProperty property) {
         ensureNotStarted();
-        builder.addBuiltIn(property);
+        builder.builtIn(property);
     }
 
     /**
@@ -95,7 +95,7 @@ public final class RequestContextExportingAppender
      */
     public void addAttribute(String alias, AttributeKey<?> attrKey) {
         ensureNotStarted();
-        builder.addAttribute(alias, attrKey);
+        builder.attr(alias, attrKey);
     }
 
     /**
@@ -110,7 +110,7 @@ public final class RequestContextExportingAppender
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         requireNonNull(stringifier, "stringifier");
-        builder.addAttribute(alias, attrKey, stringifier);
+        builder.attr(alias, attrKey, stringifier);
     }
 
     /**
@@ -119,7 +119,7 @@ public final class RequestContextExportingAppender
     public void addRequestHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        builder.addRequestHeader(name);
+        builder.requestHeader(name);
     }
 
     /**
@@ -128,7 +128,17 @@ public final class RequestContextExportingAppender
     public void addResponseHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        builder.addResponseHeader(name);
+        builder.responseHeader(name);
+    }
+
+    /**
+     * Specifies a prefix of the default export group.
+     * Note: this method is meant to be used for XML configuration.
+     */
+    public void setPrefix(String prefix) {
+        requireNonNull(prefix, "prefix");
+        checkArgument(!prefix.isEmpty(), "prefix must not be empty");
+        builder.prefix(prefix);
     }
 
     /**
@@ -139,7 +149,7 @@ public final class RequestContextExportingAppender
     public void setExport(String mdcKey) {
         requireNonNull(mdcKey, "mdcKey");
         checkArgument(!mdcKey.isEmpty(), "mdcKey must not be empty");
-        builder.addKeyPattern(mdcKey);
+        builder.keyPattern(mdcKey);
     }
 
     /**
@@ -149,11 +159,21 @@ public final class RequestContextExportingAppender
      */
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
+        checkArgument(!mdcKeys.isEmpty(), "mdcKeys must not be empty");
         KEY_SPLITTER.split(mdcKeys)
                     .forEach(mdcKey -> {
                         checkArgument(!mdcKey.isEmpty(), "comma-separated MDC key must not be empty");
-                        builder.addKeyPattern(mdcKey);
+                        builder.keyPattern(mdcKey);
                     });
+    }
+
+    /**
+     * Adds the export group.
+     * Note: this method is meant to be used for XML configuration.
+     */
+    public void setExportGroup(ExportGroupConfig exportGroupConfiguration) {
+        requireNonNull(exportGroupConfiguration, "exportGroupConfiguration");
+        builder.exportGroup(exportGroupConfiguration.build());
     }
 
     private void ensureNotStarted() {

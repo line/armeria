@@ -29,8 +29,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * A {@link RequestConverterFunction} which converts a text body of the
  * {@link AggregatedHttpRequest} to a {@link String}.
- * Note that this {@link RequestConverterFunction} is applied to the annotated service by default,
- * so you don't have to set explicitly.
+ * Note that this {@link RequestConverterFunction} is applied to an annotated service by default,
+ * so you don't have to specify this converter explicitly.
  */
 public final class StringRequestConverterFunction implements RequestConverterFunction {
     /**

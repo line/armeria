@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import static com.linecorp.armeria.common.MediaType.create;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -25,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -33,6 +35,7 @@ import java.util.stream.Stream;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TTupleProtocol;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +45,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
@@ -54,7 +59,6 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
-import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
 import com.linecorp.armeria.client.logging.LoggingRpcClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -63,10 +67,12 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SerializationFormatProvider;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -88,7 +94,25 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.netty.util.AsciiString;
 
 @SuppressWarnings("unchecked")
-class ThriftOverHttpClientTest {
+public class ThriftOverHttpClientTest {
+    public static class TestSerializationFormatProvider extends SerializationFormatProvider {
+        @Override
+        protected Set<SerializationFormatProvider.Entry> entries() {
+            return ImmutableSet.of(new SerializationFormatProvider.Entry(
+                    "ttuple",
+                    create("application", "x-thrift").withParameter("protocol", "TTUPLE"),
+                    create("application", "vnd.apache.thrift.tuple"))
+            );
+        }
+    }
+
+    public static class TestThriftProtocolFactoryProvider extends ThriftProtocolFactoryProvider {
+        @Override
+        public Set<ThriftProtocolFactoryProvider.Entry> entries() {
+            return ImmutableSet.of(new ThriftProtocolFactoryProvider.Entry(
+                    SerializationFormat.of("ttuple"), new TTupleProtocol.Factory()));
+        }
+    }
 
     private static final boolean ENABLE_LOGGING_DECORATORS = false;
     private static final boolean ENABLE_CONNECTION_POOL_LOGGING = true;
@@ -191,12 +215,12 @@ class ThriftOverHttpClientTest {
             sb.tlsSelfSigned();
 
             for (Handlers h : Handlers.values()) {
-                for (SerializationFormat defaultSerializationFormat : ThriftSerializationFormats.values()) {
-                    HttpService service = THttpService.of(h.handler(), defaultSerializationFormat);
+                for (SerializationFormat thriftSerializationFormat : ThriftSerializationFormats.values()) {
+                    HttpService service = THttpService.of(h.handler(), thriftSerializationFormat);
                     if (ENABLE_LOGGING_DECORATORS) {
                         service = service.decorate(LoggingService.newDecorator());
                     }
-                    sb.service(h.path(defaultSerializationFormat), service);
+                    sb.service(h.path(thriftSerializationFormat), service);
                 }
             }
 
@@ -207,7 +231,7 @@ class ThriftOverHttpClientTest {
     @BeforeAll
     static void init() throws Exception {
         final ConnectionPoolListener connectionPoolListener =
-                ENABLE_CONNECTION_POOL_LOGGING ? new ConnectionPoolLoggingListener()
+                ENABLE_CONNECTION_POOL_LOGGING ? ConnectionPoolListener.logging()
                                                : ConnectionPoolListener.noop();
 
         clientFactoryWithUseHttp2Preface = ClientFactory.builder()
@@ -564,7 +588,7 @@ class ThriftOverHttpClientTest {
         assertThat(clientA.header(AUTHORIZATION)).isEqualTo(TOKEN_A);
         assertThat(clientB.header(AUTHORIZATION)).isEqualTo(TOKEN_B);
 
-        // Ensure that the parent client's HTTP_HEADERS option did not change:
+        // Ensure that the parent client's HEADERS option did not change:
         assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
     }
 
@@ -734,14 +758,13 @@ class ThriftOverHttpClientTest {
     }
 
     private static ClientOptionValue<HttpHeaders> newHttpHeaderOption(AsciiString name, String value) {
-        return ClientOptions.HTTP_HEADERS.newValue(HttpHeaders.of(name, value));
+        return ClientOptions.HEADERS.newValue(HttpHeaders.of(name, value));
     }
 
     private static class ParametersProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return ThriftSerializationFormats.values().stream()
-                    .flatMap(serializationFormat -> Stream.of(
+            return ThriftSerializationFormats.values().stream().flatMap(serializationFormat -> Stream.of(
                             arguments(clientOptions.toBuilder()
                                                    .factory(clientFactoryWithUseHttp2Preface)
                                                    .build(),

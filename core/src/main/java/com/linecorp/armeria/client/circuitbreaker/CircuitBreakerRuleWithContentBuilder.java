@@ -21,8 +21,6 @@ import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -117,21 +115,6 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     }
 
     /**
-     * Adds the specified {@code responseFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the specified {@code responseFilter} completes with {@code true},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     *
-     * @deprecated Use {@link #onResponse(BiFunction)}.
-     */
-    @Deprecated
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onResponse(
-            Function<? super T, ? extends CompletionStage<Boolean>> responseFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponse(responseFilter);
-    }
-
-    /**
      * Adds the specified {@code responseHeadersFilter} for a {@link CircuitBreakerRuleWithContent}.
      * If the specified {@code responseHeadersFilter} returns {@code true},
      * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
@@ -145,22 +128,6 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     }
 
     /**
-     * Adds the specified {@code responseHeadersFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the specified {@code responseHeadersFilter} returns {@code true},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     *
-     * @deprecated Use {@link #onResponseHeaders(BiPredicate)}.
-     */
-    @Deprecated
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onResponseHeaders(
-            Predicate<? super ResponseHeaders> responseHeadersFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseHeaders(responseHeadersFilter);
-    }
-
-    /**
      * Adds the specified {@code responseTrailersFilter} for a {@link CircuitBreakerRuleWithContent}.
      * If the specified {@code responseTrailersFilter} returns {@code true},
      * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
@@ -170,22 +137,6 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     @Override
     public CircuitBreakerRuleWithContentBuilder<T> onResponseTrailers(
             BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
-    }
-
-    /**
-     * Adds the specified {@code responseTrailersFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the specified {@code responseTrailersFilter} returns {@code true},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     *
-     * @deprecated Use {@link #onResponseTrailers(BiPredicate)}.
-     */
-    @Deprecated
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onResponseTrailers(
-            Predicate<? super HttpHeaders> responseTrailersFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
     }
 
@@ -263,21 +214,6 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     }
 
     /**
-     * Adds the specified {@code statusFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the response status matches the specified {@code statusFilter},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     *
-     * @deprecated Use {@link #onStatus(BiPredicate)}.
-     */
-    @Deprecated
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onStatus(Predicate<? super HttpStatus> statusFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onStatus(statusFilter);
-    }
-
-    /**
      * Adds the specified exception type for a {@link CircuitBreakerRuleWithContent}.
      * If an {@link Exception} is raised and it is an instance of the specified {@code exception},
      * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
@@ -299,21 +235,6 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     @Override
     public CircuitBreakerRuleWithContentBuilder<T> onException(
             BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onException(exceptionFilter);
-    }
-
-    /**
-     * Adds the specified {@code exceptionFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     *
-     * @deprecated Use {@link #onException(BiPredicate)}.
-     */
-    @Deprecated
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onException(Predicate<? super Throwable> exceptionFilter) {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onException(exceptionFilter);
     }
 

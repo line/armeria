@@ -25,6 +25,8 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -50,16 +52,6 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
-
-    ServiceConfigSetters defaultServiceName(String defaultServiceName) {
-        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
-        return this;
-    }
-
-    ServiceConfigSetters defaultLogName(String defaultLogName) {
-        this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
-        return this;
-    }
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -100,13 +92,11 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Override
     public ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
-
         if (this.decorator != null) {
             this.decorator = this.decorator.andThen(decorator);
         } else {
             this.decorator = decorator;
         }
-
         return this;
     }
 
@@ -115,6 +105,40 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
             return Function.identity();
         }
         return decorator;
+    }
+
+    @Override
+    @SafeVarargs
+    public final ServiceConfigSetters decorators(
+            Function<? super HttpService, ? extends HttpService>... decorators) {
+        return decorators(ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
+    }
+
+    @Override
+    public ServiceConfigSetters decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+
+        requireNonNull(decorators, "decorators");
+
+        ServiceConfigSetters ret = this;
+        for (Function<? super HttpService, ? extends HttpService> decorator : decorators) {
+            requireNonNull(decorator, "decorators contains null.");
+            ret = decorator(decorator);
+        }
+
+        return ret;
+    }
+
+    @Override
+    public ServiceConfigSetters defaultServiceName(String defaultServiceName) {
+        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters defaultLogName(String defaultLogName) {
+        this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
+        return this;
     }
 
     /**

@@ -1,3 +1,8 @@
+# Use-legacy-processing to use this application-testbed.yml file instead of application.yml
+spring:
+  config:
+    use-legacy-processing: true
+
 # Use a random port to avoid a potential port conflict.
 server:
   port: 0

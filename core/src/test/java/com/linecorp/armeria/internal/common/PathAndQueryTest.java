@@ -145,8 +145,8 @@ public class PathAndQueryTest {
 
     @Test
     public void colon() {
-        assertThat(PathAndQuery.parse("/:")).isNull();
-        assertThat(PathAndQuery.parse("/:/")).isNull();
+        assertThat(PathAndQuery.parse("/:")).isNotNull();
+        assertThat(PathAndQuery.parse("/:/")).isNotNull();
         assertThat(PathAndQuery.parse("/a/:")).isNotNull();
         assertThat(PathAndQuery.parse("/a/:/")).isNotNull();
     }

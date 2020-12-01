@@ -8,7 +8,7 @@ dependencies {
         testImplementation("io.micrometer:$it") {
             version {
                 // Will fail the build if the override doesn't work
-                strictly '1.3.11'
+                strictly '1.3.14'
             }
         }
     }

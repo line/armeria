@@ -58,9 +58,9 @@ import io.netty.util.AttributeKey;
  * <p>The request will go through the below decorators to reach the {@code userService}.
  * <pre>{@code
  *  request -> initialDispatcherService
- *          -> loggingDecorator         -> routeDecoratingService
- *          -> authDecorator            -> routeDecoratingService
  *          -> traceDecorator           -> routeDecoratingService
+ *          -> authDecorator            -> routeDecoratingService
+ *          -> loggingDecorator         -> routeDecoratingService
  *          -> userService
  * }</pre>
  */

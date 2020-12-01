@@ -69,7 +69,7 @@ class DropwizardMetricsIntegrationTest {
 
     @AfterAll
     static void closeClientFactory() {
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test

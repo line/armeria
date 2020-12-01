@@ -46,6 +46,8 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.client.retry.RetryConfig;
+import com.linecorp.armeria.client.retry.RetryConfigMapping;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -70,6 +72,7 @@ class RetryingRpcClientTest {
 
     private final HelloService.Iface serviceHandler = mock(HelloService.Iface.class);
     private final DevNullService.Iface devNullServiceHandler = mock(DevNullService.Iface.class);
+    private final AtomicInteger serviceRetryCount = new AtomicInteger();
 
     @RegisterExtension
     final ServerExtension server = new ServerExtension() {
@@ -80,10 +83,10 @@ class RetryingRpcClientTest {
 
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final AtomicInteger retryCount = new AtomicInteger();
+            serviceRetryCount.set(0);
             sb.service("/thrift", THttpService.of(serviceHandler).decorate(
                     (delegate, ctx, req) -> {
-                        final int count = retryCount.getAndIncrement();
+                        final int count = serviceRetryCount.getAndIncrement();
                         if (count != 0) {
                             assertThat(count).isEqualTo(req.headers().getInt(ARMERIA_RETRY_COUNT));
                         }
@@ -100,6 +103,42 @@ class RetryingRpcClientTest {
 
         assertThat(client.hello("hello")).isEqualTo("world");
         verify(serviceHandler, only()).hello("hello");
+    }
+
+    @Test
+    void execute_honorMapping() throws Exception {
+        final HelloService.Iface client = helloClient(
+                RetryConfigMapping.of(
+                        (ctx, req) -> ctx.rpcRequest().params().contains("Alice") ? "1" : "2",
+                        (ctx, req) -> {
+                            if (ctx.rpcRequest().params().contains("Alice")) {
+                                return RetryConfig.builderForRpc(retryOnException)
+                                                  .maxTotalAttempts(3)
+                                                  .build();
+                            } else {
+                                return RetryConfig.builderForRpc(retryOnException)
+                                                  .maxTotalAttempts(5)
+                                                  .build();
+                            }
+                        }));
+
+        when(serviceHandler.hello(anyString()))
+                .thenThrow(new IllegalArgumentException())
+                .thenThrow(new IllegalArgumentException())
+                .thenReturn("Hey");
+        serviceRetryCount.set(0);
+        assertThat(client.hello("Alice")).isEqualTo("Hey");
+        verify(serviceHandler, times(3)).hello("Alice");
+
+        when(serviceHandler.hello(anyString()))
+                .thenThrow(new IllegalArgumentException())
+                .thenThrow(new IllegalArgumentException())
+                .thenThrow(new IllegalArgumentException())
+                .thenThrow(new IllegalArgumentException())
+                .thenReturn("Hey");
+        serviceRetryCount.set(0);
+        assertThat(client.hello("Bob")).isEqualTo("Hey");
+        verify(serviceHandler, times(5)).hello("Bob");
     }
 
     @Test
@@ -156,11 +195,19 @@ class RetryingRpcClientTest {
         assertThatThrownBy(() -> client.hello("bar")).isSameAs(exception);
     }
 
+    private HelloService.Iface helloClient(RetryConfigMapping<RpcResponse> mapping) {
+        return Clients.builder(server.httpUri(BINARY) + "/thrift")
+                      .rpcDecorator(RetryingRpcClient.newDecorator(mapping))
+                      .build(HelloService.Iface.class);
+    }
+
     private HelloService.Iface helloClient(RetryRuleWithContent<RpcResponse> rule, int maxAttempts) {
         return Clients.builder(server.httpUri(BINARY) + "/thrift")
-                      .rpcDecorator(RetryingRpcClient.builder(rule)
-                                                     .maxTotalAttempts(maxAttempts)
-                                                     .newDecorator())
+                      .rpcDecorator(
+                              RetryingRpcClient.builder(RetryConfig.builderForRpc(rule)
+                                                                   .maxTotalAttempts(maxAttempts)
+                                                                   .build())
+                                               .newDecorator())
                       .build(HelloService.Iface.class);
     }
 

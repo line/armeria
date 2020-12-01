@@ -36,7 +36,7 @@ class HttpClientAdditionalHeadersTest {
     };
 
     @Test
-    void blacklistedHeadersMustBeFiltered() {
+    void disallowedHeadersMustBeFiltered() {
         final WebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator((delegate, ctx, req) -> {

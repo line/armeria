@@ -16,156 +16,35 @@
 
 package com.linecorp.armeria.spring;
 
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedServices;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureGrpcServices;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureHttpServices;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureThriftServices;
-
-import java.time.Duration;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.function.Consumer;
-
-import javax.annotation.Nullable;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.autoconfigure.condition.NoneNestedConditions;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 
-import com.google.common.base.Strings;
-
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.server.docs.DocService;
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
-import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.spring.ArmeriaSettings.Port;
-
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
+import com.linecorp.armeria.spring.ArmeriaAutoConfiguration.NonReactiveWebApplicationCondition;
 
 /**
  * Spring Boot {@link Configuration} that provides Armeria integration.
  */
 @Configuration
+@Conditional(NonReactiveWebApplicationCondition.class)
 @EnableConfigurationProperties(ArmeriaSettings.class)
 @ConditionalOnMissingBean(Server.class)
-public class ArmeriaAutoConfiguration {
-    private static final Logger logger = LoggerFactory.getLogger(ArmeriaAutoConfiguration.class);
-
-    private static final Port DEFAULT_PORT = new Port().setPort(8080)
-                                                       .setProtocol(SessionProtocol.HTTP);
-
-    private static final String GRACEFUL_SHUTDOWN = "graceful";
+public class ArmeriaAutoConfiguration extends AbstractArmeriaAutoConfiguration {
 
     /**
-     * Create a started {@link Server} bean.
+     * Condition for non-reactive web application type.
      */
-    @Bean
-    @Nullable
-    public Server armeriaServer(
-            ArmeriaSettings armeriaSettings,
-            Optional<MeterRegistry> meterRegistry,
-            Optional<List<HealthChecker>> healthCheckers,
-            Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
-            Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
-            Optional<List<ThriftServiceRegistrationBean>> thriftServiceRegistrationBeans,
-            Optional<List<GrpcServiceRegistrationBean>> grpcServiceRegistrationBeans,
-            Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
-            Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans,
-            Optional<List<DocServiceConfigurator>> docServiceConfigurators)
-            throws InterruptedException {
+    static class NonReactiveWebApplicationCondition extends NoneNestedConditions {
 
-        if (!armeriaServerConfigurators.isPresent() &&
-            !armeriaServerBuilderConsumers.isPresent() &&
-            !thriftServiceRegistrationBeans.isPresent() &&
-            !grpcServiceRegistrationBeans.isPresent() &&
-            !httpServiceRegistrationBeans.isPresent() &&
-            !annotatedServiceRegistrationBeans.isPresent()) {
-            // No services to register, no need to start up armeria server.
-            return null;
+        NonReactiveWebApplicationCondition() {
+            super(ConfigurationPhase.PARSE_CONFIGURATION);
         }
 
-        final ServerBuilder serverBuilder = Server.builder();
-
-        final List<Port> ports = armeriaSettings.getPorts();
-        if (ports.isEmpty()) {
-            serverBuilder.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocols()));
-        } else {
-            configurePorts(serverBuilder, ports);
-        }
-
-        final DocServiceBuilder docServiceBuilder = DocService.builder();
-        docServiceConfigurators.ifPresent(
-                configurators -> configurators.forEach(
-                        configurator -> configurator.configure(docServiceBuilder)));
-
-        final String docsPath = armeriaSettings.getDocsPath();
-        configureThriftServices(serverBuilder,
-                                docServiceBuilder,
-                                thriftServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                                docsPath);
-        configureGrpcServices(serverBuilder,
-                              docServiceBuilder,
-                              grpcServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                              docsPath);
-        configureHttpServices(serverBuilder,
-                              httpServiceRegistrationBeans.orElseGet(Collections::emptyList)
-        );
-        configureAnnotatedServices(serverBuilder,
-                                   docServiceBuilder,
-                                   annotatedServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                                   docsPath);
-        configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
-                                           meterRegistry.orElse(Metrics.globalRegistry),
-                                           healthCheckers.orElseGet(Collections::emptyList));
-
-        armeriaServerConfigurators.ifPresent(
-                configurators -> configurators.forEach(
-                        configurator -> configurator.configure(serverBuilder)));
-
-        armeriaServerBuilderConsumers.ifPresent(
-                consumers -> consumers.forEach(
-                        consumer -> consumer.accept(serverBuilder)));
-
-        if (!Strings.isNullOrEmpty(docsPath)) {
-            serverBuilder.serviceUnder(docsPath, docServiceBuilder.build());
-        }
-
-        final Server server = serverBuilder.build();
-
-        server.start().handle((result, t) -> {
-            if (t != null) {
-                throw new IllegalStateException("Armeria server failed to start", t);
-            }
-            return result;
-        }).join();
-        logger.info("Armeria server started at ports: {}", server.activePorts());
-        return server;
-    }
-
-    /**
-     * A user can configure a {@link Server} by providing an {@link ArmeriaServerConfigurator} bean.
-     */
-    @Bean
-    @ConditionalOnProperty("server.shutdown")
-    public ArmeriaServerConfigurator gracefulShutdownServerConfigurator(
-            @Value("${server.shutdown}") String shutdown,
-            @Value("${spring.lifecycle.timeout-per-shutdown-phase:30s}") Duration duration) {
-        if (GRACEFUL_SHUTDOWN.equalsIgnoreCase(shutdown)) {
-            return sb -> sb.gracefulShutdownTimeout(duration, duration);
-        } else {
-            return sb -> {};
-        }
+        @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
+        static class ReactiveWebApplication {}
     }
 }

@@ -66,7 +66,6 @@ import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.internal.common.util.TransportType;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.Gauge;
@@ -124,9 +123,7 @@ public final class Server implements ListenableAsyncCloseable {
         config.setServer(this);
 
         // Server-wide cache metrics.
-        final MeterIdPrefix idPrefix =
-                new MeterIdPrefix(Flags.useLegacyMeterNames() ? "armeria.server.parsedPathCache"
-                                                              : "armeria.server.parsed.path.cache");
+        final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsed.path.cache");
         PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
 
         setupVersionMetrics();
@@ -383,9 +380,7 @@ public final class Server implements ListenableAsyncCloseable {
         final String repositoryStatus = versionInfo.repositoryStatus();
         final List<Tag> tags = ImmutableList.of(Tag.of("version", version),
                                                 Tag.of("commit", commit),
-                                                Tag.of(Flags.useLegacyMeterNames() ? "repoStatus"
-                                                                                   : "repo.status",
-                                                       repositoryStatus));
+                                                Tag.of("repo.status", repositoryStatus));
         Gauge.builder("armeria.build.info", () -> 1)
              .tags(tags)
              .description("A metric with a constant '1' value labeled by version and commit hash" +
@@ -473,7 +468,7 @@ public final class Server implements ListenableAsyncCloseable {
             });
 
             b.group(bossGroup, config.workerGroup());
-            b.channel(TransportType.detectTransportType().serverChannelType());
+            b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
             b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts,
                                                               gracefulShutdownSupport));
@@ -486,9 +481,8 @@ public final class Server implements ListenableAsyncCloseable {
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
-            meterRegistry.gauge(Flags.useLegacyMeterNames() ? "armeria.server.pendingResponses"
-                                                            : "armeria.server.pending.responses",
-                                gracefulShutdownSupport, GracefulShutdownSupport::pendingResponses);
+            meterRegistry.gauge("armeria.server.pending.responses", gracefulShutdownSupport,
+                                GracefulShutdownSupport::pendingResponses);
             meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
                                 ConnectionLimitingHandler::numConnections);
         }

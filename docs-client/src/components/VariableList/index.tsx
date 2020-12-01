@@ -48,48 +48,6 @@ interface Props {
   specification: Specification;
 }
 
-export default function ({ title, variables, specification }: Props) {
-  const hasBean = variables.some(
-    (variable) =>
-      !!variable.childFieldInfos && variable.childFieldInfos.length > 0,
-  );
-
-  const hasLocation = variables.some(
-    (variable) =>
-      variable.location &&
-      variable.location.length > 0 &&
-      variable.location !== 'UNSPECIFIED',
-  );
-
-  return (
-    <>
-      <Typography variant="h6">{title}</Typography>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Name</TableCell>
-            {hasLocation && <TableCell>Location</TableCell>}
-            <TableCell>Required</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Description</TableCell>
-            {hasBean && <TableCell />}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          <FieldInfos
-            hasLocation={hasLocation}
-            indent={0}
-            title={title}
-            variables={variables}
-            specification={specification}
-          />
-        </TableBody>
-      </Table>
-      <Typography variant="body2" paragraph />
-    </>
-  );
-}
-
 interface OwnProps {
   indent: number;
   hasLocation: boolean;
@@ -166,6 +124,8 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
         )}
       </TableRow>
       {hasChildren && (
+        // TODO(minwoox) fix circular usage of FieldInfo and FieldInfos
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
         <FieldInfos
           hasLocation={hasLocation}
           hidden={hidden || !expanded}
@@ -220,6 +180,48 @@ const FieldInfos: React.FunctionComponent<FieldInfosProps> = (props) => {
           </TableCell>
         </TableRow>
       )}
+    </>
+  );
+};
+
+export default ({ title, variables, specification }: Props) => {
+  const hasBean = variables.some(
+    (variable) =>
+      !!variable.childFieldInfos && variable.childFieldInfos.length > 0,
+  );
+
+  const hasLocation = variables.some(
+    (variable) =>
+      variable.location &&
+      variable.location.length > 0 &&
+      variable.location !== 'UNSPECIFIED',
+  );
+
+  return (
+    <>
+      <Typography variant="h6">{title}</Typography>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Name</TableCell>
+            {hasLocation && <TableCell>Location</TableCell>}
+            <TableCell>Required</TableCell>
+            <TableCell>Type</TableCell>
+            <TableCell>Description</TableCell>
+            {hasBean && <TableCell />}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          <FieldInfos
+            hasLocation={hasLocation}
+            indent={0}
+            title={title}
+            variables={variables}
+            specification={specification}
+          />
+        </TableBody>
+      </Table>
+      <Typography variant="body2" paragraph />
     </>
   );
 };

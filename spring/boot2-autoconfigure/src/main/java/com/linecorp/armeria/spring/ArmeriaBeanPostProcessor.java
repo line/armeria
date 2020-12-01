@@ -19,13 +19,12 @@ import org.springframework.beans.PropertyValues;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.InjectionMetadata;
-import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.InstantiationAwareBeanPostProcessor;
 
 /**
- * {@link BeanPostProcessor} implementation that autowires annotated fields, setter methods, and arbitrary
+ * {@code BeanPostProcessor} implementation that autowires annotated fields, setter methods, and arbitrary
  * config methods. Such members to be injected are detected through annotations:
- * by default, {@link LocalArmeriaPort} and {@link LocalArmeriaPorts} annotations.
+ * by default, {@code LocalArmeriaPort} and {@code LocalArmeriaPorts} annotations.
  */
 public final class ArmeriaBeanPostProcessor extends AbstractArmeriaBeanPostProcessor
         implements InstantiationAwareBeanPostProcessor {

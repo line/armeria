@@ -24,6 +24,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -58,7 +59,7 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
  */
 public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
 
-    private static final long DEFAULT_REGISTRY_FETCH_INTERVAL_SECONDS = 30;
+    private static final long DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS = 30000;
 
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
@@ -74,7 +75,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     @Nullable
     private String secureVipAddress;
 
-    private long registryFetchIntervalSeconds = DEFAULT_REGISTRY_FETCH_INTERVAL_SECONDS;
+    private long registryFetchIntervalMillis = DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS;
 
     @Nullable
     private List<String> regions;
@@ -183,29 +184,46 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     }
 
     /**
-     * Sets the interval between fetching registry requests. {@value #DEFAULT_REGISTRY_FETCH_INTERVAL_SECONDS}
-     * is used by default and it's not recommended to modify this value. See
+     * Sets the interval between fetching registry requests. {@value #DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS}
+     * milliseconds is used by default and it's not recommended to modify this value. See
      * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#fetch-registry">
      * fetch-registry</a>.
      */
     public EurekaEndpointGroupBuilder registryFetchInterval(Duration registryFetchInterval) {
         requireNonNull(registryFetchInterval, "registryFetchInterval");
-        final long seconds = registryFetchInterval.getSeconds();
-        checkArgument(seconds > 0, "registryFetchInterval.getSeconds(): %s (expected: > 0)", seconds);
-        return registryFetchIntervalSeconds(seconds);
+        checkArgument(!registryFetchInterval.isZero() &&
+                      !registryFetchInterval.isNegative(),
+                      "registryFetchInterval: %s (expected: > 0)",
+                      registryFetchInterval);
+        return registryFetchIntervalMillis(registryFetchInterval.toMillis());
     }
 
     /**
-     * Sets the interval between fetching registry requests in seconds.
-     * {@value #DEFAULT_REGISTRY_FETCH_INTERVAL_SECONDS} is used by default and it's not recommended to modify
+     * Sets the interval between fetching registry requests in seconds. {@code 30} is used by default and
+     * it's not recommended to modify this value. See
+     * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#fetch-registry">
+     * fetch-registry</a>.
+     *
+     * @deprecated Use {@link #registryFetchIntervalMillis(long)}.
+     */
+    @Deprecated
+    public EurekaEndpointGroupBuilder registryFetchIntervalSeconds(long registryFetchIntervalSeconds) {
+        checkArgument(registryFetchIntervalSeconds > 0, "registryFetchIntervalSeconds: %s (expected: > 0)",
+                      registryFetchIntervalSeconds);
+        return registryFetchIntervalMillis(TimeUnit.SECONDS.toMillis(registryFetchIntervalSeconds));
+    }
+
+    /**
+     * Sets the interval between fetching registry requests in milliseconds.
+     * {@value #DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS} is used by default and it's not recommended to modify
      * this value. See
      * <a href="https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#fetch-registry">
      * fetch-registry</a>.
      */
-    public EurekaEndpointGroupBuilder registryFetchIntervalSeconds(long registryFetchIntervalSeconds) {
-        checkArgument(registryFetchIntervalSeconds > 0, "registryFetchIntervalSeconds: %s (expected: > 0)",
-                      registryFetchIntervalSeconds);
-        this.registryFetchIntervalSeconds = registryFetchIntervalSeconds;
+    public EurekaEndpointGroupBuilder registryFetchIntervalMillis(long registryFetchIntervalMillis) {
+        checkArgument(registryFetchIntervalMillis > 0, "registryFetchIntervalMillis: %s (expected: > 0)",
+                      registryFetchIntervalMillis);
+        this.registryFetchIntervalMillis = registryFetchIntervalMillis;
         return this;
     }
 
@@ -227,7 +245,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
             final ClientFactory factory = options.factory();
             client = (WebClient) factory.newClient(params);
         }
-        return new EurekaEndpointGroup(selectionStrategy, client, registryFetchIntervalSeconds, appName,
+        return new EurekaEndpointGroup(selectionStrategy, client, registryFetchIntervalMillis, appName,
                                        instanceId, vipAddress, secureVipAddress, regions);
     }
 
@@ -311,8 +329,7 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public EurekaEndpointGroupBuilder rpcDecorator(
-            Function<? super RpcClient, ? extends RpcClient> decorator) {
+    public EurekaEndpointGroupBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
         return (EurekaEndpointGroupBuilder) super.rpcDecorator(decorator);
     }
 
@@ -322,25 +339,30 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public EurekaEndpointGroupBuilder addHttpHeader(CharSequence name, Object value) {
-        return (EurekaEndpointGroupBuilder) super.addHttpHeader(name, value);
+    public EurekaEndpointGroupBuilder clearDecorators() {
+        return (EurekaEndpointGroupBuilder) super.clearDecorators();
     }
 
     @Override
-    public EurekaEndpointGroupBuilder addHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (EurekaEndpointGroupBuilder) super.addHttpHeaders(httpHeaders);
+    public EurekaEndpointGroupBuilder addHeader(CharSequence name, Object value) {
+        return (EurekaEndpointGroupBuilder) super.addHeader(name, value);
     }
 
     @Override
-    public EurekaEndpointGroupBuilder setHttpHeader(CharSequence name, Object value) {
-        return (EurekaEndpointGroupBuilder) super.setHttpHeader(name, value);
+    public EurekaEndpointGroupBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (EurekaEndpointGroupBuilder) super.addHeaders(headers);
     }
 
     @Override
-    public EurekaEndpointGroupBuilder setHttpHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
-        return (EurekaEndpointGroupBuilder) super.setHttpHeaders(httpHeaders);
+    public EurekaEndpointGroupBuilder setHeader(CharSequence name, Object value) {
+        return (EurekaEndpointGroupBuilder) super.setHeader(name, value);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (EurekaEndpointGroupBuilder) super.setHeaders(headers);
     }
 
     @Override

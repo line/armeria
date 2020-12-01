@@ -53,7 +53,7 @@ public final class DocServiceBuilder {
     // When a service name is empty, its method name shouldn't be empty.
     // For exampleRequests, both service name and method name shouldn't be empty.
 
-    private final Map<String, ListMultimap<String, HttpHeaders>> exampleHttpHeaders = new HashMap<>();
+    private final Map<String, ListMultimap<String, HttpHeaders>> exampleHeaders = new HashMap<>();
     private final Map<String, ListMultimap<String, String>> exampleRequests = new HashMap<>();
     private final Map<String, ListMultimap<String, String>> examplePaths = new HashMap<>();
     private final Map<String, ListMultimap<String, String>> exampleQueries = new HashMap<>();
@@ -65,116 +65,116 @@ public final class DocServiceBuilder {
     /**
      * Adds the example {@link HttpHeaders} which are applicable to any services.
      */
-    public DocServiceBuilder exampleHttpHeaders(HttpHeaders... exampleHttpHeaders) {
-        requireNonNull(exampleHttpHeaders, "exampleHttpHeaders");
-        return exampleHttpHeaders(ImmutableList.copyOf(exampleHttpHeaders));
+    public DocServiceBuilder exampleHeaders(HttpHeaders... exampleHeaders) {
+        requireNonNull(exampleHeaders, "exampleHeaders");
+        return exampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
      * Adds the example {@link HttpHeaders} which are applicable to any services.
      */
-    public DocServiceBuilder exampleHttpHeaders(Iterable<? extends HttpHeaders> exampleHttpHeaders) {
-        return exampleHttpHeaders0("", "", exampleHttpHeaders);
+    public DocServiceBuilder exampleHeaders(Iterable<? extends HttpHeaders> exampleHeaders) {
+        return exampleHeaders0("", "", exampleHeaders);
     }
 
     /**
      * Adds the example {@link HttpHeaders} for the service with the specified type. This method is
      * a shortcut to:
      * <pre>{@code
-     * exampleHttpHeaders(serviceType.getName(), exampleHttpHeaders);
+     * exampleHeaders(serviceType.getName(), exampleHeaders);
      * }</pre>
      */
-    public DocServiceBuilder exampleHttpHeaders(Class<?> serviceType, HttpHeaders... exampleHttpHeaders) {
+    public DocServiceBuilder exampleHeaders(Class<?> serviceType, HttpHeaders... exampleHeaders) {
         requireNonNull(serviceType, "serviceType");
-        return exampleHttpHeaders(serviceType.getName(), exampleHttpHeaders);
+        return exampleHeaders(serviceType.getName(), exampleHeaders);
     }
 
     /**
      * Adds the example {@link HttpHeaders} for the service with the specified type. This method is
      * a shortcut to:
      * <pre>{@code
-     * exampleHttpHeaders(serviceType.getName(), exampleHttpHeaders);
+     * exampleHeaders(serviceType.getName(), exampleHeaders);
      * }</pre>
      */
-    public DocServiceBuilder exampleHttpHeaders(Class<?> serviceType,
-                                                Iterable<? extends HttpHeaders> exampleHttpHeaders) {
+    public DocServiceBuilder exampleHeaders(Class<?> serviceType,
+                                            Iterable<? extends HttpHeaders> exampleHeaders) {
         requireNonNull(serviceType, "serviceType");
-        return exampleHttpHeaders(serviceType.getName(), exampleHttpHeaders);
+        return exampleHeaders(serviceType.getName(), exampleHeaders);
     }
 
     /**
      * Adds the example {@link HttpHeaders} for the service with the specified name.
      */
-    public DocServiceBuilder exampleHttpHeaders(String serviceName, HttpHeaders... exampleHttpHeaders) {
-        requireNonNull(exampleHttpHeaders, "exampleHttpHeaders");
-        return exampleHttpHeaders(serviceName, ImmutableList.copyOf(exampleHttpHeaders));
+    public DocServiceBuilder exampleHeaders(String serviceName, HttpHeaders... exampleHeaders) {
+        requireNonNull(exampleHeaders, "exampleHeaders");
+        return exampleHeaders(serviceName, ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
      * Adds the example {@link HttpHeaders} for the service with the specified name.
      */
-    public DocServiceBuilder exampleHttpHeaders(String serviceName,
-                                                Iterable<? extends HttpHeaders> exampleHttpHeaders) {
+    public DocServiceBuilder exampleHeaders(String serviceName,
+                                            Iterable<? extends HttpHeaders> exampleHeaders) {
         requireNonNull(serviceName, "serviceName");
         checkArgument(!serviceName.isEmpty(), "serviceName is empty.");
-        requireNonNull(exampleHttpHeaders, "exampleHttpHeaders");
-        return exampleHttpHeaders0(serviceName, "", exampleHttpHeaders);
+        requireNonNull(exampleHeaders, "exampleHeaders");
+        return exampleHeaders0(serviceName, "", exampleHeaders);
     }
 
     /**
      * Adds the example {@link HttpHeaders} for the method with the specified type and method name.
      * This method is a shortcut to:
      * <pre>{@code
-     * exampleHttpHeaders(serviceType.getName(), methodName, exampleHttpHeaders);
+     * exampleHeaders(serviceType.getName(), methodName, exampleHeaders);
      * }</pre>
      */
-    public DocServiceBuilder exampleHttpHeaders(Class<?> serviceType, String methodName,
-                                                HttpHeaders... exampleHttpHeaders) {
+    public DocServiceBuilder exampleHeaders(Class<?> serviceType, String methodName,
+                                            HttpHeaders... exampleHeaders) {
         requireNonNull(serviceType, "serviceType");
-        return exampleHttpHeaders(serviceType.getName(), methodName, exampleHttpHeaders);
+        return exampleHeaders(serviceType.getName(), methodName, exampleHeaders);
     }
 
     /**
      * Adds the example {@link HttpHeaders} for the method with the specified type and method name.
      * This method is a shortcut to:
      * <pre>{@code
-     * exampleHttpHeaders(serviceType.getName(), methodName, exampleHttpHeaders);
+     * exampleHeaders(serviceType.getName(), methodName, exampleHeaders);
      * }</pre>
      */
-    public DocServiceBuilder exampleHttpHeaders(Class<?> serviceType, String methodName,
-                                                Iterable<? extends HttpHeaders> exampleHttpHeaders) {
+    public DocServiceBuilder exampleHeaders(Class<?> serviceType, String methodName,
+                                            Iterable<? extends HttpHeaders> exampleHeaders) {
         requireNonNull(serviceType, "serviceType");
-        return exampleHttpHeaders(serviceType.getName(), methodName, exampleHttpHeaders);
+        return exampleHeaders(serviceType.getName(), methodName, exampleHeaders);
     }
 
     /**
      * Adds the example {@link HttpHeaders} for the method with the specified service and method name.
      */
-    public DocServiceBuilder exampleHttpHeaders(String serviceName, String methodName,
-                                                HttpHeaders... exampleHttpHeaders) {
-        requireNonNull(exampleHttpHeaders, "exampleHttpHeaders");
-        return exampleHttpHeaders(serviceName, methodName, ImmutableList.copyOf(exampleHttpHeaders));
+    public DocServiceBuilder exampleHeaders(String serviceName, String methodName,
+                                            HttpHeaders... exampleHeaders) {
+        requireNonNull(exampleHeaders, "exampleHeaders");
+        return exampleHeaders(serviceName, methodName, ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
      * Adds the example {@link HttpHeaders} for the method with the specified service and method name.
      */
-    public DocServiceBuilder exampleHttpHeaders(String serviceName, String methodName,
-                                                Iterable<? extends HttpHeaders> exampleHttpHeaders) {
+    public DocServiceBuilder exampleHeaders(String serviceName, String methodName,
+                                            Iterable<? extends HttpHeaders> exampleHeaders) {
         requireNonNull(serviceName, "serviceName");
         checkArgument(!serviceName.isEmpty(), "serviceName is empty.");
         requireNonNull(methodName, "methodName");
         checkArgument(!methodName.isEmpty(), "methodName is empty.");
-        requireNonNull(exampleHttpHeaders, "exampleHttpHeaders");
-        return exampleHttpHeaders0(serviceName, methodName, exampleHttpHeaders);
+        requireNonNull(exampleHeaders, "exampleHeaders");
+        return exampleHeaders0(serviceName, methodName, exampleHeaders);
     }
 
-    private DocServiceBuilder exampleHttpHeaders0(String serviceName, String methodName,
-                                                  Iterable<? extends HttpHeaders> exampleHttpHeaders) {
-        for (HttpHeaders h : exampleHttpHeaders) {
-            requireNonNull(h, "exampleHttpHeaders contains null.");
-            this.exampleHttpHeaders.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
-                                   .put(methodName, h);
+    private DocServiceBuilder exampleHeaders0(String serviceName, String methodName,
+                                              Iterable<? extends HttpHeaders> exampleHeaders) {
+        for (HttpHeaders h : exampleHeaders) {
+            requireNonNull(h, "exampleHeaders contains null.");
+            this.exampleHeaders.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
+                               .put(methodName, h);
         }
         return this;
     }
@@ -267,50 +267,50 @@ public final class DocServiceBuilder {
      * Adds the example requests for the method with the specified service type and method name.
      * This method is a shortcut to:
      * <pre>{@code
-     * exampleRequest(serviceType.getName(), exampleRequests);
+     * exampleRequests(serviceType.getName(), methodName, exampleRequests);
      * }</pre>
      */
-    public DocServiceBuilder exampleRequestForMethod(Class<?> serviceType, String methodName,
-                                                     Object... exampleRequests) {
+    public DocServiceBuilder exampleRequests(Class<?> serviceType, String methodName,
+                                             Object... exampleRequests) {
         requireNonNull(exampleRequests, "exampleRequests");
-        return exampleRequestForMethod(serviceType, methodName, ImmutableList.copyOf(exampleRequests));
+        return exampleRequests(serviceType, methodName, ImmutableList.copyOf(exampleRequests));
     }
 
     /**
      * Adds the example requests for the method with the specified service type and method name.
      * This method is a shortcut to:
      * <pre>{@code
-     * exampleRequest(serviceType.getName(), exampleRequests);
+     * exampleRequests(serviceType.getName(), methodNane, exampleRequests);
      * }</pre>
      */
-    public DocServiceBuilder exampleRequestForMethod(Class<?> serviceType, String methodName,
-                                                     Iterable<?> exampleRequests) {
+    public DocServiceBuilder exampleRequests(Class<?> serviceType, String methodName,
+                                             Iterable<?> exampleRequests) {
         requireNonNull(serviceType, "serviceType");
-        return exampleRequestForMethod(serviceType.getName(), methodName, exampleRequests);
+        return exampleRequests(serviceType.getName(), methodName, exampleRequests);
     }
 
     /**
      * Adds the example requests for the method with the specified service and method name.
      */
-    public DocServiceBuilder exampleRequestForMethod(String serviceName, String methodName,
-                                                     Object... exampleRequests) {
+    public DocServiceBuilder exampleRequests(String serviceName, String methodName,
+                                             Object... exampleRequests) {
         requireNonNull(exampleRequests, "exampleRequests");
-        return exampleRequestForMethod(serviceName, methodName, ImmutableList.copyOf(exampleRequests));
+        return exampleRequests(serviceName, methodName, ImmutableList.copyOf(exampleRequests));
     }
 
     /**
      * Adds the example requests for the method with the specified service and method name.
      */
-    public DocServiceBuilder exampleRequestForMethod(String serviceName, String methodName,
-                                                     Iterable<?> exampleRequests) {
+    public DocServiceBuilder exampleRequests(String serviceName, String methodName,
+                                             Iterable<?> exampleRequests) {
         requireNonNull(serviceName, "serviceName");
         requireNonNull(methodName, "methodName");
         requireNonNull(exampleRequests, "exampleRequests");
 
         for (Object e : exampleRequests) {
             requireNonNull(e, "exampleRequests contains null.");
-            exampleRequest0(serviceName, methodName,
-                            serializeExampleRequest(serviceName, methodName, e));
+            putExampleRequest(serviceName, methodName,
+                              serializeExampleRequest(serviceName, methodName, e));
         }
         return this;
     }
@@ -322,24 +322,12 @@ public final class DocServiceBuilder {
      *
      * @throws IllegalArgumentException if failed to get the service and method name from an example request
      */
-    public DocServiceBuilder exampleRequest(Object... exampleRequests) {
-        requireNonNull(exampleRequests, "exampleRequests");
-        return exampleRequest(ImmutableList.copyOf(exampleRequests));
-    }
-
-    /**
-     * Adds the example requests which are applicable to the method denoted by the specified example requests.
-     * Please note that this method may fail if the specified requests object do not provide the information
-     * about their service and method names.
-     *
-     * @throws IllegalArgumentException if failed to get the service and method name from an example request
-     */
-    public DocServiceBuilder exampleRequest(Iterable<?> exampleRequests) {
+    public DocServiceBuilder exampleRequests(Iterable<?> exampleRequests) {
         requireNonNull(exampleRequests, "exampleRequests");
         for (Object e : exampleRequests) {
             requireNonNull(e, "exampleRequests contains null.");
             final String[] result = guessAndSerializeExampleRequest(e);
-            exampleRequest0(result[0], result[1], result[2]);
+            putExampleRequest(result[0], result[1], result[2]);
         }
         return this;
     }
@@ -421,9 +409,9 @@ public final class DocServiceBuilder {
      *   });
      * }</pre>
      */
-    public DocServiceBuilder injectedScript(String... scripts) {
+    public DocServiceBuilder injectedScripts(String... scripts) {
         requireNonNull(scripts, "scripts");
-        return injectedScript(ImmutableList.copyOf(scripts));
+        return injectedScripts(ImmutableList.copyOf(scripts));
     }
 
     /**
@@ -439,7 +427,7 @@ public final class DocServiceBuilder {
      *   });
      * }</pre>
      */
-    public DocServiceBuilder injectedScript(Iterable<String> scripts) {
+    public DocServiceBuilder injectedScripts(Iterable<String> scripts) {
         requireNonNull(scripts, "scripts");
         for (String s : scripts) {
             requireNonNull(s, "scripts contains null.");
@@ -460,7 +448,7 @@ public final class DocServiceBuilder {
         return this;
     }
 
-    private void exampleRequest0(String serviceName, String methodName, String serializedExampleRequest) {
+    private void putExampleRequest(String serviceName, String methodName, String serializedExampleRequest) {
         exampleRequests.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
                        .put(methodName, serializedExampleRequest);
     }
@@ -532,7 +520,7 @@ public final class DocServiceBuilder {
      * Returns a newly-created {@link DocService} based on the properties of this builder.
      */
     public DocService build() {
-        return new DocService(exampleHttpHeaders, exampleRequests, examplePaths, exampleQueries,
+        return new DocService(exampleHeaders, exampleRequests, examplePaths, exampleQueries,
                               injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter));
     }
 }

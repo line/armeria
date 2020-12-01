@@ -123,7 +123,7 @@ public class ThriftSerializationFormatsTest {
         // Browser clients often send a non-Thrift content type.
         final HelloService.Iface client =
                 Clients.builder(server.httpUri(BINARY) + "/hello")
-                       .setHttpHeader(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8")
+                       .setHeader(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8")
                        .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
@@ -132,7 +132,7 @@ public class ThriftSerializationFormatsTest {
     public void acceptNotSameAsContentType() throws Exception {
         final HelloService.Iface client =
                 Clients.builder(server.httpUri(TEXT) + "/hello")
-                       .setHttpHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
+                       .setHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
                        .build(HelloService.Iface.class);
         assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(InvalidResponseHeadersException.class)
                                                          .hasMessageContaining(":status=406");

@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     implementation project(':core')
+    runtimeOnly 'org.slf4j:slf4j-simple'
 
     implementation 'com.google.dagger:dagger'
     implementation 'com.google.dagger:dagger-producers'

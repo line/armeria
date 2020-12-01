@@ -22,6 +22,11 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -30,7 +35,10 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
@@ -41,7 +49,8 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
@@ -49,14 +58,18 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
+import com.linecorp.armeria.server.grpc.HandlerRegistry.Entry;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.BindableService;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
+import io.grpc.MethodDescriptor;
+import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
+import io.grpc.Status;
 import io.grpc.protobuf.services.ProtoReflectionService;
 
 /**
@@ -66,6 +79,23 @@ public final class GrpcServiceBuilder {
 
     private static final Set<SerializationFormat> DEFAULT_SUPPORTED_SERIALIZATION_FORMATS =
             GrpcSerializationFormats.values();
+
+    private static final Logger logger = LoggerFactory.getLogger(GrpcServiceBuilder.class);
+
+    private static final boolean USE_COROUTINE_CONTEXT_INTERCEPTOR;
+
+    static {
+        boolean useCoroutineContextInterceptor;
+        final String className = "io.grpc.kotlin.CoroutineContextServerInterceptor";
+        try {
+            Class.forName(className, false, GrpcServiceBuilder.class.getClassLoader());
+            useCoroutineContextInterceptor = true;
+        } catch (Throwable ignored) {
+            useCoroutineContextInterceptor = false;
+        }
+        logger.debug("{}: {}", className, useCoroutineContextInterceptor ? "available" : "unavailable");
+        USE_COROUTINE_CONTEXT_INTERCEPTOR = useCoroutineContextInterceptor;
+    }
 
     private final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
 
@@ -78,9 +108,15 @@ public final class GrpcServiceBuilder {
     @Nullable
     private ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
 
+    @Nullable
+    private LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings;
+
+    @Nullable
+    private GrpcStatusFunction statusFunction;
+
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
-    private int maxInboundMessageSizeBytes = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
+    private int maxInboundMessageSizeBytes = ArmeriaMessageDeframerHandler.NO_MAX_INBOUND_MESSAGE_SIZE;
 
     private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
@@ -107,19 +143,126 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Adds a gRPC {@link ServerServiceDefinition} to this {@link GrpcServiceBuilder}, such as
+     * what's returned by {@link BindableService#bindService()}.
+     *
+     * <p>Note that the specified {@code path} replaces the normal gRPC service path.
+     * Let's say you have the following gRPC service definition.
+     * <pre>{@code
+     * package example.grpc.hello;
+     *
+     * service HelloService {
+     *   rpc Hello (HelloRequest) returns (HelloReply) {}
+     * }}</pre>
+     * The normal gRPC service path for the {@code Hello} method is
+     * {@code "/example.grpc.hello.HelloService/Hello"}.
+     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
+     * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
+     */
+    public GrpcServiceBuilder addService(String path, ServerServiceDefinition service) {
+        registryBuilder.addService(requireNonNull(path, "path"), requireNonNull(service, "service"), null);
+        return this;
+    }
+
+    /**
+     * Adds a {@linkplain MethodDescriptor method} of gRPC {@link ServerServiceDefinition} to this
+     * {@link GrpcServiceBuilder}. You can get {@link MethodDescriptor}s from the enclosing class of
+     * your generated stub.
+     *
+     * <p>Note that the specified {@code path} replaces the normal gRPC service path.
+     * Let's say you have the following gRPC service definition.
+     * <pre>{@code
+     * package example.grpc.hello;
+     *
+     * service HelloService {
+     *   rpc Hello (HelloRequest) returns (HelloReply) {}
+     * }}</pre>
+     * The normal gRPC service path for the {@code Hello} method is
+     * {@code "/example.grpc.hello.HelloService/Hello"}.
+     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
+     * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
+     */
+    public GrpcServiceBuilder addService(String path, ServerServiceDefinition service,
+                                         MethodDescriptor<?, ?> methodDescriptor) {
+        registryBuilder.addService(requireNonNull(path, "path"),
+                                   requireNonNull(service, "service"),
+                                   requireNonNull(methodDescriptor, "methodDescriptor"));
+        return this;
+    }
+
+    /**
      * Adds a gRPC {@link BindableService} to this {@link GrpcServiceBuilder}. Most gRPC service
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
         if (bindableService instanceof ProtoReflectionService) {
-            checkState(protoReflectionServiceInterceptor == null,
-                       "Attempting to add a ProtoReflectionService but one is already present. " +
-                       "ProtoReflectionService must only be added once.");
-            protoReflectionServiceInterceptor = new ProtoReflectionServiceInterceptor();
-            return addService(ServerInterceptors.intercept(bindableService, protoReflectionServiceInterceptor));
+            return addService(ServerInterceptors.intercept(bindableService,
+                                                           newProtoReflectionServiceInterceptor()));
         }
 
         return addService(bindableService.bindService());
+    }
+
+    /**
+     * Adds a gRPC {@link BindableService} to this {@link GrpcServiceBuilder}. Most gRPC service
+     * implementations are {@link BindableService}s.
+     *
+     * <p>Note that the specified {@code path} replaces the normal gRPC service path.
+     * Let's say you have the following gRPC service definition.
+     * <pre>{@code
+     * package example.grpc.hello;
+     *
+     * service HelloService {
+     *   rpc Hello (HelloRequest) returns (HelloReply) {}
+     * }}</pre>
+     * The normal gRPC service path for the {@code Hello} method is
+     * {@code "/example.grpc.hello.HelloService/Hello"}.
+     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
+     * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
+     */
+    public GrpcServiceBuilder addService(String path, BindableService bindableService) {
+        if (bindableService instanceof ProtoReflectionService) {
+            return addService(path, ServerInterceptors.intercept(bindableService,
+                                                                 newProtoReflectionServiceInterceptor()));
+        }
+
+        return addService(path, bindableService.bindService());
+    }
+
+    /**
+     * Adds a {@linkplain MethodDescriptor method} of gRPC {@link BindableService} to this
+     * {@link GrpcServiceBuilder}. You can get {@link MethodDescriptor}s from the enclosing class of
+     * your generated stub.
+     *
+     * <p>Note that the specified {@code path} replaces the normal gRPC service path.
+     * Let's say you have the following gRPC service definition.
+     * <pre>{@code
+     * package example.grpc.hello;
+     *
+     * service HelloService {
+     *   rpc Hello (HelloRequest) returns (HelloReply) {}
+     * }}</pre>
+     * The normal gRPC service path for the {@code Hello} method is
+     * {@code "/example.grpc.hello.HelloService/Hello"}.
+     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
+     * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
+     */
+    public GrpcServiceBuilder addService(String path, BindableService bindableService,
+                                         MethodDescriptor<?, ?> methodDescriptor) {
+        if (bindableService instanceof ProtoReflectionService) {
+            final ServerServiceDefinition interceptor =
+                    ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
+            return addService(path, interceptor, methodDescriptor);
+        }
+
+        return addService(path, bindableService.bindService(), methodDescriptor);
+    }
+
+    private ProtoReflectionServiceInterceptor newProtoReflectionServiceInterceptor() {
+        checkState(protoReflectionServiceInterceptor == null,
+                   "Attempting to add a ProtoReflectionService but one is already present. " +
+                   "ProtoReflectionService must only be added once.");
+        return protoReflectionServiceInterceptor = new ProtoReflectionServiceInterceptor();
     }
 
     /**
@@ -305,12 +448,96 @@ public final class GrpcServiceBuilder {
      * processing. If disabled, the request timeout will be the one configured for the Armeria server, e.g.,
      * using {@link ServerBuilder#requestTimeout(Duration)}.
      *
-     * <p>It is recommended to disable this when clients are not trusted code, e.g., for grpc-web clients that
+     * <p>It is recommended to disable this when clients are not trusted code, e.g., for gRPC-Web clients that
      * can come from arbitrary browsers.
      */
     public GrpcServiceBuilder useClientTimeoutHeader(boolean useClientTimeoutHeader) {
         this.useClientTimeoutHeader = useClientTimeoutHeader;
         return this;
+    }
+
+    /**
+     * Sets the specified {@link GrpcStatusFunction} that maps a {@link Throwable} to a gRPC {@link Status}.
+     *
+     * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
+     */
+    public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction statusFunction) {
+        requireNonNull(statusFunction, "statusFunction");
+        checkState(exceptionMappings == null,
+                   "exceptionMapping() and addExceptionMapping() are mutually exclusive.");
+
+        this.statusFunction = statusFunction;
+        return this;
+    }
+
+    /**
+     * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
+     * The mapping is used to handle a {@link Throwable} when it is raised.
+     *
+     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
+     */
+    public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(status, "status");
+
+        checkState(statusFunction == null,
+                   "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
+
+        if (exceptionMappings == null) {
+            exceptionMappings = new LinkedList<>();
+            exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, status));
+            return this;
+        }
+
+        addExceptionMapping(exceptionMappings, exceptionType, status);
+        return this;
+    }
+
+    @VisibleForTesting
+    static void addExceptionMapping(
+            LinkedList<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings,
+            Class<? extends Throwable> exceptionType, Status status) {
+        requireNonNull(exceptionMappings, "exceptionMappings");
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(status, "status");
+
+        final ListIterator<Map.Entry<Class<? extends Throwable>, Status>> it =
+                exceptionMappings.listIterator();
+
+        while (it.hasNext()) {
+            final Map.Entry<Class<? extends Throwable>, Status> next = it.next();
+            final Class<? extends Throwable> oldExceptionType = next.getKey();
+            checkArgument(oldExceptionType != exceptionType, "%s is already added with %s",
+                          oldExceptionType, next.getValue());
+
+            if (oldExceptionType.isAssignableFrom(exceptionType)) {
+                // exceptionType is a subtype of oldExceptionType. exceptionType needs a higher priority.
+                it.previous();
+                it.add(new SimpleImmutableEntry<>(exceptionType, status));
+                return;
+            }
+        }
+
+        exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, status));
+    }
+
+    /**
+     * Converts the specified exception mappings to {@link GrpcStatusFunction}.
+     */
+    @VisibleForTesting
+    static GrpcStatusFunction toGrpcStatusFunction(
+            List<Map.Entry<Class<? extends Throwable>, Status>> exceptionMappings) {
+        final List<Map.Entry<Class<? extends Throwable>, Status>> mappings =
+                ImmutableList.copyOf(exceptionMappings);
+
+        return throwable -> {
+            for (Map.Entry<Class<? extends Throwable>, Status> mapping : mappings) {
+                if (mapping.getKey().isInstance(throwable)) {
+                    return mapping.getValue().withCause(throwable);
+                }
+            }
+            return null;
+        };
     }
 
     /**
@@ -321,7 +548,29 @@ public final class GrpcServiceBuilder {
      * without interfering with other services.
      */
     public GrpcService build() {
-        final HandlerRegistry handlerRegistry = registryBuilder.build();
+        final HandlerRegistry handlerRegistry;
+        if (USE_COROUTINE_CONTEXT_INTERCEPTOR) {
+            final ServerInterceptor coroutineContextInterceptor =
+                    new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
+            final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
+
+            for (Entry entry : registryBuilder.entries()) {
+                final MethodDescriptor<?, ?> methodDescriptor = entry.method();
+                final ServerServiceDefinition intercepted =
+                        ServerInterceptors.intercept(entry.service(), coroutineContextInterceptor);
+                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
+            }
+            handlerRegistry = newRegistryBuilder.build();
+        } else {
+            handlerRegistry = registryBuilder.build();
+        }
+
+        final GrpcStatusFunction statusFunction;
+        if (exceptionMappings != null) {
+            statusFunction = toGrpcStatusFunction(exceptionMappings);
+        } else {
+            statusFunction = this.statusFunction;
+        }
 
         final GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
@@ -336,11 +585,12 @@ public final class GrpcServiceBuilder {
                 supportedSerializationFormats,
                 jsonMarshallerFactory,
                 protoReflectionServiceInterceptor,
+                statusFunction,
                 maxOutboundMessageSizeBytes,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
                 maxInboundMessageSizeBytes);
-        return enableUnframedRequests ? new UnframedGrpcService(grpcService) : grpcService;
+        return enableUnframedRequests ? new UnframedGrpcService(grpcService, handlerRegistry) : grpcService;
     }
 }

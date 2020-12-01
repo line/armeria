@@ -63,8 +63,8 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.testing.DynamicBehaviorHandler;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
+import com.linecorp.armeria.internal.testing.SimpleChannelHandlerFactory;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -116,7 +116,10 @@ class ProxyClientIntegrationTest {
     private static final String PROXY_PATH = "/proxy";
     private static final String SUCCESS_RESPONSE = "success";
 
-    private static final DynamicBehaviorHandler DYNAMIC_HANDLER = new DynamicBehaviorHandler();
+    private static final SimpleChannelHandlerFactory NOOP_CHANNEL_HANDLER_FACTORY =
+            new SimpleChannelHandlerFactory(null, null);
+
+    private static SimpleChannelHandlerFactory channelHandlerFactory;
 
     @RegisterExtension
     @Order(0)
@@ -140,7 +143,7 @@ class ProxyClientIntegrationTest {
         @Override
         protected void configure(Channel ch) throws Exception {
             ch.pipeline().addLast(new SocksPortUnificationServerHandler());
-            ch.pipeline().addLast(DYNAMIC_HANDLER);
+            ch.pipeline().addLast(channelHandlerFactory.newHandler());
             ch.pipeline().addLast(new Socks4ProxyServerHandler());
             ch.pipeline().addLast(new Socks5ProxyServerHandler());
             ch.pipeline().addLast(new IntermediaryProxyServerHandler("socks"));
@@ -183,7 +186,7 @@ class ProxyClientIntegrationTest {
             ch.pipeline().addLast(new LoggingHandler(getClass()));
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
-            ch.pipeline().addLast(DYNAMIC_HANDLER);
+            ch.pipeline().addLast(channelHandlerFactory.newHandler());
         }
     };
 
@@ -192,7 +195,7 @@ class ProxyClientIntegrationTest {
     @BeforeEach
     void beforeEach() {
         numSuccessfulProxyRequests = 0;
-        DYNAMIC_HANDLER.reset();
+        channelHandlerFactory = NOOP_CHANNEL_HANDLER_FACTORY;
     }
 
     @Test
@@ -383,7 +386,7 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testHttpProxyUpgradeRequestFailure() throws Exception {
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             final HttpRequest request = (HttpRequest) msg;
             final DefaultFullHttpResponse response;
             if ("h2c".equals(request.headers().get(HttpHeaderNames.UPGRADE))) {
@@ -427,7 +430,7 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testHttpProxyPrefaceFailure() throws Exception {
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             final HttpRequest request = (HttpRequest) msg;
             final DefaultFullHttpResponse response;
             if (HttpMethod.valueOf("PRI").equals(request.method())) {
@@ -485,7 +488,7 @@ class ProxyClientIntegrationTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
         assertThat(numSuccessfulProxyRequests).isEqualTo(1);
-        clientFactory.close();
+        clientFactory.closeAsync();
     }
 
     @Test
@@ -516,7 +519,7 @@ class ProxyClientIntegrationTest {
     @Test
     void testProxyWithUserName() throws Exception {
         final String username = "username";
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             if (msg instanceof DefaultSocks4CommandRequest) {
                 assertThat(username).isEqualTo(((DefaultSocks4CommandRequest) msg).userId());
             }
@@ -593,7 +596,7 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testProxy_connectionTimeoutFailure_throwsException() throws Exception {
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             if (msg instanceof DefaultSocks4CommandRequest) {
                 ctx.channel().eventLoop().schedule(
                         () -> ctx.fireChannelRead(msg), 50, TimeUnit.MILLISECONDS);
@@ -647,7 +650,7 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testProxy_serverImmediateClose_throwsException() throws Exception {
-        DYNAMIC_HANDLER.setChannelReadCustomizer((ctx, msg) -> {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onChannelRead((ctx, msg) -> {
             ReferenceCountUtil.release(msg);
             ctx.close();
         });
@@ -690,7 +693,7 @@ class ProxyClientIntegrationTest {
 
     @Test
     void testProxy_responseFailure_throwsException() throws Exception {
-        DYNAMIC_HANDLER.setWriteCustomizer((ctx, msg, promise) -> {
+        channelHandlerFactory = SimpleChannelHandlerFactory.onWrite((ctx, msg, promise) -> {
             ReferenceCountUtil.release(msg);
             ctx.write(new DefaultSocks4CommandResponse(Socks4CommandStatus.REJECTED_OR_FAILED), promise);
         });
@@ -781,8 +784,8 @@ class ProxyClientIntegrationTest {
         protected void channelRead0(ChannelHandlerContext ctx, Socks4Message msg) throws Exception {
             if (msg instanceof DefaultSocks4CommandRequest) {
                 final DefaultSocks4CommandRequest req = (DefaultSocks4CommandRequest) msg;
-                final DefaultSocks4CommandResponse response;
-                response = new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
+                final DefaultSocks4CommandResponse response =
+                        new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
                 ctx.fireUserEventTriggered(new ProxySuccessEvent(
                         new InetSocketAddress(req.dstAddr(), req.dstPort()), response));
             } else {

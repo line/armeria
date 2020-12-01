@@ -25,13 +25,6 @@ import org.junit.jupiter.api.Test;
 class PrefixPathMappingTest {
 
     @Test
-    void loggerAndMetricName() {
-        final PrefixPathMapping prefixPathMapping = new PrefixPathMapping("/foo/bar", true);
-        assertThat(prefixPathMapping.loggerName()).isEqualTo("foo.bar");
-        assertThat(prefixPathMapping.meterTag()).isEqualTo("prefix:/foo/bar/");
-    }
-
-    @Test
     void patternString() {
         final PrefixPathMapping prefixPathMapping1 = new PrefixPathMapping("/foo/bar", true);
         assertThat(prefixPathMapping1.patternString()).isEqualTo("/foo/bar/*");

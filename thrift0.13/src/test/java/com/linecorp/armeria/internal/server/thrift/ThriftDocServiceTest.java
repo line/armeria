@@ -112,15 +112,17 @@ public class ThriftDocServiceTest {
             sb.service("/hbase", hbaseService);
             sb.service("/oneway", onewayHelloService);
 
-            sb.serviceUnder("/docs/",
+            sb.serviceUnder(
+                    "/docs/",
                     DocService.builder()
-                              .exampleHttpHeaders(EXAMPLE_HEADERS_ALL)
-                              .exampleHttpHeaders(HelloService.class, EXAMPLE_HEADERS_HELLO)
-                              .exampleHttpHeaders(FooService.class, EXAMPLE_HEADERS_FOO)
-                              .exampleHttpHeaders(FooService.class, "bar1", EXAMPLE_HEADERS_FOO_BAR1)
-                              .exampleRequest(EXAMPLE_HELLO)
+                              .exampleHeaders(EXAMPLE_HEADERS_ALL)
+                              .exampleHeaders(HelloService.class, EXAMPLE_HEADERS_HELLO)
+                              .exampleHeaders(FooService.class, EXAMPLE_HEADERS_FOO)
+                              .exampleHeaders(FooService.class, "bar1", EXAMPLE_HEADERS_FOO_BAR1)
+                              .exampleRequests(ImmutableList.of(EXAMPLE_HELLO))
                               .build());
-            sb.serviceUnder("/excludeAll/",
+            sb.serviceUnder(
+                    "/excludeAll/",
                     DocService.builder()
                               .exclude(DocServiceFilter.ofThrift())
                               .build());
@@ -189,26 +191,26 @@ public class ThriftDocServiceTest {
 
     private static void addExamples(JsonNode json) {
         // Add the global example.
-        ((ArrayNode) json.get("exampleHttpHeaders")).add(mapper.valueToTree(EXAMPLE_HEADERS_ALL));
+        ((ArrayNode) json.get("exampleHeaders")).add(mapper.valueToTree(EXAMPLE_HEADERS_ALL));
 
         json.get("services").forEach(service -> {
             // Add the service-wide examples.
             final String serviceName = service.get("name").textValue();
-            final ArrayNode serviceExampleHttpHeaders = (ArrayNode) service.get("exampleHttpHeaders");
+            final ArrayNode serviceExampleHeaders = (ArrayNode) service.get("exampleHeaders");
             if (HelloService.class.getName().equals(serviceName)) {
-                serviceExampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_HELLO));
+                serviceExampleHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_HELLO));
             }
             if (FooService.class.getName().equals(serviceName)) {
-                serviceExampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_FOO));
+                serviceExampleHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_FOO));
             }
 
             // Add the method-specific examples.
             service.get("methods").forEach(method -> {
                 final String methodName = method.get("name").textValue();
-                final ArrayNode exampleHttpHeaders = (ArrayNode) method.get("exampleHttpHeaders");
+                final ArrayNode exampleHeaders = (ArrayNode) method.get("exampleHeaders");
                 if (FooService.class.getName().equals(serviceName) &&
                     "bar1".equals(methodName)) {
-                    exampleHttpHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_FOO_BAR1));
+                    exampleHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_FOO_BAR1));
                 }
 
                 final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");

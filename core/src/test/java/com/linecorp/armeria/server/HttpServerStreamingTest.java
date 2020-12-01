@@ -130,7 +130,7 @@ class HttpServerStreamingTest {
 
     @AfterAll
     static void destroy() {
-        CompletableFuture.runAsync(clientFactory::close);
+        clientFactory.closeAsync();
     }
 
     @BeforeEach

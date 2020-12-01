@@ -49,6 +49,7 @@ import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.FutureListener;
@@ -61,7 +62,7 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
  * accept requests. The default behavior is to respond healthy after the server is started and unhealthy
  * after it started to stop.
  *
- * <h3>Long-polling support</h3>
+ * <h2>Long-polling support</h2>
  *
  * <p>A client that sends health check requests to this service can send a long-polling request to get notified
  * immediately when a {@link Server} becomes healthy or unhealthy, rather than sending health check requests
@@ -76,14 +77,14 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
  *       <li>e.g. {@code Prefer: wait=60}</li>
  *     </ul>
  *   </li>
- * </ul></p>
+ * </ul>
  *
  * <p>To wait until a {@link Server} becomes healthy, i.e. wait for the recovery, send an HTTP request with
  * two additional headers:
  * <ul>
  *   <li>{@code If-None-Match: "unhealthy"}</li>
  *   <li>{@code Prefer: wait=<seconds>}</li>
- * </ul></p>
+ * </ul>
  *
  * <p>The {@link Server} will wait up to the amount of seconds specified in the {@code "Prefer"} header
  * and respond with {@code "200 OK"}, {@code "503 Service Unavailable"} or {@code "304 Not Modified"}.
@@ -144,6 +145,7 @@ public final class HealthCheckService implements TransientHttpService {
     final Set<PendingResponse> pendingUnhealthyResponses;
     @Nullable
     private final HealthCheckUpdateHandler updateHandler;
+    private final Set<TransientServiceOption> transientServiceOptions;
 
     @Nullable
     private Server server;
@@ -152,11 +154,13 @@ public final class HealthCheckService implements TransientHttpService {
     HealthCheckService(Iterable<HealthChecker> healthCheckers,
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
                        long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
-                       long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler) {
+                       long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
+                       Set<TransientServiceOption> transientServiceOptions) {
         serverHealth = new SettableHealthChecker(false);
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
                 .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
+        this.transientServiceOptions = transientServiceOptions;
 
         if (maxLongPollingTimeoutMillis > 0 &&
             this.healthCheckers.stream().allMatch(ListenableHealthChecker.class::isInstance)) {
@@ -517,6 +521,11 @@ public final class HealthCheckService implements TransientHttpService {
                 }
             }
         }
+    }
+
+    @Override
+    public Set<TransientServiceOption> transientServiceOptions() {
+        return transientServiceOptions;
     }
 
     private static final class PendingResponse {

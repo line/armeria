@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,16 +14,12 @@
  * under the License.
  */
 
-import 'react-dropdown/style.css';
-import './style-dropdown.css';
-
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
 import React from 'react';
-import { Option } from 'react-dropdown';
 import { RouteComponentProps } from 'react-router-dom';
 
 import {
@@ -34,6 +30,7 @@ import {
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { ANNOTATED_HTTP_MIME_TYPE } from '../../lib/transports/annotated-http';
+import { SelectOption } from '../../lib/types';
 
 import Section from '../../components/Section';
 import VariableList from '../../components/VariableList';
@@ -49,19 +46,16 @@ function getExampleHeaders(
   specification: Specification,
   service: Service,
   method: Method,
-): Option[] {
-  const exampleHeaders: Option[] = [];
-  addExampleHeadersIfExists(exampleHeaders, method.exampleHttpHeaders);
-  addExampleHeadersIfExists(exampleHeaders, service.exampleHttpHeaders);
-  addExampleHeadersIfExists(
-    exampleHeaders,
-    specification.getExampleHttpHeaders(),
-  );
+): SelectOption[] {
+  const exampleHeaders: SelectOption[] = [];
+  addExampleHeadersIfExists(exampleHeaders, method.exampleHeaders);
+  addExampleHeadersIfExists(exampleHeaders, service.exampleHeaders);
+  addExampleHeadersIfExists(exampleHeaders, specification.getExampleHeaders());
   return exampleHeaders;
 }
 
 function addExampleHeadersIfExists(
-  dst: Option[],
+  dst: SelectOption[],
   src: { [name: string]: string }[],
 ) {
   if (src.length > 0) {
@@ -78,7 +72,7 @@ function getExamplePaths(
   specification: Specification,
   service: Service,
   method: Method,
-): Option[] {
+): SelectOption[] {
   return (
     specification
       .getServiceByName(service.name)
@@ -93,7 +87,7 @@ function getExampleQueries(
   specification: Specification,
   service: Service,
   method: Method,
-): Option[] {
+): SelectOption[] {
   return (
     specification
       .getServiceByName(service.name)

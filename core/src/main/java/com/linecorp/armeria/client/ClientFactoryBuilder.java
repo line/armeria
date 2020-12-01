@@ -28,9 +28,12 @@ import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -103,6 +106,8 @@ public final class ClientFactoryBuilder {
     private int maxNumEventLoopsPerEndpoint;
     private int maxNumEventLoopsPerHttp1Endpoint;
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
+    private boolean tlsNoVerifySet;
+    private final Set<String> insecureHosts = new HashSet<>();
 
     ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
@@ -242,15 +247,29 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Disables the verification of server's key certificate chain. This method is a shortcut for:
-     * {@code tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))}.
+     * Disables the verification of server's TLS certificate chain. If you want to disable verification for
+     * only specific hosts, use {@link #tlsNoVerifyHosts(String...)}.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see InsecureTrustManagerFactory
      * @see #tlsCustomizer(Consumer)
      */
     public ClientFactoryBuilder tlsNoVerify() {
-        tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
+        checkState(insecureHosts.isEmpty(), "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
+        tlsNoVerifySet = true;
+        return this;
+    }
+
+    /**
+     * Disables the verification of server's TLS certificate chain for specific hosts. If you want to disable
+     * all verification, use {@link #tlsNoVerify()} .
+     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * @see #tlsCustomizer(Consumer)
+     */
+    public ClientFactoryBuilder tlsNoVerifyHosts(String... insecureHosts) {
+        checkState(!tlsNoVerifySet, "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
+        this.insecureHosts.addAll(Arrays.asList(insecureHosts));
         return this;
     }
 
@@ -278,6 +297,21 @@ public final class ClientFactoryBuilder {
                 tlsCustomizer.accept(b);
             });
         }
+        return this;
+    }
+
+    /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     */
+    public ClientFactoryBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
+        option(ClientFactoryOptions.TLS_ALLOW_UNSAFE_CIPHERS, tlsAllowUnsafeCiphers);
         return this;
     }
 
@@ -433,7 +467,7 @@ public final class ClientFactoryBuilder {
      * Sets the PING interval in milliseconds.
      * When neither read nor write was performed for the given {@code pingIntervalMillis},
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
@@ -457,7 +491,7 @@ public final class ClientFactoryBuilder {
      * Sets the PING interval.
      * When neither read nor write was performed for the given {@code pingInterval},
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a herf="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
@@ -597,10 +631,24 @@ public final class ClientFactoryBuilder {
                         if (dnsResolverGroupCustomizers != null) {
                             dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
                         }
-                        return builder.build(eventLoopGroup);
+
+                        final ClientFactoryOptionValue<?> opt = options.getOrDefault(
+                                ClientFactoryOptions.METER_REGISTRY,
+                                ClientFactoryOptions.METER_REGISTRY.newValue(
+                                        ClientFactoryOptions.of().meterRegistry()));
+
+                        return builder
+                                .meterRegistry((MeterRegistry) opt.value())
+                                .build(eventLoopGroup);
                     };
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
+
+        if (tlsNoVerifySet) {
+            tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
+        } else if (!insecureHosts.isEmpty()) {
+            tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
+        }
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long idleTimeoutMillis = newOptions.idleTimeoutMillis();

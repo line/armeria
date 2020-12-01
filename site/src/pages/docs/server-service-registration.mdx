@@ -1,0 +1,142 @@
+# Service registration for discovery
+
+You can use <type://ServerListener> to register the information of Armeria servers when they start so that
+a client uses the information to distribute its requests to the servers autonomously, unlike
+traditional server-side load balancing where the requests go through a dedicated load balancer such as
+[L4 and L7 switches](https://en.wikipedia.org/wiki/Multilayer_switch#Layer_4%E2%80%937_switch,_web_switch,_or_content_switch).
+
+Armeria provides 2 <type://ServerListener> implementations for service registration:
+- <type://ZooKeeperUpdatingListener> which registers to [ZooKeeper](https://zookeeper.apache.org/)
+  as an ephemeral node.
+- <type://EurekaUpdatingListener> which registers to [Eureka](https://github.com/Netflix/eureka/).
+
+## ZooKeeper-based service registration with `ZooKeeperUpdatingListener`
+
+First, You need the `armeria-zookeeper3` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-zookeeper3' },
+  ]}
+/>
+
+Then, use <type://ZooKeeperUpdatingListener> and <type://ZooKeeperRegistrationSpec> to register your server
+to a ZooKeeper cluster:
+
+```java
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.zookeeper.ZooKeeperRegistrationSpec;
+import com.linecorp.armeria.server.zookeeper.ZooKeeperUpdatingListener;
+
+String zkConnectionStr = "myZooKeeperHost:2181";
+String znodePath = "/myProductionEndpoints";
+String serviceName = "catalog";
+ZooKeeperRegistrationSpec registrationSpec =
+        ZooKeeperRegistrationSpec.curator(serviceName);
+ZooKeeperUpdatingListener listener =
+        ZooKeeperUpdatingListener.builder(zkConnectionStr, znodePath, registrationSpec)
+                                 .sessionTimeoutMillis(10000)
+                                 .build();
+Server server = ...
+server.addListener(listener);
+server.start();
+```
+
+The <type://ZooKeeperRegistrationSpec> is used to convert the information of your server to a binary
+representation. The <type://ZooKeeperUpdatingListener> registers the binary representation to the specified
+znode as a member of the cluster when your server starts up. Each server will represent itself as
+[an EPHEMERAL node](https://zookeeper.apache.org/doc/r3.4.10/zookeeperOver.html#Nodes+and+ephemeral+nodes),
+which means when a server stops or a network partition between your server and ZooKeeper cluster occurs,
+the node of the server that became unreachable will be deleted automatically by ZooKeeper.
+
+<type://ZooKeeperRegistrationSpec#curator(String)> uses the format of
+[Curator Service Discovery](https://curator.apache.org/curator-x-discovery/index.html) which is compatible
+with [Spring Cloud Zookeeper](https://cloud.spring.io/spring-cloud-zookeeper/reference/html/).
+You can use <type://ZooKeeperRegistrationSpec#serverSets()> that applies the format of
+[Finagle ServerSets](https://twitter.github.io/finagle/docs/com/twitter/serverset.html).
+If you want to use your own format, you can implement the <type://ZooKeeperRegistrationSpec>.
+
+In the example above, we used the ZooKeeper connection string(`"myZooKeeperHost:2181"`) to connect to
+the ZooKeeper cluster. Instead, you can use an existing
+[CuratorFramework](https://curator.apache.org/apidocs/org/apache/curator/framework/CuratorFramework.html)
+instance.
+
+```java
+import org.apache.curator.framework.CuratorFramework;
+
+CuratorFramework client = ...
+String znodePath = ...
+ZooKeeperRegistrationSpec registrationSpec = ...
+ZooKeeperUpdatingListener listener =
+        ZooKeeperUpdatingListener.builder(client, znodePath, registrationSpec)
+                                 .build();
+Server server = ...
+server.addListener(listener);
+server.start();
+```
+
+For more information, please refer to the API documentation of the
+[com.linecorp.armeria.server.zookeeper](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/server/zookeeper/package-summary.html) package.
+
+<Tip>
+
+See [ZooKeeper service discovery](/docs/client-service-discovery#zookeeper-based-service-discovery-with-zookeeperendpointgroup).
+
+</Tip>
+
+## Eureka-based service registration with `EurekaUpdatingListener`
+
+First, You need the `armeria-eureka` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-eureka' },
+  ]}
+/>
+
+Then, use <type://EurekaUpdatingListener> to register your server to the Eureka:
+
+```java
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.eureka.EurekaUpdatingListener;
+
+EurekaUpdatingListener listener =
+        EurekaUpdatingListener.of("https://eureka.com:8001/eureka/v2");
+
+ServerBuilder sb = Server.builder();
+sb.serverListener(listener);
+sb.builder().start();
+```
+
+If you want to specify the [properties](https://github.com/Netflix/eureka/wiki/Eureka-REST-operations)
+of the <type://Server>, use <type://EurekaUpdatingListenerBuilder>:
+
+```java
+import com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder;
+
+EurekaUpdatingListenerBuilder builder =
+        EurekaUpdatingListener.builder("https://eureka.com:8001/eureka/v2");
+                              .instanceId("i-00000000")
+                              .setHostname("armeria.service.1")
+                              // If ipAddr is not specified, it's automatically filled
+                              // using SystemInfo.defaultNonLoopbackIpV4Address().
+                              .ipAddr("192.168.10.10")
+                              .vipAddress("armeria.service.com:8080");
+                              .build();
+EurekaUpdatingListener listener = builder.build();
+ServerBuilder sb = Server.builder();
+sb.serverListener(listener);
+sb.builder().start();
+```
+
+For more information, please refer to the API documentation of the
+[com.linecorp.armeria.client.eureka](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/eureka/package-summary.html) package.
+
+<Tip>
+
+See [Eureka service discovery](/docs/client-service-discovery#eureka-based-service-discovery-with-eurekaendpointgroup).
+
+</Tip>

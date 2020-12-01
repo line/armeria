@@ -1,5 +1,5 @@
 final def SPRING_BOOT_VERSION = '1.5.22.RELEASE'
-final def MICROMETER_VERSION = '1.3.11'
+final def MICROMETER_VERSION = '1.3.14'
 
 dependencies {
     // To let a user choose between thrift and thrift0.9.
@@ -26,12 +26,6 @@ dependencies {
 
     api 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
-    api("org.springframework.boot:spring-boot-starter") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly SPRING_BOOT_VERSION
-        }
-    }
     api("org.springframework.boot:spring-boot-autoconfigure") {
         version {
             // Will fail the build if the override doesn't work
@@ -47,10 +41,12 @@ dependencies {
 
     testImplementation project(':grpc')
     testImplementation project(':thrift0.13')
-    testImplementation("org.springframework.boot:spring-boot-starter-test") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly SPRING_BOOT_VERSION
+    [ 'spring-boot-starter', 'spring-boot-starter-test' ].each {
+        testImplementation("org.springframework.boot:$it") {
+            version {
+                // Will fail the build if the override doesn't work
+                strictly SPRING_BOOT_VERSION
+            }
         }
     }
 }
@@ -60,10 +56,11 @@ dependencies {
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
 def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot2-autoconfigure"
-// Copy common files from boot-autoconfigure module to gen-src directory in order to use them as a source set.
+// Copy common files from boot2-autoconfigure module to gen-src directory in order to use them as a source set.
 task generateSources(type: Copy) {
     from "${autoconfigureProjectDir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
+    exclude '**/ArmeriaAutoConfiguration.java'
     exclude '**/ArmeriaBeanPostProcessor.java'
     exclude '**/ArmeriaBeanPostProcessorConfiguration.java'
     exclude '**/package-info.java'

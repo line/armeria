@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
@@ -66,7 +67,6 @@ class GrpcWebRetryTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(GrpcService.builder()
                                   .addService(new TestServiceImpl())
-                                  .supportedSerializationFormats(GrpcSerializationFormats.values())
                                   .build());
         }
     };
@@ -84,8 +84,7 @@ class GrpcWebRetryTest {
                             return grpcStatus != null && grpcStatus != 0;
                         })
                         .onResponse((ctx, res) -> res.aggregate().thenApply(aggregatedRes -> {
-                            final HttpHeaders trailers =
-                                    GrpcWebUtil.parseTrailers(ctx, aggregatedRes.content());
+                            final HttpHeaders trailers = GrpcWebTrailers.get(ctx);
                             return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0;
                         }))
                         .thenBackoff();
@@ -94,7 +93,7 @@ class GrpcWebRetryTest {
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
     @ParameterizedTest
     void unaryCall(SerializationFormat serializationFormat) {
-        unaryCall(serializationFormat, SimpleRequest.newBuilder().build());
+        unaryCall(serializationFormat, SimpleRequest.getDefaultInstance());
     }
 
     private void unaryCall(SerializationFormat serializationFormat, SimpleRequest request) {

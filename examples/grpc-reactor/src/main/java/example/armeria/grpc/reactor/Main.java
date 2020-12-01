@@ -54,13 +54,13 @@ public final class Main {
                      // See https://armeria.dev/docs/server-docservice for more information.
                      .serviceUnder("/docs",
                              DocService.builder()
-                                       .exampleRequestForMethod(
+                                       .exampleRequests(
                                                HelloServiceGrpc.SERVICE_NAME,
                                                "Hello", exampleRequest)
-                                       .exampleRequestForMethod(
+                                       .exampleRequests(
                                                HelloServiceGrpc.SERVICE_NAME,
                                                "LazyHello", exampleRequest)
-                                       .exampleRequestForMethod(
+                                       .exampleRequests(
                                                HelloServiceGrpc.SERVICE_NAME,
                                                "BlockingHello", exampleRequest)
                                        .exclude(DocServiceFilter.ofServiceName(

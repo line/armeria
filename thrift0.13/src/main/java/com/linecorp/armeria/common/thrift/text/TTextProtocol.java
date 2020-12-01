@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -43,6 +43,7 @@ import org.apache.thrift.TBase;
 import org.apache.thrift.TEnum;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TField;
+import org.apache.thrift.protocol.TJSONProtocol;
 import org.apache.thrift.protocol.TList;
 import org.apache.thrift.protocol.TMap;
 import org.apache.thrift.protocol.TMessage;
@@ -61,33 +62,31 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
- * A simple text format for serializing/deserializing thrift
+ * A simple text format for serializing/deserializing Thrift
  * messages. This format is inefficient in space.
  *
  * <p>For an example, see:
- * tests/resources/com/twitter/common/thrift/text/TTextProtocol_TestData.txt
+ * {@code test/resources/com/linecorp/armeria/common/thrift/text/TTextProtocol_TestData.txt},</p>
  *
- * <p>which is a text encoding of the thrift message defined in:
- *
- * <p>src/main/thrift/com/twitter/common/thrift/text/TTextProtocolTest.thrift
+ * <p>which is a text encoding of the Thrift message defined in:
+ * {@code test/thrift/TTextProtocolTest.thrift}.</p>
  *
  * <p>Whitespace (including newlines) is not significant.
+ * No comments are allowed in the JSON.</p>
  *
- * <p>No comments are allowed in the json.
+ * <p>Messages must be formatted as a JSON object with {@code method} field containing
+ * the message name, {@code type} containing the message type as an uppercase string
+ * corresponding to {@link TMessageType}, {@code args} containing a JSON object with
+ * the actual arguments, and an optional {@code seqid} field containing the sequence
+ * ID. If {@code seqid} is not provided, it will be treated as {@code 0}. {@code args}
+ * should use the argument names as defined in the service definition.</p>
  *
- * <p>Messages must be formatted as a JSON object with a field 'method' containing
- * the message name, 'type' containing the message type as an uppercase string
- * corresponding to {@link TMessageType}, 'args' containing a JSON object with
- * the actual arguments, and an optional 'seqid' field containing the sequence
- * id. If 'seqid' is not provided, it will be treated as 0. 'args' should use
- * the argument names as defined in the service definition.
- *
- * <p>Example:{@code
- *
+ * <p>Example:<pre>{@code
  * {
  *     "method": "GetItem",
  *     "type": "CALL",
@@ -97,27 +96,23 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  *     },
  *     "seqid": 100
  * }
+ * }</pre></p>
  *
- * }
+ * <p>See Thrift's {@link TJSONProtocol} for another example of an implementation
+ * of the {@link TProtocol} interface. This class is based on that.</p>
  *
  * <p>TODO(Alex Roetter): write a wrapper that allows us to read in a file
  * of many structs (perhaps stored in a JsonArray), passing each struct to
  * this class for parsing.
  *
- * <p>See thrift's @see org.apache.thrift.protocol.TJSONProtocol
- * for another example an implementation of the @see TProtocol
- * interface. This class is based on that.
- *
- * <p>TODO(Alex Roetter): Also add a new TEXT_PROTOCOL field to ThriftCodec
- *
- * <p>TODO: Support map enum keys specified as strings.
- *
  * <p>TODO: Support string values for enums that have been typedef'd.
  *
- * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}.
+ * @see TTextProtocolFactory#getProtocol(TTransport)
  */
-@Deprecated
-public final class TTextProtocol extends TProtocol {
+final class TTextProtocol extends TProtocol {
+
+    static final String MAP_KEY_SUFFIX = "$k";
+    static final String MAP_VALUE_SUFFIX = "$v";
 
     private static final String SEQUENCE_AS_KEY_ILLEGAL =
             "Can't have a sequence (list or set) as a key in a map!";
@@ -127,41 +122,37 @@ public final class TTextProtocol extends TProtocol {
 
     private static final TStruct ANONYMOUS_STRUCT = new TStruct();
 
-    // how many bytes to read at once
+    // How many bytes to read at once.
     private static final int READ_BUFFER_SIZE = 1024;
-
     private static final byte UNUSED_TYPE = TType.STOP;
+
     private final Stack<WriterByteArrayOutputStream> writers;
     private final Stack<BaseContext> contextStack;
-    private final Stack<Class<?>> currentFieldClass;
+    private final Stack<BaseContext> currentFieldContext;
+    private final Stack<String> currentFieldName;
     private final boolean useNamedEnums;
     @Nullable
     private JsonNode root;
 
     /**
-     * Create a parser which can read from trans, and create the output writer
-     * that can write to a TTransport.
-     *
-     * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}
+     * Create a parser which can read from {@code trans},
+     * and create the output writer that can write to a {@link TTransport}.
      */
-    @Deprecated
-    public TTextProtocol(TTransport trans) {
+    TTextProtocol(TTransport trans) {
         this(trans, false);
     }
 
     /**
-     * Create a parser which can read from trans, and create the output writer
-     * that can write to a TTransport, optionally enabling serialization of named enums.
-     *
-     * @deprecated Use {@link TTextProtocolFactory#getProtocol(TTransport)}
+     * Create a parser which can read from {@code trans}, and create the output writer
+     * that can write to a {@link TTransport}, optionally enabling serialization of named enums.
      */
-    @Deprecated
-    public TTextProtocol(TTransport trans, boolean useNamedEnums) {
+    TTextProtocol(TTransport trans, boolean useNamedEnums) {
         super(trans);
 
         writers = new Stack<>();
         contextStack = new Stack<>();
-        currentFieldClass = new Stack<>();
+        currentFieldContext = new Stack<>();
+        currentFieldName = new Stack<>();
         this.useNamedEnums = useNamedEnums;
         reset();
     }
@@ -181,7 +172,8 @@ public final class TTextProtocol extends TProtocol {
 
         contextStack.clear();
         contextStack.push(new BaseContext());
-        currentFieldClass.clear();
+        currentFieldContext.clear();
+        currentFieldName.clear();
     }
 
     /**
@@ -217,6 +209,7 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public void writeStructBegin(TStruct struct) throws TException {
+        writeCurrentContext();
         writeJsonObjectBegin(new StructContext(null));
     }
 
@@ -233,12 +226,14 @@ public final class TTextProtocol extends TProtocol {
             throw new TException(ex);
         }
 
-        currentFieldClass.push(getCurrentContext().getClassByFieldName(field.name));
+        currentFieldContext.push(getCurrentContext());
+        currentFieldName.push(field.name);
     }
 
     @Override
     public void writeFieldEnd() throws TException {
-        currentFieldClass.pop();
+        currentFieldContext.pop();
+        currentFieldName.pop();
     }
 
     @Override
@@ -247,12 +242,15 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public void writeMapBegin(TMap map) throws TException {
+        writeCurrentContext();
+        currentFieldName.push(currentFieldName.peek());
         writeJsonObjectBegin(new MapContext(null));
     }
 
     @Override
     public void writeMapEnd() throws TException {
         writeJsonObjectEnd();
+        currentFieldName.pop();
     }
 
     /**
@@ -260,7 +258,6 @@ public final class TTextProtocol extends TProtocol {
      * both of which are written as JsonObjects.
      */
     private void writeJsonObjectBegin(BaseContext context) throws TException {
-        getCurrentContext().write();
         if (getCurrentContext().isMapKey()) {
             pushWriter(new ByteArrayOutputStream());
         }
@@ -319,7 +316,7 @@ public final class TTextProtocol extends TProtocol {
      * Helper shared by write{List/Set}Begin.
      */
     private void writeSequenceBegin() throws TException {
-        getCurrentContext().write();
+        writeCurrentContext();
         if (getCurrentContext().isMapKey()) {
             throw new TException(SEQUENCE_AS_KEY_ILLEGAL);
         }
@@ -346,21 +343,26 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public void writeBool(boolean b) throws TException {
+        writeCurrentContext();
         writeNameOrValue(TypedParser.BOOLEAN, b);
     }
 
     @Override
     public void writeByte(byte b) throws TException {
+        writeCurrentContext();
         writeNameOrValue(TypedParser.BYTE, b);
     }
 
     @Override
     public void writeI16(short i16) throws TException {
+        writeCurrentContext();
         writeNameOrValue(TypedParser.SHORT, i16);
     }
 
     @Override
     public void writeI32(int i32) throws TException {
+        writeCurrentContext();
+
         if (!useNamedEnums) {
             writeNameOrValue(TypedParser.INTEGER, i32);
             return;
@@ -384,21 +386,25 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public void writeI64(long i64) throws TException {
+        writeCurrentContext();
         writeNameOrValue(TypedParser.LONG, i64);
     }
 
     @Override
     public void writeDouble(double dub) throws TException {
+        writeCurrentContext();
         writeNameOrValue(TypedParser.DOUBLE, dub);
     }
 
     @Override
     public void writeString(String str) throws TException {
+        writeCurrentContext();
         writeNameOrValue(TypedParser.STRING, str);
     }
 
     @Override
     public void writeBinary(ByteBuffer buf) throws TException {
+        writeCurrentContext();
         writeNameOrValue(TypedParser.BINARY, buf);
     }
 
@@ -407,9 +413,7 @@ public final class TTextProtocol extends TProtocol {
      * escaped by quotes), or a value. The TypedParser knows how to
      * handle the writing.
      */
-    private <T> void writeNameOrValue(TypedParser<T> helper, T val)
-            throws TException {
-        getCurrentContext().write();
+    private <T> void writeNameOrValue(TypedParser<T> helper, T val) throws TException {
         try {
             if (getCurrentContext().isMapKey()) {
                 getCurrentWriter().writeFieldName(val.toString());
@@ -469,7 +473,7 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public TStruct readStructBegin() throws TException {
-        getCurrentContext().read();
+        readCurrentContext();
 
         JsonNode structElem;
         // Reading a new top level struct if the only item on the stack
@@ -520,7 +524,7 @@ public final class TTextProtocol extends TProtocol {
             return new TField("", UNUSED_TYPE, (short) 0);
         }
 
-        getCurrentContext().read();
+        readCurrentContext();
 
         final JsonNode jsonName = getCurrentContext().getCurrentChild();
 
@@ -529,19 +533,22 @@ public final class TTextProtocol extends TProtocol {
         }
 
         final String fieldName = jsonName.asText();
-        currentFieldClass.push(getCurrentContext().getClassByFieldName(fieldName));
+        currentFieldContext.push(getCurrentContext());
+        currentFieldName.push(fieldName);
 
         return getCurrentContext().getTFieldByName(fieldName);
     }
 
     @Override
     public void readFieldEnd() throws TException {
-        currentFieldClass.pop();
+        currentFieldContext.pop();
+        currentFieldName.pop();
     }
 
     @Override
     public TMap readMapBegin() throws TException {
-        getCurrentContext().read();
+        readCurrentContext();
+        currentFieldName.push(currentFieldName.peek());
 
         JsonNode curElem = getCurrentContext().getCurrentChild();
 
@@ -565,6 +572,7 @@ public final class TTextProtocol extends TProtocol {
     @Override
     public void readMapEnd() throws TException {
         popContext();
+        currentFieldName.pop();
     }
 
     @Override
@@ -593,7 +601,7 @@ public final class TTextProtocol extends TProtocol {
      * Helper shared by read{List/Set}Begin.
      */
     private int readSequenceBegin() throws TException {
-        getCurrentContext().read();
+        readCurrentContext();
         if (getCurrentContext().isMapKey()) {
             throw new TException(SEQUENCE_AS_KEY_ILLEGAL);
         }
@@ -616,33 +624,37 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public boolean readBool() throws TException {
+        readCurrentContext();
         return readNameOrValue(TypedParser.BOOLEAN);
     }
 
     @Override
     public byte readByte() throws TException {
+        readCurrentContext();
         return readNameOrValue(TypedParser.BYTE);
     }
 
     @Override
     public short readI16() throws TException {
+        readCurrentContext();
         return readNameOrValue(TypedParser.SHORT);
     }
 
     @Override
     public int readI32() throws TException {
+        readCurrentContext();
+
         final Class<?> fieldClass = getCurrentFieldClassIfIs(TEnum.class);
         if (fieldClass != null) {
             // Enum fields may be set by string, even though they represent integers.
-            getCurrentContext().read();
             final JsonNode elem = getCurrentContext().getCurrentChild();
-            if (elem.isInt()) {
+            if (elem.isInt() || Ints.tryParse(elem.asText()) != null) {
                 return TypedParser.INTEGER.readFromJsonElement(elem);
             } else if (elem.isTextual()) {
                 // All TEnum are enums
                 @SuppressWarnings({ "unchecked", "rawtypes" })
                 final TEnum tEnum = (TEnum) Enum.valueOf((Class<Enum>) fieldClass,
-                                                   TypedParser.STRING.readFromJsonElement(elem));
+                                                         TypedParser.STRING.readFromJsonElement(elem));
                 return tEnum.getValue();
             } else {
                 throw new TTransportException("invalid value type for enum field: " + elem.getNodeType() +
@@ -655,21 +667,25 @@ public final class TTextProtocol extends TProtocol {
 
     @Override
     public long readI64() throws TException {
+        readCurrentContext();
         return readNameOrValue(TypedParser.LONG);
     }
 
     @Override
     public double readDouble() throws TException {
+        readCurrentContext();
         return readNameOrValue(TypedParser.DOUBLE);
     }
 
     @Override
     public String readString() throws TException {
+        readCurrentContext();
         return readNameOrValue(TypedParser.STRING);
     }
 
     @Override
     public ByteBuffer readBinary() throws TException {
+        readCurrentContext();
         return readNameOrValue(TypedParser.BINARY);
     }
 
@@ -678,15 +694,8 @@ public final class TTextProtocol extends TProtocol {
      * JSONElement is a string and we convert it), or as a value
      * (meaning the JSONElement has the type we expect).
      * Uses a TypedParser to do the real work.
-     *
-     * <p>TODO(Alex Roetter): not sure TypedParser is a win for the number of
-     * lines it saves. Consider expanding out all the readX() methods to
-     * do what readNameOrValue does, calling the relevant methods from
-     * the TypedParser directly.
      */
     private <T> T readNameOrValue(TypedParser<T> ch) {
-        getCurrentContext().read();
-
         final JsonNode elem = getCurrentContext().getCurrentChild();
         if (getCurrentContext().isMapKey()) {
             // Will throw a ClassCastException if this is not a JsonPrimitive string
@@ -725,6 +734,36 @@ public final class TTextProtocol extends TProtocol {
     }
 
     /**
+     * Prepare the current parsing context for writing.
+     */
+    private void writeCurrentContext() {
+        getCurrentContext().write();
+        updateCurrentFieldName();
+    }
+
+    /**
+     * Prepare the current parsing context for reading.
+     */
+    private void readCurrentContext() {
+        getCurrentContext().read();
+        updateCurrentFieldName();
+    }
+
+    /**
+     * Update the current field name, if necessary.
+     *
+     * <p>After every read/write operation in {@link MapContext},
+     * the field name should toggle between the map's key and value.</p>
+     */
+    private void updateCurrentFieldName() {
+        if (getCurrentContext() instanceof MapContext) {
+            currentFieldName.pop();
+            final String suffix = getCurrentContext().isMapKey() ? MAP_KEY_SUFFIX : MAP_VALUE_SUFFIX;
+            currentFieldName.push(currentFieldName.peek() + suffix);
+        }
+    }
+
+    /**
      * Add a new parsing context onto the parse context stack.
      */
     private void pushContext(BaseContext c) {
@@ -760,11 +799,15 @@ public final class TTextProtocol extends TProtocol {
 
     @Nullable
     private Class<?> getCurrentFieldClassIfIs(Class<?> classToMatch) {
-        if (currentFieldClass.isEmpty() || currentFieldClass.peek() == null) {
+        if (currentFieldContext.isEmpty() || currentFieldContext.peek() == null) {
             return null;
         }
-        final Class<?> classToCheck = currentFieldClass.peek();
-        if (classToMatch.isAssignableFrom(classToCheck)) {
+
+        final BaseContext context = currentFieldContext.peek();
+        final String fieldName = currentFieldName.peek();
+
+        final Class<?> classToCheck = context.getClassByFieldName(fieldName);
+        if (classToCheck != null && classToMatch.isAssignableFrom(classToCheck)) {
             return classToCheck;
         }
         return null;
@@ -774,7 +817,7 @@ public final class TTextProtocol extends TProtocol {
         final JsonGenerator generator;
         try {
             generator = OBJECT_MAPPER.getFactory().createGenerator(baos, JsonEncoding.UTF8)
-                    .useDefaultPrettyPrinter();
+                                     .useDefaultPrettyPrinter();
         } catch (IOException e) {
             // Can't happen, using a byte stream.
             throw new IllegalStateException(e);

@@ -21,10 +21,6 @@ import java.util.Set;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.logging.RequestLog;
-
-import io.micrometer.core.instrument.Meter;
-import io.micrometer.core.instrument.Tag;
 
 /**
  * {@link Route} maps from an incoming HTTP request to an {@link HttpService} based on its path, method,
@@ -64,33 +60,45 @@ public interface Route {
      * @see RouteBuilder#produces(Iterable)
      * @see RouteBuilder#matchesHeaders(Iterable)
      * @see RouteBuilder#matchesParams(Iterable)
+     *
+     * @deprecated Use {@link #apply(RoutingContext, boolean)}.
      */
-    RoutingResult apply(RoutingContext routingCtx);
+    @Deprecated
+    default RoutingResult apply(RoutingContext routingCtx) {
+        return apply(routingCtx, false);
+    }
+
+    /**
+     * Matches the specified {@link RoutingContext} and extracts the path parameters from it if exists.
+     *
+     * @param routingCtx a context to find the {@link HttpService}
+     * @param isRouteDecorator {@code true} if this method is called for route decorators.
+     *                         {@code false} if this method is called for services.
+     *                         If {@code true}, an {@link HttpStatusException} will not be
+     *                         {@linkplain RoutingContext#deferStatusException(HttpStatusException) deferred}
+     *                         and {@linkplain RoutingContext#isCorsPreflight() preflight request} will not
+     *                         be handled by this {@link Route}.
+     *
+     * @return a non-empty {@link RoutingResult} if the {@linkplain RoutingContext#path() path},
+     *         {@linkplain RoutingContext#method() method},
+     *         {@linkplain RoutingContext#contentType() contentType} and
+     *         {@linkplain RoutingContext#acceptTypes() acceptTypes} and
+     *         {@linkplain RoutingContext#headers() HTTP headers} and
+     *         {@linkplain RoutingContext#params() query parameters} matches the equivalent conditions in
+     *         {@link Route}. {@link RoutingResult#empty()} otherwise.
+     *
+     * @see RouteBuilder#methods(Iterable)
+     * @see RouteBuilder#consumes(Iterable)
+     * @see RouteBuilder#produces(Iterable)
+     * @see RouteBuilder#matchesHeaders(Iterable)
+     * @see RouteBuilder#matchesParams(Iterable)
+     */
+    RoutingResult apply(RoutingContext routingCtx, boolean isRouteDecorator);
 
     /**
      * Returns the names of the path parameters extracted by this mapping.
      */
     Set<String> paramNames();
-
-    /**
-     * Returns the logger name.
-     *
-     * @return the logger name whose components are separated by a dot (.)
-     *
-     * @deprecated Use {@link RequestLog#name()}, {@link RequestLog#serviceName()} or
-     *             {@link Route#patternString()}.
-     */
-    @Deprecated
-    String loggerName();
-
-    /**
-     * Returns the value of the {@link Tag} in a {@link Meter} of this {@link Route}.
-     *
-     * @deprecated Use {@link RequestLog#name()}, {@link RequestLog#serviceName()} or
-     *             {@link Route#patternString()}.
-     */
-    @Deprecated
-    String meterTag();
 
     /**
      * Returns the path pattern of this {@link Route}. The returned path pattern is different according to

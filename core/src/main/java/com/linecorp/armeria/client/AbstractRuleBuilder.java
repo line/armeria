@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.common.util.BiPredicateUtil.toBiPredicateForSecond;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
@@ -67,16 +66,6 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Creates a new instance with the specified {@code requestHeadersFilter}.
-     *
-     * @deprecated Use {@link #AbstractRuleBuilder(BiPredicate)}.
-     */
-    @Deprecated
-    protected AbstractRuleBuilder(Predicate<? super RequestHeaders> requestHeadersFilter) {
-        this(toBiPredicateForSecond(requireNonNull(requestHeadersFilter, "requestHeadersFilter")));
-    }
-
-    /**
      * Adds the specified {@code responseHeadersFilter}.
      */
     public AbstractRuleBuilder onResponseHeaders(
@@ -91,17 +80,6 @@ public abstract class AbstractRuleBuilder {
             this.responseHeadersFilter = cast;
         }
         return this;
-    }
-
-    /**
-     * Adds the specified {@code responseHeadersFilter}.
-     *
-     * @deprecated Use {@link #onResponseHeaders(BiPredicate)}.
-     */
-    @Deprecated
-    public AbstractRuleBuilder onResponseHeaders(Predicate<? super ResponseHeaders> responseHeadersFilter) {
-        requireNonNull(responseHeadersFilter, "responseHeadersFilter");
-        return onResponseHeaders(toBiPredicateForSecond(responseHeadersFilter));
     }
 
     /**
@@ -122,17 +100,6 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
-     * Adds the specified {@code responseTrailersFilter}.
-     *
-     * @deprecated Use {@link #onResponseTrailers(BiPredicate)}.
-     */
-    @Deprecated
-    public AbstractRuleBuilder onResponseTrailers(Predicate<? super HttpHeaders> responseTrailersFilter) {
-        requireNonNull(responseTrailersFilter, "responseTrailersFilter");
-        return onResponseTrailers(toBiPredicateForSecond(responseTrailersFilter));
-    }
-
-    /**
      * Adds the specified {@link HttpStatusClass}es.
      */
     public AbstractRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
@@ -147,7 +114,7 @@ public abstract class AbstractRuleBuilder {
         checkArgument(!Iterables.isEmpty(statusClasses), "statusClasses can't be empty.");
 
         final Set<HttpStatusClass> statusClasses0 = Sets.immutableEnumSet(statusClasses);
-        onResponseHeaders(headers -> statusClasses0.contains(headers.status().codeClass()));
+        onResponseHeaders((ctx, headers) -> statusClasses0.contains(headers.status().codeClass()));
         return this;
     }
 
@@ -173,7 +140,7 @@ public abstract class AbstractRuleBuilder {
         checkArgument(!Iterables.isEmpty(statuses), "statuses can't be empty.");
 
         final Set<HttpStatus> statuses0 = ImmutableSet.copyOf(statuses);
-        onResponseHeaders(headers -> statuses0.contains(headers.status()));
+        onResponseHeaders((ctx, headers) -> statuses0.contains(headers.status()));
         return this;
     }
 
@@ -185,17 +152,6 @@ public abstract class AbstractRuleBuilder {
         requireNonNull(statusFilter, "statusFilter");
         onResponseHeaders((ctx, headers) -> statusFilter.test(ctx, headers.status()));
         return this;
-    }
-
-    /**
-     * Adds the specified {@code statusFilter}.
-     *
-     * @deprecated Use {@link #onStatus(BiPredicate)}.
-     */
-    @Deprecated
-    public AbstractRuleBuilder onStatus(Predicate<? super HttpStatus> statusFilter) {
-        requireNonNull(statusFilter, "statusFilter");
-        return onStatus(toBiPredicateForSecond(statusFilter));
     }
 
     /**
@@ -221,17 +177,6 @@ public abstract class AbstractRuleBuilder {
             this.exceptionFilter = cast;
         }
         return this;
-    }
-
-    /**
-     * Adds the specified {@code exceptionFilter}.
-     *
-     * @deprecated Use {@link #onException(BiPredicate)}.
-     */
-    @Deprecated
-    public AbstractRuleBuilder onException(Predicate<? super Throwable> exceptionFilter) {
-        requireNonNull(exceptionFilter, "exceptionFilter");
-        return onException(toBiPredicateForSecond(exceptionFilter));
     }
 
     /**

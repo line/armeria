@@ -32,7 +32,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 /**
  * Immutable HTTP query parameters.
  *
- * <h3>Building a new {@link QueryParams}</h3>
+ * <h2>Building a new {@link QueryParams}</h2>
  *
  * <p>You can use the {@link QueryParams#of(String, String) QueryParams.of()} factory methods or
  * the {@link QueryParamsBuilder} to build a new {@link QueryParams} from scratch:</p>
@@ -52,7 +52,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  * assert paramsWithOf.equals(paramsWithBuilder);
  * }</pre>
  *
- * <h3>Building a new {@link QueryParams} from an existing one</h3>
+ * <h2>Building a new {@link QueryParams} from an existing one</h2>
  *
  * <p>You can use {@link QueryParams#toBuilder()} or {@link QueryParams#withMutations(Consumer)} to build
  * a new {@link QueryParams} derived from an existing one:</p>
@@ -78,7 +78,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  * assert !params.equals(paramsWithMutations);
  * }</pre>
  *
- * <h3><a name="object-values">Specifying a non-{@link String} parameter value</a></h3>
+ * <h2><a id="object-values">Specifying a non-{@link String} parameter value</a></h2>
  *
  * <p>Certain parameter values are better represented as a Java object, such as {@link Integer},
  * {@link MediaType}, {@link Instant} or {@link Date}, than as a {@link String}. Armeria's query parameters
@@ -110,7 +110,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  *   </li>
  * </ul>
  *
- * <h4>Using {@link QueryParams#of(String, Object) QueryParams.of()} factory methods</h4>
+ * <h2>Using {@link QueryParams#of(String, Object) QueryParams.of()} factory methods</h2>
  *
  * <pre>{@code
  * QueryParams params = QueryParams.of("the-number", 42,
@@ -118,7 +118,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  *                                     "the-date", Instant.now());
  * }</pre>
  *
- * <h4>Using {@link QueryParamsBuilder}</h4>
+ * <h3>Using {@link QueryParamsBuilder}</h3>
  *
  * <pre>{@code
  * QueryParams params =

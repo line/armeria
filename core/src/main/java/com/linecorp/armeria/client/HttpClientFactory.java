@@ -47,8 +47,8 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
-import com.linecorp.armeria.internal.common.util.TransportType;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.Bootstrap;
@@ -128,12 +128,15 @@ final class HttpClientFactory implements ClientFactory {
 
         final ImmutableList<? extends Consumer<? super SslContextBuilder>> tlsCustomizers =
                 ImmutableList.of(options.tlsCustomizer());
+        final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
 
         shutdownWorkerGroupOnClose = options.shutdownWorkerGroupOnClose();
         eventLoopScheduler = options.eventLoopSchedulerFactory().apply(workerGroup);
         baseBootstrap = bootstrap;
-        sslCtxHttp1Or2 = SslContextUtil.createSslContext(SslContextBuilder::forClient, false, tlsCustomizers);
-        sslCtxHttp1Only = SslContextUtil.createSslContext(SslContextBuilder::forClient, true, tlsCustomizers);
+        sslCtxHttp1Or2 = SslContextUtil
+                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers);
+        sslCtxHttp1Only = SslContextUtil
+                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers);
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
         http2MaxFrameSize = options.http2MaxFrameSize();

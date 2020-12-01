@@ -1,0 +1,92 @@
+{
+  "a" : 12345,
+
+  "b" : 5,
+
+  "c" : {
+    "s" : 1,
+    "s2" : {
+      "x" : 10
+    }
+  },
+
+  "d" : [ 7, 8, 9, 10, 11 ],
+
+  "e" : [ { "s" : 2, "s2" : { "x" : 100 } },
+          { "s" : 3, "s2" : { "x" : 200 } },
+          { "s" : 4, "s2" : { "x" : 300 } } ],
+
+  "f" : true,
+
+  "g" : 12,
+
+  "h" : {
+    "1" : 2,
+    "3" : 4,
+    "5" : 6
+  },
+
+  "j" : {
+     "1" : [ true , true , false , true ],
+     "5" : [ false ]
+  },
+
+  "k" : [ true, false ],
+
+  "l" : "SGVsbG8gV29ybGQ=",
+
+  "m" : "hello \"spherical\" world!",
+
+  "n" : 678,
+
+  "p" : "CHARLIE",
+
+  "q" : [ "ALPHA", "BETA", "CHARLIE", "DELTA", "ECHO" ],
+
+  "r": {
+    "{\n  \"s\" : 1,\n  \"s2\" : {\n    \"x\" : 2\n  }\n}": 100
+  },
+
+  "s": {
+    "{\n  \"{\\n  \\\"200\\\" : 400\\n}\" : 300\n}": 100
+  },
+
+  "t": [ "ALPHA", "ALPHA", "CHARLIE", "ALPHA", "CHARLIE", "ECHO" ],
+
+  "u": {
+    "foo": "ALPHA",
+    "bar": "DELTA"
+  },
+
+  "v": "BETA",
+
+  "w": { "f2": 4 },
+
+  "x": [ { "f2": 5 }, {"f1": "SGVsbG8gV29ybGQ="} ],
+
+  "y": 1,
+
+  "aa": {
+    "ALPHA": 2,
+    "BETA": 4
+  },
+
+  "ab": {
+    "CHARLIE": "ONE",
+    "DELTA": "THREE",
+    "BETA": "FIVE"
+  },
+
+  "ac": {
+    "{\n  \"ONE\" : 3\n}": {
+      "{\n  \"n\" : \"TWO\"\n}": {
+        "ECHO": [ "ECHO", "ALPHA", "ALPHA" ]
+      }
+    },
+    "{\n  \"THREE\" : 5\n}": {
+      "{\n  \"n\" : \"FOUR\"\n}": {
+        "ALPHA": [ "BETA", "DELTA" ]
+      }
+    }
+  }
+}

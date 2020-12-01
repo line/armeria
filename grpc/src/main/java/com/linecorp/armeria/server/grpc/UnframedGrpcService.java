@@ -17,13 +17,14 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
+
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -36,15 +37,17 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -77,22 +80,17 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
 
     private static final char LINE_SEPARATOR = '\n';
 
-    private final Map<String, MethodDescriptor<?, ?>> methodsByName;
+    private final Map<String, ServerMethodDefinition<?, ?>> methodsByName;
     private final GrpcService delegateGrpcService;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    UnframedGrpcService(GrpcService delegate) {
+    UnframedGrpcService(GrpcService delegate, HandlerRegistry registry) {
         super(delegate);
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
         delegateGrpcService = delegate;
-        methodsByName = delegate.services()
-                                .stream()
-                                .flatMap(service -> service.getMethods().stream())
-                                .map(ServerMethodDefinition::getMethodDescriptor)
-                                .collect(toImmutableMap(MethodDescriptor::getFullMethodName,
-                                                        Function.identity()));
+        methodsByName = registry.methods();
     }
 
     @Override
@@ -103,6 +101,11 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
     @Override
     public List<ServerServiceDefinition> services() {
         return delegateGrpcService.services();
+    }
+
+    @Override
+    public Map<String, ServerMethodDefinition<?, ?>> methods() {
+        return methodsByName;
     }
 
     @Override
@@ -128,7 +131,18 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
         }
 
         final String methodName = GrpcRequestUtil.determineMethod(ctx);
-        final MethodDescriptor<?, ?> method = methodName != null ? methodsByName.get(methodName) : null;
+        final MethodDescriptor<?, ?> method;
+        if (methodName != null) {
+            final ServerMethodDefinition<?, ?> methodDef = methodsByName.get(methodName);
+            if (methodDef != null) {
+                method = methodDef.getMethodDescriptor();
+            } else {
+                method = null;
+            }
+        } else {
+            method = null;
+        }
+
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
             return unwrap().serve(ctx, req);
@@ -244,15 +258,17 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                 message.append(", ").append(grpcMessage);
             }
 
-            res.complete(HttpResponse.of(
-                    httpStatus,
-                    MediaType.PLAIN_TEXT_UTF_8,
-                    message.toString()));
+            final ResponseHeaders headers = ResponseHeaders.builder(httpStatus)
+                                                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                                           .add(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode)
+                                                           .build();
+            res.complete(HttpResponse.of(headers, HttpData.ofUtf8(message.toString())));
             return;
         }
 
         final MediaType grpcMediaType = grpcResponse.contentType();
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
+        unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
         if (grpcMediaType != null) {
             if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
                 unframedHeaders.contentType(MediaType.PROTOBUF);
@@ -261,31 +277,47 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             }
         }
 
-        try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
-                new Listener() {
-                    @Override
-                    public void messageRead(DeframedMessage message) {
-                        // We know that we don't support compression, so this is always a ByteBuffer.
-                        final HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
-                        unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
-                        res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
-                    }
-
-                    @Override
-                    public void endOfStream() {
-                        if (!res.isDone()) {
-                            // If 'ResponseObserver.onCompleted()' is called without calling 'onNext()',
-                            // this callback would be invoked but 'messageRead' callback wouldn't.
-                            res.complete(HttpResponse.of(unframedHeaders.build()));
-                        }
-                    }
-                },
+        final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
-                Integer.MAX_VALUE,
-                ctx.alloc(), false)) {
-            deframer.request(1);
-            deframer.deframe(grpcResponse.content(), true);
-        }
+                Integer.MAX_VALUE);
+        final HttpDeframer<DeframedMessage> deframer = HttpDeframer.of(handler, ctx.alloc());
+        StreamMessage.of(grpcResponse.content()).subscribe(deframer, ctx.eventLoop());
+        deframer.subscribe(singleSubscriber(unframedHeaders, res), ctx.eventLoop());
+    }
+
+    private static Subscriber<DeframedMessage> singleSubscriber(ResponseHeadersBuilder unframedHeaders,
+                                                                CompletableFuture<HttpResponse> res) {
+        return new Subscriber<DeframedMessage>() {
+
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                subscription.request(1);
+            }
+
+            @Override
+            public void onNext(DeframedMessage message) {
+                // We know that we don't support compression, so this is always a ByteBuf.
+                final HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
+                unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
+                res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                if (!res.isDone()) {
+                    res.completeExceptionally(t);
+                }
+            }
+
+            @Override
+            public void onComplete() {
+                if (!res.isDone()) {
+                    // If 'ResponseObserver.onCompleted()' is called without calling 'onNext()',
+                    // this callback would be invoked but 'messageRead' callback wouldn't.
+                    res.complete(HttpResponse.of(unframedHeaders.build()));
+                }
+            }
+        };
     }
 
     @Override

@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.common.logging;
 
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -28,6 +29,8 @@ import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.HttpResponseException;
+import com.linecorp.armeria.server.HttpStatusException;
 
 /**
  * Utilities for logging decorators.
@@ -38,6 +41,26 @@ public final class LoggingDecorators {
     private static final String RESPONSE_FORMAT2 = "{} Response: {}, cause: {}";
 
     private LoggingDecorators() {}
+
+    /**
+     * Logs request and response using the specified {@code requestLogger} and {@code responseLogger}.
+     */
+    public static void logWhenComplete(
+            Logger logger, RequestContext ctx,
+            Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
+        ctx.log().whenRequestComplete().thenAccept(requestLogger).exceptionally(e -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn("{} Unexpected exception while logging request: ", ctx, e);
+            }
+            return null;
+        });
+        ctx.log().whenComplete().thenAccept(responseLogger).exceptionally(e -> {
+            try (SafeCloseable ignored = ctx.push()) {
+                logger.warn("{} Unexpected exception while logging response: ", ctx, e);
+            }
+            return null;
+        });
+    }
 
     /**
      * Logs a stringified request of {@link RequestLog}.
@@ -100,6 +123,11 @@ public final class LoggingDecorators {
                                                                  requestTrailersSanitizer));
                 }
 
+                if (expected(responseCause)) {
+                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
+                    return;
+                }
+
                 final Object sanitizedResponseCause = responseCauseSanitizer.apply(ctx, responseCause);
                 if (sanitizedResponseCause == null) {
                     responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
@@ -115,5 +143,9 @@ public final class LoggingDecorators {
                 }
             }
         }
+    }
+
+    private static boolean expected(Throwable responseCause) {
+        return responseCause instanceof HttpResponseException || responseCause instanceof HttpStatusException;
     }
 }

@@ -16,14 +16,16 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -86,23 +88,20 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
-    /**
-     * Sets the default value of the {@link RequestLog#serviceName()} property which is used when
-     * no service name was set via {@link RequestLogBuilder#name(String, String)}.
-     *
-     * @param defaultServiceName the default service name.
-     */
+    @Override
+    public AbstractServiceBindingBuilder decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
     public AbstractServiceBindingBuilder defaultServiceName(String defaultServiceName) {
         defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
         return this;
     }
 
-    /**
-     * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
-     * {@link RequestLogBuilder#name(String, String)}.
-     *
-     * @param defaultLogName the default log name.
-     */
+    @Override
     public AbstractServiceBindingBuilder defaultLogName(String defaultLogName) {
         defaultServiceConfigSetters.defaultLogName(defaultLogName);
         return this;
@@ -111,8 +110,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
-        final List<Route> routes = buildRouteList();
+        final ServiceWithRoutes<?, ?> serviceWithRoutes = service.as(ServiceWithRoutes.class);
+        final Set<Route> fallbackRoutes =
+                firstNonNull(serviceWithRoutes != null ? serviceWithRoutes.routes() : null,
+                             ImmutableSet.of());
 
+        final List<Route> routes = buildRouteList(fallbackRoutes);
         for (Route route : routes) {
             final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
             final ServiceConfigBuilder serviceConfigBuilder =
