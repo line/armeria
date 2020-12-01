@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
+import java.nio.file.Paths;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -29,6 +30,7 @@ import javax.annotation.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.pszymczyk.consul.ConsulProcess;
 import com.pszymczyk.consul.ConsulStarterBuilder;
@@ -42,6 +44,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
+
 
 public abstract class ConsulTestBase {
 
@@ -69,12 +72,19 @@ public abstract class ConsulTestBase {
     static void start() throws Throwable {
         // Initialize Consul embedded server for testing
         // This EmbeddedConsul tested with Consul version above 1.4.0
-        consul = ConsulStarterBuilder.consulStarter()
-                                     .withConsulVersion("1.9.0")
-                                     .withWaitTimeout(120)
-                                     .withCustomConfig(aclConfiguration(CONSUL_TOKEN))
-                                     .withToken(CONSUL_TOKEN)
-                                     .build().start();
+        final ConsulStarterBuilder builder =
+                ConsulStarterBuilder.consulStarter()
+                                    .withConsulVersion("1.9.0")
+                                    .withWaitTimeout(120)
+                                    .withCustomConfig(aclConfiguration(CONSUL_TOKEN))
+                                    .withToken(CONSUL_TOKEN);
+
+        final String downloadPath = System.getenv("CONSUL_DOWNLOAD_PATH");
+        if (!Strings.isNullOrEmpty(downloadPath)) {
+            builder.withConsulBinaryDownloadDirectory(Paths.get(downloadPath));
+        }
+
+        consul = builder.build().start();
         // Initialize Consul client
         consulClient = ConsulClient.builder(URI.create("http://127.0.0.1:" + consul.getHttpPort()))
                                    .consulToken(CONSUL_TOKEN)
@@ -110,7 +120,7 @@ public abstract class ConsulTestBase {
         final int[] ports = new int[numPorts];
         final Random random = ThreadLocalRandom.current();
         for (int i = 0; i < numPorts; i++) {
-            for (;;) {
+            for (; ; ) {
                 final int candidatePort = random.nextInt(64512) + 1024;
                 try (ServerSocket ss = new ServerSocket()) {
                     ss.bind(new InetSocketAddress("127.0.0.1", candidatePort));
@@ -142,7 +152,7 @@ public abstract class ConsulTestBase {
                         .toString();
     }
 
-     public static class EchoService extends AbstractHttpService {
+    public static class EchoService extends AbstractHttpService {
         private HttpStatus responseStatus = HttpStatus.OK;
 
         @Override

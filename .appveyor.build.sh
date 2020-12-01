@@ -59,6 +59,10 @@ export JAVA_HOME="$HOME/jdk/build-$BUILD_JDK_VERSION"
 export JAVA_TEST_HOME="$HOME/jdk/test-$TEST_JAVA_VERSION-$TEST_JRE_VERSION"
 export PATH="$JAVA_HOME/bin:$PATH"
 
+# Create a cache directory for a embedded Consul
+export CONSUL_DOWNLOAD_PATH=/var/cache/consul
+echo_and_run mkdir -p $CONSUL_DOWNLOAD_PATH
+
 msg "User home directory: $HOME"
 msg "Current working directory: $PWD"
 
