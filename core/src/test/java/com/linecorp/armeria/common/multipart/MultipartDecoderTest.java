@@ -52,7 +52,9 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.multipart.MultipartEncoderTest.HttpDataAggregator;
 
+import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;
+import reactor.test.publisher.PublisherProbe;
 
 /**
  * Tests {@link MultipartDecoder}.
@@ -381,7 +383,7 @@ public class MultipartDecoderTest {
 
     @Test
     void testUpstreamError() {
-        final MultipartDecoder decoder = new MultipartDecoder("boundary");
+        final MultipartDecoder decoder = new MultipartDecoder("boundary", ByteBufAllocator.DEFAULT);
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, null);
         decoder.subscribe(testSubscriber);
         Flux.<HttpData>error(new IllegalStateException("oops")).subscribe(decoder);
@@ -393,11 +395,11 @@ public class MultipartDecoderTest {
 
     @Test
     void testSubcribingMoreThanOnce() {
-        final MultipartDecoder decoder = new MultipartDecoder("boundary");
+        final MultipartDecoder decoder = new MultipartDecoder("boundary", ByteBufAllocator.DEFAULT);
         chunksPublisher("foo".getBytes()).subscribe(decoder);
-        assertThatThrownBy(() -> chunksPublisher("bar".getBytes()).subscribe(decoder))
-                .hasCauseInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Subscription already set.");
+        final PublisherProbe<HttpData> probe = PublisherProbe.of(chunksPublisher("bar".getBytes()));
+        probe.flux().subscribe(decoder);
+        probe.assertWasCancelled();
     }
 
     /**
@@ -478,7 +480,7 @@ public class MultipartDecoderTest {
      * @return publisher of body parts
      */
     static Publisher<? extends BodyPart> partsPublisher(String boundary, List<byte[]> data) {
-        final MultipartDecoder decoder = new MultipartDecoder(boundary);
+        final MultipartDecoder decoder = new MultipartDecoder(boundary, ByteBufAllocator.DEFAULT);
         chunksPublisher(data).subscribe(decoder);
         return decoder;
     }

@@ -30,7 +30,10 @@ import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+
+import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultMultipart implements Multipart {
 
@@ -45,13 +48,6 @@ final class DefaultMultipart implements Multipart {
     DefaultMultipart(String boundary, StreamMessage<? extends BodyPart> parts) {
         this.boundary = boundary;
         this.parts = parts;
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpData> s) {
-        final MultipartEncoder encoder = new MultipartEncoder(boundary);
-        parts.subscribe(encoder);
-        encoder.subscribe(s);
     }
 
     @Override
@@ -72,6 +68,54 @@ final class DefaultMultipart implements Multipart {
         return UnmodifiableFuture.wrap(
                 aggregator.completionFuture.thenApply(parts -> AggregatedMultipart.of(boundary, parts)));
     }
+
+    @Override
+    public boolean isOpen() {
+        return parts.isOpen();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return parts.isEmpty();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenComplete() {
+        return parts.whenComplete();
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpData> s) {
+        final MultipartEncoder encoder = new MultipartEncoder(boundary);
+        parts.subscribe(encoder);
+        encoder.subscribe(s);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
+        final MultipartEncoder encoder = new MultipartEncoder(boundary);
+        parts.subscribe(encoder, executor);
+        encoder.subscribe(subscriber, executor);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        final MultipartEncoder encoder = new MultipartEncoder(boundary);
+        parts.subscribe(encoder, executor, options);
+        encoder.subscribe(subscriber, executor, options);
+    }
+
+    @Override
+    public void abort() {
+        parts.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        parts.abort(cause);
+    }
+
 
     @Override
     public String toString() {

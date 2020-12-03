@@ -48,14 +48,18 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+
+import io.netty.buffer.ByteBufAllocator;
 
 /**
  * A reactive {@link Multipart} that represents
  * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html">multiple part messages</a>.
  */
-public interface Multipart extends Publisher<HttpData> {
+// TODO(ikhoon): extends StreamMessage?
+public interface Multipart extends StreamMessage<HttpData> {
 
     // Forked form https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/main/java/io/helidon/media/multipart/MultiPart.java
 
@@ -160,9 +164,18 @@ public interface Multipart extends Publisher<HttpData> {
      * {@link Publisher} of {@link HttpData}.
      */
     static Multipart from(String boundary, Publisher<? extends HttpData> contents) {
+        return from(boundary, contents, ByteBufAllocator.DEFAULT);
+    }
+
+    /**
+     * Returns a decoded {@link Multipart} from the the specified {@code boundary},
+     * {@link Publisher} of {@link HttpData} and {@link ByteBufAllocator}.
+     */
+    static Multipart from(String boundary, Publisher<? extends HttpData> contents, ByteBufAllocator alloc) {
         requireNonNull(boundary, "boundary");
         requireNonNull(contents, "contents");
-        final MultipartDecoder decoder = new MultipartDecoder(boundary);
+        requireNonNull(alloc, "alloc");
+        final MultipartDecoder decoder = new MultipartDecoder(boundary, alloc);
         contents.subscribe(decoder);
         return of(decoder);
     }

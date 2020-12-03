@@ -41,10 +41,12 @@ import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpObject;
 
+import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;
 
-public class MultipartDecoderSubsWhiteBoxTckTest extends SubscriberWhiteboxVerification<HttpData> {
+public class MultipartDecoderSubsWhiteBoxTckTest extends SubscriberWhiteboxVerification<HttpObject> {
 
     // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartDecoderSubsWhiteBoxTckTest.java
 
@@ -53,7 +55,7 @@ public class MultipartDecoderSubsWhiteBoxTckTest extends SubscriberWhiteboxVerif
     }
 
     @Override
-    public Publisher<HttpData> createHelperPublisher(long l) {
+    public Publisher<HttpObject> createHelperPublisher(long l) {
         return MultipartDecoderTckTest.upstream(l);
     }
 
@@ -63,9 +65,9 @@ public class MultipartDecoderSubsWhiteBoxTckTest extends SubscriberWhiteboxVerif
     }
 
     @Override
-    public Subscriber<HttpData> createSubscriber(final WhiteboxSubscriberProbe<HttpData> probe) {
+    public Subscriber<HttpObject> createSubscriber(final WhiteboxSubscriberProbe<HttpObject> probe) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        final MultipartDecoder decoder = new MultipartDecoder("boundary") {
+        final MultipartDecoder decoder = new MultipartDecoder("boundary", ByteBufAllocator.DEFAULT) {
             @Override
             public void onSubscribe(final Subscription subscription) {
                 super.onSubscribe(subscription);
@@ -84,7 +86,7 @@ public class MultipartDecoderSubsWhiteBoxTckTest extends SubscriberWhiteboxVerif
             }
 
             @Override
-            public void onNext(HttpData chunk) {
+            public void onNext(HttpObject chunk) {
                 super.onNext(chunk);
                 probe.registerOnNext(chunk);
             }

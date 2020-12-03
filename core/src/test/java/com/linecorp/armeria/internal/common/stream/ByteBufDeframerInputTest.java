@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -25,6 +25,8 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.linecorp.armeria.internal.common.stream.ByteBufDeframerInput;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;

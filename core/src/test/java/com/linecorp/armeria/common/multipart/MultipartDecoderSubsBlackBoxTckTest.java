@@ -38,10 +38,13 @@ import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 
+import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;
 
-public class MultipartDecoderSubsBlackBoxTckTest extends SubscriberBlackboxVerification<HttpData> {
+public class MultipartDecoderSubsBlackBoxTckTest extends SubscriberBlackboxVerification<HttpObject> {
 
     // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartDecoderSubsBlackBoxTckTest.java
 
@@ -50,7 +53,7 @@ public class MultipartDecoderSubsBlackBoxTckTest extends SubscriberBlackboxVerif
     }
 
     @Override
-    public Publisher<HttpData> createHelperPublisher(long l) {
+    public Publisher<HttpObject> createHelperPublisher(long l) {
         return MultipartDecoderTckTest.upstream(l);
     }
 
@@ -60,8 +63,8 @@ public class MultipartDecoderSubsBlackBoxTckTest extends SubscriberBlackboxVerif
     }
 
     @Override
-    public Subscriber<HttpData> createSubscriber() {
-        final MultipartDecoder decoder = new MultipartDecoder("boundary");
+    public Subscriber<HttpObject> createSubscriber() {
+        final MultipartDecoder decoder = new MultipartDecoder("boundary", ByteBufAllocator.DEFAULT);
         Flux.from(decoder).subscribe(part -> {});
         return decoder;
     }

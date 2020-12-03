@@ -45,7 +45,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.LongStream;
 
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -57,6 +59,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
+import reactor.test.publisher.PublisherProbe;
 
 /**
  * Test {@link MultipartEncoder}.
@@ -156,9 +160,9 @@ class MultipartEncoderTest {
     void testSubscribingMoreThanOnce() {
         final MultipartEncoder encoder = new MultipartEncoder("boundary");
         Flux.<BodyPart>empty().subscribe(encoder);
-        assertThatThrownBy(() -> Flux.<BodyPart>empty().subscribe(encoder))
-                .hasCauseInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Subscription already set.");
+        final PublisherProbe<BodyPart> probe = PublisherProbe.of(Flux.empty());
+        probe.flux().subscribe(encoder);
+        probe.assertWasCancelled();
     }
 
     @Test

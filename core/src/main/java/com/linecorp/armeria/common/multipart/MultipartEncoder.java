@@ -45,13 +45,15 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Reactive processor that encodes a stream of {@link BodyPart} into an HTTP payload.
  */
-class MultipartEncoder implements Processor<BodyPart, HttpData> {
+class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<HttpData> {
 
     // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/main/java/io/helidon/media/multipart/MultiPartEncoder.java
 
@@ -91,6 +93,22 @@ class MultipartEncoder implements Processor<BodyPart, HttpData> {
     }
 
     @Override
+    public boolean isOpen() {
+        return false;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return false;
+    }
+
+    @Override
+    public CompletableFuture<Void> whenComplete() {
+        // TODO(ikhoon): Handle this
+        return null;
+    }
+
+    @Override
     public void subscribe(Subscriber<? super HttpData> subscriber) {
         requireNonNull(subscriber, "subscriber");
         if (emitter != null || !downstreamUpdater.compareAndSet(this, null, subscriber)) {
@@ -102,11 +120,31 @@ class MultipartEncoder implements Processor<BodyPart, HttpData> {
     }
 
     @Override
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
+
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+
+    }
+
+    @Override
+    public void abort() {
+
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+
+    }
+
+    @Override
     public void onSubscribe(Subscription subscription) {
         requireNonNull(subscription, "subscription");
         if (!upstreamUpdater.compareAndSet(this, null, subscription)) {
             subscription.cancel();
-            throw new IllegalStateException("Subscription already set.");
         }
         deferredInit();
     }

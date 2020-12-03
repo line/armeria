@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -22,22 +22,24 @@ import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.Queue;
 
+import com.linecorp.armeria.common.stream.HttpDeframerInput;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-final class ByteBufDeframerInput implements HttpDeframerInput {
+public final class ByteBufDeframerInput implements HttpDeframerInput {
 
     private final ByteBufAllocator alloc;
     private final Queue<ByteBuf> queue;
 
     private boolean closed;
 
-    ByteBufDeframerInput(ByteBufAllocator alloc) {
+    public ByteBufDeframerInput(ByteBufAllocator alloc) {
         this.alloc = alloc;
         queue = new ArrayDeque<>();
     }
 
-    boolean add(ByteBuf byteBuf) {
+    public boolean add(ByteBuf byteBuf) {
         if (closed || !byteBuf.isReadable()) {
             byteBuf.release();
             return false;
@@ -176,6 +178,60 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
         throw newEndOfInputException();
     }
 
+    @Override
+    public byte getByte(int index) {
+        for (ByteBuf buf : queue) {
+            final int readableBytes = buf.readableBytes();
+            if (readableBytes > index) {
+                return buf.getByte(buf.readerIndex() + index);
+            } else {
+                index -= readableBytes;
+            }
+        }
+
+        throw newEndOfInputException();
+    }
+
+    @Override
+    public void skipBytes(int length) {
+        final ByteBuf firstBuf = queue.peek();
+        if (firstBuf == null) {
+            throw newEndOfInputException();
+        }
+
+        final int readableBytes = firstBuf.readableBytes();
+        if (readableBytes > length) {
+            firstBuf.skipBytes(length);
+        } else {
+            queue.remove();
+            firstBuf.release();
+            final int remaining = length - readableBytes;
+            if (remaining > 0) {
+                skipBytesSlow(remaining);
+            }
+        }
+    }
+
+    private void skipBytesSlow(int remaining) {
+        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext(); ) {
+            final ByteBuf buf = it.next();
+            final int readableBytes = buf.readableBytes();
+            if (readableBytes > remaining) {
+                buf.skipBytes(remaining);
+                return;
+            } else {
+                buf.release();
+                it.remove();
+                remaining -= readableBytes;
+                if (remaining == 0) {
+                    return;
+                }
+            }
+        }
+
+        throw newEndOfInputException();
+    }
+
     private static IllegalStateException newEndOfInputException() {
         return new IllegalStateException("end of deframer input");
     }
@@ -187,7 +243,7 @@ final class ByteBufDeframerInput implements HttpDeframerInput {
         }
 
         closed = true;
-        for (;;) {
+        for (; ; ) {
             final ByteBuf buf = queue.poll();
             if (buf != null) {
                 buf.release();

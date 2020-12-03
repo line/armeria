@@ -38,17 +38,26 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.HttpDeframerInput;
+import com.linecorp.armeria.common.stream.HttpDeframerOutput;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 
 /**
  * Parser for multipart MIME message.
  */
 final class MimeParser {
+    private final HttpDeframerInput in;
+    private final HttpDeframerOutput<BodyPart> out;
 
-    // Forked from https://github.com/oracle/helidon/blob/a9363a3d226a3154e2fb99abe230239758504436/media/multipart/src/main/java/io/helidon/media/multipart/MimeParser.java
+    // Forked from https://github.com/oracle/helidon/blob/a9363a3d226a3154e2fb99abe230239758504436/media
+    // /multipart/src/main/java/io/helidon/media/multipart/MimeParser.java
     // - Replaced VirtualBuffer with CompositeByteBuf
 
     /**
@@ -67,18 +76,8 @@ final class MimeParser {
 
     private static final Logger logger = LoggerFactory.getLogger(MimeParser.class);
 
-    private static final ByteBuf EMPTY_BUF = Unpooled.buffer(1);
+    private static final ByteBuf NEED_MORE = Unpooled.buffer(1);
     private static final Charset HEADER_ENCODING = Charset.forName("ISO8859-1");
-    private static final StartMessageEvent START_MESSAGE_EVENT = new StartMessageEvent();
-    private static final StartPartEvent START_PART_EVENT = new StartPartEvent();
-    private static final EndHeadersEvent END_HEADERS_EVENT = new EndHeadersEvent();
-    private static final EndPartEvent END_PART_EVENT = new EndPartEvent();
-    private static final EndMessageEvent END_MESSAGE_EVENT = new EndMessageEvent();
-
-    /**
-     * Read-only byte array of the current byte buffer being processed.
-     */
-    private final CompositeByteBuf buf;
 
     /**
      * Boundary as bytes.
@@ -101,21 +100,16 @@ final class MimeParser {
     private final int[] goodSuffixes;
 
     /**
-     * The event listener.
-     */
-    private final EventProcessor listener;
-
-    /**
      * The current parser state.
      */
     private State state = State.START_MESSAGE;
 
-    /**
-     * The parser state to resume to, non {@code null} when {@link #state} is
-     * equal to {@link State#DATA_REQUIRED}.
-     */
     @Nullable
-    private State resumeState;
+    private HttpHeadersBuilder bodyPartHeaderBuilder;
+    @Nullable
+    private BodyPartBuilder bodyPartBuilder;
+    @Nullable
+    private DefaultStreamMessage<HttpData> bodyPartPublisher;
 
     /**
      * Read and process body partsList until we see the terminating boundary
@@ -141,40 +135,13 @@ final class MimeParser {
     /**
      * Parses the MIME content.
      */
-    MimeParser(String boundary, EventProcessor eventListener) {
+    MimeParser(HttpDeframerInput in, HttpDeframerOutput<BodyPart> out, String boundary) {
+        this.in = in;
+        this.out = out;
         boundaryBytes = getBytes("--" + boundary);
-        listener = eventListener;
         boundaryLength = boundaryBytes.length;
         goodSuffixes = new int[boundaryLength];
-        buf = Unpooled.compositeBuffer();
         compileBoundaryPattern();
-    }
-
-    /**
-     * Pushes new data to the parsing buffer.
-     *
-     * @param data new data add to the parsing buffer
-     * @throws MimeParsingException if the parser state is not consistent
-     */
-    void offer(ByteBuf data) {
-        if (closed) {
-            throw new MimeParsingException("Parser is closed");
-        }
-        switch (state) {
-            case START_MESSAGE:
-                buf.addComponent(true, data);
-                buf.readerIndex(0);
-                break;
-            case DATA_REQUIRED:
-                // resume the previous state
-                state = resumeState;
-                resumeState = null;
-                buf.discardSomeReadBytes();
-                buf.addComponents(true, data);
-                break;
-            default:
-                throw new MimeParsingException("Invalid state: " + state);
-        }
     }
 
     /**
@@ -188,20 +155,13 @@ final class MimeParser {
             case START_MESSAGE:
             case END_MESSAGE:
                 closed = true;
-                buf.release();
                 break;
-            case DATA_REQUIRED:
-                switch (resumeState) {
-                    case SKIP_PREAMBLE:
-                        throw new MimeParsingException("Missing start boundary");
-                    case BODY:
-                        throw new MimeParsingException("No closing MIME boundary");
-                    case HEADERS:
-                        throw new MimeParsingException("No blank line found");
-                    default:
-                        // do nothing
-                }
-                break;
+            case SKIP_PREAMBLE:
+                throw new MimeParsingException("Missing start boundary");
+            case BODY:
+                throw new MimeParsingException("No closing MIME boundary");
+            case HEADERS:
+                throw new MimeParsingException("No blank line found");
             default:
                 throw new MimeParsingException("Invalid state: " + state);
         }
@@ -212,13 +172,16 @@ final class MimeParser {
      * @throws MimeParsingException if an error occurs during parsing
      */
     void parse() {
+        if (closed) {
+            throw new MimeParsingException("Parser is closed");
+        }
+
         try {
             while (true) {
                 switch (state) {
                     case START_MESSAGE:
                         logger.trace("state={}", State.START_MESSAGE);
                         state = State.SKIP_PREAMBLE;
-                        listener.process(START_MESSAGE_EVENT);
                         break;
 
                     case SKIP_PREAMBLE:
@@ -226,20 +189,19 @@ final class MimeParser {
                         skipPreamble();
                         if (boundaryStart == -1) {
                             logger.trace("state={}", State.DATA_REQUIRED);
-                            state = State.DATA_REQUIRED;
-                            resumeState = State.SKIP_PREAMBLE;
-                            listener.process(new DataRequiredEvent(false));
+                            // Need more data
                             return;
                         }
-                        logger.trace("Skipped the preamble. position={}", buf.readerIndex());
+                        logger.trace("Skipped the preamble.");
                         state = State.START_PART;
                         break;
 
-                    // fall through
                     case START_PART:
+                        // TODO(ikhoon): Remove State.START_PART?
                         logger.trace("state={}", State.START_PART);
+                        bodyPartHeaderBuilder = HttpHeaders.builder();
+                        bodyPartBuilder = BodyPart.builder();
                         state = State.HEADERS;
-                        listener.process(START_PART_EVENT);
                         break;
 
                     case HEADERS:
@@ -247,36 +209,43 @@ final class MimeParser {
                         final String headerLine = readHeaderLine();
                         if (headerLine == null) {
                             logger.trace("state={}", State.DATA_REQUIRED);
-                            state = State.DATA_REQUIRED;
-                            resumeState = State.HEADERS;
-                            listener.process(new DataRequiredEvent(false));
+                            // Need more data
                             return;
                         }
                         if (!headerLine.isEmpty()) {
-                            final Header header = new Header(headerLine);
-                            listener.process(new HeaderEvent(header.name(), header.value()));
+                            final int index = headerLine.indexOf(':');
+                            if (index < 0) {
+                                throw new MimeParsingException("Invalid header line: " + headerLine);
+                            }
+                            final String key = headerLine.substring(0, index).trim();
+                            // Skip ':' from value
+                            final String value = headerLine.substring(index + 1).trim();
+                            bodyPartHeaderBuilder.add(key, value);
                             break;
                         }
                         state = State.BODY;
                         startOfLine = true;
-                        listener.process(END_HEADERS_EVENT);
+
+                        bodyPartPublisher = new DefaultStreamMessage<>();
+                        final BodyPart bodyPart = bodyPartBuilder.headers(bodyPartHeaderBuilder.build())
+                                                                 .content(bodyPartPublisher)
+                                                                 .build();
+                        out.add(bodyPart);
                         break;
 
                     case BODY:
                         logger.trace("state={}", State.BODY);
                         final ByteBuf bodyContent = readBody();
-                        if (boundaryStart == -1 || bodyContent == EMPTY_BUF) {
+                        if (boundaryStart == -1 || bodyContent == NEED_MORE) {
                             logger.trace("state={}", State.DATA_REQUIRED);
-                            state = State.DATA_REQUIRED;
-                            resumeState = State.BODY;
-                            if (bodyContent == EMPTY_BUF) {
-                                listener.process(new DataRequiredEvent(true));
+                            if (bodyContent == NEED_MORE) {
+                                // Need more data
                                 return;
                             }
                         } else {
                             startOfLine = false;
                         }
-                        listener.process(new ContentEvent(bodyContent));
+                        bodyPartPublisher.write(HttpData.wrap(bodyContent));
                         break;
 
                     case END_PART:
@@ -286,16 +255,19 @@ final class MimeParser {
                         } else {
                             state = State.START_PART;
                         }
-                        listener.process(END_PART_EVENT);
+
+                        // Release body part resources
+                        bodyPartPublisher.close();
+                        bodyPartPublisher = null;
+                        bodyPartHeaderBuilder = null;
+                        bodyPartBuilder = null;
                         break;
 
                     case END_MESSAGE:
                         logger.trace("state={}", State.END_MESSAGE);
-                        listener.process(END_MESSAGE_EVENT);
                         return;
 
                     case DATA_REQUIRED:
-                        listener.process(new DataRequiredEvent(resumeState == State.BODY));
                         return;
 
                     default:
@@ -318,92 +290,120 @@ final class MimeParser {
     private ByteBuf readBody() {
         // matches boundary
         boundaryStart = match();
-        final int length = buf.capacity();
-        final int bodyStart = buf.readerIndex();
+        final int length = in.readableBytes();
 
         if (boundaryStart == -1) {
             // No boundary is found
-            if (bodyStart + boundaryLength + 1 < length) {
-                // there may be an incomplete boundary at the end of the buffer
-                // return the remaining data minus the boundary length
-                // so that it can be processed next iteration
-                final int bodyLength = length - bodyStart - (boundaryLength + 1);
-                return buf.readSlice(bodyLength);
+            if (boundaryLength + 1 < length) {
+                // There may be an incomplete boundary at the end of the buffer.
+                // Return the remaining data minus the boundary length
+                // so that it can be processed next iteration.
+                // e.g. |---body---|--bound|
+
+                final int bodyLength = length - (boundaryLength + 1);
+                return in.readBytes(bodyLength);
             }
             // remaining data can be an complete boundary, force it to be
             // processed during next iteration
-            return EMPTY_BUF;
+            return NEED_MORE;
         }
 
         // Found boundary.
         // Is it at the start of a line ?
-        int bodyLength = boundaryStart - bodyStart;
+        int bodyLength = boundaryStart;
         if (startOfLine && bodyLength == 0) {
-            // nothing to do
-        } else if (boundaryStart > bodyStart &&
-                   (buf.getByte(boundaryStart - 1) == '\n' ||
-                    buf.getByte(boundaryStart - 1) == '\r')) {
-            --bodyLength;
-            if (buf.getByte(boundaryStart - 1) == '\n' && boundaryStart > 1 &&
-                buf.getByte(boundaryStart - 2) == '\r') {
-                --bodyLength;
-            }
+            // an empty body, nothing to do
+            // e.g. ||--boundary|
         } else {
-            // boundary is not at beginning of a line
-            return buf.readSlice(bodyLength + 1);
+            final byte last = in.getByte(boundaryStart - 1);
+            // Remove CRLF from bodyLength
+            if (boundaryStart > 0 && (last == '\n' || last == '\r')) {
+                // e.g. |---body---\n|--boundary|
+                --bodyLength;
+                if (last == '\n' && boundaryStart > 1 && in.getByte(boundaryStart - 2) == '\r') {
+                    // e.g. |---body---\r\n|--boundary|
+                    --bodyLength;
+                }
+            } else {
+                // Boundary is not at beginning of a line. A boundary string can be in a body.
+                // e.g. |---body---boundary---|
+                return in.readBytes(bodyLength + 1);
+            }
         }
 
+        int boundaryEnd = boundaryStart + boundaryLength;
         // check if this is a "closing" boundary
-        if (boundaryStart + boundaryLength + 1 < length &&
-            buf.getByte(boundaryStart + boundaryLength) == '-' &&
-            buf.getByte(boundaryStart + boundaryLength + 1) == '-') {
+        // e.g. |---body---\n|--boundary--|
+        if (boundaryEnd + 1 < length && in.getByte(boundaryEnd) == '-' && in.getByte(boundaryEnd + 1) == '-') {
 
             state = State.END_PART;
             done = true;
-            final ByteBuf body = buf.readSlice(bodyLength);
-            buf.readerIndex(boundaryStart + boundaryLength + 2);
+            final ByteBuf body = in.readBytes(bodyLength);
+
+            // Discard a closing boundary
+            in.skipBytes(boundaryLength + 2);
             return body;
         }
 
         // Consider all the linear whitespace in boundary+whitespace+"\r\n"
-        int linearWhiteSpace = 0;
-        for (int i = boundaryStart + boundaryLength;
-             i < length && (buf.getByte(i) == ' ' || buf.getByte(i) == '\t'); i++) {
-            ++linearWhiteSpace;
+        // e.g. |---body---\n|--boundary \t\t\r\n|
+        for (int i = boundaryEnd; i < length; i++) {
+            final byte current = in.getByte(i);
+            if (current == ' ' || current == '\t') {
+                boundaryEnd++;
+            } else {
+                break;
+            }
         }
 
-        // Check boundary+whitespace+"\n"
-        if (boundaryStart + boundaryLength + linearWhiteSpace < length &&
-            buf.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\n') {
+        if (boundaryEnd < length) {
+            // Check boundary+whitespace+"\n"
+            // e.g. |---body---\n|--boundary\n|
+            final byte closingChar = in.getByte(boundaryEnd);
+            if (closingChar == '\n') {
+                state = State.END_PART;
+                final ByteBuf body = safeReadBytes(in, bodyLength);
 
-            state = State.END_PART;
-            final ByteBuf body = buf.readSlice(bodyLength);
-            buf.readerIndex(boundaryStart + boundaryLength + linearWhiteSpace + 1);
-            return body;
+                // Skip boundary+whitespace+"\n"
+                in.skipBytes(boundaryEnd + 1 - bodyLength);
+                return body;
+            }
+
+            // Check for boundary+whitespace+"\r\n"
+            // e.g. |---body---\n|--boundary--\r\n|
+            if (boundaryEnd + 1 < length &&
+                closingChar == '\r' &&
+                in.getByte(boundaryEnd + 1) == '\n') {
+
+                state = State.END_PART;
+                final ByteBuf body = safeReadBytes(in, bodyLength);
+
+                // Skip boundary+whitespace+"\r\n"
+                in.skipBytes(boundaryEnd + 2 - bodyLength);
+                return body;
+            }
         }
 
-        // Check for boundary+whitespace+"\r\n"
-        if (boundaryStart + boundaryLength + linearWhiteSpace + 1 < length &&
-            buf.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\r' &&
-            buf.getByte(boundaryStart + boundaryLength + linearWhiteSpace + 1) == '\n') {
-
-            state = State.END_PART;
-            final ByteBuf body = buf.readSlice(bodyLength);
-            buf.readerIndex(boundaryStart + boundaryLength + linearWhiteSpace + 2);
-            return body;
-        }
-
-        if (boundaryStart + boundaryLength + linearWhiteSpace + 1 < length) {
-            // boundary string in a part data
-            return buf.readSlice(bodyLength + 1);
+        if (boundaryEnd + 1 < length) {
+            // It is not a closing boundary, but there is no CRLF.
+            // A boundary string is in a part data.
+            return in.readBytes(bodyLength + 1);
         }
 
         // A boundary is found but it's not a "closing" boundary
         // return everything before that boundary as the "closing" characters
         // might be available next iteration
-        final ByteBuf body = buf.readSlice(bodyLength);
-        buf.readerIndex(boundaryStart);
+        final ByteBuf body = safeReadBytes(in, bodyLength);
+        in.skipBytes(boundaryStart - bodyLength);
         return body;
+    }
+
+    private static ByteBuf safeReadBytes(HttpDeframerInput in, int length) {
+        if (length == 0) {
+            return Unpooled.EMPTY_BUFFER;
+        } else {
+            return in.readBytes(length);
+        }
     }
 
     /**
@@ -417,30 +417,31 @@ final class MimeParser {
             return;
         }
 
-        final int length = buf.capacity();
+        final int length = in.readableBytes();
 
         // Consider all the whitespace boundary+whitespace+"\r\n"
         int linearWhiteSpace = 0;
         for (int i = boundaryStart + boundaryLength;
-             i < length && (buf.getByte(i) == ' ' || buf.getByte(i) == '\t'); i++) {
+             i < length && (in.getByte(i) == ' ' || in.getByte(i) == '\t'); i++) {
             ++linearWhiteSpace;
         }
 
         // Check for \n or \r\n
         if (boundaryStart + boundaryLength + linearWhiteSpace < length &&
-            (buf.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\n' ||
-             buf.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\r')) {
+            (in.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\n' ||
+             in.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\r')) {
 
-            if (buf.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\n') {
-                buf.readerIndex(boundaryStart + boundaryLength + linearWhiteSpace + 1);
+            if (in.getByte(boundaryStart + boundaryLength + linearWhiteSpace) == '\n') {
+                in.skipBytes(boundaryStart + boundaryLength + linearWhiteSpace + 1);
                 return;
             } else if (boundaryStart + boundaryLength + linearWhiteSpace + 1 < length &&
-                       buf.getByte(boundaryStart + boundaryLength + linearWhiteSpace + 1) == '\n') {
-                buf.readerIndex(boundaryStart + boundaryLength + linearWhiteSpace + 2);
+                       in.getByte(boundaryStart + boundaryLength + linearWhiteSpace + 1) == '\n') {
+                in.skipBytes(boundaryStart + boundaryLength + linearWhiteSpace + 2);
                 return;
             }
         }
-        buf.readerIndex(boundaryStart + 1);
+
+        in.skipBytes(boundaryStart + 1);
     }
 
     /**
@@ -452,35 +453,43 @@ final class MimeParser {
      */
     @Nullable
     private String readHeaderLine() {
-        final int length = buf.capacity();
+        final int length = in.readableBytes();
         // need more data to progress
         // need at least one blank line to read (no headers)
-        final int readerIndex = buf.readerIndex();
-        if (readerIndex >= length - 1) {
+        if (length == 0) {
             return null;
         }
         int headerLength = 0;
         int lwsp = 0;
-        for (; readerIndex + headerLength < length; headerLength++) {
-            if (buf.getByte(readerIndex + headerLength) == '\n') {
+
+        // Find the end of a header line which ends with `\n` or `\r\n`
+        for (; headerLength < length; headerLength++) {
+            final byte currentChar = in.getByte(headerLength);
+            if (currentChar == '\n') {
                 lwsp += 1;
                 break;
             }
-            if (readerIndex + headerLength + 1 >= length) {
+            if (headerLength + 1 >= length) {
                 // No more data in the buffer
                 return null;
             }
-            if (buf.getByte(readerIndex + headerLength) == '\r' &&
-                buf.getByte(readerIndex + headerLength + 1) == '\n') {
+            if (currentChar == '\r' && in.getByte(headerLength + 1) == '\n') {
                 lwsp += 2;
                 break;
             }
         }
-        buf.readerIndex(readerIndex + headerLength + lwsp);
         if (headerLength == 0) {
+            in.skipBytes(lwsp);
             return "";
         }
-        return new String(ByteBufUtil.getBytes(buf, readerIndex, headerLength), HEADER_ENCODING);
+
+        final ByteBuf byteBuf = in.readBytes(headerLength);
+        try {
+            in.skipBytes(lwsp);
+            return new String(ByteBufUtil.getBytes(byteBuf), HEADER_ENCODING);
+        } finally {
+            byteBuf.release();
+        }
     }
 
     /**
@@ -538,15 +547,15 @@ final class MimeParser {
      * @return -1 if there is no match or index where the match starts
      */
     private int match() {
-        final int last = buf.capacity() - boundaryBytes.length;
-        int off = buf.readerIndex();
+        final int last = in.readableBytes() - boundaryBytes.length;
+        int off = 0;
 
         // Loop over all possible match positions in text
         NEXT:
         while (off <= last) {
             // Loop over pattern from right to left
             for (int j = boundaryBytes.length - 1; j >= 0; j--) {
-                final byte ch = buf.getByte(off + j);
+                final byte ch = in.getByte(off + j);
                 if (ch != boundaryBytes[j]) {
                     // Shift search to the right by the maximum of the
                     // bad character shift and the good suffix shift
@@ -570,67 +579,10 @@ final class MimeParser {
         final int size = chars.length;
         final byte[] bytes = new byte[size];
 
-        for (int i = 0; i < size;) {
+        for (int i = 0; i < size; ) {
             bytes[i] = (byte) chars[i++];
         }
         return bytes;
-    }
-
-    /**
-     * A private utility class to represent an individual header.
-     */
-    private static final class Header {
-
-        /**
-         * The trimmed name of this header.
-         */
-        private final String name;
-
-        /**
-         * The entire header "line".
-         */
-        private final String line;
-
-        /**
-         * Constructor that takes a line and splits out the header name.
-         */
-        private Header(String line) {
-            final int i = line.indexOf(':');
-            if (i < 0) {
-                // should never happen
-                name = line.trim();
-            } else {
-                name = line.substring(0, i).trim();
-            }
-            this.line = line;
-        }
-
-        /**
-         * Return the "name" part of the header line.
-         */
-        String name() {
-            return name;
-        }
-
-        /**
-         * Return the "value" part of the header line.
-         */
-        String value() {
-            final int i = line.indexOf(':');
-            if (i < 0) {
-                return line;
-            }
-
-            int j;
-            // skip whitespace after ':'
-            for (j = i + 1; j < line.length(); j++) {
-                final char c = line.charAt(j);
-                if (!(c == ' ' || c == '\t')) {
-                    break;
-                }
-            }
-            return line.substring(j);
-        }
     }
 
     /**
@@ -692,196 +644,5 @@ final class MimeParser {
          * </ul>
          */
         DATA_REQUIRED
-    }
-
-    /**
-     * Base class for the parser events.
-     */
-    abstract static class ParserEvent {
-
-        /**
-         * Returns the event type.
-         * @return EVENT_TYPE
-         */
-        abstract EventType type();
-
-        /**
-         * Returns this event as a {@link HeaderEvent}.
-         * @return HeaderEvent
-         */
-        HeaderEvent asHeaderEvent() {
-            return (HeaderEvent) this;
-        }
-
-        /**
-         * Returns this event as a {@link ContentEvent}.
-         *
-         * @return ContentEvent
-         */
-        ContentEvent asContentEvent() {
-            return (ContentEvent) this;
-        }
-
-        /**
-         * Returns this event as a {@link DataRequiredEvent}.
-         *
-         * @return DataRequiredEvent
-         */
-        DataRequiredEvent asDataRequiredEvent() {
-            return (DataRequiredEvent) this;
-        }
-    }
-
-    /**
-     * The event class for {@link EventType#START_MESSAGE}.
-     */
-    static final class StartMessageEvent extends ParserEvent {
-
-        private StartMessageEvent() {
-        }
-
-        @Override
-        EventType type() {
-            return EventType.START_MESSAGE;
-        }
-    }
-
-    /**
-     * The event class for {@link EventType#START_MESSAGE}.
-     */
-    static final class StartPartEvent extends ParserEvent {
-
-        private StartPartEvent() {
-        }
-
-        @Override
-        EventType type() {
-            return EventType.START_PART;
-        }
-    }
-
-    /**
-     * The event class for {@link EventType#HEADER}.
-     */
-    static final class HeaderEvent extends ParserEvent {
-
-        private final String name;
-        private final String value;
-
-        private HeaderEvent(String name, String value) {
-            this.name = name;
-            this.value = value;
-        }
-
-        String name() {
-            return name;
-        }
-
-        String value() {
-            return value;
-        }
-
-        @Override
-        EventType type() {
-            return EventType.HEADER;
-        }
-    }
-
-    /**
-     * The event class for {@link EventType#END_HEADERS}.
-     */
-    static final class EndHeadersEvent extends ParserEvent {
-
-        private EndHeadersEvent() {}
-
-        @Override
-        EventType type() {
-            return EventType.END_HEADERS;
-        }
-    }
-
-    /**
-     * The event class for {@link EventType#CONTENT}.
-     */
-    static final class ContentEvent extends ParserEvent {
-
-        private final ByteBuf bufferEntry;
-
-        ContentEvent(ByteBuf data) {
-            bufferEntry = data;
-        }
-
-        ByteBuf content() {
-            return bufferEntry;
-        }
-
-        @Override
-        EventType type() {
-            return EventType.CONTENT;
-        }
-    }
-
-    /**
-     * The event class for {@link EventType#END_PART}.
-     */
-    static final class EndPartEvent extends ParserEvent {
-
-        private EndPartEvent() {}
-
-        @Override
-        EventType type() {
-            return EventType.END_PART;
-        }
-    }
-
-    /**
-     * The event class for {@link EventType#END_MESSAGE}.
-     */
-    static final class EndMessageEvent extends ParserEvent {
-
-        private EndMessageEvent() {}
-
-        @Override
-        EventType type() {
-            return EventType.END_MESSAGE;
-        }
-    }
-
-    /**
-     * The event class for {@link EventType#DATA_REQUIRED}.
-     */
-    static final class DataRequiredEvent extends ParserEvent {
-
-        private final boolean content;
-
-        private DataRequiredEvent(boolean content) {
-            this.content = content;
-        }
-
-        /**
-         * Indicates if the required data is for the body content of a part.
-         * @return {@code true} if for body content, {@code false} otherwise
-         */
-        boolean isContent() {
-            return content;
-        }
-
-        @Override
-        EventType type() {
-            return EventType.DATA_REQUIRED;
-        }
-    }
-
-    /**
-     * Callback interface to the parser.
-     */
-    @FunctionalInterface
-    interface EventProcessor {
-
-        /**
-         * Processes a parser event.
-         * @param event generated event
-         */
-        void process(ParserEvent event);
     }
 }

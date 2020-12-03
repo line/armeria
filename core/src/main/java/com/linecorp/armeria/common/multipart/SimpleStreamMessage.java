@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.util.concurrent.EventExecutor;
 
+// TODO(ikhoon): Remove this and allow to use pooled objects
 abstract class SimpleStreamMessage<T> implements StreamMessage<T> {
 
     @Override

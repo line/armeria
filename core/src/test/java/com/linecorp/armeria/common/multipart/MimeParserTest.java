@@ -30,25 +30,31 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.Bytes;
 
-import io.netty.buffer.ByteBuf;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.common.stream.ByteBufDeframerInput;
+
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import reactor.core.publisher.Flux;
 
 class MimeParserTest {
 
-    // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/test/java/io/helidon/media/multipart/MimeParserTest.java
+    // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media
+    // /multipart/src/test/java/io/helidon/media/multipart/MimeParserTest.java
 
     @Test
     void testSkipPreambule() {
@@ -61,13 +67,12 @@ class MimeParserTest {
                                "1\r\n" +
                                "--" + boundary + "--").getBytes();
 
-        final List<MimePart> parts = parse("boundary", chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse("boundary", chunk1);
         assertThat(parts).hasSize(1);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.contentUtf8()).isEqualTo("1");
     }
 
     @Test
@@ -79,13 +84,12 @@ class MimeParserTest {
                                "1\n" +
                                "--" + boundary + "--").getBytes();
 
-        final List<MimePart> parts = parse("boundary", chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse("boundary", chunk1);
         assertThat(parts).hasSize(1);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.get('-' + boundary + "Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers().get('-' + boundary + "Content-Id")).isEqualTo("part1");
+        assertThat(part1.contentUtf8()).isEqualTo("1");
     }
 
     @Test
@@ -101,9 +105,10 @@ class MimeParserTest {
                                "2\n" +
                                "--" + boundary + "--").getBytes();
 
-        final MimeParser.ParserEvent lastEvent = parse(boundary, chunk1).lastEvent;
-        assertThat(lastEvent).isNotNull();
-        assertThat(lastEvent.type()).isEqualTo(MimeParser.EventType.END_MESSAGE);
+        // ignore?
+        // final MimeParser.ParserEvent lastEvent = parse(boundary, chunk1).lastEvent;
+        // assertThat(lastEvent).isNotNull();
+        // assertThat(lastEvent.type()).isEqualTo(MimeParser.EventType.END_MESSAGE);
     }
 
     @Test
@@ -119,18 +124,16 @@ class MimeParserTest {
                                "2\n" +
                                "--" + boundary + "--   ").getBytes();
 
-        final List<MimePart> parts = parse("boundary", chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse("boundary", chunk1);
         assertThat(parts).hasSize(2);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.contentUtf8()).isEqualTo("1");
 
-        final MimePart part2 = parts.get(1);
-        assertThat(part2.headers.get("Content-Id")).containsExactly("part2");
-        assertThat(part2.content).isNotNull();
-        assertThat(new String(part2.content)).isEqualTo("2");
+        final AggregatedBodyPart part2 = parts.get(1);
+        assertThat(part2.headers().get("Content-Id")).isEqualTo("part2");
+        assertThat(part2.contentUtf8()).isEqualTo("2");
     }
 
     @Test
@@ -148,27 +151,26 @@ class MimeParserTest {
                                       "Content-Transfer-Encoding: binary\n" +
                                       "Content-Id: part2\n" +
                                       '\n').getBytes(),
-                                     new byte[]{(byte) 0xff, (byte) 0xd8},
+                                     new byte[]{ (byte) 0xff, (byte) 0xd8 },
                                      ("\n--" + boundary + "--").getBytes());
 
-        final List<MimePart> parts = parse(boundary, chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
         assertThat(parts).hasSize(2);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.get("Content-Type")).containsExactly("text/xml; charset=UTF-8");
-        assertThat(part1.headers.get("Content-Transfer-Encoding")).containsExactly("binary");
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.headers.get("Content-Description")).containsExactly("this is part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("<foo>bar</foo>");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers().get("Content-Type")).isEqualTo("text/xml; charset=UTF-8");
+        assertThat(part1.headers().get("Content-Transfer-Encoding")).isEqualTo("binary");
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().get("Content-Description")).isEqualTo("this is part1");
+        assertThat(part1.contentUtf8()).isEqualTo("<foo>bar</foo>");
 
-        final MimePart part2 = parts.get(1);
-        assertThat(part2.headers.get("Content-Type")).containsExactly("image/jpeg");
-        assertThat(part2.headers.get("Content-Transfer-Encoding")).containsExactly("binary");
-        assertThat(part2.headers.get("Content-Id")).containsExactly("part2");
-        assertThat(part2.content).isNotNull();
-        assertThat(part2.content[0]).isEqualTo((byte) 0xff);
-        assertThat(part2.content[1]).isEqualTo((byte) 0xd8);
+        final AggregatedBodyPart part2 = parts.get(1);
+        assertThat(part2.headers().get("Content-Type")).isEqualTo("image/jpeg");
+        assertThat(part2.headers().get("Content-Transfer-Encoding")).isEqualTo("binary");
+        assertThat(part2.headers().get("Content-Id")).isEqualTo("part2");
+        final byte[] content = part2.content().array();
+        assertThat(content[0]).isEqualTo((byte) 0xff);
+        assertThat(content[1]).isEqualTo((byte) 0xd8);
     }
 
     @Test
@@ -185,20 +187,18 @@ class MimeParserTest {
                                "<foo>bar</foo>\n" +
                                "--" + boundary + "--").getBytes();
 
-        final List<MimePart> parts = parse(boundary, chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
         assertThat(parts).hasSize(2);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.get("Content-Type")).containsExactly("text/xml; charset=utf-8");
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(part1.content.length).isEqualTo(0);
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers().get("Content-Type")).isEqualTo("text/xml; charset=utf-8");
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.contentUtf8().length()).isEqualTo(0);
 
-        final MimePart part2 = parts.get(1);
-        assertThat(part2.headers.get("Content-Type")).containsExactly("text/xml");
-        assertThat(part2.headers.get("Content-Id")).containsExactly("part2");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part2.content)).isEqualTo("<foo>bar</foo>");
+        final AggregatedBodyPart part2 = parts.get(1);
+        assertThat(part2.headers().get("Content-Type")).isEqualTo("text/xml");
+        assertThat(part2.headers().get("Content-Id")).isEqualTo("part2");
+        assertThat(part2.contentUtf8()).isEqualTo("<foo>bar</foo>");
     }
 
     @Test
@@ -212,18 +212,18 @@ class MimeParserTest {
                                "<bar>foo</bar>\n" +
                                "--" + boundary + "--").getBytes();
 
-        final List<MimePart> parts = parse(boundary, chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
         assertThat(parts).hasSize(2);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(0);
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("<foo>bar</foo>");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(1);
 
-        final MimePart part2 = parts.get(1);
-        assertThat(part2.headers).hasSize(0);
-        assertThat(part2.content).isNotNull();
-        assertThat(new String(part2.content)).isEqualTo("<bar>foo</bar>");
+        assertThat(part1.contentUtf8()).isEqualTo("<foo>bar</foo>");
+
+        final AggregatedBodyPart part2 = parts.get(1);
+        assertThat(part2.headers()).hasSize(1);
+        assertThat(part2.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part2.contentUtf8()).isEqualTo("<bar>foo</bar>");
     }
 
     @Test
@@ -239,7 +239,7 @@ class MimeParserTest {
                                       "Content-Transfer-Encoding: binary\n" +
                                       "Content-Id: part2\n" +
                                       '\n').getBytes(),
-                                     new byte[]{(byte) 0xff, (byte) 0xd8});
+                                     new byte[]{ (byte) 0xff, (byte) 0xd8 });
 
         assertThatThrownBy(() -> parse(boundary, chunk1))
                 .isInstanceOf(MimeParsingException.class)
@@ -259,18 +259,16 @@ class MimeParserTest {
                                "2\n" +
                                "--" + boundary + "--   ").getBytes();
 
-        final List<MimePart> parts = parse("boundary", chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse("boundary", chunk1);
         assertThat(parts).hasSize(2);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.contentUtf8()).isEqualTo("1");
 
-        final MimePart part2 = parts.get(1);
-        assertThat(part2.headers.get("Content-Id")).containsExactly("part2");
-        assertThat(part2.content).isNotNull();
-        assertThat(new String(part2.content)).isEqualTo("2");
+        final AggregatedBodyPart part2 = parts.get(1);
+        assertThat(part2.headers().get("Content-Id")).isEqualTo("part2");
+        assertThat(part2.contentUtf8()).isEqualTo("2");
     }
 
     @Test
@@ -287,21 +285,21 @@ class MimeParserTest {
                                "--" + boundary + " starts on a new line\n" +
                                "--" + boundary + "--         ").getBytes();
 
-        final List<MimePart> parts = parse(boundary, chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
         assertThat(parts).hasSize(2);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(1);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("1 --" + boundary + " in body");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("1 --" + boundary + " in body");
 
-        final MimePart part2 = parts.get(1);
-        assertThat(part2.headers).hasSize(1);
-        assertThat(part2.headers.get("Content-Id")).containsExactly("part2");
-        assertThat(part2.content).isNotNull();
-        assertThat(new String(part2.content)).isEqualTo("2 --" + boundary + " in body\n--" +
-                                                        boundary + " starts on a new line");
+        final AggregatedBodyPart part2 = parts.get(1);
+        assertThat(part2.headers()).hasSize(2);
+        assertThat(part2.headers().get("Content-Id")).isEqualTo("part2");
+        assertThat(part2.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part2.contentUtf8()).isEqualTo("2 --" + boundary + " in body\n--" +
+                                                  boundary + " starts on a new line");
     }
 
     @Test
@@ -317,7 +315,7 @@ class MimeParserTest {
                                       "Content-Transfer-Encoding: binary\n" +
                                       "Content-Id: part2\n" +
                                       '\n').getBytes(),
-                                     new byte[]{(byte) 0xff, (byte) 0xd8},
+                                     new byte[]{ (byte) 0xff, (byte) 0xd8 },
                                      ("\n--" + boundary).getBytes());
 
         assertThatThrownBy(() -> parse(boundary, chunk1))
@@ -338,20 +336,20 @@ class MimeParserTest {
                                "body 2\n" +
                                "--" + boundary + "--").getBytes();
 
-        final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2));
         assertThat(parts).hasSize(2);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(1);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("body 1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("body 1");
 
-        final MimePart part2 = parts.get(1);
-        assertThat(part2.headers).hasSize(1);
-        assertThat(part2.headers.get("Content-Id")).containsExactly("part2");
-        assertThat(part2.content).isNotNull();
-        assertThat(new String(part2.content)).isEqualTo("body 2");
+        final AggregatedBodyPart part2 = parts.get(1);
+        assertThat(part2.headers()).hasSize(2);
+        assertThat(part2.headers().get("Content-Id")).isEqualTo("part2");
+        assertThat(part2.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part2.contentUtf8()).isEqualTo("body 2");
     }
 
     @Test
@@ -364,35 +362,16 @@ class MimeParserTest {
         final byte[] chunk2 = ("this-is-the-2nd-slice-of-the-body\n" +
                                "--" + boundary + "--").getBytes();
 
-        final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2));
         assertThat(parts).hasSize(1);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(1);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("this-is-the-1st-slice-of-the-body\n" +
-                                                        "this-is-the-2nd-slice-of-the-body");
-    }
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
 
-    @Test
-    void testBoundaryAcrossChunksDataRequired() {
-        final String boundary = "boundary";
-        final byte[] chunk1 = ("--" + boundary + '\n' +
-                               "Content-Id: part1\n" +
-                               '\n' +
-                               "this-is-the-body-of-part1\n" +
-                               "--" + boundary.substring(0, 3)).getBytes();
-
-        final ParserEventProcessor processor = new ParserEventProcessor();
-        final MimeParser parser = new MimeParser(boundary, processor);
-        parser.offer(Unpooled.wrappedBuffer(chunk1));
-        parser.parse();
-
-        assertThat(processor.partContent).isNotNull();
-        assertThat(new String(processor.partContent)).isEqualTo("this-is-the-body-of-");
-        assertThat(processor.lastEvent).isNotNull();
-        assertThat(processor.lastEvent.type()).isEqualTo(MimeParser.EventType.DATA_REQUIRED);
+        assertThat(part1.contentUtf8()).isEqualTo("this-is-the-1st-slice-of-the-body\n" +
+                                                  "this-is-the-2nd-slice-of-the-body");
     }
 
     @Test
@@ -408,19 +387,19 @@ class MimeParserTest {
                                "this-is-the-body-of-part2\n" +
                                "--" + boundary + "--").getBytes();
 
-        final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2));
         assertThat(parts).hasSize(2);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(1);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("this-is-the-body-of-part1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("this-is-the-body-of-part1");
 
-        final MimePart part2 = parts.get(1);
-        assertThat(part2.headers).hasSize(0);
-        assertThat(part2.content).isNotNull();
-        assertThat(new String(part2.content)).isEqualTo("this-is-the-body-of-part2");
+        final AggregatedBodyPart part2 = parts.get(1);
+        assertThat(part2.headers()).hasSize(1);
+        assertThat(part2.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part2.contentUtf8()).isEqualTo("this-is-the-body-of-part2");
     }
 
     @Test
@@ -433,14 +412,14 @@ class MimeParserTest {
                                "--" + boundary.substring(0, 3)).getBytes();
         final byte[] chunk2 = (boundary.substring(3) + "--").getBytes();
 
-        final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2));
         assertThat(parts).hasSize(1);
 
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(1);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("this-is-the-body-of-part1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("this-is-the-body-of-part1");
     }
 
     @Test
@@ -453,13 +432,13 @@ class MimeParserTest {
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
 
-        final List<MimePart> parts = parse(boundary, chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
         assertThat(parts).hasSize(1);
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(1);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("part1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("part1");
     }
 
     @Test
@@ -485,13 +464,14 @@ class MimeParserTest {
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
 
-        final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2));
         assertThat(parts).hasSize(1);
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(1);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("part1");
+
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("part1");
     }
 
     @Test
@@ -505,13 +485,14 @@ class MimeParserTest {
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
 
-        final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2));
         assertThat(parts).hasSize(1);
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(1);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("part1");
+
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("part1");
     }
 
     @Test
@@ -536,7 +517,7 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
         assertThatThrownBy(() -> parse(boundary, chunk1))
                 .isInstanceOf(MimeParsingException.class)
-                .hasMessageContaining("No blank line found");
+                .hasMessageContaining("Invalid header line: part1");
     }
 
     @Test
@@ -550,7 +531,7 @@ class MimeParserTest {
                                "--" + boundary + "--").getBytes();
         assertThatThrownBy(() -> parse(boundary, ImmutableList.of(chunk1, chunk2)))
                 .isInstanceOf(MimeParsingException.class)
-                .hasMessageContaining("No blank line found");
+                .hasMessageContaining("Invalid header line: part1");
     }
 
     @Test
@@ -562,14 +543,13 @@ class MimeParserTest {
                                '\n' +
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
-        final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2));
         assertThat(parts).hasSize(1);
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(2);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.headers.get("Content-Type")).containsExactly("text/plain");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("part1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("part1");
     }
 
     @Test
@@ -581,14 +561,13 @@ class MimeParserTest {
         final byte[] chunk2 = ('\n' +
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
-        final List<MimePart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2)).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, ImmutableList.of(chunk1, chunk2));
         assertThat(parts).hasSize(1);
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(2);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.headers.get("Content-Type")).containsExactly("text/plain");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("part1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("part1");
     }
 
     @Test
@@ -600,40 +579,38 @@ class MimeParserTest {
                                '\n' +
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
-        final List<MimePart> parts = parse(boundary, chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
         assertThat(parts).hasSize(1);
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(2);
-        assertThat(part1.headers.get("Content-Id")).containsExactly("part1");
-        assertThat(part1.headers.get("Content-Type")).containsExactly("text/plain");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("part1");
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("part1");
     }
 
     @Test
     void testHeaderValueWithWhiteSpacesOnly() {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
-                               "Content-Type:    \t  \t\t \n" +
+                               "Content-Id:    \t  \t\t \n" +
                                '\n' +
                                "part1\n" +
                                "--" + boundary + "--").getBytes();
-        final List<MimePart> parts = parse(boundary, chunk1).parts;
+        final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
         assertThat(parts).hasSize(1);
-        final MimePart part1 = parts.get(0);
-        assertThat(part1.headers).hasSize(1);
-        assertThat(part1.headers.get("Content-Type")).containsExactly("");
-        assertThat(part1.content).isNotNull();
-        assertThat(new String(part1.content)).isEqualTo("part1");
+
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEqualTo("part1");
     }
 
     @Test
     void testParserClosed() {
         assertThatThrownBy(() -> {
-            final ParserEventProcessor processor = new ParserEventProcessor();
-            final MimeParser parser = new MimeParser("boundary", processor);
+            final MimeParser parser = new MimeParser(null, null, "boundary");
             parser.close();
-            parser.offer(Unpooled.wrappedBuffer("foo".getBytes()));
             parser.parse();
         }).isInstanceOf(MimeParsingException.class)
           .hasMessageContaining("Parser is closed");
@@ -666,7 +643,7 @@ class MimeParserTest {
      * @param data for the chunks to parse
      * @return test parser event processor
      */
-    static ParserEventProcessor parse(String boundary, byte[] data) {
+    static List<AggregatedBodyPart> parse(String boundary, byte[] data) {
         return parse(boundary, ImmutableList.of(data));
     }
 
@@ -677,64 +654,24 @@ class MimeParserTest {
      * @param data for the chunks to parse
      * @return test parser event processor
      */
-    static ParserEventProcessor parse(String boundary, List<byte[]> data) {
-        final ParserEventProcessor processor = new ParserEventProcessor();
-        final MimeParser parser = new MimeParser(boundary, processor);
+    static List<AggregatedBodyPart> parse(String boundary, List<byte[]> data) {
+        final ByteBufDeframerInput input = new ByteBufDeframerInput(ByteBufAllocator.DEFAULT);
+        final List<BodyPart> output = new ArrayList<>();
+        final MimeParser parser = new MimeParser(input, output::add, boundary);
         for (byte[] bytes : data) {
-            parser.offer(Unpooled.wrappedBuffer(bytes));
+            input.add(Unpooled.wrappedBuffer(bytes));
             parser.parse();
         }
         parser.close();
-        return processor;
-    }
-
-    /**
-     * Test parser event processor.
-     */
-    static final class ParserEventProcessor implements MimeParser.EventProcessor {
-
-        List<MimePart> parts = new LinkedList<>();
-        Map<String, List<String>> partHeaders = new HashMap<>();
-        byte[] partContent;
-        MimeParser.ParserEvent lastEvent;
-
-        @Override
-        public void process(MimeParser.ParserEvent event) {
-            switch (event.type()) {
-                case START_PART:
-                    partHeaders = new HashMap<>();
-                    partContent = null;
-                    break;
-
-                case HEADER:
-                    final MimeParser.HeaderEvent headerEvent = event.asHeaderEvent();
-                    final String name = headerEvent.name();
-                    final String value = headerEvent.value();
-                    assertThat(name).isNotNull();
-                    assertThat(name.length()).isNotEqualTo(0);
-                    assertThat(value).isNotNull();
-                    final List<String> values = partHeaders.computeIfAbsent(name, k -> new ArrayList<>());
-                    values.add(value);
-                    break;
-
-                case CONTENT:
-                    final ByteBuf content = event.asContentEvent().content();
-                    assertThat(content).isNotNull();
-                    final byte[] contentBytes = new byte[content.capacity()];
-                    content.readBytes(contentBytes);
-                    if (partContent == null) {
-                        partContent = contentBytes;
-                    } else {
-                        partContent = concat(partContent, contentBytes);
-                    }
-                    break;
-
-                case END_PART:
-                    parts.add(new MimePart(partHeaders, partContent));
-                    break;
-            }
-            lastEvent = event;
-        }
+        return output.stream()
+                     .map(part -> {
+                         final HttpData content = Flux.from(part.content())
+                                                      .map(HttpData::array)
+                                                      .reduce(Bytes::concat)
+                                                      .map(HttpData::wrap)
+                                                      .block();
+                         return AggregatedBodyPart.of(part.headers(), content);
+                     }).collect(toImmutableList());
     }
 
     /**

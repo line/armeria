@@ -56,4 +56,14 @@ public interface HttpDeframerInput extends SafeCloseable {
      * @throws IllegalStateException if the specified {@code length} is greater than {@link #readableBytes()}
      */
     ByteBuf readBytes(int length);
+
+    /**
+     * TODO(ikhoon): Implement this
+     */
+    byte getByte(int index);
+
+    /**
+     * TODO(ikhoon): Implement this
+     */
+    void skipBytes(int length);
 }
