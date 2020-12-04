@@ -22,7 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
-import com.linecorp.armeria.internal.common.util.TransportType;
+import com.linecorp.armeria.common.Flags;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AbstractEventLoop;
@@ -87,7 +87,7 @@ public final class EventLoopGroups {
         checkArgument(numThreads > 0, "numThreads: %s (expected: > 0)", numThreads);
         requireNonNull(threadNamePrefix, "threadNamePrefix");
 
-        final TransportType type = TransportType.detectTransportType();
+        final TransportType type = Flags.transportType();
         final String prefix = threadNamePrefix + '-' + type.lowerCasedName();
         return newEventLoopGroup(numThreads, ThreadFactories.newEventLoopThreadFactory(prefix,
                                                                                        useDaemonThreads));
@@ -104,7 +104,7 @@ public final class EventLoopGroups {
         checkArgument(numThreads > 0, "numThreads: %s (expected: > 0)", numThreads);
         requireNonNull(threadFactory, "threadFactory");
 
-        final TransportType type = TransportType.detectTransportType();
+        final TransportType type = Flags.transportType();
         return type.newEventLoopGroup(numThreads, unused -> threadFactory);
     }
 

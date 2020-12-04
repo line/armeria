@@ -279,7 +279,6 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         }
 
         void clear0() {
-            assert resolverClosed;
             if (refreshFuture != null) {
                 refreshFuture.cancel(false);
             }

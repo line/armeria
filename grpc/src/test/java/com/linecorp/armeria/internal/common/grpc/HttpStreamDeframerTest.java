@@ -56,8 +56,8 @@ class HttpStreamDeframerTest {
         final TransportStatusListener statusListener = (status, metadata) -> statusRef.set(status);
         final HttpStreamDeframerHandler handler =
                 new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), statusListener,
-                                              Integer.MAX_VALUE);
-        deframer = new HttpDeframer<>(handler, ByteBufAllocator.DEFAULT);
+                                              null, Integer.MAX_VALUE);
+        deframer = HttpDeframer.of(handler, ByteBufAllocator.DEFAULT);
         handler.setDeframer(deframer);
     }
 

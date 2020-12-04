@@ -18,9 +18,9 @@ package com.linecorp.armeria.client.endpoint.dns;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.dns.DefaultDnsRecordEncoder;
 
-final class DnsNameEncoder {
+public final class DnsNameEncoder {
 
-    static void encodeName(String name, ByteBuf out) {
+    public static void encodeName(String name, ByteBuf out) {
         DefaultDnsRecordEncoderTrampoline.INSTANCE.encodeName(name, out);
     }
 

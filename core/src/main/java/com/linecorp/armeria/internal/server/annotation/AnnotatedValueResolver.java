@@ -46,7 +46,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -59,7 +58,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
@@ -98,6 +96,16 @@ final class AnnotatedValueResolver {
             new StringRequestConverterFunction(),
             new ByteArrayRequestConverterFunction());
 
+    private static final ClassValue<EnumConverter<?>> enumConverters = new ClassValue<EnumConverter<?>>() {
+        @Override
+        protected EnumConverter<?> computeValue(Class<?> type) {
+            logger.debug("Registered an Enum {}", type);
+            return new EnumConverter<>(type.asSubclass(Enum.class));
+        }
+    };
+
+    private static final Object[] emptyArguments = new Object[0];
+
     private static final List<RequestObjectResolver> defaultRequestObjectResolvers;
 
     static {
@@ -127,8 +135,6 @@ final class AnnotatedValueResolver {
                          requestConverterFunctionProviders);
         }
     }
-
-    private static final Object[] emptyArguments = new Object[0];
 
     /**
      * Returns an array of arguments which are resolved by each {@link AnnotatedValueResolver} of the
@@ -765,8 +771,6 @@ final class AnnotatedValueResolver {
 
     private final AggregationStrategy aggregationStrategy;
 
-    private static final ConcurrentMap<Class<?>, EnumConverter<?>> enumConverters = new MapMaker().makeMap();
-
     private AnnotatedValueResolver(@Nullable Class<? extends Annotation> annotationType,
                                    @Nullable String httpElementName,
                                    boolean isPathVariable, boolean shouldExist,
@@ -802,10 +806,7 @@ final class AnnotatedValueResolver {
         if (!elementType.isEnum()) {
             return null;
         }
-        return enumConverters.computeIfAbsent(elementType, newElementType -> {
-            logger.debug("Registered an Enum {}", newElementType);
-            return new EnumConverter<>(newElementType.asSubclass(Enum.class));
-        });
+        return enumConverters.get(elementType);
     }
 
     @Nullable

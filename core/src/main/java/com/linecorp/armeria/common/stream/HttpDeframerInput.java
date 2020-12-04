@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.buffer.ByteBuf;
@@ -24,6 +25,7 @@ import io.netty.buffer.ByteBuf;
 /**
  * An input of {@link HttpDeframer} which is used to read a stream of {@link HttpData}.
  */
+@UnstableApi
 public interface HttpDeframerInput extends SafeCloseable {
 
     /**

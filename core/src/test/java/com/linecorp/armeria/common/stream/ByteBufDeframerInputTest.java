@@ -179,4 +179,15 @@ class ByteBufDeframerInputTest {
         assertThat(byteBuf3.refCnt()).isZero();
         assertThat(byteBuf4.refCnt()).isZero();
     }
+
+    @Test
+    void addAfterClosing() {
+        assertThat(input.readableBytes()).isEqualTo(9);
+        input.close();
+        assertThat(input.readableBytes()).isEqualTo(0);
+        final ByteBuf byteBuf = Unpooled.wrappedBuffer(new byte[]{ 1, 2, 3, 4 });
+        // As 'ByteBufDeframerInput' is closed, the 'byteBuf' should be released by 'ByteBufDeframerInput'.
+        input.add(byteBuf);
+        assertThat(byteBuf.refCnt()).isZero();
+    }
 }

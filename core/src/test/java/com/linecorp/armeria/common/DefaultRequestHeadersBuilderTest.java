@@ -19,9 +19,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Locale;
+import java.util.Locale.LanguageRange;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -140,6 +144,120 @@ class DefaultRequestHeadersBuilderTest {
         SessionProtocol.httpsValues().forEach(p -> assertThat(builder.scheme(p).scheme()).isEqualTo("https"));
         assertThatThrownBy(() -> builder.scheme(SessionProtocol.PROXY))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void testAcceptLanguageMultiHeader() {
+        final RequestHeaders headers = RequestHeaders
+                .builder()
+                .path("/")
+                .method(HttpMethod.GET)
+                .add(HttpHeaderNames.ACCEPT_LANGUAGE,
+                        "de-us ;q=0.9, *;q=0.8",
+                        "en;q=0.95, en-US;q=0.98"
+                )
+                .build();
+        final List<LanguageRange> acceptLanguages = headers.acceptLanguages();
+        assertThat(acceptLanguages)
+                .isEqualTo(
+                        ImmutableList.of(
+                                new LanguageRange("en-US", 0.98),
+                                new LanguageRange("en", 0.95),
+                                new LanguageRange("de-us", 0.9),
+                                new LanguageRange("*", 0.8)
+                        )
+                );
+    }
+
+    @Test
+    void testAcceptLanguageNoHeader() {
+        final RequestHeaders headers = RequestHeaders
+                .builder()
+                .path("/")
+                .method(HttpMethod.GET)
+                .build();
+        final List<LanguageRange> acceptLanguages = headers.acceptLanguages();
+        assertThat(acceptLanguages).isNull();
+    }
+
+    @Test
+    void testAcceptLanguageEmptyHeader() {
+        final RequestHeaders headers = RequestHeaders
+                .builder()
+                .path("/")
+                .method(HttpMethod.GET)
+                .add(HttpHeaderNames.ACCEPT_LANGUAGE, "")
+                .build();
+        final List<LanguageRange> acceptLanguages = headers.acceptLanguages();
+        assertThat(acceptLanguages).isNull();
+    }
+
+    @Test
+    void testAcceptLanguagesOrdering() {
+        final RequestHeaders headers = RequestHeaders
+                .builder()
+                .path("/")
+                .method(HttpMethod.GET)
+                .set(HttpHeaderNames.ACCEPT_LANGUAGE, "de-us ;q=0.9, *;q=0.8,en;q=0.95, en-US;q=0.98")
+                .build();
+        final List<Locale> supportedLocales = ImmutableList.of(
+                Locale.GERMANY,
+                Locale.UK
+        );
+        final Locale bestLocale = headers.selectLocale(supportedLocales);
+        assertThat(bestLocale).isEqualTo(Locale.UK);
+    }
+
+    @Test
+    void testAcceptLanguageNoMatchingLanguages() {
+        final RequestHeaders headers = RequestHeaders
+                .builder()
+                .path("/")
+                .method(HttpMethod.GET)
+                .set(HttpHeaderNames.ACCEPT_LANGUAGE, "en-US;q=0.98")
+                .build();
+
+        assertThat(
+                headers.selectLocale(ImmutableList.of(Locale.TRADITIONAL_CHINESE))
+        ).isNull();
+    }
+
+    @Test
+    void testInvalidAcceptLanguageHeader() {
+        final List<LanguageRange> acceptLanguages = RequestHeaders
+                .builder()
+                .set(HttpHeaderNames.ACCEPT_LANGUAGE, "en-US;0.98")
+                .acceptLanguages();
+        assertThat(acceptLanguages).isNull();
+    }
+
+    @Test
+    void testSettingOfAcceptLanguage() {
+        final String acceptLanguage = RequestHeaders
+                .builder()
+                .acceptLanguages(
+                        ImmutableList.of(
+                                new LanguageRange("zh-TW", 0.8),
+                                new LanguageRange("de-us", 0.5)
+                        )
+                )
+                .get(HttpHeaderNames.ACCEPT_LANGUAGE);
+        assertThat(acceptLanguage).isEqualTo("zh-tw;q=0.8, de-us;q=0.5");
+    }
+
+    @Test
+    void testAcceptLanguageBuilderGetter() {
+        final ImmutableList<LanguageRange> languageRanges = ImmutableList.of(
+                new LanguageRange("zh-TW", 0.8),
+                new LanguageRange("de-us", 0.5)
+        );
+        final List<LanguageRange> acceptLanguages = RequestHeaders
+                .builder()
+                .acceptLanguages(
+                        languageRanges
+                )
+                .acceptLanguages();
+        assertThat(acceptLanguages).isEqualTo(languageRanges);
     }
 
     /**

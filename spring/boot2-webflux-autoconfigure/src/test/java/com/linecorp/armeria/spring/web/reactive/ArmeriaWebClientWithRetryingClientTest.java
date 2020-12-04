@@ -15,8 +15,11 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
@@ -43,7 +46,10 @@ class ArmeriaWebClientWithRetryingClientTest {
                       .retrieve()
                       .bodyToFlux(String.class);
         StepVerifier.create(body)
-                    .expectError(AnticipatedException.class)
+                    .expectErrorSatisfies(error -> {
+                        assertThat(error).isInstanceOf(WebClientRequestException.class);
+                        assertThat(error.getCause()).isInstanceOf(AnticipatedException.class);
+                    })
                     .verify();
     }
 }

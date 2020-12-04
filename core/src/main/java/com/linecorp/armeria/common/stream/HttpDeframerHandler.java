@@ -22,12 +22,14 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An {@link HttpDeframerHandler} that decodes a stream of {@link HttpObject}s to N objects.
  *
  * @param <T> the result type of being deframed
  */
+@UnstableApi
 public interface HttpDeframerHandler<T> {
 
     /**

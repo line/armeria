@@ -38,33 +38,33 @@ public final class RetryConfig<T extends Response> {
     private static final Logger logger = LoggerFactory.getLogger(RetryConfig.class);
 
     /**
-     * Returns a new {@link RetryConfigBuilder} with the specified {@code RetryRule}.
+     * Returns a new {@link RetryConfigBuilder} with the specified {@link RetryRule}.
      */
     public static RetryConfigBuilder<HttpResponse> builder(RetryRule retryRule) {
-        return new RetryConfigBuilder<>(retryRule);
+        return builder0(retryRule);
     }
 
     /**
-     * Returns a new {@link RetryConfigBuilder} with the specified {@code RetryRuleWithContent}.
+     * Returns a new {@link RetryConfigBuilder} with the specified {@link RetryRuleWithContent}.
      */
     public static RetryConfigBuilder<HttpResponse> builder(
             RetryRuleWithContent<HttpResponse> retryRuleWithContent) {
-        return new RetryConfigBuilder<>(retryRuleWithContent);
+        return builder0(retryRuleWithContent);
     }
 
     /**
-     * Returns a new {@link RetryConfigBuilder} with the specified {@code RetryRule}.
+     * Returns a new {@link RetryConfigBuilder} with the specified {@link RetryRule}.
      */
     public static RetryConfigBuilder<RpcResponse> builderForRpc(RetryRule retryRule) {
-        return new RetryConfigBuilder<>(retryRule);
+        return builder0(retryRule);
     }
 
     /**
-     * Returns a new {@link RetryConfigBuilder} with the specified {@code RetryRuleWithContent}.
+     * Returns a new {@link RetryConfigBuilder} with the specified {@link RetryRuleWithContent}.
      */
     public static RetryConfigBuilder<RpcResponse> builderForRpc(
             RetryRuleWithContent<RpcResponse> retryRuleWithContent) {
-        return new RetryConfigBuilder<>(retryRuleWithContent);
+        return builder0(retryRuleWithContent);
     }
 
     static <T extends Response> RetryConfigBuilder<T> builder0(RetryRule retryRule) {
@@ -82,13 +82,10 @@ public final class RetryConfig<T extends Response> {
 
     @Nullable
     private final RetryRule retryRule;
-
     @Nullable
     private final RetryRuleWithContent<T> retryRuleWithContent;
-
     @Nullable
     private final RetryRule fromRetryRuleWithContent;
-
     @Nullable
     private RetryRuleWithContent<T> fromRetryRule;
 
@@ -166,7 +163,7 @@ public final class RetryConfig<T extends Response> {
     }
 
     /**
-     * Returns the {@link RetryRule} used by {@link RetryingClient} using this config, could be null.
+     * Returns the {@link RetryRule} which was specified with {@link RetryConfig#builder(RetryRule)}.
      */
     @Nullable
     public RetryRule retryRule() {
@@ -174,7 +171,8 @@ public final class RetryConfig<T extends Response> {
     }
 
     /**
-     * Returns the {@link RetryRuleWithContent} used by {@link RetryingClient} using this config, could be null.
+     * Returns the {@link RetryRuleWithContent} which was specified with
+     * {@link RetryConfig#builder(RetryRuleWithContent)}.
      */
     @Nullable
     public RetryRuleWithContent<T> retryRuleWithContent() {
@@ -182,8 +180,7 @@ public final class RetryConfig<T extends Response> {
     }
 
     /**
-     * Returns config's {@code maxContentLength}, which is non-zero only if
-     * a {@link RetryRuleWithContent} is used.
+     * Returns the {@code maxContentLength}, which is non-zero only if a {@link RetryRuleWithContent} is used.
      */
     public int maxContentLength() {
         return maxContentLength;

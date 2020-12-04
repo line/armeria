@@ -3,14 +3,14 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.11.2
-  - io.dropwizard.metrics:metrics-bom:4.1.13
-  - io.grpc:grpc-bom:1.33.0
-  - io.micrometer:micrometer-bom:1.5.5
+  - com.fasterxml.jackson:jackson-bom:2.12.0
+  - io.dropwizard.metrics:metrics-bom:4.1.15
+  - io.grpc:grpc-bom:1.33.1
+  - io.micrometer:micrometer-bom:1.6.1
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.53.Final
-  - io.zipkin.brave:brave-bom:5.12.7
-  - org.eclipse.jetty:jetty-bom:9.4.32.v20200930
+  - io.netty:netty-bom:4.1.54.Final
+  - io.zipkin.brave:brave-bom:5.13.1
+  - org.eclipse.jetty:jetty-bom:9.4.35.v20201120
   - org.junit:junit-bom:5.7.0
 
 cglib:
@@ -35,13 +35,13 @@ com.auth0:
 com.fasterxml.jackson.core:
   jackson-annotations:
     javadocs:
-    - https://fasterxml.github.io/jackson-annotations/javadoc/2.11/
+    - https://fasterxml.github.io/jackson-annotations/javadoc/2.12/
   jackson-core:
     javadocs:
-    - https://fasterxml.github.io/jackson-core/javadoc/2.11/
+    - https://fasterxml.github.io/jackson-core/javadoc/2.12/
   jackson-databind:
     javadocs:
-    - https://fasterxml.github.io/jackson-databind/javadoc/2.11/
+    - https://fasterxml.github.io/jackson-databind/javadoc/2.12/
 
 com.github.ben-manes.caffeine:
   caffeine:
@@ -61,14 +61,14 @@ com.github.node-gradle:
   gradle-node-plugin: { version: '2.2.4' }
 
 com.google.api:
-  gax-grpc: { version: '1.60.0' }
+  gax-grpc: { version: '1.60.1' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 # This is only used for examples/context-propagation/dagger
 com.google.dagger:
-  dagger: { version: &DAGGER_VERSION '2.29.1' }
+  dagger: { version: &DAGGER_VERSION '2.30.1' }
   dagger-compiler: { version: *DAGGER_VERSION }
   dagger-producers: { version: *DAGGER_VERSION }
 
@@ -122,15 +122,15 @@ com.google.protobuf:
 
 # Akka is used only for testing in it:grpcweb module.
 com.lightbend.akka.grpc:
-  akka-grpc-runtime_2.13: { version: '1.0.1' }
+  akka-grpc-runtime_2.13: { version: '1.0.2' }
 
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
-  eureka-client: { version: &EUREKA_VERSION '1.10.7' }
+  eureka-client: { version: &EUREKA_VERSION '1.10.10' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.36.2' }
+  checkstyle: { version: '8.38' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.1' }
@@ -138,7 +138,7 @@ com.salesforce.servicelibs:
 
 com.spotify:
   completable-futures:
-    version: '0.3.3'
+    version: '0.3.4'
     relocations:
     - from: com.spotify.futures
       to: com.linecorp.armeria.internal.shaded.futures
@@ -161,21 +161,21 @@ com.thesamet.scalapb:
 
 # Akka is used only for testing in it:grpcweb module.
 com.typesafe.akka:
-  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.9' }
+  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.10' }
   akka-discovery_2.13: { version: *TYPESAFE_AKKA_VERSION }
   akka-stream_2.13: { version: *TYPESAFE_AKKA_VERSION }
 
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
   finagle-serversets_2.13:
-    version: '20.9.0'
+    version: '20.10.0'
 
 gradle.plugin.net.davidecavestro:
   gradle-jxr-plugin: { version: '0.2.1' }
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '2.0.13'
+    version: &DROPWIZARD_VERSION '2.0.16'
     javadocs:
     - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.13/
   dropwizard-jackson: { version: *DROPWIZARD_VERSION }
@@ -213,7 +213,7 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
-  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.2.0' }
+  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.2.1' }
   protoc-gen-grpc-kotlin: { version: *GRPC_KOTLIN_VERSION }
 
 io.micrometer:
@@ -232,7 +232,7 @@ io.micrometer:
 
 # This is only used for ScalaPB test
 io.monix:
-  monix-reactive_2.12: { version: &MONIX_VERSION '3.2.2+45-5c6c8b9e' }
+  monix-reactive_2.12: { version: &MONIX_VERSION '3.3.0' }
   monix-reactive_2.13: { version: *MONIX_VERSION }
 
 io.netty:
@@ -242,15 +242,18 @@ io.netty:
   # TODO: get netty-bom to claim this version!
   netty-tcnative-boringssl-static: { version: '2.0.34.Final' }
 
+io.netty.incubator:
+  netty-incubator-transport-native-io_uring: { version: '0.0.1.Final' }
+
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.3.10.RELEASE'
+    version: &REACTOR_VERSION '3.4.0'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
 
 io.projectreactor.kotlin:
-  reactor-kotlin-extensions: { version: '1.0.2.RELEASE' }
+  reactor-kotlin-extensions: { version: '1.1.0' }
 
 io.prometheus:
   simpleclient_common:
@@ -279,7 +282,7 @@ io.zipkin.brave:
 
 it.unimi.dsi:
   fastutil:
-    version: '8.4.2'
+    version: '8.4.3'
     relocations:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
@@ -318,17 +321,17 @@ log4j:
   log4j: { version: '1.2.17' }
 
 me.champeau.gradle:
-  jmh-gradle-plugin: { version: '0.5.0' }
+  jmh-gradle-plugin: { version: '0.5.2' }
 
 net.javacrumbs.future-converter:
   future-converter-rxjava2-java8: { version: 1.2.0 }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.19.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.22.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 com.guardsquare:
-  proguard-gradle: { version: '7.0.0' }
+  proguard-gradle: { version: '7.0.1' }
 
 net.shibboleth.utilities:
   java-support: { version: '7.5.1' }
@@ -360,7 +363,7 @@ org.apache.hbase:
 
 org.apache.httpcomponents:
   httpclient:
-    version: '4.5.12'
+    version: '4.5.13'
     exclusions:
     - commons-logging:commons-logging
 
@@ -382,7 +385,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.39'
+    version: &TOMCAT_VERSION '9.0.40'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -404,7 +407,7 @@ org.awaitility:
 
 org.bouncycastle:
   bcprov-jdk15on:
-    version: '1.66'
+    version: '1.67'
     relocations:
     - from: org.bouncycastle
       to: com.linecorp.armeria.internal.shaded.bouncycastle
@@ -444,7 +447,7 @@ org.hibernate.validator:
 
 org.jctools:
   jctools-core:
-    version: '3.1.0'
+    version: '3.2.0'
     relocations:
     - from: org.jctools
       to: com.linecorp.armeria.internal.shaded.jctools
@@ -452,10 +455,10 @@ org.jctools:
 # If you want to change `org.jetbrains.kotlin:kotlin-allopen` version,
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: &KOTLIN_VERSION '1.4.10' }
+  kotlin-allopen: { version: &KOTLIN_VERSION '1.4.20' }
 
 org.jetbrains.kotlinx:
-  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.3.9' }
+  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.4.2' }
   kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
@@ -469,7 +472,7 @@ org.jsoup:
   jsoup: { version: '1.13.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.5.15' }
+  mockito-core: { version: &MOCKITO_VERSION '3.6.28' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -518,11 +521,11 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.2.9.RELEASE' }
+  spring-web: { version: '5.3.1' }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.3.4.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.4.0'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
