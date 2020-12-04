@@ -32,6 +32,7 @@ package com.linecorp.armeria.common.multipart;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.multipart.DefaultMultipart.DEFAULT_BOUNDARY;
+import static com.linecorp.armeria.common.multipart.StreamMessages.toStreamMessage;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -58,7 +59,6 @@ import io.netty.buffer.ByteBufAllocator;
  * A reactive {@link Multipart} that represents
  * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html">multiple part messages</a>.
  */
-// TODO(ikhoon): extends StreamMessage?
 public interface Multipart extends StreamMessage<HttpData> {
 
     // Forked form https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/main/java/io/helidon/media/multipart/MultiPart.java
@@ -105,9 +105,10 @@ public interface Multipart extends StreamMessage<HttpData> {
     /**
      * Returns a new {@link Multipart} with the specified {@link BodyPart}s.
      */
+    @SuppressWarnings("unchecked")
     static Multipart of(String boundary, Publisher<? extends BodyPart> parts) {
         requireNonNull(parts, "parts");
-        return new DefaultMultipart(boundary, new PublisherBasedStreamMessage<>(parts));
+        return new DefaultMultipart(boundary, toStreamMessage(parts));
     }
 
     /**
@@ -115,10 +116,10 @@ public interface Multipart extends StreamMessage<HttpData> {
      * You can reactively subscribe body parts using the {@link Publisher} of {@link #bodyParts()}:
      * <pre>{@code
      * > import reactor.core.publisher.Flux;
-     *
+     * >
      * > HttpRequest req = ...;
      * > Multipart multiPart = Multipart.from(req);
-     *
+     * >
      * > Flux.from(multiPart.bodyParts())
      * >     .subscribe(bodyPart -> {
      * >         Flux.from(bodyPart.content())
@@ -153,9 +154,9 @@ public interface Multipart extends StreamMessage<HttpData> {
             throw new IllegalStateException("boundary header is missing");
         }
 
-        final StreamMessage<?> contents = StreamMessages.filter(request, HttpData.class::isInstance);
+        // HttpRequest publishes only HttpData
         @SuppressWarnings("unchecked")
-        final StreamMessage<HttpData> cast = (StreamMessage<HttpData>) contents;
+        final StreamMessage<HttpData> cast = (StreamMessage<HttpData>) (StreamMessage<?>) request;
         return from(boundary, cast);
     }
 
@@ -177,7 +178,7 @@ public interface Multipart extends StreamMessage<HttpData> {
         requireNonNull(alloc, "alloc");
         final MultipartDecoder decoder = new MultipartDecoder(boundary, alloc);
         contents.subscribe(decoder);
-        return of(decoder);
+        return of(boundary, decoder);
     }
 
     /**
@@ -192,7 +193,7 @@ public interface Multipart extends StreamMessage<HttpData> {
      * >                             .headers(headers)
      * >                             .content(fileData)
      * >                             .build();
-     *
+     * >
      * > HttpRequest request = Multipart.of(filePart).toHttpRequest("/upload");
      * > CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();
      * }</pre>
@@ -218,7 +219,7 @@ public interface Multipart extends StreamMessage<HttpData> {
      * >                             .headers(headers)
      * >                             .content(fileData)
      * >                             .build();
-     *
+     * >
      * > RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.POST, "/upload");
      * > HttpRequest request = Multipart.of(filePart).toHttpRequest(requestHeaders);
      * > CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();

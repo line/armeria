@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.LongConsumer;
@@ -27,6 +29,9 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
+
+import io.netty.util.concurrent.EventExecutor;
 
 final class ListenableStreamMessage<T> extends DefaultStreamMessage<T> {
 
@@ -38,23 +43,17 @@ final class ListenableStreamMessage<T> extends DefaultStreamMessage<T> {
     private final LongConsumer onRequest;
     @Nullable
     private final Runnable onCancel;
-    @Nullable
-    private final Consumer<T> onEmit;
 
     private volatile long demand;
-    private volatile boolean isSubscribed;
 
-    ListenableStreamMessage(@Nullable LongConsumer onRequest,
-                            @Nullable Runnable onCancel,
-                            @Nullable Consumer<T> onEmit) {
+    ListenableStreamMessage(@Nullable LongConsumer onRequest, @Nullable Runnable onCancel) {
         this.onRequest = onRequest;
         this.onCancel = onCancel;
-        this.onEmit = onEmit;
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber) {
-        isSubscribed = true;
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
         final Subscriber<T> wrapped = new SubscriberWrapper<T>(subscriber) {
             @Override
             public void onSubscribe(Subscription s) {
@@ -85,24 +84,14 @@ final class ListenableStreamMessage<T> extends DefaultStreamMessage<T> {
             }
 
             @Override
-            public void onNext(T t) {
+            public void onNext(T item) {
+                requireNonNull(item, "item");
                 if (demand != Long.MAX_VALUE) {
                     demandUpdater.decrementAndGet(ListenableStreamMessage.this);
                 }
-                super.onNext(t);
-                if (onEmit != null) {
-                    onEmit.accept(t);
-                }
+                super.onNext(item);
             }
         };
-        super.subscribe(wrapped);
-    }
-
-    boolean isSubscribed() {
-        return isSubscribed;
-    }
-
-    long demand() {
-        return demand;
+        super.subscribe(wrapped, executor, options);
     }
 }

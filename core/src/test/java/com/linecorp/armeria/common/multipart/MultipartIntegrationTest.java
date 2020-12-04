@@ -17,14 +17,21 @@ package com.linecorp.armeria.common.multipart;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
@@ -35,6 +42,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -115,6 +123,55 @@ class MultipartIntegrationTest {
                     return HttpResponse.of(200);
                 }));
             });
+
+            sb.service("/pooled", (ctx, req) -> {
+                final Multipart multiPart = Multipart.from(req);
+                final AtomicBoolean pooled = new AtomicBoolean();
+                final HttpResponseWriter writer = HttpResponse.streaming();
+                multiPart.bodyParts()
+                         .subscribe(new Subscriber<BodyPart>() {
+                             @Override
+                             public void onSubscribe(Subscription s) {
+                                 s.request(Long.MAX_VALUE);
+                             }
+
+                             @Override
+                             public void onNext(BodyPart bodyPart) {
+                                 bodyPart.content().subscribe(new Subscriber<HttpData>() {
+                                     @Override
+                                     public void onSubscribe(Subscription s) {
+                                         s.request(Long.MAX_VALUE);
+                                     }
+
+                                     @Override
+                                     public void onNext(HttpData httpData) {
+                                         pooled.set(httpData.isPooled());
+                                         httpData.close();
+                                     }
+
+                                     @Override
+                                     public void onError(Throwable t) {}
+
+                                     @Override
+                                     public void onComplete() {
+                                         if (pooled.get()) {
+                                             writer.write(ResponseHeaders.of(200));
+                                         } else {
+                                             writer.write(ResponseHeaders.of(500));
+                                         }
+                                         writer.close();
+                                     }
+                                 }, SubscriptionOption.WITH_POOLED_OBJECTS);
+                             }
+
+                             @Override
+                             public void onError(Throwable t) {}
+
+                             @Override
+                             public void onComplete() {}
+                         });
+                return writer;
+            });
         }
     };
 
@@ -149,8 +206,9 @@ class MultipartIntegrationTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
     }
 
-    @Test
-    void simple() {
+    @CsvSource({ "/simple", "/pooled" })
+    @ParameterizedTest
+    void simple(String path) {
         final WebClient client = WebClient.of(server.httpUri());
         final HttpHeaders headers = HttpHeaders.builder().build();
         final BodyPart bodyPart = BodyPart.builder()
@@ -161,7 +219,7 @@ class MultipartIntegrationTest {
         final Multipart multiPart = Multipart.of(bodyPart);
 
         final AggregatedHttpResponse response =
-                client.execute(multiPart.toHttpRequest("/simple")).aggregate().join();
+                client.execute(multiPart.toHttpRequest(path)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
     }
 }

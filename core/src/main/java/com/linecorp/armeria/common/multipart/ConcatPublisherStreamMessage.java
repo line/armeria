@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static com.linecorp.armeria.common.multipart.StreamMessages.EMPTY_OPTIONS;
+import static com.linecorp.armeria.common.multipart.StreamMessages.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -29,16 +31,19 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
- * Relay items in order from a {@link StreamMessage} of {@link Publisher} as a single {@link StreamMessage}
+ * Relay items in order from a {@link StreamMessage} of {@link StreamMessage} as a single {@link StreamMessage}
  * source.
  */
-final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
+final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
 
-    private final StreamMessage<? extends Publisher<? extends T>> sources;
+    private final StreamMessage<? extends StreamMessage<? extends T>> sources;
 
-    ConcatPublisherStreamMessage(StreamMessage<? extends Publisher<? extends T>> sources) {
+    ConcatPublisherStreamMessage(StreamMessage<? extends StreamMessage<? extends T>> sources) {
         this.sources = sources;
     }
 
@@ -58,6 +63,25 @@ final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
     }
 
     @Override
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+        subscribe(subscriber, executor, EMPTY_OPTIONS);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+
+        final InnerSubscriber<T> innerSubscriber = new InnerSubscriber<>(subscriber, options);
+        final OuterSubscriber<T> outerSubscriber = new OuterSubscriber<>(innerSubscriber, executor);
+        innerSubscriber.setOuterSubscriber(outerSubscriber);
+        subscriber.onSubscribe(innerSubscriber);
+        sources.subscribe(outerSubscriber, executor, options);
+    }
+
+    @Override
     public void abort() {
         sources.abort();
     }
@@ -67,23 +91,14 @@ final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
         sources.abort(cause);
     }
 
-    @Override
-    void subscribe(Subscriber<? super T> subscriber, boolean notifyCancellation) {
-        requireNonNull(subscriber, "subscriber");
-        final InnerSubscriber<T> innerSubscriber = new InnerSubscriber<>(subscriber, notifyCancellation);
-        final OuterSubscriber<T> outerSubscriber = new OuterSubscriber<>(innerSubscriber);
-        innerSubscriber.setOuterSubscriber(outerSubscriber);
-        subscriber.onSubscribe(innerSubscriber);
-        sources.subscribe(outerSubscriber);
-    }
-
-    private static final class OuterSubscriber<T> implements Subscriber<Publisher<? extends T>> {
+    private static final class OuterSubscriber<T> implements Subscriber<StreamMessage<? extends T>> {
 
         @SuppressWarnings("rawtypes")
         private static final AtomicReferenceFieldUpdater<OuterSubscriber, Subscription> upstreamUpdater =
                 AtomicReferenceFieldUpdater.newUpdater(OuterSubscriber.class, Subscription.class, "upstream");
 
         private final InnerSubscriber<T> innerSubscriber;
+        private final EventExecutor executor;
 
         private boolean completed;
 
@@ -91,8 +106,9 @@ final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
         private volatile Subscription upstream;
         private volatile boolean inSubscribe;
 
-        OuterSubscriber(InnerSubscriber<T> innerSubscriber) {
+        OuterSubscriber(InnerSubscriber<T> innerSubscriber, EventExecutor executor) {
             this.innerSubscriber = innerSubscriber;
+            this.executor = executor;
         }
 
         @Override
@@ -106,13 +122,15 @@ final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
         }
 
         @Override
-        public void onNext(Publisher<? extends T> publisher) {
+        public void onNext(StreamMessage<? extends T> publisher) {
+            requireNonNull(publisher, "publisher");
             inSubscribe = true;
-            publisher.subscribe(innerSubscriber);
+            publisher.subscribe(innerSubscriber, executor, innerSubscriber.options);
         }
 
         @Override
         public void onError(Throwable cause) {
+            requireNonNull(cause, "cause");
             if (completed) {
                 return;
             }
@@ -148,7 +166,7 @@ final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
         private static final long serialVersionUID = -676372622418720676L;
 
         private final Subscriber<? super T> downstream;
-        private final boolean notifyCancellation;
+        private final SubscriptionOption[] options;
 
         @Nullable
         private OuterSubscriber<T> outerSubscriber;
@@ -157,9 +175,9 @@ final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
         // Updated via cancelledUpdater
         private volatile int cancelled;
 
-        InnerSubscriber(Subscriber<? super T> downstream, boolean notifyCancellation) {
+        InnerSubscriber(Subscriber<? super T> downstream, SubscriptionOption[] options) {
             this.downstream = downstream;
-            this.notifyCancellation = notifyCancellation;
+            this.options = options;
         }
 
         void setOuterSubscriber(OuterSubscriber<T> outerSubscriber) {
@@ -168,6 +186,7 @@ final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
 
         @Override
         public void onSubscribe(Subscription subscription) {
+            requireNonNull(subscription, "subscription");
             if (isCancelled()) {
                 subscription.cancel();
                 return;
@@ -180,6 +199,7 @@ final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
 
         @Override
         public void onNext(T item) {
+            requireNonNull(item, "item");
             if (isCancelled()) {
                 return;
             }
@@ -225,7 +245,7 @@ final class ConcatPublisherStreamMessage<T> extends SimpleStreamMessage<T> {
                     outerSubscriber.upstream.cancel();
                 }
                 super.cancel();
-                if (!completed && notifyCancellation) {
+                if (!completed && containsNotifyCancellation(options)) {
                     downstream.onError(CancelledSubscriptionException.get());
                 }
             }

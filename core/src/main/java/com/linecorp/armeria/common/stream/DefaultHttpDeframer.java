@@ -182,13 +182,14 @@ final class DefaultHttpDeframer<T>
     }
 
     @Override
-    public void onNext(HttpObject data) {
+    public void onNext(HttpObject obj) {
+        requireNonNull(obj, "obj");
         final EventExecutor eventLoop = this.eventLoop;
         assert eventLoop != null;
         if (eventLoop.inEventLoop()) {
-            onNext0(data);
+            onNext0(obj);
         } else {
-            eventLoop.execute(() -> onNext0(data));
+            eventLoop.execute(() -> onNext0(obj));
         }
     }
 

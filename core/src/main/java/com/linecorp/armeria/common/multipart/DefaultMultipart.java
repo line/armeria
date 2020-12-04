@@ -64,6 +64,7 @@ final class DefaultMultipart implements Multipart {
     @Override
     public CompletableFuture<AggregatedMultipart> aggregate() {
         final BodyPartAggregator aggregator = new BodyPartAggregator();
+        // TODO(ikhoon): Need EventExecutor?
         parts.subscribe(aggregator);
         return UnmodifiableFuture.wrap(
                 aggregator.completionFuture.thenApply(parts -> AggregatedMultipart.of(boundary, parts)));
@@ -85,14 +86,17 @@ final class DefaultMultipart implements Multipart {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpData> s) {
+    public void subscribe(Subscriber<? super HttpData> subscriber) {
+        requireNonNull(subscriber, "subscriber");
         final MultipartEncoder encoder = new MultipartEncoder(boundary);
         parts.subscribe(encoder);
-        encoder.subscribe(s);
+        encoder.subscribe(subscriber);
     }
 
     @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
         final MultipartEncoder encoder = new MultipartEncoder(boundary);
         parts.subscribe(encoder, executor);
         encoder.subscribe(subscriber, executor);
@@ -101,6 +105,9 @@ final class DefaultMultipart implements Multipart {
     @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
         final MultipartEncoder encoder = new MultipartEncoder(boundary);
         parts.subscribe(encoder, executor, options);
         encoder.subscribe(subscriber, executor, options);
@@ -115,7 +122,6 @@ final class DefaultMultipart implements Multipart {
     public void abort(Throwable cause) {
         parts.abort(cause);
     }
-
 
     @Override
     public String toString() {
@@ -138,14 +144,16 @@ final class DefaultMultipart implements Multipart {
 
         @Override
         public void onNext(BodyPart bodyPart) {
+            requireNonNull(bodyPart, "bodyPart");
             final HttpDataAggregator aggregator = new HttpDataAggregator(bodyPart);
             bodyPart.content().subscribe(aggregator);
             bodyPartFutures.add(aggregator.completionFuture);
         }
 
         @Override
-        public void onError(Throwable t) {
-            completionFuture.completeExceptionally(t);
+        public void onError(Throwable ex) {
+            requireNonNull(ex, "ex");
+            completionFuture.completeExceptionally(ex);
         }
 
         @Override
@@ -182,11 +190,13 @@ final class DefaultMultipart implements Multipart {
 
         @Override
         public void onNext(HttpData item) {
+            requireNonNull(item, "item");
             dataList.add(item);
         }
 
         @Override
         public void onError(Throwable ex) {
+            requireNonNull(ex, "ex");
             completionFuture.completeExceptionally(ex);
         }
 

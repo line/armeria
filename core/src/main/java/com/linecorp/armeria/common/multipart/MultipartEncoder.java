@@ -30,6 +30,7 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static com.linecorp.armeria.common.multipart.StreamMessages.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map.Entry;
@@ -86,6 +87,12 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
     // Updated via initializedUpdater
     private volatile int initialized;
 
+    // Read 'executor' and 'options' only after 'initialized' is written.
+    @Nullable
+    private EventExecutor executor;
+    @Nullable
+    private SubscriptionOption[] options;
+
     MultipartEncoder(String boundary) {
         requireNonNull(boundary, "boundary");
         this.boundary = boundary;
@@ -94,25 +101,33 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
 
     @Override
     public boolean isOpen() {
-        return false;
+        return emitter == null || emitter.isOpen();
     }
 
     @Override
     public boolean isEmpty() {
-        return false;
+        return emitter == null || emitter.isEmpty();
     }
 
     @Override
     public CompletableFuture<Void> whenComplete() {
-        // TODO(ikhoon): Handle this
-        return null;
+        return initFuture.thenCompose(e -> e.whenComplete());
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber) {
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
+        subscribe(subscriber, executor, EMPTY_OPTIONS);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
+        this.executor = requireNonNull(executor, "executor");
+        this.options = requireNonNull(options, "options");
+
         if (emitter != null || !downstreamUpdater.compareAndSet(this, null, subscriber)) {
-            subscriber.onSubscribe(SubscriptionHelper.CANCELLED);
+            subscriber.onSubscribe(CancelledSubscription.CANCELLED);
             subscriber.onError(new IllegalStateException("Only one Subscriber allowed"));
             return;
         }
@@ -120,24 +135,20 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
-
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-
-    }
-
-    @Override
     public void abort() {
-
+        initFuture.handle((e, t) -> {
+            e.abort();
+            return null;
+        });
     }
 
     @Override
     public void abort(Throwable cause) {
-
+        requireNonNull(cause, "cause");
+        initFuture.handle((e, t) -> {
+            e.abort(cause);
+            return null;
+        });
     }
 
     @Override
@@ -155,10 +166,11 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
         if (upstream != null && downstream != null) {
             // relay request to upstream, already reduced by flatmap
             if (initializedUpdater.compareAndSet(this, 0, 1)) {
-                emitter = new ListenableStreamMessage<>(upstream::request, upstream::cancel, null);
-                StreamMessages.onCompleteResumeWith(StreamMessages.concat(emitter),
-                                                    StreamMessage.of(HttpData.ofUtf8("--" + boundary + "--")))
-                              .subscribe(downstream);
+                emitter = new ListenableStreamMessage<>(upstream::request, upstream::cancel);
+                StreamMessages.concat(StreamMessages.concat(emitter),
+                                      StreamMessage.of(HttpData.ofUtf8("--" + boundary + "--")))
+                              .subscribe(downstream, executor, options);
+
                 initFuture.complete(emitter);
                 this.downstream = null;
             }
@@ -167,18 +179,25 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
 
     @Override
     public void onNext(BodyPart bodyPart) {
+        requireNonNull(bodyPart, "bodyPart");
         emitter.write(createBodyPartPublisher(bodyPart));
     }
 
     @Override
     public void onError(Throwable throwable) {
         requireNonNull(throwable, "throwable");
-        initFuture.whenComplete((e, t) -> e.abort(throwable));
+        initFuture.handle((e, t) -> {
+            e.abort(throwable);
+            return null;
+        });
     }
 
     @Override
     public void onComplete() {
-        initFuture.whenComplete((e, t) -> e.close());
+        initFuture.handle((e, t) -> {
+            e.close();
+            return null;
+        });
     }
 
     private StreamMessage<HttpData> createBodyPartPublisher(BodyPart bodyPart) {

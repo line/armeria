@@ -31,6 +31,7 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static com.linecorp.armeria.common.multipart.StreamMessages.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -42,13 +43,17 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Relay items in order from subsequent {@link StreamMessage}s as a single {@link StreamMessage} source.
  */
-final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
+final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
 
-    // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common/reactive/src/main/java/io/helidon/common/reactive/MultiConcatArray.java
+    // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common
+    // /reactive/src/main/java/io/helidon/common/reactive/MultiConcatArray.java
 
     private final StreamMessage<? extends T>[] sources;
 
@@ -82,10 +87,18 @@ final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
     }
 
     @Override
-    void subscribe(Subscriber<? super T> subscriber, boolean notifyCancellation) {
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+        subscribe(subscriber, executor, EMPTY_OPTIONS);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
         final ConcatArraySubscriber<T> parent =
-                new ConcatArraySubscriber<>(subscriber, sources, notifyCancellation);
+                new ConcatArraySubscriber<>(subscriber, sources, executor, options);
         subscriber.onSubscribe(parent);
         parent.nextSource();
     }
@@ -107,6 +120,8 @@ final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
 
     private static final class ConcatArraySubscriber<T> extends SubscriptionArbiter implements Subscriber<T> {
 
+        private static final long serialVersionUID = -9184116713095894096L;
+
         @SuppressWarnings("rawtypes")
         private static final AtomicIntegerFieldUpdater<ConcatArraySubscriber> cancelledUpdater =
                 AtomicIntegerFieldUpdater.newUpdater(ConcatArraySubscriber.class, "cancelled");
@@ -115,22 +130,23 @@ final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
         private static final AtomicIntegerFieldUpdater<ConcatArraySubscriber> wipUpdater =
                 AtomicIntegerFieldUpdater.newUpdater(ConcatArraySubscriber.class, "wip");
 
-        private static final long serialVersionUID = -9184116713095894096L;
-
         private Subscriber<? super T> downstream;
         private final StreamMessage<? extends T>[] sources;
-        private final boolean notifyCancellation;
+        private final EventExecutor executor;
+        private final SubscriptionOption[] options;
 
         private int index;
         private long produced;
+
         private volatile int wip;
         private volatile int cancelled;
 
         ConcatArraySubscriber(Subscriber<? super T> downstream, StreamMessage<? extends T>[] sources,
-                              boolean notifyCancellation) {
+                              EventExecutor executor, SubscriptionOption... options) {
             this.downstream = downstream;
             this.sources = sources;
-            this.notifyCancellation = notifyCancellation;
+            this.executor = executor;
+            this.options = options;
         }
 
         @Override
@@ -144,6 +160,7 @@ final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
 
         @Override
         public void onNext(T item) {
+            requireNonNull(item, "item");
             produced++;
             downstream.onNext(item);
         }
@@ -169,7 +186,7 @@ final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
                     if (index == sources.length) {
                         downstream.onComplete();
                     } else {
-                        sources[index++].subscribe(this);
+                        sources[index++].subscribe(this, executor, options);
                     }
                 } while (wipUpdater.decrementAndGet(this) != 0);
             }
@@ -189,11 +206,12 @@ final class ConcatArrayStreamMessage<T> extends SimpleStreamMessage<T> {
         public void cancel() {
             if (cancelledUpdater.compareAndSet(this, 0, 1)) {
                 super.cancel();
-                if (notifyCancellation) {
+                if (StreamMessages.containsNotifyCancellation(options)) {
                     downstream.onError(CancelledSubscriptionException.get());
                 }
                 downstream = NoopSubscriber.get();
             }
         }
+
     }
 }

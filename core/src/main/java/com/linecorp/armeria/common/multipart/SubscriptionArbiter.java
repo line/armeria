@@ -31,6 +31,7 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static com.linecorp.armeria.common.multipart.CancelledSubscription.CANCELLED;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -40,6 +41,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscription;
+
+import com.google.common.math.LongMath;
 
 /**
  * Allows changing the subscription, tracking requests and item
@@ -62,11 +65,6 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
     private static final long serialVersionUID = 1163246596979976791L;
 
     /**
-     * The current outstanding request amount.
-     */
-    private long requested;
-
-    /**
      * The new subscription to use.
      */
     private final AtomicReference<Subscription> newSubscription;
@@ -85,11 +83,13 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
      * The current subscription to relay requests for.
      */
     @Nullable
-    private Subscription subscription;
+    private volatile Subscription subscription;
 
     /**
-     * Constructs an empty arbiter.
+     * The current outstanding request amount.
      */
+    private volatile long requested;
+
     SubscriptionArbiter() {
         newProduced = new AtomicLong();
         newRequested = new AtomicLong();
@@ -98,26 +98,25 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
 
     @Override
     public void request(long n) {
-        SubscriptionHelper.addRequest(newRequested, n);
+        addRequest(newRequested, n);
         drain();
     }
 
     @Override
     public void cancel() {
-        SubscriptionHelper.cancel(newSubscription);
+        cancel(newSubscription);
         drain();
     }
 
     /**
      * Set the new subscription to resume with.
      * @param subscription the new subscription
-     * @throws NullPointerException if {@code subscription} is {@code null}
      */
     final void setSubscription(Subscription subscription) {
         requireNonNull(subscription, "subscription");
         for (;;) {
             final Subscription previous = newSubscription.get();
-            if (previous == SubscriptionHelper.CANCELLED) {
+            if (previous == CANCELLED) {
                 subscription.cancel();
                 return;
             }
@@ -134,7 +133,7 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
      * @param n the number of items produced, positive
      */
     final void produced(long n) {
-        SubscriptionHelper.addRequest(newProduced, n);
+        addRequest(newProduced, n);
         drain();
     }
 
@@ -146,16 +145,17 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
         Subscription requestFrom = null;
 
         do {
-            long req = newRequested.get();
-            if (req != 0L) {
-                req = newRequested.getAndSet(0L);
+            // Get snapshots from atomic values and initialize them
+            long newReq = newRequested.get();
+            if (newReq != 0L) {
+                newReq = newRequested.getAndSet(0L);
             }
-            long prod = newProduced.get();
-            if (prod != 0L) {
-                prod = newProduced.getAndSet(0L);
+            long newProd = newProduced.get();
+            if (newProd != 0L) {
+                newProd = newProduced.getAndSet(0L);
             }
             final Subscription next = newSubscription.get();
-            final boolean isCancelled = next == SubscriptionHelper.CANCELLED;
+            final boolean isCancelled = next == CANCELLED;
             if (next != null) {
                 newSubscription.compareAndSet(next, null);
             }
@@ -171,24 +171,19 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
             } else {
                 long currentRequested = requested;
 
-                if (req != 0L) {
-                    currentRequested += req;
-                    if (currentRequested < 0L) {
-                        currentRequested = Long.MAX_VALUE;
-                    }
-                    toRequest += req;
-                    if (toRequest < 0L) {
-                        toRequest = Long.MAX_VALUE;
-                    }
+                if (newReq != 0L) {
+                    // Accumulate a newly requested number
+                    currentRequested = LongMath.saturatedAdd(currentRequested, newReq);
+                    toRequest = LongMath.saturatedAdd(toRequest, newReq);
                     requestFrom = subscription;
                 }
-                if (prod != 0L && currentRequested != Long.MAX_VALUE) {
-                    currentRequested -= prod;
-                    if (currentRequested < 0L) {
-                        currentRequested = 0L;
-                    }
+
+                if (newProd != 0L && currentRequested != Long.MAX_VALUE) {
+                    // Subtract the produced number from the requested number
+                    currentRequested = Math.max(currentRequested - newProd, 0);
                 }
                 if (next != null) {
+                    // A new subscription was set. Replace the old subscription with the new one.
                     subscription = next;
                     requestFrom = next;
                     toRequest = currentRequested;
@@ -200,6 +195,46 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
         // request outside the serialization loop to avoid certain reentrance issues
         if (requestFrom != null && toRequest != 0L) {
             requestFrom.request(toRequest);
+        }
+    }
+
+    /**
+     * Atomically swap in the {@link CancelledSubscription#CANCELLED} instance and call cancel() on
+     * any previous Subscription held.
+     * @param subscriptionField the target field to cancel atomically.
+     * @return true if the current thread succeeded with the cancellation (as only one thread is able to)
+     */
+    static boolean cancel(AtomicReference<Subscription> subscriptionField) {
+        Subscription subscription = subscriptionField.get();
+        if (subscription != CANCELLED) {
+            subscription = subscriptionField.getAndSet(CANCELLED);
+            if (subscription != CANCELLED) {
+                if (subscription != null) {
+                    subscription.cancel();
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Atomically add the given request amount to the field while capping it at
+     * {@link Long#MAX_VALUE}.
+     * @param field the target field to update
+     * @param n the request amount to add, must be positive (not verified)
+     * @return the old request amount after the operation
+     */
+    static long addRequest(AtomicLong field, long n) {
+        for (;;) {
+            final long current = field.get();
+            if (current == Long.MAX_VALUE) {
+                return Long.MAX_VALUE;
+            }
+            final long update = LongMath.saturatedAdd(current, n);
+            if (field.compareAndSet(current, update)) {
+                return current;
+            }
         }
     }
 }

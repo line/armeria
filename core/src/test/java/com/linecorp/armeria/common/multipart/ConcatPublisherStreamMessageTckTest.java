@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.multipart;
 
+import static com.linecorp.armeria.common.multipart.StreamMessages.toStreamMessage;
+
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
@@ -34,9 +36,9 @@ public class ConcatPublisherStreamMessageTckTest extends PublisherVerification<I
 
     @Override
     public Publisher<Integer> createPublisher(long l) {
-        final StreamMessage<Flux<Integer>> nested =
-                StreamMessage.of(Flux.range(0, (int) l / 2),
-                                 Flux.range((int) l / 2, (int) (l - l / 2)));
+        final StreamMessage<StreamMessage<Integer>> nested =
+                StreamMessage.of(toStreamMessage(Flux.range(0, (int) l / 2)),
+                                 toStreamMessage(Flux.range((int) l / 2, (int) (l - l / 2))));
         return StreamMessages.concat(nested);
     }
 
