@@ -204,4 +204,33 @@ class DefaultStreamMessageTest {
                 .hasCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("expected: > 0");
     }
+
+    @Test
+    void shouldCompleteWhenConsumingAllElements() throws InterruptedException {
+        final DefaultStreamMessage<String> streamMessage = new DefaultStreamMessage<>();
+        streamMessage.write("foo");
+        streamMessage.whenConsumed().thenRun(() -> {});
+        streamMessage.close();
+
+        final AtomicBoolean completed = new AtomicBoolean();
+        streamMessage.subscribe(new Subscriber<String>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(1);
+            }
+
+            @Override
+            public void onNext(String s) {}
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {
+                completed.set(true);
+            }
+        });
+        await().untilTrue(completed);
+    }
+
 }
