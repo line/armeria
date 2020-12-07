@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.multipart;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
-import java.util.function.Consumer;
 import java.util.function.LongConsumer;
 
 import javax.annotation.Nullable;

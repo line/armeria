@@ -58,20 +58,45 @@ final class MimeParser {
 
     // Forked from https://github.com/oracle/helidon/blob/a9363a3d226a3154e2fb99abe230239758504436/media
     // /multipart/src/main/java/io/helidon/media/multipart/MimeParser.java
-    // - Replaced VirtualBuffer with CompositeByteBuf
 
     /**
      * All states.
      */
     private enum State {
+        /**
+         * The first state is set by the parser. It is set only once.
+         */
         START_MESSAGE,
+
+        /**
+         * This state is set when skipping the preamble. It is set only once.
+         */
         SKIP_PREAMBLE,
+
+        /**
+         * This state is set when a new part is detected. It is set for each part.
+         */
         START_PART,
+
+        /**
+         * This state is set for each header line of a part.
+         */
         HEADERS,
+
+        /**
+         * This state is set when each part chunk is parsed.
+         */
         BODY,
+
+        /**
+         * This state is set when the content for a part is complete. It is set only once for each part.
+         */
         END_PART,
-        END_MESSAGE,
-        DATA_REQUIRED
+
+        /**
+         * This state is set when all parts are complete. It is set only once.
+         */
+        END_MESSAGE
     }
 
     private static final Logger logger = LoggerFactory.getLogger(MimeParser.class);
@@ -188,7 +213,6 @@ final class MimeParser {
                         logger.trace("state={}", State.SKIP_PREAMBLE);
                         skipPreamble();
                         if (boundaryStart == -1) {
-                            logger.trace("state={}", State.DATA_REQUIRED);
                             // Need more data
                             return;
                         }
@@ -197,7 +221,6 @@ final class MimeParser {
                         break;
 
                     case START_PART:
-                        // TODO(ikhoon): Remove State.START_PART?
                         logger.trace("state={}", State.START_PART);
                         bodyPartHeaderBuilder = HttpHeaders.builder();
                         bodyPartBuilder = BodyPart.builder();
@@ -208,7 +231,6 @@ final class MimeParser {
                         logger.trace("state={}", State.HEADERS);
                         final String headerLine = readHeaderLine();
                         if (headerLine == null) {
-                            logger.trace("state={}", State.DATA_REQUIRED);
                             // Need more data
                             return;
                         }
@@ -237,7 +259,6 @@ final class MimeParser {
                         logger.trace("state={}", State.BODY);
                         final ByteBuf bodyContent = readBody();
                         if (boundaryStart == -1 || bodyContent == NEED_MORE) {
-                            logger.trace("state={}", State.DATA_REQUIRED);
                             if (bodyContent == NEED_MORE) {
                                 // Need more data
                                 return;
@@ -265,9 +286,6 @@ final class MimeParser {
 
                     case END_MESSAGE:
                         logger.trace("state={}", State.END_MESSAGE);
-                        return;
-
-                    case DATA_REQUIRED:
                         return;
 
                     default:
@@ -579,70 +597,9 @@ final class MimeParser {
         final int size = chars.length;
         final byte[] bytes = new byte[size];
 
-        for (int i = 0; i < size; ) {
+        for (int i = 0; i < size;) {
             bytes[i] = (byte) chars[i++];
         }
         return bytes;
-    }
-
-    /**
-     * The emitted parser event types.
-     */
-    enum EventType {
-
-        /**
-         * This event is the first event issued by the parser.
-         * It is generated only once.
-         */
-        START_MESSAGE,
-
-        /**
-         * This event is issued when a new part is detected.
-         * It is generated for each part.
-         */
-        START_PART,
-
-        /**
-         * This event is issued for each header line of a part. It may be
-         * generated more than once for each part.
-         */
-        HEADER,
-
-        /**
-         * This event is issued for each header line of a part. It may be
-         * generated more than once for each part.
-         */
-        END_HEADERS,
-
-        /**
-         * This event is issued for each part chunk parsed. The event
-         * It may be generated more than once for each part.
-         */
-        CONTENT,
-
-        /**
-         * This event is issued when the content for a part is complete.
-         * It is generated only once for each part.
-         */
-        END_PART,
-
-        /**
-         * This event is issued when all parts are complete. It is generated
-         * only once.
-         */
-        END_MESSAGE,
-
-        /**
-         * This event is issued when there is not enough data in the buffer to
-         * continue parsing. If issued after:
-         * <ul>
-         *   <li>{@link #START_MESSAGE} - the parser did not detect the end of the preamble</li>
-         *   <li>{@link #HEADER} - the parser did not detect the blank line that separates
-         *       the part headers and the part body</li>
-         *   <li>{@link #CONTENT} - the parser did not detect the next starting boundary or
-         *       closing boundary</li>
-         * </ul>
-         */
-        DATA_REQUIRED
     }
 }

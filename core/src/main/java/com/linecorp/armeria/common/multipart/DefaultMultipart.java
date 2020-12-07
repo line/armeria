@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -63,9 +65,22 @@ final class DefaultMultipart implements Multipart {
 
     @Override
     public CompletableFuture<AggregatedMultipart> aggregate() {
+        return aggregate0(null);
+    }
+
+    @Override
+    public CompletableFuture<AggregatedMultipart> aggregate(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        return aggregate0(executor);
+    }
+
+    private CompletableFuture<AggregatedMultipart> aggregate0(@Nullable EventExecutor executor) {
         final BodyPartAggregator aggregator = new BodyPartAggregator();
-        // TODO(ikhoon): Need EventExecutor?
-        parts.subscribe(aggregator);
+        if (executor == null) {
+            parts.subscribe(aggregator);
+        } else {
+            parts.subscribe(aggregator, executor);
+        }
         return UnmodifiableFuture.wrap(
                 aggregator.completionFuture.thenApply(parts -> AggregatedMultipart.of(boundary, parts)));
     }

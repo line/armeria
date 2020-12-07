@@ -39,7 +39,6 @@ import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.stream.HttpDeframer;
 
 import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;

@@ -213,7 +213,7 @@ public final class ByteBufDeframerInput implements HttpDeframerInput {
     }
 
     private void skipBytesSlow(int remaining) {
-        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext(); ) {
+        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext();) {
             final ByteBuf buf = it.next();
             final int readableBytes = buf.readableBytes();
             if (readableBytes > remaining) {
@@ -243,7 +243,7 @@ public final class ByteBufDeframerInput implements HttpDeframerInput {
         }
 
         closed = true;
-        for (; ; ) {
+        for (;;) {
             final ByteBuf buf = queue.poll();
             if (buf != null) {
                 buf.release();

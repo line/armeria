@@ -212,6 +212,5 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
                 downstream = NoopSubscriber.get();
             }
         }
-
     }
 }

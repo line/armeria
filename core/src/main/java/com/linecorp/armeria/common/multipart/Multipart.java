@@ -13,21 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Copyright (c) 2020 Oracle and/or its affiliates.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.linecorp.armeria.common.multipart;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -49,19 +34,16 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.stream.HttpDeframer;
-import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A reactive {@link Multipart} that represents
  * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html">multiple part messages</a>.
  */
 public interface Multipart extends StreamMessage<HttpData> {
-
-    // Forked form https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/main/java/io/helidon/media/multipart/MultiPart.java
 
     /**
      * Returns a new {@link Multipart} with the specified {@link BodyPart}s.
@@ -300,4 +282,22 @@ public interface Multipart extends StreamMessage<HttpData> {
      * }</pre>
      */
     CompletableFuture<AggregatedMultipart> aggregate();
+
+    /**
+     * Aggregates this {@link Multipart} with the specified {@link EventExecutor}.
+     * The returned {@link CompletableFuture} will be notified when
+     * the {@link BodyPart}s of the {@link Multipart} is received fully.
+     *
+     * <p>For example: <pre>{@code
+     * > HttpRequest req = ...;
+     * > Multipart.from(req).aggregate()
+     * >          .thenAccept(multipart -> {
+     * >              for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
+     * >                  String content = bodyPart.contentUtf8();
+     * >                  ...
+     * >              }
+     * >          });
+     * }</pre>
+     */
+    CompletableFuture<AggregatedMultipart> aggregate(EventExecutor executor);
 }

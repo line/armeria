@@ -45,9 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.LongStream;
 
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -59,7 +57,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import reactor.core.publisher.Flux;
-import reactor.test.StepVerifier;
 import reactor.test.publisher.PublisherProbe;
 
 /**

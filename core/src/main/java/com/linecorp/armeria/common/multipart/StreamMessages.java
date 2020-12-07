@@ -19,8 +19,6 @@ package com.linecorp.armeria.common.multipart;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.Predicate;
-
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;

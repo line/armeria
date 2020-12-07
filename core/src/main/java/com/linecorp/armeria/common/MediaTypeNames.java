@@ -472,8 +472,6 @@ public final class MediaTypeNames {
      */
     public static final String ZIP = "application/zip";
 
-    /* multipart types */
-
     /**
      * {@value MULTIPART_FORM_DATA}.
      */

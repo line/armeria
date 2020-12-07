@@ -102,10 +102,50 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
         drain();
     }
 
+    /**
+     * Atomically add the given request amount to the field while capping it at
+     * {@link Long#MAX_VALUE}.
+     * @param field the target field to update
+     * @param n the request amount to add, must be positive (not verified)
+     * @return the old request amount after the operation
+     */
+    private static long addRequest(AtomicLong field, long n) {
+        for (;;) {
+            final long current = field.get();
+            if (current == Long.MAX_VALUE) {
+                return Long.MAX_VALUE;
+            }
+            final long update = LongMath.saturatedAdd(current, n);
+            if (field.compareAndSet(current, update)) {
+                return current;
+            }
+        }
+    }
+
     @Override
     public void cancel() {
         cancel(newSubscription);
         drain();
+    }
+
+    /**
+     * Atomically swap in the {@link CancelledSubscription#CANCELLED} instance and call cancel() on
+     * any previous Subscription held.
+     * @param subscriptionField the target field to cancel atomically.
+     * @return true if the current thread succeeded with the cancellation (as only one thread is able to)
+     */
+    private static boolean cancel(AtomicReference<Subscription> subscriptionField) {
+        Subscription subscription = subscriptionField.get();
+        if (subscription != CANCELLED) {
+            subscription = subscriptionField.getAndSet(CANCELLED);
+            if (subscription != CANCELLED) {
+                if (subscription != null) {
+                    subscription.cancel();
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -195,46 +235,6 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
         // request outside the serialization loop to avoid certain reentrance issues
         if (requestFrom != null && toRequest != 0L) {
             requestFrom.request(toRequest);
-        }
-    }
-
-    /**
-     * Atomically swap in the {@link CancelledSubscription#CANCELLED} instance and call cancel() on
-     * any previous Subscription held.
-     * @param subscriptionField the target field to cancel atomically.
-     * @return true if the current thread succeeded with the cancellation (as only one thread is able to)
-     */
-    static boolean cancel(AtomicReference<Subscription> subscriptionField) {
-        Subscription subscription = subscriptionField.get();
-        if (subscription != CANCELLED) {
-            subscription = subscriptionField.getAndSet(CANCELLED);
-            if (subscription != CANCELLED) {
-                if (subscription != null) {
-                    subscription.cancel();
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Atomically add the given request amount to the field while capping it at
-     * {@link Long#MAX_VALUE}.
-     * @param field the target field to update
-     * @param n the request amount to add, must be positive (not verified)
-     * @return the old request amount after the operation
-     */
-    static long addRequest(AtomicLong field, long n) {
-        for (;;) {
-            final long current = field.get();
-            if (current == Long.MAX_VALUE) {
-                return Long.MAX_VALUE;
-            }
-            final long update = LongMath.saturatedAdd(current, n);
-            if (field.compareAndSet(current, update)) {
-                return current;
-            }
         }
     }
 }
