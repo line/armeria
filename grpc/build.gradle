@@ -3,7 +3,7 @@ dependencies {
 
     api 'com.google.protobuf:protobuf-java'
     implementation 'com.google.protobuf:protobuf-java-util'
-    api 'jakarta.annotation:jakarta.annotation-api'
+    api 'javax.annotation:javax.annotation-api'
 
     // gRPC
     [ 'grpc-core', 'grpc-protobuf', 'grpc-services', 'grpc-stub' ].each {
@@ -13,13 +13,14 @@ dependencies {
     optionalImplementation 'io.grpc:grpc-kotlin-stub'
     optionalImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
 
-
     api 'org.curioswitch.curiostack:protobuf-jackson'
 
     testImplementation 'com.google.api:gax-grpc'
     testImplementation 'io.grpc:grpc-okhttp'
     testImplementation 'io.grpc:grpc-testing'
     testImplementation 'io.micrometer:micrometer-registry-prometheus'
+    testImplementation 'io.projectreactor:reactor-test'
+    testImplementation 'org.reactivestreams:reactive-streams-tck'
 }
 
 tasks {

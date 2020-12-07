@@ -21,7 +21,6 @@ dependencies {
 
     testImplementation project(':spring:boot2-actuator-autoconfigure')
     testImplementation project(':thrift0.13')
-    testImplementation "io.projectreactor:reactor-test"
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
@@ -46,6 +45,7 @@ task generateSources(type: Copy) {
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
     include '**/DocServiceConfigurator.java'
+    include '**/HealthCheckServiceConfigurator.java'
     include '**/LocalArmeriaPort.java'
     include '**/LocalArmeriaPorts.java'
     include '**/*MeterIdPrefixFunctionFactory.java'

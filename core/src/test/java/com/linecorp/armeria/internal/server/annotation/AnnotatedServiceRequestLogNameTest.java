@@ -61,16 +61,16 @@ class AnnotatedServiceRequestLogNameTest {
               .defaultLogName("ConfiguredLog")
               .build(new BarService());
 
-            sb.decorator((delegate, ctx, req) -> {
-                logs.add(ctx.log());
-                return delegate.serve(ctx, req);
-            });
-
             // The annotated service will not be invoked at all for '/fail_early'.
             sb.routeDecorator().path("/fail_early")
               .build((delegate, ctx, req) -> {
                   throw HttpStatusException.of(500);
               });
+
+            sb.decorator((delegate, ctx, req) -> {
+                logs.add(ctx.log());
+                return delegate.serve(ctx, req);
+            });
         }
     };
 

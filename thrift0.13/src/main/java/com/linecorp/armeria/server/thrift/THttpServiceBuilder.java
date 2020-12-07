@@ -32,6 +32,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimaps;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.RpcService;
 
@@ -107,11 +108,12 @@ public final class THttpServiceBuilder {
     }
 
     /**
-     * Adds other {@link SerializationFormat} to the builder. Current supported {@link SerializationFormat}s are
-     * {@link ThriftSerializationFormats#values()}. If nothing is specified then all the
-     * {@link SerializationFormat#values()}s are added.
+     * Adds other {@link SerializationFormat} to the builder. By default, all {@link SerializationFormat}s in
+     * {@link ThriftSerializationFormats} are supported. If nothing is specified then they are added.
+     * To add a new custom Thrift serialization format,
+     * define a new SPI {@link ThriftProtocolFactoryProvider}.
      *
-     * <p>Currently, the only way to specify a serialization format is by using the HTTP session
+     * <p>Currently, the only way to specify a serialization format at request time is by using the HTTP session
      * protocol and setting the {@code "Content-Type"} header to the appropriate
      * {@link SerializationFormat#mediaType()}.
      */
@@ -121,11 +123,11 @@ public final class THttpServiceBuilder {
     }
 
     /**
-     * Adds other {@link SerializationFormat} to the builder. Current supported {@link SerializationFormat}s are
-     * {@link ThriftSerializationFormats#values()}. If nothing is specified then all the
-     * {@link SerializationFormat#values()}s are added.
+     * Adds other {@link SerializationFormat}s to the builder. If nothing is specified then all
+     * {@link SerializationFormat}s returned by {@link ThriftSerializationFormats#values()}
+     * are added.
      *
-     * <p>Currently, the only way to specify a serialization format is by using the HTTP session
+     * <p>Currently, the only way to specify a serialization format at request time is by using the HTTP session
      * protocol and setting the {@code "Content-Type"} header to the appropriate
      * {@link SerializationFormat#mediaType()}.
      */

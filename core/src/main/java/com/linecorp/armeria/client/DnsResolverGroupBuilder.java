@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -25,16 +26,21 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.internal.common.util.TransportType;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.TransportType;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.BiDnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
@@ -90,6 +96,10 @@ public final class DnsResolverGroupBuilder {
     private Integer ndots;
     @Nullable
     private Boolean decodeIdn;
+    @Nullable
+    private String cacheSpec;
+    @Nullable
+    private MeterRegistry meterRegistry;
 
     DnsResolverGroupBuilder() {}
 
@@ -292,6 +302,23 @@ public final class DnsResolverGroupBuilder {
         return this;
     }
 
+    /**
+     * Sets {@link MeterRegistry} to collect the DNS query metrics.
+     */
+    DnsResolverGroupBuilder meterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+        return this;
+    }
+
+    /**
+     * Sets the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the domain
+     * names and their resolved addresses. If not set, {@link Flags#dnsCacheSpec()} is used by default.
+     */
+    public DnsResolverGroupBuilder cacheSpec(String cacheSpec) {
+        this.cacheSpec = requireNonNull(cacheSpec, "cacheSpec");
+        return this;
+    }
+
     RefreshingAddressResolverGroup build(EventLoopGroup eventLoopGroup) {
         final Consumer<DnsNameResolverBuilder> resolverConfigurator = builder -> {
             builder.channelType(TransportType.datagramChannelType(eventLoopGroup))
@@ -329,8 +356,17 @@ public final class DnsResolverGroupBuilder {
             if (dnsServerAddressStreamProvider != null) {
                 builder.nameServerProvider(dnsServerAddressStreamProvider);
             }
-            if (dnsQueryLifecycleObserverFactory != null) {
-                builder.dnsQueryLifecycleObserverFactory(dnsQueryLifecycleObserverFactory);
+            assert meterRegistry != null;
+            final DnsQueryLifecycleObserverFactory observerFactory =
+                    new DefaultDnsQueryLifecycleObserverFactory(
+                            meterRegistry,
+                            new MeterIdPrefix("armeria.client.dns.queries"));
+            if (dnsQueryLifecycleObserverFactory == null) {
+                builder.dnsQueryLifecycleObserverFactory(observerFactory);
+            } else {
+                builder.dnsQueryLifecycleObserverFactory(
+                        new BiDnsQueryLifecycleObserverFactory(observerFactory,
+                                                               dnsQueryLifecycleObserverFactory));
             }
             if (searchDomains != null) {
                 builder.searchDomains(searchDomains);
@@ -342,7 +378,9 @@ public final class DnsResolverGroupBuilder {
                 builder.decodeIdn(decodeIdn);
             }
         };
+        final String cacheSpec = firstNonNull(this.cacheSpec, Flags.dnsCacheSpec());
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
-                                                  queryTimeoutMillis, refreshBackoff, resolvedAddressTypes);
+                                                  queryTimeoutMillis, refreshBackoff, resolvedAddressTypes,
+                                                  cacheSpec);
     }
 }

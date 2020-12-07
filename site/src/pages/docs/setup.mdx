@@ -10,7 +10,7 @@ import versions from '../../../gen-src/versions.json';
 
 Use Java 13 (or later) if you are a contributor who tries to build Armeria itself.
 See [CONTRIBUTING.md](https://github.com/line/armeria/blob/master/CONTRIBUTING.md) for more information.
-   
+
 </Tip>
 
 ## Choosing the artifacts
@@ -50,6 +50,8 @@ the list of major Armeria artifacts which might interest you:
 |                                             | request information.                                                            |
 |                                             | See [Logging contextual information](/docs/advanced-logging).                   |
 +---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-protobuf`                          | Support Protocol Buffers in annotated service.                                  |
++---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-retrofit2`                         | Allows using Armeria instead of OkHttp as transport layer                       |
 |                                             | when using Retrofit2.                                                           |
 |                                             | See [Retrofit integration](/docs/client-retrofit).                              |
@@ -57,6 +59,9 @@ the list of major Armeria artifacts which might interest you:
 | `armeria-rxjava3`                           | RxJava 3 plugin                                                                 |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-saml`                              | SAML support                                                                    |
++---------------------------------------------+---------------------------------------------------------------------------------+
+| `armeria-scalapb_2.12` and                  | Support ScalaPB for gRPC and annotated service.                                           |
+| `armeria-scalapb_2.13`                      |                                                                                 |
 +---------------------------------------------+---------------------------------------------------------------------------------+
 | `armeria-spring-boot2-autoconfigure`        | Spring Boot 2 integration                                                       |
 +---------------------------------------------+---------------------------------------------------------------------------------+
@@ -245,7 +250,7 @@ You can configure your build tool to add `-parameters` javac option as follows.
 
 ### IntelliJ IDEA
 
-Go to `Preferences` > `Build, Execution, Deployment` > `Compiler` > `Java Compiler` 
+Go to `Preferences` > `Build, Execution, Deployment` > `Compiler` > `Java Compiler`
 and add `-parameters` to `Additional command line parameters`.
 
 ![](../../images/intellij_javac_parameters.png)

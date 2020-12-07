@@ -13,13 +13,25 @@ const transformer = (markdownAST) => {
     }
 
     const prefixLength = node.url.indexOf('://') + 3;
-    const typeName = node.url.substring(prefixLength);
+    let optionIndex = node.url.lastIndexOf('?');
+    let option;
+    if (optionIndex < 0) {
+      optionIndex = node.url.length;
+    } else {
+      option = node.url.substring(optionIndex);
+    }
+    // Exclude option string from typeName
+    const typeName = node.url.substring(prefixLength, optionIndex);
     const href = typeName.startsWith('@')
       ? apiIndex[typeName.substring(1)]
       : apiIndex[typeName];
     if (href) {
       // eslint-disable-next-line no-param-reassign
       node.url = `${node.url.substring(0, prefixLength)}${typeName}:${href}`;
+      if (option) {
+        // eslint-disable-next-line no-param-reassign
+        node.url += option;
+      }
     }
   });
 };

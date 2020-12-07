@@ -17,11 +17,14 @@ package com.linecorp.armeria.client.thrift;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.assertj.core.api.HamcrestCondition.matching;
+import static org.hamcrest.CoreMatchers.isA;
+import static org.hamcrest.CoreMatchers.sameInstance;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -37,9 +40,7 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 class ThriftClientRequestContextInitFailureTest {
     @Test
     void endpointSelectionFailure() {
-        assertFailure(EndpointGroup.of(), actualCause -> {
-            assertThat(actualCause).isInstanceOf(EmptyEndpointGroupException.class);
-        });
+        assertFailure(EndpointGroup.of(), matching(isA(EmptyEndpointGroupException.class)));
     }
 
     @Test
@@ -48,13 +49,11 @@ class ThriftClientRequestContextInitFailureTest {
         try (SafeCloseable ignored = Clients.withContextCustomizer(ctx -> {
             throw cause;
         })) {
-            assertFailure(Endpoint.of("127.0.0.1", 1), actualCause -> {
-                assertThat(actualCause).isSameAs(cause);
-            });
+            assertFailure(Endpoint.of("127.0.0.1", 1), matching(sameInstance(cause)));
         }
     }
 
-    private static void assertFailure(EndpointGroup endpointGroup, Consumer<Throwable> requirements) {
+    private static void assertFailure(EndpointGroup endpointGroup, Condition<Throwable> requirements) {
         final AtomicBoolean rpcDecoratorRan = new AtomicBoolean();
         final AtomicReference<ClientRequestContext> capturedCtx = new AtomicReference<>();
         final HelloService.Iface client =
@@ -71,7 +70,7 @@ class ThriftClientRequestContextInitFailureTest {
 
         final Throwable actualCause = catchThrowable(() -> client.hello(""));
         assertThat(actualCause).isInstanceOf(UnprocessedRequestException.class);
-        assertThat(actualCause.getCause()).satisfies((Consumer) requirements);
+        assertThat(actualCause.getCause()).satisfies(requirements);
 
         assertThat(rpcDecoratorRan).isTrue();
         assertThat(capturedCtx.get()).satisfies(ctx -> {

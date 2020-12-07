@@ -97,7 +97,15 @@ class RouteDecoratingTest {
               .routeDecorator().pathPrefix("/abc").order(4).build(newDecorator(3))
               .routeDecorator().pathPrefix("/abc").order(3).build(newDecorator(4))
               .routeDecorator().pathPrefix("/abc/def").order(2).build(newDecorator(5))
-              .routeDecorator().path("glob:**def").build(newDecorator(6));
+              .routeDecorator().path("glob:**def").build(newDecorator(6))
+
+              .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .decorator("glob:fo*", newDecorator(10))
+              .decorator("glob:foo", newDecorator(11))
+
+              .service("/bar", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .decorator("glob:bar", newDecorator(10))
+              .decorator("glob:ba*", newDecorator(11));
         }
     };
 
@@ -120,19 +128,19 @@ class RouteDecoratingTest {
                   return delegate.serve(ctx, req);
               })
               .routeDecorator()
-              .pathPrefix("/assets/resources")
-              .build((delegate, ctx, req) -> {
-                  final HttpResponse response = delegate.serve(ctx, req);
-                  ctx.mutateAdditionalResponseHeaders(
-                          mutator -> mutator.add(HttpHeaderNames.CACHE_CONTROL, "public"));
-                  return response;
-              })
-              .routeDecorator()
               .pathPrefix("/assets/resources/private")
               .build((delegate, ctx, req) -> {
                   final HttpResponse response = delegate.serve(ctx, req);
                   ctx.mutateAdditionalResponseHeaders(
                           mutator -> mutator.add(HttpHeaderNames.CACHE_CONTROL, "private"));
+                  return response;
+              })
+              .routeDecorator()
+              .pathPrefix("/assets/resources")
+              .build((delegate, ctx, req) -> {
+                  final HttpResponse response = delegate.serve(ctx, req);
+                  ctx.mutateAdditionalResponseHeaders(
+                          mutator -> mutator.add(HttpHeaderNames.CACHE_CONTROL, "public"));
                   return response;
               });
         }
@@ -189,6 +197,11 @@ class RouteDecoratingTest {
 
     static Stream<Arguments> generateDecorateInOrderFromDecoratingServer() {
         return Stream.of(
+                Arguments.of("/abc", ImmutableList.of(2, 1)),
+                Arguments.of("/abc/def", ImmutableList.of(5, 3, 1)),
+                Arguments.of("/abc/def/ghi", ImmutableList.of(4, 3, 1)),
+                Arguments.of("/foo", ImmutableList.of(11, 10, 1)),
+                Arguments.of("/bar", ImmutableList.of(11, 10, 1)));
                 Arguments.of("/abc", ImmutableList.of(1, 2)), // 2, 1
                 Arguments.of("/abc/def", ImmutableList.of(6, 1, 4, 3)), // 1, 3, 4, 6
                 Arguments.of("/abc/def/ghi", ImmutableList.of(1, 4, 3, 5))); // 1, 3, 4, 5
@@ -283,5 +296,19 @@ class RouteDecoratingTest {
             builder.add("dest", destHeader);
         }
         assertThat(client.execute(builder.build()).aggregate().join().contentUtf8()).isEqualTo(result);
+    }
+
+    void decorator() {
+        final Server server = Server.builder()
+                                   .decorator("glob:/**", newDecorator(1))
+                                   .decorator("glob:/foo/*", newDecorator(2))
+                                   .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                   .build();
+        server.start().join();
+
+        Server.builder()
+              .decorator("glob:/foo/*", newDecorator(3))
+              .decorator("glob:/**", newDecorator(4))
+              .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
     }
 }

@@ -301,6 +301,21 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     */
+    public ClientFactoryBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
+        option(ClientFactoryOptions.TLS_ALLOW_UNSAFE_CIPHERS, tlsAllowUnsafeCiphers);
+        return this;
+    }
+
+    /**
      * Sets the factory that creates a {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      *
@@ -616,7 +631,15 @@ public final class ClientFactoryBuilder {
                         if (dnsResolverGroupCustomizers != null) {
                             dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
                         }
-                        return builder.build(eventLoopGroup);
+
+                        final ClientFactoryOptionValue<?> opt = options.getOrDefault(
+                                ClientFactoryOptions.METER_REGISTRY,
+                                ClientFactoryOptions.METER_REGISTRY.newValue(
+                                        ClientFactoryOptions.of().meterRegistry()));
+
+                        return builder
+                                .meterRegistry((MeterRegistry) opt.value())
+                                .build(eventLoopGroup);
                     };
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });

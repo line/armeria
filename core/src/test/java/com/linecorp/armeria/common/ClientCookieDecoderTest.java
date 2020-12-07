@@ -57,7 +57,7 @@ class ClientCookieDecoderTest {
         final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
-        assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
+        assertThat(cookie.domain()).isEqualTo("adomainsomewhere");
         assertThat(cookie.maxAge()).withFailMessage("maxAge should be defined when parsing cookie: " +
                                                     cookieString)
                                    .isNotEqualTo(Cookie.UNDEFINED_MAX_AGE);
@@ -77,7 +77,7 @@ class ClientCookieDecoderTest {
         final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
-        assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
+        assertThat(cookie.domain()).isEqualTo("adomainsomewhere");
         assertThat(cookie.maxAge()).isEqualTo(50);
         assertThat(cookie.path()).isEqualTo("/apathsomewhere");
         assertThat(cookie.isSecure()).isTrue();
@@ -90,7 +90,7 @@ class ClientCookieDecoderTest {
         final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
-        assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
+        assertThat(cookie.domain()).isEqualTo("adomainsomewhere");
         assertThat(cookie.maxAge()).isEqualTo(50);
         assertThat(cookie.path()).isEqualTo("/apathsomewhere");
         assertThat(cookie.isSecure()).isTrue();
@@ -104,7 +104,7 @@ class ClientCookieDecoderTest {
         final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
-        assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
+        assertThat(cookie.domain()).isEqualTo("adomainsomewhere");
         assertThat(cookie.maxAge()).isEqualTo(50);
         assertThat(cookie.path()).isEqualTo("/apathsomewhere");
         assertThat(cookie.isSecure()).isTrue();
@@ -118,7 +118,7 @@ class ClientCookieDecoderTest {
         final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
-        assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
+        assertThat(cookie.domain()).isEqualTo("adomainsomewhere");
         assertThat(cookie.maxAge()).isEqualTo(50);
         assertThat(cookie.path()).isEqualTo("/apathsomewhere");
         assertThat(cookie.isSecure()).isTrue();
@@ -133,7 +133,7 @@ class ClientCookieDecoderTest {
         final Cookie cookie = Cookie.fromSetCookieHeader(c1);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
-        assertThat(cookie.domain()).isEqualTo(".adomainsomewhere");
+        assertThat(cookie.domain()).isEqualTo("adomainsomewhere");
         assertThat(cookie.maxAge()).isEqualTo(50);
         assertThat(cookie.path()).isEqualTo("/apathsomewhere");
         assertThat(cookie.isSecure()).isTrue();

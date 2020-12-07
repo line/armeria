@@ -39,6 +39,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -100,7 +101,7 @@ public final class VirtualHostBuilder {
     @Nullable
     private SelfSignedCertificate selfSignedCertificate;
     private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
-    private final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
+    private final LinkedList<RouteDecoratingService> routeDecoratingServices = new LinkedList<>();
     @Nullable
     private Function<? super VirtualHost, ? extends Logger> accessLoggerMapper;
 
@@ -350,7 +351,8 @@ public final class VirtualHostBuilder {
 
     /**
      * Returns a {@link VirtualHostDecoratingServiceBindingBuilder} which is for binding
-     * a {@code decorator} fluently.
+     * a {@code decorator} fluently. The specified decorator(s) is/are executed in reverse order of
+     * the insertion.
      */
     public VirtualHostDecoratingServiceBindingBuilder routeDecorator() {
         return new VirtualHostDecoratingServiceBindingBuilder(this);
@@ -591,7 +593,7 @@ public final class VirtualHostBuilder {
     }
 
     VirtualHostBuilder addRouteDecoratingService(RouteDecoratingService routeDecoratingService) {
-        routeDecoratingServices.add(routeDecoratingService);
+        routeDecoratingServices.addFirst(routeDecoratingService);
         return this;
     }
 
@@ -616,6 +618,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates all {@link HttpService}s with the specified {@code decorator}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decorator the {@link Function} that decorates {@link HttpService}s
      */
@@ -625,6 +628,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates all {@link HttpService}s with the specified {@link DecoratingHttpServiceFunction}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
@@ -636,6 +640,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
@@ -647,6 +652,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
     public VirtualHostBuilder decorator(
             String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
@@ -655,6 +661,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@link Route}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param route the route being decorated
      * @param decorator the {@link Function} that decorates {@link HttpService}
@@ -682,6 +689,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@link Route}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param route the route being decorated
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
@@ -696,6 +704,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s under the specified directory.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
     public VirtualHostBuilder decoratorUnder(
             String prefix, Function<? super HttpService, ? extends HttpService> decorator) {
@@ -704,6 +713,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Decorates {@link HttpService}s under the specified directory.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
@@ -998,7 +1008,9 @@ public final class VirtualHostBuilder {
     private static SslContext buildSslContext(
             Supplier<SslContextBuilder> sslContextBuilderSupplier,
             Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
-        return SslContextUtil.createSslContext(sslContextBuilderSupplier, false, tlsCustomizers);
+        return SslContextUtil
+                .createSslContext(sslContextBuilderSupplier,
+                        /* forceHttp1 */ false, /* tlsAllowUnsafeCiphers */ false, tlsCustomizers);
     }
 
     /**

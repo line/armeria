@@ -164,6 +164,47 @@ class RequestContextExporterTest {
                                             "foo", "bar");
     }
 
+    @Test
+    void exportGroup() {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx.setAttr(ATTR1, "1");
+        ctx.setAttr(ATTR2, "2");
+        final RequestContextExporter exporter =
+                RequestContextExporter
+                        .builder()
+                        .exportGroup(
+                                ExportGroup
+                                        .builder()
+                                        .keyPattern("client.*")
+                                        .requestHeader(HttpHeaderNames.METHOD)
+                                        .attr("attrs.attr1-1", ATTR1)
+                                        .attr("attrs.attr1-2", ATTR1)
+                                        .build()
+                        )
+                        .exportGroup(
+                                ExportGroup
+                                        .builder()
+                                        .prefix("armeria.")
+                                        .keyPattern("client.*")
+                                        .requestHeader(HttpHeaderNames.METHOD, "request_method")
+                                        .attr("attrs.attr1-1", ATTR1)
+                                        .attr("attrs.attr1-2", ATTR1)
+                                        .build()
+                        )
+                        .build();
+
+        assertThat(exporter.export(ctx)).containsOnlyKeys(
+                "client.ip",
+                "req.headers.:method",
+                "attrs.attr1-1",
+                "attrs.attr1-2",
+                "armeria.client.ip",
+                "armeria.request_method",
+                "armeria.attrs.attr1-1",
+                "armeria.attrs.attr1-2"
+        );
+    }
+
     static final class Foo {
         final String value;
 

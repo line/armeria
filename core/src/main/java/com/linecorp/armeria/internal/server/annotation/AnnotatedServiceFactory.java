@@ -49,8 +49,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -136,7 +134,17 @@ public final class AnnotatedServiceFactory {
     /**
      * An instance map for reusing converters, exception handlers and decorators.
      */
-    private static final ConcurrentMap<Class<?>, Object> instanceCache = new ConcurrentHashMap<>();
+    private static final ClassValue<Object> instanceCache = new ClassValue<Object>() {
+        @Override
+        protected Object computeValue(Class<?> type) {
+            try {
+                return getInstance0(type);
+            } catch (Exception e) {
+                throw new IllegalStateException("A class must have an accessible default constructor: " +
+                                                type.getName(), e);
+            }
+        }
+    };
 
     /**
      * A default {@link ExceptionHandlerFunction}.
@@ -320,8 +328,8 @@ public final class AnnotatedServiceFactory {
                 AnnotationUtil.findFirst(object.getClass(), Blocking.class) != null;
 
         return routes.stream().map(route -> {
-            final List<AnnotatedValueResolver> resolvers = getAnnotatedValueResolvers(req, route, method,
-                                                                                      clazz);
+            final List<AnnotatedValueResolver> resolvers =
+                    getAnnotatedValueResolvers(req, route, method, clazz, needToUseBlockingTaskExecutor);
             return new AnnotatedServiceElement(
                     route,
                     new AnnotatedService(object, method, resolvers, eh, res, route, responseHeaders,
@@ -332,13 +340,14 @@ public final class AnnotatedServiceFactory {
 
     private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
                                                                            Route route, Method method,
-                                                                           Class<?> clazz) {
+                                                                           Class<?> clazz,
+                                                                           boolean useBlockingExecutor) {
         final Set<String> expectedParamNames = route.paramNames();
         List<AnnotatedValueResolver> resolvers;
         try {
-            resolvers = AnnotatedValueResolver.ofServiceMethod(method, expectedParamNames,
-                                                               AnnotatedValueResolver
-                                                                       .toRequestObjectResolvers(req));
+            resolvers = AnnotatedValueResolver.ofServiceMethod(
+                    method, expectedParamNames,
+                    AnnotatedValueResolver.toRequestObjectResolvers(req, method), useBlockingExecutor);
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
             //
@@ -697,15 +706,7 @@ public final class AnnotatedServiceFactory {
         try {
             @SuppressWarnings("unchecked")
             final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
-            return expectedType.cast(instanceCache.computeIfAbsent(clazz, type -> {
-                try {
-                    return getInstance0(clazz);
-                } catch (Exception e) {
-                    throw new IllegalStateException(
-                            "A class specified in @" + annotation.annotationType().getSimpleName() +
-                            " annotation must have an accessible default constructor: " + clazz.getName(), e);
-                }
-            }));
+            return expectedType.cast(instanceCache.get(clazz));
         } catch (ClassCastException e) {
             throw new IllegalArgumentException(
                     "A class specified in @" + annotation.annotationType().getSimpleName() +
@@ -718,14 +719,7 @@ public final class AnnotatedServiceFactory {
      */
     static <T> T getInstance(Class<T> clazz) {
         @SuppressWarnings("unchecked")
-        final T casted = (T) instanceCache.computeIfAbsent(clazz, type -> {
-            try {
-                return getInstance0(clazz);
-            } catch (Exception e) {
-                throw new IllegalStateException("A class must have an accessible default constructor: " +
-                                                clazz.getName(), e);
-            }
-        });
+        final T casted = (T) instanceCache.get(clazz);
         return casted;
     }
 

@@ -19,10 +19,9 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil.serializeTrailersAsMessage;
+import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -30,6 +29,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,21 +46,23 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
-import com.linecorp.armeria.internal.common.grpc.HttpStreamReader;
+import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframerHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
@@ -85,7 +88,7 @@ import io.netty.buffer.ByteBuf;
  * via {@link ServerCall.Listener}, and writing messages passed back to the response.
  */
 final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
-        implements ArmeriaMessageDeframer.Listener, TransportStatusListener {
+        implements Subscriber<DeframedMessage>, TransportStatusListener {
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerCall.class);
 
@@ -97,8 +100,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private final MethodDescriptor<I, O> method;
 
-    private final HttpStreamReader messageReader;
-    private final ArmeriaMessageFramer messageFramer;
+    private final HttpDeframer<DeframedMessage> requestDeframer;
+    private final ArmeriaMessageFramer responseFramer;
 
     private final HttpResponseWriter res;
     private final CompressorRegistry compressorRegistry;
@@ -106,9 +109,12 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
     private final boolean unsafeWrapRequestBuffers;
+    private final ResponseHeaders defaultHeaders;
+
     @Nullable
     private final Executor blockingExecutor;
-    private final ResponseHeaders defaultHeaders;
+    @Nullable
+    private final GrpcStatusFunction statusFunction;
 
     // Only set once.
     @Nullable
@@ -120,6 +126,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Nullable
     private Compressor compressor;
+    @Nullable
+    private Subscription upstream;
 
     // Message compression defaults to being enabled unless a user disables it using a server interceptor.
     private boolean messageCompression = true;
@@ -133,6 +141,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private boolean sendHeadersCalled;
     private boolean closeCalled;
 
+    private int pendingRequests;
     private volatile int pendingMessages;
 
     ArmeriaServerCall(HttpHeaders clientHeaders,
@@ -147,19 +156,26 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       @Nullable GrpcJsonMarshaller jsonMarshaller,
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
-                      ResponseHeaders defaultHeaders) {
+                      ResponseHeaders defaultHeaders,
+                      @Nullable GrpcStatusFunction statusFunction) {
         requireNonNull(clientHeaders, "clientHeaders");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.defaultHeaders = requireNonNull(defaultHeaders, "defaultHeaders");
+
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
-        messageReader = new HttpStreamReader(
-                requireNonNull(decompressorRegistry, "decompressorRegistry"),
-                new ArmeriaMessageDeframer(this, maxInboundMessageSizeBytes, ctx.alloc(), grpcWebText)
-                        .decompressor(clientDecompressor(clientHeaders, decompressorRegistry)),
-                this);
-        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
+        requireNonNull(decompressorRegistry, "decompressorRegistry");
+
+        final HttpStreamDeframerHandler handler =
+                new HttpStreamDeframerHandler(decompressorRegistry, this, statusFunction,
+                                              maxInboundMessageSizeBytes)
+                        .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
+        requestDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
+        handler.setDeframer(requestDeframer);
+        requestDeframer.subscribe(this, ctx.eventLoop());
+        responseFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
+
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         clientAcceptEncoding =
@@ -169,6 +185,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         blockingExecutor = useBlockingTaskExecutor ?
                            MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
+        this.statusFunction = statusFunction;
 
         res.whenComplete().handleAsync((unused, t) -> {
             if (!closeCalled) {
@@ -185,9 +202,13 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void request(int numMessages) {
         if (ctx.eventLoop().inEventLoop()) {
-            messageReader.request(numMessages);
+            if (upstream == null) {
+                pendingRequests += numMessages;
+            } else {
+                upstream.request(numMessages);
+            }
         } else {
-            ctx.eventLoop().execute(() -> messageReader.request(numMessages));
+            ctx.eventLoop().execute(() -> request(numMessages));
         }
     }
 
@@ -201,6 +222,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private void doSendHeaders(Metadata metadata) {
+        if (cancelled) {
+            // call was already closed by client or with non-OK status.
+            return;
+        }
         checkState(!sendHeadersCalled, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
@@ -214,7 +239,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 compressor = Codec.Identity.NONE;
             }
         }
-        messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
+        responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
 
         ResponseHeaders headers = defaultHeaders;
 
@@ -242,6 +267,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private void doSendMessage(O message) {
+        if (cancelled) {
+            // call was already closed by client or with non-OK status
+            return;
+        }
         checkState(sendHeadersCalled, "sendHeaders has not been called");
         checkState(!closeCalled, "call is closed");
 
@@ -250,7 +279,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         try {
-            res.write(messageFramer.writePayload(marshaller.serializeResponse(message)));
+            res.write(responseFramer.writePayload(marshaller.serializeResponse(message)));
             res.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
                     if (blockingExecutor != null) {
@@ -261,10 +290,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             });
         } catch (RuntimeException e) {
-            close(GrpcStatus.fromThrowable(e), new Metadata());
+            close(e, new Metadata());
             throw e;
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), new Metadata());
+            close(t, new Metadata());
             throw new RuntimeException(t);
         }
     }
@@ -275,7 +304,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 listener.onReady();
             }
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), new Metadata());
+            close(t, new Metadata());
         }
     }
 
@@ -287,21 +316,33 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void close(Status status, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(status, metadata);
+            doClose(GrpcStatus.fromStatusFunction(statusFunction, status), metadata);
         } else {
-            ctx.eventLoop().execute(() -> doClose(status, metadata));
+            ctx.eventLoop().execute(() -> {
+                doClose(GrpcStatus.fromStatusFunction(statusFunction, status), metadata);
+            });
+        }
+    }
+
+    private void close(Throwable exception, Metadata metadata) {
+        if (ctx.eventLoop().inEventLoop()) {
+            doClose(GrpcStatus.fromThrowable(statusFunction, exception), metadata);
+        } else {
+            ctx.eventLoop().execute(() -> {
+                doClose(GrpcStatus.fromThrowable(statusFunction, exception), metadata);
+            });
         }
     }
 
     private void doClose(Status status, Metadata metadata) {
-        checkState(!closeCalled, "call already closed");
-
-        closeCalled = true;
         if (cancelled) {
             // No need to write anything to client if cancelled already.
             closeListener(status);
             return;
         }
+
+        checkState(!closeCalled, "call already closed");
+        closeCalled = true;
 
         final HttpHeaders trailers = statusToTrailers(
                 ctx, sendHeadersCalled ? HttpHeaders.builder() : defaultHeaders.toBuilder(),
@@ -311,7 +352,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 GrpcWebTrailers.set(ctx, trailers);
                 // Normal trailers are not supported in grpc-web and must be encoded as a message.
                 final ByteBuf serialized = serializeTrailersAsMessage(ctx.alloc(), trailers);
-                if (res.tryWrite(messageFramer.writePayload(serialized, true))) {
+                if (res.tryWrite(responseFramer.writePayload(serialized, true))) {
                     res.close();
                 }
             } else {
@@ -336,7 +377,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Override
     public synchronized void setMessageCompression(boolean messageCompression) {
-        messageFramer.setMessageCompression(messageCompression);
+        responseFramer.setMessageCompression(messageCompression);
         this.messageCompression = messageCompression;
     }
 
@@ -345,7 +386,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(!sendHeadersCalled, "sendHeaders has been called");
         compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
-        messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
+        responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
     }
 
     @Override
@@ -354,51 +395,62 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     @Override
-    public void messageRead(DeframedMessage message) {
-
-        final I request;
-        final ByteBuf buf = message.buf();
-
-        boolean success = false;
-        try {
-            // Special case for unary calls.
-            if (messageReceived && method.getType() == MethodType.UNARY) {
-                closeListener(Status.INTERNAL.withDescription(
-                        "More than one request messages for unary call or server streaming call"));
-                return;
-            }
-            messageReceived = true;
-
-            if (isCancelled()) {
-                return;
-            }
-            success = true;
-        } finally {
-            if (buf != null && !success) {
-                buf.release();
-            }
+    public void onSubscribe(Subscription subscription) {
+        requireNonNull(subscription, "subscription");
+        // 'subscribe()' only happens in the constructor of ArmeriaServerCall.
+        upstream = subscription;
+        if (pendingRequests > 0) {
+            upstream.request(pendingRequests);
+            pendingRequests = 0;
         }
+    }
 
-        final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
-
+    @Override
+    public void onNext(DeframedMessage message) {
         try {
+            final I request;
+            final ByteBuf buf = message.buf();
+
+            boolean success = false;
+            try {
+                // Special case for unary calls.
+                if (messageReceived && method.getType() == MethodType.UNARY) {
+                    closeListener(Status.INTERNAL.withDescription(
+                            "More than one request messages for unary call or server streaming call"));
+                    return;
+                }
+                messageReceived = true;
+
+                if (isCancelled()) {
+                    return;
+                }
+                success = true;
+            } finally {
+                if (buf != null && !success) {
+                    buf.release();
+                }
+            }
+
+            final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
+
             request = marshaller.deserializeRequest(message, grpcWebText);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
 
-        if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-            ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
-        }
+            if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
+            }
 
-        if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
-            GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
-        }
+            if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
+                GrpcUnsafeBufferUtil.storeBuffer(buf, request, ctx);
+            }
 
-        if (blockingExecutor != null) {
-            blockingExecutor.execute(() -> invokeOnMessage(request));
-        } else {
-            invokeOnMessage(request);
+            if (blockingExecutor != null) {
+                blockingExecutor.execute(() -> invokeOnMessage(request));
+            } else {
+                invokeOnMessage(request);
+            }
+        } catch (Throwable e) {
+            upstream.cancel();
+            close(e, new Metadata());
         }
     }
 
@@ -407,13 +459,14 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             assert listener != null;
             listener.onMessage(request);
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), new Metadata());
+            upstream.cancel();
+            close(t, new Metadata());
         }
     }
 
     @Override
-    public void endOfStream() {
-        setClientStreamClosed();
+    public void onComplete() {
+        clientStreamClosed = true;
         if (!closeCalled) {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
@@ -424,6 +477,13 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             } else {
                 invokeHalfClose();
             }
+        }
+    }
+
+    @Override
+    public void onError(Throwable t) {
+        if (!closeCalled && !(t instanceof AbortedStreamException)) {
+            close(t, new Metadata());
         }
     }
 
@@ -440,7 +500,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 listener.onReady();
             }
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), new Metadata());
+            close(t, new Metadata());
         }
     }
 
@@ -461,10 +521,16 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private void closeListener(Status newStatus) {
         if (!listenerClosed) {
             listenerClosed = true;
-            setClientStreamClosed();
-            messageFramer.close();
+
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse), null);
-            if (newStatus.isOk()) {
+
+            final boolean ok = newStatus.isOk();
+            if (!clientStreamClosed) {
+                clientStreamClosed = true;
+                requestDeframer.abort();
+            }
+
+            if (ok) {
                 if (blockingExecutor != null) {
                     blockingExecutor.execute(this::invokeOnComplete);
                 } else {
@@ -513,15 +579,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // A custom error when dealing with client cancel or transport issues should be
                 // returned. We have already closed the listener, so it will not receive any more
                 // callbacks as designed.
-                close(GrpcStatus.fromThrowable(t), new Metadata());
+                close(t, new Metadata());
             }
-        }
-    }
-
-    private void setClientStreamClosed() {
-        if (!clientStreamClosed) {
-            messageReader().cancel();
-            clientStreamClosed = true;
         }
     }
 
@@ -536,7 +595,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
             trailersBuilder.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
-                               Base64.getEncoder().encodeToString(proto.toByteArray()));
+                                Base64.getEncoder().encodeToString(proto.toByteArray()));
         }
 
         final HttpHeaders additionalTrailers = ctx.additionalResponseTrailers();
@@ -545,8 +604,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         return trailersBuilder.build();
     }
 
-    HttpStreamReader messageReader() {
-        return messageReader;
+    HttpDeframer<DeframedMessage> messageDeframer() {
+        return requestDeframer;
     }
 
     void setListener(Listener<I> listener) {

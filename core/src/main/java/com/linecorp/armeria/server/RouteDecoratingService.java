@@ -58,9 +58,9 @@ import io.netty.util.AttributeKey;
  * <p>The request will go through the below decorators to reach the {@code userService}.
  * <pre>{@code
  *  request -> initialDispatcherService
- *          -> loggingDecorator         -> routeDecoratingService
- *          -> authDecorator            -> routeDecoratingService
  *          -> traceDecorator           -> routeDecoratingService
+ *          -> authDecorator            -> routeDecoratingService
+ *          -> loggingDecorator         -> routeDecoratingService
  *          -> userService
  * }</pre>
  */
@@ -125,8 +125,7 @@ final class RouteDecoratingService implements HttpService {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             final Queue<HttpService> serviceChain = new ArrayDeque<>(4);
-            // TODO(minwoox): Can do without making a new instance for RoutingContext?
-            router.findAll(RouteDecoratorRoutingContext.of(ctx.routingContext())).forEach(routed -> {
+            router.findAll(ctx.routingContext()).forEach(routed -> {
                 if (routed.isPresent()) {
                     serviceChain.add(routed.value().decorator());
                 }

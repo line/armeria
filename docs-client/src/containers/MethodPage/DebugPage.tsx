@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -32,11 +32,9 @@ import React, {
   useReducer,
   useState,
 } from 'react';
-import { Option } from 'react-dropdown';
-import SyntaxHighlighter from 'react-syntax-highlighter';
-// react-syntax-highlighter type definitions are out of date.
-// @ts-ignore
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import githubGist from 'react-syntax-highlighter/dist/esm/styles/hljs/github-gist';
+import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
 
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
@@ -45,17 +43,20 @@ import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
 import { Method } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
+import { SelectOption } from '../../lib/types';
 import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
 import RequestBody from './RequestBody';
 
+SyntaxHighlighter.registerLanguage('json', json);
+
 interface OwnProps {
   method: Method;
   isAnnotatedService: boolean;
-  exampleHeaders: Option[];
-  examplePaths: Option[];
-  exampleQueries: Option[];
+  exampleHeaders: SelectOption[];
+  examplePaths: SelectOption[];
+  exampleQueries: SelectOption[];
   exactPathMapping: boolean;
   useRequestBody: boolean;
 }
@@ -220,9 +221,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setSnackbarOpen(false);
   }, []);
 
-  const onSelectedQueriesChange = useCallback((selectedQueries: Option) => {
-    setAdditionalQueries(selectedQueries.value);
-  }, []);
+  const onSelectedQueriesChange = useCallback(
+    (e: ChangeEvent<{ value: unknown }>) => {
+      setAdditionalQueries(e.target.value as string);
+    },
+    [],
+  );
 
   const onQueriesFormChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -231,17 +235,23 @@ const DebugPage: React.FunctionComponent<Props> = ({
     [],
   );
 
-  const onSelectedPathChange = useCallback((selectedPath: Option) => {
-    setAdditionalPath(selectedPath.value);
-  }, []);
+  const onSelectedPathChange = useCallback(
+    (e: ChangeEvent<{ value: unknown }>) => {
+      setAdditionalPath(e.target.value as string);
+    },
+    [],
+  );
 
   const onPathFormChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setAdditionalPath(e.target.value);
   }, []);
 
-  const onSelectedHeadersChange = useCallback((selectedHeaders: Option) => {
-    setAdditionalHeaders(selectedHeaders.value);
-  }, []);
+  const onSelectedHeadersChange = useCallback(
+    (e: ChangeEvent<{ value: unknown }>) => {
+      setAdditionalHeaders(e.target.value as string);
+    },
+    [],
+  );
 
   const onHeadersFormChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -556,26 +566,32 @@ const DebugPage: React.FunctionComponent<Props> = ({
             </Button>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Tooltip title="Copy response">
-              <div>
-                <IconButton
-                  onClick={onCopy}
-                  disabled={debugResponse.length === 0}
-                >
-                  <FileCopyIcon />
-                </IconButton>
-              </div>
-            </Tooltip>
-            <Tooltip title="Clear response">
-              <div>
-                <IconButton
-                  onClick={onClear}
-                  disabled={debugResponse.length === 0}
-                >
-                  <DeleteSweepIcon />
-                </IconButton>
-              </div>
-            </Tooltip>
+            <Grid container spacing={1}>
+              <Grid item xs="auto">
+                <Tooltip title="Copy response">
+                  <div>
+                    <IconButton
+                      onClick={onCopy}
+                      disabled={debugResponse.length === 0}
+                    >
+                      <FileCopyIcon />
+                    </IconButton>
+                  </div>
+                </Tooltip>
+              </Grid>
+              <Grid item xs="auto">
+                <Tooltip title="Clear response">
+                  <div>
+                    <IconButton
+                      onClick={onClear}
+                      disabled={debugResponse.length === 0}
+                    >
+                      <DeleteSweepIcon />
+                    </IconButton>
+                  </div>
+                </Tooltip>
+              </Grid>
+            </Grid>
             <SyntaxHighlighter
               language="json"
               style={githubGist}

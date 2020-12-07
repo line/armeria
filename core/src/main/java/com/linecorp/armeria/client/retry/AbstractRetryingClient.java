@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -69,67 +68,39 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
 
-    @Nullable
-    private final RetryRule retryRule;
+    private final RetryConfigMapping<O> mapping;
 
     @Nullable
-    private final RetryRule fromRetryRuleWithContent;
-
-    @Nullable
-    private final RetryRuleWithContent<O> retryRuleWithContent;
-
-    private final int maxTotalAttempts;
-    private final long responseTimeoutMillisForEachAttempt;
+    private final RetryConfig<O> retryConfig;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractRetryingClient(Client<I, O> delegate, RetryRule retryRule,
-                           int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        this(delegate, requireNonNull(retryRule, "retryRule"), null,
-             maxTotalAttempts, responseTimeoutMillisForEachAttempt);
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    AbstractRetryingClient(Client<I, O> delegate,
-                           RetryRuleWithContent<O> retryRuleWithContent,
-                           int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        this(delegate, null, requireNonNull(retryRuleWithContent, "retryRuleWithContent"),
-             maxTotalAttempts, responseTimeoutMillisForEachAttempt);
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    private AbstractRetryingClient(Client<I, O> delegate, @Nullable RetryRule retryRule,
-                                   @Nullable RetryRuleWithContent<O> retryRuleWithContent,
-                                   int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
+    AbstractRetryingClient(
+            Client<I, O> delegate, RetryConfigMapping<O> mapping, @Nullable RetryConfig<O> retryConfig) {
         super(delegate);
-        this.retryRule = retryRule;
-        this.retryRuleWithContent = retryRuleWithContent;
-        if (retryRuleWithContent != null) {
-            fromRetryRuleWithContent = RetryRuleUtil.fromRetryRuleWithContent(retryRuleWithContent);
-        } else {
-            fromRetryRuleWithContent = null;
-        }
-
-        checkArgument(maxTotalAttempts > 0, "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
-        this.maxTotalAttempts = maxTotalAttempts;
-
-        checkArgument(responseTimeoutMillisForEachAttempt >= 0,
-                      "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
-                      responseTimeoutMillisForEachAttempt);
-        this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
+        this.mapping = requireNonNull(mapping, "mapping");
+        this.retryConfig = retryConfig;
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final State state =
-                new State(maxTotalAttempts, responseTimeoutMillisForEachAttempt, ctx.responseTimeoutMillis());
+        final RetryConfig<O> config = mapping.get(ctx, req);
+        requireNonNull(config, "mapping.get() returned null");
+
+        final State state = new State(
+                config.maxTotalAttempts(),
+                config.responseTimeoutMillisForEachAttempt(),
+                ctx.responseTimeoutMillis());
         ctx.setAttr(STATE, state);
         return doExecute(ctx, req);
+    }
+
+    /**
+     * Returns the current {@link RetryConfigMapping} set for this client.
+     */
+    protected final RetryConfigMapping<O> mapping() {
+        return mapping;
     }
 
     /**
@@ -151,6 +122,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * @throws IllegalStateException if the {@link RetryRule} is not set
      */
     protected final RetryRule retryRule() {
+        checkState(retryConfig != null, "No retryRule set. Are you using RetryConfigMapping?");
+        final RetryRule retryRule = retryConfig.retryRule();
         checkState(retryRule != null, "retryRule is not set.");
         return retryRule;
     }
@@ -161,13 +134,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * @throws IllegalStateException if the {@link RetryRuleWithContent} is not set
      */
     protected final RetryRuleWithContent<O> retryRuleWithContent() {
+        checkState(retryConfig != null, "No retryRuleWithContent set. Are you using RetryConfigMapping?");
+        final RetryRuleWithContent<O> retryRuleWithContent = retryConfig.retryRuleWithContent();
         checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
         return retryRuleWithContent;
-    }
-
-    final RetryRule fromRetryRuleWithContent() {
-        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
-        return fromRetryRuleWithContent;
     }
 
     /**

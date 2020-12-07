@@ -17,11 +17,13 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.parseGrpcWebTrailers;
+import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
 
 import java.io.IOException;
 import java.io.InputStream;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingHttpClientFunction;
@@ -37,10 +39,11 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 
@@ -48,6 +51,7 @@ import io.grpc.ClientInterceptor;
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 
 /**
  * Utilities for working with <a href="https://grpc.io/docs/languages/web/basics/">gRPC-Web</a>.
@@ -69,46 +73,14 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
     public HttpResponse execute(HttpClient delegate, ClientRequestContext ctx, HttpRequest req)
             throws Exception {
         final HttpResponse response = delegate.execute(ctx, req);
-        final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(new Listener() {
-            @Override
-            public void messageRead(DeframedMessage message) {
-                if (message.type() >> 7 == 1) {
-                    final ByteBuf buf;
-                    try {
-                        buf = messageBuf(message, ctx.alloc());
-                    } catch (IOException e) {
-                        // Ignore silently
-                        return;
-                    }
-                    try {
-                        final HttpHeaders trailers = parseGrpcWebTrailers(buf);
-                        if (trailers == null) {
-                            return;
-                        }
-                        GrpcWebTrailers.set(ctx, trailers);
-                    } finally {
-                        buf.release();
-                    }
-                } else {
-                    final ByteBuf buf = message.buf();
-                    if (buf != null) {
-                        buf.release();
-                    } else {
-                        try {
-                            final InputStream stream = message.stream();
-                            assert stream != null;
-                            stream.close();
-                        } catch (IOException e) {
-                            // Ignore silently
-                        }
-                    }
-                }
-            }
+        final ByteBufAllocator alloc = ctx.alloc();
 
-            @Override
-            public void endOfStream() { /* no-op */ }
-        }, maxMessageSizeBytes, ctx.alloc(), grpcWebText);
+        final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(maxMessageSizeBytes);
+        final HttpDeframer<DeframedMessage> deframer = newHttpDeframer(handler, alloc, grpcWebText);
 
+        final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
+        publisher.subscribe(deframer, ctx.eventLoop());
+        deframer.subscribe(new TrailersSubscriber(ctx), ctx.eventLoop());
         final FilteredHttpResponse filteredHttpResponse = new FilteredHttpResponse(response, true) {
             @Override
             protected HttpObject filter(HttpObject obj) {
@@ -117,7 +89,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                     final String statusText = headers.get(HttpHeaderNames.STATUS);
                     if (statusText == null) {
                         // Missing status header.
-                        deframer.close();
+                        publisher.close();
                         return obj;
                     }
 
@@ -129,7 +101,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                     final HttpStatus status = HttpStatus.valueOf(statusText);
                     if (!status.equals(HttpStatus.OK)) {
                         // Not OK status.
-                        deframer.close();
+                        publisher.close();
                         return obj;
                     }
 
@@ -141,40 +113,99 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                                 DecompressorRegistry.getDefaultInstance().lookupDecompressor(grpcEncoding);
                         if (decompressor == null) {
                             // Can't find decompressor.
-                            deframer.close();
+                            publisher.close();
                             return obj;
                         }
-                        deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
+                        handler.decompressor(ForwardingDecompressor.forGrpc(decompressor));
                     }
-                    deframer.request(Integer.MAX_VALUE);
                     return obj;
                 }
 
-                if (obj instanceof HttpData && !deframer.isClosed()) {
+                if (obj instanceof HttpData && !publisher.isComplete()) {
                     final HttpData httpData = (HttpData) obj;
                     final HttpData wrapped = HttpData.wrap(
                             httpData.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
-                    deframer.deframe(wrapped, wrapped.isEndOfStream());
+                    final boolean ignored = publisher.tryWrite(wrapped);
                 }
                 return obj;
             }
 
             @Override
             protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-                deframer.close();
+                publisher.close();
             }
 
             @Override
             protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-                deframer.close();
+                publisher.close();
                 return cause;
             }
         };
         filteredHttpResponse.whenComplete().handle((unused, unused2) -> {
             // To make sure the deframer is closed even when the response is cancelled.
-            deframer.close();
+            publisher.close();
             return null;
         });
         return filteredHttpResponse;
+    }
+
+    private static final class TrailersSubscriber implements Subscriber<DeframedMessage> {
+
+        private final ClientRequestContext ctx;
+
+        TrailersSubscriber(ClientRequestContext ctx) {
+            this.ctx = ctx;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            // Backpressure is controlled by HttpDeframer.
+            s.request(Long.MAX_VALUE);
+        }
+
+        @Override
+        public void onNext(DeframedMessage message) {
+            if (message.type() >> 7 == 1) {
+                final ByteBuf buf;
+                try {
+                    buf = messageBuf(message, ctx.alloc());
+                } catch (IOException e) {
+                    // Ignore silently
+                    return;
+                }
+                try {
+                    final HttpHeaders trailers = parseGrpcWebTrailers(buf);
+                    if (trailers == null) {
+                        return;
+                    }
+                    GrpcWebTrailers.set(ctx, trailers);
+                } finally {
+                    buf.release();
+                }
+            } else {
+                final ByteBuf buf = message.buf();
+                if (buf != null) {
+                    buf.release();
+                } else {
+                    try {
+                        final InputStream stream = message.stream();
+                        assert stream != null;
+                        stream.close();
+                    } catch (IOException e) {
+                        // Ignore silently
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            /* no-op */
+        }
+
+        @Override
+        public void onComplete() {
+            /* no-op */
+        }
     }
 }

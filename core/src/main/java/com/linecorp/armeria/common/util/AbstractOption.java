@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -29,7 +28,6 @@ import java.util.function.Function;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.client.ClientOption;
 
@@ -50,7 +48,12 @@ public abstract class AbstractOption<
 
     private static final AtomicLong uniqueIdGenerator = new AtomicLong();
 
-    private static final Map<Class<?>, Pool> map = new MapMaker().weakKeys().makeMap();
+    private static final ClassValue<Pool> map = new ClassValue<Pool>() {
+        @Override
+        protected Pool computeValue(Class<?> type) {
+            return new Pool(type);
+        }
+    };
 
     /**
      * Returns all available options of the specified option type.
@@ -120,8 +123,8 @@ public abstract class AbstractOption<
         requireNonNull(validator, "validator");
         requireNonNull(mergeFunction, "mergeFunction");
 
-        return map.computeIfAbsent(type, unused -> new Pool(type, optionFactory))
-                  .define(name, defaultValue, validator, mergeFunction);
+        return map.get(type)
+                  .define(optionFactory, name, defaultValue, validator, mergeFunction);
     }
 
     private final long uniqueId;
@@ -231,17 +234,15 @@ public abstract class AbstractOption<
     private static final class Pool {
 
         private final Class<?> type;
-        private final Factory<?, ?, ?> optionFactory;
         private final BiMap<String, AbstractOption<?, ?, ?>> options;
 
-        Pool(Class<?> type, Factory<?, ?, ?> optionFactory) {
+        Pool(Class<?> type) {
             this.type = type;
-            this.optionFactory = optionFactory;
             options = HashBiMap.create();
         }
 
         synchronized <T extends AbstractOption<T, U, V>, U extends AbstractOptionValue<U, T, V>, V>
-        T define(String name, V defaultValue,
+        T define(Factory<T, U, V> optionFactory, String name, V defaultValue,
                  Function<V, V> validator, BiFunction<U, U, U> mergeFunction) {
             final AbstractOption<?, ?, ?> oldOption = options.get(name);
             if (oldOption != null) {
@@ -249,8 +250,6 @@ public abstract class AbstractOption<
                         '\'' + type.getName() + '#' + name + "' exists already.");
             }
 
-            @SuppressWarnings("unchecked")
-            final Factory<T, U, V> optionFactory = (Factory<T, U, V>) this.optionFactory;
             final T newOption = optionFactory.get(name, defaultValue, validator, mergeFunction);
             checkArgument(type.isInstance(newOption),
                           "OptionFactory.newOption() must return an instance of %s.", type);

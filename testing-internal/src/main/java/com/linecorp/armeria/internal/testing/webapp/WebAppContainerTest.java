@@ -40,10 +40,13 @@ import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -108,6 +111,7 @@ public abstract class WebAppContainerTest {
                         "<p>Context path: </p>" + // ROOT context path
                         "<p>Request URI: /index.jsp</p>" +
                         "<p>Scheme: http</p>" +
+                        "<p>Protocol: HTTP/1.1</p>" +
                         "</body></html>");
             }
         }
@@ -140,17 +144,24 @@ public abstract class WebAppContainerTest {
         final WebClient client = WebClient.builder(server().uri(SessionProtocol.HTTPS))
                                           .factory(ClientFactory.insecure())
                                           .build();
-        final AggregatedHttpResponse response = client.get("/jsp/index.jsp").aggregate().get();
-        final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
-                                             .replaceAll("");
-        assertThat(actualContent).isEqualTo(
-                "<html><body>" +
-                "<p>Hello, Armerian World!</p>" +
-                "<p>Have you heard about the class 'org.slf4j.Logger'?</p>" +
-                "<p>Context path: </p>" + // ROOT context path
-                "<p>Request URI: /index.jsp</p>" +
-                "<p>Scheme: https</p>" +
-                "</body></html>");
+
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse response = client.get("/jsp/index.jsp").aggregate().get();
+            final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
+                                                 .replaceAll("");
+            // Get the session protocol observed from the client side.
+            final String expectedProtocol = ctxCaptor.get().log().ensureAvailable(RequestLogProperty.SESSION)
+                                                     .sessionProtocol().isMultiplex() ? "HTTP/2.0" : "HTTP/1.1";
+            assertThat(actualContent).isEqualTo(
+                    "<html><body>" +
+                    "<p>Hello, Armerian World!</p>" +
+                    "<p>Have you heard about the class 'org.slf4j.Logger'?</p>" +
+                    "<p>Context path: </p>" + // ROOT context path
+                    "<p>Request URI: /index.jsp</p>" +
+                    "<p>Scheme: https</p>" +
+                    "<p>Protocol: " + expectedProtocol + "</p>" +
+                    "</body></html>");
+        }
     }
 
     @Test
