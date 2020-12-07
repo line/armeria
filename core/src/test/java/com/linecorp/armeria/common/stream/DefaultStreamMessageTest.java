@@ -232,5 +232,4 @@ class DefaultStreamMessageTest {
         });
         await().untilTrue(completed);
     }
-
 }
