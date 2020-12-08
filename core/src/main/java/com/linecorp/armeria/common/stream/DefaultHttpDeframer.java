@@ -16,19 +16,21 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -37,54 +39,57 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * The default {@link HttpDeframer} implementation.
+ * The default HTTP deframer implementation.
  */
-final class DefaultHttpDeframer<T>
-        extends DefaultStreamMessage<T>
-        implements HttpDeframer<T>, HttpDeframerOutput<T> {
+public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implements HttpDeframerOutput<T> {
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultHttpDeframer, Subscription> upstreamUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(DefaultHttpDeframer.class, Subscription.class, "upstream");
+    private static final SubscriptionOption[] EMPTY_OPTIONS = {};
+    private static final SubscriptionOption[] POOLED_OBJECTS_OPTIONS = { WITH_POOLED_OBJECTS };
+    private static final SubscriptionOption[] NOTIFY_CANCELLATION_OPTIONS = { NOTIFY_CANCELLATION };
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicIntegerFieldUpdater<DefaultHttpDeframer> initializedUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(DefaultHttpDeframer.class, "initialized");
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicIntegerFieldUpdater<DefaultHttpDeframer> askedUpstreamForElementUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(DefaultHttpDeframer.class, "askedUpstreamForElement");
+    private final HttpMessageSubscriber subscriber = new HttpMessageSubscriber();
 
     private final HttpDeframerHandler<T> handler;
     private final ByteBufDeframerInput input;
     private final Function<? super HttpData, ? extends ByteBuf> byteBufConverter;
+    private final StreamMessage<? extends HttpObject> publisher;
+
+    @Nullable
+    private HttpHeaders httpHeaders;
+    @Nullable
+    private Subscription upstream;
 
     private boolean handlerProduced;
     private boolean sawLeadingHeaders;
+    private boolean initialized;
+    private boolean askedUpstreamForElement;
+    private boolean cancelled;
 
-    @Nullable
-    private volatile EventExecutor eventLoop;
-    @Nullable
-    private volatile Subscription upstream;
-    private volatile int initialized;
-    private volatile int askedUpstreamForElement;
-
-    @Nullable
-    private volatile Throwable cause;
-    private volatile boolean cancelled;
-    private volatile boolean completing;
+    /**
+     * Returns a new {@link DefaultHttpDeframer} with the specified {@link HttpDeframerHandler},
+     * {@link ByteBufAllocator}.
+     */
+    public DefaultHttpDeframer(StreamMessage<? extends HttpObject> streamMessage,
+                               HttpDeframerHandler<T> handler, ByteBufAllocator alloc) {
+        this(streamMessage, handler, alloc, HttpData::byteBuf);
+    }
 
     /**
      * Returns a new {@link DefaultHttpDeframer} with the specified {@link HttpDeframerHandler},
      * {@link ByteBufAllocator} and {@code byteBufConverter}.
      */
-    DefaultHttpDeframer(HttpDeframerHandler<T> handler, ByteBufAllocator alloc,
-                        Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
+    public DefaultHttpDeframer(StreamMessage<? extends HttpObject> streamMessage,
+                               HttpDeframerHandler<T> handler, ByteBufAllocator alloc,
+                               Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
+        publisher = requireNonNull(streamMessage, "streamMessage");
         this.handler = requireNonNull(handler, "handler");
         input = new ByteBufDeframerInput(requireNonNull(alloc, "alloc"));
         this.byteBufConverter = requireNonNull(byteBufConverter, "byteBufConverter");
+        if (publisher instanceof HttpRequest) {
+            httpHeaders = ((HttpRequest) publisher).headers();
+        }
 
-        whenComplete().handle((unused1, unused2)  -> {
+        whenComplete().handle((unused1, unused2) -> {
             // In addition to 'onComplete()', 'onError()' and 'cancel()',
             // make sure to call 'cleanup()' even when 'abort()' or 'close()' is invoked directly
             cleanup();
@@ -104,61 +109,59 @@ final class DefaultHttpDeframer<T>
         final SubscriptionImpl subscriptionImpl = super.subscribe(subscription);
         if (subscriptionImpl == subscription) {
             final EventExecutor eventLoop = subscription.executor();
-            this.eventLoop = eventLoop;
-            deferredInit(eventLoop);
+            publisher.subscribe(subscriber, eventLoop, getSubscriptionOptions(subscription));
+            deferredInit();
         }
         return subscriptionImpl;
     }
 
-    private void deferredInit(@Nullable EventExecutor eventLoop) {
-        final Subscription upstream = this.upstream;
+    private void deferredInit() {
+        if (upstream != null) {
+            if (initialized) {
+                return;
+            }
 
-        if (upstream != null && eventLoop != null) {
-            if (initializedUpdater.compareAndSet(this, 0, 1)) {
-                if (cancelled) {
-                    upstream.cancel();
-                    return;
-                }
+            initialized = true;
+            if (cancelled) {
+                upstream.cancel();
+                return;
+            }
 
-                final Throwable cause = this.cause;
-                if (cause != null) {
-                    if (eventLoop.inEventLoop()) {
-                        onError0(cause);
-                    } else {
-                        eventLoop.execute(() -> onError0(cause));
-                    }
-                    return;
-                }
+            long demand = demand();
+            if (demand > 0 && httpHeaders != null) {
+                final HttpHeaders httpHeaders = this.httpHeaders;
+                this.httpHeaders = null;
+                subscriber.onNext(httpHeaders);
+                demand--;
+            }
 
-                if (completing) {
-                    if (eventLoop.inEventLoop()) {
-                        onComplete0();
-                    } else {
-                        eventLoop.execute(this::onComplete0);
-                    }
-                    return;
-                }
-
-                if (demand() > 0) {
-                    askUpstreamForElement();
-                }
+            if (demand > 0) {
+                askUpstreamForElement();
             }
         }
     }
 
     @Override
     void request(long n) {
+
         // Fetch from upstream only when this deframer is initialized and the given demand is valid.
-        if (initialized != 0 && n > 0) {
-            askUpstreamForElement();
+        if (initialized && n > 0) {
+            if (httpHeaders != null) {
+                // A readily available HTTP headers is not delivered yet.
+                final HttpHeaders httpHeaders = this.httpHeaders;
+                this.httpHeaders = null;
+                subscriber.onNext(httpHeaders);
+            } else {
+                askUpstreamForElement();
+            }
         }
 
         super.request(n);
     }
 
     private void askUpstreamForElement() {
-        if (askedUpstreamForElementUpdater.compareAndSet(this, 0, 1)) {
-            final Subscription upstream = this.upstream;
+        if (!askedUpstreamForElement) {
+            askedUpstreamForElement = true;
             assert upstream != null;
             upstream.request(1);
         }
@@ -170,144 +173,131 @@ final class DefaultHttpDeframer<T>
         super.cancel();
     }
 
-    @Override
-    public void onSubscribe(Subscription subscription) {
-        requireNonNull(subscription, "subscription");
-        if (upstreamUpdater.compareAndSet(this, null, subscription)) {
-            deferredInit(eventLoop);
-        } else {
-            subscription.cancel();
-        }
-    }
-
-    @Override
-    public void onNext(HttpObject data) {
-        final EventExecutor eventLoop = this.eventLoop;
-        assert eventLoop != null;
-        if (eventLoop.inEventLoop()) {
-            onNext0(data);
-        } else {
-            eventLoop.execute(() -> onNext0(data));
-        }
-    }
-
-    private void onNext0(HttpObject obj) {
-        askedUpstreamForElement = 0;
-        handlerProduced = false;
-        try {
-            // Call the handler so that it publishes something.
-            if (obj instanceof HttpHeaders) {
-                final HttpHeaders headers = (HttpHeaders) obj;
-                if (headers instanceof ResponseHeaders &&
-                    ((ResponseHeaders) headers).status().isInformational()) {
-                    handler.processInformationalHeaders((ResponseHeaders) headers, this);
-                } else if (!sawLeadingHeaders) {
-                    sawLeadingHeaders = true;
-                    handler.processHeaders((HttpHeaders) obj, this);
-                } else {
-                    handler.processTrailers((HttpHeaders) obj, this);
-                }
-            } else if (obj instanceof HttpData) {
-                final HttpData data = (HttpData) obj;
-                final ByteBuf byteBuf = byteBufConverter.apply(data);
-                requireNonNull(byteBuf, "byteBufConverter.apply() returned null");
-                if (input.add(byteBuf)) {
-                    handler.process(input, this);
-                }
-            }
-
-            if (handlerProduced) {
-                // Handler produced something.
-                if (askedUpstreamForElement == 0) {
-                    // Ask the upstream for more elements after the produced elements are fully consumed and
-                    // there are still demands left.
-                    whenConsumed().handle((unused1, unused2) -> {
-                        if (demand() > 0) {
-                            askUpstreamForElement();
-                        }
-                        return null;
-                    });
-                } else {
-                    // No need to ask the upstream for more elements because:
-                    // - The handler triggered Subscription.request(); or
-                    // - Subscription.request() was called from another thread.
-                }
-            } else {
-                // Handler didn't produce anything, which means it needs more elements from the upstream
-                // to produce something.
-                askUpstreamForElement();
-            }
-        } catch (Throwable ex) {
-            handler.processOnError(ex);
-            cancelAndCleanup();
-            abort(ex);
-            Exceptions.throwIfFatal(ex);
-        }
-    }
-
     private void cancelAndCleanup() {
         if (cancelled) {
             return;
         }
 
         cancelled = true;
-        final Subscription upstream = this.upstream;
         if (upstream != null) {
             upstream.cancel();
         }
         cleanup();
     }
 
-    @Override
-    public void onError(Throwable cause) {
-        requireNonNull(cause, "cause");
-        if (cancelled) {
-            return;
-        }
-
-        this.cause = cause;
-        final EventExecutor eventLoop = this.eventLoop;
-        if (eventLoop != null) {
-            if (eventLoop.inEventLoop()) {
-                onError0(cause);
-            } else {
-                eventLoop.execute(() -> onError0(cause));
-            }
-        }
-    }
-
-    private void onError0(Throwable cause) {
-        if (!(cause instanceof AbortedStreamException)) {
-            handler.processOnError(cause);
-        }
-
-        abort(cause);
-        cleanup();
-    }
-
-    @Override
-    public void onComplete() {
-        if (cancelled) {
-            return;
-        }
-
-        completing = true;
-        final EventExecutor eventLoop = this.eventLoop;
-        if (eventLoop != null) {
-            if (eventLoop.inEventLoop()) {
-                onComplete0();
-            } else {
-                eventLoop.execute(this::onComplete0);
-            }
-        }
-    }
-
-    private void onComplete0() {
-        cleanup();
-        close();
-    }
-
     private void cleanup() {
         input.close();
+    }
+
+    private static SubscriptionOption[] getSubscriptionOptions(SubscriptionImpl subscription) {
+        final boolean pooledObjects = subscription.withPooledObjects();
+        final boolean notifyCancellation = subscription.notifyCancellation();
+
+        if (pooledObjects && notifyCancellation) {
+            return SubscriptionOption.values();
+        }
+        if (pooledObjects) {
+            return POOLED_OBJECTS_OPTIONS;
+        }
+        if (notifyCancellation) {
+            return NOTIFY_CANCELLATION_OPTIONS;
+        }
+        return EMPTY_OPTIONS;
+    }
+
+    private final class HttpMessageSubscriber implements Subscriber<HttpObject> {
+
+        @Override
+        public void onSubscribe(Subscription subscription) {
+            requireNonNull(subscription, "subscription");
+            if (upstream == null) {
+                upstream = subscription;
+                deferredInit();
+            } else {
+                subscription.cancel();
+            }
+        }
+
+        @Override
+        public void onNext(HttpObject obj) {
+            requireNonNull(obj, "obj");
+
+            askedUpstreamForElement = false;
+            handlerProduced = false;
+            try {
+                // Call the handler so that it publishes something.
+                if (obj instanceof HttpHeaders) {
+                    final HttpHeaders headers = (HttpHeaders) obj;
+                    if (headers instanceof ResponseHeaders &&
+                        ((ResponseHeaders) headers).status().isInformational()) {
+                        handler.processInformationalHeaders((ResponseHeaders) headers,
+                                                            DefaultHttpDeframer.this);
+                    } else if (!sawLeadingHeaders) {
+                        sawLeadingHeaders = true;
+                        handler.processHeaders((HttpHeaders) obj, DefaultHttpDeframer.this);
+                    } else {
+                        handler.processTrailers((HttpHeaders) obj, DefaultHttpDeframer.this);
+                    }
+                } else if (obj instanceof HttpData) {
+                    final HttpData data = (HttpData) obj;
+                    final ByteBuf byteBuf = byteBufConverter.apply(data);
+                    requireNonNull(byteBuf, "byteBufConverter.apply() returned null");
+                    if (input.add(byteBuf)) {
+                        handler.process(input, DefaultHttpDeframer.this);
+                    }
+                }
+
+                if (handlerProduced) {
+                    // Handler produced something.
+                    if (!askedUpstreamForElement) {
+                        // Ask the upstream for more elements after the produced elements are fully consumed and
+                        // there are still demands left.
+                        whenConsumed().handle((unused1, unused2) -> {
+                            if (demand() > 0) {
+                                askUpstreamForElement();
+                            }
+                            return null;
+                        });
+                    } else {
+                        // No need to ask the upstream for more elements because:
+                        // - The handler triggered Subscription.request(); or
+                        // - Subscription.request() was called from another thread.
+                    }
+                } else {
+                    // Handler didn't produce anything, which means it needs more elements from the upstream
+                    // to produce something.
+                    askUpstreamForElement();
+                }
+            } catch (Throwable ex) {
+                handler.processOnError(ex);
+                cancelAndCleanup();
+                abort(ex);
+                Exceptions.throwIfFatal(ex);
+            }
+        }
+
+        @Override
+        public void onError(Throwable cause) {
+            requireNonNull(cause, "cause");
+            if (cancelled) {
+                return;
+            }
+
+            if (!(cause instanceof AbortedStreamException)) {
+                handler.processOnError(cause);
+            }
+
+            abort(cause);
+            cleanup();
+        }
+
+        @Override
+        public void onComplete() {
+            if (cancelled) {
+                return;
+            }
+            cleanup();
+            close();
+        }
     }
 }

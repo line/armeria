@@ -25,13 +25,14 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.HttpDeframerOutput;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
@@ -44,7 +45,7 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
     private final GrpcStatusFunction statusFunction;
 
     @Nullable
-    private HttpDeframer<DeframedMessage> deframer;
+    private StreamMessage<DeframedMessage> deframedStreamMessage;
 
     public HttpStreamDeframerHandler(
             DecompressorRegistry decompressorRegistry,
@@ -58,19 +59,22 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
     }
 
     /**
-     * Sets the specified {@link HttpDeframer}.
-     * Note that the deframer should be set before processing the first {@link HttpObject}.
+     * Sets the deframed {@link StreamMessage}.
+     * Note that the {@code deframedStreamMessage} should be set before processing the first {@link HttpObject}.
      */
-    public void setDeframer(HttpDeframer<DeframedMessage> deframer) {
-        requireNonNull(deframer, "deframer");
-        checkState(this.deframer == null, "deframer is already set");
-        this.deframer = deframer;
+    public void setDeframedStreamMessage(StreamMessage<DeframedMessage> deframedStreamMessage) {
+        requireNonNull(deframedStreamMessage, "deframedStreamMessage");
+        checkState(this.deframedStreamMessage == null, "deframedStreamMessage is already set");
+        this.deframedStreamMessage = deframedStreamMessage;
     }
 
     @Override
     public void processHeaders(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
-        // Only clients will see headers from a stream. It doesn't hurt to share this logic between server
-        // and client though as everything else is identical.
+        if (headers instanceof RequestHeaders) {
+            // RequestHeaders is handled by (Un)FramedGrpcService.
+            return;
+        }
+
         final String statusText = headers.get(HttpHeaderNames.STATUS);
         if (statusText == null) {
             // Not allowed to have empty leading headers, kill the stream hard.
@@ -88,8 +92,8 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
 
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
-            assert deframer != null;
-            GrpcStatus.reportStatusLater(headers, deframer, transportStatusListener);
+            assert deframedStreamMessage != null;
+            GrpcStatus.reportStatusLater(headers, deframedStreamMessage, transportStatusListener);
         }
 
         // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
@@ -114,8 +118,8 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
     public void processTrailers(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
-            assert deframer != null;
-            GrpcStatus.reportStatusLater(headers, deframer, transportStatusListener);
+            assert deframedStreamMessage != null;
+            GrpcStatus.reportStatusLater(headers, deframedStreamMessage, transportStatusListener);
         }
     }
 

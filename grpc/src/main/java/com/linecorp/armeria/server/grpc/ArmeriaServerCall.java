@@ -18,8 +18,8 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil.serializeTrailersAsMessage;
-import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Base64;
@@ -41,7 +41,9 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
@@ -55,7 +57,8 @@ import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
@@ -82,6 +85,7 @@ import io.grpc.ServerCall;
 import io.grpc.Status;
 import io.grpc.StatusException;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 
 /**
  * Encapsulates the state of a single server call, reading messages from the client, passing to business logic
@@ -100,7 +104,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private final MethodDescriptor<I, O> method;
 
-    private final HttpDeframer<DeframedMessage> requestDeframer;
+    private final StreamMessage<DeframedMessage> deframedRequest;
     private final ArmeriaMessageFramer responseFramer;
 
     private final HttpResponseWriter res;
@@ -144,7 +148,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private int pendingRequests;
     private volatile int pendingMessages;
 
-    ArmeriaServerCall(HttpHeaders clientHeaders,
+    ArmeriaServerCall(HttpRequest req,
                       MethodDescriptor<I, O> method,
                       CompressorRegistry compressorRegistry,
                       DecompressorRegistry decompressorRegistry,
@@ -158,7 +162,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       boolean useBlockingTaskExecutor,
                       ResponseHeaders defaultHeaders,
                       @Nullable GrpcStatusFunction statusFunction) {
-        requireNonNull(clientHeaders, "clientHeaders");
+        requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
@@ -167,20 +171,21 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         requireNonNull(decompressorRegistry, "decompressorRegistry");
 
+        final RequestHeaders clientHeaders = req.headers();
+        final ByteBufAllocator alloc = ctx.alloc();
         final HttpStreamDeframerHandler handler =
                 new HttpStreamDeframerHandler(decompressorRegistry, this, statusFunction,
                                               maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
-        requestDeframer = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
-        handler.setDeframer(requestDeframer);
-        requestDeframer.subscribe(this, ctx.eventLoop());
-        responseFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
+        deframedRequest = req.deframe(handler, alloc, byteBufConverter(alloc, grpcWebText));
+        handler.setDeframedStreamMessage(deframedRequest);
+        responseFramer = new ArmeriaMessageFramer(alloc, maxOutboundMessageSizeBytes, grpcWebText);
 
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         clientAcceptEncoding =
                 Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
-        marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
+        marshaller = new GrpcMessageMarshaller<>(alloc, serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         blockingExecutor = useBlockingTaskExecutor ?
@@ -527,7 +532,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             final boolean ok = newStatus.isOk();
             if (!clientStreamClosed) {
                 clientStreamClosed = true;
-                requestDeframer.abort();
+                deframedRequest.abort();
             }
 
             if (ok) {
@@ -604,14 +609,14 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         return trailersBuilder.build();
     }
 
-    HttpDeframer<DeframedMessage> messageDeframer() {
-        return requestDeframer;
-    }
-
     void setListener(Listener<I> listener) {
         checkState(this.listener == null, "listener already set");
         this.listener = requireNonNull(listener, "listener");
         invokeOnReady();
+    }
+
+    void startDeframing() {
+        deframedRequest.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
     @Nullable

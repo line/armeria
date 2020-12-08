@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client.grpc;
 
-import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
+import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.UncheckedIOException;
@@ -45,7 +45,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -167,12 +167,13 @@ class GrpcWebTextTest {
         private static CompletableFuture<ByteBuf> deframeMessage(HttpData framed,
                                                                  EventLoop eventLoop,
                                                                  ByteBufAllocator alloc) {
-            final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
+            final CompletableFuture<ByteBuf> deframedByteBuf = new CompletableFuture<>();
             final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
-            final HttpDeframer<DeframedMessage> deframer = newHttpDeframer(handler, alloc, true);
-            StreamMessage.of(framed).subscribe(deframer, eventLoop);
-            deframer.subscribe(singleSubscriber(deframed), eventLoop);
-            return deframed;
+            final StreamMessage<HttpData> source = StreamMessage.of(framed);
+            final StreamMessage<DeframedMessage> deframed =
+                    new DefaultHttpDeframer<>(source, handler, alloc, byteBufConverter(alloc, true));
+            deframed.subscribe(singleSubscriber(deframedByteBuf), eventLoop);
+            return deframedByteBuf;
         }
 
         private static Subscriber<DeframedMessage> singleSubscriber(CompletableFuture<ByteBuf> deframed) {

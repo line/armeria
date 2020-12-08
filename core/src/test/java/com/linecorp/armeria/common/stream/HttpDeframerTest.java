@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -33,7 +34,12 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
@@ -49,12 +55,14 @@ class HttpDeframerTest {
     static EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Test
+    <T>
     void mapNToZero() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
-        final HttpDeframer<String> deframer = HttpDeframer.of(decoder, ByteBufAllocator.DEFAULT);
-        final Flux<HttpData> stream = Flux.just(HttpData.ofUtf8("A012345"), HttpData.ofUtf8("67"));
-        stream.subscribe(deframer);
-        StepVerifier.create(deframer)
+        final StreamMessage<HttpData> stream =
+                StreamMessage.of(HttpData.ofUtf8("A012345"), HttpData.ofUtf8("67"));
+        final StreamMessage<String> deframed =
+                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT, HttpData::byteBuf);
+        StepVerifier.create(deframed)
                     .expectComplete()
                     .verify();
         assertThat(decoder.isReleased()).isTrue();
@@ -63,11 +71,11 @@ class HttpDeframerTest {
     @Test
     void mapTwoToOne() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
-        final Flux<HttpData> stream = Flux.just("A012345", "6789B1234")
-                                          .map(HttpData::ofUtf8);
-        final HttpDeframer<String> deframer = HttpDeframer.of(decoder, ByteBufAllocator.DEFAULT);
-        stream.subscribe(deframer);
-        StepVerifier.create(deframer)
+        final StreamMessage<HttpData> stream =
+                StreamMessage.of(HttpData.ofUtf8("A012345"), HttpData.ofUtf8("6789B1234"));
+        final StreamMessage<String> deframed =
+                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT);
+        StepVerifier.create(deframed)
                     .expectNext("A0123456789")
                     .expectComplete()
                     .verify();
@@ -77,15 +85,16 @@ class HttpDeframerTest {
     @Test
     void mapNToN() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
-        final HttpDeframer<String> deframer = HttpDeframer.of(decoder, ByteBufAllocator.DEFAULT);
-        final Flux<HttpData> stream = Flux.just("A0123456789",
-                                                "B0123456789",
-                                                "C0123456789",
-                                                "D0123456789",
-                                                "E0123456789")
-                                          .map(HttpData::ofUtf8);
-        stream.subscribe(deframer);
-        StepVerifier.create(deframer)
+        final StreamMessage<HttpData> stream = new PublisherBasedStreamMessage<>(
+                Flux.just("A0123456789",
+                          "B0123456789",
+                          "C0123456789",
+                          "D0123456789",
+                          "E0123456789")
+                    .map(HttpData::ofUtf8));
+        final StreamMessage<String> deframed =
+                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT);
+        StepVerifier.create(deframed)
                     .expectNext("A0123456789")
                     .expectNext("B0123456789")
                     .expectNext("C0123456789")
@@ -99,19 +108,21 @@ class HttpDeframerTest {
     @Test
     void mapMToN() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
-        final HttpDeframer<String> deframer = HttpDeframer.of(decoder, ByteBufAllocator.DEFAULT);
-        final Flux<HttpData> stream = Flux.just("A012345",
-                                                "6789B0",
-                                                "12",
-                                                "",
-                                                "3",
-                                                "456789",
-                                                "C01234",
-                                                "56789D",
-                                                "0123456789E0123456789")
-                                          .map(HttpData::ofUtf8);
-        stream.subscribe(deframer);
-        StepVerifier.create(deframer)
+        final StreamMessage<HttpData> stream = new PublisherBasedStreamMessage<>(
+                Flux.just("A012345",
+                          "6789B0",
+                          "12",
+                          "",
+                          "3",
+                          "456789",
+                          "C01234",
+                          "56789D",
+                          "0123456789E0123456789")
+                    .map(HttpData::ofUtf8));
+
+        final StreamMessage<String> deframed =
+                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT);
+        StepVerifier.create(deframed)
                     .expectNext("A0123456789")
                     .expectNext("B0123456789")
                     .expectNext("C0123456789")
@@ -125,11 +136,12 @@ class HttpDeframerTest {
     @Test
     void mapNToOne() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
-        final HttpDeframer<String> deframer = HttpDeframer.of(decoder, ByteBufAllocator.DEFAULT);
-        final Flux<HttpData> stream = Flux.just(HttpData.empty(), HttpData.ofUtf8("A0123456"),
-                                                HttpData.empty(), HttpData.ofUtf8("789B"));
-        stream.subscribe(deframer);
-        StepVerifier.create(deframer)
+        final StreamMessage<HttpData> stream = new PublisherBasedStreamMessage<>(
+                Flux.just(HttpData.empty(), HttpData.ofUtf8("A0123456"),
+                          HttpData.empty(), HttpData.ofUtf8("789B")));
+        final StreamMessage<String> deframed =
+                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT);
+        StepVerifier.create(deframed)
                     .expectNext("A0123456789")
                     .expectComplete()
                     .verify();
@@ -139,23 +151,25 @@ class HttpDeframerTest {
     @Test
     void consumeExpectedCount() throws InterruptedException {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
-        final HttpDeframer<String> deframer = HttpDeframer.of(decoder, ByteBufAllocator.DEFAULT);
-        final Flux<HttpData> stream = Flux.just("A012345",
-                                                "6789B0",
-                                                "12",
-                                                "",
-                                                "3",
-                                                "456789",
-                                                "C01234",
-                                                "56789D",
-                                                "0123456789E0123456789")
-                                          .map(HttpData::ofUtf8);
+        final StreamMessage<HttpData> stream = new PublisherBasedStreamMessage<>(
+                Flux.just("A012345",
+                          "6789B0",
+                          "12",
+                          "",
+                          "3",
+                          "456789",
+                          "C01234",
+                          "56789D",
+                          "0123456789E0123456789")
+                    .map(HttpData::ofUtf8));
 
-        stream.subscribe(deframer);
+        final StreamMessage<String> deframed =
+                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT);
+
         final List<String> consumed = new ArrayList<>();
         final AtomicBoolean completed = new AtomicBoolean();
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
-        deframer.subscribe(new Subscriber<String>() {
+        deframed.subscribe(new Subscriber<String>() {
             @Override
             public void onSubscribe(Subscription s) {
                 subscriptionRef.set(s);
@@ -194,10 +208,8 @@ class HttpDeframerTest {
     }
 
     @Test
-    void headerAwareData() {
-        final Flux<HttpHeaders> headers = Flux.just(ResponseHeaders.of(HttpStatus.CONTINUE),
-                                                    HttpHeaders.of("length", 11));
-        final Flux<HttpData> stream = Flux.just("A012345",
+    void headerAwareData_HttpResponse() {
+        final Stream<HttpData> body = Stream.of("A012345",
                                                 "6789B0",
                                                 "12",
                                                 "",
@@ -206,13 +218,17 @@ class HttpDeframerTest {
                                                 "C01234",
                                                 "56789D",
                                                 "0123456789E0123456789")
-                                          .map(HttpData::ofUtf8);
+                                            .map(HttpData::ofUtf8);
+        final HttpResponseWriter response = HttpResponse.streaming();
+        response.write(ResponseHeaders.of(HttpStatus.CONTINUE));
+        response.write(HttpHeaders.of("length", 11));
+        body.forEach(response::write);
+        response.close();
 
         final HeaderAwareDecoder decoder = new HeaderAwareDecoder();
-        final HttpDeframer<String> deframer = HttpDeframer.of(decoder, ByteBufAllocator.DEFAULT);
+        final StreamMessage<String> deframed = response.deframe(decoder);
 
-        Flux.concat(headers, stream).subscribe(deframer);
-        StepVerifier.create(deframer)
+        StepVerifier.create(deframed)
                     .expectNext("A0123456789")
                     .expectNext("B0123456789")
                     .expectNext("C0123456789")
@@ -224,15 +240,45 @@ class HttpDeframerTest {
     }
 
     @Test
+    void headerAwareData_HttpRequest() {
+        final Flux<HttpData> body = Flux.just("A012345",
+                                              "6789B0",
+                                              "12",
+                                              "",
+                                              "3",
+                                              "456789",
+                                              "C01234",
+                                              "56789D",
+                                              "0123456789E0123456789")
+                                        .map(HttpData::ofUtf8);
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/", "length", 11), body);
+
+        final HeaderAwareDecoder decoder = new HeaderAwareDecoder();
+        final StreamMessage<String> deframed = request.deframe(decoder);
+
+        StepVerifier.create(deframed)
+                    .expectNext("A0123456789")
+                    .expectNext("B0123456789")
+                    .expectNext("C0123456789")
+                    .expectNext("D0123456789")
+                    .expectNext("E0123456789")
+                    .expectComplete()
+                    .verify();
+
+        assertThat(decoder.length).isEqualTo(11);
+        assertThat(decoder.isReleased()).isTrue();
+    }
+
+    @Test
     void deferredError() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
-        final HttpDeframer<String> deframer = HttpDeframer.of(decoder, ByteBufAllocator.DEFAULT);
         final RuntimeException cause = new RuntimeException("Error before subscribing");
-        final Flux<HttpData> stream = Flux.error(cause);
-        stream.subscribe(deframer);
+        final StreamMessage<HttpData> source = new PublisherBasedStreamMessage<>(Flux.error(cause));
+        final StreamMessage<String> deframed =
+                new DefaultHttpDeframer<>(source, decoder, ByteBufAllocator.DEFAULT, HttpData::byteBuf);
         final EventLoop eventLoop = HttpDeframerTest.eventLoop.get();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
-        deframer.subscribe(new Subscriber<String>() {
+        deframed.subscribe(new Subscriber<String>() {
             @Override
             public void onSubscribe(Subscription s) {}
 

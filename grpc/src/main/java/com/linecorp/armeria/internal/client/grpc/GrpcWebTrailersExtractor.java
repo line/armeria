@@ -17,7 +17,7 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.parseGrpcWebTrailers;
-import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
+import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,8 +42,9 @@ import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
-import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 
@@ -76,11 +77,10 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
         final ByteBufAllocator alloc = ctx.alloc();
 
         final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(maxMessageSizeBytes);
-        final HttpDeframer<DeframedMessage> deframer = newHttpDeframer(handler, alloc, grpcWebText);
-
         final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
-        publisher.subscribe(deframer, ctx.eventLoop());
-        deframer.subscribe(new TrailersSubscriber(ctx), ctx.eventLoop());
+        final StreamMessage<DeframedMessage> deframed =
+                new DefaultHttpDeframer<>(publisher, handler, alloc, byteBufConverter(alloc, grpcWebText));
+        deframed.subscribe(new TrailersSubscriber(ctx), ctx.eventLoop());
         final FilteredHttpResponse filteredHttpResponse = new FilteredHttpResponse(response, true) {
             @Override
             protected HttpObject filter(HttpObject obj) {

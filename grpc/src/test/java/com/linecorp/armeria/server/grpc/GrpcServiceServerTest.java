@@ -396,6 +396,8 @@ class GrpcServiceServerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.maxRequestLength(0);
+            sb.requestTimeoutMillis(0);
+            sb.idleTimeoutMillis(0);
 
             sb.service(
                     GrpcService.builder()
@@ -880,7 +882,10 @@ class GrpcServiceServerTest {
 
     @Test
     void unframed() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .responseTimeoutMillis(0)
+                                          .factory(ClientFactory.builder().idleTimeoutMillis(0).build())
+                                          .build();
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),

@@ -29,13 +29,13 @@ import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
-import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.grpc.DecompressorRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.core.publisher.Flux;
 
 @Test
@@ -70,22 +70,20 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
         final HttpStreamDeframerHandler handler =
                 new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), noopListener,
                                               null, -1);
-        final HttpDeframer<DeframedMessage> deframer =
-                        HttpDeframer.of(handler, ByteBufAllocator.DEFAULT);
+        final StreamMessage<DeframedMessage> deframed =
+                new DefaultHttpDeframer<>(source, handler, ByteBufAllocator.DEFAULT);
 
-        source.subscribe(deframer, ImmediateEventExecutor.INSTANCE);
-        return Flux.from(deframer).doOnNext(message -> byteBufs.add(message.buf()));
+        return Flux.from(deframed).doOnNext(message -> byteBufs.add(message.buf()));
     }
 
     @Override
     public Publisher<DeframedMessage> createFailedPublisher() {
-        final Flux<HttpData> source = Flux.error(new RuntimeException());
+        final StreamMessage<HttpData> source =
+                new PublisherBasedStreamMessage<>(Flux.error(new RuntimeException()));
         final HttpStreamDeframerHandler handler =
                 new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), noopListener,
                                               null, -1);
-        final HttpDeframer<DeframedMessage> reader = HttpDeframer.of(handler, ByteBufAllocator.DEFAULT);
-        source.subscribe(reader);
-        return reader;
+        return new DefaultHttpDeframer<>(source, handler, ByteBufAllocator.DEFAULT);
     }
 
     @Ignore

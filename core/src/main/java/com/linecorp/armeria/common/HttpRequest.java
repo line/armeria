@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -41,12 +42,15 @@ import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
+import com.linecorp.armeria.common.stream.HttpDeframerHandler;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -56,7 +60,7 @@ import io.netty.util.concurrent.EventExecutor;
  * <p>Note: The initial {@link RequestHeaders} is not signaled to {@link Subscriber}s. It is readily available
  * via {@link #headers()}.
  */
-public interface HttpRequest extends Request, StreamMessage<HttpObject> {
+public interface HttpRequest extends Request, HttpMessage, StreamMessage<HttpObject> {
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
     //       AggregatedHttpRequest for consistency.
@@ -543,5 +547,11 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     default HttpRequestDuplicator toDuplicator(EventExecutor executor, long maxRequestLength) {
         requireNonNull(executor, "executor");
         return new DefaultHttpRequestDuplicator(this, executor, maxRequestLength);
+    }
+
+    @Override
+    default <T> StreamMessage<T> deframe(HttpDeframerHandler<T> handler, ByteBufAllocator alloc,
+                                         Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
+        return new DefaultHttpDeframer<>(this, handler, alloc, byteBufConverter);
     }
 }

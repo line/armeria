@@ -20,12 +20,61 @@ import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An {@link HttpDeframerHandler} that decodes a stream of {@link HttpObject}s to N objects.
+ *
+ * <p>Follow the below steps to deframe HTTP payload using {@link HttpDeframerHandler}.
+ * <ol>
+ *   <li>Implement your deframing logic in {@link HttpDeframerHandler}.
+ *       <pre>{@code
+ *       > class FixedLengthDecoder implements HttpDeframerHandler<String> {
+ *       >     private final int length;
+ *       >
+ *       >     FixedLengthDecoder(int length) {
+ *       >         this.length = length;
+ *       >     }
+ *       >
+ *       >     @Override
+ *       >     public void process(HttpDeframerInput in, HttpDeframerOutput<String> out) {
+ *       >         int remaining = in.readableBytes();
+ *       >         if (remaining < length) {
+ *       >             // The input is not enough to process. Waiting for more data.
+ *       >             return;
+ *       >         }
+ *       >
+ *       >         do {
+ *       >             // Read data from 'HttpDeframerInput' and
+ *       >             // write the processed result to 'HttpDeframerOutput'.
+ *       >             ByteBuf buf = in.readBytes(length);
+ *       >             out.add(buf.toString(StandardCharsets.UTF_8));
+ *       >             // Should release the returned 'ByteBuf'
+ *       >             buf.release();
+ *       >             remaining -= length;
+ *       >         } while (remaining >= length);
+ *       >     }
+ *       > }
+ *       }</pre>
+ *   </li>
+ *   <li>Creates an deframed {@link StreamMessage} using {@link HttpMessage#deframe(HttpDeframerHandler)}
+ *       with the {@link HttpDeframerHandler} instance.
+ *       <pre>{@code
+ *       FixedLengthDecoder decoder = new FixedLengthDecoder(11);
+ *       HttpRequest req = ...;
+ *       StreamMessage<String> deframed = req.deframe(decoder);
+ *       }</pre>
+ *   </li>
+ *   <li>Subscribe to the {@link Publisher} of the deframed data and connect to your business logic.
+ *       <pre>{@code
+ *       import reactor.core.publisher.Flux;
+ *       Flux.from(deframed).map(...); // Consume and manipulate the deframed data.
+ *       }</pre>
+ *   </li>
+ * </ol>
  *
  * @param <T> the result type of being deframed
  */

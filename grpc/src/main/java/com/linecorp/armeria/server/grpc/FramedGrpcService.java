@@ -37,7 +37,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -52,7 +51,6 @@ import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
@@ -208,10 +206,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         final HttpResponseWriter res = HttpResponse.streaming();
         final ArmeriaServerCall<?, ?> call = startCall(
-                methodName, method, ctx, req.headers(), res, serializationFormat);
+                methodName, method, ctx, req, res, serializationFormat);
         if (call != null) {
             ctx.whenRequestCancelling().thenRun(() -> call.close(Status.CANCELLED, new Metadata()));
-            req.subscribe(call.messageDeframer(), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+            call.startDeframing();
         }
         return res;
     }
@@ -221,12 +219,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             String fullMethodName,
             ServerMethodDefinition<I, O> methodDef,
             ServiceRequestContext ctx,
-            HttpHeaders headers,
+            HttpRequest req,
             HttpResponseWriter res,
             SerializationFormat serializationFormat) {
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
         final ArmeriaServerCall<I, O> call = new ArmeriaServerCall<>(
-                headers,
+                req,
                 methodDescriptor,
                 compressorRegistry,
                 decompressorRegistry,
@@ -242,7 +240,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 statusFunction);
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = ctx.push()) {
-            listener = methodDef.getServerCallHandler().startCall(call, MetadataUtil.copyFromHeaders(headers));
+            listener = methodDef.getServerCallHandler()
+                                .startCall(call, MetadataUtil.copyFromHeaders(req.headers()));
         } catch (Throwable t) {
             call.setListener(new EmptyListener<>());
             call.close(GrpcStatus.fromThrowable(statusFunction, t), new Metadata());

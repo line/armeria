@@ -16,30 +16,24 @@
 
 package com.linecorp.armeria.internal.common.grpc.protocol;
 
+import java.util.function.Function;
+
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
-import com.linecorp.armeria.common.stream.HttpDeframer;
-import com.linecorp.armeria.common.stream.HttpDeframerHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-public final class HttpDeframerUtil {
+public final class Base64DecoderUtil {
 
-    /**
-     * Returns a newly-created {@link HttpDeframer} using the specified {@link HttpDeframerHandler}.
-     * If {@code decodeBase64} is set to true, a base64-encoded {@link ByteBuf} is decoded before deframing.
-     */
-    public static HttpDeframer<DeframedMessage> newHttpDeframer(
-            HttpDeframerHandler<DeframedMessage> handler,
-            ByteBufAllocator alloc, boolean decodeBase64) {
+    public static Function<? super HttpData, ? extends ByteBuf> byteBufConverter(ByteBufAllocator alloc,
+                                                                                 boolean decodeBase64) {
         if (decodeBase64) {
             final Base64Decoder base64Decoder = new Base64Decoder(alloc);
-            return HttpDeframer.of(handler, alloc, data -> base64Decoder.decode(data.byteBuf()));
+            return data -> base64Decoder.decode(data.byteBuf());
         } else {
-            return HttpDeframer.of(handler, alloc, HttpData::byteBuf);
+            return HttpData::byteBuf;
         }
     }
 
-    private HttpDeframerUtil() {}
+    private Base64DecoderUtil() {}
 }

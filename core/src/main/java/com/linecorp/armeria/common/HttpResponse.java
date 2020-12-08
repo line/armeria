@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -40,6 +41,8 @@ import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
+import com.linecorp.armeria.common.stream.HttpDeframerHandler;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -47,13 +50,14 @@ import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A streamed HTTP/2 {@link Response}.
  */
-public interface HttpResponse extends Response, StreamMessage<HttpObject> {
+public interface HttpResponse extends Response, HttpMessage, StreamMessage<HttpObject> {
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
     //       AggregatedHttpResponse for consistency.
@@ -574,5 +578,11 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     @CheckReturnValue
     default SplitHttpResponse split(EventExecutor executor) {
         return new DefaultSplitHttpResponse(this, executor);
+    }
+
+    @Override
+    default <T> StreamMessage<T> deframe(HttpDeframerHandler<T> handler, ByteBufAllocator alloc,
+                                         Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
+        return new DefaultHttpDeframer<>(this, handler, alloc, byteBufConverter);
     }
 }

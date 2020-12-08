@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
@@ -108,13 +108,12 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
     private static CompletableFuture<ByteBuf> deframeMessage(HttpData framed,
                                                              EventLoop eventLoop,
                                                              ByteBufAllocator alloc) {
-        final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
+        final CompletableFuture<ByteBuf> deframedByteBuf = new CompletableFuture<>();
         final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
-        final HttpDeframer<DeframedMessage> deframer = HttpDeframer.of(handler, alloc);
-
-        StreamMessage.of(framed).subscribe(deframer, eventLoop);
-        deframer.subscribe(singleSubscriber(deframed), eventLoop);
-        return deframed;
+        final StreamMessage<DeframedMessage> deframed =
+                new DefaultHttpDeframer<>(StreamMessage.of(framed), handler, alloc);
+        deframed.subscribe(singleSubscriber(deframedByteBuf), eventLoop);
+        return deframedByteBuf;
     }
 
     private static Subscriber<DeframedMessage> singleSubscriber(CompletableFuture<ByteBuf> deframed) {
