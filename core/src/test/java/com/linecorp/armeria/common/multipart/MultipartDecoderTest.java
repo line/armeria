@@ -322,7 +322,7 @@ public class MultipartDecoderTest {
                                "<foo>bar</foo>\n").getBytes();
 
         final BodyPartSubscriber testSubscriber =
-                new BodyPartSubscriber(SubscriberType.CANCEL_AFTER_ONE, null);
+                new BodyPartSubscriber(SubscriberType.ONE_BY_ONE, null);
         partsPublisher(boundary, chunk1).subscribe(testSubscriber);
         assertThatThrownBy(testSubscriber.completionFuture::join)
                 .hasCauseInstanceOf(MimeParsingException.class)
@@ -405,7 +405,7 @@ public class MultipartDecoderTest {
     /**
      * Types of test subscribers.
      */
-    enum SubscriberType {
+    private enum SubscriberType {
         INFINITE,
         ONE_BY_ONE,
         CANCEL_AFTER_ONE,
@@ -414,7 +414,7 @@ public class MultipartDecoderTest {
     /**
      * A part test subscriber.
      */
-    static class BodyPartSubscriber implements Subscriber<BodyPart> {
+    private static class BodyPartSubscriber implements Subscriber<BodyPart> {
 
         private final SubscriberType subscriberType;
         private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
@@ -469,7 +469,7 @@ public class MultipartDecoderTest {
      * @param data data for the chunk
      * @return publisher of body parts
      */
-    static Publisher<? extends BodyPart> partsPublisher(String boundary, byte[] data) {
+    private static Publisher<? extends BodyPart> partsPublisher(String boundary, byte[] data) {
         return partsPublisher(boundary, ImmutableList.of(data));
     }
 
@@ -479,7 +479,7 @@ public class MultipartDecoderTest {
      * @param data data for the chunks
      * @return publisher of body parts
      */
-    static Publisher<? extends BodyPart> partsPublisher(String boundary, List<byte[]> data) {
+    private static Publisher<? extends BodyPart> partsPublisher(String boundary, List<byte[]> data) {
         final MultipartDecoder decoder = new MultipartDecoder(boundary, ByteBufAllocator.DEFAULT);
         chunksPublisher(data).subscribe(decoder);
         return decoder;
@@ -490,7 +490,7 @@ public class MultipartDecoderTest {
      * @param bytes data for the chunk to create
      * @return publisher
      */
-    static Publisher<HttpData> chunksPublisher(byte[] bytes) {
+    private static Publisher<HttpData> chunksPublisher(byte[] bytes) {
         return chunksPublisher(ImmutableList.of(bytes));
     }
 
@@ -499,7 +499,7 @@ public class MultipartDecoderTest {
      * @param data data for the chunks to create
      * @return publisher
      */
-    static Publisher<HttpData> chunksPublisher(List<byte[]> data) {
+    private static Publisher<HttpData> chunksPublisher(List<byte[]> data) {
         final HttpData[] chunks = data.stream()
                                       .map(HttpData::copyOf)
                                       .toArray(HttpData[]::new);

@@ -36,7 +36,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -643,7 +642,7 @@ class MimeParserTest {
      * @param data for the chunks to parse
      * @return test parser event processor
      */
-    static List<AggregatedBodyPart> parse(String boundary, byte[] data) {
+    private static List<AggregatedBodyPart> parse(String boundary, byte[] data) {
         return parse(boundary, ImmutableList.of(data));
     }
 
@@ -654,7 +653,7 @@ class MimeParserTest {
      * @param data for the chunks to parse
      * @return test parser event processor
      */
-    static List<AggregatedBodyPart> parse(String boundary, List<byte[]> data) {
+    private static List<AggregatedBodyPart> parse(String boundary, List<byte[]> data) {
         final ByteBufDeframerInput input = new ByteBufDeframerInput(ByteBufAllocator.DEFAULT);
         final List<BodyPart> output = new ArrayList<>();
         final MimeParser parser = new MimeParser(input, output::add, boundary);
@@ -672,19 +671,5 @@ class MimeParserTest {
                                                       .block();
                          return AggregatedBodyPart.of(part.headers(), content);
                      }).collect(toImmutableList());
-    }
-
-    /**
-     * Pair of part headers and body part content.
-     */
-    static final class MimePart {
-
-        final Map<String, List<String>> headers;
-        final byte[] content;
-
-        MimePart(Map<String, List<String>> headers, byte[] content) {
-            this.headers = headers;
-            this.content = content;
-        }
     }
 }

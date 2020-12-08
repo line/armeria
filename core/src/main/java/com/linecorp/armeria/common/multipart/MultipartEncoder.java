@@ -52,7 +52,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * Reactive processor that encodes a stream of {@link BodyPart} into an HTTP payload.
+ * Reactive processor that encodes a stream of {@link BodyPart}s into an HTTP payload.
  */
 class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<HttpData> {
 

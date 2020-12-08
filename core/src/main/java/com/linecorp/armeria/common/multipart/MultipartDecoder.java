@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.stream.HttpDeframerHandler;
 import com.linecorp.armeria.common.stream.HttpDeframerInput;
 import com.linecorp.armeria.common.stream.HttpDeframerOutput;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.CompositeException;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
@@ -102,11 +103,27 @@ class MultipartDecoder implements HttpDeframer<BodyPart>, HttpDeframerHandler<Bo
 
     @Override
     public void onError(Throwable t) {
+        if (parser != null) {
+            try {
+                parser.close();
+            } catch (MimeParsingException ex) {
+                delegate.onError(new CompositeException(ex, t));
+                return;
+            }
+        }
         delegate.onError(t);
     }
 
     @Override
     public void onComplete() {
+        if (parser != null) {
+            try {
+                parser.close();
+            } catch (MimeParsingException ex) {
+                delegate.onError(ex);
+                return;
+            }
+        }
         delegate.onComplete();
     }
 }

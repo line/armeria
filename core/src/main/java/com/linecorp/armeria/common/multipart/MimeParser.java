@@ -53,51 +53,8 @@ import io.netty.buffer.Unpooled;
  * Parser for multipart MIME message.
  */
 final class MimeParser {
-    private final HttpDeframerInput in;
-    private final HttpDeframerOutput<BodyPart> out;
-
     // Forked from https://github.com/oracle/helidon/blob/a9363a3d226a3154e2fb99abe230239758504436/media
     // /multipart/src/main/java/io/helidon/media/multipart/MimeParser.java
-
-    /**
-     * All states.
-     */
-    private enum State {
-        /**
-         * The first state is set by the parser. It is set only once.
-         */
-        START_MESSAGE,
-
-        /**
-         * This state is set when skipping the preamble. It is set only once.
-         */
-        SKIP_PREAMBLE,
-
-        /**
-         * This state is set when a new part is detected. It is set for each part.
-         */
-        START_PART,
-
-        /**
-         * This state is set for each header line of a part.
-         */
-        HEADERS,
-
-        /**
-         * This state is set when each part chunk is parsed.
-         */
-        BODY,
-
-        /**
-         * This state is set when the content for a part is complete. It is set only once for each part.
-         */
-        END_PART,
-
-        /**
-         * This state is set when all parts are complete. It is set only once.
-         */
-        END_MESSAGE
-    }
 
     private static final Logger logger = LoggerFactory.getLogger(MimeParser.class);
 
@@ -129,10 +86,31 @@ final class MimeParser {
      */
     private State state = State.START_MESSAGE;
 
+    /**
+     * The input of multipart data.
+     */
+    private final HttpDeframerInput in;
+
+    /**
+     * The output which the parsed {@link BodyPart}s are added to.
+     */
+    private final HttpDeframerOutput<BodyPart> out;
+
+    /**
+     * The builder for the headers of a body part.
+     */
     @Nullable
-    private HttpHeadersBuilder bodyPartHeaderBuilder;
+    private HttpHeadersBuilder bodyPartHeadersBuilder;
+
+    /**
+     * The builder for a body part.
+     */
     @Nullable
     private BodyPartBuilder bodyPartBuilder;
+
+    /**
+     * that publisher that publishes body part contents.
+     */
     @Nullable
     private DefaultStreamMessage<HttpData> bodyPartPublisher;
 
@@ -222,7 +200,7 @@ final class MimeParser {
 
                     case START_PART:
                         logger.trace("state={}", State.START_PART);
-                        bodyPartHeaderBuilder = HttpHeaders.builder();
+                        bodyPartHeadersBuilder = HttpHeaders.builder();
                         bodyPartBuilder = BodyPart.builder();
                         state = State.HEADERS;
                         break;
@@ -242,14 +220,14 @@ final class MimeParser {
                             final String key = headerLine.substring(0, index).trim();
                             // Skip ':' from value
                             final String value = headerLine.substring(index + 1).trim();
-                            bodyPartHeaderBuilder.add(key, value);
+                            bodyPartHeadersBuilder.add(key, value);
                             break;
                         }
                         state = State.BODY;
                         startOfLine = true;
 
                         bodyPartPublisher = new DefaultStreamMessage<>();
-                        final BodyPart bodyPart = bodyPartBuilder.headers(bodyPartHeaderBuilder.build())
+                        final BodyPart bodyPart = bodyPartBuilder.headers(bodyPartHeadersBuilder.build())
                                                                  .content(bodyPartPublisher)
                                                                  .build();
                         out.add(bodyPart);
@@ -280,7 +258,7 @@ final class MimeParser {
                         // Release body part resources
                         bodyPartPublisher.close();
                         bodyPartPublisher = null;
-                        bodyPartHeaderBuilder = null;
+                        bodyPartHeadersBuilder = null;
                         bodyPartBuilder = null;
                         break;
 
@@ -601,5 +579,45 @@ final class MimeParser {
             bytes[i] = (byte) chars[i++];
         }
         return bytes;
+    }
+
+    /**
+     * All states.
+     */
+    private enum State {
+        /**
+         * The first state set by the parser. It is set only once.
+         */
+        START_MESSAGE,
+
+        /**
+         * The state set when skipping the preamble. It is set only once.
+         */
+        SKIP_PREAMBLE,
+
+        /**
+         * The state set when a new part is detected. It is set for each part.
+         */
+        START_PART,
+
+        /**
+         * The state set for each header line of a part.
+         */
+        HEADERS,
+
+        /**
+         * The state set when each part chunk is being parsed.
+         */
+        BODY,
+
+        /**
+         * The state set when the content for a part is complete. It is set only once for each part.
+         */
+        END_PART,
+
+        /**
+         * The state set when all parts are complete. It is set only once.
+         */
+        END_MESSAGE
     }
 }

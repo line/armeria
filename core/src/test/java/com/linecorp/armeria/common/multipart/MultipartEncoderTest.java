@@ -207,7 +207,7 @@ class MultipartEncoderTest {
     /**
      * A subscriber of data chunk that accumulates bytes to a single String.
      */
-    static class HttpDataAggregator implements Subscriber<HttpData> {
+    static final class HttpDataAggregator implements Subscriber<HttpData> {
 
         private final List<HttpData> dataList = new ArrayList<>();
         private final CompletableFuture<String> future = new CompletableFuture<>();

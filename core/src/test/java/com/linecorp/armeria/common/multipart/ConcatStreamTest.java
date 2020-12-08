@@ -25,12 +25,10 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import reactor.test.StepVerifier;
 
 class ConcatStreamTest {
+
     @Test
     void emptyStream() {
-
         final StreamMessage<Object> source = concat(StreamMessage.of());
-
-        StepVerifier.create(source)
-                    .verifyComplete();
+        StepVerifier.create(source).verifyComplete();
     }
 }
