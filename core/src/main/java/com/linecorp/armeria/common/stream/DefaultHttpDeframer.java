@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
@@ -41,6 +42,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * The default HTTP deframer implementation.
  */
+@UnstableApi
 public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implements HttpDeframerOutput<T> {
 
     private static final SubscriptionOption[] EMPTY_OPTIONS = {};
