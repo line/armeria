@@ -370,13 +370,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             }
 
             if (o instanceof AwaitDemandFuture) {
-                if (notifyAwaitDemandFuture()) {
-                    // Notified successfully.
-                    continue;
-                } else {
-                    // Not enough demand.
-                    break;
-                }
+                notifyAwaitDemandFuture();
+                continue;
             }
 
             if (!notifySubscriberWithElements(subscription)) {
@@ -419,16 +414,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         return true;
     }
 
-    private boolean notifyAwaitDemandFuture() {
-        if (demand == 0) {
-            return false;
-        }
-
+    private void notifyAwaitDemandFuture() {
         @SuppressWarnings("unchecked")
         final CompletableFuture<Void> f = (CompletableFuture<Void>) queue.remove();
         f.complete(null);
-
-        return true;
     }
 
     private void handleCloseEvent(SubscriptionImpl subscription, CloseEvent o) {
