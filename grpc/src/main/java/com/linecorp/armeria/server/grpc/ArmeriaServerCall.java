@@ -616,6 +616,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     void startDeframing() {
+        // Should start deframing after a listener is set.
+        assert listener != null;
         deframedRequest.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
