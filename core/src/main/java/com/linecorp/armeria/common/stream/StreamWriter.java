@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -106,7 +108,7 @@ public interface StreamWriter<T> {
      */
     @CheckReturnValue
     default boolean tryWrite(Supplier<? extends T> o) {
-        return tryWrite(o.get());
+        return tryWrite(requireNonNull(o.get(), "o.get() returned null"));
     }
 
     /**
