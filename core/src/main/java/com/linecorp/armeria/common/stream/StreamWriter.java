@@ -108,7 +108,9 @@ public interface StreamWriter<T> {
      */
     @CheckReturnValue
     default boolean tryWrite(Supplier<? extends T> o) {
-        return tryWrite(requireNonNull(o.get(), "o.get() returned null"));
+        requireNonNull(o, "o");
+        final T obj = requireNonNull(o.get(), "o.get() returned null");
+        return tryWrite(obj);
     }
 
     /**
