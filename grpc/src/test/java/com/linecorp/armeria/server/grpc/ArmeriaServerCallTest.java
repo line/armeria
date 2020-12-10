@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -55,6 +56,7 @@ import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
+import io.grpc.ServerCall.Listener;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
@@ -158,6 +160,7 @@ class ArmeriaServerCallTest {
                                .build(),
                 /* exceptionMappings */ null);
 
+        call.setListener(mock(Listener.class));
         call.startDeframing();
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.onNext(new DeframedMessage(buf, 0));
