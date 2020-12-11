@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -57,7 +58,7 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
     private final StreamMessage<? extends HttpObject> publisher;
 
     @Nullable
-    private HttpHeaders httpHeaders;
+    private RequestHeaders requestHeaders;
     @Nullable
     private Subscription upstream;
 
@@ -68,7 +69,7 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
     private boolean cancelled;
 
     /**
-     * Returns a new {@link DefaultHttpDeframer} with the specified {@link HttpDeframerHandler},
+     * Returns a new {@link DefaultHttpDeframer} with the specified {@link HttpDeframerHandler} and
      * {@link ByteBufAllocator}.
      */
     public DefaultHttpDeframer(StreamMessage<? extends HttpObject> streamMessage,
@@ -88,7 +89,7 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
         input = new ByteBufDeframerInput(requireNonNull(alloc, "alloc"));
         this.byteBufConverter = requireNonNull(byteBufConverter, "byteBufConverter");
         if (publisher instanceof HttpRequest) {
-            httpHeaders = ((HttpRequest) publisher).headers();
+            requestHeaders = ((HttpRequest) publisher).headers();
         }
 
         whenComplete().handle((unused1, unused2) -> {
@@ -111,10 +112,18 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
         final SubscriptionImpl subscriptionImpl = super.subscribe(subscription);
         if (subscriptionImpl == subscription) {
             final EventExecutor eventLoop = subscription.executor();
-            publisher.subscribe(subscriber, eventLoop, getSubscriptionOptions(subscription));
-            deferredInit();
+            if (eventLoop.inEventLoop()) {
+                subscribe0(subscription, eventLoop);
+            } else {
+                eventLoop.execute(() -> subscribe0(subscription, eventLoop));
+            }
         }
         return subscriptionImpl;
+    }
+
+    private void subscribe0(SubscriptionImpl subscription, EventExecutor eventLoop) {
+        publisher.subscribe(subscriber, eventLoop, getSubscriptionOptions(subscription));
+        deferredInit();
     }
 
     private void deferredInit() {
@@ -130,10 +139,10 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
             }
 
             long demand = demand();
-            if (demand > 0 && httpHeaders != null) {
-                final HttpHeaders httpHeaders = this.httpHeaders;
-                this.httpHeaders = null;
-                subscriber.onNext(httpHeaders);
+            if (demand > 0 && requestHeaders != null) {
+                final HttpHeaders requestHeaders = this.requestHeaders;
+                this.requestHeaders = null;
+                subscriber.onNext(requestHeaders);
                 demand--;
             }
 
@@ -148,11 +157,11 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
 
         // Fetch from upstream only when this deframer is initialized and the given demand is valid.
         if (initialized && n > 0) {
-            if (httpHeaders != null) {
+            if (requestHeaders != null) {
                 // A readily available HTTP headers is not delivered yet.
-                final HttpHeaders httpHeaders = this.httpHeaders;
-                this.httpHeaders = null;
-                subscriber.onNext(httpHeaders);
+                final HttpHeaders requestHeaders = this.requestHeaders;
+                this.requestHeaders = null;
+                subscriber.onNext(requestHeaders);
             } else {
                 askUpstreamForElement();
             }

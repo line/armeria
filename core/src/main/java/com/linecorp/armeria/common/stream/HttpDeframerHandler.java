@@ -60,7 +60,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *       > }
  *       }</pre>
  *   </li>
- *   <li>Creates an deframed {@link StreamMessage} using {@link HttpMessage#deframe(HttpDeframerHandler)}
+ *   <li>Create an deframed {@link StreamMessage} using {@link HttpMessage#deframe(HttpDeframerHandler)}
  *       with the {@link HttpDeframerHandler} instance.
  *       <pre>{@code
  *       FixedLengthDecoder decoder = new FixedLengthDecoder(11);
