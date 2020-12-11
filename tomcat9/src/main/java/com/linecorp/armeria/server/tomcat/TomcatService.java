@@ -33,6 +33,7 @@ import java.util.Queue;
 
 import javax.annotation.Nullable;
 
+import org.apache.catalina.LifecycleState;
 import org.apache.catalina.Service;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
@@ -330,7 +331,15 @@ public abstract class TomcatService implements HttpService {
     public final HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Connector connector = connector();
         if (connector == null) {
-            // Tomcat is not configured / stopped.
+            // Tomcat is not configured.
+            throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
+        }
+        final LifecycleState connectorState = connector.getState();
+        if (connectorState == LifecycleState.STOPPED ||
+            connectorState == LifecycleState.DESTROYING ||
+            connectorState == LifecycleState.DESTROYED ||
+            connectorState == LifecycleState.FAILED) {
+            // Tomcat is stopped.
             throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
 
