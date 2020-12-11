@@ -18,22 +18,22 @@ package com.linecorp.armeria.common.stream;
 
 import java.util.stream.LongStream;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.tck.SubscriberBlackboxVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
 
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage.AbortableSubscriber;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.core.publisher.Flux;
 
 public class AbortableSubscriberBlackboxTckTest extends SubscriberBlackboxVerification<Object> {
 
+    @Nullable
     private PublisherBasedStreamMessage<Object> publisher;
 
     protected AbortableSubscriberBlackboxTckTest() {
