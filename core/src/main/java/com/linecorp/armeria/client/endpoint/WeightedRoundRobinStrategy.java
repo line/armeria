@@ -152,7 +152,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                 // accumulation
                 long totalWeight = 0;
 
-                ImmutableList.Builder<EndpointsGroupByWeight> accumulatedGroupsBuilder =
+                final ImmutableList.Builder<EndpointsGroupByWeight> accumulatedGroupsBuilder =
                         ImmutableList.builderWithExpectedSize(numberDistinctWeight);
                 EndpointsGroupByWeight currentGroup = null;
 
