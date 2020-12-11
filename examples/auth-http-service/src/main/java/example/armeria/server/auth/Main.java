@@ -18,7 +18,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthService;
 import com.linecorp.armeria.server.auth.AuthServiceBuilder;
 import com.linecorp.armeria.server.auth.Authorizer;
-import com.linecorp.armeria.server.logging.LoggingService;
 
 public class Main {
 
@@ -46,9 +45,8 @@ public class Main {
         final Authorizer<HttpRequest> authorizer = (ctx, req) ->
                 CompletableFuture.supplyAsync(
                         () -> "token".equals(req.headers().get(AUTHORIZATION)));
-        sb.service("/welcom",
-                service.decorate(AuthService.newDecorator(authorizer))
-                        .decorate(LoggingService.newDecorator()));
+        sb.service("/hello",
+                service.decorate(AuthService.newDecorator(authorizer)));
 
         //MyAuthHandler
         final AuthServiceBuilder authServiceBuilder = AuthService.builder();
