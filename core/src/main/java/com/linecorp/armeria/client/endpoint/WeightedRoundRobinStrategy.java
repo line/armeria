@@ -164,15 +164,15 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
                         currentGroup = new EndpointsGroupByWeight(
                                 numEndpoints - rest, endpoint.weight(), totalWeight
                         );
-                        accumulatedGroupsBuilder = accumulatedGroupsBuilder.add(currentGroup);
+                        accumulatedGroupsBuilder.add(currentGroup);
                     }
 
                     rest--;
                 }
 
-                this.accumulatedGroups = accumulatedGroupsBuilder.build();
+                accumulatedGroups = accumulatedGroupsBuilder.build();
                 this.totalWeight = totalWeight;
-                this.weighted = minWeight != maxWeight;
+                weighted = minWeight != maxWeight;
             }
 
             @Nullable

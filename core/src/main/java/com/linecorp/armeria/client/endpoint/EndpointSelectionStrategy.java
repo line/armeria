@@ -29,7 +29,9 @@ import com.linecorp.armeria.common.HttpRequest;
 public interface EndpointSelectionStrategy {
 
     /**
-     * Returns a weighted round-robin strategy.
+     * Returns a weighted round-robin strategy. The endpoint is selected using
+     * <a href="https://en.wikipedia.org/wiki/Weighted_round_robin#Interleaved_WRR">Interleave WRR</a>
+     * algorithm.
      *
      * @see #roundRobin()
      * @see #sticky(ToLongFunction)
@@ -46,6 +48,24 @@ public interface EndpointSelectionStrategy {
      */
     static EndpointSelectionStrategy roundRobin() {
         return RoundRobinStrategy.INSTANCE;
+    }
+
+    /**
+     * Returns a weighted round-robin strategy which is ramping up the weight of the newly added
+     * {@link Endpoint}s using {@link EndpointWeightTransition#linear()}.
+     * The weights of {@link Endpoint}s are ramped up ten times every two seconds by default. If you want to
+     * customize the parameters, use {@link #builderForRampingUp()}.
+     */
+    static EndpointSelectionStrategy rampingUp() {
+        return RoundRobinStrategy.INSTANCE;
+    }
+
+    /**
+     * Returns a new {@link RampingUpWeightedRoundRobinStrategyBuilder} that builds
+     * a weighted round-robin strategy which is ramping up the weight of the newly added {@link Endpoint}s.
+     */
+    static RampingUpWeightedRoundRobinStrategyBuilder builderForRampingUp() {
+        return new RampingUpWeightedRoundRobinStrategyBuilder();
     }
 
     /**

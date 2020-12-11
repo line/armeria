@@ -1,0 +1,168 @@
+/*
+ * Copyright 2020 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package com.linecorp.armeria.client.endpoint;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
+
+import java.time.Duration;
+import java.util.concurrent.ScheduledExecutorService;
+
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.util.Ticker;
+
+import io.netty.channel.EventLoop;
+
+/**
+ * Builds a weighted round-robin strategy which is ramping up the weight of the newly added {@link Endpoint}s.
+ */
+public final class RampingUpWeightedRoundRobinStrategyBuilder {
+
+    private static final long DEFAULT_RAMPING_UP_INTERVAL_MILLIS = 2000;
+    private static final int DEFAULT_NUMBER_OF_STEPS = 10;
+    private static final int DEFAULT_UPDATING_ENTRY_WINDOW_MILLIS = 500;
+    private static final Ticker DEFAULT_TICKER = Ticker.systemTicker();
+
+    private EndpointWeightTransition transition = EndpointWeightTransition.linear();
+
+    @Nullable
+    private ScheduledExecutorService executor;
+
+    private long rampingUpIntervalMillis = DEFAULT_RAMPING_UP_INTERVAL_MILLIS;
+    private int totalSteps = DEFAULT_NUMBER_OF_STEPS;
+    private long updatingTaskWindowMillis = DEFAULT_UPDATING_ENTRY_WINDOW_MILLIS;
+    private Ticker ticker = DEFAULT_TICKER;
+
+    /**
+     * Sets the specified {@link EndpointWeightTransition} that will compute the weight of an {@link Endpoint}
+     * during the transition. {@link EndpointWeightTransition#linear()} is used by default.
+     */
+    public RampingUpWeightedRoundRobinStrategyBuilder transition(EndpointWeightTransition transition) {
+        this.transition = requireNonNull(transition, "transition");
+        return this;
+    }
+
+    /**
+     * Sets the specified {@link ScheduledExecutorService} that will be used to compute the weight of
+     * an {@link Endpoint} using {@link EndpointWeightTransition}. An {@link EventLoop} from
+     * {@link CommonPools#workerGroup()} is used by default.
+     */
+    public RampingUpWeightedRoundRobinStrategyBuilder executor(ScheduledExecutorService executor) {
+        this.executor = requireNonNull(executor, "executor");
+        return this;
+    }
+
+    /**
+     * Sets the specified {@code rampingUpInterval}. The weight of an {@link Endpoint} is ramped up
+     * {@link #totalSteps(int) totalSteps} times every {@code rampingUpInterval}.
+     * {@value DEFAULT_RAMPING_UP_INTERVAL_MILLIS} millis is used by default.
+     */
+    public RampingUpWeightedRoundRobinStrategyBuilder rampingUpInterval(Duration rampingUpInterval) {
+        requireNonNull(rampingUpInterval, "rampingUpInterval");
+        return rampingUpIntervalMillis(rampingUpInterval.toMillis());
+    }
+
+    /**
+     * Sets the specified {@code rampingUpIntervalMillis}. The weight of an {@link Endpoint} is ramped up
+     * {@link #totalSteps(int) totalSteps} times every {@code rampingUpIntervalMillis}.
+     * {@value DEFAULT_RAMPING_UP_INTERVAL_MILLIS} millis is used by default.
+     */
+    public RampingUpWeightedRoundRobinStrategyBuilder rampingUpIntervalMillis(long rampingUpIntervalMillis) {
+        checkArgument(rampingUpIntervalMillis > 0,
+                      "rampingUpIntervalMillis: %s (expected: > 0)", rampingUpIntervalMillis);
+        this.rampingUpIntervalMillis = rampingUpIntervalMillis;
+        return this;
+    }
+
+    /**
+     * Sets the specified {@code totalSteps}. The weight of an {@link Endpoint} is ramped up
+     * {@code totalSteps} times every {@link #rampingUpIntervalMillis(long) rampingUpIntervalMillis}.
+     * {@value DEFAULT_NUMBER_OF_STEPS} is used by default.
+     */
+    public RampingUpWeightedRoundRobinStrategyBuilder totalSteps(int totalSteps) {
+        checkArgument(totalSteps > 0, "totalSteps: %s (expected: > 0)", totalSteps);
+        this.totalSteps = totalSteps;
+        return this;
+    }
+
+    /**
+     * Sets the specified {@code updatingTaskWindow} which will be used to combine weight updating tasks.
+     * If several {@link Endpoint}s are added within the {@code updatingTaskWindow}, the weights of
+     * them are updated together. If there's already a scheduled job and a new {@link Endpoint}s are added
+     * within the {@code updatingTaskWindow}, they also updated together.
+     * This is an example of how it works when {@code updatingTaskWindow} is 500 milliseconds and
+     * {@code rampingUpIntervalMillis} is 2000 milliseconds:
+     * <pre>{@code
+     * ----------------------------------------------------------------------------------------------------
+     *     A         B                             C                                       D
+     * ----------------------------------------------------------------------------------------------------
+     *     0t       200T                        1000T                                    1800T     2000T
+     * }</pre>
+     * A and B are updated right away when they added and they are updated together from the point of the
+     * time at 2000T. C is updated alone every 2000 milliseconds. D is updated together with A and B at 2000T.
+     */
+    public RampingUpWeightedRoundRobinStrategyBuilder updatingTaskWindow(Duration updatingTaskWindow) {
+        requireNonNull(updatingTaskWindow, "updatingTaskWindow");
+        return updatingTaskWindowMillis(updatingTaskWindow.toMillis());
+    }
+
+    /**
+     * Sets the specified {@code updatingTaskWindowMillis} which will be used to combine weight updating tasks.
+     * If several {@link Endpoint}s are added within the {@code updatingTaskWindowMillis}, the weights of
+     * them are updated together. If there's already a scheduled job and a new {@link Endpoint}s are added
+     * within the {@code updatingTaskWindow}, they also updated together.
+     * This is an example of how it works when {@code updatingTaskWindowMillis} is 500 milliseconds and
+     * {@code rampingUpIntervalMillis} is 2000 milliseconds:
+     * <pre>{@code
+     * ----------------------------------------------------------------------------------------------------
+     *     A         B                             C                                       D
+     * ----------------------------------------------------------------------------------------------------
+     *     0t       200T                        1000T                                    1800T     2000T
+     * }</pre>
+     * A and B are updated right away when they added and they are updated together from the point of the
+     * time at 2000T. C is updated alone every 2000 milliseconds. D is updated together with A and B at 2000T.
+     */
+    public RampingUpWeightedRoundRobinStrategyBuilder updatingTaskWindowMillis(long updatingTaskWindowMillis) {
+        checkArgument(updatingTaskWindowMillis >= 0,
+                      "updatingTaskWindowMillis: %s (expected >= 0)", updatingTaskWindowMillis);
+        this.updatingTaskWindowMillis = updatingTaskWindowMillis;
+        return this;
+    }
+
+    /**
+     * Returns a newly-created weighted round-robin {@link EndpointSelectionStrategy} which is ramping up
+     * the weight of the newly added {@link Endpoint}s.
+     */
+    public EndpointSelectionStrategy build() {
+        checkState(rampingUpIntervalMillis > updatingTaskWindowMillis,
+                   "rampingUpIntervalMillis: %s, updatingTaskWindowMillis: %s " +
+                   "(expected: rampingUpIntervalMillis > updatingTaskWindowMillis)",
+                   rampingUpIntervalMillis, updatingTaskWindowMillis);
+        final ScheduledExecutorService executor;
+        if (this.executor != null) {
+            executor = this.executor;
+        } else {
+            executor = CommonPools.workerGroup().next();
+        }
+
+        return new RampingUpWeightedRoundRobinStrategy(transition, executor, rampingUpIntervalMillis,
+                                                       totalSteps, updatingTaskWindowMillis, ticker);
+    }
+}
