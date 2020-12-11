@@ -15,13 +15,17 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
-import static com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil.startServerWithRetries;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.annotation.Nullable;
 
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceType;
@@ -45,14 +49,16 @@ class ZooKeeperRegistrationTest {
     private static final String CURATOR_X_SERVICE_NAME = "foo";
     private static final String CURATOR_X_ADDRESS = "foo.com";
     private static final int SESSION_TIMEOUT_MILLIS = 20000;
-    private static final List<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints(3);
+
+    @Nullable
+    private static List<Endpoint> sampleEndpoints;
 
     @RegisterExtension
     static ZooKeeperExtension zkInstance = new ZooKeeperExtension();
 
     @Test
     void legacyZooKeeperRegistrationSpec() throws Throwable {
-        final List<Server> servers = startServers(true);
+        final List<Server> servers = startServersWithRetry(true);
         // all servers start and with znode created
         await().untilAsserted(() -> sampleEndpoints.forEach(
                 endpoint -> zkInstance.assertExists(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port())));
@@ -94,8 +100,18 @@ class ZooKeeperRegistrationTest {
         assertThat(remaining).isEqualTo(sampleEndpoints.size() - 1);
     }
 
+    private static List<Server> startServersWithRetry(boolean legacySpec) {
+        final AtomicReference<List<Server>> serversRef = new AtomicReference<>();
+        await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+            assertThatCode(() -> serversRef.set(startServers(legacySpec)))
+                    .doesNotThrowAnyException();
+        });
+        return serversRef.get();
+    }
+
     private static List<Server> startServers(boolean legacySpec) throws Exception {
         final List<Server> servers = new ArrayList<>();
+        sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints(3);
         for (int i = 0; i < sampleEndpoints.size(); i++) {
             final Server server = Server.builder()
                                         .http(sampleEndpoints.get(i).port())
@@ -115,7 +131,7 @@ class ZooKeeperRegistrationTest {
                                              .sessionTimeoutMillis(SESSION_TIMEOUT_MILLIS)
                                              .build();
             server.addListener(listener);
-            startServerWithRetries(server);
+            server.start().join();
             servers.add(server);
         }
         return servers;
@@ -123,7 +139,7 @@ class ZooKeeperRegistrationTest {
 
     @Test
     void curatorRegistrationSpec() throws Throwable {
-        final List<Server> servers = startServers(false);
+        final List<Server> servers = startServersWithRetry(false);
         // all servers start and with znode created
         await().untilAsserted(() -> {
             for (int i = 0; i < 3; i++) {
@@ -137,9 +153,9 @@ class ZooKeeperRegistrationTest {
                 final ZooKeeperDiscoverySpec discoverySpec =
                         ZooKeeperDiscoverySpec.builderForCurator(CURATOR_X_SERVICE_NAME)
                                               .converter(serviceInstance -> {
-                                         instanceCaptor.complete(serviceInstance);
-                                         return null;
-                                     }).build();
+                                                  instanceCaptor.complete(serviceInstance);
+                                                  return null;
+                                              }).build();
                 discoverySpec.decode(zk.getData(Z_NODE + '/' + CURATOR_X_SERVICE_NAME + '/' + i).get());
                 final ServiceInstance<?> actual = instanceCaptor.join();
                 final ServiceInstance<Object> expected = expectedInstance(servers, i);
