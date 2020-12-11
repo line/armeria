@@ -18,8 +18,8 @@ package com.linecorp.armeria.client.endpoint;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.LongAdder;
 
 import javax.annotation.Nullable;
 
@@ -127,7 +127,7 @@ final class WeightBasedRandomEndpointSelector {
     static class Entry {
         private final Endpoint endpoint;
         final long lowerBound;
-        private final LongAdder counter = new LongAdder();
+        private final AtomicInteger counter = new AtomicInteger();
 
         Entry(Endpoint endpoint, long lowerBound) {
             this.endpoint = endpoint;
@@ -142,16 +142,15 @@ final class WeightBasedRandomEndpointSelector {
             if (isFull()) {
                 return false;
             }
-            counter.add(1);
-            return true;
+            return counter.incrementAndGet() <= endpoint.weight();
         }
 
         boolean isFull() {
-            return counter.sum() >= endpoint.weight();
+            return counter.get() >= endpoint.weight();
         }
 
         public void reset() {
-            counter.reset();
+            counter.set(0);
         }
     }
 }
