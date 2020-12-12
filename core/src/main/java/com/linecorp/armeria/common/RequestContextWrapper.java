@@ -184,6 +184,27 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     }
 
     @Override
+    public void cancel(Throwable cause) {
+        delegate().cancel(cause);
+    }
+
+    @Override
+    public void cancel() {
+        delegate().cancel();
+    }
+
+    @Override
+    public void timeoutNow() {
+        delegate().timeoutNow();
+    }
+
+    @Override
+    @Nullable
+    public Throwable cancellationCause() {
+        return delegate().cancellationCause();
+    }
+
+    @Override
     public ContextAwareEventLoop eventLoop() {
         return delegate().eventLoop();
     }
