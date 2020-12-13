@@ -72,12 +72,10 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
     @VisibleForTesting
     final class RampingUpEndpointWeightSelector extends AbstractEndpointSelector {
 
-        private final List<Endpoint> initialEndpoints;
-
         private volatile WeightBasedRandomEndpointSelector endpointSelector;
 
         @Nullable
-        private List<Endpoint> oldEndpoints;
+        private List<Endpoint> oldEndpoints = new ArrayList<>();
 
         @VisibleForTesting
         final Deque<EndpointsInUpdatingEntry> endpointsInUpdatingEntries = new ArrayDeque<>();
@@ -87,8 +85,9 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
 
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            initialEndpoints = endpointGroup.endpoints();
+            final List<Endpoint> initialEndpoints = endpointGroup.endpoints();
             endpointSelector = new WeightBasedRandomEndpointSelector(initialEndpoints);
+            oldEndpoints.addAll(initialEndpoints);
             endpointGroup.addListener(this::updateEndpoints);
         }
 
@@ -110,12 +109,8 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
         // Only executed by the executor.
         private void updateEndpoints0(List<Endpoint> newEndpoints) {
             unhandledNewEndpoints = null;
-            if (oldEndpoints == null) {
-                // The first event of endpoints change.
-                oldEndpoints = new ArrayList<>();
-                oldEndpoints.addAll(initialEndpoints);
-            } else if (updatingTaskWindowNanos > 0) {
-                if (addToLastEntry()) {
+            if (updatingTaskWindowNanos > 0) {
+                if (addToPrevEntry()) {
                     // Update weight right away and combine updating weight schedule with the previous Entry.
                     final Deque<EndpointAndStep> newlyAddedEndpoints = updateEndpoints1(newEndpoints);
                     final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
@@ -155,7 +150,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             updateEndpointWeight();
         }
 
-        private boolean addToLastEntry() {
+        private boolean addToPrevEntry() {
             final EndpointsInUpdatingEntry lastEndpointsInUpdatingEntry = endpointsInUpdatingEntries.peekLast();
             return lastEndpointsInUpdatingEntry != null &&
                    ticker.read() - lastEndpointsInUpdatingEntry.lastUpdatedTime <= updatingTaskWindowNanos;
