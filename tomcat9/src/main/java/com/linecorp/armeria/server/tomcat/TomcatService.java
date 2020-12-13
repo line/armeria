@@ -330,23 +330,12 @@ public abstract class TomcatService implements HttpService {
     @Override
     public final HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Connector connector = connector();
-        if (connector == null) {
-            // Tomcat is not configured.
-            throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
+        if (connector == null || isConnectorStopped(connector.getState())) {
+            return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
-        final LifecycleState connectorState = connector.getState();
-        if (connectorState == LifecycleState.STOPPED ||
-            connectorState == LifecycleState.DESTROYING ||
-            connectorState == LifecycleState.DESTROYED ||
-            connectorState == LifecycleState.FAILED) {
-            // Tomcat is stopped.
-            throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
-        }
-
         final Adapter coyoteAdapter = connector.getProtocolHandler().getAdapter();
         if (coyoteAdapter == null) {
-            // Tomcat is not configured / stopped.
-            throw HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE);
+            return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
 
         final HttpResponseWriter res = HttpResponse.streaming();
@@ -355,6 +344,12 @@ public abstract class TomcatService implements HttpService {
                 if (cause != null) {
                     logger.warn("{} Failed to aggregate a request:", ctx, cause);
                     if (res.tryWrite(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR))) {
+                        res.close();
+                    }
+                    return null;
+                }
+                if (isConnectorStopped(connector.getState())) {
+                    if (res.tryWrite(ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE))) {
                         res.close();
                     }
                     return null;
@@ -378,6 +373,13 @@ public abstract class TomcatService implements HttpService {
 
                 ctx.blockingTaskExecutor().execute(() -> {
                     if (!res.isOpen()) {
+                        return;
+                    }
+
+                    if (isConnectorStopped(connector.getState())) {
+                        if (res.tryWrite(ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE))) {
+                            res.close();
+                        }
                         return;
                     }
 
@@ -407,6 +409,13 @@ public abstract class TomcatService implements HttpService {
         });
 
         return res;
+    }
+
+    private static boolean isConnectorStopped(LifecycleState connectorState) {
+        return connectorState == LifecycleState.STOPPED ||
+               connectorState == LifecycleState.DESTROYING ||
+               connectorState == LifecycleState.DESTROYED ||
+               connectorState == LifecycleState.FAILED;
     }
 
     @Nullable
