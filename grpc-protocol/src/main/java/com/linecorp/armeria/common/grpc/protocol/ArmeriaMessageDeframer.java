@@ -59,7 +59,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
-import com.linecorp.armeria.common.stream.HttpDeframerOutput;
+import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -106,7 +106,7 @@ public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
     }
 
     @Override
-    public void process(HttpDecoderInput in, HttpDeframerOutput<DeframedMessage> out) throws Exception {
+    public void process(HttpDecoderInput in, HttpDecoderOutput<DeframedMessage> out) throws Exception {
         startedDeframing = true;
         int readableBytes = in.readableBytes();
         while (readableBytes >= requiredLength) {

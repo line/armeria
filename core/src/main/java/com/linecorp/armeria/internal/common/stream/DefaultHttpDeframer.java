@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.HttpDecoder;
-import com.linecorp.armeria.common.stream.HttpDeframerOutput;
+import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -51,7 +51,7 @@ import io.netty.util.concurrent.EventExecutor;
  * The default HTTP deframer implementation.
  */
 @UnstableApi
-public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implements HttpDeframerOutput<T> {
+public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implements HttpDecoderOutput<T> {
 
     private static final SubscriptionOption[] EMPTY_OPTIONS = {};
     private static final SubscriptionOption[] POOLED_OBJECTS_OPTIONS = { WITH_POOLED_OBJECTS };

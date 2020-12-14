@@ -308,7 +308,7 @@ class HttpDeframerTest {
         }
 
         @Override
-        public void process(HttpDecoderInput in, HttpDeframerOutput<String> out) {
+        public void process(HttpDecoderInput in, HttpDecoderOutput<String> out) {
             int remaining = in.readableBytes();
             if (remaining < length) {
                 return;
@@ -334,13 +334,13 @@ class HttpDeframerTest {
         private final List<ByteBuf> byteBufs = new ArrayList<>();
 
         @Override
-        public void processHeaders(HttpHeaders in, HttpDeframerOutput<String> out) {
+        public void processHeaders(HttpHeaders in, HttpDecoderOutput<String> out) {
             length = in.getInt("length", -1);
             assertThat(length).isGreaterThan(0);
         }
 
         @Override
-        public void process(HttpDecoderInput in, HttpDeframerOutput<String> out) {
+        public void process(HttpDecoderInput in, HttpDecoderOutput<String> out) {
             int remaining = in.readableBytes();
             if (remaining < length) {
                 return;

@@ -30,9 +30,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *
  * <p>Follow the below steps to decode HTTP payload using {@link HttpDecoder}.
  * <ol>
- *   <li>Implement your deframing logic in {@link HttpDecoder}.
+ *   <li>Implement your decoding logic in {@link HttpDecoder}.
  *       <pre>{@code
- *       > class FixedLengthDecoder implements HttpDeframerHandler<String> {
+ *       > class FixedLengthDecoder implements HttpDecoder<String> {
  *       >     private final int length;
  *       >
  *       >     FixedLengthDecoder(int length) {
@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *       >     }
  *       >
  *       >     @Override
- *       >     public void process(HttpDeframerInput in, HttpDeframerOutput<String> out) {
+ *       >     public void process(HttpDecoderInput in, HttpDecoderOutput<String> out) {
  *       >         int remaining = in.readableBytes();
  *       >         if (remaining < length) {
  *       >             // The input is not enough to process. Waiting for more data.
@@ -48,8 +48,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *       >         }
  *       >
  *       >         do {
- *       >             // Read data from 'HttpDeframerInput' and
- *       >             // write the processed result to 'HttpDeframerOutput'.
+ *       >             // Read data from 'HttpDecoderInput' and
+ *       >             // write the processed result to 'HttpDecoderOutput'.
  *       >             ByteBuf buf = in.readBytes(length);
  *       >             out.add(buf.toString(StandardCharsets.UTF_8));
  *       >             // Should release the returned 'ByteBuf'
@@ -60,23 +60,23 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *       > }
  *       }</pre>
  *   </li>
- *   <li>Create an deframed {@link StreamMessage} using {@link HttpMessage#decode(HttpDecoder)}
+ *   <li>Create an decoded {@link StreamMessage} using {@link HttpMessage#decode(HttpDecoder)}
  *       with the {@link HttpDecoder} instance.
  *       <pre>{@code
  *       FixedLengthDecoder decoder = new FixedLengthDecoder(11);
  *       HttpRequest req = ...;
- *       StreamMessage<String> deframed = req.decode(decoder);
+ *       StreamMessage<String> decoded = req.decode(decoder);
  *       }</pre>
  *   </li>
- *   <li>Subscribe to the {@link Publisher} of the deframed data and connect to your business logic.
+ *   <li>Subscribe to the {@link Publisher} of the decoded data and connect to your business logic.
  *       <pre>{@code
  *       import reactor.core.publisher.Flux;
- *       Flux.from(deframed).map(...); // Consume and manipulate the deframed data.
+ *       Flux.from(decoded).map(...); // Consume and manipulate the decoded data.
  *       }</pre>
  *   </li>
  * </ol>
  *
- * @param <T> the result type of being deframed
+ * @param <T> the result type of being decoded
  */
 @UnstableApi
 public interface HttpDecoder<T> {
@@ -85,22 +85,22 @@ public interface HttpDecoder<T> {
      * Decodes a stream of {@link HttpData}s to N objects.
      * This method will be called whenever an {@link HttpData} is signaled from {@link Publisher}.
      */
-    void process(HttpDecoderInput in, HttpDeframerOutput<T> out) throws Exception;
+    void process(HttpDecoderInput in, HttpDecoderOutput<T> out) throws Exception;
 
     /**
      * Decodes an informational {@link ResponseHeaders} to N objects.
      */
-    default void processInformationalHeaders(ResponseHeaders in, HttpDeframerOutput<T> out) throws Exception {}
+    default void processInformationalHeaders(ResponseHeaders in, HttpDecoderOutput<T> out) throws Exception {}
 
     /**
      * Decodes a non-informational {@link HttpHeaders} to N objects.
      */
-    default void processHeaders(HttpHeaders in, HttpDeframerOutput<T> out) throws Exception {}
+    default void processHeaders(HttpHeaders in, HttpDecoderOutput<T> out) throws Exception {}
 
     /**
      * Decodes a {@link HttpHeaders trailers} to N objects.
      */
-    default void processTrailers(HttpHeaders in, HttpDeframerOutput<T> out) throws Exception {}
+    default void processTrailers(HttpHeaders in, HttpDecoderOutput<T> out) throws Exception {}
 
     /**
      * Invoked when a {@link Throwable} is raised while deframing.

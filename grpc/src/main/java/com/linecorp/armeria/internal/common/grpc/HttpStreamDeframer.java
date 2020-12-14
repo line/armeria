@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.stream.HttpDeframerOutput;
+import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.grpc.DecompressorRegistry;
@@ -69,7 +69,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     }
 
     @Override
-    public void processHeaders(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
+    public void processHeaders(HttpHeaders headers, HttpDecoderOutput<DeframedMessage> out) {
         if (headers instanceof RequestHeaders) {
             // RequestHeaders is handled by (Un)FramedGrpcService.
             return;
@@ -115,7 +115,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     }
 
     @Override
-    public void processTrailers(HttpHeaders headers, HttpDeframerOutput<DeframedMessage> out) {
+    public void processTrailers(HttpHeaders headers, HttpDecoderOutput<DeframedMessage> out) {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;
