@@ -91,7 +91,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public long demand() {
+    public final long demand() {
         return demand;
     }
 

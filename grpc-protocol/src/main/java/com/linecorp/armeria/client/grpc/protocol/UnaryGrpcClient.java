@@ -154,7 +154,7 @@ public final class UnaryGrpcClient {
                                })
                        .thenCompose(msg -> {
                            if (!msg.status().equals(HttpStatus.OK) || msg.content().isEmpty()) {
-                               // Nothing to decode.
+                               // Nothing to deframe.
                                return CompletableFuture.completedFuture(msg.toHttpResponse());
                            }
 
