@@ -76,11 +76,11 @@ import io.netty.buffer.Unpooled;
  * a {@link ByteBuf} to optimize message parsing.
  */
 @UnstableApi
-public class ArmeriaMessageDeframerHandler implements HttpDecoder<DeframedMessage> {
+public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
 
     public static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
-    private static final String DEBUG_STRING = ArmeriaMessageDeframerHandler.class.getName();
+    private static final String DEBUG_STRING = ArmeriaMessageDeframer.class.getName();
 
     private static final int HEADER_LENGTH = 5;
     private static final int COMPRESSED_FLAG_MASK = 1;
@@ -98,10 +98,10 @@ public class ArmeriaMessageDeframerHandler implements HttpDecoder<DeframedMessag
     private Decompressor decompressor;
 
     /**
-     * Construct an {@link ArmeriaMessageDeframerHandler} for reading messages out of a gRPC request or
+     * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or
      * response.
      */
-    public ArmeriaMessageDeframerHandler(int maxMessageSizeBytes) {
+    public ArmeriaMessageDeframer(int maxMessageSizeBytes) {
         this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
     }
 
@@ -192,7 +192,7 @@ public class ArmeriaMessageDeframerHandler implements HttpDecoder<DeframedMessag
     /**
      * Sets the {@link Decompressor} for this deframer.
      */
-    public ArmeriaMessageDeframerHandler decompressor(@Nullable Decompressor decompressor) {
+    public ArmeriaMessageDeframer decompressor(@Nullable Decompressor decompressor) {
         checkState(!startedDeframing,
                    "Deframing has already started, cannot change decompressor mid-stream.");
         this.decompressor = decompressor;

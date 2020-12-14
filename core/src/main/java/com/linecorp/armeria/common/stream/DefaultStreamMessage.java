@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -114,7 +115,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    SubscriptionImpl subscribe(SubscriptionImpl subscription) {
+    protected SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
             final SubscriptionImpl oldSubscription = this.subscription;
             assert oldSubscription != null;
@@ -136,6 +137,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
         try {
             invokedOnSubscribe = true;
+            subscribe0(subscription.executor(), subscription.withPooledObjects(),
+                       subscription.notifyCancellation());
             subscriber.onSubscribe(subscription);
         } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
@@ -148,6 +151,16 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             }
         }
     }
+
+    /**
+     * Invoked when a subscriber subscribes.
+     */
+    protected void subscribe0(EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation) {}
+
+    /**
+     * Invoked whenever a new demand is requested.
+     */
+    protected void onRequest(long n) {}
 
     @Override
     public final void abort() {
@@ -210,12 +223,12 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    final long demand() {
+    public final long demand() {
         return demand;
     }
 
     @Override
-    void request(long n) {
+    final void request(long n) {
         final SubscriptionImpl subscription = this.subscription;
         // A user cannot access subscription without subscribing.
         assert subscription != null;
@@ -228,6 +241,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void doRequest(long n) {
+        onRequest(n);
+
         final long oldDemand = demand;
         if (oldDemand >= Long.MAX_VALUE - n) {
             demand = Long.MAX_VALUE;
@@ -241,7 +256,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    void cancel() {
+    final void cancel() {
         if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
             // It the state was CLOSED, close() or close(cause) has been called before cancel() or abort()
             // is called. We just ignore the previously pushed event and deal with CANCELLED_CLOSE.

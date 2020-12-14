@@ -39,14 +39,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
+import com.linecorp.armeria.internal.common.stream.DefaultHttpDeframer;
 
 import io.grpc.ClientInterceptor;
 import io.grpc.Decompressor;
@@ -76,7 +76,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
         final HttpResponse response = delegate.execute(ctx, req);
         final ByteBufAllocator alloc = ctx.alloc();
 
-        final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(maxMessageSizeBytes);
+        final ArmeriaMessageDeframer handler = new ArmeriaMessageDeframer(maxMessageSizeBytes);
         final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessage<DeframedMessage> deframed =
                 new DefaultHttpDeframer<>(publisher, handler, alloc, byteBufConverter(alloc, grpcWebText));

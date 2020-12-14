@@ -29,9 +29,9 @@ import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
-import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.internal.common.stream.DefaultHttpDeframer;
 
 import io.grpc.DecompressorRegistry;
 import io.netty.buffer.ByteBuf;
@@ -67,9 +67,9 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
                                           .toArray(HttpData[]::new);
         final StreamMessage<HttpData> source = StreamMessage.of(data);
 
-        final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), noopListener,
-                                              null, -1);
+        final HttpStreamDeframer handler =
+                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), noopListener,
+                                       null, -1);
         final StreamMessage<DeframedMessage> deframed =
                 new DefaultHttpDeframer<>(source, handler, ByteBufAllocator.DEFAULT);
 
@@ -80,9 +80,9 @@ public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> 
     public Publisher<DeframedMessage> createFailedPublisher() {
         final StreamMessage<HttpData> source =
                 new PublisherBasedStreamMessage<>(Flux.error(new RuntimeException()));
-        final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(DecompressorRegistry.getDefaultInstance(), noopListener,
-                                              null, -1);
+        final HttpStreamDeframer handler =
+                new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), noopListener,
+                                       null, -1);
         return new DefaultHttpDeframer<>(source, handler, ByteBufAllocator.DEFAULT);
     }
 

@@ -47,7 +47,6 @@ import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -55,22 +54,23 @@ import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.common.stream.DefaultHttpDeframer;
 
 import io.grpc.Codec.Gzip;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import reactor.test.StepVerifier;
 
-class ArmeriaMessageDeframerHandlerTest {
+class ArmeriaMessageDeframerTest {
 
     private static final int MAX_MESSAGE_SIZE = 1024;
 
     private DeframedMessage deframedMessage;
-    private ArmeriaMessageDeframerHandler handler;
+    private ArmeriaMessageDeframer handler;
 
     @BeforeEach
     void setUp() {
-        handler = new ArmeriaMessageDeframerHandler(MAX_MESSAGE_SIZE)
+        handler = new ArmeriaMessageDeframer(MAX_MESSAGE_SIZE)
                 .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
         deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
     }

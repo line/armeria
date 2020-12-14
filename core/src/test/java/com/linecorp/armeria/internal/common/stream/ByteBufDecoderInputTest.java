@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,7 +31,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
-class ByteBufDeframerInputTest {
+class ByteBufDecoderInputTest {
 
     ByteBufDecoderInput input;
     List<ByteBuf> byteBufs = new ArrayList<>();
@@ -81,8 +81,8 @@ class ByteBufDeframerInputTest {
             assertThat(input.readByte()).isEqualTo((byte) i);
         }
         assertThatThrownBy(() -> input.readByte())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("end of deframer input");
+                  .isInstanceOf(IllegalStateException.class)
+                  .hasMessageContaining("end of deframer input");
     }
 
     @Test
@@ -113,8 +113,8 @@ class ByteBufDeframerInputTest {
         assertThat(byteBufs.get(2).refCnt()).isZero();
 
         assertThatThrownBy(() -> input.readInt())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("end of deframer input");
+                  .isInstanceOf(IllegalStateException.class)
+                  .hasMessageContaining("end of deframer input");
     }
 
     @Test
@@ -171,8 +171,8 @@ class ByteBufDeframerInputTest {
         buf.release();
 
         assertThatThrownBy(() -> input.readBytes(1))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("end of deframer input");
+                  .isInstanceOf(IllegalStateException.class)
+                  .hasMessageContaining("end of deframer input");
         input.close();
         assertThat(byteBuf1.refCnt()).isZero();
         assertThat(byteBuf2.refCnt()).isZero();

@@ -138,6 +138,11 @@ public interface StreamMessage<T> extends Publisher<T> {
     boolean isEmpty();
 
     /**
+     * Returns the current demand of this stream.
+     */
+    long demand();
+
+    /**
      * Returns {@code true} if this stream is complete, either successfully or exceptionally,
      * including cancellation and abortion.
      *

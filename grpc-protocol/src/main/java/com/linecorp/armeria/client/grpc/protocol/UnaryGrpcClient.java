@@ -40,14 +40,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
-import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
-import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -162,12 +160,10 @@ public final class UnaryGrpcClient {
 
                            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
-                           final StreamMessage<HttpData> publisher = StreamMessage.of(msg.content());
-                           final ArmeriaMessageDeframerHandler handler =
-                                   new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
-                           final StreamMessage<DeframedMessage> deframed =
-                                   new DefaultHttpDeframer<>(publisher, handler, ctx.alloc());
-                           deframed.subscribe(singleSubscriber(msg, responseFuture), ctx.eventLoop());
+                           final ArmeriaMessageDeframer deframer =
+                                   new ArmeriaMessageDeframer(Integer.MAX_VALUE);
+                           msg.toHttpResponse().decode(deframer, ctx.alloc())
+                              .subscribe(singleSubscriber(msg, responseFuture), ctx.eventLoop());
                            return responseFuture;
                        }), ctx.eventLoop());
         }

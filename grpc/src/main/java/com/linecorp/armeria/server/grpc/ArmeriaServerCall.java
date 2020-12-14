@@ -65,7 +65,7 @@ import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
-import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframerHandler;
+import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
@@ -173,9 +173,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         final RequestHeaders clientHeaders = req.headers();
         final ByteBufAllocator alloc = ctx.alloc();
-        final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(decompressorRegistry, this, statusFunction,
-                                              maxInboundMessageSizeBytes)
+        final HttpStreamDeframer handler =
+                new HttpStreamDeframer(decompressorRegistry, this, statusFunction,
+                                       maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         deframedRequest = req.decode(handler, alloc, byteBufConverter(alloc, grpcWebText));
         handler.setDeframedStreamMessage(deframedRequest);

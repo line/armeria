@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
 
-public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandler {
+public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
@@ -47,7 +47,7 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
     @Nullable
     private StreamMessage<DeframedMessage> deframedStreamMessage;
 
-    public HttpStreamDeframerHandler(
+    public HttpStreamDeframer(
             DecompressorRegistry decompressorRegistry,
             TransportStatusListener transportStatusListener,
             @Nullable GrpcStatusFunction statusFunction,
@@ -129,7 +129,7 @@ public final class HttpStreamDeframerHandler extends ArmeriaMessageDeframerHandl
     }
 
     @Override
-    public HttpStreamDeframerHandler decompressor(@Nullable Decompressor decompressor) {
-        return (HttpStreamDeframerHandler) super.decompressor(decompressor);
+    public HttpStreamDeframer decompressor(@Nullable Decompressor decompressor) {
+        return (HttpStreamDeframer) super.decompressor(decompressor);
     }
 }

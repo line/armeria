@@ -42,12 +42,12 @@ import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
+import com.linecorp.armeria.internal.common.stream.DefaultHttpDeframer;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -349,7 +349,8 @@ public interface HttpRequest extends Request, HttpMessage, StreamMessage<HttpObj
      * {@link LanguageRange} and picking the first match. This is the "classic"
      * algorithm described in
      * <a href="https://tools.ietf.org/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
-     * and also referenced in <a href="https://tools.ietf.org/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     * and also referenced in
+     * <a href="https://tools.ietf.org/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
      * @param supportedLocales an {@link Iterable} of {@link Locale}s supported by the server.
      * @return The best matching {@link Locale} or {@code null} if no {@link Locale} matches.
      */
@@ -365,7 +366,8 @@ public interface HttpRequest extends Request, HttpMessage, StreamMessage<HttpObj
      * {@link LanguageRange} and picking the first match. This is the "classic"
      * algorithm described in
      * <a href="https://tools.ietf.org/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
-     * and also referenced in <a href="https://tools.ietf.org/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     * and also referenced in
+     * <a href="https://tools.ietf.org/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
      * @param supportedLocales {@link Locale}s supported by the server.
      * @return The best matching {@link Locale} or {@code null} if no {@link Locale} matches.
      */

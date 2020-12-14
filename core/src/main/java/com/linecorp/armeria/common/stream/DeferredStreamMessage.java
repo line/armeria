@@ -166,7 +166,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    final long demand() {
+    public final long demand() {
         return pendingDemand;
     }
 

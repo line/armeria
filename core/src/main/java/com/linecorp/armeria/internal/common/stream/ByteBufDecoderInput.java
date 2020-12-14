@@ -14,13 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.Queue;
+
+import com.linecorp.armeria.common.stream.HttpDecoderInput;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;

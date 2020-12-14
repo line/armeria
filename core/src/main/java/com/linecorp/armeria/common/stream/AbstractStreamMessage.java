@@ -93,11 +93,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     }
 
     /**
-     * Returns the current demand.
-     */
-    abstract long demand();
-
-    /**
      * Callback invoked by {@link Subscription#request(long)} to add {@code n} to demand.
      */
     abstract void request(long n);

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
@@ -34,6 +34,13 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.HttpDecoder;
+import com.linecorp.armeria.common.stream.HttpDeframerOutput;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
@@ -92,10 +99,14 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
             requestHeaders = ((HttpRequest) publisher).headers();
         }
 
-        whenComplete().handle((unused1, unused2) -> {
-            // In addition to 'onComplete()', 'onError()' and 'cancel()',
-            // make sure to call 'cleanup()' even when 'abort()' or 'close()' is invoked directly
-            cleanup();
+        whenComplete().handle((unused1, cause) -> {
+            if (cause instanceof CancelledSubscriptionException) {
+                cancelAndCleanup();
+            } else {
+                // In addition to 'onComplete()', 'onError()' and 'cancel()',
+                // make sure to call 'cleanup()' even when 'abort()' or 'close()' is invoked directly
+                cleanup();
+            }
             return null;
         });
     }
@@ -108,21 +119,8 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
     }
 
     @Override
-    SubscriptionImpl subscribe(SubscriptionImpl subscription) {
-        final SubscriptionImpl subscriptionImpl = super.subscribe(subscription);
-        if (subscriptionImpl == subscription) {
-            final EventExecutor eventLoop = subscription.executor();
-            if (eventLoop.inEventLoop()) {
-                subscribe0(subscription, eventLoop);
-            } else {
-                eventLoop.execute(() -> subscribe0(subscription, eventLoop));
-            }
-        }
-        return subscriptionImpl;
-    }
-
-    private void subscribe0(SubscriptionImpl subscription, EventExecutor eventLoop) {
-        publisher.subscribe(subscriber, eventLoop, getSubscriptionOptions(subscription));
+    protected void subscribe0(EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation) {
+        publisher.subscribe(subscriber, executor, toSubscriptionOptions(withPooledObjects, notifyCancellation));
         deferredInit();
     }
 
@@ -153,8 +151,7 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
     }
 
     @Override
-    void request(long n) {
-
+    protected void onRequest(long n) {
         // Fetch from upstream only when this deframer is initialized and the given demand is valid.
         if (initialized && n > 0) {
             if (requestHeaders != null) {
@@ -166,8 +163,6 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
                 askUpstreamForElement();
             }
         }
-
-        super.request(n);
     }
 
     private void askUpstreamForElement() {
@@ -176,12 +171,6 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
             assert upstream != null;
             upstream.request(1);
         }
-    }
-
-    @Override
-    void cancel() {
-        cancelAndCleanup();
-        super.cancel();
     }
 
     private void cancelAndCleanup() {
@@ -200,14 +189,12 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
         input.close();
     }
 
-    private static SubscriptionOption[] getSubscriptionOptions(SubscriptionImpl subscription) {
-        final boolean pooledObjects = subscription.withPooledObjects();
-        final boolean notifyCancellation = subscription.notifyCancellation();
-
-        if (pooledObjects && notifyCancellation) {
+    private static SubscriptionOption[] toSubscriptionOptions(boolean withPooledObjects,
+                                                              boolean notifyCancellation) {
+        if (withPooledObjects && notifyCancellation) {
             return SubscriptionOption.values();
         }
-        if (pooledObjects) {
+        if (withPooledObjects) {
             return POOLED_OBJECTS_OPTIONS;
         }
         if (notifyCancellation) {

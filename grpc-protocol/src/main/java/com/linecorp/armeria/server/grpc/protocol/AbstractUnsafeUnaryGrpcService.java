@@ -25,18 +25,18 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
-import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -64,6 +64,8 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
             ResponseHeaders.of(HttpStatus.OK,
                                HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto",
                                GrpcHeaderNames.GRPC_ENCODING, "identity");
+
+    private static final RequestHeaders DUMMY_HEADERS = RequestHeaders.of(HttpMethod.GET, "/");
 
     /**
      * Returns an unframed response message to return to the client, given an unframed request message. It is
@@ -109,18 +111,18 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                                                              EventLoop eventLoop,
                                                              ByteBufAllocator alloc) {
         final CompletableFuture<ByteBuf> deframedByteBuf = new CompletableFuture<>();
-        final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
-        final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(StreamMessage.of(framed), handler, alloc);
-        deframed.subscribe(singleSubscriber(deframedByteBuf), eventLoop);
+
+        final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(Integer.MAX_VALUE);
+        HttpRequest.of(DUMMY_HEADERS, framed).decode(deframer, alloc)
+                   .subscribe(singleSubscriber(deframedByteBuf), eventLoop);
         return deframedByteBuf;
     }
 
     private static Subscriber<DeframedMessage> singleSubscriber(CompletableFuture<ByteBuf> deframed) {
-        return new Subscriber<DeframedMessage>()  {
+        return new Subscriber<DeframedMessage>() {
             @Override
             public void onSubscribe(Subscription s) {
-               s.request(1);
+                s.request(1);
             }
 
             @Override
