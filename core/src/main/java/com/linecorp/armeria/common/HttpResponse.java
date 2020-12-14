@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.DefaultHttpDeframer;
-import com.linecorp.armeria.common.stream.HttpDeframerHandler;
+import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -497,59 +497,22 @@ public interface HttpResponse extends Response, HttpMessage, StreamMessage<HttpO
         return future;
     }
 
-    /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
-     * more {@link HttpResponse}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
-     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
-     * {@link HttpResponseDuplicator}.
-     */
     @Override
     default HttpResponseDuplicator toDuplicator() {
         return toDuplicator(Flags.defaultMaxResponseLength());
     }
 
-    /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
-     * more {@link HttpResponse}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
-     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
-     * {@link HttpResponseDuplicator}.
-     *
-     * @param executor the executor to duplicate
-     */
     @Override
     default HttpResponseDuplicator toDuplicator(EventExecutor executor) {
         return toDuplicator(executor, Flags.defaultMaxResponseLength());
     }
 
-    /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
-     * more {@link HttpResponse}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
-     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
-     * {@link HttpResponseDuplicator}.
-     *
-     * @param maxResponseLength the maximum response length that the duplicator can hold in its buffer.
-     *                         {@link ContentTooLargeException} is raised if the length of the buffered
-     *                         {@link HttpData} is greater than this value.
-     */
+    @Override
     default HttpResponseDuplicator toDuplicator(long maxResponseLength) {
         return toDuplicator(defaultSubscriberExecutor(), maxResponseLength);
     }
 
-    /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
-     * more {@link HttpResponse}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
-     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
-     * {@link HttpResponseDuplicator}.
-     *
-     * @param executor the executor to duplicate
-     * @param maxResponseLength the maximum response length that the duplicator can hold in its buffer.
-     *                         {@link ContentTooLargeException} is raised if the length of the buffered
-     *                         {@link HttpData} is greater than this value.
-     */
+    @Override
     default HttpResponseDuplicator toDuplicator(EventExecutor executor, long maxResponseLength) {
         requireNonNull(executor, "executor");
         return new DefaultHttpResponseDuplicator(this, executor, maxResponseLength);
@@ -581,8 +544,8 @@ public interface HttpResponse extends Response, HttpMessage, StreamMessage<HttpO
     }
 
     @Override
-    default <T> StreamMessage<T> deframe(HttpDeframerHandler<T> handler, ByteBufAllocator alloc,
-                                         Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
+    default <T> StreamMessage<T> decode(HttpDecoder<T> handler, ByteBufAllocator alloc,
+                                        Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
         return new DefaultHttpDeframer<>(this, handler, alloc, byteBufConverter);
     }
 }

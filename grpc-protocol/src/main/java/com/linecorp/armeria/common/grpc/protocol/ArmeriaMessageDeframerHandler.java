@@ -57,8 +57,8 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.HttpDeframerHandler;
-import com.linecorp.armeria.common.stream.HttpDeframerInput;
+import com.linecorp.armeria.common.stream.HttpDecoder;
+import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import com.linecorp.armeria.common.stream.HttpDeframerOutput;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
@@ -76,7 +76,7 @@ import io.netty.buffer.Unpooled;
  * a {@link ByteBuf} to optimize message parsing.
  */
 @UnstableApi
-public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<DeframedMessage> {
+public class ArmeriaMessageDeframerHandler implements HttpDecoder<DeframedMessage> {
 
     public static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
@@ -106,7 +106,7 @@ public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<Defram
     }
 
     @Override
-    public void process(HttpDeframerInput in, HttpDeframerOutput<DeframedMessage> out) throws Exception {
+    public void process(HttpDecoderInput in, HttpDeframerOutput<DeframedMessage> out) throws Exception {
         startedDeframing = true;
         int readableBytes = in.readableBytes();
         while (readableBytes >= requiredLength) {
@@ -124,7 +124,7 @@ public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<Defram
      * Processes the gRPC compression header which is composed of the compression flag and the outer
      * frame length.
      */
-    private void readHeader(HttpDeframerInput in) {
+    private void readHeader(HttpDecoderInput in) {
         final int type = in.readUnsignedByte();
         if ((type & RESERVED_MASK) != 0) {
             throw new ArmeriaStatusException(
@@ -150,7 +150,7 @@ public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<Defram
      * Processes the body of the gRPC compression frame. A single compression frame may contain
      * several gRPC messages within it.
      */
-    private DeframedMessage readBody(HttpDeframerInput in) {
+    private DeframedMessage readBody(HttpDecoderInput in) {
         final ByteBuf buf;
         if (requiredLength == 0) {
             buf = Unpooled.EMPTY_BUFFER;

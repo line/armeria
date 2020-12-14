@@ -52,8 +52,8 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
 
     private final HttpMessageSubscriber subscriber = new HttpMessageSubscriber();
 
-    private final HttpDeframerHandler<T> handler;
-    private final ByteBufDeframerInput input;
+    private final HttpDecoder<T> handler;
+    private final ByteBufDecoderInput input;
     private final Function<? super HttpData, ? extends ByteBuf> byteBufConverter;
     private final StreamMessage<? extends HttpObject> publisher;
 
@@ -69,24 +69,24 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
     private boolean cancelled;
 
     /**
-     * Returns a new {@link DefaultHttpDeframer} with the specified {@link HttpDeframerHandler} and
+     * Returns a new {@link DefaultHttpDeframer} with the specified {@link HttpDecoder} and
      * {@link ByteBufAllocator}.
      */
     public DefaultHttpDeframer(StreamMessage<? extends HttpObject> streamMessage,
-                               HttpDeframerHandler<T> handler, ByteBufAllocator alloc) {
+                               HttpDecoder<T> handler, ByteBufAllocator alloc) {
         this(streamMessage, handler, alloc, HttpData::byteBuf);
     }
 
     /**
-     * Returns a new {@link DefaultHttpDeframer} with the specified {@link HttpDeframerHandler},
+     * Returns a new {@link DefaultHttpDeframer} with the specified {@link HttpDecoder},
      * {@link ByteBufAllocator} and {@code byteBufConverter}.
      */
     public DefaultHttpDeframer(StreamMessage<? extends HttpObject> streamMessage,
-                               HttpDeframerHandler<T> handler, ByteBufAllocator alloc,
+                               HttpDecoder<T> handler, ByteBufAllocator alloc,
                                Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
         publisher = requireNonNull(streamMessage, "streamMessage");
         this.handler = requireNonNull(handler, "handler");
-        input = new ByteBufDeframerInput(requireNonNull(alloc, "alloc"));
+        input = new ByteBufDecoderInput(requireNonNull(alloc, "alloc"));
         this.byteBufConverter = requireNonNull(byteBufConverter, "byteBufConverter");
         if (publisher instanceof HttpRequest) {
             requestHeaders = ((HttpRequest) publisher).headers();

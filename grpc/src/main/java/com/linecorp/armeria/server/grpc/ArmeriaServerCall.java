@@ -177,7 +177,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 new HttpStreamDeframerHandler(decompressorRegistry, this, statusFunction,
                                               maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
-        deframedRequest = req.deframe(handler, alloc, byteBufConverter(alloc, grpcWebText));
+        deframedRequest = req.decode(handler, alloc, byteBufConverter(alloc, grpcWebText));
         handler.setDeframedStreamMessage(deframedRequest);
         responseFramer = new ArmeriaMessageFramer(alloc, maxOutboundMessageSizeBytes, grpcWebText);
 

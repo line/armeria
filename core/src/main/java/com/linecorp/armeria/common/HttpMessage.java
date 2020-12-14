@@ -20,11 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.stream.HttpDeframerHandler;
+import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessageDuplicator;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A streamed HTTP/2 message.
@@ -32,28 +34,75 @@ import io.netty.buffer.ByteBufAllocator;
 public interface HttpMessage {
 
     /**
-     * Creates a deframed {@link StreamMessage} which is decoded from a stream of {@link HttpObject}s using
-     * the specified {@link HttpDeframerHandler}.
+     * Returns a new {@link StreamMessageDuplicator} that duplicates this {@link HttpMessage} into one or
+     * more {@link HttpMessage}s, which publish the same elements.
+     * Note that you cannot subscribe to this {@link HttpMessage} anymore after you call this method.
+     * To subscribe, call {@link StreamMessageDuplicator#duplicate()} from the returned
+     * {@link StreamMessageDuplicator}.
      */
-    default <T> StreamMessage<T> deframe(HttpDeframerHandler<T> handler) {
+    StreamMessageDuplicator<HttpObject> toDuplicator();
+
+    /**
+     * Returns a new {@link StreamMessageDuplicator} that duplicates this {@link HttpMessage} into one or
+     * more {@link HttpMessage}s, which publish the same elements.
+     * Note that you cannot subscribe to this {@link HttpMessage} anymore after you call this method.
+     * To subscribe, call {@link StreamMessageDuplicator#duplicate()} from the returned
+     * {@link StreamMessageDuplicator}.
+     *
+     * @param executor the executor to duplicate
+     */
+    StreamMessageDuplicator<HttpObject> toDuplicator(EventExecutor executor);
+
+    /**
+     * Returns a new {@link StreamMessageDuplicator} that duplicates this {@link HttpMessage} into one or
+     * more {@link HttpMessage}s, which publish the same elements.
+     * Note that you cannot subscribe to this {@link HttpMessage} anymore after you call this method.
+     * To subscribe, call {@link StreamMessageDuplicator#duplicate()} from the returned
+     * {@link StreamMessageDuplicator}.
+     *
+     * @param maxContentLength the maximum content length that the duplicator can hold in its buffer.
+     *                         {@link ContentTooLargeException} is raised if the length of the buffered
+     *                         {@link HttpData} is greater than this value.
+     */
+    StreamMessageDuplicator<HttpObject> toDuplicator(long maxContentLength);
+
+    /**
+     * Returns a new {@link StreamMessageDuplicator} that duplicates this {@link HttpMessage} into one or
+     * more {@link HttpMessage}s, which publish the same elements.
+     * Note that you cannot subscribe to this {@link HttpMessage} anymore after you call this method.
+     * To subscribe, call {@link StreamMessageDuplicator#duplicate()} from the returned
+     * {@link StreamMessageDuplicator}.
+     *
+     * @param executor the executor to duplicate
+     * @param maxContentLength the maximum content length that the duplicator can hold in its buffer.
+     *                         {@link ContentTooLargeException} is raised if the length of the buffered
+     *                         {@link HttpData} is greater than this value.
+     */
+    StreamMessageDuplicator<HttpObject> toDuplicator(EventExecutor executor, long maxContentLength);
+
+    /**
+     * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@link HttpObject}s using
+     * the specified {@link HttpDecoder}.
+     */
+    default <T> StreamMessage<T> decode(HttpDecoder<T> handler) {
         requireNonNull(handler, "handler");
-        return deframe(handler, ByteBufAllocator.DEFAULT);
+        return decode(handler, ByteBufAllocator.DEFAULT);
     }
 
     /**
-     * Creates a deframed {@link StreamMessage} which is decoded from a stream of {@link HttpObject}s using
-     * the specified {@link HttpDeframerHandler} and {@link ByteBufAllocator}.
+     * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@link HttpObject}s using
+     * the specified {@link HttpDecoder} and {@link ByteBufAllocator}.
      */
-    default <T> StreamMessage<T> deframe(HttpDeframerHandler<T> handler, ByteBufAllocator alloc) {
+    default <T> StreamMessage<T> decode(HttpDecoder<T> handler, ByteBufAllocator alloc) {
         requireNonNull(handler, "handler");
         requireNonNull(alloc, "alloc");
-        return deframe(handler, alloc, HttpData::byteBuf);
+        return decode(handler, alloc, HttpData::byteBuf);
     }
 
     /**
-     * Creates a deframed {@link StreamMessage} which is decoded from a stream of {@link HttpObject}s using
-     * the specified {@link HttpDeframerHandler} and {@link ByteBufAllocator} and {@code byteBufConverter}.
+     * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@link HttpObject}s using
+     * the specified {@link HttpDecoder} and {@link ByteBufAllocator} and {@code byteBufConverter}.
      */
-    <T> StreamMessage<T> deframe(HttpDeframerHandler<T> handler, ByteBufAllocator alloc,
-                                 Function<? super HttpData, ? extends ByteBuf> byteBufConverter);
+    <T> StreamMessage<T> decode(HttpDecoder<T> handler, ByteBufAllocator alloc,
+                                Function<? super HttpData, ? extends ByteBuf> byteBufConverter);
 }

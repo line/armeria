@@ -220,7 +220,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 new HttpStreamDeframerHandler(decompressorRegistry, this, null, maxInboundMessageSizeBytes);
         final ByteBufAllocator alloc = ctx.alloc();
         final StreamMessage<DeframedMessage> deframed =
-                res.deframe(handler, alloc, byteBufConverter(alloc, grpcWebText));
+                res.decode(handler, alloc, byteBufConverter(alloc, grpcWebText));
         handler.setDeframedStreamMessage(deframed);
         deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
         responseListener.onReady();

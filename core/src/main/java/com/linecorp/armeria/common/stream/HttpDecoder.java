@@ -26,11 +26,11 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * An {@link HttpDeframerHandler} that decodes a stream of {@link HttpObject}s to N objects.
+ * An {@link HttpDecoder} that decodes a stream of {@link HttpObject}s to N objects.
  *
- * <p>Follow the below steps to deframe HTTP payload using {@link HttpDeframerHandler}.
+ * <p>Follow the below steps to decode HTTP payload using {@link HttpDecoder}.
  * <ol>
- *   <li>Implement your deframing logic in {@link HttpDeframerHandler}.
+ *   <li>Implement your deframing logic in {@link HttpDecoder}.
  *       <pre>{@code
  *       > class FixedLengthDecoder implements HttpDeframerHandler<String> {
  *       >     private final int length;
@@ -60,12 +60,12 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *       > }
  *       }</pre>
  *   </li>
- *   <li>Create an deframed {@link StreamMessage} using {@link HttpMessage#deframe(HttpDeframerHandler)}
- *       with the {@link HttpDeframerHandler} instance.
+ *   <li>Create an deframed {@link StreamMessage} using {@link HttpMessage#decode(HttpDecoder)}
+ *       with the {@link HttpDecoder} instance.
  *       <pre>{@code
  *       FixedLengthDecoder decoder = new FixedLengthDecoder(11);
  *       HttpRequest req = ...;
- *       StreamMessage<String> deframed = req.deframe(decoder);
+ *       StreamMessage<String> deframed = req.decode(decoder);
  *       }</pre>
  *   </li>
  *   <li>Subscribe to the {@link Publisher} of the deframed data and connect to your business logic.
@@ -79,13 +79,13 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * @param <T> the result type of being deframed
  */
 @UnstableApi
-public interface HttpDeframerHandler<T> {
+public interface HttpDecoder<T> {
 
     /**
      * Decodes a stream of {@link HttpData}s to N objects.
      * This method will be called whenever an {@link HttpData} is signaled from {@link Publisher}.
      */
-    void process(HttpDeframerInput in, HttpDeframerOutput<T> out) throws Exception;
+    void process(HttpDecoderInput in, HttpDeframerOutput<T> out) throws Exception;
 
     /**
      * Decodes an informational {@link ResponseHeaders} to N objects.

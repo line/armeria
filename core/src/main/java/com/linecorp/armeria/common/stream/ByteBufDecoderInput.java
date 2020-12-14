@@ -25,14 +25,14 @@ import java.util.Queue;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-final class ByteBufDeframerInput implements HttpDeframerInput {
+final class ByteBufDecoderInput implements HttpDecoderInput {
 
     private final ByteBufAllocator alloc;
     private final Queue<ByteBuf> queue;
 
     private boolean closed;
 
-    ByteBufDeframerInput(ByteBufAllocator alloc) {
+    ByteBufDecoderInput(ByteBufAllocator alloc) {
         this.alloc = alloc;
         queue = new ArrayDeque<>();
     }

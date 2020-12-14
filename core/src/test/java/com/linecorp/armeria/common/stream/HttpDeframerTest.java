@@ -226,7 +226,7 @@ class HttpDeframerTest {
         response.close();
 
         final HeaderAwareDecoder decoder = new HeaderAwareDecoder();
-        final StreamMessage<String> deframed = response.deframe(decoder);
+        final StreamMessage<String> deframed = response.decode(decoder);
 
         StepVerifier.create(deframed)
                     .expectNext("A0123456789")
@@ -254,7 +254,7 @@ class HttpDeframerTest {
         final HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/", "length", 11), body);
 
         final HeaderAwareDecoder decoder = new HeaderAwareDecoder();
-        final StreamMessage<String> deframed = request.deframe(decoder);
+        final StreamMessage<String> deframed = request.decode(decoder);
 
         StepVerifier.create(deframed)
                     .expectNext("A0123456789")
@@ -297,7 +297,7 @@ class HttpDeframerTest {
         await().untilAtomic(causeRef, Matchers.is(cause));
     }
 
-    private static final class FixedLengthDecoder implements HttpDeframerHandler<String> {
+    private static final class FixedLengthDecoder implements HttpDecoder<String> {
 
         private final int length;
         private final List<ByteBuf> byteBufs = new ArrayList<>();
@@ -307,7 +307,7 @@ class HttpDeframerTest {
         }
 
         @Override
-        public void process(HttpDeframerInput in, HttpDeframerOutput<String> out) {
+        public void process(HttpDecoderInput in, HttpDeframerOutput<String> out) {
             int remaining = in.readableBytes();
             if (remaining < length) {
                 return;
@@ -327,7 +327,7 @@ class HttpDeframerTest {
         }
     }
 
-    private static final class HeaderAwareDecoder implements HttpDeframerHandler<String> {
+    private static final class HeaderAwareDecoder implements HttpDecoder<String> {
 
         private int length;
         private final List<ByteBuf> byteBufs = new ArrayList<>();
@@ -339,7 +339,7 @@ class HttpDeframerTest {
         }
 
         @Override
-        public void process(HttpDeframerInput in, HttpDeframerOutput<String> out) {
+        public void process(HttpDecoderInput in, HttpDeframerOutput<String> out) {
             int remaining = in.readableBytes();
             if (remaining < length) {
                 return;
