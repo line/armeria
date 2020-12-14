@@ -263,6 +263,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onSubscribe(Subscription subscription) {
+            requireNonNull(subscription, "subscription");
             if (executor.inEventLoop()) {
                 onSubscribe0(subscription);
             } else {
@@ -287,6 +288,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onNext(Object obj) {
+            requireNonNull(obj, "obj");
             parent.publishedAny = true;
             if (executor.inEventLoop()) {
                 onNext0(obj);
@@ -308,6 +310,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onError(Throwable cause) {
+            requireNonNull(cause, "cause");
             if (executor.inEventLoop()) {
                 onError0(cause);
             } else {
