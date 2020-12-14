@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.google.errorprone.annotations.MustBeClosed;
@@ -26,6 +27,11 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class RequestContextWrapperTest {
+
+    static {
+        // Armeria properties use bare names.
+        Assertions.setExtractBareNamePropertyMethods(true);
+    }
 
     private static final class WrappedRequestContext extends RequestContextWrapper<RequestContext> {
         private WrappedRequestContext(RequestContext delegate) {
@@ -43,7 +49,7 @@ class RequestContextWrapperTest {
     @Test
     void wrapMatchesNormal() {
         final RequestContext ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
-        // Use reflective comparison to handle added fields automatically.
+        // Use reflective comparison to handle added properties automatically.
         assertThat(new WrappedRequestContext(ctx)).usingRecursiveComparison().ignoringFields("delegate")
                                                   .isEqualTo(ctx);
     }
