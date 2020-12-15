@@ -18,18 +18,4 @@ package com.linecorp.armeria;
 
 import com.linecorp.armeria.internal.testing.AbstractMethodChainingTest;
 
-class MethodChainingTest extends AbstractMethodChainingTest {
-
-    MethodChainingTest() {
-        super("com.linecorp.armeria.common.DefaultQueryParamsBuilder",
-              "com.linecorp.armeria.common.DefaultRequestHeadersBuilder",
-              "com.linecorp.armeria.common.DefaultHttpHeadersBuilder",
-              "com.linecorp.armeria.common.DefaultResponseHeadersBuilder",
-              "com.linecorp.armeria.client.ClientBuilder",
-              "com.linecorp.armeria.server.file.HttpFileBuilder$FileSystemHttpFileBuilder",
-              "com.linecorp.armeria.server.file.HttpFileBuilder$ClassPathHttpFileBuilder",
-              "com.linecorp.armeria.server.file.HttpFileBuilder$NonExistentHttpFileBuilder",
-              "com.linecorp.armeria.server.file.HttpFileBuilder$HttpDataFileBuilder",
-              "com.linecorp.armeria.server.DomainMappingBuilder");
-    }
-}
+class MethodChainingTest extends AbstractMethodChainingTest {}

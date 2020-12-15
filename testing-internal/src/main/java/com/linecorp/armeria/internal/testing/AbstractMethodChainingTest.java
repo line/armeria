@@ -49,7 +49,7 @@ public abstract class AbstractMethodChainingTest {
                                    .map(ReflectionUtils::forName)
                                    .filter(this::filterClass)
                                    .forEach(clazz -> {
-                                       final List<Method> methods = getAllMethods(clazz);
+                                       final List<Method> methods = obtainMethods(clazz);
                                        for (Method m : methods) {
                                            try {
                                                final Method overriddenMethod =
@@ -86,12 +86,23 @@ public abstract class AbstractMethodChainingTest {
         return !declaringClass.getSimpleName().endsWith("Test");
     }
 
-    private static List<Method> getAllMethods(Class<?> clazz) {
+    private static List<Method> obtainMethods(Class<?> clazz) {
         final Set<Class<?>> allSuperTypes = ReflectionUtils.getAllSuperTypes(clazz, input -> input != clazz);
-        return allSuperTypes.stream()
-                            .flatMap(sc -> Arrays.stream(sc.getMethods()))
-                            .distinct()
-                            .filter(m -> m.getReturnType() == m.getDeclaringClass())
-                            .collect(toImmutableList());
+        final ImmutableList<Method> methods = allSuperTypes.stream()
+                                                           .flatMap(sc -> Arrays.stream(sc.getMethods()))
+                                                           .distinct()
+                                                           .collect(toImmutableList());
+
+        if (existMethodName(methods, "build")) {
+            return ImmutableList.of();
+        } else {
+            return methods.stream()
+                          .filter(m -> m.getReturnType() == m.getDeclaringClass())
+                          .collect(toImmutableList());
+        }
+    }
+
+    private static boolean existMethodName(List<Method> methods, String methodName) {
+        return methods.stream().anyMatch(m -> methodName.equals(m.getName()));
     }
 }
