@@ -19,26 +19,20 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
 
 final class WeightBasedRandomEndpointSelector {
-    private static final AtomicIntegerFieldUpdater<WeightBasedRandomEndpointSelector> removingEntryUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(WeightBasedRandomEndpointSelector.class, "removingEntry");
 
     private final List<Entry> entries;
     private final long totalWeight;
     private final List<Entry> currentEntries;
     private long currentTotalWeight;
-
-    private volatile int removingEntry;
 
     WeightBasedRandomEndpointSelector(List<Endpoint> endpoints) {
         final ImmutableList.Builder<Entry> builder = ImmutableList.builder();

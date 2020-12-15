@@ -116,7 +116,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * ----------------------------------------------------------------------------------------------------
      *     0ms       t0 + 200ms                    t0 + 1000ms                          t0 + 1800ms  t0 + 2000ms
      * }</pre>
-     * A and B are updated right away when they added and they are updated together at t4.
+     * A and B are updated right away when they are added and they are updated together at t4.
      * C is updated alone every 2000 milliseconds. D is updated together with A and B at t4.
      */
     public RampingUpWeightedRoundRobinStrategyBuilder updatingTaskWindow(Duration updatingTaskWindow) {
@@ -138,7 +138,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * ----------------------------------------------------------------------------------------------------
      *     0ms       t0 + 200ms                    t0 + 1000ms                          t0 + 1800ms  t0 + 2000ms
      * }</pre>
-     * A and B are updated right away when they added and they are updated together at t4.
+     * A and B are updated right away when they are added and they are updated together at t4.
      * C is updated alone every 2000 milliseconds. D is updated together with A and B at t4.
      */
     public RampingUpWeightedRoundRobinStrategyBuilder updatingTaskWindowMillis(long updatingTaskWindowMillis) {
