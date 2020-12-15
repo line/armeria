@@ -1838,6 +1838,8 @@ democracia.bo
 democrat
 demon.nl
 denmark.museum
+deno-staging.dev
+deno.dev
 dental
 dentist
 dep.no
@@ -8427,6 +8429,7 @@ wnext.app
 wodzislaw.pl
 wolomin.pl
 wolterskluwer
+woltlab-demo.com
 woodside
 work
 workers.dev

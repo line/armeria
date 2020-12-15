@@ -66,7 +66,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      */
     @Bean
     @Nullable
-    public Server armeriaServer(
+    public ArmeriaServerGracefulShutdownLifecycle armeriaServer(
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
             Optional<List<HealthChecker>> healthCheckers,
@@ -125,7 +125,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
             return result;
         }).join();
         logger.info("Armeria server started at ports: {}", server.activePorts());
-        return server;
+        return new ArmeriaServerGracefulShutdownLifecycle(server);
     }
 
     /**
