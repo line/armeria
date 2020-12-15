@@ -108,7 +108,7 @@ EurekaUpdatingListener listener =
 
 ServerBuilder sb = Server.builder();
 sb.serverListener(listener);
-sb.builder().start();
+sb.build().start();
 ```
 
 If you want to specify the [properties](https://github.com/Netflix/eureka/wiki/Eureka-REST-operations)
@@ -118,18 +118,18 @@ of the <type://Server>, use <type://EurekaUpdatingListenerBuilder>:
 import com.linecorp.armeria.server.eureka.EurekaUpdatingListenerBuilder;
 
 EurekaUpdatingListenerBuilder builder =
-        EurekaUpdatingListener.builder("https://eureka.com:8001/eureka/v2");
+        EurekaUpdatingListener.builder("https://eureka.com:8001/eureka/v2")
                               .instanceId("i-00000000")
-                              .setHostname("armeria.service.1")
+                              .hostname("armeria.service.1")
                               // If ipAddr is not specified, it's automatically filled
                               // using SystemInfo.defaultNonLoopbackIpV4Address().
                               .ipAddr("192.168.10.10")
                               .vipAddress("armeria.service.com:8080");
-                              .build();
+                              
 EurekaUpdatingListener listener = builder.build();
 ServerBuilder sb = Server.builder();
 sb.serverListener(listener);
-sb.builder().start();
+sb.build().start();
 ```
 
 For more information, please refer to the API documentation of the
