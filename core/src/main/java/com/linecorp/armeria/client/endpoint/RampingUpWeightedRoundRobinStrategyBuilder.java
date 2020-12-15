@@ -26,19 +26,17 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.util.Ticker;
 
 import io.netty.channel.EventLoop;
 
 /**
- * Builds a weighted round-robin strategy which is ramping up the weight of the newly added {@link Endpoint}s.
+ * Builds a weighted round-robin strategy which ramps up the weight of the newly added {@link Endpoint}s.
  */
 public final class RampingUpWeightedRoundRobinStrategyBuilder {
 
     private static final long DEFAULT_RAMPING_UP_INTERVAL_MILLIS = 2000;
     private static final int DEFAULT_NUMBER_OF_STEPS = 10;
     private static final int DEFAULT_UPDATING_ENTRY_WINDOW_MILLIS = 500;
-    private static final Ticker DEFAULT_TICKER = Ticker.systemTicker();
 
     private EndpointWeightTransition transition = EndpointWeightTransition.linear();
 
@@ -48,7 +46,6 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
     private long rampingUpIntervalMillis = DEFAULT_RAMPING_UP_INTERVAL_MILLIS;
     private int totalSteps = DEFAULT_NUMBER_OF_STEPS;
     private long updatingTaskWindowMillis = DEFAULT_UPDATING_ENTRY_WINDOW_MILLIS;
-    private Ticker ticker = DEFAULT_TICKER;
 
     /**
      * Sets the specified {@link EndpointWeightTransition} that will compute the weight of an {@link Endpoint}
@@ -71,7 +68,8 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
 
     /**
      * Sets the specified {@code rampingUpInterval}. The weight of an {@link Endpoint} is ramped up
-     * {@link #totalSteps(int) totalSteps} times every {@code rampingUpInterval}.
+     * every {@code rampingUpInterval} until the number of ramping reaches to the
+     * {@link #totalSteps(int) totalSteps}.
      * {@value DEFAULT_RAMPING_UP_INTERVAL_MILLIS} millis is used by default.
      */
     public RampingUpWeightedRoundRobinStrategyBuilder rampingUpInterval(Duration rampingUpInterval) {
@@ -81,7 +79,8 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
 
     /**
      * Sets the specified {@code rampingUpIntervalMillis}. The weight of an {@link Endpoint} is ramped up
-     * {@link #totalSteps(int) totalSteps} times every {@code rampingUpIntervalMillis}.
+     * every {@code rampingUpIntervalMillis} until the number of ramping reaches to the
+     * {@link #totalSteps(int) totalSteps}.
      * {@value DEFAULT_RAMPING_UP_INTERVAL_MILLIS} millis is used by default.
      */
     public RampingUpWeightedRoundRobinStrategyBuilder rampingUpIntervalMillis(long rampingUpIntervalMillis) {
@@ -93,7 +92,8 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
 
     /**
      * Sets the specified {@code totalSteps}. The weight of an {@link Endpoint} is ramped up
-     * {@code totalSteps} times every {@link #rampingUpIntervalMillis(long) rampingUpIntervalMillis}.
+     * every {@link #rampingUpIntervalMillis(long) rampingUpIntervalMillis}
+     * until the number of ramping reaches to the {@code totalSteps}.
      * {@value DEFAULT_NUMBER_OF_STEPS} is used by default.
      */
     public RampingUpWeightedRoundRobinStrategyBuilder totalSteps(int totalSteps) {
@@ -106,17 +106,18 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * Sets the specified {@code updatingTaskWindow} which will be used to combine weight updating tasks.
      * If several {@link Endpoint}s are added within the {@code updatingTaskWindow}, the weights of
      * them are updated together. If there's already a scheduled job and a new {@link Endpoint}s are added
-     * within the {@code updatingTaskWindow}, they also updated together.
+     * within the {@code updatingTaskWindow}, they are also updated together.
      * This is an example of how it works when {@code updatingTaskWindow} is 500 milliseconds and
      * {@code rampingUpIntervalMillis} is 2000 milliseconds:
      * <pre>{@code
      * ----------------------------------------------------------------------------------------------------
      *     A         B                             C                                       D
+     *     t0        t1                            t2                                      t3         t4
      * ----------------------------------------------------------------------------------------------------
-     *     0t       200T                        1000T                                    1800T     2000T
+     *     0ms       t0 + 200ms                    t0 + 1000ms                          t0 + 1800ms  t0 + 2000ms
      * }</pre>
-     * A and B are updated right away when they added and they are updated together from the point of the
-     * time at 2000T. C is updated alone every 2000 milliseconds. D is updated together with A and B at 2000T.
+     * A and B are updated right away when they added and they are updated together at t4.
+     * C is updated alone every 2000 milliseconds. D is updated together with A and B at t4.
      */
     public RampingUpWeightedRoundRobinStrategyBuilder updatingTaskWindow(Duration updatingTaskWindow) {
         requireNonNull(updatingTaskWindow, "updatingTaskWindow");
@@ -127,17 +128,18 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * Sets the specified {@code updatingTaskWindowMillis} which will be used to combine weight updating tasks.
      * If several {@link Endpoint}s are added within the {@code updatingTaskWindowMillis}, the weights of
      * them are updated together. If there's already a scheduled job and a new {@link Endpoint}s are added
-     * within the {@code updatingTaskWindow}, they also updated together.
+     * within the {@code updatingTaskWindow}, they are also updated together.
      * This is an example of how it works when {@code updatingTaskWindowMillis} is 500 milliseconds and
      * {@code rampingUpIntervalMillis} is 2000 milliseconds:
      * <pre>{@code
      * ----------------------------------------------------------------------------------------------------
      *     A         B                             C                                       D
+     *     t0        t1                            t2                                      t3         t4
      * ----------------------------------------------------------------------------------------------------
-     *     0t       200T                        1000T                                    1800T     2000T
+     *     0ms       t0 + 200ms                    t0 + 1000ms                          t0 + 1800ms  t0 + 2000ms
      * }</pre>
-     * A and B are updated right away when they added and they are updated together from the point of the
-     * time at 2000T. C is updated alone every 2000 milliseconds. D is updated together with A and B at 2000T.
+     * A and B are updated right away when they added and they are updated together at t4.
+     * C is updated alone every 2000 milliseconds. D is updated together with A and B at t4.
      */
     public RampingUpWeightedRoundRobinStrategyBuilder updatingTaskWindowMillis(long updatingTaskWindowMillis) {
         checkArgument(updatingTaskWindowMillis >= 0,
@@ -147,7 +149,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
     }
 
     /**
-     * Returns a newly-created weighted round-robin {@link EndpointSelectionStrategy} which is ramping up
+     * Returns a newly-created weighted round-robin {@link EndpointSelectionStrategy} which ramps up
      * the weight of the newly added {@link Endpoint}s.
      */
     public EndpointSelectionStrategy build() {
@@ -163,6 +165,6 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
         }
 
         return new RampingUpWeightedRoundRobinStrategy(transition, executor, rampingUpIntervalMillis,
-                                                       totalSteps, updatingTaskWindowMillis, ticker);
+                                                       totalSteps, updatingTaskWindowMillis);
     }
 }

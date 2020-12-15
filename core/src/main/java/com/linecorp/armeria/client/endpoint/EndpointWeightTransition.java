@@ -29,7 +29,8 @@ public interface EndpointWeightTransition {
      */
     static EndpointWeightTransition linear() {
         return (endpoint, currentStep, totalSteps) ->
-                (int) ((double) endpoint.weight() * currentStep / totalSteps);
+                // currentStep is never greater than totalSteps so we can cast long to int.
+                (int) ((long) endpoint.weight() * currentStep / totalSteps);
     }
 
     /**

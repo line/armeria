@@ -41,7 +41,7 @@ final class WeightBasedRandomEndpointSelector {
     private volatile int removingEntry;
 
     WeightBasedRandomEndpointSelector(List<Endpoint> endpoints) {
-        final Builder<Entry> builder = ImmutableList.builder();
+        final ImmutableList.Builder<Entry> builder = ImmutableList.builder();
 
         long totalWeight = 0;
         for (Endpoint endpoint : endpoints) {
@@ -65,6 +65,11 @@ final class WeightBasedRandomEndpointSelector {
             return null;
         }
         for (;;) {
+            // selectEndpoint0() returns null if the endpoint is selected more than its weight while
+            // other endpoints are not. In that case the entry of that endpoint is removed and returns null.
+            // So we should loop to select another endpoint.
+            // This guarantees that the endpoint whose weight is very low is always selected when
+            // selectEndpoint() is called by totalWeight times even though we use random.
             final Endpoint endpoint = selectEndpoint0();
             if (endpoint != null) {
                 return endpoint;
@@ -78,56 +83,53 @@ final class WeightBasedRandomEndpointSelector {
         // There's a chance that currentTotalWeight is changed before looping currentEntries.
         // However, we have counters and choosing an endpoint doesn't have to be exact so no big deal.
         // TODO(minwoox): Use binary search when the number of endpoints is greater than N.
+        Endpoint selected = null;
         for (Entry entry : currentEntries) {
             if (entry.lowerBound >= nextLong) {
                 if (entry.increaseCounter()) {
-                    return entry.endpoint();
+                    selected = entry.endpoint();
                 }
-                // Should remove the entry from currentEntries.
-                removeEntry(entry);
-                return null;
+                if (!entry.isFull()) {
+                    return selected;
+                }
+
+                // The entry is full so we should remove the entry from currentEntries.
+                synchronized (currentEntries) {
+                    // Check again not to remove the entry where reset() is called by another thread.
+                    if (!entry.isFull()) {
+                        return selected;
+                    }
+                    if (currentEntries.remove(entry)) {
+                        if (currentEntries.isEmpty()) {
+                            reset();
+                        } else {
+                            currentTotalWeight -= entry.endpoint().weight();
+                        }
+                    } else {
+                        // The entry is removed by another thread.
+                    }
+                }
+                return selected;
             }
         }
 
         return null;
     }
 
-    private void removeEntry(Entry entry) {
-        for (;;) {
-            if (removingEntryUpdater.compareAndSet(this, 0, 1)) {
-                // Check again not to remove the entry in case reset() is called by another thread.
-                if (!entry.isFull()) {
-                    removingEntry = 0;
-                    return;
-                }
-                if (currentEntries.remove(entry)) {
-                    if (currentEntries.isEmpty()) {
-                        reset();
-                    } else {
-                        currentTotalWeight -= entry.endpoint().weight();
-                    }
-                } else {
-                    // The entry is removed by other thread.
-                }
-                removingEntry = 0;
-                return;
-            }
-        }
-    }
-
     private void reset() {
         for (Entry entry : entries) {
-            entry.reset();
+            entry.set(0);
         }
         currentEntries.addAll(entries);
         currentTotalWeight = totalWeight;
     }
 
     @VisibleForTesting
-    static class Entry {
+    static final class Entry extends AtomicInteger {
+        private static final long serialVersionUID = -1719423489992905558L;
+
         private final Endpoint endpoint;
         final long lowerBound;
-        private final AtomicInteger counter = new AtomicInteger();
 
         Entry(Endpoint endpoint, long lowerBound) {
             this.endpoint = endpoint;
@@ -142,15 +144,11 @@ final class WeightBasedRandomEndpointSelector {
             if (isFull()) {
                 return false;
             }
-            return counter.incrementAndGet() <= endpoint.weight();
+            return incrementAndGet() <= endpoint.weight();
         }
 
         boolean isFull() {
-            return counter.get() >= endpoint.weight();
-        }
-
-        public void reset() {
-            counter.set(0);
+            return get() >= endpoint.weight();
         }
     }
 }

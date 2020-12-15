@@ -21,8 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -41,6 +43,8 @@ import com.linecorp.armeria.common.util.Ticker;
 
 final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
+    private static final Ticker default_ticker = Ticker.systemTicker();
+
     private final EndpointWeightTransition weightTransition;
     private final ScheduledExecutorService executor;
     private final long rampingUpIntervalMillis;
@@ -48,6 +52,14 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
     private final long updatingTaskWindowNanos;
     private final Ticker ticker;
 
+    RampingUpWeightedRoundRobinStrategy(EndpointWeightTransition weightTransition,
+                                        ScheduledExecutorService executor, long rampingUpIntervalMillis,
+                                        int totalSteps, long updatingTaskWindowMillis) {
+        this(weightTransition, executor, rampingUpIntervalMillis, totalSteps, updatingTaskWindowMillis,
+             default_ticker);
+    }
+
+    @VisibleForTesting
     RampingUpWeightedRoundRobinStrategy(EndpointWeightTransition weightTransition,
                                         ScheduledExecutorService executor, long rampingUpIntervalMillis,
                                         int totalSteps, long updatingTaskWindowMillis, Ticker ticker) {
@@ -74,8 +86,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
 
         private volatile WeightBasedRandomEndpointSelector endpointSelector;
 
-        @Nullable
-        private List<Endpoint> oldEndpoints = new ArrayList<>();
+        private final List<Endpoint> oldEndpoints = new ArrayList<>();
 
         @VisibleForTesting
         final Deque<EndpointsInUpdatingEntry> endpointsInUpdatingEntries = new ArrayDeque<>();
@@ -110,9 +121,9 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
         private void updateEndpoints0(List<Endpoint> newEndpoints) {
             unhandledNewEndpoints = null;
             if (updatingTaskWindowNanos > 0) {
-                if (addToPrevEntry()) {
+                if (canAddToPrevEntry()) {
                     // Update weight right away and combine updating weight schedule with the previous Entry.
-                    final Deque<EndpointAndStep> newlyAddedEndpoints = updateEndpoints1(newEndpoints);
+                    final Set<EndpointAndStep> newlyAddedEndpoints = updateEndpoints1(newEndpoints);
                     final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
                     addCurrentEndpoints(builder);
 
@@ -126,14 +137,15 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                     return;
                 }
 
-                if (addToNextEntry()) {
-                    // Combine with the Entry and let it handle this newEndpoints when it calls updateWeight().
+                if (canAddToNextEntry()) {
+                    // Combine with the next entry and let it handle this newEndpoints when
+                    // updateEndpointWeight() is executed.
                     unhandledNewEndpoints = newEndpoints;
                     return;
                 }
             }
 
-            final Deque<EndpointAndStep> newlyAddedEndpoints = updateEndpoints1(newEndpoints);
+            final Set<EndpointAndStep> newlyAddedEndpoints = updateEndpoints1(newEndpoints);
             if (newlyAddedEndpoints.isEmpty()) {
                 final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
                 addCurrentEndpoints(builder);
@@ -150,31 +162,29 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             updateEndpointWeight();
         }
 
-        private boolean addToPrevEntry() {
+        private boolean canAddToPrevEntry() {
             final EndpointsInUpdatingEntry lastEndpointsInUpdatingEntry = endpointsInUpdatingEntries.peekLast();
             return lastEndpointsInUpdatingEntry != null &&
                    ticker.read() - lastEndpointsInUpdatingEntry.lastUpdatedTime <= updatingTaskWindowNanos;
         }
 
-        private boolean addToNextEntry() {
+        private boolean canAddToNextEntry() {
             final EndpointsInUpdatingEntry nextEndpointsInUpdatingEntry = endpointsInUpdatingEntries.peek();
             return nextEndpointsInUpdatingEntry != null &&
                    nextEndpointsInUpdatingEntry.nextUpdatingTime - ticker.read() <= updatingTaskWindowNanos;
         }
 
         private void addCurrentEndpoints(Builder<Endpoint> builder) {
-            assert oldEndpoints != null;
             builder.addAll(oldEndpoints);
-            endpointsInUpdatingEntries.forEach(entry -> {
-                entry.endpointAndSteps().forEach(endpointAndStep -> {
-                    builder.add(endpointAndStep.endpoint().withWeight(endpointAndStep.currentWeight()));
-                });
-            });
+            endpointsInUpdatingEntries.forEach(
+                    entry -> entry.endpointAndSteps().forEach(
+                            endpointAndStep -> builder.add(
+                                    endpointAndStep.endpoint().withWeight(endpointAndStep.currentWeight()))));
         }
 
-        private Deque<EndpointAndStep> updateEndpoints1(List<Endpoint> newEndpoints) {
+        private Set<EndpointAndStep> updateEndpoints1(List<Endpoint> newEndpoints) {
             final List<Endpoint> replacedOldEndpoints = new ArrayList<>();
-            assert oldEndpoints != null;
+            // TODO(minwoox): Use the sorted list to handle efficiently when the number of endpoints is huge.
             for (final Iterator<Endpoint> i = oldEndpoints.iterator(); i.hasNext();) {
                 final Endpoint oldEndpoint = i.next();
                 for (Endpoint newEndpoint : newEndpoints) {
@@ -201,7 +211,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                  i.hasNext();) {
                 final EndpointsInUpdatingEntry endpointsInUpdatingEntry = i.next();
 
-                final Deque<EndpointAndStep> endpointAndSteps = endpointsInUpdatingEntry.endpointAndSteps();
+                final Set<EndpointAndStep> endpointAndSteps = endpointsInUpdatingEntry.endpointAndSteps();
                 removeIfNotInNewEndpoints(endpointAndSteps, newEndpoints);
                 if (endpointAndSteps.isEmpty()) {
                     // All endpointAndSteps are removed so remove the entry from the Deque.
@@ -213,7 +223,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                 }
             }
 
-            final Deque<EndpointAndStep> newlyAddedEndpoints = new ArrayDeque<>();
+            final Set<EndpointAndStep> newlyAddedEndpoints = new HashSet<>();
             for (Endpoint newEndpoint : newEndpoints) {
                 // We don't have to compare the weight because the old endpoint whose host is same and weight
                 // is different is already removed.
@@ -243,7 +253,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             return newlyAddedEndpoints;
         }
 
-        private void removeIfNotInNewEndpoints(Deque<EndpointAndStep> endpointAndSteps,
+        private void removeIfNotInNewEndpoints(Set<EndpointAndStep> endpointAndSteps,
                                                List<Endpoint> newEndpoints) {
             final List<EndpointAndStep> replacedEndpoints = new ArrayList<>();
             for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator();
@@ -266,7 +276,6 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                         // Same weight so we don't do anything.
                     } else if (endpointAndStep.currentWeight() > newEndpoint.weight()) {
                         // Don't need to update the weight anymore so we add the newEndpoint to oldEndpoints.
-                        assert oldEndpoints != null;
                         oldEndpoints.add(newEndpoint);
                         i.remove();
                     } else {
@@ -286,15 +295,14 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             final EndpointsInUpdatingEntry entry = endpointsInUpdatingEntries.peekFirst();
             assert entry != null;
             if (unhandledNewEndpoints != null) {
-                final Deque<EndpointAndStep> newlyAddedEndpoints = updateEndpoints1(unhandledNewEndpoints);
+                final Set<EndpointAndStep> newlyAddedEndpoints = updateEndpoints1(unhandledNewEndpoints);
                 entry.addEndpoints(newlyAddedEndpoints);
                 unhandledNewEndpoints = null;
             }
 
             final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
-            final Deque<EndpointAndStep> endpointAndSteps = entry.endpointAndSteps();
+            final Set<EndpointAndStep> endpointAndSteps = entry.endpointAndSteps();
             updateEndpointWeight(endpointAndSteps, builder);
-            assert oldEndpoints != null;
             builder.addAll(oldEndpoints);
 
             endpointSelector = new WeightBasedRandomEndpointSelector(builder.build());
@@ -310,9 +318,8 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             }
         }
 
-        private void updateEndpointWeight(Deque<EndpointAndStep> endpointAndSteps,
+        private void updateEndpointWeight(Set<EndpointAndStep> endpointAndSteps,
                                           Builder<Endpoint> builder) {
-            assert oldEndpoints != null;
             for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext();) {
                 final EndpointAndStep endpointAndStep = i.next();
                 final int step = endpointAndStep.incrementAndGetStep();
@@ -332,9 +339,9 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
     }
 
     @VisibleForTesting
-    static class EndpointsInUpdatingEntry {
+    static final class EndpointsInUpdatingEntry {
 
-        private final Deque<EndpointAndStep> endpointAndSteps;
+        private final Set<EndpointAndStep> endpointAndSteps;
         private final Ticker ticker;
         private final long rampingUpIntervalNanos;
 
@@ -343,18 +350,18 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
         long lastUpdatedTime;
         long nextUpdatingTime;
 
-        EndpointsInUpdatingEntry(Deque<EndpointAndStep> endpointAndSteps, Ticker ticker,
+        EndpointsInUpdatingEntry(Set<EndpointAndStep> endpointAndSteps, Ticker ticker,
                                  long rampingUpIntervalNanos) {
             this.endpointAndSteps = endpointAndSteps;
             this.ticker = ticker;
             this.rampingUpIntervalNanos = rampingUpIntervalNanos;
         }
 
-        Deque<EndpointAndStep> endpointAndSteps() {
+        Set<EndpointAndStep> endpointAndSteps() {
             return endpointAndSteps;
         }
 
-        void addEndpoints(Deque<EndpointAndStep> endpoints) {
+        void addEndpoints(Set<EndpointAndStep> endpoints) {
             endpointAndSteps.addAll(endpoints);
         }
 
@@ -365,7 +372,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
         }
 
         @VisibleForTesting
-        static class EndpointAndStep {
+        static final class EndpointAndStep {
 
             private final Endpoint endpoint;
             private int step;
