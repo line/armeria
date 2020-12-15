@@ -28,6 +28,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.reflections.ReflectionUtils;
 import org.reflections.Reflections;
+import org.reflections.adapters.JavaReflectionAdapter;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
@@ -36,18 +37,12 @@ import com.google.common.collect.ImmutableList;
 
 public abstract class AbstractMethodChainingTest {
 
-    private final List<String> ignoredClasses;
-
-    protected AbstractMethodChainingTest(String... ignoredClasses) {
-        this.ignoredClasses = ImmutableList.copyOf(ignoredClasses);
-    }
-
     @Test
     void methodChaining() {
         final String packageName = getClass().getPackage().getName();
         findAllClasses(packageName).stream()
                                    .map(ReflectionUtils::forName)
-                                   .filter(this::filterClass)
+                                   .filter(AbstractMethodChainingTest::filterClass)
                                    .forEach(clazz -> {
                                        final List<Method> methods = obtainMethods(clazz);
                                        for (Method m : methods) {
@@ -64,18 +59,17 @@ public abstract class AbstractMethodChainingTest {
     }
 
     private static Collection<String> findAllClasses(String packageName) {
-        final Reflections reflections = new Reflections(
-                new ConfigurationBuilder()
-                        .setUrls(ClasspathHelper.forPackage(packageName))
-                        .setScanners(new SubTypesScanner(false))
-        );
-        return reflections.getStore().get("SubTypesScanner").values();
+        final ConfigurationBuilder configuration = new ConfigurationBuilder()
+                .setUrls(ClasspathHelper.forPackage(packageName))
+                .setScanners(new SubTypesScanner())
+                .setMetadataAdapter(new JavaReflectionAdapter());
+        final Reflections reflections = new Reflections(configuration);
+        return reflections.getStore().get(SubTypesScanner.class.getSimpleName()).values();
     }
 
-    private boolean filterClass(Class<?> clazz) {
+    private static boolean filterClass(Class<?> clazz) {
         return declaredInTestClass(clazz) &&
-               clazz.getName().endsWith("Builder") &&
-               !ignoredClasses.contains(clazz.getName());
+               clazz.getName().endsWith("Builder");
     }
 
     private static boolean declaredInTestClass(Class<?> clazz) {
