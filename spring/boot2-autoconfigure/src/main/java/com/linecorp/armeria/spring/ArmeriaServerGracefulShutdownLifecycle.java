@@ -22,7 +22,7 @@ import com.linecorp.armeria.server.Server;
 
 /**
  * Make Armeria Server utilize spring's SmartLifecycle feature.
- * So Armeria will shutdown before other web servers & beans in the context.
+ * So Armeria will shutdown before other web servers and beans in the context.
  */
 public class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
     /**

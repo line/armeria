@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 
 import com.google.common.base.Strings;
@@ -66,7 +67,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      */
     @Bean
     @Nullable
-    public ArmeriaServerGracefulShutdownLifecycle armeriaServer(
+    public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
             Optional<List<HealthChecker>> healthCheckers,
@@ -125,6 +126,14 @@ public abstract class AbstractArmeriaAutoConfiguration {
             return result;
         }).join();
         logger.info("Armeria server started at ports: {}", server.activePorts());
+        return server;
+    }
+
+    /**
+     * Wrap server with {@link SmartLifecycle}.
+     */
+    @Bean
+    public ArmeriaServerGracefulShutdownLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
         return new ArmeriaServerGracefulShutdownLifecycle(server);
     }
 
