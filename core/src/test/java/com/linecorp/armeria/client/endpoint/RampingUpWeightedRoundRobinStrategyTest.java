@@ -115,17 +115,20 @@ final class RampingUpWeightedRoundRobinStrategyTest {
         final Deque<EndpointsInUpdatingEntry> endpointsInUpdatingEntries = selector.endpointsInUpdatingEntries;
         assertThat(endpointsInUpdatingEntries).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps1 = endpointsInUpdatingEntries.peek().endpointAndSteps();
-        assertThat(endpointAndSteps1).containsExactly(
+        assertThat(endpointAndSteps1).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("bar.com"), 1, 100),
                 endpointAndStep(Endpoint.of("bar1.com"), 1, 100),
                 endpointAndStep(Endpoint.of("baz.com"), 1, 100),
                 endpointAndStep(Endpoint.of("baz1.com"), 1, 100));
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator()).containsExactly(
-                Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
-                Endpoint.of("bar.com").withWeight(100), Endpoint.of("bar1.com").withWeight(100),
-                Endpoint.of("baz.com").withWeight(100), Endpoint.of("baz1.com").withWeight(100)
-        );
+        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+                                      .containsExactlyInAnyOrder(
+                                              Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
+                                              Endpoint.of("bar.com").withWeight(100),
+                                              Endpoint.of("bar1.com").withWeight(100),
+                                              Endpoint.of("baz.com").withWeight(100),
+                                              Endpoint.of("baz1.com").withWeight(100)
+                                      );
     }
 
     private static EndpointAndStep endpointAndStep(Endpoint endpoint, int step, int currentWeight) {
@@ -169,7 +172,7 @@ final class RampingUpWeightedRoundRobinStrategyTest {
         endpointsInUpdatingEntries = selector.endpointsInUpdatingEntries;
         assertThat(endpointsInUpdatingEntries).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps2 = endpointsInUpdatingEntries.peek().endpointAndSteps();
-        assertThat(endpointAndSteps2).containsExactly(
+        assertThat(endpointAndSteps2).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("bar.com"), 2, 200),
                 endpointAndStep(Endpoint.of("bar1.com"), 2, 200),
                 endpointAndStep(Endpoint.of("qux.com"), 1, 100),
