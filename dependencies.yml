@@ -129,6 +129,9 @@ com.netflix.eureka:
   eureka-client: { version: &EUREKA_VERSION '1.10.10' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
+com.pszymczyk.consul:
+  embedded-consul: { version: '2.1.4' }
+
 com.puppycrawl.tools:
   checkstyle: { version: '8.38' }
 

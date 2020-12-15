@@ -986,7 +986,6 @@ boxfuse.io
 bozen-sudtirol.it
 bozen-suedtirol.it
 bozen.it
-bpl.biz
 bplaced.com
 bplaced.de
 bplaced.net
@@ -2145,6 +2144,7 @@ edu.ru
 edu.sa
 edu.sb
 edu.sc
+edu.scot
 edu.sd
 edu.sg
 edu.sl
@@ -2427,6 +2427,7 @@ fl.us
 fla.no
 flakstad.no
 flanders.museum
+flap.id
 flatanger.no
 flekkefjord.no
 flesberg.no
@@ -4276,6 +4277,7 @@ krasnik.pl
 krasnodar.su
 krd
 kred
+krellian.net
 kristiansand.no
 kristiansund.no
 krodsherad.no
@@ -4571,6 +4573,7 @@ loginto.me
 logistics.aero
 logoip.com
 logoip.de
+lohmus.me
 lol
 lolipop.io
 lom.it
@@ -4632,7 +4635,6 @@ lukow.pl
 lund.no
 lundbeck
 lunner.no
-lupin
 luroy.no
 luster.no
 lutsk.ua
@@ -5552,10 +5554,7 @@ nfl
 nflfan.org
 nfshost.com
 ng
-ng.city
 ng.eu.org
-ng.ink
-ng.school
 ngo
 ngo.lk
 ngo.ng
@@ -6141,6 +6140,7 @@ org.vi
 org.vn
 org.vu
 org.ws
+org.yt
 org.za
 org.zm
 org.zw
@@ -6150,6 +6150,7 @@ oristano.it
 orkanger.no
 orkdal.no
 orland.no
+orsites.com
 orskog.no
 orsta.no
 orx.biz
@@ -7203,6 +7204,7 @@ shop.hu
 shop.pl
 shop.ro
 shop.th
+shoparena.pl
 shopitsite.com
 shopping
 shopware.store
@@ -8374,6 +8376,7 @@ webredirect.org
 website
 website.yandexcloud.net
 webspace.rocks
+webthings.io
 wedding
 wedeploy.io
 wedeploy.me
@@ -8482,6 +8485,7 @@ xn--3e0b707e
 xn--3hcrj9c
 xn--3oq18vl8pn36a
 xn--3pxu8k
+xn--41a.xn--p1acf
 xn--42c2d9a
 xn--45br5cyl
 xn--45brj9c
@@ -8506,6 +8510,7 @@ xn--6frz82g
 xn--6orx2r.jp
 xn--6qq986b3xl
 xn--7t0a264c.jp
+xn--80aaa0cvac.xn--p1acf
 xn--80adxhks
 xn--80ao21a
 xn--80aqecdr1a
@@ -8515,9 +8520,11 @@ xn--80au.xn--90a3ac
 xn--8ltr62k.jp
 xn--8pvr4u.jp
 xn--8y0a063a
+xn--90a1af.xn--p1acf
 xn--90a3ac
 xn--90ae
 xn--90ais
+xn--90amc.xn--p1acf
 xn--90azh.xn--90a3ac
 xn--9dbhblg6di.museum
 xn--9dbq2a
@@ -8553,6 +8560,7 @@ xn--btsfjord-9za.no
 xn--bulsan-sdtirol-nsb.it
 xn--c1avg
 xn--c1avg.xn--90a3ac
+xn--c1avg.xn--p1acf
 xn--c2br7g
 xn--c3s14m.jp
 xn--cck2b3b
@@ -8620,6 +8628,8 @@ xn--gmqw5a.hk
 xn--gmqw5a.xn--j6w193g
 xn--h-2fa.no
 xn--h1aegh.museum
+xn--h1ahn.xn--p1acf
+xn--h1aliz.xn--p1acf
 xn--h2breg3eve
 xn--h2brj9c
 xn--h2brj9c8c
@@ -8644,7 +8654,10 @@ xn--indery-fya.no
 xn--io0a7i
 xn--io0a7i.cn
 xn--io0a7i.hk
+xn--j1adp.xn--p1acf
 xn--j1aef
+xn--j1aef.xn--p1acf
+xn--j1ael8b.xn--p1acf
 xn--j1amh
 xn--j6w193g
 xn--jlq480n2rg
