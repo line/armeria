@@ -371,6 +371,18 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             nextUpdatingTime = lastUpdatedTime + rampingUpIntervalNanos;
         }
 
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("endpointAndSteps", endpointAndSteps)
+                              .add("ticker", ticker)
+                              .add("rampingUpIntervalNanos", rampingUpIntervalNanos)
+                              .add("scheduledFuture", scheduledFuture)
+                              .add("lastUpdatedTime", lastUpdatedTime)
+                              .add("nextUpdatingTime", nextUpdatingTime)
+                              .toString();
+        }
+
         @VisibleForTesting
         static final class EndpointAndStep {
 
