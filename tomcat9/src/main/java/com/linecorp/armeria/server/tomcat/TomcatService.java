@@ -64,7 +64,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
@@ -412,10 +411,15 @@ public abstract class TomcatService implements HttpService {
     }
 
     private static boolean isConnectorStopped(LifecycleState connectorState) {
-        return connectorState == LifecycleState.STOPPED ||
-               connectorState == LifecycleState.DESTROYING ||
-               connectorState == LifecycleState.DESTROYED ||
-               connectorState == LifecycleState.FAILED;
+        switch (connectorState) {
+            case STOPPED:
+            case DESTROYING:
+            case DESTROYED:
+            case FAILED:
+                return true;
+            default:
+                return false;
+        }
     }
 
     @Nullable
