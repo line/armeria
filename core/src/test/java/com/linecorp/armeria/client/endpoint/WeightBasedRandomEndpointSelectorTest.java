@@ -35,7 +35,7 @@ final class WeightBasedRandomEndpointSelectorTest {
         final Endpoint baz = Endpoint.of("baz.com").withWeight(1);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar, baz);
         final WeightBasedRandomEndpointSelector selector = new WeightBasedRandomEndpointSelector(endpoints);
-        for (int i = 0; i < 10; i++) { // wrap around 10 times.
+        for (int i = 0; i < 1000; i++) {
             final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
             // The sum of weight is 6. Every endpoint is selected as many as its weight.
             for (int j = 0; j < 6; j++) {

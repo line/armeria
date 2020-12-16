@@ -30,7 +30,7 @@ public interface EndpointSelectionStrategy {
 
     /**
      * Returns a weighted round-robin strategy. The endpoint is selected using
-     * <a href="https://en.wikipedia.org/wiki/Weighted_round_robin#Interleaved_WRR">Interleave WRR</a>
+     * <a href="https://en.wikipedia.org/wiki/Weighted_round_robin#Interleaved_WRR">Interleaved WRR</a>
      * algorithm.
      *
      * @see #roundRobin()
