@@ -27,6 +27,13 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
+/**
+ * This selector selects an {@link Endpoint} using random and the weight of the {@link Endpoint}. If there are
+ * A(weight 10), B(weight 4) and C(weight 6) {@link Endpoint}s, the chances that {@link Endpoint}s are selected
+ * are 10/20, 4/20 and 6/20, respectively. If A {@link Endpoint} is selected 10 times and B and C are not
+ * selected as much as their weight, then A is removed temporarily and the the chances that B and C are selected
+ * are 4/10 and 6/10.
+ */
 final class WeightBasedRandomEndpointSelector {
 
     private final List<Entry> entries;
