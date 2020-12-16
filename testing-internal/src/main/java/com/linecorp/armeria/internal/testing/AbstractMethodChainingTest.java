@@ -35,6 +35,9 @@ import org.reflections.util.ConfigurationBuilder;
 
 import com.google.common.collect.ImmutableList;
 
+/**
+ * Makes sure most builder overrides all overridden methods with the correct return type.
+ */
 public abstract class AbstractMethodChainingTest {
 
     @Test
