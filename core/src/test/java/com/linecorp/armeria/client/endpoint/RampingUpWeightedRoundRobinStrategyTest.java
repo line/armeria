@@ -42,14 +42,11 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategy.EndpointsInUpdatingEntry;
 import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategy.EndpointsInUpdatingEntry.EndpointAndStep;
 import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategy.RampingUpEndpointWeightSelector;
 import com.linecorp.armeria.client.endpoint.WeightBasedRandomEndpointSelector.Entry;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 
 final class RampingUpWeightedRoundRobinStrategyTest {
 
