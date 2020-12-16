@@ -17,6 +17,8 @@ package com.linecorp.armeria.server.tomcat;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.File;
+
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.startup.Tomcat;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,8 @@ class TomcatServiceDestroyedConnectorTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             tomcatWithWebApp = new Tomcat();
+            tomcatWithWebApp.setBaseDir("build" + File.separatorChar +
+                                        "tomcat-" + TomcatServiceDestroyedConnectorTest.class.getSimpleName());
             tomcatWithWebApp.addWebapp("", WebAppContainerTest.webAppRoot().getAbsolutePath());
             tomcatWithWebApp.start();
             sb.serviceUnder("/api/", TomcatService.of(tomcatWithWebApp.getConnector()));
