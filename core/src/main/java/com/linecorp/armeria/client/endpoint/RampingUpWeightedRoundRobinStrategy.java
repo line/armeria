@@ -21,9 +21,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -131,8 +133,8 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                         updateEndpointWeight(newlyAddedEndpoints, builder);
                         endpointsInUpdatingEntries.getLast().addEndpoints(newlyAddedEndpoints);
                     }
-                    // Should recreate endpointSelector because the oldEndpoints is changed
-                    // when newlyAddedEndpoints is empty.
+                    // Should recreate endpointSelector even when newlyAddedEndpoints is empty because
+                    // the oldEndpoints is changed.
                     endpointSelector = new WeightBasedRandomEndpointSelector(builder.build());
                     return;
                 }
@@ -183,24 +185,35 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
         }
 
         private Set<EndpointAndStep> updateEndpoints1(List<Endpoint> newEndpoints) {
+            final Map<Endpoint, Endpoint> newEndpointsMap = new HashMap<>(newEndpoints.size());
+            // The value is retrieved to compare the weight of the endpoint.
+            newEndpoints.forEach(newEndpoint -> newEndpointsMap.put(newEndpoint, newEndpoint));
+
             final List<Endpoint> replacedOldEndpoints = new ArrayList<>();
-            // TODO(minwoox): Use the sorted list to handle efficiently when the number of endpoints is huge.
             for (final Iterator<Endpoint> i = oldEndpoints.iterator(); i.hasNext();) {
                 final Endpoint oldEndpoint = i.next();
-                for (Endpoint newEndpoint : newEndpoints) {
-                    if (oldEndpoint.equals(newEndpoint)) {
-                        if (oldEndpoint.weight() > newEndpoint.weight()) {
-                            i.remove();
-                            // The weight of the new endpoint is lower than old one so we just replace it.
-                            replacedOldEndpoints.add(newEndpoint);
-                        } else if (oldEndpoint.weight() < newEndpoint.weight()) {
-                            // The weight of the new endpoint is greater than old one so we just remove the
-                            // old endpoint. The new endpoint will be added to
-                            // newlyAddedEndpoints at the bottom of this method.
-                            i.remove();
-                        }
-                        break;
-                    }
+                final Endpoint newEndpoint = newEndpointsMap.get(oldEndpoint);
+                if (newEndpoint == null) {
+                    // newEndpoints does not have this old endpoint so we remove it.
+                    i.remove();
+                    continue;
+                }
+
+                if (oldEndpoint.weight() > newEndpoint.weight()) {
+                    // The weight of the new endpoint is lower than the old endpoint so we just replace it
+                    // because we don't have to ramp up the weight.
+                    replacedOldEndpoints.add(newEndpoint);
+                    // Also remove the new endpoint from the map so we don't ramp up for the endpoint.
+                    newEndpointsMap.remove(newEndpoint);
+                    i.remove();
+                } else if (oldEndpoint.weight() < newEndpoint.weight()) {
+                    // The weight of the new endpoint is greater than the old endpoint so we remove the
+                    // old one. The new endpoint will be ramping up
+                    i.remove();
+                } else {
+                    // The weights are same so we keep the old endpoint and remove the new endpoint from
+                    // the map so we don't ramp up for the endpoint.
+                    newEndpointsMap.remove(newEndpoint);
                 }
             }
             if (!replacedOldEndpoints.isEmpty()) {
@@ -212,9 +225,9 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                 final EndpointsInUpdatingEntry endpointsInUpdatingEntry = i.next();
 
                 final Set<EndpointAndStep> endpointAndSteps = endpointsInUpdatingEntry.endpointAndSteps();
-                removeIfNotInNewEndpoints(endpointAndSteps, newEndpoints);
+                removeIfNotInNewEndpoints(endpointAndSteps, newEndpointsMap);
                 if (endpointAndSteps.isEmpty()) {
-                    // All endpointAndSteps are removed so remove the entry from the Deque.
+                    // All endpointAndSteps are removed so remove the entry completely.
                     i.remove();
                     final ScheduledFuture<?> scheduledFuture = endpointsInUpdatingEntry.scheduledFuture;
                     if (scheduledFuture != null) {
@@ -223,72 +236,46 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                 }
             }
 
-            final Set<EndpointAndStep> newlyAddedEndpoints = new HashSet<>();
-            for (Endpoint newEndpoint : newEndpoints) {
-                // We don't have to compare the weight because the old endpoint whose host is same and weight
-                // is different is already removed.
-                if (oldEndpoints.contains(newEndpoint)) {
-                    continue;
-                }
-
-                // Two for loops are used but it's only the number of endpoints in updating because there are
-                // no duplicate endpoints. So no big deal.
-                boolean found = false;
-                for (EndpointsInUpdatingEntry endpointsInUpdatingEntry : endpointsInUpdatingEntries) {
-                    for (EndpointAndStep endpointAndStep : endpointsInUpdatingEntry.endpointAndSteps()) {
-                        if (endpointAndStep.endpoint().equals(newEndpoint)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (found) {
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    newlyAddedEndpoints.add(new EndpointAndStep(newEndpoint));
-                }
-            }
+            // At this point, newEndpointsMap only contains the new endpoints that have to be ramped up.
+            final Set<EndpointAndStep> newlyAddedEndpoints = new HashSet<>(newEndpointsMap.size());
+            newEndpointsMap.keySet().forEach(
+                    endpoint -> newlyAddedEndpoints.add(new EndpointAndStep(endpoint)));
             return newlyAddedEndpoints;
         }
 
         private void removeIfNotInNewEndpoints(Set<EndpointAndStep> endpointAndSteps,
-                                               List<Endpoint> newEndpoints) {
+                                               Map<Endpoint, Endpoint> newEndpointsMap) {
             final List<EndpointAndStep> replacedEndpoints = new ArrayList<>();
-            for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator();
-                 i.hasNext();) {
-                removeIfNotInNewEndpoints(i, newEndpoints, replacedEndpoints);
+            for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext();) {
+                final EndpointAndStep endpointAndStep = i.next();
+                final Endpoint endpointInUpdating = endpointAndStep.endpoint();
+                // Call map.remove() because endpointInUpdating should be removed from the newEndpointsMap
+                // if the map has it.
+                final Endpoint newEndpoint = newEndpointsMap.remove(endpointInUpdating);
+                if (newEndpoint == null) {
+                    // newEndpointsMap does not contain endpointInUpdating so just remove the endpoint.
+                    i.remove();
+                    continue;
+                }
+
+                if (endpointInUpdating.weight() == newEndpoint.weight()) {
+                    // Same weight so don't to anything. Ramping up happens as it is scheduled.
+                } else if (endpointAndStep.currentWeight() > newEndpoint.weight()) {
+                    // Don't need to update the weight anymore so we add the newEndpoint to oldEndpoints and
+                    // remove from the iterator.
+                    oldEndpoints.add(newEndpoint);
+                    i.remove();
+                } else {
+                    // Should replace the existing endpoint with the new one.
+                    // To replace, just remove and add the newEndpoint later after iteration is over.
+                    replacedEndpoints.add(new EndpointAndStep(newEndpoint, endpointAndStep.step));
+                    i.remove();
+                }
             }
 
             if (!replacedEndpoints.isEmpty()) {
                 endpointAndSteps.addAll(replacedEndpoints);
             }
-        }
-
-        private void removeIfNotInNewEndpoints(Iterator<EndpointAndStep> i, List<Endpoint> newEndpoints,
-                                               List<EndpointAndStep> replacedEndpoints) {
-            final EndpointAndStep endpointAndStep = i.next();
-            final Endpoint endpointInUpdating = endpointAndStep.endpoint();
-            for (Endpoint newEndpoint : newEndpoints) {
-                if (endpointInUpdating.equals(newEndpoint)) {
-                    if (endpointInUpdating.weight() == newEndpoint.weight()) {
-                        // Same weight so we don't do anything.
-                    } else if (endpointAndStep.currentWeight() > newEndpoint.weight()) {
-                        // Don't need to update the weight anymore so we add the newEndpoint to oldEndpoints.
-                        oldEndpoints.add(newEndpoint);
-                        i.remove();
-                    } else {
-                        // Should replace the existing endpoint with the new one.
-                        // To replace, just remove and add the newEndpoint later after iteration is over.
-                        replacedEndpoints.add(new EndpointAndStep(newEndpoint, endpointAndStep.step));
-                        i.remove();
-                    }
-                    return;
-                }
-            }
-            // The endpoint is not in newEndpoints so remove it.
-            i.remove();
         }
 
         private void updateEndpointWeight() {
@@ -318,8 +305,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             }
         }
 
-        private void updateEndpointWeight(Set<EndpointAndStep> endpointAndSteps,
-                                          Builder<Endpoint> builder) {
+        private void updateEndpointWeight(Set<EndpointAndStep> endpointAndSteps, Builder<Endpoint> builder) {
             for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext();) {
                 final EndpointAndStep endpointAndStep = i.next();
                 final int step = endpointAndStep.incrementAndGetStep();
@@ -415,7 +401,6 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                 return endpoint;
             }
 
-            // Added for testing.
             @Override
             public boolean equals(Object o) {
                 if (this == o) {
@@ -433,10 +418,10 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                        currentWeight == that.currentWeight();
             }
 
-            // Added for testing.
             @Override
             public int hashCode() {
-                return ((endpoint.hashCode() * 31 + endpoint.weight()) * 31 + step) * 31 + currentWeight;
+                // Do not use step and currentWeight because they are changed during iteration.
+                return endpoint.hashCode() * 31 + endpoint.weight();
             }
 
             @Override

@@ -42,11 +42,14 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategy.EndpointsInUpdatingEntry;
 import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategy.EndpointsInUpdatingEntry.EndpointAndStep;
 import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategy.RampingUpEndpointWeightSelector;
 import com.linecorp.armeria.client.endpoint.WeightBasedRandomEndpointSelector.Entry;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 
 final class RampingUpWeightedRoundRobinStrategyTest {
 
@@ -147,14 +150,16 @@ final class RampingUpWeightedRoundRobinStrategyTest {
         Deque<EndpointsInUpdatingEntry> endpointsInUpdatingEntries = selector.endpointsInUpdatingEntries;
         assertThat(endpointsInUpdatingEntries).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps1 = endpointsInUpdatingEntries.peek().endpointAndSteps();
-        assertThat(endpointAndSteps1).containsExactly(
+        assertThat(endpointAndSteps1).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("bar.com"), 1, 100),
                 endpointAndStep(Endpoint.of("bar1.com"), 1, 100));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator()).containsExactly(
-                Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
-                Endpoint.of("bar.com").withWeight(100), Endpoint.of("bar1.com").withWeight(100)
-        );
+        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+                                      .containsExactlyInAnyOrder(
+                                              Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
+                                              Endpoint.of("bar.com").withWeight(100),
+                                              Endpoint.of("bar1.com").withWeight(100)
+                                      );
 
         // The weights of qux.com and qux1.com will be updated with bar.com and bar1.com.
         endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
@@ -289,15 +294,17 @@ final class RampingUpWeightedRoundRobinStrategyTest {
         final Deque<EndpointsInUpdatingEntry> endpointsInUpdatingEntries = selector.endpointsInUpdatingEntries;
         assertThat(endpointsInUpdatingEntries).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps = endpointsInUpdatingEntries.peek().endpointAndSteps();
-        assertThat(endpointAndSteps).containsExactly(
+        assertThat(endpointAndSteps).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("bar.com"), 1, 100),
                 endpointAndStep(Endpoint.of("bar1.com"), 1, 100));
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator()).containsExactly(
-                Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
-                // 1000 * (1 / 10) => weight * (step / numberOfSteps)
-                Endpoint.of("bar.com").withWeight(100), Endpoint.of("bar1.com").withWeight(100)
-        );
+        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+                                      .containsExactlyInAnyOrder(
+                                              Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
+                                              // 1000 * (1 / 10) => weight * (step / numberOfSteps)
+                                              Endpoint.of("bar.com").withWeight(100),
+                                              Endpoint.of("bar1.com").withWeight(100)
+                                      );
     }
 
     /**
