@@ -45,7 +45,7 @@ public abstract class AbstractMethodChainingTest {
         final String packageName = getClass().getPackage().getName();
         findAllClasses(packageName).stream()
                                    .map(ReflectionUtils::forName)
-                                   .filter(AbstractMethodChainingTest::filterClass)
+                                   .filter(clazz -> clazz.getSimpleName().endsWith("Builder"))
                                    .forEach(clazz -> {
                                        final List<Method> methods = obtainMethods(clazz);
                                        for (Method m : methods) {
@@ -63,24 +63,12 @@ public abstract class AbstractMethodChainingTest {
 
     private static Collection<String> findAllClasses(String packageName) {
         final ConfigurationBuilder configuration = new ConfigurationBuilder()
+                .filterInputsBy(filePath -> filePath != null && filePath.endsWith(".class"))
                 .setUrls(ClasspathHelper.forPackage(packageName))
                 .setScanners(new SubTypesScanner())
                 .setMetadataAdapter(new JavaReflectionAdapter());
         final Reflections reflections = new Reflections(configuration);
         return reflections.getStore().get(SubTypesScanner.class.getSimpleName()).values();
-    }
-
-    private static boolean filterClass(Class<?> clazz) {
-        return declaredInTestClass(clazz) &&
-               clazz.getName().endsWith("Builder");
-    }
-
-    private static boolean declaredInTestClass(Class<?> clazz) {
-        final Class<?> declaringClass = clazz.getDeclaringClass();
-        if (declaringClass == null) {
-            return true;
-        }
-        return !declaringClass.getSimpleName().endsWith("Test");
     }
 
     private static List<Method> obtainMethods(Class<?> clazz) {
@@ -89,7 +77,7 @@ public abstract class AbstractMethodChainingTest {
                                                            .flatMap(sc -> Arrays.stream(sc.getMethods()))
                                                            .distinct()
                                                            .collect(toImmutableList());
-
+        // In general, if parent classes have a build method, did not override the method with that type.
         if (existMethodName(methods, "build")) {
             return ImmutableList.of();
         } else {
