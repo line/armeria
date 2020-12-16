@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
+import com.google.common.primitives.Ints;
+
 import com.linecorp.armeria.client.Endpoint;
 
 /**
@@ -30,7 +32,7 @@ public interface EndpointWeightTransition {
     static EndpointWeightTransition linear() {
         return (endpoint, currentStep, totalSteps) ->
                 // currentStep is never greater than totalSteps so we can cast long to int.
-                (int) ((long) endpoint.weight() * currentStep / totalSteps);
+                Ints.saturatedCast((long) endpoint.weight() * currentStep / totalSteps);
     }
 
     /**

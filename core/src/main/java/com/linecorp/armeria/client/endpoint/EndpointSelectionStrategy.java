@@ -57,7 +57,7 @@ public interface EndpointSelectionStrategy {
      * by default. If you want to customize the parameters, use {@link #builderForRampingUp()}.
      */
     static EndpointSelectionStrategy rampingUp() {
-        return new RampingUpWeightedRoundRobinStrategyBuilder().build();
+        return builderForRampingUp().build();
     }
 
     /**

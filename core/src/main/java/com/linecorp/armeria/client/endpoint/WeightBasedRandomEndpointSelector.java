@@ -72,7 +72,8 @@ final class WeightBasedRandomEndpointSelector {
             // However, we have counters and choosing an endpoint doesn't have to be exact so no big deal.
             // TODO(minwoox): Use binary search when the number of endpoints is greater than N.
             for (Entry entry : currentEntries) {
-                nextLong -= entry.endpoint.weight();
+                final int weight = entry.endpoint().weight();
+                nextLong -= weight;
                 if (nextLong < 0) {
                     if (entry.increaseCounter()) {
                         selected = entry.endpoint();
@@ -84,17 +85,14 @@ final class WeightBasedRandomEndpointSelector {
                     // The entry is full so we should remove the entry from currentEntries.
                     synchronized (currentEntries) {
                         // Check again not to remove the entry where reset() is called by another thread.
-                        if (!entry.isFull()) {
-                            break;
-                        }
-                        if (currentEntries.remove(entry)) {
-                            if (currentEntries.isEmpty()) {
-                                reset();
-                            } else {
-                                currentTotalWeight -= entry.endpoint().weight();
+                        if (entry.isFull()) {
+                            if (currentEntries.remove(entry)) {
+                                if (currentEntries.isEmpty()) {
+                                    reset();
+                                } else {
+                                    currentTotalWeight -= weight;
+                                }
                             }
-                        } else {
-                            // The entry is removed by another thread.
                         }
                     }
                     break;
