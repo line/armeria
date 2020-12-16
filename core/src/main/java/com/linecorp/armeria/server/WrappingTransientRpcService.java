@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import java.util.Set;
-import java.util.function.Function;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -25,22 +24,7 @@ import com.linecorp.armeria.common.RpcResponse;
 /**
  * Decorated a {@link RpcService} to be treated as {@link TransientService} without inheritance.
  */
-public final class WrappingTransientRpcService
-        extends SimpleDecoratingRpcService implements TransientRpcService {
-
-    /**
-     * Returns a new {@link RpcService} decorator which makes as {@link TransientService}.
-     */
-    public static Function<? super RpcService, WrappingTransientRpcService> newDecorator() {
-        return delegate -> builder().build(delegate);
-    }
-
-    /**
-     * Returns a new {@link WrappingTransientRpcServiceBuilder}.
-     */
-    public static WrappingTransientRpcServiceBuilder builder() {
-        return new WrappingTransientRpcServiceBuilder();
-    }
+final class WrappingTransientRpcService extends SimpleDecoratingRpcService implements TransientRpcService {
 
     private final Set<TransientServiceOption> transientServiceOptions;
 

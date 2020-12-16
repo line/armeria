@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import java.util.Set;
-import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -25,22 +24,7 @@ import com.linecorp.armeria.common.HttpResponse;
 /**
  * Decorated a {@link HttpService} to be treated as {@link TransientService} without inheritance.
  */
-public final class WrappingTransientHttpService
-        extends SimpleDecoratingHttpService implements TransientHttpService {
-
-    /**
-     * Returns a new {@link HttpService} decorator which makes as {@link TransientService}.
-     */
-    public static Function<? super HttpService, WrappingTransientHttpService> newDecorator() {
-        return delegate -> builder().build(delegate);
-    }
-
-    /**
-     * Returns a new {@link WrappingTransientHttpServiceBuilder}.
-     */
-    public static WrappingTransientHttpServiceBuilder builder() {
-        return new WrappingTransientHttpServiceBuilder();
-    }
+final class WrappingTransientHttpService extends SimpleDecoratingHttpService implements TransientHttpService {
 
     private final Set<TransientServiceOption> transientServiceOptions;
 

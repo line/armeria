@@ -31,9 +31,7 @@ class WrappingTransientHttpServiceTest {
     @Test
     void extractTransientServiceOptions() {
         final HttpService wrapped = FOO.decorate(
-                WrappingTransientHttpService.builder()
-                                            .transientServiceOptions(TransientServiceOption.WITH_ACCESS_LOGGING)
-                                            .newDecorator());
+                TransientService.newDecorator(TransientServiceOption.WITH_ACCESS_LOGGING));
 
         @SuppressWarnings("rawtypes")
         final TransientService transientService = wrapped.as(TransientService.class);

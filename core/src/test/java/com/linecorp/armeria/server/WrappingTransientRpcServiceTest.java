@@ -24,16 +24,14 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.RpcResponse;
 
-class WrappingTransientRpcServiceBuilderTest {
+class WrappingTransientRpcServiceTest {
 
     static final RpcService FOO = (ctx, req) -> RpcResponse.of("foo");
 
     @Test
     void extractTransientServiceOptions() {
         final RpcService wrapped = FOO.decorate(
-                WrappingTransientRpcService.builder()
-                                           .transientServiceOptions(TransientServiceOption.WITH_ACCESS_LOGGING)
-                                           .newDecorator());
+                TransientRpcService.newDecorator(TransientServiceOption.WITH_ACCESS_LOGGING));
 
         @SuppressWarnings("rawtypes")
         final TransientService transientService = wrapped.as(TransientService.class);

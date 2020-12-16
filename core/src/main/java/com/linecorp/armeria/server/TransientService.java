@@ -16,7 +16,12 @@
 
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Set;
+import java.util.function.Function;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
@@ -30,6 +35,17 @@ import com.linecorp.armeria.common.Response;
  */
 @FunctionalInterface
 public interface TransientService<I extends Request, O extends Response> extends Service<I, O> {
+
+    /**
+     * Returns a new {@link HttpService} decorator which makes the specified {@link HttpService} as
+     * {@link TransientService}.
+     */
+    static Function<? super HttpService, SimpleDecoratingHttpService> newDecorator(
+            TransientServiceOption... transientServiceOptions) {
+        requireNonNull(transientServiceOptions, "transientServiceOptions");
+        return delegate -> new WrappingTransientHttpService(delegate,
+                                                            ImmutableSet.copyOf(transientServiceOptions));
+    }
 
     /**
      * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for this
