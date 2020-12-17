@@ -14,17 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring;
+package com.linecorp.armeria.internal.spring;
 
 import org.springframework.context.SmartLifecycle;
 
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.spring.ArmeriaAutoConfiguration;
 
 /**
- * Make Armeria Server utilize spring's SmartLifecycle feature.
+ * Make Armeria {@link Server} utilize spring's SmartLifecycle feature.
  * So Armeria will shutdown before other web servers and beans in the context.
  */
-public class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
+public final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
     /**
      * {@link Server} created by {@link ArmeriaAutoConfiguration}. .
      */
@@ -35,13 +36,6 @@ public class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
      */
     public ArmeriaServerGracefulShutdownLifecycle(Server server) {
         this.server = server;
-    }
-
-    /**
-     * Return the created {@link Server}.
-     */
-    public Server getServer() {
-        return server;
     }
 
     /**
@@ -69,7 +63,7 @@ public class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
     }
 
     /**
-     * Return the phase that this lifecycle object is supposed to run in.
+     * Returns the phase that this lifecycle object is supposed to run in.
      * WebServerStartStopLifecycle's phase is Integer.MAX_VALUE - 1.
      * To run before the tomcat, we need to larger than Integer.MAX_VALUE - 1.
      */
