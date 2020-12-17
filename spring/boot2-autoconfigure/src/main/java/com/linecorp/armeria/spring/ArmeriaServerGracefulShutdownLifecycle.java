@@ -14,12 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.spring;
+package com.linecorp.armeria.spring;
 
 import org.springframework.context.SmartLifecycle;
 
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.spring.ArmeriaAutoConfiguration;
 
 /**
  * Make Armeria {@link Server} utilize spring's SmartLifecycle feature.
