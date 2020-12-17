@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common.stream;
 
-import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
@@ -52,10 +50,6 @@ import io.netty.util.concurrent.EventExecutor;
  */
 @UnstableApi
 public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implements HttpDecoderOutput<T> {
-
-    private static final SubscriptionOption[] EMPTY_OPTIONS = {};
-    private static final SubscriptionOption[] POOLED_OBJECTS_OPTIONS = { WITH_POOLED_OBJECTS };
-    private static final SubscriptionOption[] NOTIFY_CANCELLATION_OPTIONS = { NOTIFY_CANCELLATION };
 
     private final HttpMessageSubscriber subscriber = new HttpMessageSubscriber();
 
@@ -115,38 +109,37 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
     public void add(T e) {
         if (tryWrite(e)) {
             handlerProduced = true;
+        } else {
+            cancelAndCleanup();
         }
     }
 
     @Override
-    protected void subscribe0(EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation) {
-        publisher.subscribe(subscriber, executor, toSubscriptionOptions(withPooledObjects, notifyCancellation));
-        deferredInit();
+    protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {
+        publisher.subscribe(subscriber, executor, options);
     }
 
-    private void deferredInit() {
-        if (upstream != null) {
-            if (initialized) {
-                return;
-            }
+    private void initialize() {
+        if (initialized) {
+            return;
+        }
 
-            initialized = true;
-            if (cancelled) {
-                upstream.cancel();
-                return;
-            }
+        initialized = true;
+        if (cancelled) {
+            upstream.cancel();
+            return;
+        }
 
-            long demand = demand();
-            if (demand > 0 && requestHeaders != null) {
-                final HttpHeaders requestHeaders = this.requestHeaders;
-                this.requestHeaders = null;
-                subscriber.onNext(requestHeaders);
-                demand--;
-            }
+        long demand = demand();
+        if (demand > 0 && requestHeaders != null) {
+            final HttpHeaders requestHeaders = this.requestHeaders;
+            this.requestHeaders = null;
+            subscriber.onNext(requestHeaders);
+            demand--;
+        }
 
-            if (demand > 0) {
-                askUpstreamForElement();
-            }
+        if (demand > 0) {
+            askUpstreamForElement();
         }
     }
 
@@ -189,20 +182,6 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
         input.close();
     }
 
-    private static SubscriptionOption[] toSubscriptionOptions(boolean withPooledObjects,
-                                                              boolean notifyCancellation) {
-        if (withPooledObjects && notifyCancellation) {
-            return SubscriptionOption.values();
-        }
-        if (withPooledObjects) {
-            return POOLED_OBJECTS_OPTIONS;
-        }
-        if (notifyCancellation) {
-            return NOTIFY_CANCELLATION_OPTIONS;
-        }
-        return EMPTY_OPTIONS;
-    }
-
     private final class HttpMessageSubscriber implements Subscriber<HttpObject> {
 
         @Override
@@ -210,7 +189,7 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
             requireNonNull(subscription, "subscription");
             if (upstream == null) {
                 upstream = subscription;
-                deferredInit();
+                initialize();
             } else {
                 subscription.cancel();
             }

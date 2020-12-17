@@ -60,7 +60,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *       > }
  *       }</pre>
  *   </li>
- *   <li>Create an decoded {@link StreamMessage} using {@link HttpMessage#decode(HttpDecoder)}
+ *   <li>Create a decoded {@link StreamMessage} using {@link HttpMessage#decode(HttpDecoder)}
  *       with the {@link HttpDecoder} instance.
  *       <pre>{@code
  *       FixedLengthDecoder decoder = new FixedLengthDecoder(11);

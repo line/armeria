@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
@@ -137,8 +138,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
         try {
             invokedOnSubscribe = true;
-            subscribe0(subscription.executor(), subscription.withPooledObjects(),
-                       subscription.notifyCancellation());
+            subscribe0(subscription.executor(), subscription.options());
             subscriber.onSubscribe(subscription);
         } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
@@ -155,7 +155,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     /**
      * Invoked when a subscriber subscribes.
      */
-    protected void subscribe0(EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation) {}
+    protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {}
 
     /**
      * Invoked whenever a new demand is requested.
@@ -177,7 +177,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         SubscriptionImpl subscription = this.subscription;
         if (subscription == null) {
             final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                    this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
+                    this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
                 // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
                 invokedOnSubscribe = true;
