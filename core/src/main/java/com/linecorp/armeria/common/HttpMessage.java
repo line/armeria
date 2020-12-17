@@ -31,27 +31,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * A streamed HTTP/2 message.
  */
-public interface HttpMessage {
-
-    /**
-     * Returns a new {@link StreamMessageDuplicator} that duplicates this {@link HttpMessage} into one or
-     * more {@link HttpMessage}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpMessage} anymore after you call this method.
-     * To subscribe, call {@link StreamMessageDuplicator#duplicate()} from the returned
-     * {@link StreamMessageDuplicator}.
-     */
-    StreamMessageDuplicator<HttpObject> toDuplicator();
-
-    /**
-     * Returns a new {@link StreamMessageDuplicator} that duplicates this {@link HttpMessage} into one or
-     * more {@link HttpMessage}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpMessage} anymore after you call this method.
-     * To subscribe, call {@link StreamMessageDuplicator#duplicate()} from the returned
-     * {@link StreamMessageDuplicator}.
-     *
-     * @param executor the executor to duplicate
-     */
-    StreamMessageDuplicator<HttpObject> toDuplicator(EventExecutor executor);
+public interface HttpMessage extends StreamMessage<HttpObject> {
 
     /**
      * Returns a new {@link StreamMessageDuplicator} that duplicates this {@link HttpMessage} into one or

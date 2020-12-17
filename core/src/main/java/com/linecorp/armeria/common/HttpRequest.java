@@ -60,7 +60,7 @@ import io.netty.util.concurrent.EventExecutor;
  * <p>Note: The initial {@link RequestHeaders} is not signaled to {@link Subscriber}s. It is readily available
  * via {@link #headers()}.
  */
-public interface HttpRequest extends Request, HttpMessage, StreamMessage<HttpObject> {
+public interface HttpRequest extends Request, HttpMessage {
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
     //       AggregatedHttpRequest for consistency.

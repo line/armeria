@@ -57,7 +57,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * A streamed HTTP/2 {@link Response}.
  */
-public interface HttpResponse extends Response, HttpMessage, StreamMessage<HttpObject> {
+public interface HttpResponse extends Response, HttpMessage {
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
     //       AggregatedHttpResponse for consistency.
