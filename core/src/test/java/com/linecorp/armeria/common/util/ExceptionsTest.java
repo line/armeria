@@ -92,16 +92,21 @@ public class ExceptionsTest {
         assertThat(Exceptions.isExpected(ClosedSessionException.get())).isEqualTo(expected);
 
         assertThat(Exceptions.isExpected(new IOException("connection reset by peer"))).isEqualTo(expected);
-        assertThat(Exceptions.isExpected(new IOException("invalid argument"))).isEqualTo(false);
+        assertThat(Exceptions.isExpected(new IOException("invalid argument"))).isFalse();
 
         assertThat(Exceptions.isExpected(new ChannelException("broken pipe"))).isEqualTo(expected);
-        assertThat(Exceptions.isExpected(new ChannelException("invalid argument"))).isEqualTo(false);
+        assertThat(Exceptions.isExpected(new ChannelException("invalid argument"))).isFalse();
 
         assertThat(Exceptions.isExpected(new Http2Exception(Http2Error.INTERNAL_ERROR, "stream closed")))
                 .isEqualTo(expected);
-        assertThat(Exceptions.isExpected(new Http2Exception(Http2Error.INTERNAL_ERROR))).isEqualTo(false);
+        assertThat(Exceptions.isExpected(new Http2Exception(Http2Error.INTERNAL_ERROR))).isFalse();
+
+        assertThat(Exceptions.isExpected(new Http2Exception(Http2Error.PROTOCOL_ERROR,
+                                                            "Stream 49 does not exist")))
+                .isTrue();
+        assertThat(Exceptions.isExpected(new Http2Exception(Http2Error.PROTOCOL_ERROR))).isFalse();
 
         assertThat(Exceptions.isExpected(new SSLException("SSLEngine closed already"))).isEqualTo(expected);
-        assertThat(Exceptions.isExpected(new SSLException("Handshake failed"))).isEqualTo(false);
+        assertThat(Exceptions.isExpected(new SSLException("Handshake failed"))).isFalse();
     }
 }
