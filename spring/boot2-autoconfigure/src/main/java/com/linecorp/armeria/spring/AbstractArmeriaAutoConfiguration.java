@@ -27,8 +27,6 @@ import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
@@ -38,6 +36,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.internal.spring.ArmeriaServerGracefulShutdownLifecycle;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -55,15 +54,13 @@ import io.micrometer.core.instrument.Metrics;
  */
 public abstract class AbstractArmeriaAutoConfiguration {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-
     private static final Port DEFAULT_PORT = new Port().setPort(8080)
                                                        .setProtocol(SessionProtocol.HTTP);
 
     private static final String GRACEFUL_SHUTDOWN = "graceful";
 
     /**
-     * Create a started {@link Server} bean.
+     * Create a {@link Server} bean without starting.
      */
     @Bean
     @Nullable
@@ -116,24 +113,14 @@ public abstract class AbstractArmeriaAutoConfiguration {
         if (!Strings.isNullOrEmpty(docsPath)) {
             serverBuilder.serviceUnder(docsPath, docServiceBuilder.build());
         }
-
-        final Server server = serverBuilder.build();
-
-        server.start().handle((result, t) -> {
-            if (t != null) {
-                throw new IllegalStateException("Armeria server failed to start", t);
-            }
-            return result;
-        }).join();
-        logger.info("Armeria server started at ports: {}", server.activePorts());
-        return server;
+        return serverBuilder.build();
     }
 
     /**
-     * Wrap {@link Server} with {@link SmartLifecycle}.
+     * Wrap {@link Server} with {@link SmartLifecycle} and let Spring help starting.
      */
     @Bean
-    public ArmeriaServerGracefulShutdownLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
+    public SmartLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
         return new ArmeriaServerGracefulShutdownLifecycle(server);
     }
 

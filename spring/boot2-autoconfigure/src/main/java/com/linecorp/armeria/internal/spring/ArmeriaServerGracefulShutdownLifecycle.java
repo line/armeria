@@ -14,21 +14,27 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring;
+package com.linecorp.armeria.internal.spring;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
 
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.spring.ArmeriaAutoConfiguration;
 
 /**
  * Make Armeria {@link Server} utilize spring's SmartLifecycle feature.
  * So Armeria will shutdown before other web servers and beans in the context.
  */
 public final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
+    private final Logger logger = LoggerFactory.getLogger(getClass());
     /**
      * {@link Server} created by {@link ArmeriaAutoConfiguration}. .
      */
     private final Server server;
+
+    private volatile boolean running;
 
     /**
      * Creates a new instance.
@@ -39,10 +45,20 @@ public final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecy
 
     /**
      * Start this component.
-     * Currently AbstractArmeriaAutoConfiguration help starting the server.
      */
     @Override
     public void start() {
+        if (running) {
+            return;
+        }
+        server.start().handle((result, t) -> {
+            if (t != null) {
+                throw new IllegalStateException("Armeria server failed to start", t);
+            }
+            return result;
+        }).join();
+        logger.info("Armeria server started at ports: {}", server.activePorts());
+        running = true;
     }
 
     /**
@@ -58,6 +74,7 @@ public final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecy
      */
     @Override
     public void stop(Runnable callback) {
+        running = false;
         server.stop().whenComplete((unused, throwable) -> callback.run());
     }
 
@@ -76,16 +93,15 @@ public final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecy
      */
     @Override
     public boolean isRunning() {
-        return !server.isClosed() && !server.isClosing();
+        return running;
     }
 
     /**
      * Returns true if this Lifecycle component should get started automatically by the container at the time
      * that the containing ApplicationContext gets refreshed.
-     * AbstractArmeriaAutoConfiguration start the server manually, so this implementation return false.
      */
     @Override
     public boolean isAutoStartup() {
-        return false;
+        return true;
     }
 }
