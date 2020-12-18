@@ -36,7 +36,7 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -102,6 +102,9 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             endpointSelector = new WeightBasedRandomEndpointSelector(initialEndpoints);
             oldEndpoints.addAll(initialEndpoints);
             endpointGroup.addListener(this::updateEndpoints);
+            if (endpointGroup instanceof DynamicEndpointGroup) {
+                ((DynamicEndpointGroup) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
+            }
         }
 
         @Override
@@ -125,17 +128,14 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             if (updatingTaskWindowNanos > 0) {
                 if (canAddToPrevEntry()) {
                     // Update weight right away and combine updating weight schedule with the previous Entry.
-                    final Set<EndpointAndStep> newlyAddedEndpoints = updateEndpoints1(newEndpoints);
-                    final ImmutableList.Builder<Endpoint> targetEndpointsBuilder = ImmutableList.builder();
-                    addCurrentEndpoints(targetEndpointsBuilder);
-
+                    final Set<EndpointAndStep> newlyAddedEndpoints = removeOrUpdateEndpoints(newEndpoints);
                     if (!newlyAddedEndpoints.isEmpty()) {
-                        updateEndpointWeight(newlyAddedEndpoints, targetEndpointsBuilder);
+                        updateWeightAndStep(newlyAddedEndpoints);
                         endpointsInUpdatingEntries.getLast().addEndpoints(newlyAddedEndpoints);
                     }
                     // Should recreate endpointSelector even when newlyAddedEndpoints is empty because
                     // the oldEndpoints is changed.
-                    endpointSelector = new WeightBasedRandomEndpointSelector(targetEndpointsBuilder.build());
+                    buildEndpointSelector();
                     return;
                 }
 
@@ -147,21 +147,36 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                 }
             }
 
-            final Set<EndpointAndStep> newlyAddedEndpoints = updateEndpoints1(newEndpoints);
+            final Set<EndpointAndStep> newlyAddedEndpoints = removeOrUpdateEndpoints(newEndpoints);
             if (newlyAddedEndpoints.isEmpty()) {
-                final ImmutableList.Builder<Endpoint> targetEndpointsBuilder = ImmutableList.builder();
-                addCurrentEndpoints(targetEndpointsBuilder);
-                // Should recreate endpointSelector because the oldEndpoints is changed
-                // when newlyAddedEndpoints is empty.
-                endpointSelector = new WeightBasedRandomEndpointSelector(targetEndpointsBuilder.build());
+                // newlyAddedEndpoints is empty which means that oldEndpoints might be changed.
+                // So rebuild the endpoint selector.
+                buildEndpointSelector();
                 return;
             }
 
-            final EndpointsInUpdatingEntry endpointsInUpdatingEntry =
-                    new EndpointsInUpdatingEntry(newlyAddedEndpoints, ticker,
-                                                 TimeUnit.MILLISECONDS.toNanos(rampingUpIntervalMillis));
-            endpointsInUpdatingEntries.add(endpointsInUpdatingEntry);
-            updateEndpointWeight();
+            updateWeightAndStep(newlyAddedEndpoints);
+
+            // Check again because newlyAddedEndpoints can be removed in updateWeightAndStep method.
+            if (!newlyAddedEndpoints.isEmpty()) {
+                final ScheduledFuture<?> scheduledFuture = executor.scheduleAtFixedRate(
+                        this::updateWeightAndStep, rampingUpIntervalMillis,
+                        rampingUpIntervalMillis, TimeUnit.MILLISECONDS);
+                final EndpointsInUpdatingEntry entry = new EndpointsInUpdatingEntry(
+                        newlyAddedEndpoints, scheduledFuture, ticker, rampingUpIntervalMillis);
+                endpointsInUpdatingEntries.add(entry);
+            }
+            buildEndpointSelector();
+        }
+
+        private void buildEndpointSelector() {
+            final ImmutableList.Builder<Endpoint> targetEndpointsBuilder = ImmutableList.builder();
+            targetEndpointsBuilder.addAll(oldEndpoints);
+            endpointsInUpdatingEntries.forEach(
+                    entry -> entry.endpointAndSteps().forEach(
+                            endpointAndStep -> targetEndpointsBuilder.add(
+                                    endpointAndStep.endpoint().withWeight(endpointAndStep.currentWeight()))));
+            endpointSelector = new WeightBasedRandomEndpointSelector(targetEndpointsBuilder.build());
         }
 
         private boolean canAddToPrevEntry() {
@@ -176,15 +191,12 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                    nextEndpointsInUpdatingEntry.nextUpdatingTime - ticker.read() <= updatingTaskWindowNanos;
         }
 
-        private void addCurrentEndpoints(ImmutableList.Builder<Endpoint> targetEndpointsBuilder) {
-            targetEndpointsBuilder.addAll(oldEndpoints);
-            endpointsInUpdatingEntries.forEach(
-                    entry -> entry.endpointAndSteps().forEach(
-                            endpointAndStep -> targetEndpointsBuilder.add(
-                                    endpointAndStep.endpoint().withWeight(endpointAndStep.currentWeight()))));
-        }
-
-        private Set<EndpointAndStep> updateEndpoints1(List<Endpoint> newEndpoints) {
+        /**
+         * Removes endpoints in oldEndpoints and endpointsInUpdatingEntries which newEndpoints do not contain.
+         * This also returns the the {@link Set} of {@link EndpointAndStep}s whose endpoints are not in
+         * in oldEndpoints and endpointsInUpdatingEntries.
+         */
+        private Set<EndpointAndStep> removeOrUpdateEndpoints(List<Endpoint> newEndpoints) {
             final Map<Endpoint, Endpoint> newEndpointsMap = new HashMap<>(newEndpoints.size());
             // The value is retrieved to compare the weight of the endpoint.
             newEndpoints.forEach(newEndpoint -> newEndpointsMap.put(newEndpoint, newEndpoint));
@@ -192,7 +204,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             final List<Endpoint> replacedOldEndpoints = new ArrayList<>();
             for (final Iterator<Endpoint> i = oldEndpoints.iterator(); i.hasNext();) {
                 final Endpoint oldEndpoint = i.next();
-                final Endpoint newEndpoint = newEndpointsMap.get(oldEndpoint);
+                final Endpoint newEndpoint = newEndpointsMap.remove(oldEndpoint);
                 if (newEndpoint == null) {
                     // newEndpoints does not have this old endpoint so we remove it.
                     i.remove();
@@ -203,17 +215,14 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                     // The weight of the new endpoint is lower than the old endpoint so we just replace it
                     // because we don't have to ramp up the weight.
                     replacedOldEndpoints.add(newEndpoint);
-                    // Also remove the new endpoint from the map so we don't ramp up for the endpoint.
-                    newEndpointsMap.remove(newEndpoint);
                     i.remove();
                 } else if (oldEndpoint.weight() < newEndpoint.weight()) {
                     // The weight of the new endpoint is greater than the old endpoint so we remove the
-                    // old one. The new endpoint will be ramping up
+                    // old one and put the newEndpoint back.
+                    newEndpointsMap.put(newEndpoint, newEndpoint);
                     i.remove();
                 } else {
-                    // The weights are same so we keep the old endpoint and remove the new endpoint from
-                    // the map so we don't ramp up for the endpoint.
-                    newEndpointsMap.remove(newEndpoint);
+                    // The weights are same so we keep the old endpoint.
                 }
             }
             if (!replacedOldEndpoints.isEmpty()) {
@@ -225,32 +234,30 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                 final EndpointsInUpdatingEntry endpointsInUpdatingEntry = i.next();
 
                 final Set<EndpointAndStep> endpointAndSteps = endpointsInUpdatingEntry.endpointAndSteps();
-                removeOrUpdateEndpointAndSteps(endpointAndSteps, newEndpointsMap);
+                removeOrUpdateEndpoints(endpointAndSteps, newEndpointsMap);
                 if (endpointAndSteps.isEmpty()) {
                     // All endpointAndSteps are removed so remove the entry completely.
                     i.remove();
-                    final ScheduledFuture<?> scheduledFuture = endpointsInUpdatingEntry.scheduledFuture;
-                    if (scheduledFuture != null) {
-                        scheduledFuture.cancel(true);
-                    }
+                    endpointsInUpdatingEntry.scheduledFuture.cancel(true);
                 }
             }
 
             // At this point, newEndpointsMap only contains the new endpoints that have to be ramped up.
+            if (newEndpointsMap.isEmpty()) {
+                return ImmutableSet.of();
+            }
             final Set<EndpointAndStep> newlyAddedEndpoints = new HashSet<>(newEndpointsMap.size());
             newEndpointsMap.keySet().forEach(
                     endpoint -> newlyAddedEndpoints.add(new EndpointAndStep(endpoint)));
             return newlyAddedEndpoints;
         }
 
-        private void removeOrUpdateEndpointAndSteps(Set<EndpointAndStep> endpointAndSteps,
-                                                    Map<Endpoint, Endpoint> newEndpointsMap) {
+        private void removeOrUpdateEndpoints(Set<EndpointAndStep> endpointAndSteps,
+                                             Map<Endpoint, Endpoint> newEndpointsMap) {
             final List<EndpointAndStep> replacedEndpoints = new ArrayList<>();
             for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext();) {
                 final EndpointAndStep endpointAndStep = i.next();
                 final Endpoint endpointInUpdating = endpointAndStep.endpoint();
-                // Call map.remove() because endpointInUpdating should be removed from the newEndpointsMap
-                // if the map has it.
                 final Endpoint newEndpoint = newEndpointsMap.remove(endpointInUpdating);
                 if (newEndpoint == null) {
                     // newEndpointsMap does not contain endpointInUpdating so just remove the endpoint.
@@ -268,7 +275,10 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                 } else {
                     // Should replace the existing endpoint with the new one.
                     // To replace, just remove and add the newEndpoint later after iteration is over.
-                    replacedEndpoints.add(new EndpointAndStep(newEndpoint, endpointAndStep.step));
+                    final int step = endpointAndStep.step();
+                    final EndpointAndStep replaced = new EndpointAndStep(newEndpoint, step);
+                    replaced.currentWeight(weightTransition.compute(newEndpoint, step, totalSteps));
+                    replacedEndpoints.add(replaced);
                     i.remove();
                 }
             }
@@ -278,34 +288,31 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             }
         }
 
-        private void updateEndpointWeight() {
-            final EndpointsInUpdatingEntry entry = endpointsInUpdatingEntries.peekFirst();
-            assert entry != null;
+        private void updateWeightAndStep() {
             if (unhandledNewEndpoints != null) {
-                final Set<EndpointAndStep> newlyAddedEndpoints = updateEndpoints1(unhandledNewEndpoints);
+                final Set<EndpointAndStep> newlyAddedEndpoints =
+                        removeOrUpdateEndpoints(unhandledNewEndpoints);
+                final EndpointsInUpdatingEntry entry = endpointsInUpdatingEntries.peek();
+                assert entry != null;
                 entry.addEndpoints(newlyAddedEndpoints);
                 unhandledNewEndpoints = null;
             }
+            final EndpointsInUpdatingEntry entry = endpointsInUpdatingEntries.poll();
+            assert entry != null;
 
-            final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
             final Set<EndpointAndStep> endpointAndSteps = entry.endpointAndSteps();
-            updateEndpointWeight(endpointAndSteps, builder);
-            builder.addAll(oldEndpoints);
-
-            endpointSelector = new WeightBasedRandomEndpointSelector(builder.build());
-            endpointsInUpdatingEntries.pollFirst();
-            if (!endpointAndSteps.isEmpty()) {
-                final ScheduledFuture<?> scheduledFuture = executor.schedule(
-                        (Runnable) this::updateEndpointWeight,
-                        rampingUpIntervalMillis,
-                        TimeUnit.MILLISECONDS);
-                entry.scheduledFuture(scheduledFuture);
+            updateWeightAndStep(endpointAndSteps);
+            if (endpointAndSteps.isEmpty()) {
+                entry.scheduledFuture.cancel(true);
+            } else {
                 // Added to the last of the entries.
                 endpointsInUpdatingEntries.add(entry);
+                entry.updateWindowTimestamps();
             }
+            buildEndpointSelector();
         }
 
-        private void updateEndpointWeight(Set<EndpointAndStep> endpointAndSteps, Builder<Endpoint> builder) {
+        private void updateWeightAndStep(Set<EndpointAndStep> endpointAndSteps) {
             for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext();) {
                 final EndpointAndStep endpointAndStep = i.next();
                 final int step = endpointAndStep.incrementAndGetStep();
@@ -316,10 +323,16 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                 } else {
                     final int calculated =
                             weightTransition.compute(endpoint, step, totalSteps);
-                    final int currentWeight = Math.max(Math.min(calculated, endpoint.weight()), 1);
+                    final int currentWeight = Math.max(Math.min(calculated, endpoint.weight()), 0);
                     endpointAndStep.currentWeight(currentWeight);
-                    builder.add(endpoint.withWeight(currentWeight));
                 }
+            }
+        }
+
+        private void close() {
+            EndpointsInUpdatingEntry entry;
+            while ((entry = endpointsInUpdatingEntries.poll()) != null) {
+                entry.scheduledFuture.cancel(true);
             }
         }
     }
@@ -331,16 +344,17 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
         private final Ticker ticker;
         private final long rampingUpIntervalNanos;
 
-        @Nullable
-        ScheduledFuture<?> scheduledFuture;
+        final ScheduledFuture<?> scheduledFuture;
         long lastUpdatedTime;
         long nextUpdatingTime;
 
-        EndpointsInUpdatingEntry(Set<EndpointAndStep> endpointAndSteps, Ticker ticker,
-                                 long rampingUpIntervalNanos) {
+        EndpointsInUpdatingEntry(Set<EndpointAndStep> endpointAndSteps, ScheduledFuture<?> scheduledFuture,
+                                 Ticker ticker, long rampingUpIntervalMillis) {
             this.endpointAndSteps = endpointAndSteps;
+            this.scheduledFuture = scheduledFuture;
             this.ticker = ticker;
-            this.rampingUpIntervalNanos = rampingUpIntervalNanos;
+            rampingUpIntervalNanos = TimeUnit.MILLISECONDS.toNanos(rampingUpIntervalMillis);
+            updateWindowTimestamps();
         }
 
         Set<EndpointAndStep> endpointAndSteps() {
@@ -351,8 +365,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
             endpointAndSteps.addAll(endpoints);
         }
 
-        void scheduledFuture(ScheduledFuture<?> scheduledFuture) {
-            this.scheduledFuture = scheduledFuture;
+        void updateWindowTimestamps() {
             lastUpdatedTime = ticker.read();
             nextUpdatingTime = lastUpdatedTime + rampingUpIntervalNanos;
         }
@@ -395,6 +408,10 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
 
             int currentWeight() {
                 return currentWeight;
+            }
+
+            int step() {
+                return step;
             }
 
             Endpoint endpoint() {

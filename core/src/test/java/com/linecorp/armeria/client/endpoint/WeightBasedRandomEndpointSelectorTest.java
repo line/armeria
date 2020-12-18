@@ -29,6 +29,15 @@ import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategyT
 final class WeightBasedRandomEndpointSelectorTest {
 
     @Test
+    void zeroWeightFiltered() {
+        final Endpoint foo = Endpoint.of("foo.com").withWeight(0);
+        final Endpoint bar = Endpoint.of("bar.com").withWeight(0);
+        final List<Endpoint> endpoints = ImmutableList.of(foo, bar);
+        final WeightBasedRandomEndpointSelector selector = new WeightBasedRandomEndpointSelector(endpoints);
+        assertThat(selector.selectEndpoint()).isNull();
+    }
+
+    @Test
     void everyEndpointIsSelectedAsManyAsItsWeightInOneTurn() {
         final Endpoint foo = Endpoint.of("foo.com").withWeight(3);
         final Endpoint bar = Endpoint.of("bar.com").withWeight(2);

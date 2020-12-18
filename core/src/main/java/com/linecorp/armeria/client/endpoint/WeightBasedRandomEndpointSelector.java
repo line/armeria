@@ -46,6 +46,9 @@ final class WeightBasedRandomEndpointSelector {
 
         long totalWeight = 0;
         for (Endpoint endpoint : endpoints) {
+            if (endpoint.weight() <= 0) {
+                continue;
+            }
             builder.add(new Entry(endpoint));
             totalWeight += endpoint.weight();
         }

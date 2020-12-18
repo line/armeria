@@ -18,9 +18,10 @@ package com.linecorp.armeria.client.endpoint;
 import static com.linecorp.armeria.client.endpoint.EndpointWeightTransition.linear;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.io.Serializable;
-import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
@@ -29,6 +30,7 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -52,12 +54,28 @@ final class RampingUpWeightedRoundRobinStrategyTest {
 
     private static final AtomicLong ticker = new AtomicLong();
 
-    private static final Queue<Runnable> scheduledJobs = new ArrayDeque<>();
+    private static final Queue<Runnable> scheduledJobs = new ConcurrentLinkedQueue<>();
+    private static final Queue<ScheduledFuture<?>> scheduledFutures = new ConcurrentLinkedQueue<>();
 
     @BeforeEach
     void setUp() {
         ticker.set(0);
         scheduledJobs.clear();
+        scheduledFutures.clear();
+    }
+
+    @Test
+    void endpointIsRemovedIfNotInNewEndpoints() {
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, 2);
+        ticker.addAndGet(1);
+        // Because we set only foo1.com, foo.com is removed.
+        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo1.com")));
+        final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
+        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+                                      .containsExactly(
+                                              Endpoint.of("foo1.com")
+                                      );
     }
 
     @Test
@@ -123,12 +141,6 @@ final class RampingUpWeightedRoundRobinStrategyTest {
                                               Endpoint.of("baz.com").withWeight(100),
                                               Endpoint.of("baz1.com").withWeight(100)
                                       );
-    }
-
-    private static EndpointAndStep endpointAndStep(Endpoint endpoint, int step, int currentWeight) {
-        final EndpointAndStep endpointAndStep = new EndpointAndStep(endpoint, step);
-        endpointAndStep.currentWeight(currentWeight);
-        return endpointAndStep;
     }
 
     @Test
@@ -258,6 +270,71 @@ final class RampingUpWeightedRoundRobinStrategyTest {
                                       );
     }
 
+    @Test
+    void endpointsInUpdatingAreRemoved() {
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, 10);
+
+        ticker.addAndGet(1);
+
+        addSecondEndpoints(endpointGroup, selector);
+
+        ticker.addAndGet(1);
+
+        // bar1.com is removed and the weight of bar.com is updated.
+        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
+                                                    Endpoint.of("bar.com").withWeight(3000)));
+
+        final Deque<EndpointsInUpdatingEntry> endpointsInUpdatingEntries = selector.endpointsInUpdatingEntries;
+        assertThat(endpointsInUpdatingEntries).hasSize(1);
+        final Set<EndpointAndStep> endpointAndSteps = endpointsInUpdatingEntries.peek().endpointAndSteps();
+        assertThat(endpointAndSteps).containsExactly(
+                endpointAndStep(Endpoint.of("bar.com").withWeight(3000), 1, 300));
+        List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
+        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+                                      .containsExactlyInAnyOrder(
+                                              Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
+                                              Endpoint.of("bar.com").withWeight(300)
+                                      );
+
+        ticker.addAndGet(1);
+        // bar.com is removed.
+        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com")));
+        assertThat(endpointsInUpdatingEntries).isEmpty();
+        endpointsFromEntry = endpointsFromSelectorEntry(selector);
+        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+                                      .containsExactlyInAnyOrder(
+                                              Endpoint.of("foo.com"), Endpoint.of("foo1.com")
+                                      );
+        assertThat(scheduledFutures).hasSize(1);
+        verify(scheduledFutures.poll(), times(1)).cancel(true);
+    }
+
+    @Test
+    void scheduledIsCanceledWhenEndpointGroupIsClosed() {
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, 10);
+
+        ticker.addAndGet(1);
+
+        addSecondEndpoints(endpointGroup, selector);
+        assertThat(scheduledFutures).hasSize(1);
+
+        ticker.addAndGet(TimeUnit.SECONDS.toNanos(10));
+
+        endpointGroup.addEndpoint(Endpoint.of("baz.com"));
+        endpointGroup.addEndpoint(Endpoint.of("baz1.com"));
+        assertThat(scheduledFutures).hasSize(2);
+
+        endpointGroup.close();
+
+        ScheduledFuture<?> scheduledFuture;
+        while ((scheduledFuture = scheduledFutures.poll()) != null) {
+            verify(scheduledFuture, times(1)).cancel(true);
+        }
+
+    }
+
     private static RampingUpEndpointWeightSelector setInitialEndpoints(DynamicEndpointGroup endpointGroup,
                                                                        int numberOfSteps) {
         final RampingUpWeightedRoundRobinStrategy strategy =
@@ -304,6 +381,12 @@ final class RampingUpWeightedRoundRobinStrategyTest {
                                       );
     }
 
+    private static EndpointAndStep endpointAndStep(Endpoint endpoint, int step, int currentWeight) {
+        final EndpointAndStep endpointAndStep = new EndpointAndStep(endpoint, step);
+        endpointAndStep.currentWeight(currentWeight);
+        return endpointAndStep;
+    }
+
     /**
      * A Comparator which includes the weight of an endpoint to compare.
      */
@@ -333,8 +416,7 @@ final class RampingUpWeightedRoundRobinStrategyTest {
 
         @Override
         public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-            scheduledJobs.add(command);
-            return mock(ScheduledFuture.class);
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -345,7 +427,10 @@ final class RampingUpWeightedRoundRobinStrategyTest {
         @Override
         public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
                                                       TimeUnit unit) {
-            throw new UnsupportedOperationException();
+            scheduledJobs.add(command);
+            final ScheduledFuture<?> scheduledFuture = mock(ScheduledFuture.class);
+            scheduledFutures.add(scheduledFuture);
+            return scheduledFuture;
         }
 
         @Override
