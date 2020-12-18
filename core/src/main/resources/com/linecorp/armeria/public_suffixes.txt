@@ -1838,6 +1838,8 @@ democracia.bo
 democrat
 demon.nl
 denmark.museum
+deno-staging.dev
+deno.dev
 dental
 dentist
 dep.no
@@ -8427,6 +8429,7 @@ wnext.app
 wodzislaw.pl
 wolomin.pl
 wolterskluwer
+woltlab-demo.com
 woodside
 work
 workers.dev
@@ -8626,6 +8629,8 @@ xn--gls-elac.no
 xn--gmq050i.hk
 xn--gmqw5a.hk
 xn--gmqw5a.xn--j6w193g
+xn--gnstigbestellen-zvb.de
+xn--gnstigliefern-wob.de
 xn--h-2fa.no
 xn--h1aegh.museum
 xn--h1ahn.xn--p1acf
