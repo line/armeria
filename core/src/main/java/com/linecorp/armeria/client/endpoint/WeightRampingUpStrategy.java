@@ -98,13 +98,29 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            final List<Endpoint> initialEndpoints = endpointGroup.endpoints();
+            final List<Endpoint> initialEndpoints =
+                    new ArrayList<>(aggregateSameEndpointsWeight(endpointGroup.endpoints()).values());
             endpointSelector = new WeightedRandomDistributionEndpointSelector(initialEndpoints);
             oldEndpoints.addAll(initialEndpoints);
             endpointGroup.addListener(this::updateEndpoints);
             if (endpointGroup instanceof DynamicEndpointGroup) {
                 ((DynamicEndpointGroup) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
             }
+        }
+
+        private Map<Endpoint, Endpoint> aggregateSameEndpointsWeight(List<Endpoint> newEndpoints) {
+            final Map<Endpoint, Endpoint> newEndpointsMap = new HashMap<>(newEndpoints.size());
+
+            // The weight of the same endpoints are aggregated.
+            newEndpoints.forEach(
+                    newEndpoint -> newEndpointsMap.compute(newEndpoint, (key, v) -> {
+                        if (v == null) {
+                            return newEndpoint;
+                        }
+                        final int weightSum = newEndpoint.weight() + v.weight();
+                        return newEndpoint.withWeight(weightSum);
+                    }));
+            return newEndpointsMap;
         }
 
         @Override
@@ -197,9 +213,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
          * in oldEndpoints and endpointsInUpdatingEntries.
          */
         private Set<EndpointAndStep> removeOrUpdateEndpoints(List<Endpoint> newEndpoints) {
-            final Map<Endpoint, Endpoint> newEndpointsMap = new HashMap<>(newEndpoints.size());
-            // The value is retrieved to compare the weight of the endpoint.
-            newEndpoints.forEach(newEndpoint -> newEndpointsMap.put(newEndpoint, newEndpoint));
+            final Map<Endpoint, Endpoint> newEndpointsMap = aggregateSameEndpointsWeight(newEndpoints);
 
             final List<Endpoint> replacedOldEndpoints = new ArrayList<>();
             for (final Iterator<Endpoint> i = oldEndpoints.iterator(); i.hasNext();) {
@@ -247,7 +261,8 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 return ImmutableSet.of();
             }
             final Set<EndpointAndStep> newlyAddedEndpoints = new HashSet<>(newEndpointsMap.size());
-            newEndpointsMap.keySet().forEach(
+            // Should use values() because the value has the sum of weights of the same endpoints.
+            newEndpointsMap.values().forEach(
                     endpoint -> newlyAddedEndpoints.add(new EndpointAndStep(endpoint)));
             return newlyAddedEndpoints;
         }

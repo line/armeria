@@ -311,6 +311,38 @@ final class WeightRampingUpStrategyTest {
     }
 
     @Test
+    void sameEndpointsAreSummed() {
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, 10);
+
+        ticker.addAndGet(1);
+
+        addSecondEndpoints(endpointGroup, selector);
+
+        ticker.addAndGet(1);
+
+        // The three bar.com are converted into onw bar.com with 3000 weight.
+        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
+                                                    Endpoint.of("bar.com"), Endpoint.of("bar.com"),
+                                                    Endpoint.of("bar.com"), Endpoint.of("bar1.com")));
+
+        final Deque<EndpointsInUpdatingEntry> endpointsInUpdatingEntries = selector.endpointsInUpdatingEntries;
+        assertThat(endpointsInUpdatingEntries).hasSize(1);
+        final Set<EndpointAndStep> endpointAndSteps = endpointsInUpdatingEntries.peek().endpointAndSteps();
+        assertThat(endpointAndSteps).containsExactlyInAnyOrder(
+                endpointAndStep(Endpoint.of("bar.com").withWeight(3000), 1, 300),
+                endpointAndStep(Endpoint.of("bar1.com"), 1, 100)
+                );
+        final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
+        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+                                      .containsExactlyInAnyOrder(
+                                              Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
+                                              Endpoint.of("bar.com").withWeight(300),
+                                              Endpoint.of("bar1.com").withWeight(100)
+                                      );
+    }
+
+    @Test
     void scheduledIsCanceledWhenEndpointGroupIsClosed() {
         final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, 10);
@@ -332,7 +364,6 @@ final class WeightRampingUpStrategyTest {
         while ((scheduledFuture = scheduledFutures.poll()) != null) {
             verify(scheduledFuture, times(1)).cancel(true);
         }
-
     }
 
     private static RampingUpEndpointWeightSelector setInitialEndpoints(DynamicEndpointGroup endpointGroup,
@@ -347,9 +378,10 @@ final class WeightRampingUpStrategyTest {
                 (RampingUpEndpointWeightSelector) strategy.newSelector(endpointGroup);
 
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator()).containsExactly(
-                Endpoint.of("foo.com"), Endpoint.of("foo1.com")
-        );
+        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+                                      .containsExactlyInAnyOrder(
+                                              Endpoint.of("foo.com"), Endpoint.of("foo1.com")
+                                      );
         return selector;
     }
 
