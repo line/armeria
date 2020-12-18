@@ -218,6 +218,30 @@ class HealthCheckedEndpointGroupTest {
     }
 
     @Test
+    void makeOneContextForSameEndpoints() throws InterruptedException {
+        final AtomicInteger counter = new AtomicInteger();
+        final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
+            counter.incrementAndGet();
+            ctx.updateHealth(HEALTHY);
+            return AsyncCloseableSupport.of();
+        };
+
+        final Endpoint candidate1 = Endpoint.of("candidate1");
+        final Endpoint candidate2 = Endpoint.of("candidate2");
+
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(candidate1, candidate2, candidate2);
+
+        try (HealthCheckedEndpointGroup unused =
+                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                                                    DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                                                    ClientOptions.of(), checkFactory,
+                                                    new InfinityUpdateHealthCheckStrategy())) {
+            assertThat(counter.get()).isEqualTo(2);
+        }
+    }
+
+    @Test
     void closesWhenClientFactoryCloses() {
         final ClientFactory factory = ClientFactory.builder().build();
         final EndpointGroup delegate = Endpoint.of("foo");
