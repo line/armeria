@@ -30,9 +30,10 @@ import com.linecorp.armeria.common.CommonPools;
 import io.netty.channel.EventLoop;
 
 /**
- * Builds a weighted round-robin strategy which ramps up the weight of the newly added {@link Endpoint}s.
+ * Builds a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of the newly added
+ * {@link Endpoint}s. The {@link Endpoint} is selected using weighted random distribution.
  */
-public final class RampingUpWeightedRoundRobinStrategyBuilder {
+public final class WeightRampingUpStrategyBuilder {
 
     private static final long DEFAULT_RAMPING_UP_INTERVAL_MILLIS = 2000;
     private static final int DEFAULT_NUMBER_OF_STEPS = 10;
@@ -51,7 +52,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * Sets the specified {@link EndpointWeightTransition} that will compute the weight of an {@link Endpoint}
      * during the transition. {@link EndpointWeightTransition#linear()} is used by default.
      */
-    public RampingUpWeightedRoundRobinStrategyBuilder transition(EndpointWeightTransition transition) {
+    public WeightRampingUpStrategyBuilder transition(EndpointWeightTransition transition) {
         this.transition = requireNonNull(transition, "transition");
         return this;
     }
@@ -61,7 +62,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * an {@link Endpoint} using {@link EndpointWeightTransition}. An {@link EventLoop} from
      * {@link CommonPools#workerGroup()} is used by default.
      */
-    public RampingUpWeightedRoundRobinStrategyBuilder executor(ScheduledExecutorService executor) {
+    public WeightRampingUpStrategyBuilder executor(ScheduledExecutorService executor) {
         this.executor = requireNonNull(executor, "executor");
         return this;
     }
@@ -72,7 +73,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * {@link #totalSteps(int) totalSteps}.
      * {@value DEFAULT_RAMPING_UP_INTERVAL_MILLIS} millis is used by default.
      */
-    public RampingUpWeightedRoundRobinStrategyBuilder rampingUpInterval(Duration rampingUpInterval) {
+    public WeightRampingUpStrategyBuilder rampingUpInterval(Duration rampingUpInterval) {
         requireNonNull(rampingUpInterval, "rampingUpInterval");
         return rampingUpIntervalMillis(rampingUpInterval.toMillis());
     }
@@ -83,7 +84,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * {@link #totalSteps(int) totalSteps}.
      * {@value DEFAULT_RAMPING_UP_INTERVAL_MILLIS} millis is used by default.
      */
-    public RampingUpWeightedRoundRobinStrategyBuilder rampingUpIntervalMillis(long rampingUpIntervalMillis) {
+    public WeightRampingUpStrategyBuilder rampingUpIntervalMillis(long rampingUpIntervalMillis) {
         checkArgument(rampingUpIntervalMillis > 0,
                       "rampingUpIntervalMillis: %s (expected: > 0)", rampingUpIntervalMillis);
         this.rampingUpIntervalMillis = rampingUpIntervalMillis;
@@ -96,7 +97,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * until the number of ramping reaches to the {@code totalSteps}.
      * {@value DEFAULT_NUMBER_OF_STEPS} is used by default.
      */
-    public RampingUpWeightedRoundRobinStrategyBuilder totalSteps(int totalSteps) {
+    public WeightRampingUpStrategyBuilder totalSteps(int totalSteps) {
         checkArgument(totalSteps > 0, "totalSteps: %s (expected: > 0)", totalSteps);
         this.totalSteps = totalSteps;
         return this;
@@ -119,7 +120,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * A and B are updated right away when they are added and they are updated together at t4.
      * C is updated alone every 2000 milliseconds. D is updated together with A and B at t4.
      */
-    public RampingUpWeightedRoundRobinStrategyBuilder updatingTaskWindow(Duration updatingTaskWindow) {
+    public WeightRampingUpStrategyBuilder updatingTaskWindow(Duration updatingTaskWindow) {
         requireNonNull(updatingTaskWindow, "updatingTaskWindow");
         return updatingTaskWindowMillis(updatingTaskWindow.toMillis());
     }
@@ -141,7 +142,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
      * A and B are updated right away when they are added and they are updated together at t4.
      * C is updated alone every 2000 milliseconds. D is updated together with A and B at t4.
      */
-    public RampingUpWeightedRoundRobinStrategyBuilder updatingTaskWindowMillis(long updatingTaskWindowMillis) {
+    public WeightRampingUpStrategyBuilder updatingTaskWindowMillis(long updatingTaskWindowMillis) {
         checkArgument(updatingTaskWindowMillis >= 0,
                       "updatingTaskWindowMillis: %s (expected >= 0)", updatingTaskWindowMillis);
         this.updatingTaskWindowMillis = updatingTaskWindowMillis;
@@ -149,8 +150,8 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
     }
 
     /**
-     * Returns a newly-created weighted round-robin {@link EndpointSelectionStrategy} which ramps up
-     * the weight of the newly added {@link Endpoint}s.
+     * Returns a newly-created weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of
+     * the newly added {@link Endpoint}s. The {@link Endpoint} is selected using weighted random distribution.
      */
     public EndpointSelectionStrategy build() {
         checkState(rampingUpIntervalMillis > updatingTaskWindowMillis,
@@ -164,7 +165,7 @@ public final class RampingUpWeightedRoundRobinStrategyBuilder {
             executor = CommonPools.workerGroup().next();
         }
 
-        return new RampingUpWeightedRoundRobinStrategy(transition, executor, rampingUpIntervalMillis,
-                                                       totalSteps, updatingTaskWindowMillis);
+        return new WeightRampingUpStrategy(transition, executor, rampingUpIntervalMillis,
+                                           totalSteps, updatingTaskWindowMillis);
     }
 }

@@ -40,10 +40,10 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategy.EndpointsInUpdatingEntry.EndpointAndStep;
+import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsInUpdatingEntry.EndpointAndStep;
 import com.linecorp.armeria.common.util.Ticker;
 
-final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStrategy {
+final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
     private static final Ticker defaultTicker = Ticker.systemTicker();
 
@@ -54,17 +54,17 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
     private final long updatingTaskWindowNanos;
     private final Ticker ticker;
 
-    RampingUpWeightedRoundRobinStrategy(EndpointWeightTransition weightTransition,
-                                        ScheduledExecutorService executor, long rampingUpIntervalMillis,
-                                        int totalSteps, long updatingTaskWindowMillis) {
+    WeightRampingUpStrategy(EndpointWeightTransition weightTransition,
+                            ScheduledExecutorService executor, long rampingUpIntervalMillis,
+                            int totalSteps, long updatingTaskWindowMillis) {
         this(weightTransition, executor, rampingUpIntervalMillis, totalSteps, updatingTaskWindowMillis,
              defaultTicker);
     }
 
     @VisibleForTesting
-    RampingUpWeightedRoundRobinStrategy(EndpointWeightTransition weightTransition,
-                                        ScheduledExecutorService executor, long rampingUpIntervalMillis,
-                                        int totalSteps, long updatingTaskWindowMillis, Ticker ticker) {
+    WeightRampingUpStrategy(EndpointWeightTransition weightTransition,
+                            ScheduledExecutorService executor, long rampingUpIntervalMillis,
+                            int totalSteps, long updatingTaskWindowMillis, Ticker ticker) {
         this.weightTransition = requireNonNull(weightTransition, "weightTransition");
         this.executor = requireNonNull(executor, "executor");
         checkArgument(rampingUpIntervalMillis > 0,
@@ -86,7 +86,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
     @VisibleForTesting
     final class RampingUpEndpointWeightSelector extends AbstractEndpointSelector {
 
-        private volatile WeightBasedRandomEndpointSelector endpointSelector;
+        private volatile WeightedRandomDistributionEndpointSelector endpointSelector;
 
         private final List<Endpoint> oldEndpoints = new ArrayList<>();
 
@@ -99,7 +99,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
             final List<Endpoint> initialEndpoints = endpointGroup.endpoints();
-            endpointSelector = new WeightBasedRandomEndpointSelector(initialEndpoints);
+            endpointSelector = new WeightedRandomDistributionEndpointSelector(initialEndpoints);
             oldEndpoints.addAll(initialEndpoints);
             endpointGroup.addListener(this::updateEndpoints);
             if (endpointGroup instanceof DynamicEndpointGroup) {
@@ -113,7 +113,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
         }
 
         @VisibleForTesting
-        WeightBasedRandomEndpointSelector endpointSelector() {
+        WeightedRandomDistributionEndpointSelector endpointSelector() {
             return endpointSelector;
         }
 
@@ -176,7 +176,7 @@ final class RampingUpWeightedRoundRobinStrategy implements EndpointSelectionStra
                     entry -> entry.endpointAndSteps().forEach(
                             endpointAndStep -> targetEndpointsBuilder.add(
                                     endpointAndStep.endpoint().withWeight(endpointAndStep.currentWeight()))));
-            endpointSelector = new WeightBasedRandomEndpointSelector(targetEndpointsBuilder.build());
+            endpointSelector = new WeightedRandomDistributionEndpointSelector(targetEndpointsBuilder.build());
         }
 
         private boolean canAddToPrevEntry() {

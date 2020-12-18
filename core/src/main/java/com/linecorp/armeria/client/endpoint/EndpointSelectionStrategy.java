@@ -51,8 +51,9 @@ public interface EndpointSelectionStrategy {
     }
 
     /**
-     * Returns a weighted round-robin strategy which ramps the weight of the newly added
-     * {@link Endpoint}s using {@link EndpointWeightTransition#linear()}.
+     * Returns a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of the newly added
+     * {@link Endpoint}s using {@link EndpointWeightTransition#linear()}. The {@link Endpoint} is selected
+     * using weighted random distribution.
      * The weights of {@link Endpoint}s are ramped up by 10 percent every 2 seconds up to 100 percent
      * by default. If you want to customize the parameters, use {@link #builderForRampingUp()}.
      */
@@ -61,11 +62,12 @@ public interface EndpointSelectionStrategy {
     }
 
     /**
-     * Returns a new {@link RampingUpWeightedRoundRobinStrategyBuilder} that builds
-     * a weighted round-robin strategy which ramps the weight of the newly added {@link Endpoint}s.
+     * Returns a new {@link WeightRampingUpStrategyBuilder} that builds
+     * a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of the newly added
+     * {@link Endpoint}s. The {@link Endpoint} is selected using weighted random distribution.
      */
-    static RampingUpWeightedRoundRobinStrategyBuilder builderForRampingUp() {
-        return new RampingUpWeightedRoundRobinStrategyBuilder();
+    static WeightRampingUpStrategyBuilder builderForRampingUp() {
+        return new WeightRampingUpStrategyBuilder();
     }
 
     /**

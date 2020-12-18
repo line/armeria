@@ -45,12 +45,12 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategy.EndpointsInUpdatingEntry;
-import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategy.EndpointsInUpdatingEntry.EndpointAndStep;
-import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategy.RampingUpEndpointWeightSelector;
-import com.linecorp.armeria.client.endpoint.WeightBasedRandomEndpointSelector.Entry;
+import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsInUpdatingEntry;
+import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsInUpdatingEntry.EndpointAndStep;
+import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.RampingUpEndpointWeightSelector;
+import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSelector.Entry;
 
-final class RampingUpWeightedRoundRobinStrategyTest {
+final class WeightRampingUpStrategyTest {
 
     private static final AtomicLong ticker = new AtomicLong();
 
@@ -337,9 +337,9 @@ final class RampingUpWeightedRoundRobinStrategyTest {
 
     private static RampingUpEndpointWeightSelector setInitialEndpoints(DynamicEndpointGroup endpointGroup,
                                                                        int numberOfSteps) {
-        final RampingUpWeightedRoundRobinStrategy strategy =
-                new RampingUpWeightedRoundRobinStrategy(linear(), new ImmediateExecutor(),
-                                                        20000, numberOfSteps, 1000, ticker::get);
+        final WeightRampingUpStrategy strategy =
+                new WeightRampingUpStrategy(linear(), new ImmediateExecutor(),
+                                            20000, numberOfSteps, 1000, ticker::get);
 
         final List<Endpoint> endpoints = ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"));
         endpointGroup.setEndpoints(endpoints);

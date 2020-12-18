@@ -34,14 +34,14 @@ import com.linecorp.armeria.client.Endpoint;
  * selected as much as their weight, then A is removed temporarily and the the chances that B and C are selected
  * are 4/10 and 6/10.
  */
-final class WeightBasedRandomEndpointSelector {
+final class WeightedRandomDistributionEndpointSelector {
 
     private final List<Entry> entries;
     private final long totalWeight;
     private final List<Entry> currentEntries;
     private long currentTotalWeight;
 
-    WeightBasedRandomEndpointSelector(List<Endpoint> endpoints) {
+    WeightedRandomDistributionEndpointSelector(List<Endpoint> endpoints) {
         final ImmutableList.Builder<Entry> builder = ImmutableList.builder();
 
         long totalWeight = 0;

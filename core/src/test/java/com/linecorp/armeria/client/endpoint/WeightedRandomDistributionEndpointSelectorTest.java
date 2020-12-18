@@ -24,16 +24,17 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.RampingUpWeightedRoundRobinStrategyTest.EndpointComparator;
+import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyTest.EndpointComparator;
 
-final class WeightBasedRandomEndpointSelectorTest {
+final class WeightedRandomDistributionEndpointSelectorTest {
 
     @Test
     void zeroWeightFiltered() {
         final Endpoint foo = Endpoint.of("foo.com").withWeight(0);
         final Endpoint bar = Endpoint.of("bar.com").withWeight(0);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar);
-        final WeightBasedRandomEndpointSelector selector = new WeightBasedRandomEndpointSelector(endpoints);
+        final WeightedRandomDistributionEndpointSelector
+                selector = new WeightedRandomDistributionEndpointSelector(endpoints);
         assertThat(selector.selectEndpoint()).isNull();
     }
 
@@ -43,7 +44,8 @@ final class WeightBasedRandomEndpointSelectorTest {
         final Endpoint bar = Endpoint.of("bar.com").withWeight(2);
         final Endpoint baz = Endpoint.of("baz.com").withWeight(1);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar, baz);
-        final WeightBasedRandomEndpointSelector selector = new WeightBasedRandomEndpointSelector(endpoints);
+        final WeightedRandomDistributionEndpointSelector
+                selector = new WeightedRandomDistributionEndpointSelector(endpoints);
         for (int i = 0; i < 1000; i++) {
             final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
             // The sum of weight is 6. Every endpoint is selected as many as its weight.
