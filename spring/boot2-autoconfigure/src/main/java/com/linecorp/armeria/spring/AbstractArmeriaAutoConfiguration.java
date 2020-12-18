@@ -133,7 +133,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Wrap {@link Server} with {@link SmartLifecycle}.
      */
     @Bean
-    public ArmeriaServerGracefulShutdownLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
+    public SmartLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
         return new ArmeriaServerGracefulShutdownLifecycle(server);
     }
 
