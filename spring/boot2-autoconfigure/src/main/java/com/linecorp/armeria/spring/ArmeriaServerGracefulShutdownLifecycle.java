@@ -14,18 +14,17 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.spring;
+package com.linecorp.armeria.spring;
 
 import org.springframework.context.SmartLifecycle;
 
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.spring.ArmeriaAutoConfiguration;
 
 /**
  * Make Armeria {@link Server} utilize spring's SmartLifecycle feature.
  * So Armeria will shutdown before other web servers and beans in the context.
  */
-public final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
+final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
     /**
      * {@link Server} created by {@link ArmeriaAutoConfiguration}. .
      */
@@ -34,7 +33,7 @@ public final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecy
     /**
      * Creates a new instance.
      */
-    public ArmeriaServerGracefulShutdownLifecycle(Server server) {
+    ArmeriaServerGracefulShutdownLifecycle(Server server) {
         this.server = server;
     }
 

@@ -38,7 +38,6 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.internal.spring.ArmeriaServerGracefulShutdownLifecycle;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -134,7 +133,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Wrap {@link Server} with {@link SmartLifecycle}.
      */
     @Bean
-    public SmartLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
+    public ArmeriaServerGracefulShutdownLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
         return new ArmeriaServerGracefulShutdownLifecycle(server);
     }
 
