@@ -35,14 +35,18 @@ class PublisherBasedHttpResponseTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) {
             sb.service("/", (ctx, req) -> {
                 final Flux<HttpObject> publisher = Flux.just(ResponseHeaders.of(200), HttpData.ofUtf8("hello"));
                 final HttpResponse response = HttpResponse.of(publisher);
-                response.whenComplete().whenComplete((unused, cause) -> {
-                    exceptionIsRaised.set(cause != null);
-                });
+                response.whenComplete()
+                        .whenComplete((unused, cause) -> exceptionIsRaised.set(cause != null));
                 return response;
+            });
+            sb.service("/foo", (ctx, req) -> {
+                final Flux<HttpData> publisher = Flux.just(HttpData.ofUtf8("Armeria"),
+                                                           HttpData.ofUtf8(" is awesome"));
+                return HttpResponse.of(ResponseHeaders.of(200), publisher);
             });
         }
     };
@@ -52,5 +56,9 @@ class PublisherBasedHttpResponseTest {
         final WebClient client = WebClient.of(server.httpUri());
         assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
         assertThat(exceptionIsRaised.get()).isFalse();
+
+        final AggregatedHttpResponse response = client.get("/foo").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("Armeria is awesome");
     }
 }

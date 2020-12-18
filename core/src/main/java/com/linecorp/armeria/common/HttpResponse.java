@@ -393,6 +393,16 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new HTTP response of the specified headers whose content is produced from an existing
+     * {@link Publisher}.
+     */
+    static HttpResponse of(ResponseHeaders headers, Publisher<HttpData> contentPublisher) {
+        requireNonNull(headers, "headers");
+        requireNonNull(contentPublisher, "contentPublisher");
+        return PublisherBasedHttpResponse.from(headers, contentPublisher);
+    }
+
+    /**
      * Creates a new HTTP response of the redirect to specific location.
      */
     static HttpResponse ofRedirect(HttpStatus redirectStatus, String location) {
