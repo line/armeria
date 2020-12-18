@@ -152,7 +152,10 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     @Override
     public void serverStarted(Server server) throws Exception {
         this.instanceInfo = fillAndCreateNewInfo(instanceInfo, server);
+        register(instanceInfo);
+    }
 
+    private void register(InstanceInfo instanceInfo) {
         try (ClientRequestContextCaptor contextCaptor = Clients.newContextCaptor()) {
             final HttpResponse response = client.register(instanceInfo);
             final ClientRequestContext ctx = contextCaptor.getOrNull();
@@ -335,16 +338,28 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                               return null;
                           }
 
-                          // The information of this instance is removed from the registry when the heart beats
-                          // fail consecutive three times, so we don't retry.
-                          // See https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew
                           if (cause != null) {
                               logger.warn("Failed to send a heart beat to Eureka: {}", client.uri(), cause);
                           } else if (res.headers().status() != HttpStatus.OK) {
-                              logger.warn("Failed to send a heart beat to Eureka: {}, " +
-                                          "(status: {}, content: {})",
-                                          client.uri(), res.headers().status(), content.toStringUtf8());
+
+                              // The information of this instance is removed from the registry when
+                              // the heart beats fail consecutive three times, so we try to re-registration.
+                              // See https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew
+                              if (res.headers().status() == HttpStatus.NOT_FOUND) {
+                                  logger.warn("Instance {}/{} no longer registered with Eureka." +
+                                              " Attempting re-registration.",
+                                              appName, instanceId);
+                                  register(instanceInfo);
+                                  return null;
+                              } else {
+                                  logger.warn("Failed to send a heart beat to Eureka: {}, " +
+                                              "(status: {}, content: {})",
+                                              client.uri(), res.headers().status(), content.toStringUtf8());
+                              }
+                          } else {
+                              logger.debug("Successfully send a heart beat to Eureka: {}", client.uri());
                           }
+
                           heartBeatFuture = eventLoop.schedule(
                                   this, instanceInfo.getLeaseInfo().getRenewalIntervalInSecs(),
                                   TimeUnit.SECONDS);
