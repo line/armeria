@@ -14,8 +14,8 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.annotation.processor;
+package com.linecorp.armeria.client.retrofit2;
 
-import com.linecorp.armeria.internal.testing.AbstractMethodChainingTest;
+import com.linecorp.armeria.internal.testing.AbstractOverriddenBuilderMethodsReturnTypeTest;
 
-class MethodChainingTest extends AbstractMethodChainingTest {}
+class OverriddenBuilderMethodsReturnTypeTest extends AbstractOverriddenBuilderMethodsReturnTypeTest {}

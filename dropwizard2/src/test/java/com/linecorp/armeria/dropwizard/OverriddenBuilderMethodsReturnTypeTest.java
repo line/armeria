@@ -14,8 +14,8 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.protobuf;
+package com.linecorp.armeria.dropwizard;
 
-import com.linecorp.armeria.internal.testing.AbstractMethodChainingTest;
+import com.linecorp.armeria.internal.testing.AbstractOverriddenBuilderMethodsReturnTypeTest;
 
-class MethodChainingTest extends AbstractMethodChainingTest {}
+class OverriddenBuilderMethodsReturnTypeTest extends AbstractOverriddenBuilderMethodsReturnTypeTest {}

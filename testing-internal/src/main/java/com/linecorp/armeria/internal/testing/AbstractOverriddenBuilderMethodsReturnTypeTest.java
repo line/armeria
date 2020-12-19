@@ -38,7 +38,7 @@ import com.google.common.collect.ImmutableList;
 /**
  * Makes sure most builder overrides all overridden methods with the correct return type.
  */
-public abstract class AbstractMethodChainingTest {
+public abstract class AbstractOverriddenBuilderMethodsReturnTypeTest {
 
     @Test
     void methodChaining() {
@@ -47,7 +47,7 @@ public abstract class AbstractMethodChainingTest {
                                    .map(ReflectionUtils::forName)
                                    .filter(clazz -> clazz.getSimpleName().endsWith("Builder"))
                                    .forEach(clazz -> {
-                                       final List<Method> methods = obtainMethods(clazz);
+                                       final List<Method> methods = overriddenMethods(clazz);
                                        for (Method m : methods) {
                                            try {
                                                final Method overriddenMethod =
@@ -71,7 +71,7 @@ public abstract class AbstractMethodChainingTest {
         return reflections.getStore().get(SubTypesScanner.class.getSimpleName()).values();
     }
 
-    private static List<Method> obtainMethods(Class<?> clazz) {
+    private static List<Method> overriddenMethods(Class<?> clazz) {
         final Set<Class<?>> allSuperTypes = ReflectionUtils.getAllSuperTypes(clazz, input -> input != clazz);
         final ImmutableList<Method> methods = allSuperTypes.stream()
                                                            .flatMap(sc -> Arrays.stream(sc.getMethods()))

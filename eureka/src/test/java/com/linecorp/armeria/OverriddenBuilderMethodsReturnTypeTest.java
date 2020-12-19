@@ -14,8 +14,8 @@
  * under the License.
  */
 
-package com.linecorp.armeria.dropwizard;
+package com.linecorp.armeria;
 
-import com.linecorp.armeria.internal.testing.AbstractMethodChainingTest;
+import com.linecorp.armeria.internal.testing.AbstractOverriddenBuilderMethodsReturnTypeTest;
 
-class MethodChainingTest extends AbstractMethodChainingTest {}
+class OverriddenBuilderMethodsReturnTypeTest extends AbstractOverriddenBuilderMethodsReturnTypeTest {}

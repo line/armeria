@@ -14,8 +14,8 @@
  * under the License.
  */
 
-package com.linecorp.armeria.spring.actuate;
+package com.linecorp.armeria.server.jetty;
 
-import com.linecorp.armeria.internal.testing.AbstractMethodChainingTest;
+import com.linecorp.armeria.internal.testing.AbstractOverriddenBuilderMethodsReturnTypeTest;
 
-class MethodChainingTest extends AbstractMethodChainingTest {}
+class OverriddenBuilderMethodsReturnTypeTest extends AbstractOverriddenBuilderMethodsReturnTypeTest {}
