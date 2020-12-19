@@ -26,11 +26,11 @@ import com.linecorp.armeria.common.RpcResponse;
 
 class WrappingTransientRpcServiceTest {
 
-    static final RpcService FOO = (ctx, req) -> RpcResponse.of("foo");
+    static final RpcService fooService = (ctx, req) -> RpcResponse.of("foo");
 
     @Test
     void extractTransientServiceOptions() {
-        final RpcService wrapped = FOO.decorate(
+        final RpcService wrapped = fooService.decorate(
                 TransientRpcService.newDecorator(TransientServiceOption.WITH_ACCESS_LOGGING));
 
         @SuppressWarnings("rawtypes")

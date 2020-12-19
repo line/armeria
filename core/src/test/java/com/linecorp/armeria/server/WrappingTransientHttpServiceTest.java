@@ -26,12 +26,12 @@ import com.linecorp.armeria.common.HttpResponse;
 
 class WrappingTransientHttpServiceTest {
 
-    static final HttpService FOO = (ctx, req) -> HttpResponse.of("foo");
+    static final HttpService fooService = (ctx, req) -> HttpResponse.of("foo");
 
     @Test
     void extractTransientServiceOptions() {
-        final HttpService wrapped = FOO.decorate(
-                TransientService.newDecorator(TransientServiceOption.WITH_ACCESS_LOGGING));
+        final HttpService wrapped = fooService.decorate(
+                TransientHttpService.newDecorator(TransientServiceOption.WITH_ACCESS_LOGGING));
 
         @SuppressWarnings("rawtypes")
         final TransientService transientService = wrapped.as(TransientService.class);

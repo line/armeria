@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
 /**
- * Decorated a {@link RpcService} to be treated as {@link TransientService} without inheritance.
+ * Decorates a {@link RpcService} to be treated as {@link TransientService} without inheritance.
  */
 final class WrappingTransientRpcService extends SimpleDecoratingRpcService implements TransientRpcService {
 
