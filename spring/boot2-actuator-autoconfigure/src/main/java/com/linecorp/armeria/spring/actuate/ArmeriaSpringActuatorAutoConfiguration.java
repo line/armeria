@@ -204,7 +204,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                             OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("_links", links))
                     );
                 };
-                sb.service(route, linksService);
+                sb.route().addRoute(route).defaultServiceName("LinksService").build(linksService);
                 if (cors != null) {
                     cors.route(endpointMapping.getPath());
                 }

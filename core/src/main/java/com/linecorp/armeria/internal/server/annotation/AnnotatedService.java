@@ -83,6 +83,9 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 public final class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
 
+    /** The CGLIB class separator: {@code "$$"}. */
+    private static final String CGLIB_CLASS_SEPARATOR = "$$";
+
     /**
      * A default {@link ResponseConverterFunction}s.
      */
@@ -165,7 +168,7 @@ public final class AnnotatedService implements HttpService {
         if (serviceName != null) {
             defaultServiceName = serviceName.value();
         } else {
-            defaultServiceName = object.getClass().getName();
+            defaultServiceName = getUserClass(object.getClass()).getName();
         }
 
         this.method.setAccessible(true);
@@ -588,6 +591,21 @@ public final class AnnotatedService implements HttpService {
                 }
             }));
         }
+    }
+
+    /**
+     * Returns the user-defined class for the given class: usually simply the given class,
+     * but the original class in case of a CGLIB-generated subclass.
+     */
+    private static Class<?> getUserClass(Class<?> clazz) {
+        // Forked from https://github.com/spring-projects/spring-framework/blob/1565f4b83e7c48eeec9dc74f7eb042dce4dbb49a/spring-core/src/main/java/org/springframework/util/ClassUtils.java#L896-L904
+        if (clazz.getName().contains(CGLIB_CLASS_SEPARATOR)) {
+            final Class<?> superclass = clazz.getSuperclass();
+            if (superclass != null && superclass != Object.class) {
+                return superclass;
+            }
+        }
+        return clazz;
     }
 
     /**
