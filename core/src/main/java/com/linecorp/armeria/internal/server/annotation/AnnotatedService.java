@@ -83,7 +83,9 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 public final class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
 
-    /** The CGLIB class separator: {@code "$$"}. */
+    /**
+     * The CGLIB class separator: {@code "$$"}.
+     */
     private static final String CGLIB_CLASS_SEPARATOR = "$$";
 
     /**
