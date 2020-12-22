@@ -368,7 +368,7 @@ public final class InstanceInfo {
             this.port = port;
         }
 
-        @JsonProperty
+        @JsonProperty("@enabled")
         @JsonSerialize(using = ToStringSerializer.class)
         public boolean isEnabled() {
             return enabled;
