@@ -23,11 +23,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
@@ -45,9 +44,9 @@ import com.linecorp.armeria.spring.CgLibServiceNameTest.TestConfiguration;
 import com.linecorp.armeria.spring.CgLibServiceNameTest.TestConfiguration.MyAnnotatedService;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class, webEnvironment = WebEnvironment.NONE)
+@SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
-class CgLibServiceNameTest {
+public class CgLibServiceNameTest {
 
     private static final AtomicReference<RequestLogAccess> logRef = new AtomicReference<>();
 
@@ -90,7 +89,7 @@ class CgLibServiceNameTest {
      * will be injected instead.
      */
     @Test
-    void normalizedServiceName() throws InterruptedException {
+    public void normalizedServiceName() {
         final WebClient client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort() + '/');
         client.get("/hello").aggregate().join();
         final RequestLog requestLog = logRef.get().whenComplete().join();
