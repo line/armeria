@@ -46,6 +46,10 @@ class MeterIdPrefixFunctionTest {
         assertThat(f.withTags("zone", "1a", "host", "foo").completeRequestPrefix(null, null))
                 .isEqualTo(new MeterIdPrefix("requests_total",
                                              "region", "us-west", "zone", "1a", "host", "foo"));
+
+        assertThat(f.withTags(Tag.of("zone", "1a"), Tag.of("host", "foo")).completeRequestPrefix(null, null))
+                .isEqualTo(new MeterIdPrefix("requests_total",
+                                             "region", "us-west", "zone", "1a", "host", "foo"));
     }
 
     @Test
