@@ -17,11 +17,17 @@
 package com.linecorp.armeria.internal.common;
 
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -31,6 +37,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
@@ -45,6 +53,9 @@ import io.netty.handler.codec.http2.Http2StreamVisitor;
 public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractHttp2ConnectionHandler.class);
+
+    private static final Pattern IGNORABLE_HTTP2_ERROR_MESSAGE_GOAWAY = Pattern.compile(
+            "(?:Stream (\\d+) does not exist)", Pattern.CASE_INSENSITIVE);
 
     /**
      * XXX(trustin): Don't know why, but {@link Http2ConnectionHandler} does not close the last stream
@@ -83,7 +94,9 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         }
 
         handlingConnectionError = true;
-        if (!Exceptions.isExpected(cause)) {
+        if (Exceptions.isExpected(cause) || isGoAwaySentException(cause, connection())) {
+            // Ignore silently.
+        } else {
             logger.warn("{} HTTP/2 connection error:", ctx.channel(), cause);
         }
         super.onConnectionError(ctx, outbound, cause, filterHttp2Exception(cause, http2Ex));
@@ -97,6 +110,45 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         // Do not let Netty use the exception message as debug data, just in case the exception message
         // exposes sensitive information.
         return new Http2Exception(INTERNAL_ERROR, null, cause);
+    }
+
+    /**
+     * Determines whether the specified {@link Throwable} is raised by receiving a DATA frame with a stream ID
+     * considered to be created after a {@code GOAWAY} is sent if the following conditions hold:
+     * <p/>
+     * <ul>
+     *     <li>A {@code GOAWAY} must have been sent by the local endpoint</li>
+     *     <li>The {@code streamId} must identify a legitimate stream id for the remote endpoint to be
+     *     creating</li>
+     *     <li>{@code streamId} is greater than the Last Known Stream ID which was sent by the local endpoint
+     *     in the last {@code GOAWAY} frame</li>
+     * </ul>
+     * <p/>
+     */
+    @VisibleForTesting
+    static boolean isGoAwaySentException(Throwable cause, Http2Connection connection) {
+        if (!(cause instanceof Http2Exception)) {
+            return false;
+        }
+
+        final Http2Exception http2Exception = (Http2Exception) cause;
+        if (http2Exception.error() != PROTOCOL_ERROR) {
+            return false;
+        }
+
+        if (!connection.goAwaySent()) {
+            return false;
+        }
+
+        final String msg = cause.getMessage();
+        final Matcher matcher = IGNORABLE_HTTP2_ERROR_MESSAGE_GOAWAY.matcher(msg);
+        if (!matcher.find()) {
+            return false;
+        }
+
+        final int streamId = Integer.parseInt(matcher.group(1));
+        final Endpoint<?> remote = connection.remote();
+        return remote.isValidStreamId(streamId) && streamId > remote.lastStreamKnownByPeer();
     }
 
     @Override

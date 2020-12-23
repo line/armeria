@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.util;
 
-import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -60,11 +59,8 @@ public final class Exceptions {
     private static final Pattern IGNORABLE_SOCKET_ERROR_MESSAGE = Pattern.compile(
             "(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe)", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern IGNORABLE_HTTP2_ERROR_MESSAGE_STREAM_CLOSED = Pattern.compile(
+    private static final Pattern IGNORABLE_HTTP2_ERROR_MESSAGE = Pattern.compile(
             "(?:stream closed)", Pattern.CASE_INSENSITIVE);
-
-    private static final Pattern IGNORABLE_HTTP2_ERROR_MESSAGE_GOAWAY = Pattern.compile(
-            "(?:Stream (?:\\d+) does not exist)", Pattern.CASE_INSENSITIVE);
 
     private static final Pattern IGNORABLE_TLS_ERROR_MESSAGE = Pattern.compile(
             "(?:closed already)", Pattern.CASE_INSENSITIVE);
@@ -171,17 +167,9 @@ public final class Exceptions {
                 return true;
             }
 
-            if (cause instanceof Http2Exception) {
-                if (IGNORABLE_HTTP2_ERROR_MESSAGE_STREAM_CLOSED.matcher(msg).find()) {
-                    // Can happen when disconnected prematurely.
-                    return true;
-                }
-                final Http2Exception http2Exception = (Http2Exception) cause;
-                if (http2Exception.error() == PROTOCOL_ERROR &&
-                    IGNORABLE_HTTP2_ERROR_MESSAGE_GOAWAY.matcher(msg).find()) {
-                    // Can happen when receiving data after a GOAWAY frame is sent.
-                    return true;
-                }
+            if (cause instanceof Http2Exception && IGNORABLE_HTTP2_ERROR_MESSAGE.matcher(msg).find()) {
+                // Can happen when disconnected prematurely.
+                return true;
             }
 
             if (cause instanceof SSLException && IGNORABLE_TLS_ERROR_MESSAGE.matcher(msg).find()) {
