@@ -31,8 +31,9 @@ import io.netty.handler.codec.http2.Http2RemoteFlowController;
 
 class AbstractHttp2ConnectionHandlerTest {
 
-    final Http2Exception goAwaySentException =
+    private static final Http2Exception goAwaySentException =
             new Http2Exception(Http2Error.PROTOCOL_ERROR, "Stream 123 does not exist");
+
     @Test
     void expectedGoAwaySentException() {
         final Http2Connection connection = mock(Http2Connection.class);

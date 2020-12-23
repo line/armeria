@@ -1838,6 +1838,8 @@ democracia.bo
 democrat
 demon.nl
 denmark.museum
+deno-staging.dev
+deno.dev
 dental
 dentist
 dep.no
@@ -2362,7 +2364,6 @@ fetsund.no
 fg.it
 fh-muenster.io
 fh.se
-fhapp.xyz
 fhs.no
 fhsk.se
 fhv.se
@@ -7282,6 +7283,7 @@ small-web.org
 smart
 smile
 smola.no
+smushcdn.com
 sn
 sn.cn
 snaase.no
@@ -7657,6 +7659,7 @@ temasek
 temp-dns.com
 tempio-olbia.it
 tempioolbia.it
+tempurl.host
 tendo.yamagata.jp
 tenei.fukushima.jp
 tenkawa.nara.jp
@@ -8427,6 +8430,7 @@ wnext.app
 wodzislaw.pl
 wolomin.pl
 wolterskluwer
+woltlab-demo.com
 woodside
 work
 workers.dev
@@ -8440,6 +8444,9 @@ worse-than.tv
 wow
 wpdevcloud.com
 wpenginepowered.com
+wphostedmail.com
+wpmucdn.com
+wpmudev.host
 writesthisblog.com
 wroc.pl
 wroclaw.pl
@@ -8626,6 +8633,8 @@ xn--gls-elac.no
 xn--gmq050i.hk
 xn--gmqw5a.hk
 xn--gmqw5a.xn--j6w193g
+xn--gnstigbestellen-zvb.de
+xn--gnstigliefern-wob.de
 xn--h-2fa.no
 xn--h1aegh.museum
 xn--h1ahn.xn--p1acf

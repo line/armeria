@@ -114,8 +114,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
 
     /**
      * Determines whether the specified {@link Throwable} is raised by receiving a DATA frame with a stream ID
-     * considered to be created after a {@code GOAWAY} is sent if the following conditions hold:
-     * <p/>
+     * considered to be created after a {@code GOAWAY} is sent if the following conditions hold.
      * <ul>
      *     <li>A {@code GOAWAY} must have been sent by the local endpoint</li>
      *     <li>The {@code streamId} must identify a legitimate stream id for the remote endpoint to be
@@ -123,7 +122,6 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
      *     <li>{@code streamId} is greater than the Last Known Stream ID which was sent by the local endpoint
      *     in the last {@code GOAWAY} frame</li>
      * </ul>
-     * <p/>
      */
     @VisibleForTesting
     static boolean isGoAwaySentException(Throwable cause, Http2Connection connection) {
