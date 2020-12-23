@@ -101,11 +101,6 @@ public class ExceptionsTest {
                 .isEqualTo(expected);
         assertThat(Exceptions.isExpected(new Http2Exception(Http2Error.INTERNAL_ERROR))).isFalse();
 
-        assertThat(Exceptions.isExpected(new Http2Exception(Http2Error.PROTOCOL_ERROR,
-                                                            "Stream 49 does not exist")))
-                .isTrue();
-        assertThat(Exceptions.isExpected(new Http2Exception(Http2Error.PROTOCOL_ERROR))).isFalse();
-
         assertThat(Exceptions.isExpected(new SSLException("SSLEngine closed already"))).isEqualTo(expected);
         assertThat(Exceptions.isExpected(new SSLException("Handshake failed"))).isFalse();
     }
