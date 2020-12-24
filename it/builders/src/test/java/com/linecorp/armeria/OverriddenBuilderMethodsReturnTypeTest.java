@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.testing;
+package com.linecorp.armeria;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,7 +38,7 @@ import com.google.common.collect.ImmutableList;
 /**
  * Makes sure most builder overrides all overridden methods with the correct return type.
  */
-public abstract class AbstractOverriddenBuilderMethodsReturnTypeTest {
+class OverriddenBuilderMethodsReturnTypeTest {
 
     @Test
     void methodChaining() {

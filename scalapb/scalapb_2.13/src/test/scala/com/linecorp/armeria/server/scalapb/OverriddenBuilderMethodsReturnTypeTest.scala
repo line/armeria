@@ -1,5 +1,0 @@
-package com.linecorp.armeria.server.scalapb
-
-import com.linecorp.armeria.internal.testing.AbstractOverriddenBuilderMethodsReturnTypeTest
-
-class OverriddenBuilderMethodsReturnTypeTest extends AbstractOverriddenBuilderMethodsReturnTypeTest {}
