@@ -314,8 +314,10 @@ class HealthCheckedEndpointGroupTest {
             if (o1.host().equals(o2.host()) &&
                 Objects.equals(o1.ipAddr(), o2.ipAddr()) &&
                 o1.weight() == o2.weight()) {
-                if (o1.hasPort() || o2.hasPort() && o1.port() == o2.port()) {
-                    return 0;
+                if (o1.hasPort() || o2.hasPort()) {
+                    if (o1.port() == o2.port()) {
+                        return 0;
+                    }
                 }
                 return 0;
             }
