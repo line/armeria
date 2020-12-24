@@ -78,7 +78,7 @@ public abstract class AbstractOverriddenBuilderMethodsReturnTypeTest {
                                                            .distinct()
                                                            .collect(toImmutableList());
         // In general, if parent classes have a build method, did not override the method with that type.
-        if (existMethodName(methods, "build")) {
+        if (buildMethodExists(methods)) {
             return ImmutableList.of();
         } else {
             return methods.stream()
@@ -87,7 +87,7 @@ public abstract class AbstractOverriddenBuilderMethodsReturnTypeTest {
         }
     }
 
-    private static boolean existMethodName(List<Method> methods, String methodName) {
-        return methods.stream().anyMatch(m -> methodName.equals(m.getName()));
+    private static boolean buildMethodExists(List<Method> methods) {
+        return methods.stream().anyMatch(m -> "build".equals(m.getName()));
     }
 }
