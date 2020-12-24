@@ -25,14 +25,8 @@ import com.linecorp.armeria.server.Server;
  * So Armeria will shutdown before other web servers and beans in the context.
  */
 final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
-    /**
-     * {@link Server} created by {@link ArmeriaAutoConfiguration}. .
-     */
     private final Server server;
 
-    /**
-     * Creates a new instance.
-     */
     ArmeriaServerGracefulShutdownLifecycle(Server server) {
         this.server = server;
     }
