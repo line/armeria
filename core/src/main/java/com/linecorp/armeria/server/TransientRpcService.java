@@ -16,6 +16,13 @@
 
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.function.Function;
+
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
@@ -24,4 +31,25 @@ import com.linecorp.armeria.common.RpcResponse;
  */
 @FunctionalInterface
 public interface TransientRpcService extends TransientService<RpcRequest, RpcResponse>, RpcService {
+
+    /**
+     * Returns a new {@link RpcService} decorator which makes the specified {@link RpcService} as
+     * {@link TransientService}.
+     */
+    static Function<? super RpcService, SimpleDecoratingRpcService> newDecorator(
+            TransientServiceOption... transientServiceOptions) {
+        requireNonNull(transientServiceOptions, "transientServiceOptions");
+        return newDecorator(ImmutableSet.copyOf(transientServiceOptions));
+    }
+
+    /**
+     * Returns a new {@link RpcService} decorator which makes the specified {@link RpcService} as
+     * {@link TransientService}.
+     */
+    static Function<? super RpcService, SimpleDecoratingRpcService> newDecorator(
+            Iterable<TransientServiceOption> transientServiceOptions) {
+        requireNonNull(transientServiceOptions, "transientServiceOptions");
+        return delegate -> new WrappingTransientRpcService(delegate,
+                                                           Sets.immutableEnumSet(transientServiceOptions));
+    }
 }
