@@ -31,7 +31,8 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
         super(publisher);
     }
 
-    static PublisherBasedHttpResponse from(ResponseHeaders headers, Publisher<HttpData> contentPublisher) {
+    static PublisherBasedHttpResponse from(ResponseHeaders headers,
+                                           Publisher<? extends HttpData> contentPublisher) {
         return new PublisherBasedHttpResponse(new HeadersAndContentProcessor(headers, contentPublisher));
     }
 
@@ -43,7 +44,7 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
         @Nullable
         private Subscription contentSubscription;
 
-        HeadersAndContentProcessor(ResponseHeaders headers, Publisher<HttpData> contentPublisher) {
+        HeadersAndContentProcessor(ResponseHeaders headers, Publisher<? extends HttpData> contentPublisher) {
             this.headers = headers;
             contentPublisher.subscribe(this);
         }
