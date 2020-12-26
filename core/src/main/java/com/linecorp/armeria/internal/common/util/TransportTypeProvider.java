@@ -109,7 +109,7 @@ public final class TransportTypeProvider {
 
         return (nThreads, threadFactory) -> {
             try {
-                return (EventLoopGroup) constructor.invokeExact(nThreads, threadFactory);
+                return (EventLoopGroup) constructor.invoke(nThreads, threadFactory);
             } catch (Throwable t) {
                 return Exceptions.throwUnsafely(Exceptions.peel(t));
             }
