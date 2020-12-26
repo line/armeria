@@ -48,8 +48,8 @@ class FlagsTest {
     @Test
     void epollAvailableOnLinux() {
         assumeThat(osName).startsWith("linux");
-        assumeThat(System.getenv("WSLENV")).isNull();
-        assumeThat(System.getProperty("com.linecorp.armeria.useEpoll")).isEqualTo("false");
+        assumeThat(System.getProperty("com.linecorp.armeria.useEpoll")).isNull();
+        assumeThat(System.getProperty("com.linecorp.armeria.transportType")).isNull();
 
         assertThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
         assertThat(Epoll.isAvailable()).isTrue();
@@ -63,7 +63,7 @@ class FlagsTest {
     void openSslAvailable() {
         assumeThat(osName.startsWith("linux") || osName.startsWith("windows") ||
                    osName.startsWith("macosx") || osName.startsWith("osx")).isTrue();
-        assumeThat(System.getProperty("com.linecorp.armeria.useOpenSsl")).isEqualTo("false");
+        assumeThat(System.getProperty("com.linecorp.armeria.useOpenSsl")).isNull();
 
         assertThat(Flags.useOpenSsl()).isTrue();
         assertThat(OpenSsl.isAvailable()).isTrue();

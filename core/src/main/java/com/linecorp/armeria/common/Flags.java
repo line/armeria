@@ -73,12 +73,10 @@ import com.linecorp.armeria.server.file.HttpFile;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.Epoll;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.incubator.channel.uring.IOUring;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.util.ReferenceCountUtil;
@@ -174,9 +172,8 @@ public final class Flags {
     private static final String REQUEST_CONTEXT_STORAGE_PROVIDER =
             System.getProperty(PREFIX + "requestContextStorageProvider");
 
-    private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
-    private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
-                                                        value -> isEpollAvailable() || !value);
+    private static final boolean USE_EPOLL = getBoolean("useEpoll", TransportType.EPOLL.isAvailable(),
+                                                        value -> TransportType.EPOLL.isAvailable() || !value);
 
     private static final String DEFAULT_TRANSPORT_TYPE = USE_EPOLL ? "epoll" : "nio";
     private static final String TRANSPORT_TYPE_NAME = getNormalized("transportType",
@@ -418,32 +415,28 @@ public final class Flags {
         TransportType type = null;
         switch (TRANSPORT_TYPE_NAME) {
             case "io_uring":
-                if (isIoUringAvailable()) {
+                if (TransportType.IO_URING.isAvailable()) {
                     logger.info("Using io_uring");
                     type = TransportType.IO_URING;
                 } else {
-                    final Throwable cause = IOUring.unavailabilityCause();
+                    final Throwable cause = TransportType.IO_URING.unavailabilityCause();
                     if (cause != null) {
-                        logger.info("io_uring not available: {}", Exceptions.peel(cause).toString());
+                        logger.info("io_uring not available: {}", cause.toString());
                     } else {
                         logger.info("io_uring not available: ?");
                     }
                 }
                 // fallthrough
             case "epoll":
-                if (isEpollAvailable() && type == null) {
+                if (TransportType.EPOLL.isAvailable() && type == null) {
                     logger.info("Using /dev/epoll");
                     type = TransportType.EPOLL;
                 } else {
-                    final Throwable cause = Epoll.unavailabilityCause();
+                    final Throwable cause = TransportType.EPOLL.unavailabilityCause();
                     if (cause != null) {
-                        logger.info("/dev/epoll not available: {}", Exceptions.peel(cause).toString());
+                        logger.info("/dev/epoll not available: {}", cause.toString());
                     } else {
-                        if (HAS_WSLENV) {
-                            logger.info("/dev/epoll not available: WSL not supported");
-                        } else {
-                            logger.info("/dev/epoll not available: ?");
-                        }
+                        logger.info("/dev/epoll not available: ?");
                     }
                 }
                 // fallthrough
@@ -455,19 +448,6 @@ public final class Flags {
                 break;
         }
         TRANSPORT_TYPE = type;
-    }
-
-    private static boolean isEpollAvailable() {
-        if (SystemInfo.isLinux()) {
-            // Netty epoll transport does not work with WSL (Windows Sybsystem for Linux) yet.
-            // TODO(trustin): Re-enable on WSL if https://github.com/Microsoft/WSL/issues/1982 is resolved.
-            return Epoll.isAvailable() && !HAS_WSLENV;
-        }
-        return false;
-    }
-
-    private static boolean isIoUringAvailable() {
-        return SystemInfo.isLinux() && IOUring.isAvailable();
     }
 
     /**
