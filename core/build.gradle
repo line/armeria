@@ -1,3 +1,5 @@
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.util.concurrent.TimeUnit
 
 String releaseFlagFromVersion(String src) {
@@ -227,8 +229,7 @@ class PublicSuffixesTask extends DefaultTask {
                 tempFile.append(it)
                 tempFile.append("\n")
             }
-            publicSuffixesFile.delete()
-            tempFile.renameTo(publicSuffixesFile)
+            Files.move(tempFile.toPath(), publicSuffixesFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
             println "public suffixes file is updated"
         } catch (Exception e) {
             println "an exception was thrown: ${e}"
@@ -237,4 +238,5 @@ class PublicSuffixesTask extends DefaultTask {
 }
 
 task publicSuffixes(type: PublicSuffixesTask)
+tasks.processResources.dependsOn publicSuffixes
 tasks.classes.dependsOn publicSuffixes
