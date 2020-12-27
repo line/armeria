@@ -27,7 +27,7 @@ import io.netty.util.AsciiString;
 public interface ThrottlingHeaders {
     /**
      * Describes
-     * <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>.
+     * <a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/">RateLimit Header Scheme for HTTP</a>.
      * For example:
      * <pre>{@code
      * RateLimit-Limit: 10
