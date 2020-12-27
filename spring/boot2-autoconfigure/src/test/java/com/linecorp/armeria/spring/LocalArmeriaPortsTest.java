@@ -24,10 +24,8 @@ import javax.inject.Inject;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -52,49 +50,19 @@ public class LocalArmeriaPortsTest {
 
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
-    static class TestConfiguration {
-
-        @Bean
-        LocalArmeriaPortsForFieldInjection localArmeriaPortsForFieldInjection() {
-            return new LocalArmeriaPortsForFieldInjection();
-        }
-
-        @Bean
-        LocalArmeriaPortsForMethodInjection localArmeriaPortsForMethodInjection() {
-            return new LocalArmeriaPortsForMethodInjection();
-        }
-    }
-
-    static class LocalArmeriaPortsForFieldInjection {
-
-        @LocalArmeriaPorts
-        private List<Integer> ports;
-
-        List<Integer> getPorts() {
-            return ports;
-        }
-    }
-
-    static class LocalArmeriaPortsForMethodInjection {
-
-        private List<Integer> ports;
-
-        @LocalArmeriaPorts
-        void setPorts(List<Integer> ports) {
-            this.ports = ports;
-        }
-
-        List<Integer> getPorts() {
-            return ports;
-        }
-    }
+    static class TestConfiguration {}
 
     @Inject
     private Server server;
-    @Inject
-    private BeanFactory beanFactory;
+
     @LocalArmeriaPorts
-    private List<Integer> ports;
+    private List<Integer> portsField;
+    private List<Integer> portsMethod;
+
+    @LocalArmeriaPorts
+    public void setPorts(List<Integer> ports) {
+        portsMethod = ports;
+    }
 
     private String newUrl(String scheme, Integer port) {
         return scheme + "://127.0.0.1:" + port;
@@ -103,28 +71,22 @@ public class LocalArmeriaPortsTest {
     @Test
     public void testPortConfigurationFromFieldInjection() throws Exception {
         final Collection<ServerPort> serverPorts = server.activePorts().values();
-        final LocalArmeriaPortsForFieldInjection bean = beanFactory.getBean(
-                LocalArmeriaPortsForFieldInjection.class);
-        final List<Integer> ports = bean.getPorts();
         serverPorts.stream()
                    .map(sp -> sp.localAddress().getPort())
-                   .forEach(port -> assertThat(ports).contains(port));
+                   .forEach(port -> assertThat(portsField).contains(port));
     }
 
     @Test
     public void testPortConfigurationFromMethodInjection() throws Exception {
         final Collection<ServerPort> serverPorts = server.activePorts().values();
-        final LocalArmeriaPortsForMethodInjection bean = beanFactory.getBean(
-                LocalArmeriaPortsForMethodInjection.class);
-        final List<Integer> ports = bean.getPorts();
         serverPorts.stream()
                    .map(sp -> sp.localAddress().getPort())
-                   .forEach(port -> assertThat(ports).contains(port));
+                   .forEach(port -> assertThat(portsMethod).contains(port));
     }
 
     @Test
     public void testHttpServiceRegistrationBean() throws Exception {
-        for (Integer port : ports) {
+        for (Integer port : portsField) {
             final WebClient client = WebClient.of(newUrl("h1c", port));
             final HttpResponse response = client.get("/ok");
             final AggregatedHttpResponse res = response.aggregate().get();
