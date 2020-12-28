@@ -144,7 +144,7 @@ abstract class AbstractArmeriaBeanPostProcessor {
         return new InjectionMetadata(clazz, elements);
     }
 
-    private void serServer(Server server) {
+    private void setServer(Server server) {
         this.server = requireNonNull(server, "server");
     }
 
@@ -168,7 +168,7 @@ abstract class AbstractArmeriaBeanPostProcessor {
             Server server = getServer();
             if (server == null) {
                 server = beanFactory.getBean(Server.class);
-                serServer(server);
+                setServer(server);
             }
 
             Integer port = portCache.get(protocol);
@@ -201,7 +201,7 @@ abstract class AbstractArmeriaBeanPostProcessor {
             Server server = getServer();
             if (server == null) {
                 server = beanFactory.getBean(Server.class);
-                serServer(server);
+                setServer(server);
             }
 
             final Builder<Integer> ports = ImmutableList.builder();
