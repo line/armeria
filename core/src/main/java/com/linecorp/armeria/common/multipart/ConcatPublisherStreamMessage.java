@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import static com.linecorp.armeria.common.multipart.StreamMessages.EMPTY_OPTIONS;
-import static com.linecorp.armeria.common.multipart.StreamMessages.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;

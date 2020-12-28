@@ -31,7 +31,8 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import static com.linecorp.armeria.common.multipart.StreamMessages.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -220,7 +221,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         public void cancel() {
             if (cancelledUpdater.compareAndSet(this, 0, 1)) {
                 super.cancel();
-                if (StreamMessages.containsNotifyCancellation(options)) {
+                if (containsNotifyCancellation(options)) {
                     downstream.onError(CancelledSubscriptionException.get());
                 }
                 downstream = NoopSubscriber.get();

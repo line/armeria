@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,13 +16,9 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static java.util.Objects.requireNonNull;
-
 import org.reactivestreams.Subscriber;
 
-final class StreamMessageUtil {
-
-    static final SubscriptionOption[] EMPTY_OPTIONS = {};
+final class SubscriberUtil {
 
     static Throwable abortedOrLate(Subscriber<?> oldSubscriber) {
         if (oldSubscriber instanceof AbortingSubscriber) {
@@ -32,27 +28,5 @@ final class StreamMessageUtil {
         return new IllegalStateException("subscribed by other subscriber already");
     }
 
-    static boolean containsWithPooledObjects(SubscriptionOption... options) {
-        requireNonNull(options, "options");
-        for (SubscriptionOption option : options) {
-            if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    static boolean containsNotifyCancellation(SubscriptionOption... options) {
-        requireNonNull(options, "options");
-        for (SubscriptionOption option : options) {
-            if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private StreamMessageUtil() {}
+    private SubscriberUtil() {}
 }

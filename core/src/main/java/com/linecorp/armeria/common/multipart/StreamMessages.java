@@ -23,11 +23,8 @@ import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 final class StreamMessages {
-
-    static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
     /**
      * Concatenates an array of source {@link StreamMessage}s by relaying items
@@ -57,17 +54,6 @@ final class StreamMessages {
         } else {
             return new PublisherBasedStreamMessage<>(publisher);
         }
-    }
-
-    static boolean containsNotifyCancellation(SubscriptionOption... options) {
-        requireNonNull(options, "options");
-        for (SubscriptionOption option : options) {
-            if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private StreamMessages() {}
