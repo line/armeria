@@ -21,34 +21,35 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.stream.HttpDeframer;
-import com.linecorp.armeria.common.stream.HttpDeframerHandler;
-import com.linecorp.armeria.common.stream.HttpDeframerInput;
-import com.linecorp.armeria.common.stream.HttpDeframerOutput;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.stream.FilteredStreamMessage;
+import com.linecorp.armeria.common.stream.HttpDecoder;
+import com.linecorp.armeria.common.stream.HttpDecoderInput;
+import com.linecorp.armeria.common.stream.HttpDecoderOutput;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompositeException;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
-class MultipartDecoder implements HttpDeframer<BodyPart>, HttpDeframerHandler<BodyPart> {
+final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<BodyPart> {
 
-    private final HttpDeframer<BodyPart> delegate;
+    private final StreamMessage<BodyPart> decoded;
     private final String boundary;
 
     @Nullable
     private MimeParser parser;
 
-    MultipartDecoder(String boundary, ByteBufAllocator alloc) {
-        delegate = HttpDeframer.of(this, alloc);
+    MultipartDecoder(StreamMessage<? extends HttpData> upstream, String boundary, ByteBufAllocator alloc) {
+        decoded = newDecodedStreamMessage(upstream, alloc);
         this.boundary = boundary;
     }
 
     @Override
-    public void process(HttpDeframerInput in, HttpDeframerOutput<BodyPart> out) throws Exception {
+    public void process(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out) throws Exception {
         if (parser == null) {
             parser = new MimeParser(in, out, boundary);
         }
@@ -57,73 +58,77 @@ class MultipartDecoder implements HttpDeframer<BodyPart>, HttpDeframerHandler<Bo
 
     @Override
     public boolean isOpen() {
-        return delegate.isOpen();
+        return decoded.isOpen();
     }
 
     @Override
     public boolean isEmpty() {
-        return delegate.isEmpty();
+        return decoded.isEmpty();
+    }
+
+    @Override
+    public long demand() {
+        return decoded.demand();
     }
 
     @Override
     public CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
+        return decoded.whenComplete();
     }
 
     @Override
     public void subscribe(Subscriber<? super BodyPart> subscriber, EventExecutor executor) {
-        delegate.subscribe(subscriber, executor);
+        decoded.subscribe(subscriber, executor);
     }
 
     @Override
     public void subscribe(Subscriber<? super BodyPart> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        delegate.subscribe(subscriber, executor, options);
+        decoded.subscribe(subscriber, executor, options);
     }
 
     @Override
     public void abort() {
-        delegate.abort();
+        decoded.abort();
     }
 
     @Override
     public void abort(Throwable cause) {
-        delegate.abort(cause);
+        decoded.abort(cause);
     }
 
-    @Override
-    public void onSubscribe(Subscription s) {
-        delegate.onSubscribe(s);
-    }
+    private StreamMessage<BodyPart> newDecodedStreamMessage(StreamMessage<? extends HttpData> upstream,
+                                                            ByteBufAllocator alloc) {
+        return new FilteredStreamMessage<BodyPart, BodyPart>(
+                new DecodedHttpStreamMessage<>(upstream, this, alloc)) {
 
-    @Override
-    public void onNext(HttpObject httpObject) {
-        delegate.onNext(httpObject);
-    }
-
-    @Override
-    public void onError(Throwable t) {
-        if (parser != null) {
-            try {
-                parser.close();
-            } catch (MimeParsingException ex) {
-                delegate.onError(new CompositeException(ex, t));
-                return;
+            @Override
+            protected BodyPart filter(BodyPart obj) {
+                return obj;
             }
-        }
-        delegate.onError(t);
-    }
 
-    @Override
-    public void onComplete() {
-        if (parser != null) {
-            try {
-                parser.close();
-            } catch (MimeParsingException ex) {
-                delegate.onError(ex);
-                return;
+            @Override
+            protected Throwable beforeError(Subscriber<? super BodyPart> subscriber, Throwable cause) {
+                if (parser != null) {
+                    try {
+                        parser.close();
+                    } catch (MimeParsingException ex) {
+                        return new CompositeException(ex, cause);
+                    }
+                }
+                return cause;
             }
-        }
-        delegate.onComplete();
+
+            @Override
+            protected void beforeComplete(Subscriber<? super BodyPart> subscriber) {
+                if (parser != null) {
+                    try {
+                        parser.close();
+                    } catch (MimeParsingException ex) {
+                        subscriber.onError(ex);
+                    }
+                }
+            }
+        };
     }
 }

@@ -57,7 +57,6 @@ final class DefaultMultipart implements Multipart {
         return boundary;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public StreamMessage<BodyPart> bodyParts() {
         return (StreamMessage<BodyPart>) parts;
@@ -93,6 +92,11 @@ final class DefaultMultipart implements Multipart {
     @Override
     public boolean isEmpty() {
         return parts.isEmpty();
+    }
+
+    @Override
+    public long demand() {
+        return parts.demand();
     }
 
     @Override

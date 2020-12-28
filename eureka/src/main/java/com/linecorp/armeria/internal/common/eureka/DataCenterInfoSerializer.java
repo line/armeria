@@ -35,22 +35,25 @@ final class DataCenterInfoSerializer extends StdSerializer<DataCenterInfo> {
     public void serialize(DataCenterInfo value, JsonGenerator gen, SerializerProvider provider)
             throws IOException {
         gen.writeStartObject();
-        if ("Amazon".equalsIgnoreCase(value.getName())) {
+        final boolean isAmazon = "Amazon".equalsIgnoreCase(value.getName());
+        if (isAmazon) {
             gen.writeStringField("@class", "com.netflix.appinfo.AmazonInfo");
         } else {
             gen.writeStringField("@class", "com.netflix.appinfo.InstanceInfo$DefaultDataCenterInfo");
         }
         gen.writeStringField("name", value.getName());
 
-        final Map<String, String> metadata = value.getMetadata();
-        gen.writeFieldName("metadata");
-        gen.writeStartObject();
-        if (!metadata.isEmpty()) {
-            for (Entry<String, String> entry : metadata.entrySet()) {
-                gen.writeStringField(entry.getKey(), entry.getValue());
+        if (isAmazon) {
+            final Map<String, String> metadata = value.getMetadata();
+            gen.writeFieldName("metadata");
+            gen.writeStartObject();
+            if (!metadata.isEmpty()) {
+                for (Entry<String, String> entry : metadata.entrySet()) {
+                    gen.writeStringField(entry.getKey(), entry.getValue());
+                }
             }
+            gen.writeEndObject(); // end for metadata
         }
-        gen.writeEndObject(); // end for metadata
         gen.writeEndObject(); // end for DataCenter
     }
 }

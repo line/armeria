@@ -30,6 +30,7 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static com.linecorp.armeria.common.multipart.StreamMessages.toStreamMessage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -54,7 +55,6 @@ import com.linecorp.armeria.common.multipart.MultipartEncoderTest.HttpDataAggreg
 
 import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;
-import reactor.test.publisher.PublisherProbe;
 
 /**
  * Tests {@link MultipartDecoder}.
@@ -383,23 +383,15 @@ public class MultipartDecoderTest {
 
     @Test
     void testUpstreamError() {
-        final MultipartDecoder decoder = new MultipartDecoder("boundary", ByteBufAllocator.DEFAULT);
+        final Flux<HttpData> source = Flux.error(new IllegalStateException("oops"));
+        final MultipartDecoder decoder = new MultipartDecoder(toStreamMessage(source), "boundary",
+                                                              ByteBufAllocator.DEFAULT);
         final BodyPartSubscriber testSubscriber = new BodyPartSubscriber(SubscriberType.INFINITE, null);
         decoder.subscribe(testSubscriber);
-        Flux.<HttpData>error(new IllegalStateException("oops")).subscribe(decoder);
 
         assertThatThrownBy(testSubscriber.completionFuture::join)
                 .hasCauseInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("oops");
-    }
-
-    @Test
-    void testSubcribingMoreThanOnce() {
-        final MultipartDecoder decoder = new MultipartDecoder("boundary", ByteBufAllocator.DEFAULT);
-        chunksPublisher("foo".getBytes()).subscribe(decoder);
-        final PublisherProbe<HttpData> probe = PublisherProbe.of(chunksPublisher("bar".getBytes()));
-        probe.flux().subscribe(decoder);
-        probe.assertWasCancelled();
     }
 
     /**
@@ -480,18 +472,8 @@ public class MultipartDecoderTest {
      * @return publisher of body parts
      */
     private static Publisher<? extends BodyPart> partsPublisher(String boundary, List<byte[]> data) {
-        final MultipartDecoder decoder = new MultipartDecoder(boundary, ByteBufAllocator.DEFAULT);
-        chunksPublisher(data).subscribe(decoder);
-        return decoder;
-    }
-
-    /**
-     * Build a publisher of {@link HttpData} from a single {@code byte[]}.
-     * @param bytes data for the chunk to create
-     * @return publisher
-     */
-    private static Publisher<HttpData> chunksPublisher(byte[] bytes) {
-        return chunksPublisher(ImmutableList.of(bytes));
+        final Publisher<HttpData> source = chunksPublisher(data);
+        return new MultipartDecoder(toStreamMessage(source), boundary, ByteBufAllocator.DEFAULT);
     }
 
     /**

@@ -158,8 +158,7 @@ public interface Multipart extends StreamMessage<HttpData> {
         requireNonNull(boundary, "boundary");
         requireNonNull(contents, "contents");
         requireNonNull(alloc, "alloc");
-        final MultipartDecoder decoder = new MultipartDecoder(boundary, alloc);
-        contents.subscribe(decoder);
+        final MultipartDecoder decoder = new MultipartDecoder(toStreamMessage(contents), boundary, alloc);
         return of(boundary, decoder);
     }
 

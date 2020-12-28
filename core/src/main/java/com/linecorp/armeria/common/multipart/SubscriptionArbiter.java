@@ -107,17 +107,16 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
      * {@link Long#MAX_VALUE}.
      * @param field the target field to update
      * @param n the request amount to add, must be positive (not verified)
-     * @return the old request amount after the operation
      */
-    private static long addRequest(AtomicLong field, long n) {
+    private static void addRequest(AtomicLong field, long n) {
         for (;;) {
             final long current = field.get();
             if (current == Long.MAX_VALUE) {
-                return Long.MAX_VALUE;
+                return;
             }
             final long update = LongMath.saturatedAdd(current, n);
             if (field.compareAndSet(current, update)) {
-                return current;
+                return;
             }
         }
     }

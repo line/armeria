@@ -20,7 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -188,6 +190,57 @@ class HealthCheckedEndpointGroupTest {
     }
 
     @Test
+    void shouldCallRefreshWhenEndpointWeightIsChanged() throws InterruptedException {
+        final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
+            ctx.updateHealth(HEALTHY);
+            return AsyncCloseableSupport.of();
+        };
+
+        final Endpoint candidate1 = Endpoint.of("candidate1");
+        final Endpoint candidate2 = Endpoint.of("candidate2");
+
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(candidate1, candidate2);
+
+        try (HealthCheckedEndpointGroup group =
+                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                                                    DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                                                    ClientOptions.of(), checkFactory,
+                                                    new InfinityUpdateHealthCheckStrategy())) {
+
+            assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
+                                         .containsOnly(candidate1, candidate2);
+            delegate.set(candidate1.withWeight(150), candidate2);
+            assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
+                                         .containsOnly(candidate1.withWeight(150), candidate2);
+        }
+    }
+
+    @Test
+    void makeOneContextForSameEndpoints() throws InterruptedException {
+        final AtomicInteger counter = new AtomicInteger();
+        final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
+            counter.incrementAndGet();
+            ctx.updateHealth(HEALTHY);
+            return AsyncCloseableSupport.of();
+        };
+
+        final Endpoint candidate1 = Endpoint.of("candidate1");
+        final Endpoint candidate2 = Endpoint.of("candidate2");
+
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(candidate1, candidate2, candidate2);
+
+        try (HealthCheckedEndpointGroup unused =
+                     new HealthCheckedEndpointGroup(delegate, SessionProtocol.HTTP, 80,
+                                                    DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                                                    ClientOptions.of(), checkFactory,
+                                                    new InfinityUpdateHealthCheckStrategy())) {
+            assertThat(counter.get()).isEqualTo(2);
+        }
+    }
+
+    @Test
     void closesWhenClientFactoryCloses() {
         final ClientFactory factory = ClientFactory.builder().build();
         final EndpointGroup delegate = Endpoint.of("foo");
@@ -246,6 +299,21 @@ class HealthCheckedEndpointGroupTest {
         @Override
         public boolean updateHealth(Endpoint endpoint, double health) {
             return true;
+        }
+    }
+
+    /**
+     * A Comparator which includes the weight of an endpoint to compare.
+     */
+    private static class EndpointComparator implements Comparator<Endpoint>, Serializable {
+        private static final long serialVersionUID = 6866869171110624149L;
+
+        @Override
+        public int compare(Endpoint o1, Endpoint o2) {
+            if (o1.equals(o2) && o1.weight() == o2.weight()) {
+                return 0;
+            }
+            return -1;
         }
     }
 }

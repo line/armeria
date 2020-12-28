@@ -41,7 +41,6 @@ import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpObject;
 
 import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;
@@ -54,7 +53,7 @@ public class MultipartDecoderTckTest extends PublisherVerification<BodyPart> {
         super(new TestEnvironment(200));
     }
 
-    static Publisher<HttpObject> upstream(final long l) {
+    static Publisher<HttpData> upstream(final long l) {
         final Stream<HttpData> stream =
                 LongStream.rangeClosed(1, l)
                           .mapToObj(i -> {
@@ -79,9 +78,8 @@ public class MultipartDecoderTckTest extends PublisherVerification<BodyPart> {
 
     @Override
     public Publisher<BodyPart> createPublisher(final long l) {
-        final MultipartDecoder decoder = new MultipartDecoder("boundary", ByteBufAllocator.DEFAULT);
-        upstream(l).subscribe(decoder);
-        return decoder;
+        return new MultipartDecoder(StreamMessages.toStreamMessage(upstream(l)), "boundary",
+                                    ByteBufAllocator.DEFAULT);
     }
 
     @Override

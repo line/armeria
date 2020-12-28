@@ -37,6 +37,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -56,6 +58,9 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
     // /reactive/src/main/java/io/helidon/common/reactive/MultiConcatArray.java
 
     private final StreamMessage<? extends T>[] sources;
+
+    @Nullable
+    private ConcatArraySubscriber<T> parent;
 
     ConcatArrayStreamMessage(StreamMessage<? extends T>[] sources) {
         this.sources = sources;
@@ -82,6 +87,14 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
+    public long demand() {
+        if (parent == null) {
+            return 0;
+        }
+        return sources[parent.index].demand();
+    }
+
+    @Override
     public CompletableFuture<Void> whenComplete() {
         return sources[sources.length - 1].whenComplete();
     }
@@ -97,8 +110,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
-        final ConcatArraySubscriber<T> parent =
-                new ConcatArraySubscriber<>(subscriber, sources, executor, options);
+        parent = new ConcatArraySubscriber<>(subscriber, sources, executor, options);
         subscriber.onSubscribe(parent);
         parent.nextSource();
     }
@@ -135,9 +147,9 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         private final EventExecutor executor;
         private final SubscriptionOption[] options;
 
-        private int index;
         private long produced;
 
+        private volatile int index;
         private volatile int wip;
         private volatile int cancelled;
 
@@ -183,10 +195,12 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         void nextSource() {
             if (wipUpdater.getAndIncrement(this) == 0) {
                 do {
+                    final int index = this.index;
                     if (index == sources.length) {
                         downstream.onComplete();
                     } else {
-                        sources[index++].subscribe(this, executor, options);
+                        this.index++;
+                        sources[index].subscribe(this, executor, options);
                     }
                 } while (wipUpdater.decrementAndGet(this) != 0);
             }

@@ -45,6 +45,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
@@ -73,10 +75,10 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
     private static final HttpData CRLF = HttpData.ofUtf8("\r\n");
 
     private final String boundary;
-    private final CompletableFuture<ListenableStreamMessage<StreamMessage<HttpData>>> initFuture;
+    private final CompletableFuture<DefaultStreamMessage<StreamMessage<HttpData>>> initFuture;
 
     @Nullable
-    private ListenableStreamMessage<StreamMessage<HttpData>> emitter;
+    private DefaultStreamMessage<StreamMessage<HttpData>> emitter;
 
     // Updated only via upstreamUpdater
     @Nullable
@@ -107,6 +109,14 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
     @Override
     public boolean isEmpty() {
         return emitter == null || emitter.isEmpty();
+    }
+
+    @Override
+    public long demand() {
+        if (emitter == null) {
+            return 0;
+        }
+        return emitter.demand();
     }
 
     @Override
@@ -166,7 +176,7 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
         if (upstream != null && downstream != null) {
             // relay request to upstream, already reduced by flatmap
             if (initializedUpdater.compareAndSet(this, 0, 1)) {
-                emitter = new ListenableStreamMessage<>(upstream::request, upstream::cancel);
+                emitter = newEmitter(upstream);
                 StreamMessages.concat(StreamMessages.concat(emitter),
                                       StreamMessage.of(HttpData.ofUtf8("--" + boundary + "--")))
                               .subscribe(downstream, executor, options);
@@ -175,6 +185,24 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
                 this.downstream = null;
             }
         }
+    }
+
+    private static DefaultStreamMessage<StreamMessage<HttpData>> newEmitter(Subscription upstream) {
+        final DefaultStreamMessage<StreamMessage<HttpData>> emitter =
+                new DefaultStreamMessage<StreamMessage<HttpData>>() {
+                    @Override
+                    protected void onRequest(long n) {
+                        // A BodyPart is converted to a StreamMessage<HttpData> one to one.
+                        upstream.request(n);
+                    }
+                };
+        emitter.whenComplete().handle((unused, cause) -> {
+            if (cause instanceof CancelledSubscriptionException) {
+                upstream.cancel();
+            }
+            return null;
+        });
+        return emitter;
     }
 
     @Override

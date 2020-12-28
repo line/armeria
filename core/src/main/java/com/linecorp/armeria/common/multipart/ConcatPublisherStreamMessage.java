@@ -29,6 +29,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
@@ -42,6 +43,9 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
 
     private final StreamMessage<? extends StreamMessage<? extends T>> sources;
 
+    @Nullable
+    private volatile OuterSubscriber<T> outerSubscriber;
+
     ConcatPublisherStreamMessage(StreamMessage<? extends StreamMessage<? extends T>> sources) {
         this.sources = sources;
     }
@@ -54,6 +58,21 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
     @Override
     public boolean isEmpty() {
         return sources.isEmpty();
+    }
+
+    @Override
+    public long demand() {
+        final OuterSubscriber<T> outerSubscriber = this.outerSubscriber;
+        if (outerSubscriber == null) {
+            return 0;
+        }
+
+        final StreamMessage<? extends T> currentPublisher = outerSubscriber.currentPublisher;
+        if (currentPublisher == null) {
+            return 0;
+        }
+
+        return currentPublisher.demand();
     }
 
     @Override
@@ -75,7 +94,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
 
         final InnerSubscriber<T> innerSubscriber = new InnerSubscriber<>(subscriber, options);
         final OuterSubscriber<T> outerSubscriber = new OuterSubscriber<>(innerSubscriber, executor);
-        innerSubscriber.setOuterSubscriber(outerSubscriber);
+        this.outerSubscriber = outerSubscriber;
         subscriber.onSubscribe(innerSubscriber);
         sources.subscribe(outerSubscriber, executor, options);
     }
@@ -100,14 +119,17 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         private final EventExecutor executor;
 
         private boolean completed;
+        private boolean inSubscribe;
 
         @Nullable
+        private volatile StreamMessage<? extends T> currentPublisher;
+        @Nullable
         private volatile Subscription upstream;
-        private volatile boolean inSubscribe;
 
         OuterSubscriber(InnerSubscriber<T> innerSubscriber, EventExecutor executor) {
             this.innerSubscriber = innerSubscriber;
             this.executor = executor;
+            innerSubscriber.setOuterSubscriber(this);
         }
 
         @Override
@@ -124,6 +146,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         public void onNext(StreamMessage<? extends T> publisher) {
             requireNonNull(publisher, "publisher");
             inSubscribe = true;
+            currentPublisher = publisher;
             publisher.subscribe(innerSubscriber, executor, innerSubscriber.options);
         }
 
@@ -164,7 +187,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
 
         private static final long serialVersionUID = -676372622418720676L;
 
-        private final Subscriber<? super T> downstream;
+        private Subscriber<? super T> downstream;
         private final SubscriptionOption[] options;
 
         @Nullable
@@ -190,7 +213,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
                 subscription.cancel();
                 return;
             }
-            // Subscribe to new Publisher
+            // Reset 'completed' to subscribe to new Publisher
             completed = false;
             setSubscription(subscription);
             outerSubscriber.inSubscribe = false;
@@ -247,6 +270,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
                 if (!completed && containsNotifyCancellation(options)) {
                     downstream.onError(CancelledSubscriptionException.get());
                 }
+                downstream = NoopSubscriber.get();
             }
         }
 

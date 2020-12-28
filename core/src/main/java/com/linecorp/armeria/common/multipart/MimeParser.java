@@ -42,8 +42,8 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
-import com.linecorp.armeria.common.stream.HttpDeframerInput;
-import com.linecorp.armeria.common.stream.HttpDeframerOutput;
+import com.linecorp.armeria.common.stream.HttpDecoderInput;
+import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -89,12 +89,12 @@ final class MimeParser {
     /**
      * The input of multipart data.
      */
-    private final HttpDeframerInput in;
+    private final HttpDecoderInput in;
 
     /**
      * The output which the parsed {@link BodyPart}s are added to.
      */
-    private final HttpDeframerOutput<BodyPart> out;
+    private final HttpDecoderOutput<BodyPart> out;
 
     /**
      * The builder for the headers of a body part.
@@ -138,7 +138,7 @@ final class MimeParser {
     /**
      * Parses the MIME content.
      */
-    MimeParser(HttpDeframerInput in, HttpDeframerOutput<BodyPart> out, String boundary) {
+    MimeParser(HttpDecoderInput in, HttpDecoderOutput<BodyPart> out, String boundary) {
         this.in = in;
         this.out = out;
         boundaryBytes = getBytes("--" + boundary);
@@ -154,6 +154,10 @@ final class MimeParser {
      * @throws MimeParsingException if the parser state is not {@code END_MESSAGE} or {@code START_MESSAGE}
      */
     void close() {
+        if (closed) {
+            return;
+        }
+
         switch (state) {
             case START_MESSAGE:
             case END_MESSAGE:
@@ -394,7 +398,7 @@ final class MimeParser {
         return body;
     }
 
-    private static ByteBuf safeReadBytes(HttpDeframerInput in, int length) {
+    private static ByteBuf safeReadBytes(HttpDecoderInput in, int length) {
         if (length == 0) {
             return Unpooled.EMPTY_BUFFER;
         } else {

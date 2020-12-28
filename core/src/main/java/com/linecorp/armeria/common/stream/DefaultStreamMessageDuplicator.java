@@ -487,6 +487,11 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         @Override
+        public long demand() {
+            return processor.upstream().demand();
+        }
+
+        @Override
         public CompletableFuture<Void> whenComplete() {
             return completionFuture;
         }

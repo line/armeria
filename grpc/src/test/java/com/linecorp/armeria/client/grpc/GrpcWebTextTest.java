@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.client.grpc;
 
-import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
+import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.UncheckedIOException;
@@ -42,11 +42,9 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.stream.HttpDeframer;
-import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -62,7 +60,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.EventLoop;
 
 class GrpcWebTextTest {
 
@@ -95,20 +92,24 @@ class GrpcWebTextTest {
 
         @Override
         protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+            final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(Integer.MAX_VALUE);
+            final CompletableFuture<ByteBuf> deframedByteBuf = new CompletableFuture<>();
+            final ByteBufAllocator alloc = ctx.alloc();
+            req.decode(deframer, alloc, byteBufConverter(alloc, true))
+               .subscribe(singleSubscriber(deframedByteBuf), ctx.eventLoop());
             final CompletableFuture<HttpResponse> responseFuture =
-                    req.aggregate()
-                       .thenCompose(msg -> deframeMessage(msg.content(), ctx.eventLoop(), ctx.alloc()))
-                       .thenCompose(TestService::handleMessage)
-                       .thenApply(responseMessage -> {
-                           final HttpResponseWriter streaming = HttpResponse.streaming();
-                           streaming.write(ResponseHeaders.of(
-                                   HttpStatus.OK,
-                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc-web-text+proto",
-                                   GrpcHeaderNames.GRPC_ENCODING, "identity"));
-                           writeEncodedMessageAcrossFrames(responseMessage, streaming);
-                           writeTrailers(ctx, streaming);
-                           return streaming;
-                       });
+                    deframedByteBuf
+                            .thenCompose(TestService::handleMessage)
+                            .thenApply(responseMessage -> {
+                                final HttpResponseWriter streaming = HttpResponse.streaming();
+                                streaming.write(ResponseHeaders.of(
+                                        HttpStatus.OK,
+                                        HttpHeaderNames.CONTENT_TYPE, "application/grpc-web-text+proto",
+                                        GrpcHeaderNames.GRPC_ENCODING, "identity"));
+                                writeEncodedMessageAcrossFrames(responseMessage, streaming);
+                                writeTrailers(ctx, streaming);
+                                return streaming;
+                            });
 
             return HttpResponse.from(responseFuture);
         }
@@ -162,17 +163,6 @@ class GrpcWebTextTest {
             buf.writeBytes(message);
             message.release();
             return buf;
-        }
-
-        private static CompletableFuture<ByteBuf> deframeMessage(HttpData framed,
-                                                                 EventLoop eventLoop,
-                                                                 ByteBufAllocator alloc) {
-            final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
-            final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
-            final HttpDeframer<DeframedMessage> deframer = newHttpDeframer(handler, alloc, true);
-            StreamMessage.of(framed).subscribe(deframer, eventLoop);
-            deframer.subscribe(singleSubscriber(deframed), eventLoop);
-            return deframed;
         }
 
         private static Subscriber<DeframedMessage> singleSubscriber(CompletableFuture<ByteBuf> deframed) {
