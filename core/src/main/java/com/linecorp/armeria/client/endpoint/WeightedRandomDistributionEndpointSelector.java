@@ -16,9 +16,9 @@
 package com.linecorp.armeria.client.endpoint;
 
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -36,10 +36,13 @@ import com.linecorp.armeria.client.Endpoint;
  */
 final class WeightedRandomDistributionEndpointSelector {
 
+    private static final AtomicLongFieldUpdater<WeightedRandomDistributionEndpointSelector> updater =
+            AtomicLongFieldUpdater.newUpdater(
+                    WeightedRandomDistributionEndpointSelector.class, "currentTotalWeight");
+
     private final List<Entry> entries;
     private final long totalWeight;
-    private final List<Entry> currentEntries;
-    private long currentTotalWeight;
+    private volatile long currentTotalWeight;
 
     WeightedRandomDistributionEndpointSelector(List<Endpoint> endpoints) {
         final ImmutableList.Builder<Entry> builder = ImmutableList.builder();
@@ -55,7 +58,6 @@ final class WeightedRandomDistributionEndpointSelector {
         this.totalWeight = totalWeight;
         currentTotalWeight = totalWeight;
         entries = builder.build();
-        currentEntries = new CopyOnWriteArrayList<>(entries);
     }
 
     @VisibleForTesting
@@ -70,33 +72,29 @@ final class WeightedRandomDistributionEndpointSelector {
         }
         Endpoint selected = null;
         for (;;) {
-            long nextLong = ThreadLocalRandom.current().nextLong(currentTotalWeight);
+            final long currentWeight = currentTotalWeight;
+            if (currentWeight == 0) {
+                // currentTotalWeight will become totalWeight as soon as it becomes 0 so we just loop again.
+                continue;
+            }
+            long nextLong = ThreadLocalRandom.current().nextLong(currentWeight);
             // There's a chance that currentTotalWeight is changed before looping currentEntries.
             // However, we have counters and choosing an endpoint doesn't have to be exact so no big deal.
             // TODO(minwoox): Use binary search when the number of endpoints is greater than N.
-            for (Entry entry : currentEntries) {
-                final int weight = entry.endpoint().weight();
+            for (Entry entry : entries) {
+                if (entry.isFull()) {
+                    continue;
+                }
+                final Endpoint endpoint = entry.endpoint();
+                final int weight = endpoint.weight();
                 nextLong -= weight;
                 if (nextLong < 0) {
-                    if (entry.increaseCounter()) {
-                        selected = entry.endpoint();
+                    final int counter = entry.incrementAndGet();
+                    if (counter <= weight) {
+                        selected = endpoint;
                     }
-                    if (!entry.isFull()) {
-                        break;
-                    }
-
-                    // The entry is full so we should remove the entry from currentEntries.
-                    synchronized (currentEntries) {
-                        // Check again not to remove the entry where reset() is called by another thread.
-                        if (entry.isFull()) {
-                            if (currentEntries.remove(entry)) {
-                                if (currentEntries.isEmpty()) {
-                                    reset();
-                                } else {
-                                    currentTotalWeight -= weight;
-                                }
-                            }
-                        }
+                    if (counter == weight) {
+                        decreaseCurrentTotalWeight(weight);
                     }
                     break;
                 }
@@ -108,12 +106,18 @@ final class WeightedRandomDistributionEndpointSelector {
         }
     }
 
-    private void reset() {
-        for (Entry entry : entries) {
-            entry.set(0);
+    private void decreaseCurrentTotalWeight(int weight) {
+        for (;;) {
+            final long oldWeight = currentTotalWeight;
+            final long newWeight = oldWeight - weight;
+            if (updater.compareAndSet(this, oldWeight, newWeight)) {
+                if (currentTotalWeight == 0) {
+                    entries.forEach(entry -> entry.set(0));
+                    currentTotalWeight = totalWeight;
+                }
+                return;
+            }
         }
-        currentEntries.addAll(entries);
-        currentTotalWeight = totalWeight;
     }
 
     @VisibleForTesting

@@ -2364,7 +2364,6 @@ fetsund.no
 fg.it
 fh-muenster.io
 fh.se
-fhapp.xyz
 fhs.no
 fhsk.se
 fhv.se
@@ -7284,6 +7283,7 @@ small-web.org
 smart
 smile
 smola.no
+smushcdn.com
 sn
 sn.cn
 snaase.no
@@ -7659,6 +7659,7 @@ temasek
 temp-dns.com
 tempio-olbia.it
 tempioolbia.it
+tempurl.host
 tendo.yamagata.jp
 tenei.fukushima.jp
 tenkawa.nara.jp
@@ -8443,6 +8444,9 @@ worse-than.tv
 wow
 wpdevcloud.com
 wpenginepowered.com
+wphostedmail.com
+wpmucdn.com
+wpmudev.host
 writesthisblog.com
 wroc.pl
 wroclaw.pl

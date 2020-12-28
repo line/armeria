@@ -37,7 +37,7 @@ public final class WeightRampingUpStrategyBuilder {
 
     private static final long DEFAULT_RAMPING_UP_INTERVAL_MILLIS = 2000;
     private static final int DEFAULT_NUMBER_OF_STEPS = 10;
-    private static final int DEFAULT_UPDATING_ENTRY_WINDOW_MILLIS = 500;
+    private static final int DEFAULT_RAMPING_UP_ENTRY_WINDOW_MILLIS = 500;
 
     private EndpointWeightTransition transition = EndpointWeightTransition.linear();
 
@@ -46,7 +46,7 @@ public final class WeightRampingUpStrategyBuilder {
 
     private long rampingUpIntervalMillis = DEFAULT_RAMPING_UP_INTERVAL_MILLIS;
     private int totalSteps = DEFAULT_NUMBER_OF_STEPS;
-    private long updatingTaskWindowMillis = DEFAULT_UPDATING_ENTRY_WINDOW_MILLIS;
+    private long rampingUpTaskWindowMillis = DEFAULT_RAMPING_UP_ENTRY_WINDOW_MILLIS;
 
     /**
      * Sets the specified {@link EndpointWeightTransition} that will compute the weight of an {@link Endpoint}
@@ -104,11 +104,11 @@ public final class WeightRampingUpStrategyBuilder {
     }
 
     /**
-     * Sets the specified {@code updatingTaskWindow} which will be used to combine weight updating tasks.
-     * If several {@link Endpoint}s are added within the {@code updatingTaskWindow}, the weights of
-     * them are updated together. If there's already a scheduled job and a new {@link Endpoint}s are added
-     * within the {@code updatingTaskWindow}, they are also updated together.
-     * This is an example of how it works when {@code updatingTaskWindow} is 500 milliseconds and
+     * Sets the specified {@code rampingUpTaskWindow} which will be used to combine weight ramping up task.
+     * If several {@link Endpoint}s are added within the {@code rampingUpTaskWindow}, the weights of
+     * them are ramped up together. If there's already a scheduled job and new {@link Endpoint}s are added
+     * within the {@code rampingUpTaskWindow}, they are also ramped up together.
+     * This is an example of how it works when {@code rampingUpTaskWindow} is 500 milliseconds and
      * {@code rampingUpIntervalMillis} is 2000 milliseconds:
      * <pre>{@code
      * ----------------------------------------------------------------------------------------------------
@@ -117,20 +117,20 @@ public final class WeightRampingUpStrategyBuilder {
      * ----------------------------------------------------------------------------------------------------
      *     0ms       t0 + 200ms                    t0 + 1000ms                          t0 + 1800ms  t0 + 2000ms
      * }</pre>
-     * A and B are updated right away when they are added and they are updated together at t4.
-     * C is updated alone every 2000 milliseconds. D is updated together with A and B at t4.
+     * A and B are ramped up right away when they are added and they are ramped up together at t4.
+     * C is ramped up alone every 2000 milliseconds. D is ramped up together with A and B at t4.
      */
-    public WeightRampingUpStrategyBuilder updatingTaskWindow(Duration updatingTaskWindow) {
-        requireNonNull(updatingTaskWindow, "updatingTaskWindow");
-        return updatingTaskWindowMillis(updatingTaskWindow.toMillis());
+    public WeightRampingUpStrategyBuilder rampingUpTaskWindow(Duration rampingUpTaskWindow) {
+        requireNonNull(rampingUpTaskWindow, "rampingUpTaskWindow");
+        return rampingUpTaskWindowMillis(rampingUpTaskWindow.toMillis());
     }
 
     /**
-     * Sets the specified {@code updatingTaskWindowMillis} which will be used to combine weight updating tasks.
-     * If several {@link Endpoint}s are added within the {@code updatingTaskWindowMillis}, the weights of
-     * them are updated together. If there's already a scheduled job and a new {@link Endpoint}s are added
-     * within the {@code updatingTaskWindow}, they are also updated together.
-     * This is an example of how it works when {@code updatingTaskWindowMillis} is 500 milliseconds and
+     * Sets the specified {@code rampingUpTaskWindowMillis} which will be used to combine weight ramping up
+     * tasks. If several {@link Endpoint}s are added within the {@code rampingUpTaskWindowMillis},
+     * the weights of them are ramped up together. If there's already a scheduled job and
+     * new {@link Endpoint}s are added within the {@code rampingUpTaskWindow}, they are also ramped up together.
+     * This is an example of how it works when {@code rampingUpTaskWindowMillis} is 500 milliseconds and
      * {@code rampingUpIntervalMillis} is 2000 milliseconds:
      * <pre>{@code
      * ----------------------------------------------------------------------------------------------------
@@ -139,13 +139,13 @@ public final class WeightRampingUpStrategyBuilder {
      * ----------------------------------------------------------------------------------------------------
      *     0ms       t0 + 200ms                    t0 + 1000ms                          t0 + 1800ms  t0 + 2000ms
      * }</pre>
-     * A and B are updated right away when they are added and they are updated together at t4.
-     * C is updated alone every 2000 milliseconds. D is updated together with A and B at t4.
+     * A and B are ramped up right away when they are added and they are ramped up together at t4.
+     * C is ramped up alone every 2000 milliseconds. D is ramped up together with A and B at t4.
      */
-    public WeightRampingUpStrategyBuilder updatingTaskWindowMillis(long updatingTaskWindowMillis) {
-        checkArgument(updatingTaskWindowMillis >= 0,
-                      "updatingTaskWindowMillis: %s (expected >= 0)", updatingTaskWindowMillis);
-        this.updatingTaskWindowMillis = updatingTaskWindowMillis;
+    public WeightRampingUpStrategyBuilder rampingUpTaskWindowMillis(long rampingUpTaskWindowMillis) {
+        checkArgument(rampingUpTaskWindowMillis >= 0,
+                      "rampingUpTaskWindowMillis: %s (expected >= 0)", rampingUpTaskWindowMillis);
+        this.rampingUpTaskWindowMillis = rampingUpTaskWindowMillis;
         return this;
     }
 
@@ -154,10 +154,10 @@ public final class WeightRampingUpStrategyBuilder {
      * the newly added {@link Endpoint}s. The {@link Endpoint} is selected using weighted random distribution.
      */
     public EndpointSelectionStrategy build() {
-        checkState(rampingUpIntervalMillis > updatingTaskWindowMillis,
-                   "rampingUpIntervalMillis: %s, updatingTaskWindowMillis: %s " +
-                   "(expected: rampingUpIntervalMillis > updatingTaskWindowMillis)",
-                   rampingUpIntervalMillis, updatingTaskWindowMillis);
+        checkState(rampingUpIntervalMillis > rampingUpTaskWindowMillis,
+                   "rampingUpIntervalMillis: %s, rampingUpTaskWindowMillis: %s " +
+                   "(expected: rampingUpIntervalMillis > rampingUpTaskWindowMillis)",
+                   rampingUpIntervalMillis, rampingUpTaskWindowMillis);
         final ScheduledExecutorService executor;
         if (this.executor != null) {
             executor = this.executor;
@@ -166,6 +166,6 @@ public final class WeightRampingUpStrategyBuilder {
         }
 
         return new WeightRampingUpStrategy(transition, executor, rampingUpIntervalMillis,
-                                           totalSteps, updatingTaskWindowMillis);
+                                           totalSteps, rampingUpTaskWindowMillis);
     }
 }
