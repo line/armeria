@@ -216,12 +216,12 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
-        final HttpStreamDeframer handler =
+        final HttpStreamDeframer deframer =
                 new HttpStreamDeframer(decompressorRegistry, this, null, maxInboundMessageSizeBytes);
         final ByteBufAllocator alloc = ctx.alloc();
         final StreamMessage<DeframedMessage> deframed =
-                res.decode(handler, alloc, byteBufConverter(alloc, grpcWebText));
-        handler.setDeframedStreamMessage(deframed);
+                res.decode(deframer, alloc, byteBufConverter(alloc, grpcWebText));
+        deframer.setDeframedStreamMessage(deframed);
         deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
         responseListener.onReady();
     }

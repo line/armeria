@@ -92,10 +92,10 @@ class GrpcWebTextTest {
 
         @Override
         protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-            final ArmeriaMessageDeframer handler = new ArmeriaMessageDeframer(Integer.MAX_VALUE);
+            final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(Integer.MAX_VALUE);
             final CompletableFuture<ByteBuf> deframedByteBuf = new CompletableFuture<>();
             final ByteBufAllocator alloc = ctx.alloc();
-            req.decode(handler, alloc, byteBufConverter(alloc, true))
+            req.decode(deframer, alloc, byteBufConverter(alloc, true))
                .subscribe(singleSubscriber(deframedByteBuf), ctx.eventLoop());
             final CompletableFuture<HttpResponse> responseFuture =
                     deframedByteBuf

@@ -66,11 +66,11 @@ class ArmeriaMessageDeframerTest {
     private static final int MAX_MESSAGE_SIZE = 1024;
 
     private DeframedMessage deframedMessage;
-    private ArmeriaMessageDeframer handler;
+    private ArmeriaMessageDeframer deframer;
 
     @BeforeEach
     void setUp() {
-        handler = new ArmeriaMessageDeframer(MAX_MESSAGE_SIZE)
+        deframer = new ArmeriaMessageDeframer(MAX_MESSAGE_SIZE)
                 .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
         deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
     }
@@ -240,7 +240,7 @@ class ArmeriaMessageDeframerTest {
     private StreamMessage<DeframedMessage> newDeframedStreamMessage(
             StreamMessage<HttpData> source, boolean base64) {
         final UnpooledByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
-        return new DefaultHttpDeframer<>(source, handler, alloc, byteBufConverter(alloc, base64));
+        return new DefaultHttpDeframer<>(source, deframer, alloc, byteBufConverter(alloc, base64));
     }
 
     @ArgumentsSource(DeframerProvider.class)

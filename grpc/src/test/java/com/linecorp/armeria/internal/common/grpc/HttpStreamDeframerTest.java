@@ -47,23 +47,23 @@ class HttpStreamDeframerTest {
     private static final HttpData DATA =
             HttpData.wrap(GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf()));
 
-    private HttpStreamDeframer handler;
+    private HttpStreamDeframer deframer;
     private AtomicReference<Status> statusRef;
 
     @BeforeEach
     void setUp() {
         statusRef = new AtomicReference<>();
         final TransportStatusListener statusListener = (status, metadata) -> statusRef.set(status);
-        handler = new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), statusListener,
-                                         null, Integer.MAX_VALUE);
+        deframer = new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), statusListener,
+                                          null, Integer.MAX_VALUE);
     }
 
     @Test
     void onHeaders() {
         final StreamMessage<HttpObject> source = StreamMessage.of(HEADERS);
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(source, handler, ByteBufAllocator.DEFAULT);
-        handler.setDeframedStreamMessage(deframed);
+                new DefaultHttpDeframer<>(source, deframer, ByteBufAllocator.DEFAULT);
+        deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)
                     .expectNextCount(0)
@@ -74,8 +74,8 @@ class HttpStreamDeframerTest {
     void onTrailers() {
         final StreamMessage<HttpObject> source = StreamMessage.of(HEADERS, TRAILERS);
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(source, handler, ByteBufAllocator.DEFAULT);
-        handler.setDeframedStreamMessage(deframed);
+                new DefaultHttpDeframer<>(source, deframer, ByteBufAllocator.DEFAULT);
+        deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)
                     .expectNextCount(0)
@@ -87,8 +87,8 @@ class HttpStreamDeframerTest {
         final DeframedMessage deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
         final StreamMessage<HttpObject> source = StreamMessage.of(DATA);
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(source, handler, ByteBufAllocator.DEFAULT);
-        handler.setDeframedStreamMessage(deframed);
+                new DefaultHttpDeframer<>(source, deframer, ByteBufAllocator.DEFAULT);
+        deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)
                     .expectNextMatches(message -> {
@@ -104,8 +104,8 @@ class HttpStreamDeframerTest {
     void onMessage_deframeError() throws Exception {
         final StreamMessage<HttpData> malformed = StreamMessage.of(HttpData.ofUtf8("foobar"));
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(malformed, handler, ByteBufAllocator.DEFAULT);
-        handler.setDeframedStreamMessage(deframed);
+                new DefaultHttpDeframer<>(malformed, deframer, ByteBufAllocator.DEFAULT);
+        deframer.setDeframedStreamMessage(deframed);
 
         StepVerifier.create(deframed)
                     .thenRequest(1)
@@ -120,8 +120,8 @@ class HttpStreamDeframerTest {
         final StreamMessage<ResponseHeaders> source =
                 StreamMessage.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(source, handler, ByteBufAllocator.DEFAULT);
-        handler.setDeframedStreamMessage(deframed);
+                new DefaultHttpDeframer<>(source, deframer, ByteBufAllocator.DEFAULT);
+        deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)
                     .verifyComplete();

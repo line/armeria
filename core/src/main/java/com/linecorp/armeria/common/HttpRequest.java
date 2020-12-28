@@ -515,8 +515,8 @@ public interface HttpRequest extends Request, HttpMessage {
     }
 
     @Override
-    default <T> StreamMessage<T> decode(HttpDecoder<T> handler, ByteBufAllocator alloc,
+    default <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
                                         Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
-        return new DefaultHttpDeframer<>(this, handler, alloc, byteBufConverter);
+        return new DefaultHttpDeframer<>(this, decoder, alloc, byteBufConverter);
     }
 }

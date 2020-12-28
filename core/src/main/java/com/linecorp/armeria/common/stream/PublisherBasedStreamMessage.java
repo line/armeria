@@ -313,7 +313,9 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         private void onNext0(Object obj) {
-            parent.demand--;
+            if (parent.demand != Long.MAX_VALUE) {
+                parent.demand--;
+            }
             try {
                 subscriber.onNext(obj);
             } catch (Throwable t) {

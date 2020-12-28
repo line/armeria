@@ -76,10 +76,10 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
         final HttpResponse response = delegate.execute(ctx, req);
         final ByteBufAllocator alloc = ctx.alloc();
 
-        final ArmeriaMessageDeframer handler = new ArmeriaMessageDeframer(maxMessageSizeBytes);
+        final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(maxMessageSizeBytes);
         final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(publisher, handler, alloc, byteBufConverter(alloc, grpcWebText));
+                new DefaultHttpDeframer<>(publisher, deframer, alloc, byteBufConverter(alloc, grpcWebText));
         deframed.subscribe(new TrailersSubscriber(ctx), ctx.eventLoop());
         final FilteredHttpResponse filteredHttpResponse = new FilteredHttpResponse(response, true) {
             @Override
@@ -116,7 +116,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                             publisher.close();
                             return obj;
                         }
-                        handler.decompressor(ForwardingDecompressor.forGrpc(decompressor));
+                        deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
                     }
                     return obj;
                 }

@@ -64,25 +64,25 @@ public interface HttpMessage extends StreamMessage<HttpObject> {
      * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@link HttpObject}s using
      * the specified {@link HttpDecoder}.
      */
-    default <T> StreamMessage<T> decode(HttpDecoder<T> handler) {
-        requireNonNull(handler, "handler");
-        return decode(handler, ByteBufAllocator.DEFAULT);
+    default <T> StreamMessage<T> decode(HttpDecoder<T> decoder) {
+        requireNonNull(decoder, "decoder");
+        return decode(decoder, ByteBufAllocator.DEFAULT);
     }
 
     /**
      * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@link HttpObject}s using
      * the specified {@link HttpDecoder} and {@link ByteBufAllocator}.
      */
-    default <T> StreamMessage<T> decode(HttpDecoder<T> handler, ByteBufAllocator alloc) {
-        requireNonNull(handler, "handler");
+    default <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc) {
+        requireNonNull(decoder, "decoder");
         requireNonNull(alloc, "alloc");
-        return decode(handler, alloc, HttpData::byteBuf);
+        return decode(decoder, alloc, HttpData::byteBuf);
     }
 
     /**
      * Creates a decoded {@link StreamMessage} which is decoded from a stream of {@link HttpObject}s using
      * the specified {@link HttpDecoder} and {@link ByteBufAllocator} and {@code byteBufConverter}.
      */
-    <T> StreamMessage<T> decode(HttpDecoder<T> handler, ByteBufAllocator alloc,
+    <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
                                 Function<? super HttpData, ? extends ByteBuf> byteBufConverter);
 }

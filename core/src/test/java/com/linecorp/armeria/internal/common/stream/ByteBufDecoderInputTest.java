@@ -81,8 +81,8 @@ class ByteBufDecoderInputTest {
             assertThat(input.readByte()).isEqualTo((byte) i);
         }
         assertThatThrownBy(() -> input.readByte())
-                  .isInstanceOf(IllegalStateException.class)
-                  .hasMessageContaining("end of deframer input");
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("end of deframer input");
     }
 
     @Test
@@ -113,8 +113,8 @@ class ByteBufDecoderInputTest {
         assertThat(byteBufs.get(2).refCnt()).isZero();
 
         assertThatThrownBy(() -> input.readInt())
-                  .isInstanceOf(IllegalStateException.class)
-                  .hasMessageContaining("end of deframer input");
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("end of deframer input");
     }
 
     @Test
@@ -171,8 +171,8 @@ class ByteBufDecoderInputTest {
         buf.release();
 
         assertThatThrownBy(() -> input.readBytes(1))
-                  .isInstanceOf(IllegalStateException.class)
-                  .hasMessageContaining("end of deframer input");
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("end of deframer input");
         input.close();
         assertThat(byteBuf1.refCnt()).isZero();
         assertThat(byteBuf2.refCnt()).isZero();

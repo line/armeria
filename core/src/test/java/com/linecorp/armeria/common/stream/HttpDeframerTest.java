@@ -56,7 +56,6 @@ class HttpDeframerTest {
     static EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Test
-    <T>
     void mapNToZero() {
         final FixedLengthDecoder decoder = new FixedLengthDecoder(11);
         final StreamMessage<HttpData> stream =

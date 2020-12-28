@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * An {@link HttpDecoder} that decodes a stream of {@link HttpObject}s to N objects.
+ * Decodes a stream of {@link HttpObject}s to N objects.
  *
  * <p>Follow the below steps to decode HTTP payload using {@link HttpDecoder}.
  * <ol>
