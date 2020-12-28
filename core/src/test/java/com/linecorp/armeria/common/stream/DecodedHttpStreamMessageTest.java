@@ -41,7 +41,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.common.stream.DefaultHttpDeframer;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
@@ -50,7 +50,7 @@ import io.netty.channel.EventLoop;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
-class HttpDeframerTest {
+class DecodedHttpStreamMessageTest {
 
     @RegisterExtension
     static EventLoopExtension eventLoop = new EventLoopExtension();
@@ -61,7 +61,7 @@ class HttpDeframerTest {
         final StreamMessage<HttpData> stream =
                 StreamMessage.of(HttpData.ofUtf8("A012345"), HttpData.ofUtf8("67"));
         final StreamMessage<String> deframed =
-                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT, HttpData::byteBuf);
+                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT, HttpData::byteBuf);
         StepVerifier.create(deframed)
                     .expectComplete()
                     .verify();
@@ -74,7 +74,7 @@ class HttpDeframerTest {
         final StreamMessage<HttpData> stream =
                 StreamMessage.of(HttpData.ofUtf8("A012345"), HttpData.ofUtf8("6789B1234"));
         final StreamMessage<String> deframed =
-                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT);
+                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT);
         StepVerifier.create(deframed)
                     .expectNext("A0123456789")
                     .expectComplete()
@@ -93,7 +93,7 @@ class HttpDeframerTest {
                           "E0123456789")
                     .map(HttpData::ofUtf8));
         final StreamMessage<String> deframed =
-                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT);
+                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT);
         StepVerifier.create(deframed)
                     .expectNext("A0123456789")
                     .expectNext("B0123456789")
@@ -121,7 +121,7 @@ class HttpDeframerTest {
                     .map(HttpData::ofUtf8));
 
         final StreamMessage<String> deframed =
-                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT);
+                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT);
         StepVerifier.create(deframed)
                     .expectNext("A0123456789")
                     .expectNext("B0123456789")
@@ -140,7 +140,7 @@ class HttpDeframerTest {
                 Flux.just(HttpData.empty(), HttpData.ofUtf8("A0123456"),
                           HttpData.empty(), HttpData.ofUtf8("789B")));
         final StreamMessage<String> deframed =
-                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT);
+                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT);
         StepVerifier.create(deframed)
                     .expectNext("A0123456789")
                     .expectComplete()
@@ -164,7 +164,7 @@ class HttpDeframerTest {
                     .map(HttpData::ofUtf8));
 
         final StreamMessage<String> deframed =
-                new DefaultHttpDeframer<>(stream, decoder, ByteBufAllocator.DEFAULT);
+                new DecodedHttpStreamMessage<>(stream, decoder, ByteBufAllocator.DEFAULT);
 
         final List<String> consumed = new ArrayList<>();
         final AtomicBoolean completed = new AtomicBoolean();
@@ -275,8 +275,8 @@ class HttpDeframerTest {
         final RuntimeException cause = new RuntimeException("Error before subscribing");
         final StreamMessage<HttpData> source = new PublisherBasedStreamMessage<>(Flux.error(cause));
         final StreamMessage<String> deframed =
-                new DefaultHttpDeframer<>(source, decoder, ByteBufAllocator.DEFAULT, HttpData::byteBuf);
-        final EventLoop eventLoop = HttpDeframerTest.eventLoop.get();
+                new DecodedHttpStreamMessage<>(source, decoder, ByteBufAllocator.DEFAULT, HttpData::byteBuf);
+        final EventLoop eventLoop = DecodedHttpStreamMessageTest.eventLoop.get();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         deframed.subscribe(new Subscriber<String>() {
             @Override

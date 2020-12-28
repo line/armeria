@@ -47,7 +47,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
-import com.linecorp.armeria.internal.common.stream.DefaultHttpDeframer;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -546,6 +546,6 @@ public interface HttpResponse extends Response, HttpMessage {
     @Override
     default <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
                                         Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
-        return new DefaultHttpDeframer<>(this, decoder, alloc, byteBufConverter);
+        return new DecodedHttpStreamMessage<>(this, decoder, alloc, byteBufConverter);
     }
 }

@@ -165,6 +165,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                                 newInfo.getHostName(), client.uri(), cause);
                     return null;
                 }
+
                 final ResponseHeaders headers = res.headers();
                 if (headers.status() != HttpStatus.NO_CONTENT) {
                     logger.warn("Failed to register {} to Eureka: {}. (status: {}, content: {})",

@@ -46,7 +46,7 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
-import com.linecorp.armeria.internal.common.stream.DefaultHttpDeframer;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 
 import io.grpc.ClientInterceptor;
 import io.grpc.Decompressor;
@@ -78,9 +78,10 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
 
         final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(maxMessageSizeBytes);
         final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
-        final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(publisher, deframer, alloc, byteBufConverter(alloc, grpcWebText));
+        final StreamMessage<DeframedMessage> deframed = new DecodedHttpStreamMessage<>(
+                publisher, deframer, alloc, byteBufConverter(alloc, grpcWebText));
         deframed.subscribe(new TrailersSubscriber(ctx), ctx.eventLoop());
+
         final FilteredHttpResponse filteredHttpResponse = new FilteredHttpResponse(response, true) {
             @Override
             protected HttpObject filter(HttpObject obj) {

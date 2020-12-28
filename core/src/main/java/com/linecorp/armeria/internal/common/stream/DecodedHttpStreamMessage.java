@@ -46,14 +46,14 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * The default HTTP deframer implementation.
+ * A {@link StreamMessage} which publishes a stream of objects decoded by {@link HttpDecoder}.
  */
 @UnstableApi
-public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implements HttpDecoderOutput<T> {
+public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> implements HttpDecoderOutput<T> {
 
     private final HttpMessageSubscriber subscriber = new HttpMessageSubscriber();
 
-    private final HttpDecoder<T> handler;
+    private final HttpDecoder<T> decoder;
     private final ByteBufDecoderInput input;
     private final Function<? super HttpData, ? extends ByteBuf> byteBufConverter;
     private final StreamMessage<? extends HttpObject> publisher;
@@ -70,23 +70,23 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
     private boolean cancelled;
 
     /**
-     * Returns a new {@link DefaultHttpDeframer} with the specified {@link HttpDecoder} and
+     * Returns a new {@link DecodedHttpStreamMessage} with the specified {@link HttpDecoder} and
      * {@link ByteBufAllocator}.
      */
-    public DefaultHttpDeframer(StreamMessage<? extends HttpObject> streamMessage,
-                               HttpDecoder<T> handler, ByteBufAllocator alloc) {
-        this(streamMessage, handler, alloc, HttpData::byteBuf);
+    public DecodedHttpStreamMessage(StreamMessage<? extends HttpObject> streamMessage,
+                                    HttpDecoder<T> decoder, ByteBufAllocator alloc) {
+        this(streamMessage, decoder, alloc, HttpData::byteBuf);
     }
 
     /**
-     * Returns a new {@link DefaultHttpDeframer} with the specified {@link HttpDecoder},
+     * Returns a new {@link DecodedHttpStreamMessage} with the specified {@link HttpDecoder},
      * {@link ByteBufAllocator} and {@code byteBufConverter}.
      */
-    public DefaultHttpDeframer(StreamMessage<? extends HttpObject> streamMessage,
-                               HttpDecoder<T> handler, ByteBufAllocator alloc,
-                               Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
+    public DecodedHttpStreamMessage(StreamMessage<? extends HttpObject> streamMessage,
+                                    HttpDecoder<T> decoder, ByteBufAllocator alloc,
+                                    Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
         publisher = requireNonNull(streamMessage, "streamMessage");
-        this.handler = requireNonNull(handler, "handler");
+        this.decoder = requireNonNull(decoder, "decoder");
         input = new ByteBufDecoderInput(requireNonNull(alloc, "alloc"));
         this.byteBufConverter = requireNonNull(byteBufConverter, "byteBufConverter");
         if (publisher instanceof HttpRequest) {
@@ -207,20 +207,20 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
                     final HttpHeaders headers = (HttpHeaders) obj;
                     if (headers instanceof ResponseHeaders &&
                         ((ResponseHeaders) headers).status().isInformational()) {
-                        handler.processInformationalHeaders((ResponseHeaders) headers,
-                                                            DefaultHttpDeframer.this);
+                        decoder.processInformationalHeaders((ResponseHeaders) headers,
+                                                            DecodedHttpStreamMessage.this);
                     } else if (!sawLeadingHeaders) {
                         sawLeadingHeaders = true;
-                        handler.processHeaders((HttpHeaders) obj, DefaultHttpDeframer.this);
+                        decoder.processHeaders((HttpHeaders) obj, DecodedHttpStreamMessage.this);
                     } else {
-                        handler.processTrailers((HttpHeaders) obj, DefaultHttpDeframer.this);
+                        decoder.processTrailers((HttpHeaders) obj, DecodedHttpStreamMessage.this);
                     }
                 } else if (obj instanceof HttpData) {
                     final HttpData data = (HttpData) obj;
                     final ByteBuf byteBuf = byteBufConverter.apply(data);
                     requireNonNull(byteBuf, "byteBufConverter.apply() returned null");
                     if (input.add(byteBuf)) {
-                        handler.process(input, DefaultHttpDeframer.this);
+                        decoder.process(input, DecodedHttpStreamMessage.this);
                     }
                 }
 
@@ -246,7 +246,7 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
                     askUpstreamForElement();
                 }
             } catch (Throwable ex) {
-                handler.processOnError(ex);
+                decoder.processOnError(ex);
                 cancelAndCleanup();
                 abort(ex);
                 Exceptions.throwIfFatal(ex);
@@ -261,7 +261,7 @@ public final class DefaultHttpDeframer<T> extends DefaultStreamMessage<T> implem
             }
 
             if (!(cause instanceof AbortedStreamException)) {
-                handler.processOnError(cause);
+                decoder.processOnError(cause);
             }
 
             abort(cause);

@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.internal.common.stream.DefaultHttpDeframer;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
@@ -62,7 +62,7 @@ class HttpStreamDeframerTest {
     void onHeaders() {
         final StreamMessage<HttpObject> source = StreamMessage.of(HEADERS);
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(source, deframer, ByteBufAllocator.DEFAULT);
+                new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
         deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)
@@ -74,7 +74,7 @@ class HttpStreamDeframerTest {
     void onTrailers() {
         final StreamMessage<HttpObject> source = StreamMessage.of(HEADERS, TRAILERS);
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(source, deframer, ByteBufAllocator.DEFAULT);
+                new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
         deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)
@@ -87,7 +87,7 @@ class HttpStreamDeframerTest {
         final DeframedMessage deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
         final StreamMessage<HttpObject> source = StreamMessage.of(DATA);
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(source, deframer, ByteBufAllocator.DEFAULT);
+                new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
         deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)
@@ -104,7 +104,7 @@ class HttpStreamDeframerTest {
     void onMessage_deframeError() throws Exception {
         final StreamMessage<HttpData> malformed = StreamMessage.of(HttpData.ofUtf8("foobar"));
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(malformed, deframer, ByteBufAllocator.DEFAULT);
+                new DecodedHttpStreamMessage<>(malformed, deframer, ByteBufAllocator.DEFAULT);
         deframer.setDeframedStreamMessage(deframed);
 
         StepVerifier.create(deframed)
@@ -120,7 +120,7 @@ class HttpStreamDeframerTest {
         final StreamMessage<ResponseHeaders> source =
                 StreamMessage.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
         final StreamMessage<DeframedMessage> deframed =
-                new DefaultHttpDeframer<>(source, deframer, ByteBufAllocator.DEFAULT);
+                new DecodedHttpStreamMessage<>(source, deframer, ByteBufAllocator.DEFAULT);
         deframer.setDeframedStreamMessage(deframed);
         StepVerifier.create(deframed)
                     .thenRequest(1)

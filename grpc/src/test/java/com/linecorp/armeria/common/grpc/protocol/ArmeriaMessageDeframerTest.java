@@ -54,7 +54,7 @@ import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
-import com.linecorp.armeria.internal.common.stream.DefaultHttpDeframer;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 
 import io.grpc.Codec.Gzip;
 import io.netty.buffer.Unpooled;
@@ -240,7 +240,7 @@ class ArmeriaMessageDeframerTest {
     private StreamMessage<DeframedMessage> newDeframedStreamMessage(
             StreamMessage<HttpData> source, boolean base64) {
         final UnpooledByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
-        return new DefaultHttpDeframer<>(source, deframer, alloc, byteBufConverter(alloc, base64));
+        return new DecodedHttpStreamMessage<>(source, deframer, alloc, byteBufConverter(alloc, base64));
     }
 
     @ArgumentsSource(DeframerProvider.class)
