@@ -42,7 +42,7 @@ class OverriddenBuilderMethodsReturnTypeTest {
 
     @Test
     void methodChaining() {
-        final String packageName = getClass().getPackage().getName();
+        final String packageName = "com.linecorp.armeria";
         findAllClasses(packageName).stream()
                                    .map(ReflectionUtils::forName)
                                    .filter(clazz -> clazz.getSimpleName().endsWith("Builder"))
