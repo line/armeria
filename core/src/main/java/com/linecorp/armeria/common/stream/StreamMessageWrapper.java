@@ -60,6 +60,11 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     }
 
     @Override
+    public long demand() {
+        return delegate.demand();
+    }
+
+    @Override
     public CompletableFuture<Void> whenComplete() {
         return delegate().whenComplete();
     }

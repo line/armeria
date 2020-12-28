@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -29,18 +30,12 @@ import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
-import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -55,13 +50,13 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.ServerCall;
+import io.grpc.ServerCall.Listener;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
@@ -69,24 +64,15 @@ import io.netty.buffer.ByteBufInputStream;
 // TODO(anuraag): Currently only grpc-protobuf has been published so we only test proto here.
 // Once grpc-thrift is published, add tests for thrift stubs which will not go through the
 // optimized protobuf marshalling paths.
-public class ArmeriaServerCallTest {
+class ArmeriaServerCallTest {
 
     private static final int MAX_MESSAGE_BYTES = 1024;
-
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
-
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
 
     @Mock
     private HttpResponseWriter res;
 
     @Mock
     private ServerCall.Listener<SimpleRequest> listener;
-
-    @Mock
-    private Subscription subscription;
 
     private ServiceRequestContext ctx;
 
@@ -97,8 +83,8 @@ public class ArmeriaServerCallTest {
 
     private CompletableFuture<Void> completionFuture;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         completionFuture = new CompletableFuture<>();
         when(res.whenComplete()).thenReturn(completionFuture);
 
@@ -107,7 +93,7 @@ public class ArmeriaServerCallTest {
                                    .build();
 
         call = new ArmeriaServerCall<>(
-                HttpHeaders.of(),
+                HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
@@ -124,21 +110,19 @@ public class ArmeriaServerCallTest {
                                .build(),
                 /* exceptionMappings */ null);
         call.setListener(listener);
-        call.messageDeframer().onSubscribe(subscription);
 
         ctx.setAttr(GrpcUnsafeBufferUtil.BUFFERS, buffersAttr);
     }
 
-    @After
-    public void tearDown() {
-        call.messageDeframer().abort();
+    @AfterEach
+    void tearDown() {
         if (!call.isCloseCalled()) {
             call.close(Status.OK, new Metadata());
         }
     }
 
     @Test
-    public void messageReadAfterClose_byteBuf() {
+    void messageReadAfterClose_byteBuf() {
         call.close(Status.ABORTED, new Metadata());
 
         // messageRead is always called from the event loop.
@@ -147,7 +131,7 @@ public class ArmeriaServerCallTest {
     }
 
     @Test
-    public void messageRead_notWrappedByteBuf() {
+    void messageRead_notWrappedByteBuf() {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.onNext(new DeframedMessage(buf, 0));
 
@@ -155,11 +139,11 @@ public class ArmeriaServerCallTest {
     }
 
     @Test
-    public void messageRead_wrappedByteBuf() {
+    void messageRead_wrappedByteBuf() {
         tearDown();
 
         call = new ArmeriaServerCall<>(
-                HttpHeaders.of(),
+                HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
@@ -176,6 +160,8 @@ public class ArmeriaServerCallTest {
                                .build(),
                 /* exceptionMappings */ null);
 
+        call.setListener(mock(Listener.class));
+        call.startDeframing();
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.onNext(new DeframedMessage(buf, 0));
 
@@ -183,7 +169,7 @@ public class ArmeriaServerCallTest {
     }
 
     @Test
-    public void messageReadAfterClose_stream() {
+    void messageReadAfterClose_stream() {
         call.close(Status.ABORTED, new Metadata());
 
         call.onNext(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
@@ -193,20 +179,20 @@ public class ArmeriaServerCallTest {
     }
 
     @Test
-    public void readyOnStart() {
+    void readyOnStart() {
         assertThat(call.isReady()).isTrue();
-        call.messageDeframer().abort();
+        call.close(Status.OK, new Metadata());
     }
 
     @Test
-    public void notReadyAfterClose() {
+    void notReadyAfterClose() {
         assertThat(call.isReady()).isTrue();
         call.close(Status.OK, new Metadata());
         await().untilAsserted(() -> assertThat(call.isReady()).isFalse());
     }
 
     @Test
-    public void closedIfCancelled() {
+    void closedIfCancelled() {
         assertThat(call.isCancelled()).isFalse();
         completionFuture.completeExceptionally(ClosedSessionException.get());
         await().untilAsserted(() -> assertThat(call.isCancelled()).isTrue());

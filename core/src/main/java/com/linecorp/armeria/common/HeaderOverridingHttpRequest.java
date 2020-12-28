@@ -69,6 +69,11 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
+    public long demand() {
+        return delegate.demand();
+    }
+
+    @Override
     public boolean isComplete() {
         return delegate.isComplete();
     }
