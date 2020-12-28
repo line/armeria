@@ -91,8 +91,8 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         this.rampingUpIntervalMillis = rampingUpIntervalMillis;
         checkArgument(totalSteps > 0, "totalSteps: %s (expected: > 0)", totalSteps);
         this.totalSteps = totalSteps;
-        checkArgument(rampingUpTaskWindowMillis > 0,
-                      "rampingUpTaskWindowMillis: %s (rampingUpTaskWindowMillis: > 0)",
+        checkArgument(rampingUpTaskWindowMillis >= 0,
+                      "rampingUpTaskWindowMillis: %s (rampingUpTaskWindowMillis: >0 0)",
                       rampingUpTaskWindowMillis);
         rampingUpTaskWindowNanos = TimeUnit.MILLISECONDS.toNanos(rampingUpTaskWindowMillis);
         this.ticker = requireNonNull(ticker, "ticker");
@@ -171,8 +171,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 // Check whether we can ramp up with the previous ramped up endpoints which are at the last
                 // of the rampingUpEndpointsEntries.
                 if (canAddToPrevEntry()) {
-                    // Ramp up right away and add to previous entry which is at the last.
-                    final Set<EndpointAndStep> newlyAddedEndpoints = removeOrUpdateEndpoints(newEndpoints);
+                    final Set<EndpointAndStep> newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
                     if (!newlyAddedEndpoints.isEmpty()) {
                         updateWeightAndStep(newlyAddedEndpoints);
                         rampingUpEndpointsEntries.getLast().addEndpoints(newlyAddedEndpoints);
@@ -189,7 +188,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 }
             }
 
-            final Set<EndpointAndStep> newlyAddedEndpoints = removeOrUpdateEndpoints(newEndpoints);
+            final Set<EndpointAndStep> newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
             if (newlyAddedEndpoints.isEmpty()) {
                 // newlyAddedEndpoints is empty which means that settledEndpoints are changed.
                 // So rebuild the endpoint selector.
@@ -239,7 +238,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
          * This also returns the {@link Set} of {@link EndpointAndStep}s whose endpoints are not in
          * in settledEndpoints and endpointsInUpdatingEntries.
          */
-        private Set<EndpointAndStep> removeOrUpdateEndpoints(List<Endpoint> newEndpoints) {
+        private Set<EndpointAndStep> filterOldEndpoints(List<Endpoint> newEndpoints) {
             final Map<Endpoint, Endpoint> newEndpointsMap = removeDuplicateEndpoints(newEndpoints);
 
             final List<Endpoint> replacedSettledEndpoints = new ArrayList<>();
@@ -275,7 +274,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 final RampingUpEndpointsEntry rampingUpEndpointsEntry = i.next();
 
                 final Set<EndpointAndStep> endpointAndSteps = rampingUpEndpointsEntry.endpointAndSteps();
-                removeOrUpdateEndpoints(endpointAndSteps, newEndpointsMap);
+                filterOldEndpoints(endpointAndSteps, newEndpointsMap);
                 if (endpointAndSteps.isEmpty()) {
                     // All endpointAndSteps are removed so remove the entry completely.
                     i.remove();
@@ -293,8 +292,8 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             return newlyAddedEndpoints;
         }
 
-        private void removeOrUpdateEndpoints(Set<EndpointAndStep> endpointAndSteps,
-                                             Map<Endpoint, Endpoint> newEndpointsMap) {
+        private void filterOldEndpoints(Set<EndpointAndStep> endpointAndSteps,
+                                        Map<Endpoint, Endpoint> newEndpointsMap) {
             final List<EndpointAndStep> replacedEndpoints = new ArrayList<>();
             for (final Iterator<EndpointAndStep> i = endpointAndSteps.iterator(); i.hasNext();) {
                 final EndpointAndStep endpointAndStep = i.next();
@@ -331,7 +330,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         private void updateWeightAndStep() {
             if (unhandledNewEndpoints != null) {
                 final Set<EndpointAndStep> newlyAddedEndpoints =
-                        removeOrUpdateEndpoints(unhandledNewEndpoints);
+                        filterOldEndpoints(unhandledNewEndpoints);
                 final RampingUpEndpointsEntry entry = rampingUpEndpointsEntries.peek();
                 assert entry != null;
                 entry.addEndpoints(newlyAddedEndpoints);
