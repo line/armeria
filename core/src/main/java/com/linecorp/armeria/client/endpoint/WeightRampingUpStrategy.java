@@ -44,7 +44,7 @@ import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.RampingUpEnd
 import com.linecorp.armeria.common.util.Ticker;
 
 /**
- * A ramping up {@link EndpointSelectionStrategy} which ramps the weight of the newly added
+ * A ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
  * {@link Endpoint}s using {@link EndpointWeightTransition},
  * {@code rampingUpIntervalMillis} and {@code rampingUpTaskWindow}.
  * If several {@link Endpoint}s are added within the {@code rampingUpTaskWindow}, the weights of

@@ -51,7 +51,7 @@ public interface EndpointSelectionStrategy {
     }
 
     /**
-     * Returns a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of the newly added
+     * Returns a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
      * {@link Endpoint}s using {@link EndpointWeightTransition#linear()}. The {@link Endpoint} is selected
      * using weighted random distribution.
      * The weights of {@link Endpoint}s are ramped up by 10 percent every 2 seconds up to 100 percent
@@ -63,7 +63,7 @@ public interface EndpointSelectionStrategy {
 
     /**
      * Returns a new {@link WeightRampingUpStrategyBuilder} that builds
-     * a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of the newly added
+     * a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
      * {@link Endpoint}s. The {@link Endpoint} is selected using weighted random distribution.
      */
     static WeightRampingUpStrategyBuilder builderForRampingUp() {

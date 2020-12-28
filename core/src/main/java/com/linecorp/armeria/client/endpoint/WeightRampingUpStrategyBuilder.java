@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.CommonPools;
 import io.netty.channel.EventLoop;
 
 /**
- * Builds a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of the newly added
+ * Builds a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
  * {@link Endpoint}s. The {@link Endpoint} is selected using weighted random distribution.
  */
 public final class WeightRampingUpStrategyBuilder {
@@ -151,7 +151,7 @@ public final class WeightRampingUpStrategyBuilder {
 
     /**
      * Returns a newly-created weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of
-     * the newly added {@link Endpoint}s. The {@link Endpoint} is selected using weighted random distribution.
+     * newly added {@link Endpoint}s. The {@link Endpoint} is selected using weighted random distribution.
      */
     public EndpointSelectionStrategy build() {
         checkState(rampingUpIntervalMillis > rampingUpTaskWindowMillis,
