@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.spring;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
 
 import com.linecorp.armeria.server.Server;
@@ -25,7 +27,11 @@ import com.linecorp.armeria.server.Server;
  * So Armeria will shutdown before other web servers and beans in the context.
  */
 final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
+
+    private final Logger logger = LoggerFactory.getLogger(getClass());
+
     private final Server server;
+    private volatile boolean running;
 
     ArmeriaServerGracefulShutdownLifecycle(Server server) {
         this.server = server;
@@ -37,6 +43,14 @@ final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
      */
     @Override
     public void start() {
+        running = true;
+        server.start().handle((result, t) -> {
+            if (t != null) {
+                throw new IllegalStateException("Armeria server failed to start", t);
+            }
+            return result;
+        }).join();
+        logger.info("Armeria server started at ports: {}", server.activePorts());
     }
 
     /**
@@ -52,6 +66,7 @@ final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
      */
     @Override
     public void stop(Runnable callback) {
+        running = false;
         server.stop().whenComplete((unused, throwable) -> callback.run());
     }
 
@@ -70,7 +85,7 @@ final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
      */
     @Override
     public boolean isRunning() {
-        return !server.isClosed() && !server.isClosing();
+        return running;
     }
 
     /**
@@ -80,6 +95,6 @@ final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
      */
     @Override
     public boolean isAutoStartup() {
-        return false;
+        return true;
     }
 }
