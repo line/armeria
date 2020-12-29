@@ -22,6 +22,7 @@ import java.io.File;
 
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.startup.Tomcat;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -46,9 +47,14 @@ class TomcatServiceDestroyedConnectorTest {
             tomcatWithWebApp.start();
             sb.serviceUnder("/api/", TomcatService.of(tomcatWithWebApp.getConnector()));
         }
+
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
     };
 
-    @Test
+    @RepeatedTest(100)
     void serviceUnavailableAfterConnectorIsDestroyed() throws LifecycleException {
         final WebClient client = WebClient.of(server.httpUri());
         assertThat(client.get("/api/").aggregate().join().status()).isSameAs(HttpStatus.OK);
