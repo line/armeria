@@ -117,6 +117,7 @@ class MultipartIntegrationTest {
                             }
                             writer.close();
                         }
+                        bodyPart.content().close();
                         count++;
                     }
                 });
