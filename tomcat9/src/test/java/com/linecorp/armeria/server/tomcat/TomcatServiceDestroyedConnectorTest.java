@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.tomcat;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.io.File;
 
@@ -25,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -51,11 +51,11 @@ class TomcatServiceDestroyedConnectorTest {
     @Test
     void serviceUnavailableAfterConnectorIsDestroyed() throws LifecycleException {
         final WebClient client = WebClient.of(server.httpUri());
-        AggregatedHttpResponse join = client.get("/api/").aggregate().join();
-        assertThat(join.status()).isSameAs(HttpStatus.OK);
+        assertThat(client.get("/api/").aggregate().join().status()).isSameAs(HttpStatus.OK);
         tomcatWithWebApp.stop();
         tomcatWithWebApp.getConnector().destroy();
-        join = client.get("/api/").aggregate().join();
-        assertThat(join.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+        // Use await because it can take time to destroy the connector.
+        await().untilAsserted(() -> assertThat(client.get("/api/").aggregate().join().status())
+                .isSameAs(HttpStatus.SERVICE_UNAVAILABLE));
     }
 }
