@@ -357,9 +357,6 @@ public final class DefaultClientRequestContext
         if (ctx.request() != null) {
             requireNonNull(req, "req");
         }
-        if (ctx.rpcRequest() != null) {
-            requireNonNull(rpcReq, "rpcReq");
-        }
 
         eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
