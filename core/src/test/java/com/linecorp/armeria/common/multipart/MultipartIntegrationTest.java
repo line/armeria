@@ -83,11 +83,19 @@ class MultipartIntegrationTest {
             });
 
             sb.service("/aggregate", (ctx, req) -> {
-                final CompletableFuture<AggregatedMultipart> aggregated = Multipart.from(req).aggregate();
                 final HttpResponseWriter writer = HttpResponse.streaming();
+                final CompletableFuture<AggregatedMultipart> aggregated;
+                final boolean pooled = "pooled".equals(ctx.query());
+                if (pooled) {
+                    aggregated = Multipart.from(req).aggregateWithPooledObjects(ctx.alloc());
+                } else {
+                    aggregated = Multipart.from(req).aggregate();
+                }
+
                 aggregated.thenAccept(multipart -> {
                     int count = 0;
                     for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
+                        assertThat(bodyPart.content().isPooled()).isEqualTo(pooled);
                         if (count == 0) {
                             final ContentDisposition dispositionA = bodyPart.headers().contentDisposition();
                             assertThat(dispositionA.name()).isEqualTo("fieldA");
@@ -104,6 +112,9 @@ class MultipartIntegrationTest {
                             assertThat(bodyPart.content().toStringUtf8()).isEqualTo("{\"foo\":\"bar\"}");
 
                             writer.write(ResponseHeaders.of(200));
+                            if (pooled) {
+                                writer.write(HttpData.ofUtf8("pooled"));
+                            }
                             writer.close();
                         }
                         count++;
@@ -170,7 +181,7 @@ class MultipartIntegrationTest {
         }
     };
 
-    @CsvSource({ "/multipart", "/aggregate" })
+    @CsvSource({ "/multipart", "/aggregate", "/aggregate?pooled" })
     @ParameterizedTest
     void multipart(String path) {
         final WebClient client = WebClient.of(server.httpUri());
@@ -198,6 +209,9 @@ class MultipartIntegrationTest {
         final Multipart multiPart = Multipart.of(partA, partB);
         final AggregatedHttpResponse response =
                 client.execute(multiPart.toHttpRequest(path)).aggregate().join();
+        if ("/aggregate?pooled".equals(path)) {
+            assertThat(response.contentUtf8()).isEqualTo("pooled");
+        }
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
     }
 
