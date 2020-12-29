@@ -357,6 +357,9 @@ public final class DefaultClientRequestContext
         if (ctx.request() != null) {
             requireNonNull(req, "req");
         }
+        // The rpcReq can be null when ctx.rpcRequest() is not null because there's a chance that
+        // the rpcRequest is set between the time we call ctx.rpcRequest() to create this context and now.
+        // So we don't check the nullness of rpcRequest unlike request.
 
         eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
