@@ -289,7 +289,8 @@ public interface Multipart extends StreamMessage<HttpData> {
      *
      * <p>For example: <pre>{@code
      * > HttpRequest req = ...;
-     * > Multipart.from(req).aggregate()
+     * > EventExecutor executor = ...;
+     * > Multipart.from(req).aggregate(executor)
      * >          .thenAccept(multipart -> {
      * >              for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
      * >                  String content = bodyPart.contentUtf8();
@@ -299,4 +300,21 @@ public interface Multipart extends StreamMessage<HttpData> {
      * }</pre>
      */
     CompletableFuture<AggregatedMultipart> aggregate(EventExecutor executor);
+
+    /**
+     * (Advanced users only) Aggregates this {@link Multipart}. The returned {@link CompletableFuture} will
+     * be notified when the {@link BodyPart}s of the {@link Multipart} is received fully.
+     * {@link AggregatedBodyPart#content()} will return a pooled object, and the caller must ensure
+     * to release it. If you don't know what this means, use {@link #aggregate()}.
+     */
+    CompletableFuture<AggregatedMultipart> aggregateWithPooledObjects(ByteBufAllocator alloc);
+
+    /**
+     * (Advanced users only) Aggregates this {@link Multipart}. The returned {@link CompletableFuture} will
+     * be notified when the {@link BodyPart}s of the {@link Multipart} is received fully.
+     * {@link AggregatedBodyPart#content()} will return a pooled object, and the caller must ensure
+     * to release it. If you don't know what this means, use {@link #aggregate()}.
+     */
+    CompletableFuture<AggregatedMultipart> aggregateWithPooledObjects(EventExecutor executor,
+                                                                      ByteBufAllocator alloc);
 }

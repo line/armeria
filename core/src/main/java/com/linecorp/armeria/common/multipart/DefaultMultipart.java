@@ -27,14 +27,16 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.primitives.Bytes;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.HttpObjectAggregator;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultMultipart implements Multipart {
@@ -57,51 +59,10 @@ final class DefaultMultipart implements Multipart {
         return boundary;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public StreamMessage<BodyPart> bodyParts() {
         return (StreamMessage<BodyPart>) parts;
-    }
-
-    @Override
-    public CompletableFuture<AggregatedMultipart> aggregate() {
-        return aggregate0(null);
-    }
-
-    @Override
-    public CompletableFuture<AggregatedMultipart> aggregate(EventExecutor executor) {
-        requireNonNull(executor, "executor");
-        return aggregate0(executor);
-    }
-
-    private CompletableFuture<AggregatedMultipart> aggregate0(@Nullable EventExecutor executor) {
-        final BodyPartAggregator aggregator = new BodyPartAggregator();
-        if (executor == null) {
-            parts.subscribe(aggregator);
-        } else {
-            parts.subscribe(aggregator, executor);
-        }
-        return UnmodifiableFuture.wrap(
-                aggregator.completionFuture.thenApply(parts -> AggregatedMultipart.of(boundary, parts)));
-    }
-
-    @Override
-    public boolean isOpen() {
-        return parts.isOpen();
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return parts.isEmpty();
-    }
-
-    @Override
-    public long demand() {
-        return parts.demand();
-    }
-
-    @Override
-    public CompletableFuture<Void> whenComplete() {
-        return parts.whenComplete();
     }
 
     @Override
@@ -133,6 +94,63 @@ final class DefaultMultipart implements Multipart {
     }
 
     @Override
+    public CompletableFuture<AggregatedMultipart> aggregate() {
+        return aggregate0(null, null);
+    }
+
+    @Override
+    public CompletableFuture<AggregatedMultipart> aggregate(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        return aggregate0(executor, null);
+    }
+
+    @Override
+    public CompletableFuture<AggregatedMultipart> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+        requireNonNull(alloc, "alloc");
+        return aggregate0(null, alloc);
+    }
+
+    @Override
+    public CompletableFuture<AggregatedMultipart> aggregateWithPooledObjects(EventExecutor executor,
+                                                                             ByteBufAllocator alloc) {
+        requireNonNull(executor, "executor");
+        requireNonNull(alloc, "alloc");
+        return aggregate0(executor, alloc);
+    }
+
+    private CompletableFuture<AggregatedMultipart> aggregate0(@Nullable EventExecutor executor,
+                                                              @Nullable ByteBufAllocator alloc) {
+        final BodyPartAggregator aggregator = new BodyPartAggregator(alloc);
+        if (executor == null) {
+            parts.subscribe(aggregator);
+        } else {
+            parts.subscribe(aggregator, executor);
+        }
+        return UnmodifiableFuture.wrap(
+                aggregator.completionFuture.thenApply(parts -> AggregatedMultipart.of(boundary, parts)));
+    }
+
+    @Override
+    public boolean isOpen() {
+        return parts.isOpen();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return parts.isEmpty();
+    }
+
+    @Override
+    public long demand() {
+        return parts.demand();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenComplete() {
+        return parts.whenComplete();
+    }
+
+    @Override
     public void abort() {
         parts.abort();
     }
@@ -155,6 +173,13 @@ final class DefaultMultipart implements Multipart {
         private final CompletableFuture<List<AggregatedBodyPart>> completionFuture = new CompletableFuture<>();
         private final List<CompletableFuture<AggregatedBodyPart>> bodyPartFutures = new ArrayList<>();
 
+        @Nullable
+        private final ByteBufAllocator alloc;
+
+        BodyPartAggregator(@Nullable ByteBufAllocator alloc) {
+            this.alloc = alloc;
+        }
+
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
@@ -164,9 +189,9 @@ final class DefaultMultipart implements Multipart {
         @Override
         public void onNext(BodyPart bodyPart) {
             requireNonNull(bodyPart, "bodyPart");
-            final HttpDataAggregator aggregator = new HttpDataAggregator(bodyPart);
-            bodyPart.content().subscribe(aggregator);
-            bodyPartFutures.add(aggregator.completionFuture);
+            final CompletableFuture<AggregatedBodyPart> future = new CompletableFuture<>();
+            bodyPart.content().subscribe(new ContentAggregator(bodyPart, future, alloc));
+            bodyPartFutures.add(future);
         }
 
         @Override
@@ -178,55 +203,39 @@ final class DefaultMultipart implements Multipart {
         @Override
         public void onComplete() {
             CompletableFutures.allAsList(bodyPartFutures)
-                              .whenComplete((parts, cause) -> {
+                              .handle((parts, cause) -> {
                                   if (cause != null) {
                                       completionFuture.completeExceptionally(cause);
                                   } else {
                                       completionFuture.complete(parts);
                                   }
+                                  return null;
                               });
         }
     }
 
     /**
-     * A subscriber of {@link HttpData} that accumulates bytes to a single {@link HttpData}.
+     * Aggregates a {@link BodyPart#content()}.
      */
-    private static final class HttpDataAggregator implements Subscriber<HttpData> {
+    private static final class ContentAggregator extends HttpObjectAggregator<AggregatedBodyPart> {
 
-        private final List<HttpData> dataList = new ArrayList<>();
-        private final CompletableFuture<AggregatedBodyPart> completionFuture = new CompletableFuture<>();
         private final BodyPart bodyPart;
 
-        HttpDataAggregator(BodyPart bodyPart) {
+        ContentAggregator(BodyPart bodyPart, CompletableFuture<AggregatedBodyPart> future,
+                          @Nullable ByteBufAllocator alloc) {
+            super(future, alloc);
             this.bodyPart = bodyPart;
         }
 
         @Override
-        public void onSubscribe(Subscription subscription) {
-            requireNonNull(subscription, "subscription");
-            subscription.request(Long.MAX_VALUE);
+        protected void onHeaders(HttpHeaders headers) {}
+
+        @Override
+        protected AggregatedBodyPart onSuccess(HttpData content) {
+            return AggregatedBodyPart.of(bodyPart.headers(), content);
         }
 
         @Override
-        public void onNext(HttpData item) {
-            requireNonNull(item, "item");
-            dataList.add(item);
-        }
-
-        @Override
-        public void onError(Throwable ex) {
-            requireNonNull(ex, "ex");
-            completionFuture.completeExceptionally(ex);
-        }
-
-        @Override
-        public void onComplete() {
-            final byte[][] arrays = new byte[dataList.size()][];
-            for (int i = 0; i < arrays.length; i++) {
-                arrays[i] = dataList.get(i).array();
-            }
-            completionFuture.complete(AggregatedBodyPart.of(bodyPart.headers(),
-                                                            HttpData.wrap(Bytes.concat(arrays))));
-        }
+        protected void onFailure() {}
     }
 }
