@@ -43,6 +43,7 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
         private Subscriber<? super HttpObject> subscriber;
         @Nullable
         private Subscription contentSubscription;
+        private boolean contentCompleted;
 
         HeadersAndContentProcessor(ResponseHeaders headers, Publisher<? extends HttpData> contentPublisher) {
             this.headers = headers;
@@ -68,7 +69,11 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
 
         @Override
         public void onComplete() {
-            assert subscriber != null;
+            // onComplete may be called before being subscribed, e.g in case of Mono.empty()
+            if (subscriber == null) {
+                contentCompleted = true;
+                return;
+            }
             subscriber.onComplete();
         }
 
@@ -84,15 +89,19 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
 
             @Override
             public void request(long n) {
+                assert subscriber != null;
                 if (!headersSent) {
-                    assert subscriber != null;
                     subscriber.onNext(headers);
                     n--;
                     headersSent = true;
                 }
                 if (n > 0) {
-                    assert contentSubscription != null;
-                    contentSubscription.request(n);
+                    if (contentCompleted) {
+                        subscriber.onComplete();
+                    } else {
+                        assert contentSubscription != null;
+                        contentSubscription.request(n);
+                    }
                 }
             }
 
