@@ -26,6 +26,8 @@ class DefaultHttpHeaders extends HttpHeadersBase implements HttpHeaders {
 
     @Nullable
     private MediaType contentType;
+    @Nullable
+    private ContentDisposition contentDisposition;
 
     /**
      * Creates an empty headers.
@@ -63,6 +65,19 @@ class DefaultHttpHeaders extends HttpHeadersBase implements HttpHeaders {
         final MediaType newContentType = super.contentType();
         this.contentType = newContentType;
         return newContentType;
+    }
+
+    @Nullable
+    @Override
+    public final ContentDisposition contentDisposition() {
+        final ContentDisposition contentDisposition = this.contentDisposition;
+        if (contentDisposition != null) {
+            return contentDisposition;
+        }
+
+        final ContentDisposition newContentDisposition = super.contentDisposition();
+        this.contentDisposition = newContentDisposition;
+        return newContentDisposition;
     }
 
     @Override

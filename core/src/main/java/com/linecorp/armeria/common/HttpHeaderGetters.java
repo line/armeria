@@ -50,6 +50,15 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     MediaType contentType();
 
     /**
+     * Returns the parsed {@code "content-disposition"} header.
+     *
+     * @return the parsed {@link MediaType} if present and valid, or {@code null} if not present.
+     * @throws IllegalStateException if failed to parse {@code "content-disposition"} header.
+     */
+    @Nullable
+    ContentDisposition contentDisposition();
+
+    /**
      * Returns the value of a header with the specified {@code name}. If there are more than one value for
      * the specified {@code name}, the first value in insertion order is returned.
      *

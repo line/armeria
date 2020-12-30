@@ -34,6 +34,7 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri
 import static java.util.Comparator.comparingDouble;
 import static java.util.Objects.requireNonNull;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -303,6 +304,26 @@ class HttpHeadersBase
     final void contentType(MediaType contentType) {
         requireNonNull(contentType, "contentType");
         set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+    }
+
+    @Override
+    @Nullable
+    public ContentDisposition contentDisposition() {
+        final String contentDispositionString = get(HttpHeaderNames.CONTENT_DISPOSITION);
+        if (contentDispositionString == null) {
+            return null;
+        }
+
+        try {
+            return ContentDisposition.parse(contentDispositionString);
+        } catch (IllegalArgumentException | UnsupportedEncodingException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    final void contentDisposition(ContentDisposition contentDisposition) {
+        requireNonNull(contentDisposition, "contentDisposition");
+        set(HttpHeaderNames.CONTENT_DISPOSITION, contentDisposition.asHeaderValue());
     }
 
     // Getters

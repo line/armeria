@@ -54,6 +54,9 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeadersBuilder contentType(MediaType contentType);
 
     @Override
+    ResponseHeadersBuilder contentDisposition(ContentDisposition contentDisposition);
+
+    @Override
     ResponseHeadersBuilder add(CharSequence name, String value);
 
     @Override

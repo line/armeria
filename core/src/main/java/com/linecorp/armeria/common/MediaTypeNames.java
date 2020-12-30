@@ -69,6 +69,10 @@ public final class MediaTypeNames {
      */
     public static final String I_CALENDAR_UTF_8 = "text/calendar; charset=utf-8";
     /**
+     * {@value #PLAIN_TEXT}.
+     */
+    public static final String PLAIN_TEXT = "text/plain";
+    /**
      * {@value #PLAIN_TEXT_UTF_8}.
      */
     public static final String PLAIN_TEXT_UTF_8 = "text/plain; charset=utf-8";
@@ -467,6 +471,11 @@ public final class MediaTypeNames {
      * {@value #ZIP}.
      */
     public static final String ZIP = "application/zip";
+
+    /**
+     * {@value MULTIPART_FORM_DATA}.
+     */
+    public static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
     private MediaTypeNames() {}
 }
