@@ -20,7 +20,7 @@ License for the specific language governing permissions and limitations
 under the License.
 
 Also, please refer to each LICENSE.<component>.<licenseType>.txt file, which
-is located in the 'licenses' directory of the distribution file, for the 
+is located in the 'licenses' directory of the distribution file, for the
 license terms of the components that this product depends on.
 
 
@@ -87,6 +87,11 @@ This product contains a modified part of Guava, distributed by Google:
 
   * License: licenses/LICENSE.guava.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/google/guava
+
+This product contains a modified part of Helidon Multipart, distributed by Oracle, Inc:
+
+  * License: license/LICENSE.helidon.al20.txt (Apache License v2.0)
+  * Homepage: https://helidon.io/
 
 This product contains a modified part of json-minify, distributed by Kyle Simpson:
 

@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -74,10 +74,10 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     private Subscription upstreamSubscription;
 
     @Nullable
-    @SuppressWarnings("unused") // Updated only via subscriptionUpdater
+    @SuppressWarnings("unused") // Updated only via downstreamSubscriptionUpdater
     private volatile SubscriptionImpl downstreamSubscription;
 
-    @SuppressWarnings("unused") // Updated only via subscribedToDelegateUpdater
+    @SuppressWarnings("unused") // Updated only via subscribedToUpstreamUpdater
     private volatile int subscribedToUpstream;
 
     // Only accessed from subscription's executor.

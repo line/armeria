@@ -14,25 +14,17 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import org.reactivestreams.Subscriber;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 
-final class StreamMessageUtil {
+public final class StreamMessageUtil {
 
-    static final SubscriptionOption[] EMPTY_OPTIONS = {};
+    public static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
-    static Throwable abortedOrLate(Subscriber<?> oldSubscriber) {
-        if (oldSubscriber instanceof AbortingSubscriber) {
-            return ((AbortingSubscriber<?>) oldSubscriber).cause();
-        }
-
-        return new IllegalStateException("subscribed by other subscriber already");
-    }
-
-    static boolean containsWithPooledObjects(SubscriptionOption... options) {
+    public static boolean containsWithPooledObjects(SubscriptionOption... options) {
         requireNonNull(options, "options");
         for (SubscriptionOption option : options) {
             if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
@@ -43,7 +35,7 @@ final class StreamMessageUtil {
         return false;
     }
 
-    static boolean containsNotifyCancellation(SubscriptionOption... options) {
+    public static boolean containsNotifyCancellation(SubscriptionOption... options) {
         requireNonNull(options, "options");
         for (SubscriptionOption option : options) {
             if (option == SubscriptionOption.NOTIFY_CANCELLATION) {

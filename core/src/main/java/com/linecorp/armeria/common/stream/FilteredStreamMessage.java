@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -47,15 +47,15 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private static final SubscriptionOption[] EMPTY_OPTIONS = new SubscriptionOption[0];
 
-    private final StreamMessage<T> delegate;
+    private final StreamMessage<T> upstream;
     private final boolean filterSupportsPooledObjects;
 
     /**
      * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code delegate}
      * before passing to a subscriber.
      */
-    protected FilteredStreamMessage(StreamMessage<T> delegate) {
-        this(delegate, false);
+    protected FilteredStreamMessage(StreamMessage<T> upstream) {
+        this(upstream, false);
     }
 
     /**
@@ -68,8 +68,8 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
      * @see PooledObjects
      */
     @UnstableApi
-    protected FilteredStreamMessage(StreamMessage<T> delegate, boolean withPooledObjects) {
-        this.delegate = requireNonNull(delegate, "delegate");
+    protected FilteredStreamMessage(StreamMessage<T> upstream, boolean withPooledObjects) {
+        this.upstream = requireNonNull(upstream, "delegate");
         filterSupportsPooledObjects = withPooledObjects;
     }
 
@@ -105,22 +105,22 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public final boolean isOpen() {
-        return delegate.isOpen();
+        return upstream.isOpen();
     }
 
     @Override
     public final boolean isEmpty() {
-        return delegate.isEmpty();
+        return upstream.isEmpty();
     }
 
     @Override
-    public long demand() {
-        return delegate.demand();
+    public final long demand() {
+        return upstream.demand();
     }
 
     @Override
     public final CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
+        return upstream.whenComplete();
     }
 
     @Override
@@ -141,7 +141,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private void subscribe(Subscriber<? super U> subscriber, EventExecutor executor, boolean withPooledObjects,
                            boolean notifyCancellation) {
-        delegate.subscribe(new FilteringSubscriber(subscriber, withPooledObjects),
+        upstream.subscribe(new FilteringSubscriber(subscriber, withPooledObjects),
                            executor, filteringSubscriptionOptions(notifyCancellation));
     }
 
@@ -158,17 +158,17 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public final EventExecutor defaultSubscriberExecutor() {
-        return delegate.defaultSubscriberExecutor();
+        return upstream.defaultSubscriberExecutor();
     }
 
     @Override
     public final void abort() {
-        delegate.abort();
+        upstream.abort();
     }
 
     @Override
     public final void abort(Throwable cause) {
-        delegate.abort(requireNonNull(cause, "cause"));
+        upstream.abort(requireNonNull(cause, "cause"));
     }
 
     private final class FilteringSubscriber implements Subscriber<T> {
