@@ -16,14 +16,10 @@
 
 package com.linecorp.armeria.common;
 
-import javax.annotation.Nullable;
-
-import org.reactivestreams.Processor;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.PrependingPublisher;
 
 final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpObject> implements HttpResponse {
 
@@ -33,83 +29,6 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
 
     static PublisherBasedHttpResponse from(ResponseHeaders headers,
                                            Publisher<? extends HttpData> contentPublisher) {
-        return new PublisherBasedHttpResponse(new HeadersAndContentProcessor(headers, contentPublisher));
-    }
-
-    static final class HeadersAndContentProcessor implements Processor<HttpData, HttpObject> {
-
-        private final ResponseHeaders headers;
-        @Nullable
-        private Subscriber<? super HttpObject> subscriber;
-        @Nullable
-        private Subscription contentSubscription;
-        private boolean contentCompleted;
-
-        HeadersAndContentProcessor(ResponseHeaders headers, Publisher<? extends HttpData> contentPublisher) {
-            this.headers = headers;
-            contentPublisher.subscribe(this);
-        }
-
-        @Override
-        public void onSubscribe(Subscription contentSubscription) {
-            this.contentSubscription = contentSubscription;
-        }
-
-        @Override
-        public void onNext(HttpData httpData) {
-            assert subscriber != null;
-            subscriber.onNext(httpData);
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            assert subscriber != null;
-            subscriber.onError(t);
-        }
-
-        @Override
-        public void onComplete() {
-            // onComplete may be called before being subscribed, e.g in case of Mono.empty()
-            if (subscriber == null) {
-                contentCompleted = true;
-                return;
-            }
-            subscriber.onComplete();
-        }
-
-        @Override
-        public void subscribe(Subscriber<? super HttpObject> subscriber) {
-            this.subscriber = subscriber;
-            subscriber.onSubscribe(new HeadersAndContentSubscription());
-        }
-
-        final class HeadersAndContentSubscription implements Subscription {
-
-            private boolean headersSent;
-
-            @Override
-            public void request(long n) {
-                assert subscriber != null;
-                if (!headersSent) {
-                    subscriber.onNext(headers);
-                    n--;
-                    headersSent = true;
-                }
-                if (n > 0) {
-                    if (contentCompleted) {
-                        subscriber.onComplete();
-                    } else {
-                        assert contentSubscription != null;
-                        contentSubscription.request(n);
-                    }
-                }
-            }
-
-            @Override
-            public void cancel() {
-                assert contentSubscription != null;
-                contentSubscription.cancel();
-            }
-        }
+        return new PublisherBasedHttpResponse(new PrependingPublisher<>(headers, contentPublisher));
     }
 }
