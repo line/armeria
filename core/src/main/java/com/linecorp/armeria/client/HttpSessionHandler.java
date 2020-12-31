@@ -36,6 +36,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
@@ -80,6 +81,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final MeterRegistry meterRegistry;
     private final SessionProtocol desiredProtocol;
     private final PoolKey poolKey;
+    private final Http1HeaderNaming http1HeaderNaming;
+
     private final boolean useHttp1Pipelining;
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
@@ -122,7 +125,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       MeterRegistry meterRegistry, SessionProtocol desiredProtocol, PoolKey poolKey,
+                       MeterRegistry meterRegistry, SessionProtocol desiredProtocol,
+                       PoolKey poolKey, Http1HeaderNaming http1HeaderNaming,
                        boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
@@ -132,6 +136,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.meterRegistry = meterRegistry;
         this.desiredProtocol = desiredProtocol;
         this.poolKey = poolKey;
+        this.http1HeaderNaming = http1HeaderNaming;
         this.useHttp1Pipelining = useHttp1Pipelining;
         this.idleTimeoutMillis = idleTimeoutMillis;
         this.pingIntervalMillis = pingIntervalMillis;
@@ -310,7 +315,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
-                final ClientHttp1ObjectEncoder requestEncoder = new ClientHttp1ObjectEncoder(channel, protocol);
+                final ClientHttp1ObjectEncoder requestEncoder =
+                        new ClientHttp1ObjectEncoder(channel, protocol, http1HeaderNaming);
                 final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
                 if (idleTimeoutMillis > 0 || pingIntervalMillis > 0) {
                     final Timer keepAliveTimer =

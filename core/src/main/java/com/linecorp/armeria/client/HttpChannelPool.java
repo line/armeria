@@ -50,6 +50,7 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
@@ -99,6 +100,7 @@ final class HttpChannelPool implements AsyncCloseable {
     private final ProxyConfigSelector proxyConfigSelector;
     private final SslContext sslCtxHttp1Or2;
     private final SslContext sslCtxHttp1Only;
+    private final Http1HeaderNaming http1HeaderNaming;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
@@ -146,6 +148,7 @@ final class HttpChannelPool implements AsyncCloseable {
         idleTimeoutMillis = clientFactory.idleTimeoutMillis();
         pingIntervalMillis = clientFactory.pingIntervalMillis();
         proxyConfigSelector = clientFactory.proxyConfigSelector();
+        http1HeaderNaming = clientFactory.http1HeaderNaming();
     }
 
     private SslContext determineSslContext(SessionProtocol desiredProtocol) {
@@ -455,8 +458,8 @@ final class HttpChannelPool implements AsyncCloseable {
 
         ch.pipeline().addLast(
                 new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture, meterRegistry,
-                                       desiredProtocol, poolKey, useHttp1Pipelining, idleTimeoutMillis,
-                                       pingIntervalMillis));
+                                       desiredProtocol, poolKey, http1HeaderNaming, useHttp1Pipelining,
+                                       idleTimeoutMillis, pingIntervalMillis));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future,
