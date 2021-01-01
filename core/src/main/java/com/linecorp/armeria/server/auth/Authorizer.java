@@ -16,13 +16,13 @@
 
 package com.linecorp.armeria.server.auth;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.auth.AuthorizerChain.AuthorizerSelectionStrategy;
 
 /**
  * Determines whether a given {@code data} is authorized for the service registered in.
@@ -48,50 +48,8 @@ public interface Authorizer<T> {
      */
     default Authorizer<T> orElse(Authorizer<T> nextAuthorizer) {
         final Authorizer<T> self = this;
-        return new Authorizer<T>() {
-            @Nullable
-            private String strVal;
-
-            @Override
-            public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data) {
-                return AuthorizerUtil.authorize(self, ctx, data).thenComposeAsync(result -> {
-                    if (result == null) {
-                        throw AuthorizerUtil.newNullResultException(self);
-                    } else {
-                        return result ? CompletableFuture.completedFuture(true)
-                                      : AuthorizerUtil.authorize(nextAuthorizer, ctx, data);
-                    }
-                }, ctx.eventLoop());
-            }
-
-            @Override
-            public String toString() {
-                if (strVal != null) {
-                    return strVal;
-                }
-
-                final StringBuilder buf = new StringBuilder();
-
-                // Append the first authorizer.
-                if (self.getClass() == getClass()) {
-                    final String s = self.toString();
-                    buf.append(s, 0, s.length() - 1);
-                } else {
-                    buf.append('[').append(self);
-                }
-                buf.append(", ");
-
-                // Append the second authorizer.
-                if (nextAuthorizer.getClass() == getClass()) {
-                    final String s = nextAuthorizer.toString();
-                    buf.append(s, 1, s.length());
-                } else {
-                    buf.append(nextAuthorizer).append(']');
-                }
-
-                return strVal = buf.toString();
-            }
-        };
+        return new AuthorizerChain<>(self, AuthorizerSelectionStrategy.LAST_WITH_HANDLER)
+                .orElse(nextAuthorizer);
     }
 
     /**

@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.auth;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -63,7 +62,6 @@ public final class AuthServiceBuilder {
         } else {
             this.authorizer = this.authorizer.orElse(authorizer);
         }
-        setAuthorizerHandlers(authorizer);
         return this;
     }
 
@@ -131,17 +129,9 @@ public final class AuthServiceBuilder {
      */
     public <T> AuthServiceBuilder addTokenAuthorizer(
             Function<? super RequestHeaders, T> tokenExtractor, Authorizer<? super T> authorizer) {
-        requireNonNull(tokenExtractor, "tokenExtractor");
-        requireNonNull(authorizer, "authorizer");
-        final Authorizer<HttpRequest> requestAuthorizer = (ctx, req) -> {
-            final T token = tokenExtractor.apply(req.headers());
-            if (token == null) {
-                return CompletableFuture.completedFuture(false);
-            }
-            return authorizer.authorize(ctx, token);
-        };
+        final Authorizer<HttpRequest> requestAuthorizer =
+                new DelegatingHttpRequestAuthorizer<>(tokenExtractor, authorizer);
         add(requestAuthorizer);
-        setAuthorizerHandlers(authorizer);
         return this;
     }
 
@@ -191,20 +181,5 @@ public final class AuthServiceBuilder {
             throw new IllegalStateException("no " + Authorizer.class.getSimpleName() + " was added.");
         }
         return authorizer;
-    }
-
-    private boolean setAuthorizerHandlers(Authorizer<?> authorizer) {
-        boolean set = false;
-        final AuthFailureHandler authorizerFailureHandler = authorizer.failureHandler();
-        if (authorizerFailureHandler != null) {
-            failureHandler = authorizerFailureHandler;
-            set = true;
-        }
-        final AuthSuccessHandler authorizerSuccessHandler = authorizer.successHandler();
-        if (authorizerSuccessHandler != null) {
-            successHandler = authorizerSuccessHandler;
-            set = true;
-        }
-        return set;
     }
 }

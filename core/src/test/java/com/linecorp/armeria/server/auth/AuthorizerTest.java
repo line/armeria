@@ -39,6 +39,9 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
@@ -126,17 +129,71 @@ public class AuthorizerTest {
 
     @Test
     public void orElseToString() {
-        final Authorizer<Object> a = new AuthorizerWithToString("A");
-        final Authorizer<Object> b = new AuthorizerWithToString("B");
-        final Authorizer<Object> c = new AuthorizerWithToString("C");
-        final Authorizer<Object> d = new AuthorizerWithToString("D");
+        final Authorizer<Object> a = new NamedAuthorizer<>("A");
+        final Authorizer<Object> b = new NamedAuthorizer<>("B");
+        final Authorizer<Object> c = new NamedAuthorizer<>("C");
+        final Authorizer<Object> d = new NamedAuthorizer<>("D");
+        final Authorizer<Object> e = new NamedAuthorizer<>("E");
 
         // A + B
         assertThat(a.orElse(b).toString()).isEqualTo("[A, B]");
-        // A + B
+        // A + B + C
         assertThat(a.orElse(b).orElse(c).toString()).isEqualTo("[A, B, C]");
-        // (A + B) + (C + D)
-        assertThat(a.orElse(b).orElse(c.orElse(d)).toString()).isEqualTo("[A, B, C, D]");
+        // A + B + (C + D) + E
+        assertThat(a.orElse(b).orElse(c.orElse(d)).orElse(e).toString()).isEqualTo("[A, B, [C, D], E]");
+    }
+
+    @Test
+    public void orElseHandler() {
+        orElseHandler(new boolean[] {true, true, true}, -1, true, 0, -1);
+        orElseHandler(new boolean[] {true, true, false}, -1, true, 0, -1);
+        orElseHandler(new boolean[] {true, false, true}, -1, true, 0, -1);
+        orElseHandler(new boolean[] {true, false, false}, -1, true, 0, -1);
+
+        orElseHandler(new boolean[] {false, true, true}, -1, true, 1, 0);
+        orElseHandler(new boolean[] {false, true, false}, -1, true, 1, 0);
+        orElseHandler(new boolean[] {false, false, true}, -1, true, 2, 1);
+        orElseHandler(new boolean[] {false, false, false}, -1, false, -1, 2);
+
+        orElseHandler(new boolean[] {true, true, true}, 0, true, -1, -1);
+        orElseHandler(new boolean[] {false, true, true}, 1, true, -1, 0);
+        orElseHandler(new boolean[] {false, false, true}, 2, true, -1, 1);
+
+        orElseHandler(new boolean[] {false, false, false}, 0, false, -1, 2);
+        orElseHandler(new boolean[] {false, false, false}, 1, false, -1, 2);
+        orElseHandler(new boolean[] {false, false, false}, 2, false, -1, 1);
+    }
+
+    public void orElseHandler(boolean[] statuses, int nullHandler, boolean expectedStatus,
+                              int expectedSuccessHandler, int expectedFailureHandler) {
+        final Authorizer<String>[] authorizers = new Authorizer[statuses.length];
+        Authorizer<String> authorizer = null;
+        for (int i = 0; i < statuses.length; i++) {
+            authorizers[i] = (i == nullHandler) ?
+                             new NamedAuthorizer<>(Integer.toString(i), statuses[i], null, null)
+                             : new NamedAuthorizer<>(Integer.toString(i), statuses[i]);
+            authorizer = (i == 0) ? authorizers[i] : authorizer.orElse(authorizers[i]);
+        }
+
+        assertThat(authorizer).isNotNull();
+        assertThat(serviceCtx).isNotNull();
+        final Boolean result = authorizer.authorize(serviceCtx, "data")
+                                         .toCompletableFuture().join();
+        final AuthSuccessHandler successHandler = authorizer.successHandler();
+        final AuthFailureHandler failureHandler = authorizer.failureHandler();
+        assertThat(result).isEqualTo(expectedStatus);
+        if (expectedSuccessHandler >= 0) {
+            assertThat(successHandler).isNotNull();
+            assertThat(successHandler.toString()).isEqualTo(Integer.toString(expectedSuccessHandler));
+        } else {
+            assertThat(successHandler).isNull();
+        }
+        if (expectedFailureHandler >= 0) {
+            assertThat(failureHandler).isNotNull();
+            assertThat(failureHandler.toString()).isEqualTo(Integer.toString(expectedFailureHandler));
+        } else {
+            assertThat(failureHandler).isNull();
+        }
     }
 
     private static Authorizer<String> newMock() {
@@ -146,22 +203,92 @@ public class AuthorizerTest {
         return mock;
     }
 
-    private static final class AuthorizerWithToString implements Authorizer<Object> {
+    private static final class NamedAuthorizer<T> implements Authorizer<T> {
 
-        private final String strVal;
+        private final String name;
+        private final boolean authorize;
+        @Nullable
+        private final AuthSuccessHandler successHandler;
+        @Nullable
+        private final AuthFailureHandler failureHandler;
 
-        AuthorizerWithToString(String strVal) {
-            this.strVal = strVal;
+        NamedAuthorizer(String name, boolean authorize,
+                        @Nullable AuthSuccessHandler successHandler,
+                        @Nullable AuthFailureHandler failureHandler) {
+            this.name = name;
+            this.authorize = authorize;
+            this.successHandler = successHandler;
+            this.failureHandler = failureHandler;
+        }
+
+        NamedAuthorizer(String name, boolean authorize) {
+            this(name, authorize, new NamedSuccessHandler(name), new NamedFailureHandler(name));
+        }
+
+        NamedAuthorizer(String name) {
+            this(name, true);
         }
 
         @Override
-        public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, Object data) {
-            return completedFuture(true);
+        public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data) {
+            return completedFuture(authorize);
+        }
+
+        @Nullable
+        @Override
+        public AuthSuccessHandler successHandler() {
+            return successHandler;
+        }
+
+        @Nullable
+        @Override
+        public AuthFailureHandler failureHandler() {
+            return failureHandler;
         }
 
         @Override
         public String toString() {
-            return strVal;
+            return name;
+        }
+    }
+
+    private static final class NamedSuccessHandler implements AuthSuccessHandler {
+
+        private final String name;
+
+        NamedSuccessHandler(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public HttpResponse authSucceeded(HttpService delegate, ServiceRequestContext ctx, HttpRequest req)
+                throws Exception {
+            return delegate.serve(ctx, req);
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    private static final class NamedFailureHandler implements AuthFailureHandler {
+
+        private final String name;
+
+        NamedFailureHandler(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public HttpResponse authFailed(HttpService delegate, ServiceRequestContext ctx, HttpRequest req,
+                                       @Nullable Throwable cause) throws Exception {
+            return HttpResponse.of(HttpStatus.UNAUTHORIZED);
+        }
+
+        @Override
+        public String toString() {
+            return name;
         }
     }
 }
