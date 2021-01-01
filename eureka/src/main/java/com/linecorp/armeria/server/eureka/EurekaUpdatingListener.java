@@ -338,29 +338,30 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
 
                       if (cause != null) {
                           logger.warn("Failed to send a heart beat to Eureka: {}", client.uri(), cause);
-                      } else if (res.headers().status() != HttpStatus.OK) {
+                      } else {
+                          final HttpStatus status = res.status();
 
-                          // The information of this instance is removed from the registry when
-                          // the heart beats fail consecutive three times, so we try to re-registration.
-                          // See https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew
-                          if (res.headers().status() == HttpStatus.NOT_FOUND) {
+                          if (status == HttpStatus.OK) {
+                              logger.debug("Sent a heart beat to Eureka: {}", client.uri());
+                          } else if (status == HttpStatus.NOT_FOUND) {
+                              // The information of this instance is removed from the registry when
+                              // the heart beats fail consecutive three times, so we try to re-registration.
+                              // See https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew
                               logger.warn("Instance {}/{} no longer registered with Eureka." +
-                                          " Attempting re-registration.",
-                                          appName, instanceId);
+                                      " Attempting re-registration.",
+                                  appName, instanceId);
                               register(instanceInfo);
                               return null;
                           } else {
                               logger.warn("Failed to send a heart beat to Eureka: {}, " +
-                                          "(status: {}, content: {})",
-                                          client.uri(), res.headers().status(), res.contentUtf8());
+                                      "(status: {}, content: {})",
+                                  client.uri(), res.headers().status(), res.contentUtf8());
                           }
-                      } else {
-                          logger.debug("Successfully send a heart beat to Eureka: {}", client.uri());
                       }
 
                       heartBeatFuture = eventLoop.schedule(
-                              this, instanceInfo.getLeaseInfo().getRenewalIntervalInSecs(),
-                              TimeUnit.SECONDS);
+                          this, instanceInfo.getLeaseInfo().getRenewalIntervalInSecs(),
+                          TimeUnit.SECONDS);
                       return null;
                   });
         }
