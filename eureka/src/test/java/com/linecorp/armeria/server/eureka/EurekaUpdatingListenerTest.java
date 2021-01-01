@@ -159,11 +159,6 @@ class EurekaUpdatingListenerTest {
             .build();
         application.start().join();
         await().until(() -> registerContentCaptor.get() != null);
-        final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
-            InstanceInfo.class);
-        final InstanceInfo expected = expectedInstanceInfo(application);
-        assertThat(instanceInfo).isEqualTo(expected);
-        await().until(() -> heartBeatHeadersCaptor.get() != null);
         assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 1);
 
         // remove instance from the registry
@@ -171,14 +166,12 @@ class EurekaUpdatingListenerTest {
         await().until(() -> registerContentCaptor.get() != null);
         assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 2);
 
-        // heat beat is sent, and not cause re-registration
+        // heat beats are sent, and not cause re-registration
         final int heartBeatCount = heartBeatRequestCounter.get();
         await().until(() -> heartBeatRequestCounter.get() >= heartBeatCount + 2);
         assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 2);
 
         application.stop().join();
-        final RequestHeaders deregisterHeaders = deregisterHeadersCaptor.join();
-        assertThat(deregisterHeaders.path()).isEqualTo("/apps/application0/i-00000000");
     }
 
     private static InstanceInfo expectedInstanceInfo(Server application) {
