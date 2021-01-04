@@ -21,26 +21,24 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.AbstractOptions;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 
@@ -197,20 +195,12 @@ public final class ClientFactoryOptions
     public static final ClientFactoryOption<ProxyConfigSelector> PROXY_CONFIG_SELECTOR =
             ClientFactoryOption.define("PROXY_CONFIG_SELECTOR", ProxyConfigSelector.of(ProxyConfig.direct()));
 
-    // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
-    @SuppressWarnings("deprecation")
-    private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
-            ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
-            ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
-            ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
-            EpollChannelOption.EPOLL_MODE);
-
     /**
      * The {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.
      */
     public static final ClientFactoryOption<Map<ChannelOption<?>, Object>> CHANNEL_OPTIONS =
             ClientFactoryOption.define("CHANNEL_OPTIONS", ImmutableMap.of(), newOptions -> {
-                for (ChannelOption<?> channelOption : PROHIBITED_SOCKET_OPTIONS) {
+                for (ChannelOption<?> channelOption : ChannelUtil.prohibitedOptions()) {
                     checkArgument(!newOptions.containsKey(channelOption),
                                   "prohibited channel option: %s", channelOption);
                 }
