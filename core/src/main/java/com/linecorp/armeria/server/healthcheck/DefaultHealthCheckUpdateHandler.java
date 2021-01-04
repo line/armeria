@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,6 +31,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -45,15 +47,19 @@ final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
     public CompletionStage<HealthCheckUpdateResult> handle(ServiceRequestContext ctx,
                                                            HttpRequest req) throws Exception {
         requireNonNull(req, "req");
+        final CompletableFuture<HealthCheckUpdateResult> updateFuture;
         switch (req.method()) {
             case PUT:
             case POST:
-                return req.aggregate().thenApply(DefaultHealthCheckUpdateHandler::handlePut);
+                updateFuture = req.aggregate().thenApply(DefaultHealthCheckUpdateHandler::handlePut);
+                break;
             case PATCH:
-                return req.aggregate().thenApply(DefaultHealthCheckUpdateHandler::handlePatch);
+                updateFuture = req.aggregate().thenApply(DefaultHealthCheckUpdateHandler::handlePatch);
+                break;
             default:
                 throw HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
+        return UnmodifiableFuture.wrap(updateFuture);
     }
 
     private static HealthCheckUpdateResult handlePut(AggregatedHttpRequest req) {
