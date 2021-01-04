@@ -348,20 +348,20 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                               // the heart beats fail consecutive three times, so we try to re-registration.
                               // See https://github.com/Netflix/eureka/wiki/Understanding-eureka-client-server-communication#renew
                               logger.warn("Instance {}/{} no longer registered with Eureka." +
-                                      " Attempting re-registration.",
-                                  appName, instanceId);
+                                          " Attempting re-registration.",
+                                          appName, instanceId);
                               register(instanceInfo);
                               return null;
                           } else {
                               logger.warn("Failed to send a heart beat to Eureka: {}, " +
-                                      "(status: {}, content: {})",
-                                  client.uri(), res.headers().status(), res.contentUtf8());
+                                          "(status: {}, content: {})",
+                                          client.uri(), res.headers().status(), res.contentUtf8());
                           }
                       }
 
                       heartBeatFuture = eventLoop.schedule(
-                          this, instanceInfo.getLeaseInfo().getRenewalIntervalInSecs(),
-                          TimeUnit.SECONDS);
+                              this, instanceInfo.getLeaseInfo().getRenewalIntervalInSecs(),
+                              TimeUnit.SECONDS);
                       return null;
                   });
         }

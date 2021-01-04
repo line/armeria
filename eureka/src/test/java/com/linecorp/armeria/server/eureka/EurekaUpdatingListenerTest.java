@@ -166,7 +166,7 @@ class EurekaUpdatingListenerTest {
         await().until(() -> registerContentCaptor.get() != null);
         assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 2);
 
-        // heat beats are sent, and not cause re-registration
+        // heart beats are sent, and not cause re-registration
         final int heartBeatCount = heartBeatRequestCounter.get();
         await().until(() -> heartBeatRequestCounter.get() >= heartBeatCount + 2);
         assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 2);
