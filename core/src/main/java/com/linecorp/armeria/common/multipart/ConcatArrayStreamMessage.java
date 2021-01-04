@@ -177,7 +177,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onSubscribe(Subscription subscription) {
-            if (cancelled != 0) {
+            if (cancelled()) {
                 subscription.cancel();
             } else {
                 setSubscription(subscription);
@@ -211,7 +211,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         void nextSource() {
             // Increase 'wip' to prevent a next source from subscribing.
             // 'onComplete()' signal could be sent while subscribing to a publisher.
-            if (wip++ == 0) {
+            if (!cancelled() && wip++ == 0) {
                 do {
                     final int index = this.index;
                     if (index == sources.length) {
@@ -238,7 +238,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         public void cancel() {
             if (cancelledUpdater.compareAndSet(this, 0, 1)) {
                 super.cancel();
-                abortUnsubscribedSources(null);
+                abortUnsubscribedSources(CancelledSubscriptionException.get());
 
                 if (containsNotifyCancellation(options)) {
                     downstream.onError(CancelledSubscriptionException.get());
@@ -247,14 +247,14 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
             }
         }
 
-        private void abortUnsubscribedSources(@Nullable Throwable cause) {
+        private boolean cancelled() {
+            return cancelled != 0;
+        }
+
+        private void abortUnsubscribedSources(Throwable cause) {
             final int index = this.index;
             for (int i = index; i < sources.length; i++) {
-                if (cause != null) {
-                    sources[i].abort(cause);
-                } else {
-                    sources[i].abort();
-                }
+                sources[i].abort(cause);
             }
         }
     }
