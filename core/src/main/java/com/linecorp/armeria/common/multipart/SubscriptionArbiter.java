@@ -124,26 +124,21 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
 
     @Override
     public void cancel() {
-        cancel(newSubscription);
-        drain();
-    }
 
-    /**
-     * Atomically swap in the {@link NoopSubscription#get()} instance and call cancel() on
-     * any previous Subscription held.
-     * @param subscriptionField the target field to cancel atomically.
-     */
-    private static void cancel(AtomicReference<Subscription> subscriptionField) {
-        Subscription subscription = subscriptionField.get();
+        // Atomically swap in the NoopSubscription#get() instance and call cancel() on
+        // any previous Subscription held.
+        Subscription subscription = newSubscription.get();
         final NoopSubscription noopSubscription = NoopSubscription.get();
         if (subscription != noopSubscription) {
-            subscription = subscriptionField.getAndSet(noopSubscription);
+            subscription = newSubscription.getAndSet(noopSubscription);
             if (subscription != noopSubscription) {
                 if (subscription != null) {
                     subscription.cancel();
                 }
             }
         }
+
+        drain();
     }
 
     /**
@@ -155,6 +150,7 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
         for (;;) {
             final Subscription previous = newSubscription.get();
             if (previous == NoopSubscription.get()) {
+                // Cancelled already
                 subscription.cancel();
                 return;
             }
@@ -162,6 +158,7 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
                 break;
             }
         }
+
         drain();
     }
 

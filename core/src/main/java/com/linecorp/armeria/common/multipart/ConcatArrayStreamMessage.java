@@ -195,9 +195,9 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         public void onError(Throwable throwable) {
             requireNonNull(throwable, "throwable");
 
-            final int index = this.index;
+            final int current = index - 1;
             for (int i = 0; i < sources.length; i++) {
-                if (i != index) {
+                if (i != current) {
                     sources[i].abort(throwable);
                 }
             }
