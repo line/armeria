@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -58,10 +59,16 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
     // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common
     // /reactive/src/main/java/io/helidon/common/reactive/MultiConcatArray.java
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<ConcatArrayStreamMessage> subscribedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(ConcatArrayStreamMessage.class, "subscribed");
+
     private final StreamMessage<? extends T>[] sources;
 
     @Nullable
     private ConcatArraySubscriber<T> parent;
+
+    private volatile int subscribed;
 
     ConcatArrayStreamMessage(StreamMessage<? extends T>[] sources) {
         this.sources = sources;
@@ -111,9 +118,15 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
-        parent = new ConcatArraySubscriber<>(subscriber, sources, executor, options);
-        subscriber.onSubscribe(parent);
-        parent.nextSource();
+
+        if (subscribedUpdater.compareAndSet(this, 0, 1)) {
+            parent = new ConcatArraySubscriber<>(subscriber, sources, executor, options);
+            subscriber.onSubscribe(parent);
+            parent.nextSource();
+        } else {
+            subscriber.onSubscribe(NoopSubscription.get());
+            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+        }
     }
 
     @Override
@@ -180,6 +193,14 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onError(Throwable throwable) {
+            requireNonNull(throwable, "throwable");
+
+            final int index = this.index;
+            for (int i = 0; i < sources.length; i++) {
+                if (i != index) {
+                    sources[i].abort(throwable);
+                }
+            }
             downstream.onError(throwable);
         }
 

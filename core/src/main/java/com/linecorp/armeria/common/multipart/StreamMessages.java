@@ -31,7 +31,6 @@ final class StreamMessages {
      * in order, non-overlappingly, one after the other finishes.
      */
     @SafeVarargs
-    @SuppressWarnings("varargs")
     static <T> StreamMessage<T> concat(StreamMessage<? extends T>... streamMessages) {
         requireNonNull(streamMessages, "streamMessages");
         checkArgument(streamMessages.length > 0, "streamMessages is empty");

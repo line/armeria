@@ -31,7 +31,6 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import static com.linecorp.armeria.common.multipart.CancelledSubscription.CANCELLED;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -43,6 +42,8 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscription;
 
 import com.google.common.math.LongMath;
+
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 /**
  * Allows changing the subscription, tracking requests and item
@@ -128,23 +129,21 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
     }
 
     /**
-     * Atomically swap in the {@link CancelledSubscription#CANCELLED} instance and call cancel() on
+     * Atomically swap in the {@link NoopSubscription#get()} instance and call cancel() on
      * any previous Subscription held.
      * @param subscriptionField the target field to cancel atomically.
-     * @return true if the current thread succeeded with the cancellation (as only one thread is able to)
      */
-    private static boolean cancel(AtomicReference<Subscription> subscriptionField) {
+    private static void cancel(AtomicReference<Subscription> subscriptionField) {
         Subscription subscription = subscriptionField.get();
-        if (subscription != CANCELLED) {
-            subscription = subscriptionField.getAndSet(CANCELLED);
-            if (subscription != CANCELLED) {
+        final NoopSubscription noopSubscription = NoopSubscription.get();
+        if (subscription != noopSubscription) {
+            subscription = subscriptionField.getAndSet(noopSubscription);
+            if (subscription != noopSubscription) {
                 if (subscription != null) {
                     subscription.cancel();
                 }
-                return true;
             }
         }
-        return false;
     }
 
     /**
@@ -155,7 +154,7 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
         requireNonNull(subscription, "subscription");
         for (;;) {
             final Subscription previous = newSubscription.get();
-            if (previous == CANCELLED) {
+            if (previous == NoopSubscription.get()) {
                 subscription.cancel();
                 return;
             }
@@ -194,7 +193,7 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
                 newProd = newProduced.getAndSet(0L);
             }
             final Subscription next = newSubscription.get();
-            final boolean isCancelled = next == CANCELLED;
+            final boolean isCancelled = next == NoopSubscription.get();
             if (next != null) {
                 newSubscription.compareAndSet(next, null);
             }
