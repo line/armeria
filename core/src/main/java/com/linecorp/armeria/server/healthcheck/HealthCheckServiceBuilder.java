@@ -23,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -57,6 +58,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     private long pingIntervalMillis = TimeUnit.SECONDS.toMillis(DEFAULT_PING_INTERVAL_SECONDS);
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
+    private final ImmutableList.Builder<HealthCheckUpdateListener> updateListeners = ImmutableList.builder();
 
     private final TransientServiceOptionsBuilder
             transientServiceOptionsBuilder = new TransientServiceOptionsBuilder();
@@ -256,6 +258,22 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
         return this;
     }
 
+    /**
+     * Adds a {@link HealthCheckUpdateHandler} which invoked when the healthiness of the {@link Server} is
+     * updated by the {@link HealthCheckUpdateHandler}. This feature is enabled when the
+     * {@link HealthCheckService} is updatable.
+     *
+     * @see #updatable(boolean)
+     * @see #updatable(HealthCheckUpdateHandler)
+     */
+    public HealthCheckServiceBuilder updateListener(HealthCheckUpdateListener updateListener) {
+        if (updateHandler == null) {
+            throw new IllegalStateException("updating healthiness is disabled.");
+        }
+        updateListeners.add(requireNonNull(updateListener, "updateListener"));
+        return this;
+    }
+
     @Override
     public HealthCheckServiceBuilder transientServiceOptions(
             TransientServiceOption... transientServiceOptions) {
@@ -277,7 +295,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      pingIntervalMillis, updateHandler,
+                                      pingIntervalMillis, updateHandler, updateListeners.build(),
                                       transientServiceOptionsBuilder.build());
     }
 }

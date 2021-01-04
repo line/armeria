@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,6 +56,8 @@ import io.netty.util.NetUtil;
 class HealthCheckServiceTest {
 
     private static final SettableHealthChecker checker = new SettableHealthChecker();
+    private static final AtomicReference<HealthCheckUpdateResult> capturedUpdateResult =
+            new AtomicReference<>();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -67,6 +70,10 @@ class HealthCheckServiceTest {
             sb.service("/hc_updatable", HealthCheckService.builder()
                                                           .updatable(true)
                                                           .build());
+            sb.service("/hc_update_listener", HealthCheckService.builder()
+                                                                .updatable(true)
+                                                                .updateListener(capturedUpdateResult::set)
+                                                                .build());
             sb.service("/hc_custom",
                        HealthCheckService.builder()
                                          .healthyResponse(AggregatedHttpResponse.of(
@@ -358,6 +365,25 @@ class HealthCheckServiceTest {
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "60, 5"),
                 HttpData.ofUtf8("{\"healthy\":true}")));
+    }
+
+    @Test
+    void updateListener() {
+        final WebClient client = WebClient.of(server.httpUri());
+
+        capturedUpdateResult.set(null);
+
+        // Make unhealthy.
+        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":false}")
+              .aggregate().join();
+        assertThat(capturedUpdateResult.get()).isEqualTo(HealthCheckUpdateResult.UNHEALTHY);
+
+        capturedUpdateResult.set(null);
+
+        // Make healthy.
+        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":true}")
+              .aggregate().join();
+        assertThat(capturedUpdateResult.get()).isEqualTo(HealthCheckUpdateResult.HEALTHY);
     }
 
     @Test

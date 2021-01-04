@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.healthcheck;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -145,6 +147,7 @@ public final class HealthCheckService implements TransientHttpService {
     final Set<PendingResponse> pendingUnhealthyResponses;
     @Nullable
     private final HealthCheckUpdateHandler updateHandler;
+    private final List<HealthCheckUpdateListener> updateListeners;
     private final Set<TransientServiceOption> transientServiceOptions;
 
     @Nullable
@@ -155,11 +158,14 @@ public final class HealthCheckService implements TransientHttpService {
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
                        long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
                        long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
+                       Iterable<HealthCheckUpdateListener> updateListeners,
                        Set<TransientServiceOption> transientServiceOptions) {
         serverHealth = new SettableHealthChecker(false);
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
                 .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
+        this.updateListeners = ImmutableList.<HealthCheckUpdateListener>builder()
+                .addAll(updateListeners).build();
         this.transientServiceOptions = transientServiceOptions;
 
         if (maxLongPollingTimeoutMillis > 0 &&
@@ -395,6 +401,14 @@ public final class HealthCheckService implements TransientHttpService {
 
         return HttpResponse.from(updateHandler.handle(ctx, req).thenApply(updateResult -> {
             if (updateResult != null) {
+                for (HealthCheckUpdateListener updateListener : updateListeners) {
+                    try {
+                        updateListener.onUpdate(updateResult);
+                    } catch (Throwable t) {
+                        logger.warn("An error occurred when notifying a Update event", t);
+                    }
+                }
+
                 switch (updateResult) {
                     case HEALTHY:
                         serverHealth.setHealthy(true);
