@@ -194,13 +194,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         @Override
         public void onError(Throwable throwable) {
             requireNonNull(throwable, "throwable");
-
-            final int current = index - 1;
-            for (int i = 0; i < sources.length; i++) {
-                if (i != current) {
-                    sources[i].abort(throwable);
-                }
-            }
+            abortUnsubscribedSources(throwable);
             downstream.onError(throwable);
         }
 
@@ -242,10 +236,23 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         public void cancel() {
             if (cancelledUpdater.compareAndSet(this, 0, 1)) {
                 super.cancel();
+                abortUnsubscribedSources(null);
+
                 if (containsNotifyCancellation(options)) {
                     downstream.onError(CancelledSubscriptionException.get());
                 }
                 downstream = NoopSubscriber.get();
+            }
+        }
+
+        private void abortUnsubscribedSources(@Nullable Throwable cause) {
+            final int index = this.index;
+            for (int i = index; i < sources.length; i++) {
+                if (cause != null) {
+                    sources[i].abort(cause);
+                } else {
+                    sources[i].abort();
+                }
             }
         }
     }
