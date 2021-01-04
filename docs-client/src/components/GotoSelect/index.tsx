@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -19,7 +19,7 @@ import Autocomplete, {
 } from '@material-ui/lab/Autocomplete';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
-import React, { ChangeEvent, useCallback } from 'react';
+import React, { ChangeEvent, useCallback, useRef } from 'react';
 
 import { Specification } from '../../lib/specification';
 import { SelectOption } from '../../lib/types';
@@ -105,10 +105,17 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
 }) => {
   const classes = useStyles();
 
-  const handleSelection = useCallback(
-    (_: ChangeEvent<{}>, option: Option | null): void => {
-      if (option) {
-        navigateTo(option.value);
+  const value = useRef('');
+  const options = getOptions(specification);
+
+  const handleChange = useCallback((_: ChangeEvent<{}>, option: Option) => {
+    value.current = option.value;
+  }, []);
+
+  const handleClose = useCallback(
+    (_: ChangeEvent<{}>, reason: string) => {
+      if (reason === 'select-option') {
+        navigateTo(value.current);
       }
     },
     [navigateTo],
@@ -126,12 +133,13 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
           input: classes.input,
           popupIndicator: classes.popupIndicator,
         }}
-        options={getOptions(specification)}
+        options={options}
         filterOptions={filterOptions}
         getOptionLabel={(option) => option.label}
         groupBy={(option) => option.group}
         noOptionsText="No results"
-        onChange={handleSelection}
+        onChange={handleChange}
+        onClose={handleClose}
         renderInput={(params) => (
           <TextField
             {...params}
