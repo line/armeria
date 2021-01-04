@@ -17,10 +17,14 @@ package com.linecorp.armeria.internal.common.util;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.TransportType;
@@ -35,6 +39,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.NetUtil;
 
 /**
  * Provides the properties required by {@link TransportType} by loading /dev/epoll and io_uring transport
@@ -42,6 +47,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
  * See: https://github.com/line/armeria/issues/3243
  */
 public final class TransportTypeProvider {
+
+    private static final Logger logger = LoggerFactory.getLogger(TransportTypeProvider.class);
 
     public static final TransportTypeProvider NIO = new TransportTypeProvider(
             "NIO", NioServerSocketChannel.class, NioSocketChannel.class, NioDatagramChannel.class,
@@ -54,7 +61,6 @@ public final class TransportTypeProvider {
             "io.netty.channel.epoll.EpollDatagramChannel",
             "io.netty.channel.epoll.EpollEventLoopGroup",
             "io.netty.channel.epoll.EpollEventLoop");
-
     public static final TransportTypeProvider IO_URING = of(
             "IO_URING", "io.netty.incubator.channel.uring.IOUring",
             "io.netty.incubator.channel.uring.IOUringServerSocketChannel",
@@ -69,14 +75,17 @@ public final class TransportTypeProvider {
             String eventLoopGroupTypeName, String eventLoopTypeName) {
 
         try {
+            // Make sure the native libraries were loaded.
             final Throwable unavailabilityCause = (Throwable)
                     findClass(entryPointTypeName)
                             .getMethod("unavailabilityCause")
                             .invoke(null);
+
             if (unavailabilityCause != null) {
                 throw unavailabilityCause;
             }
 
+            // Load the required classes and constructors.
             final Class<? extends ServerSocketChannel> ssc =
                     findClass(serverSocketChannelTypeName);
             final Class<? extends SocketChannel> sc =
@@ -93,6 +102,18 @@ public final class TransportTypeProvider {
             return new TransportTypeProvider(name, ssc, sc, dc, elg, el, elgc, null);
         } catch (Throwable cause) {
             return new TransportTypeProvider(name, null, null, null, null, null, null, Exceptions.peel(cause));
+        } finally {
+            // TODO(trustin): Remove this block which works around the bug where loading both epoll and
+            //                io_uring native libraries may revert the initialization of
+            //                io.netty.channel.unix.Socket: https://github.com/netty/netty/issues/10909
+            try {
+                final Method initializeMethod = findClass("io.netty.channel.unix.Socket")
+                        .getDeclaredMethod("initialize", boolean.class);
+                initializeMethod.setAccessible(true);
+                initializeMethod.invoke(null, NetUtil.isIpV4StackPreferred());
+            } catch (Throwable cause) {
+                logger.warn("Failed to force-initialize 'io.netty.channel.unix.Socket':", cause);
+            }
         }
     }
 
