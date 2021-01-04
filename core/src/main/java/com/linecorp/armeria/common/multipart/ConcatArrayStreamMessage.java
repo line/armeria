@@ -122,7 +122,11 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         if (subscribedUpdater.compareAndSet(this, 0, 1)) {
             parent = new ConcatArraySubscriber<>(subscriber, sources, executor, options);
             subscriber.onSubscribe(parent);
-            parent.nextSource();
+            if (executor.inEventLoop()) {
+                parent.nextSource();
+            } else {
+                executor.execute(() -> parent.nextSource());
+            }
         } else {
             subscriber.onSubscribe(NoopSubscription.get());
             subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
@@ -152,19 +156,15 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         private static final AtomicIntegerFieldUpdater<ConcatArraySubscriber> cancelledUpdater =
                 AtomicIntegerFieldUpdater.newUpdater(ConcatArraySubscriber.class, "cancelled");
 
-        @SuppressWarnings("rawtypes")
-        private static final AtomicIntegerFieldUpdater<ConcatArraySubscriber> wipUpdater =
-                AtomicIntegerFieldUpdater.newUpdater(ConcatArraySubscriber.class, "wip");
-
         private Subscriber<? super T> downstream;
         private final StreamMessage<? extends T>[] sources;
         private final EventExecutor executor;
         private final SubscriptionOption[] options;
 
         private long produced;
+        private int wip;
 
         private volatile int index;
-        private volatile int wip;
         private volatile int cancelled;
 
         ConcatArraySubscriber(Subscriber<? super T> downstream, StreamMessage<? extends T>[] sources,
@@ -209,7 +209,9 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         }
 
         void nextSource() {
-            if (wipUpdater.getAndIncrement(this) == 0) {
+            // Increase 'wip' to prevent a next source from subscribing.
+            // 'onComplete()' signal could be sent while subscribing to a publisher.
+            if (wip++ == 0) {
                 do {
                     final int index = this.index;
                     if (index == sources.length) {
@@ -218,7 +220,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
                         this.index++;
                         sources[index].subscribe(this, executor, options);
                     }
-                } while (wipUpdater.decrementAndGet(this) != 0);
+                } while (--wip != 0);
             }
         }
 
