@@ -35,6 +35,8 @@ import java.lang.reflect.Modifier;
 import java.util.BitSet;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.math.IntMath;
@@ -70,7 +72,9 @@ public final class HttpHeaderNames {
     private static final BitSet PROHIBITED_NAME_CHARS;
     private static final String[] PROHIBITED_NAME_CHAR_NAMES;
     private static final byte LAST_PROHIBITED_NAME_CHAR;
-    private static final ImmutableMap.Builder<AsciiString, String> inverseMapBuilder = ImmutableMap.builder();
+
+    @Nullable
+    private static ImmutableMap.Builder<AsciiString, String> inverseMapBuilder = ImmutableMap.builder();
 
     static {
         PROHIBITED_NAME_CHARS = new BitSet();
@@ -600,6 +604,8 @@ public final class HttpHeaderNames {
         }
         map = builder.build();
         inverseMap = inverseMapBuilder.build();
+        // inverseMapBuilder is used only when building inverseMap.
+        inverseMapBuilder = null;
     }
 
     private static AsciiString create(String name) {

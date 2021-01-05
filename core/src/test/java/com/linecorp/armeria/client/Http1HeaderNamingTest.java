@@ -66,8 +66,7 @@ class Http1HeaderNamingTest {
 
             try (Socket socket = ss.accept()) {
                 final InputStream is = socket.getInputStream();
-                final BufferedReader reader =
-                        new BufferedReader(new InputStreamReader(is));
+                final BufferedReader reader = new BufferedReader(new InputStreamReader(is));
 
                 boolean hasAuthorization = false;
                 boolean hasXForwardedFor = false;
