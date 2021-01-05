@@ -19,7 +19,7 @@ import Autocomplete, {
 } from '@material-ui/lab/Autocomplete';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import TextField from '@material-ui/core/TextField';
-import React, { ChangeEvent, useCallback, useRef } from 'react';
+import React, { ChangeEvent, useCallback, useMemo, useRef } from 'react';
 
 import { Specification } from '../../lib/specification';
 import { SelectOption } from '../../lib/types';
@@ -106,7 +106,7 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
   const classes = useStyles();
 
   const value = useRef('');
-  const options = getOptions(specification);
+  const options = useMemo(() => getOptions(specification), [specification]);
 
   const handleChange = useCallback((_: ChangeEvent<{}>, option: Option) => {
     value.current = option.value;
