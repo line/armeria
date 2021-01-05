@@ -768,6 +768,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public String name() {
         ensureAvailable(RequestLogProperty.NAME);
+        assert name != null;
         return name;
     }
 
@@ -908,11 +909,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         this.requestContent = requestContent;
         this.rawRequestContent = rawRequestContent;
-        updateFlags(RequestLogProperty.REQUEST_CONTENT);
-
         if (requestContent instanceof RpcRequest && ctx.rpcRequest() == null) {
             ctx.updateRpcRequest((RpcRequest) requestContent);
         }
+        updateFlags(RequestLogProperty.REQUEST_CONTENT);
 
         final int requestCompletionFlags = RequestLogProperty.FLAGS_REQUEST_COMPLETE & ~deferredFlags;
         if (isAvailable(requestCompletionFlags)) {
