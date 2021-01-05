@@ -317,7 +317,7 @@ class HttpHeadersBase
         try {
             return ContentDisposition.parse(contentDispositionString);
         } catch (IllegalArgumentException | UnsupportedEncodingException ex) {
-            throw new IllegalStateException(ex);
+            return null;
         }
     }
 

@@ -170,6 +170,11 @@ public final class MediaType {
     public static final MediaType HTML_UTF_8 = createConstantUtf8(TEXT_TYPE, "html");
     public static final MediaType I_CALENDAR_UTF_8 = createConstantUtf8(TEXT_TYPE, "calendar");
     public static final MediaType PLAIN_TEXT_UTF_8 = createConstantUtf8(TEXT_TYPE, "plain");
+
+    /**
+     * The <a href="https://tools.ietf.org/html/rfc1521#section-7.1.2">text/plain</a> content type is
+     * the generic subtype for plain text.
+     */
     public static final MediaType PLAIN_TEXT = createConstant(TEXT_TYPE, "plain");
 
     /**

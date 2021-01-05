@@ -34,22 +34,21 @@ package com.linecorp.armeria.common;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME;
 import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -64,10 +63,14 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  */
 public final class ContentDisposition {
 
-    // Forked from https://github.com/spring-projects/spring-framework/blob/d9ccd618ea9cbf339eb5639d24d5a5fabe8157b5/spring-web/src/main/java/org/springframework/http/ContentDisposition.java
+    // Forked from https://github
+    // .com/spring-projects/spring-framework/blob/d9ccd618ea9cbf339eb5639d24d5a5fabe8157b5/spring-web/src
+    // /main/java/org/springframework/http/ContentDisposition.java
 
-    private static final ContentDisposition EMPTY =
-            new ContentDisposition("", null, null, null, null, null, null, null);
+    private static final ContentDisposition EMPTY = new ContentDisposition("", null, null, null);
+
+    private static final Map<String, Charset> supportedCharsets =
+            ImmutableMap.of("utf-8", UTF_8, "iso-8859-1", ISO_8859_1);
 
     /**
      * Returns a new {@link ContentDispositionBuilder} with the specified {@code type}.
@@ -141,10 +144,6 @@ public final class ContentDisposition {
         String name = null;
         String filename = null;
         Charset charset = null;
-        Long size = null;
-        ZonedDateTime creationDate = null;
-        ZonedDateTime modificationDate = null;
-        ZonedDateTime readDate = null;
         for (int i = 1; i < parts.size(); i++) {
             final String part = parts.get(i);
             final int eqIndex = part.indexOf('=');
@@ -163,9 +162,10 @@ public final class ContentDisposition {
                     final int idx1 = value.indexOf('\'');
                     final int idx2 = value.indexOf('\'', idx1 + 1);
                     if (idx1 != -1 && idx2 != -1) {
-                        charset = Charset.forName(value.substring(0, idx1).trim());
-                        checkArgument(UTF_8.equals(charset) || ISO_8859_1.equals(charset),
-                                      "Charset: %s (expected: UTF-8 or ISO-8859-1)", charset);
+                        final String charsetString = value.substring(0, idx1).trim();
+                        charset = supportedCharsets.get(Ascii.toLowerCase(charsetString));
+                        checkArgument(charset != null,
+                                      "Charset: %s (expected: UTF-8 or ISO-8859-1)", charsetString);
 
                         filename = decodeFilename(value.substring(idx2 + 1), charset);
                     } else {
@@ -174,33 +174,12 @@ public final class ContentDisposition {
                     }
                 } else if ("filename".equals(attribute) && (filename == null)) {
                     filename = value;
-                } else if ("size".equals(attribute)) {
-                    size = Long.parseLong(value);
-                } else if ("creation-date".equals(attribute)) {
-                    try {
-                        creationDate = ZonedDateTime.parse(value, RFC_1123_DATE_TIME);
-                    } catch (DateTimeParseException ex) {
-                        // ignore
-                    }
-                } else if ("modification-date".equals(attribute)) {
-                    try {
-                        modificationDate = ZonedDateTime.parse(value, RFC_1123_DATE_TIME);
-                    } catch (DateTimeParseException ex) {
-                        // ignore
-                    }
-                } else if ("read-date".equals(attribute)) {
-                    try {
-                        readDate = ZonedDateTime.parse(value, RFC_1123_DATE_TIME);
-                    } catch (DateTimeParseException ex) {
-                        // ignore
-                    }
                 }
             } else {
                 throw new IllegalArgumentException("Invalid content disposition format: " + contentDisposition);
             }
         }
-        return new ContentDisposition(type, name, filename, charset, size,
-                                      creationDate, modificationDate, readDate);
+        return new ContentDisposition(type, name, filename, charset);
     }
 
     private final String type;
@@ -215,32 +194,14 @@ public final class ContentDisposition {
     private final Charset charset;
 
     @Nullable
-    private final Long size;
-
-    @Nullable
-    private final ZonedDateTime creationDate;
-
-    @Nullable
-    private final ZonedDateTime modificationDate;
-
-    @Nullable
-    private final ZonedDateTime readDate;
-
-    @Nullable
     private String strVal;
 
-    ContentDisposition(String type, @Nullable String name, @Nullable String filename,
-                       @Nullable Charset charset, @Nullable Long size,
-                       @Nullable ZonedDateTime creationDate,
-                       @Nullable ZonedDateTime modificationDate, @Nullable ZonedDateTime readDate) {
+    ContentDisposition(String type, @Nullable String name,
+                       @Nullable String filename, @Nullable Charset charset) {
         this.type = type;
         this.name = name;
         this.filename = filename;
         this.charset = charset;
-        this.size = size;
-        this.creationDate = creationDate;
-        this.modificationDate = modificationDate;
-        this.readDate = readDate;
     }
 
     /**
@@ -274,53 +235,6 @@ public final class ContentDisposition {
     @Nullable
     public Charset charset() {
         return charset;
-    }
-
-    /**
-     * Returns the value of the {@code size} parameter, or {@code null} if not defined.
-     *
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
-     *             to be removed in a future release.
-     */
-    @Deprecated
-    @Nullable
-    public Long size() {
-        return size;
-    }
-
-    /**
-     * Returns the value of the {@code creation-date} parameter, or {@code null} if not defined.
-     *
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
-     *             to be removed in a future release.
-     */
-    @Deprecated
-    @Nullable
-    public ZonedDateTime creationDate() {
-        return creationDate;
-    }
-
-    /**
-     * Returns the value of the {@code modification-date} parameter, or {@code null} if not defined.
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
-     *             to be removed in a future release.
-     */
-    @Deprecated
-    @Nullable
-    public ZonedDateTime modificationDate() {
-        return modificationDate;
-    }
-
-    /**
-     * Returns the value of the {@code read-date} parameter, or {@code null} if not defined.
-     *
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
-     *             to be removed in a future release.
-     */
-    @Deprecated
-    @Nullable
-    public ZonedDateTime readDate() {
-        return readDate;
     }
 
     private static List<String> tokenize(String headerValue) {
@@ -467,16 +381,12 @@ public final class ContentDisposition {
         return type.equals(that.type) &&
                Objects.equals(name, that.name) &&
                Objects.equals(filename, that.filename) &&
-               Objects.equals(charset, that.charset) &&
-               Objects.equals(size, that.size) &&
-               Objects.equals(creationDate, that.creationDate) &&
-               Objects.equals(modificationDate, that.modificationDate) &&
-               Objects.equals(readDate, that.readDate);
+               Objects.equals(charset, that.charset);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, name, filename, charset, size, creationDate, modificationDate, readDate);
+        return Objects.hash(type, name, filename, charset);
     }
 
     /**
@@ -503,25 +413,6 @@ public final class ContentDisposition {
                 sb.append("; filename*=");
                 sb.append(encodeFilename(filename, charset));
             }
-        }
-        if (size != null) {
-            sb.append("; size=");
-            sb.append(size);
-        }
-        if (creationDate != null) {
-            sb.append("; creation-date=\"");
-            sb.append(RFC_1123_DATE_TIME.format(creationDate));
-            sb.append('\"');
-        }
-        if (modificationDate != null) {
-            sb.append("; modification-date=\"");
-            sb.append(RFC_1123_DATE_TIME.format(modificationDate));
-            sb.append('\"');
-        }
-        if (readDate != null) {
-            sb.append("; read-date=\"");
-            sb.append(RFC_1123_DATE_TIME.format(readDate));
-            sb.append('\"');
         }
         return strVal = sb.toString();
     }

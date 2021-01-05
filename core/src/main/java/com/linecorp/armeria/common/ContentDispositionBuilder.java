@@ -57,18 +57,6 @@ public final class ContentDispositionBuilder {
     @Nullable
     private Charset charset;
 
-    @Nullable
-    private Long size;
-
-    @Nullable
-    private ZonedDateTime creationDate;
-
-    @Nullable
-    private ZonedDateTime modificationDate;
-
-    @Nullable
-    private ZonedDateTime readDate;
-
     ContentDispositionBuilder(String type) {
         this.type = type;
     }
@@ -110,60 +98,9 @@ public final class ContentDispositionBuilder {
     }
 
     /**
-     * Set the value of the {@code size} parameter.
-     *
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
-     *             to be removed in a future release.
-     */
-    @Deprecated
-    public ContentDispositionBuilder size(long size) {
-        this.size = size;
-        return this;
-    }
-
-    /**
-     * Set the value of the {@code creation-date} parameter.
-     *
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
-     *             to be removed in a future release.
-     */
-    @Deprecated
-    public ContentDispositionBuilder creationDate(ZonedDateTime creationDate) {
-        requireNonNull(creationDate, "creationDate");
-        this.creationDate = creationDate;
-        return this;
-    }
-
-    /**
-     * Set the value of the {@code modification-date} parameter.
-     *
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
-     *             to be removed in a future release.
-     */
-    @Deprecated
-    public ContentDispositionBuilder modificationDate(ZonedDateTime modificationDate) {
-        requireNonNull(modificationDate, "modificationDate");
-        this.modificationDate = modificationDate;
-        return this;
-    }
-
-    /**
-     * Set the value of the {@literal read-date} parameter.
-     * @deprecated As per <a href="https://tools.ietf.org/html/rfc6266#appendix-B">RFC 6266, Appendix B</a>,
-     *             to be removed in a future release.
-     */
-    @Deprecated
-    public ContentDispositionBuilder readDate(ZonedDateTime readDate) {
-        requireNonNull(readDate, "readDate");
-        this.readDate = readDate;
-        return this;
-    }
-
-    /**
      * Returns a newly-created {@link ContentDisposition} based on the properties of this builder.
      */
     public ContentDisposition build() {
-        return new ContentDisposition(type, name, filename, charset, size,
-                                      creationDate, modificationDate, readDate);
+        return new ContentDisposition(type, name, filename, charset);
     }
 }
