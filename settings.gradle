@@ -51,6 +51,7 @@ includeWithFlags ':javadoc',                             'java', 'publish', 'no_
 
 // Unpublished Java projects
 includeWithFlags ':benchmarks',                     'java'
+includeWithFlags ':it:builders',                    'java'
 includeWithFlags ':it:context-storage',             'java'
 includeWithFlags ':it:grpcweb',                     'java', 'akka-grpc_2.13'
 includeWithFlags ':it:kotlin',                      'java', 'relocate'

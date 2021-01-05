@@ -4,6 +4,10 @@ if (!jacocoEnabled) {
     return
 }
 
+// Override JaCoCo version if needed
+def jacocoVersion = managedVersions.containsKey('org.jacoco:org.jacoco.ant') ?
+        managedVersions['org.jacoco:org.jacoco.ant'] : JacocoPlugin.DEFAULT_JACOCO_VERSION
+
 // Collect JaCoCo execution data for all modules.
 configure(projectsWithFlags('java')) {
     if (project.hasFlags('no_aggregation')) {
@@ -13,6 +17,10 @@ configure(projectsWithFlags('java')) {
     apply plugin: 'jacoco'
 
     project.addFlags('coverage')
+
+    jacoco {
+        toolVersion = jacocoVersion
+    }
 
     tasks.withType(Test) {
         jacoco {
@@ -35,7 +43,7 @@ configure(rootProject) {
     }
 
     dependencies {
-        jacocoAnt "org.jacoco:org.jacoco.ant:${JacocoPlugin.DEFAULT_JACOCO_VERSION}"
+        jacocoAnt "org.jacoco:org.jacoco.ant:${jacocoVersion}"
     }
 
     task jacocoTestReport(type: JacocoReport) {
