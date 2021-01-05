@@ -1,9 +1,9 @@
 dependencies {
     // Tomcat
-    [ 'tomcat-embed-core', 'tomcat-embed-jasper', 'tomcat-embed-el' ].each {
-        api "org.apache.tomcat.embed:$it"
-    }
+    api "org.apache.tomcat.embed:tomcat-embed-core"
 
     // Replace commons-logging (Tomcat's logging API) with SLF4J.
     runtimeOnly 'org.slf4j:jcl-over-slf4j'
+
+    testImplementation "org.apache.tomcat.embed:tomcat-embed-jasper"
 }
