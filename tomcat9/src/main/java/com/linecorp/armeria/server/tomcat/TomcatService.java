@@ -329,7 +329,7 @@ public abstract class TomcatService implements HttpService {
     @Override
     public final HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final Connector connector = connector();
-        if (connector == null || isConnectorStopped(connector.getState())) {
+        if (connector == null || !isConnectorAvailable(connector.getState())) {
             return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
         final Adapter coyoteAdapter = connector.getProtocolHandler().getAdapter();
@@ -347,7 +347,7 @@ public abstract class TomcatService implements HttpService {
                     }
                     return null;
                 }
-                if (isConnectorStopped(connector.getState())) {
+                if (!isConnectorAvailable(connector.getState())) {
                     if (res.tryWrite(ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE))) {
                         res.close();
                     }
@@ -375,7 +375,7 @@ public abstract class TomcatService implements HttpService {
                         return;
                     }
 
-                    if (isConnectorStopped(connector.getState())) {
+                    if (!isConnectorAvailable(connector.getState())) {
                         if (res.tryWrite(ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE))) {
                             res.close();
                         }
@@ -410,12 +410,11 @@ public abstract class TomcatService implements HttpService {
         return res;
     }
 
-    private static boolean isConnectorStopped(LifecycleState connectorState) {
+    private static boolean isConnectorAvailable(LifecycleState connectorState) {
         switch (connectorState) {
-            case STOPPED:
-            case DESTROYING:
-            case DESTROYED:
-            case FAILED:
+            case STARTED:
+            case STOPPING_PREP:
+            case STOPPING:
                 return true;
             default:
                 return false;
