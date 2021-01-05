@@ -105,17 +105,17 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
 }) => {
   const classes = useStyles();
 
-  const value = useRef('');
+  const selected = useRef('');
   const options = useMemo(() => getOptions(specification), [specification]);
 
   const handleChange = useCallback((_: ChangeEvent<{}>, option: Option) => {
-    value.current = option.value;
+    selected.current = option.value;
   }, []);
 
   const handleClose = useCallback(
     (_: ChangeEvent<{}>, reason: string) => {
       if (reason === 'select-option') {
-        navigateTo(value.current);
+        navigateTo(selected.current);
       }
     },
     [navigateTo],
@@ -136,6 +136,7 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
         options={options}
         filterOptions={filterOptions}
         getOptionLabel={(option) => option.label}
+        getOptionSelected={(option, value) => option.value === value.value}
         groupBy={(option) => option.group}
         noOptionsText="No results"
         onChange={handleChange}
