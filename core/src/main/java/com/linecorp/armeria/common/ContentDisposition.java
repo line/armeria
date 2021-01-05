@@ -63,9 +63,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  */
 public final class ContentDisposition {
 
-    // Forked from https://github
-    // .com/spring-projects/spring-framework/blob/d9ccd618ea9cbf339eb5639d24d5a5fabe8157b5/spring-web/src
-    // /main/java/org/springframework/http/ContentDisposition.java
+    // Forked from https://github.com/spring-projects/spring-framework/blob/d9ccd618ea9cbf339eb5639d24d5a5fabe8157b5/spring-web/src/main/java/org/springframework/http/ContentDisposition.java
 
     private static final ContentDisposition EMPTY = new ContentDisposition("", null, null, null);
 
@@ -132,6 +130,7 @@ public final class ContentDisposition {
      * Parses a {@code "content-disposition"} header value as defined in RFC 2183.
      *
      * <p>Note that only the US-ASCII, UTF-8 and ISO-8859-1 charsets are supported.
+     * If other charsets are specified, ISO-8859-1 will be used instead.
      *
      * @param contentDisposition the {@code "content-disposition"} header value
      * @return the parsed content disposition
@@ -163,10 +162,7 @@ public final class ContentDisposition {
                     final int idx2 = value.indexOf('\'', idx1 + 1);
                     if (idx1 != -1 && idx2 != -1) {
                         final String charsetString = value.substring(0, idx1).trim();
-                        charset = supportedCharsets.get(Ascii.toLowerCase(charsetString));
-                        checkArgument(charset != null,
-                                      "Charset: %s (expected: UTF-8 or ISO-8859-1)", charsetString);
-
+                        charset = supportedCharsets.getOrDefault(Ascii.toLowerCase(charsetString), ISO_8859_1);
                         filename = decodeFilename(value.substring(idx2 + 1), charset);
                     } else {
                         // US ASCII
