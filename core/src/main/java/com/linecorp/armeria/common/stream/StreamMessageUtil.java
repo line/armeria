@@ -14,17 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.stream;
+package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.stream.SubscriptionOption;
-
-public final class StreamMessageUtil {
+final class StreamMessageUtil {
 
     public static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
-    public static boolean containsWithPooledObjects(SubscriptionOption... options) {
+    static boolean containsWithPooledObjects(SubscriptionOption... options) {
         requireNonNull(options, "options");
         for (SubscriptionOption option : options) {
             if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
@@ -35,7 +33,7 @@ public final class StreamMessageUtil {
         return false;
     }
 
-    public static boolean containsNotifyCancellation(SubscriptionOption... options) {
+    static boolean containsNotifyCancellation(SubscriptionOption... options) {
         requireNonNull(options, "options");
         for (SubscriptionOption option : options) {
             if (option == SubscriptionOption.NOTIFY_CANCELLATION) {

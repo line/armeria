@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,14 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.multipart;
+package com.linecorp.armeria.common.stream;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
-
-import com.linecorp.armeria.common.stream.StreamMessage;
 
 @Test
 public class ConcatArrayStreamMessageTck2Test extends PublisherVerification<Integer> {
@@ -42,7 +40,7 @@ public class ConcatArrayStreamMessageTck2Test extends PublisherVerification<Inte
         for (int i = 0; i < l; i++) {
             sources[i] = StreamMessage.of(i);
         }
-        return StreamMessages.concat(sources);
+        return StreamMessage.of(sources);
     }
 
     @Override

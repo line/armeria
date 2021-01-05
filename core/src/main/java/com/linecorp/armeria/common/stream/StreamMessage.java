@@ -16,13 +16,17 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
@@ -121,6 +125,50 @@ public interface StreamMessage<T> extends Publisher<T> {
                 }
                 return new RegularFixedStreamMessage<>(objs);
         }
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} from the specified {@link Publisher}.
+     */
+    static <T> StreamMessage<T> of(Publisher<? extends T> publisher) {
+        requireNonNull(publisher, "publisher");
+
+        if (publisher instanceof StreamMessage) {
+            @SuppressWarnings("unchecked")
+            final StreamMessage<T> cast = (StreamMessage<T>) publisher;
+            return cast;
+        } else {
+            return new PublisherBasedStreamMessage<>(publisher);
+        }
+    }
+
+    /**
+     * Returns a concatenated {@link StreamMessage} which relays items of the specified array of
+     * {@link Publisher}s in order, non-overlappingly, one after the other finishes.
+     */
+    @SafeVarargs
+    static <T> StreamMessage<T> of(Publisher<? extends T>... publishers) {
+        requireNonNull(publishers, "publishers");
+        checkArgument(publishers.length > 0, "publishers is empty");
+        @SuppressWarnings("unchecked")
+        final StreamMessage<? extends T>[] streamMessages = ImmutableList.copyOf(publishers)
+                                                                         .stream()
+                                                                         .map(StreamMessage::of)
+                                                                         .toArray(StreamMessage[]::new);
+        return new ConcatArrayStreamMessage<>(streamMessages);
+    }
+
+    /**
+     * Returns a concatenated {@link StreamMessage} which relays items of the specified array of
+     * {@link StreamMessage}s in order, non-overlappingly, one after the other finishes.
+     */
+    @SafeVarargs
+    static <T> StreamMessage<T> of(StreamMessage<? extends T>... streamMessages) {
+        requireNonNull(streamMessages, "streamMessages");
+        checkArgument(streamMessages.length > 0, "streamMessages is empty");
+
+        final StreamMessage<? extends T>[] copied = Arrays.copyOf(streamMessages, streamMessages.length);
+        return new ConcatArrayStreamMessage<>(copied);
     }
 
     /**

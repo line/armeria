@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,13 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.multipart;
-
-import static com.linecorp.armeria.common.multipart.StreamMessages.concat;
+package com.linecorp.armeria.common.stream;
 
 import org.junit.jupiter.api.Test;
-
-import com.linecorp.armeria.common.stream.StreamMessage;
 
 import reactor.test.StepVerifier;
 
@@ -28,7 +24,7 @@ class ConcatStreamTest {
 
     @Test
     void emptyStream() {
-        final StreamMessage<Object> source = concat(StreamMessage.of());
+        final StreamMessage<Object> source = StreamMessage.of(StreamMessage.of());
         StepVerifier.create(source).verifyComplete();
     }
 }

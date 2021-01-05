@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -29,10 +29,11 @@
  * limitations under the License.
  *
  */
-package com.linecorp.armeria.common.multipart;
 
-import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.internal.common.stream.StreamMessageUtil.containsNotifyCancellation;
+package com.linecorp.armeria.common.stream;
+
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -43,10 +44,6 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
-import com.linecorp.armeria.common.stream.NoopSubscriber;
-import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -135,9 +132,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public void abort() {
-        for (StreamMessage<? extends T> source : sources) {
-            source.abort();
-        }
+        abort(AbortedStreamException.get());
     }
 
     @Override
@@ -149,8 +144,6 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
     }
 
     private static final class ConcatArraySubscriber<T> extends SubscriptionArbiter implements Subscriber<T> {
-
-        private static final long serialVersionUID = -9184116713095894096L;
 
         @SuppressWarnings("rawtypes")
         private static final AtomicIntegerFieldUpdater<ConcatArraySubscriber> cancelledUpdater =

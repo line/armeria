@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,29 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Copyright (c)  2020 Oracle and/or its affiliates. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
-package com.linecorp.armeria.common.multipart;
+
+package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -59,26 +44,40 @@ import com.linecorp.armeria.internal.common.stream.NoopSubscription;
  *     and when to signal it.
  * </p>
  */
-class SubscriptionArbiter extends AtomicInteger implements Subscription {
+class SubscriptionArbiter implements Subscription {
 
-    // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common/reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
+    // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common
+    // /reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
 
-    private static final long serialVersionUID = 1163246596979976791L;
+    private static final AtomicReferenceFieldUpdater<SubscriptionArbiter, Subscription> newSubscriptionUpdater =
+            AtomicReferenceFieldUpdater
+                    .newUpdater(SubscriptionArbiter.class, Subscription.class, "newSubscription");
+
+    private static final AtomicLongFieldUpdater<SubscriptionArbiter> newRequestedUpdater =
+            AtomicLongFieldUpdater.newUpdater(SubscriptionArbiter.class, "newRequested");
+
+    private static final AtomicLongFieldUpdater<SubscriptionArbiter> newProducedUpdater =
+            AtomicLongFieldUpdater.newUpdater(SubscriptionArbiter.class, "newProduced");
+
+    private static final AtomicIntegerFieldUpdater<SubscriptionArbiter> wipUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(SubscriptionArbiter.class, "wip");
+
 
     /**
      * The new subscription to use.
      */
-    private final AtomicReference<Subscription> newSubscription;
+    @Nullable
+    private volatile Subscription newSubscription;
 
     /**
      * Requests accumulated.
      */
-    private final AtomicLong newRequested;
+    private volatile long newRequested;
 
     /**
      * Item production count accumulated.
      */
-    private final AtomicLong newProduced;
+    private volatile long newProduced;
 
     /**
      * The current subscription to relay requests for.
@@ -91,32 +90,30 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
      */
     private volatile long requested;
 
-    SubscriptionArbiter() {
-        newProduced = new AtomicLong();
-        newRequested = new AtomicLong();
-        newSubscription = new AtomicReference<>();
-    }
+    /**
+     * Used for serialized access.
+     */
+    private volatile int wip;
 
     @Override
     public void request(long n) {
-        addRequest(newRequested, n);
+        addRequest(n);
         drain();
     }
 
     /**
      * Atomically add the given request amount to the field while capping it at
      * {@link Long#MAX_VALUE}.
-     * @param field the target field to update
      * @param n the request amount to add, must be positive (not verified)
      */
-    private static void addRequest(AtomicLong field, long n) {
+    private void addRequest(long n) {
         for (;;) {
-            final long current = field.get();
+            final long current = newRequested;
             if (current == Long.MAX_VALUE) {
                 return;
             }
             final long update = LongMath.saturatedAdd(current, n);
-            if (field.compareAndSet(current, update)) {
+            if (newRequestedUpdater.compareAndSet(this, current, update)) {
                 return;
             }
         }
@@ -124,13 +121,11 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
 
     @Override
     public void cancel() {
-
-        // Atomically swap in the NoopSubscription#get() instance and call cancel() on
-        // any previous Subscription held.
-        Subscription subscription = newSubscription.get();
+        // Swap newSubscription with NoopSubscription and call cancel() on any previous Subscription held.
+        Subscription subscription = newSubscription;
         final NoopSubscription noopSubscription = NoopSubscription.get();
         if (subscription != noopSubscription) {
-            subscription = newSubscription.getAndSet(noopSubscription);
+            subscription = newSubscriptionUpdater.getAndSet(this, noopSubscription);
             if (subscription != noopSubscription) {
                 if (subscription != null) {
                     subscription.cancel();
@@ -148,13 +143,13 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
     final void setSubscription(Subscription subscription) {
         requireNonNull(subscription, "subscription");
         for (;;) {
-            final Subscription previous = newSubscription.get();
+            final Subscription previous = newSubscription;
             if (previous == NoopSubscription.get()) {
                 // Cancelled already
                 subscription.cancel();
                 return;
             }
-            if (newSubscription.compareAndSet(previous, subscription)) {
+            if (newSubscriptionUpdater.compareAndSet(this, previous, subscription)) {
                 break;
             }
         }
@@ -168,31 +163,32 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
      * @param n the number of items produced, positive
      */
     final void produced(long n) {
-        addRequest(newProduced, n);
+        addRequest(n);
         drain();
     }
 
     final void drain() {
-        if (getAndIncrement() != 0) {
+        if (wipUpdater.getAndIncrement(this) != 0) {
             return;
         }
+
         long toRequest = 0L;
         Subscription requestFrom = null;
 
         do {
-            // Get snapshots from atomic values and initialize them
-            long newReq = newRequested.get();
+            // Get snapshots from volatile values and initialize them
+            long newReq = newRequested;
             if (newReq != 0L) {
-                newReq = newRequested.getAndSet(0L);
+                newReq = newRequestedUpdater.getAndSet(this, 0L);
             }
-            long newProd = newProduced.get();
+            long newProd = newProduced;
             if (newProd != 0L) {
-                newProd = newProduced.getAndSet(0L);
+                newProd = newProducedUpdater.getAndSet(this, 0L);
             }
-            final Subscription next = newSubscription.get();
+            final Subscription next = newSubscription;
             final boolean isCancelled = next == NoopSubscription.get();
             if (next != null) {
-                newSubscription.compareAndSet(next, null);
+                newSubscriptionUpdater.compareAndSet(this, next, null);
             }
 
             if (isCancelled) {
@@ -225,7 +221,7 @@ class SubscriptionArbiter extends AtomicInteger implements Subscription {
                 }
                 requested = currentRequested;
             }
-        } while (decrementAndGet() != 0);
+        } while (wipUpdater.decrementAndGet(this) != 0);
 
         // request outside the serialization loop to avoid certain reentrance issues
         if (requestFrom != null && toRequest != 0L) {
