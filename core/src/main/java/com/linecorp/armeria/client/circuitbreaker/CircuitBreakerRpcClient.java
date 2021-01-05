@@ -100,7 +100,11 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      * unrelated services.
      *
      * @param factory a function that takes a host+method and creates a new {@link CircuitBreaker}
+     *
+     * @deprecated Use {@link #newDecorator(CircuitBreakerMapping, CircuitBreakerRuleWithContent)} with
+     *             {@link CircuitBreakerMapping#perHostAndMethod(BiFunction)}.
      */
+    @Deprecated
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newPerHostAndMethodDecorator(BiFunction<String, String, ? extends CircuitBreaker> factory,
                                  CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
