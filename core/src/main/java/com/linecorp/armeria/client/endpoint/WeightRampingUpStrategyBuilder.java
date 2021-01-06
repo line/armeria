@@ -49,8 +49,8 @@ public final class WeightRampingUpStrategyBuilder {
     private long rampingUpTaskWindowMillis = DEFAULT_RAMPING_UP_ENTRY_WINDOW_MILLIS;
 
     /**
-     * Sets the specified {@link EndpointWeightTransition} that will compute the weight of an {@link Endpoint}
-     * during the transition. {@link EndpointWeightTransition#linear()} is used by default.
+     * Sets computing the weight of an {@link Endpoint} during the transition with the specified
+     * {@link EndpointWeightTransition}. {@link EndpointWeightTransition#linear()} is used by default.
      */
     public WeightRampingUpStrategyBuilder transition(EndpointWeightTransition transition) {
         this.transition = requireNonNull(transition, "transition");
@@ -105,7 +105,7 @@ public final class WeightRampingUpStrategyBuilder {
 
     /**
      * Sets the specified {@code rampingUpTaskWindow} which will be used to combine weight ramping up task.
-     * If several {@link Endpoint}s are added within the {@code rampingUpTaskWindow}, the weights of
+     * If more than one {@link Endpoint} are added within the {@code rampingUpTaskWindow}, the weights of
      * them are ramped up together. If there's already a scheduled job and new {@link Endpoint}s are added
      * within the {@code rampingUpTaskWindow}, they are also ramped up together.
      * This is an example of how it works when {@code rampingUpTaskWindow} is 500 milliseconds and
@@ -127,7 +127,7 @@ public final class WeightRampingUpStrategyBuilder {
 
     /**
      * Sets the specified {@code rampingUpTaskWindowMillis} which will be used to combine weight ramping up
-     * tasks. If several {@link Endpoint}s are added within the {@code rampingUpTaskWindowMillis},
+     * tasks. If more than one {@link Endpoint} are added within the {@code rampingUpTaskWindowMillis},
      * the weights of them are ramped up together. If there's already a scheduled job and
      * new {@link Endpoint}s are added within the {@code rampingUpTaskWindow}, they are also ramped up together.
      * This is an example of how it works when {@code rampingUpTaskWindowMillis} is 500 milliseconds and

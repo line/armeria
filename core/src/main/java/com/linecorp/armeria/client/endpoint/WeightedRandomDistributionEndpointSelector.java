@@ -30,13 +30,14 @@ import com.linecorp.armeria.client.Endpoint;
 /**
  * This selector selects an {@link Endpoint} using random and the weight of the {@link Endpoint}. If there are
  * A(weight 10), B(weight 4) and C(weight 6) {@link Endpoint}s, the chances that {@link Endpoint}s are selected
- * are 10/20, 4/20 and 6/20, respectively. If A {@link Endpoint} is selected 10 times and B and C are not
+ * are 10/20, 4/20 and 6/20, respectively. If {@link Endpoint} A is selected 10 times and B and C are not
  * selected as much as their weight, then A is removed temporarily and the the chances that B and C are selected
  * are 4/10 and 6/10.
  */
 final class WeightedRandomDistributionEndpointSelector {
 
-    private static final AtomicLongFieldUpdater<WeightedRandomDistributionEndpointSelector> updater =
+    private static final AtomicLongFieldUpdater<WeightedRandomDistributionEndpointSelector>
+            currentTotalWeightUpdater =
             AtomicLongFieldUpdater.newUpdater(
                     WeightedRandomDistributionEndpointSelector.class, "currentTotalWeight");
 
@@ -70,6 +71,7 @@ final class WeightedRandomDistributionEndpointSelector {
         if (entries.isEmpty()) {
             return null;
         }
+        final ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
         Endpoint selected = null;
         for (;;) {
             final long currentWeight = currentTotalWeight;
@@ -77,7 +79,7 @@ final class WeightedRandomDistributionEndpointSelector {
                 // currentTotalWeight will become totalWeight as soon as it becomes 0 so we just loop again.
                 continue;
             }
-            long nextLong = ThreadLocalRandom.current().nextLong(currentWeight);
+            long nextLong = threadLocalRandom.nextLong(currentWeight);
             // There's a chance that currentTotalWeight is changed before looping currentEntries.
             // However, we have counters and choosing an endpoint doesn't have to be exact so no big deal.
             // TODO(minwoox): Use binary search when the number of endpoints is greater than N.
@@ -92,9 +94,9 @@ final class WeightedRandomDistributionEndpointSelector {
                     final int counter = entry.incrementAndGet();
                     if (counter <= weight) {
                         selected = endpoint;
-                    }
-                    if (counter == weight) {
-                        decreaseCurrentTotalWeight(weight);
+                        if (counter == weight) {
+                            decreaseCurrentTotalWeight(weight);
+                        }
                     }
                     break;
                 }
@@ -110,8 +112,10 @@ final class WeightedRandomDistributionEndpointSelector {
         for (;;) {
             final long oldWeight = currentTotalWeight;
             final long newWeight = oldWeight - weight;
-            if (updater.compareAndSet(this, oldWeight, newWeight)) {
-                if (currentTotalWeight == 0) {
+            if (currentTotalWeightUpdater.compareAndSet(this, oldWeight, newWeight)) {
+                // There's no chance that newWeight is lower than 0 because decreasing the weight of each entry
+                // happens only once.
+                if (newWeight == 0) {
                     entries.forEach(entry -> entry.set(0));
                     currentTotalWeight = totalWeight;
                 }

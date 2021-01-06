@@ -24,7 +24,6 @@ import static org.mockito.Mockito.verify;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
@@ -44,9 +43,8 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsRampingUpEntry.EndpointAndStep;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.RampingUpEndpointWeightSelector;
-import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.RampingUpEndpointsEntry;
-import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.RampingUpEndpointsEntry.EndpointAndStep;
 import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSelector.Entry;
 
 final class WeightRampingUpStrategyTest {
@@ -83,9 +81,8 @@ final class WeightRampingUpStrategyTest {
         final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, 2);
         ticker.addAndGet(1);
         endpointGroup.addEndpoint(Endpoint.of("bar.com"));
-        Deque<RampingUpEndpointsEntry> rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(1);
-        final Set<EndpointAndStep> endpointAndSteps = rampingUpEndpointsEntries.peek().endpointAndSteps();
+        assertThat(selector.endpointsRampingUp).hasSize(1);
+        final Set<EndpointAndStep> endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
         assertThat(endpointAndSteps).containsExactly(
                 endpointAndStep(Endpoint.of("bar.com"), 1, 500));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
@@ -99,8 +96,7 @@ final class WeightRampingUpStrategyTest {
         scheduledJobs.poll().run();
         // Ramping up is done because the step reached the numberOfSteps.
 
-        rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).isEmpty();
+        assertThat(selector.endpointsRampingUp).isEmpty();
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
                                       .containsExactlyInAnyOrder(
@@ -123,9 +119,8 @@ final class WeightRampingUpStrategyTest {
         endpointGroup.addEndpoint(Endpoint.of("baz.com"));
         endpointGroup.addEndpoint(Endpoint.of("baz1.com"));
 
-        final Deque<RampingUpEndpointsEntry> rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(1);
-        final Set<EndpointAndStep> endpointAndSteps1 = rampingUpEndpointsEntries.peek().endpointAndSteps();
+        assertThat(selector.endpointsRampingUp).hasSize(1);
+        final Set<EndpointAndStep> endpointAndSteps1 = selector.endpointsRampingUp.peek().endpointAndSteps();
         assertThat(endpointAndSteps1).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("bar.com"), 1, 100),
                 endpointAndStep(Endpoint.of("bar1.com"), 1, 100),
@@ -155,9 +150,8 @@ final class WeightRampingUpStrategyTest {
 
         // baz endpoint is not calculated and removed because it's overridden by the next setEndpoints() call.
         endpointGroup.addEndpoint(Endpoint.of("baz.com"));
-        Deque<RampingUpEndpointsEntry> rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(1);
-        final Set<EndpointAndStep> endpointAndSteps1 = rampingUpEndpointsEntries.peek().endpointAndSteps();
+        assertThat(selector.endpointsRampingUp).hasSize(1);
+        final Set<EndpointAndStep> endpointAndSteps1 = selector.endpointsRampingUp.peek().endpointAndSteps();
         assertThat(endpointAndSteps1).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("bar.com"), 1, 100),
                 endpointAndStep(Endpoint.of("bar1.com"), 1, 100));
@@ -176,9 +170,8 @@ final class WeightRampingUpStrategyTest {
 
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(1));
         scheduledJobs.poll().run();
-        rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(1);
-        final Set<EndpointAndStep> endpointAndSteps2 = rampingUpEndpointsEntries.peek().endpointAndSteps();
+        assertThat(selector.endpointsRampingUp).hasSize(1);
+        final Set<EndpointAndStep> endpointAndSteps2 = selector.endpointsRampingUp.peek().endpointAndSteps();
         assertThat(endpointAndSteps2).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("bar.com"), 2, 200),
                 endpointAndStep(Endpoint.of("bar1.com"), 2, 200),
@@ -207,8 +200,7 @@ final class WeightRampingUpStrategyTest {
         // not happening for the endpoint.
         endpointGroup.setEndpoints(
                 ImmutableList.of(Endpoint.of("foo.com").withWeight(100), Endpoint.of("foo1.com")));
-        Deque<RampingUpEndpointsEntry> rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(0);
+        assertThat(selector.endpointsRampingUp).hasSize(0);
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
                                       .containsExactlyInAnyOrder(
@@ -220,9 +212,8 @@ final class WeightRampingUpStrategyTest {
                                                     Endpoint.of("foo1.com"),
                                                     Endpoint.of("bar.com")));
 
-        rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(1);
-        Set<EndpointAndStep> endpointAndSteps = rampingUpEndpointsEntries.peek().endpointAndSteps();
+        assertThat(selector.endpointsRampingUp).hasSize(1);
+        Set<EndpointAndStep> endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
         assertThat(endpointAndSteps).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("foo.com").withWeight(3000), 1, 300),
                 endpointAndStep(Endpoint.of("bar.com"), 1, 100));
@@ -237,9 +228,8 @@ final class WeightRampingUpStrategyTest {
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(20));
         scheduledJobs.poll().run();
 
-        rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(1);
-        endpointAndSteps = rampingUpEndpointsEntries.peek().endpointAndSteps();
+        assertThat(selector.endpointsRampingUp).hasSize(1);
+        endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
         assertThat(endpointAndSteps).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("foo.com").withWeight(3000), 2, 600),
                 endpointAndStep(Endpoint.of("bar.com"), 2, 200));
@@ -257,8 +247,7 @@ final class WeightRampingUpStrategyTest {
         endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com").withWeight(599),
                                                     Endpoint.of("foo1.com"),
                                                     Endpoint.of("bar.com")));
-        rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(1);
+        assertThat(selector.endpointsRampingUp).hasSize(1);
         assertThat(endpointAndSteps).containsExactly(
                 endpointAndStep(Endpoint.of("bar.com"), 2, 200));
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
@@ -284,9 +273,8 @@ final class WeightRampingUpStrategyTest {
         endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
                                                     Endpoint.of("bar.com").withWeight(3000)));
 
-        final Deque<RampingUpEndpointsEntry> rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(1);
-        final Set<EndpointAndStep> endpointAndSteps = rampingUpEndpointsEntries.peek().endpointAndSteps();
+        assertThat(selector.endpointsRampingUp).hasSize(1);
+        final Set<EndpointAndStep> endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
         assertThat(endpointAndSteps).containsExactly(
                 endpointAndStep(Endpoint.of("bar.com").withWeight(3000), 1, 300));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
@@ -299,7 +287,7 @@ final class WeightRampingUpStrategyTest {
         ticker.addAndGet(1);
         // bar.com is removed.
         endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com")));
-        assertThat(rampingUpEndpointsEntries).isEmpty();
+        assertThat(selector.endpointsRampingUp).isEmpty();
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
                                       .containsExactlyInAnyOrder(
@@ -325,9 +313,8 @@ final class WeightRampingUpStrategyTest {
                                                     Endpoint.of("bar.com"), Endpoint.of("bar.com"),
                                                     Endpoint.of("bar.com"), Endpoint.of("bar1.com")));
 
-        final Deque<RampingUpEndpointsEntry> rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(1);
-        final Set<EndpointAndStep> endpointAndSteps = rampingUpEndpointsEntries.peek().endpointAndSteps();
+        assertThat(selector.endpointsRampingUp).hasSize(1);
+        final Set<EndpointAndStep> endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
         assertThat(endpointAndSteps).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("bar.com").withWeight(3000), 1, 300),
                 endpointAndStep(Endpoint.of("bar1.com"), 1, 100)
@@ -396,9 +383,8 @@ final class WeightRampingUpStrategyTest {
         endpointGroup.addEndpoint(Endpoint.of("bar.com"));
         endpointGroup.addEndpoint(Endpoint.of("bar1.com"));
 
-        final Deque<RampingUpEndpointsEntry> rampingUpEndpointsEntries = selector.rampingUpEndpointsEntries;
-        assertThat(rampingUpEndpointsEntries).hasSize(1);
-        final Set<EndpointAndStep> endpointAndSteps = rampingUpEndpointsEntries.peek().endpointAndSteps();
+        assertThat(selector.endpointsRampingUp).hasSize(1);
+        final Set<EndpointAndStep> endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
         assertThat(endpointAndSteps).containsExactlyInAnyOrder(
                 endpointAndStep(Endpoint.of("bar.com"), 1, 100),
                 endpointAndStep(Endpoint.of("bar1.com"), 1, 100));
