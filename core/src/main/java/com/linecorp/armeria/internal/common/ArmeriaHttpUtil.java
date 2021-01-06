@@ -61,6 +61,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -952,8 +953,9 @@ public final class ArmeriaHttpUtil {
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
     public static void toNettyHttp1ClientHeader(
-            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        toNettyHttp1Client(inputHeaders, outputHeaders, false);
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
+            Http1HeaderNaming http1HeaderNaming) {
+        toNettyHttp1Client(inputHeaders, outputHeaders, http1HeaderNaming, false);
         HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
     }
 
@@ -964,13 +966,14 @@ public final class ArmeriaHttpUtil {
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
     public static void toNettyHttp1ClientTrailer(
-            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        toNettyHttp1Client(inputHeaders, outputHeaders, true);
+            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
+            Http1HeaderNaming http1HeaderNaming) {
+        toNettyHttp1Client(inputHeaders, outputHeaders, http1HeaderNaming, true);
     }
 
     private static void toNettyHttp1Client(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
-            boolean isTrailer) {
+            Http1HeaderNaming http1HeaderNaming, boolean isTrailer) {
         StringJoiner cookieJoiner = null;
 
         for (Entry<AsciiString, String> entry : inputHeaders) {
@@ -998,7 +1001,7 @@ public final class ArmeriaHttpUtil {
                 }
                 COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
             } else {
-                outputHeaders.add(name, value);
+                outputHeaders.add(http1HeaderNaming.convert(name), value);
             }
         }
 

@@ -52,6 +52,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
@@ -571,6 +572,17 @@ public final class ClientFactoryBuilder {
     public ClientFactoryBuilder proxyConfig(ProxyConfigSelector proxyConfigSelector) {
         requireNonNull(proxyConfigSelector, "proxyConfigSelector");
         option(ClientFactoryOptions.PROXY_CONFIG_SELECTOR, proxyConfigSelector);
+        return this;
+    }
+
+    /**
+     * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+     * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
+     * case sensitive HTTP/1 headers.
+     */
+    public ClientFactoryBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
+        requireNonNull(http1HeaderNaming, "http1HeaderNaming");
+        option(ClientFactoryOptions.HTTP1_HEADER_NAMING, http1HeaderNaming);
         return this;
     }
 
