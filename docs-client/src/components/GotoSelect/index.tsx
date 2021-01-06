@@ -71,7 +71,7 @@ function getOptions(specification: Specification): Option[] {
     options.push({
       group: 'Enums',
       label: `${enm.name}`,
-      value: `/enums/${enm.name}/`,
+      value: `/enums/${enm.name}`,
     });
   }
 
@@ -79,7 +79,7 @@ function getOptions(specification: Specification): Option[] {
     options.push({
       group: 'Structs',
       label: `${struct.name}`,
-      value: `/structs/${struct.name}/`,
+      value: `/structs/${struct.name}`,
     });
   }
 
@@ -87,7 +87,7 @@ function getOptions(specification: Specification): Option[] {
     options.push({
       group: 'Exceptions',
       label: `${exception.name}`,
-      value: `/structs/${exception.name}/`,
+      value: `/structs/${exception.name}`,
     });
   }
 
