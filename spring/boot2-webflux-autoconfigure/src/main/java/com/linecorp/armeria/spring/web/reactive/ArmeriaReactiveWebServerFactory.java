@@ -18,11 +18,8 @@ package com.linecorp.armeria.spring.web.reactive;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureTls;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.contentEncodingDecorator;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.parseDataSize;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -31,6 +28,7 @@ import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -47,11 +45,11 @@ import org.springframework.boot.web.server.Http2;
 import org.springframework.boot.web.server.Ssl;
 import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.boot.web.server.WebServer;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.env.Environment;
 import org.springframework.http.server.reactive.HttpHandler;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
@@ -59,14 +57,14 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.docs.DocService;
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 
@@ -134,84 +132,115 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
             return armeriaWebServerBean;
         }
 
+        final Http2 http2 = getHttp2();
+        if (http2 != null && !http2.isEnabled()) {
+            logger.warn("Cannot disable HTTP/2 protocol for Armeria server. It will be enabled automatically.");
+        }
+
         final ServerBuilder sb = Server.builder();
         sb.disableServerHeader();
         sb.disableDateHeader();
 
-        final SessionProtocol protocol;
-        final Ssl ssl = getSsl();
-        if (ssl != null) {
-            if (ssl.isEnabled()) {
-                final SslStoreProvider provider = getSslStoreProvider();
-                final Supplier<KeyStore> keyStoreSupplier;
-                final Supplier<KeyStore> trustStoreSupplier;
-                if (provider != null) {
-                    keyStoreSupplier = () -> {
-                        try {
-                            return provider.getKeyStore();
-                        } catch (Exception e) {
-                            throw new IllegalStateException(e);
-                        }
-                    };
-                    trustStoreSupplier = () -> {
-                        try {
-                            return provider.getTrustStore();
-                        } catch (Exception e) {
-                            throw new IllegalStateException(e);
-                        }
-                    };
-                } else {
-                    keyStoreSupplier = null;
-                    trustStoreSupplier = null;
-                }
-                configureTls(sb, toArmeriaSslConfiguration(ssl), keyStoreSupplier, trustStoreSupplier);
-                protocol = SessionProtocol.HTTPS;
+        // In the property file, both Spring and Armeria port configuration can coexist.
+        // We use following to define primaryAddress, primaryLocalPort and primarySessionProtocol:
+        // (we consider Spring port is not specified when it's 0.)
+        // 1) Spring port and Armeria port exist:
+        //    - primaryAddress = Spring address
+        //    - primaryLocalPort = Spring port
+        //    - primarySessionProtocol = depends on the springSsl.isEnabled()
+        // 2) Spring port
+        //    - primaryAddress = Spring address
+        //    - primaryLocalPort = Spring port
+        //    - primarySessionProtocol = depends on the springSsl.isEnabled()
+        // 3) Armeria port
+        //    - primaryAddress = null
+        //    - primaryLocalPort = the port of the first Armeria Port
+        //    - primarySessionProtocol = the session protocol of the first Armeria Port
+        // 4) none of
+        //    - primaryAddress = Spring address
+        //    - primaryLocalPort = Spring port
+        //    - primarySessionProtocol = depends on the armeriaSsl.isEnabled().
+        //                               If armeriaSsl is null use SpringSsl
+        //
+        // Please note that Armeria TLS configuration has precedence over Spring SSL.
+
+        final ArmeriaSettings armeriaSettings = findBean(ArmeriaSettings.class);
+        final boolean armeriaSslEnabled = isArmeriaSslEnabled(armeriaSettings);
+        final Ssl springSsl = getSsl();
+        final SessionProtocol springSessionProtocol;
+        if (springSsl != null && springSsl.isEnabled()) {
+            if (armeriaSslEnabled) {
+                // TLS will be applied in configureServerWithArmeriaSettings.
+                logger.warn("Both Armeria and Spring TLS configuration exist. " +
+                            "Armeria TLS configuration is used.");
             } else {
-                logger.warn("TLS configuration exists but it is disabled by 'enabled' property.");
-                protocol = SessionProtocol.HTTP;
+                configureTls(sb, toArmeriaSslConfiguration(springSsl));
+            }
+            springSessionProtocol = SessionProtocol.HTTPS;
+        } else {
+            springSessionProtocol = SessionProtocol.HTTP;
+        }
+
+        final int springPort = ensureValidPort(getPort());
+        final List<Port> armeriaPorts = armeriaPorts(armeriaSettings);
+        final InetAddress primaryAddress;
+        final int primaryLocalPort;
+        final SessionProtocol primarySessionProtocol;
+        if (springPort > 0 || armeriaPorts.isEmpty()) {
+            // The cases of 1, 2, 4.
+            primaryAddress = getAddress();
+            primaryLocalPort = springPort;
+            if (springPort == 0) {
+                // case 4
+                primarySessionProtocol = armeriaSslEnabled ? SessionProtocol.HTTPS : springSessionProtocol;
+            } else {
+                primarySessionProtocol = springSessionProtocol;
+            }
+            if (primaryAddress != null) {
+                sb.port(new InetSocketAddress(primaryAddress, primaryLocalPort), primarySessionProtocol);
+            } else {
+                sb.port(primaryLocalPort, primarySessionProtocol);
             }
         } else {
-            protocol = SessionProtocol.HTTP;
+            // The case of 3
+            primaryAddress = null;
+            final Port armeriaFirstPort = armeriaPorts.get(0);
+            final List<SessionProtocol> protocols = armeriaFirstPort.getProtocols();
+            primaryLocalPort = armeriaFirstPort.getPort();
+            primarySessionProtocol = protocols != null && !protocols.isEmpty() ? protocols.get(0)
+                                                                               : SessionProtocol.HTTP;
+            // Armeria port is configured in configureServerWithArmeriaSettings.
         }
 
-        final Http2 http2 = getHttp2();
-        if (http2 != null && !http2.isEnabled()) {
-            logger.warn(
-                    "Cannot disable HTTP/2 protocol for Armeria server. It will be enabled automatically.");
+        if (!isArmeriaCompressionEnabled(armeriaSettings)) {
+            final Compression compression = getCompression();
+            if (compression != null && compression.getEnabled()) {
+                final long minResponseSize = compression.getMinResponseSize().toBytes();
+                sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
+                                                      compression.getExcludedUserAgents(),
+                                                      Ints.saturatedCast(minResponseSize)));
+            }
         }
 
-        final InetAddress address = getAddress();
-        final int port = ensureValidPort(getPort());
-        if (address != null) {
-            sb.port(new InetSocketAddress(address, port), protocol);
-        } else {
-            sb.port(port, protocol);
+        if (armeriaSettings != null) {
+            configureServerWithArmeriaSettings(sb, armeriaSettings,
+                                               findBeans(ArmeriaServerConfigurator.class),
+                                               findBeans(Consumer.class, ServerBuilder.class),
+                                               findBeans(DocServiceConfigurator.class),
+                                               firstNonNull(findBean(MeterRegistry.class),
+                                                            Metrics.globalRegistry),
+                                               findBeans(HealthChecker.class),
+                                               findBeans(HealthCheckServiceConfigurator.class),
+                                               meterIdPrefixFunctionOrDefault());
         }
-
-        final Compression compression = getCompression();
-        if (compression != null && compression.getEnabled()) {
-            final long minResponseSize = compression.getMinResponseSize().toBytes();
-            sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
-                                                  compression.getExcludedUserAgents(),
-                                                  Ints.saturatedCast(minResponseSize)));
-        }
-
-        final DocServiceBuilder docServiceBuilder = DocService.builder();
-        findBeans(DocServiceConfigurator.class).forEach(
-                configurator -> configurator.configure(docServiceBuilder));
-
-        final ArmeriaSettings settings = findBean(ArmeriaSettings.class);
-        if (settings != null) {
-            configureArmeriaService(sb, docServiceBuilder, settings);
-        }
-        findBeans(ArmeriaServerConfigurator.class).forEach(configurator -> configurator.configure(sb));
 
         final DataBufferFactoryWrapper<?> factoryWrapper =
                 firstNonNull(findBean(DataBufferFactoryWrapper.class), DataBufferFactoryWrapper.DEFAULT);
 
         final Server server = configureService(sb, httpHandler, factoryWrapper, getServerHeader()).build();
-        final ArmeriaWebServer armeriaWebServer = new ArmeriaWebServer(server, protocol, address, port,
-                                                                       beanFactory);
+        final ArmeriaWebServer armeriaWebServer = new ArmeriaWebServer(server, primarySessionProtocol,
+                                                                       primaryAddress,
+                                                                       primaryLocalPort, beanFactory);
         if (!isManagementPortEqualsToServerPort()) {
             // The management port is set to the Server in ArmeriaSpringActuatorAutoConfiguration.
             // Since this method will be called twice, need to reuse ArmeriaWebServer.
@@ -219,6 +248,64 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         }
 
         return armeriaWebServer;
+    }
+
+    private static boolean isArmeriaSslEnabled(@Nullable ArmeriaSettings armeriaSettings) {
+        if (armeriaSettings != null) {
+            final com.linecorp.armeria.spring.Ssl ssl = armeriaSettings.getSsl();
+            if (ssl != null) {
+                return ssl.isEnabled();
+            }
+        }
+        return false;
+    }
+
+    private static List<Port> armeriaPorts(@Nullable ArmeriaSettings armeriaSettings) {
+        if (armeriaSettings != null) {
+            return armeriaSettings.getPorts();
+        }
+        return ImmutableList.of();
+    }
+
+    private static boolean isArmeriaCompressionEnabled(@Nullable ArmeriaSettings armeriaSettings) {
+        if (armeriaSettings != null) {
+            final ArmeriaSettings.Compression compression = armeriaSettings.getCompression();
+            if (compression != null) {
+                return compression.isEnabled();
+            }
+        }
+        return false;
+    }
+
+    private void configureTls(ServerBuilder sb, com.linecorp.armeria.spring.Ssl ssl) {
+        final SslStoreProvider provider = getSslStoreProvider();
+        final Supplier<KeyStore> keyStoreSupplier;
+        final Supplier<KeyStore> trustStoreSupplier;
+        if (provider != null) {
+            keyStoreSupplier = () -> {
+                try {
+                    return provider.getKeyStore();
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+            };
+            trustStoreSupplier = () -> {
+                try {
+                    return provider.getTrustStore();
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+            };
+        } else {
+            keyStoreSupplier = null;
+            trustStoreSupplier = null;
+        }
+        ArmeriaConfigurationUtil.configureTls(sb, ssl, keyStoreSupplier, trustStoreSupplier);
+    }
+
+    private MeterIdPrefixFunction meterIdPrefixFunctionOrDefault() {
+        final MeterIdPrefixFunction f = findBean(MeterIdPrefixFunction.class);
+        return f != null ? f : MeterIdPrefixFunction.ofDefault("armeria.server");
     }
 
     @VisibleForTesting
@@ -259,32 +346,6 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                  });
     }
 
-    private void configureArmeriaService(ServerBuilder sb, DocServiceBuilder docServiceBuilder,
-                                         ArmeriaSettings settings) {
-        configurePorts(sb, settings.getPorts());
-        final MeterIdPrefixFunction f = findBean(MeterIdPrefixFunction.class);
-        configureServerWithArmeriaSettings(sb, settings,
-                                           firstNonNull(findBean(MeterRegistry.class), Metrics.globalRegistry),
-                                           findBeans(HealthChecker.class),
-                                           findBeans(HealthCheckServiceConfigurator.class),
-                                           f != null ? f : MeterIdPrefixFunction.ofDefault("armeria.server"));
-        if (settings.getSsl() != null) {
-            configureTls(sb, settings.getSsl());
-        }
-
-        final ArmeriaSettings.Compression compression = settings.getCompression();
-        if (compression != null && compression.isEnabled()) {
-            final long parsed = parseDataSize(compression.getMinResponseSize());
-            sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
-                                                  compression.getExcludedUserAgents(),
-                                                  Ints.saturatedCast(parsed)));
-        }
-
-        if (!Strings.isNullOrEmpty(settings.getDocsPath())) {
-            sb.serviceUnder(settings.getDocsPath(), docServiceBuilder.build());
-        }
-    }
-
     @Nullable
     private <T> T findBean(Class<T> clazz) {
         try {
@@ -304,6 +365,18 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         return Arrays.stream(names)
                      .map(name -> beanFactory.getBean(name, clazz))
                      .collect(toImmutableList());
+    }
+
+    private <T> List<T> findBeans(Class<?> containerType, Class<?> genericType) {
+        final ResolvableType resolvableType = ResolvableType.forClassWithGenerics(containerType, genericType);
+        final String[] names = beanFactory.getBeanNamesForType(resolvableType);
+        if (names.length == 0) {
+            return ImmutableList.of();
+        }
+        @SuppressWarnings("unchecked")
+        final List<T> beans = (List<T>) Arrays.stream(names).map(beanFactory::getBean)
+                                              .collect(toImmutableList());
+        return beans;
     }
 
     private static int ensureValidPort(int port) {
