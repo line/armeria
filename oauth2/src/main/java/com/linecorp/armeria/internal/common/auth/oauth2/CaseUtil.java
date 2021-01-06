@@ -20,6 +20,9 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
+@UnstableApi
 public final class CaseUtil {
 
   @Nullable

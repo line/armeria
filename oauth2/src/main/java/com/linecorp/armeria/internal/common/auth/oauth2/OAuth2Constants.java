@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.internal.common.auth.oauth2;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Common OAuth 2.0 constants.
  */
+@UnstableApi
 public interface OAuth2Constants {
 
     /**

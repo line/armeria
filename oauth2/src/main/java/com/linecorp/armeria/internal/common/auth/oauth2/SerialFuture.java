@@ -25,11 +25,13 @@ import java.util.concurrent.Executor;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * Executes submitted {@link Callable} actions asynchronously in sequence.
  */
+@UnstableApi
 public class SerialFuture {
 
     private final Queue<Runnable> actions = new LinkedList<>();

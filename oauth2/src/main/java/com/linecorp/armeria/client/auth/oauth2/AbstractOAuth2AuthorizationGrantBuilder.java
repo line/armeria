@@ -187,15 +187,15 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
         return executor;
     }
 
-    protected abstract AbstractAccessTokenRequest buildObtainRequest(
+    abstract AbstractAccessTokenRequest buildObtainRequest(
             WebClient accessTokenEndpoint, String accessTokenEndpointPath,
             @Nullable ClientAuthorization clientAuthorization);
 
-    protected final AbstractAccessTokenRequest buildObtainRequest() {
+    final AbstractAccessTokenRequest buildObtainRequest() {
         return buildObtainRequest(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
     }
 
-    protected final RefreshAccessTokenRequest buildRefreshRequest() {
+    final RefreshAccessTokenRequest buildRefreshRequest() {
         return new RefreshAccessTokenRequest(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
     }
 }

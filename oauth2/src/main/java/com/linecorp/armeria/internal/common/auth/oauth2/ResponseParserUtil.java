@@ -18,9 +18,12 @@ package com.linecorp.armeria.internal.common.auth.oauth2;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Common OAuth 2.0 Response parsing helper.
  */
+@UnstableApi
 public final class ResponseParserUtil {
 
     public static final ObjectMapper JSON = new ObjectMapper();
