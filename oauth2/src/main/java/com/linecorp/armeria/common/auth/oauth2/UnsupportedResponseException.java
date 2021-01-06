@@ -19,10 +19,12 @@ package com.linecorp.armeria.common.auth.oauth2;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A response type in not supported by the given request/response flow.
  */
+@UnstableApi
 public class UnsupportedResponseException extends RuntimeException {
 
     private static final long serialVersionUID = 4982498806675787821L;

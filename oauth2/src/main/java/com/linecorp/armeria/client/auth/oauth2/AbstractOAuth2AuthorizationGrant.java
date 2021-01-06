@@ -58,7 +58,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
         this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
         tokenManager = new TokenLifecycleManager<>(this::isValid, this::canRefresh,
                                                    this::shallObtainInsteadOfUpdate,
-                                                   this::obtainAccessTokenAsync, this::refreshAccessTokenAsync,
+                                                   this::obtainAccessToken, this::refreshAccessToken,
                                                    tokenSupplier, tokenConsumer, executor);
     }
 
@@ -87,7 +87,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     /**
      * Refreshes access token.
      */
-    private CompletionStage<GrantedOAuth2AccessToken> refreshAccessTokenAsync(GrantedOAuth2AccessToken token) {
+    private CompletionStage<GrantedOAuth2AccessToken> refreshAccessToken(GrantedOAuth2AccessToken token) {
         return refreshRequest.make(token);
     }
 
@@ -104,7 +104,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
      *                                       (JSON).
      */
-    protected abstract CompletableFuture<GrantedOAuth2AccessToken> obtainAccessTokenAsync(
+    abstract CompletableFuture<GrantedOAuth2AccessToken> obtainAccessToken(
             @Nullable GrantedOAuth2AccessToken token);
 
     /**

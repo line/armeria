@@ -39,11 +39,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants;
 
 /**
  * Builds an instance of {@link GrantedOAuth2AccessToken}.
  */
+@UnstableApi
 public final class GrantedOAuth2AccessTokenBuilder {
 
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =

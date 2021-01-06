@@ -21,12 +21,14 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 
 /**
  * Implements Token Revocation request/response flow,
  * as per <a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>.
  */
+@UnstableApi
 public final class TokenRevocationRequest extends AbstractTokenOperationRequest<Boolean> {
 
     /**

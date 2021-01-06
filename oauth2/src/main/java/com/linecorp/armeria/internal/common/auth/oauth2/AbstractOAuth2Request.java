@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
@@ -45,6 +46,7 @@ import com.linecorp.armeria.common.auth.oauth2.UnsupportedResponseException;
  * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a> and other relevant specifications.
  * @param <T> the type of the authorization result.
  */
+@UnstableApi
 public abstract class AbstractOAuth2Request<T> {
 
     private final WebClient endpoint;

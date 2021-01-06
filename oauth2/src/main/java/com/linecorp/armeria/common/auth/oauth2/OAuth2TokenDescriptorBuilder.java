@@ -43,9 +43,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Builds an instance of {@link OAuth2TokenDescriptor}.
  */
+@UnstableApi
 public final class OAuth2TokenDescriptorBuilder {
 
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =

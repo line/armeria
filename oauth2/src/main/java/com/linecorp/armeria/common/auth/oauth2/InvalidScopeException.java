@@ -16,45 +16,48 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * The requested scope is invalid, unknown, malformed, or exceeds the scope granted by the resource
  * owner.
  */
+@UnstableApi
 public class InvalidScopeException extends TokenRequestException {
 
-  private static final long serialVersionUID = 6364081426172863719L;
+    private static final long serialVersionUID = 6364081426172863719L;
 
-  /**
-   * Constructs a new {@link InvalidScopeException} using {@code errorDescription} and {@code errorUri}.
-   * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
-   *                         used to assist the client developer in understanding the error that occurred.
-   *                         Values for the {@code errorDescription} parameter MUST NOT include
-   *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
-   * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
-   *                 used to provide the client developer with additional information about the error.
-   *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
-   *                 thus MUST NOT include characters outside
-   *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
-   */
-  public InvalidScopeException(String errorDescription, String errorUri) {
-    super(errorDescription, errorUri);
-  }
+    /**
+     * Constructs a new {@link InvalidScopeException} using {@code errorDescription} and {@code errorUri}.
+     * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
+     *                         used to assist the client developer in understanding the error that occurred.
+     *                         Values for the {@code errorDescription} parameter MUST NOT include
+     *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
+     * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
+     *                 used to provide the client developer with additional information about the error.
+     *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
+     *                 thus MUST NOT include characters outside
+     *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
+     */
+    public InvalidScopeException(String errorDescription, String errorUri) {
+        super(errorDescription, errorUri);
+    }
 
-  /**
-   * Constructs a new {@link InvalidScopeException} using {@code errorDescription} and {@code errorUri}.
-   * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
-   *                         used to assist the client developer in understanding the error that occurred.
-   *                         Values for the {@code errorDescription} parameter MUST NOT include
-   *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
-   * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
-   *                 used to provide the client developer with additional information about the error.
-   *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
-   *                 thus MUST NOT include characters outside
-   *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
-   * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).
-   *              (A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.)
-   */
-  public InvalidScopeException(String errorDescription, String errorUri, Throwable cause) {
-    super(errorDescription, errorUri, cause);
-  }
+    /**
+     * Constructs a new {@link InvalidScopeException} using {@code errorDescription} and {@code errorUri}.
+     * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
+     *                         used to assist the client developer in understanding the error that occurred.
+     *                         Values for the {@code errorDescription} parameter MUST NOT include
+     *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
+     * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
+     *                 used to provide the client developer with additional information about the error.
+     *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
+     *                 thus MUST NOT include characters outside
+     *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
+     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).
+     *              (A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.)
+     */
+    public InvalidScopeException(String errorDescription, String errorUri, Throwable cause) {
+        super(errorDescription, errorUri, cause);
+    }
 }

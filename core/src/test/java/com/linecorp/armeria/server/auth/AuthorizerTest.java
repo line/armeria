@@ -20,6 +20,7 @@ import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -29,13 +30,17 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,24 +48,24 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 public class AuthorizerTest {
 
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
+    @RegisterExtension
+    static EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Nullable
     private static ServiceRequestContext serviceCtx;
 
-    @BeforeClass
+    @BeforeAll
     public static void setServiceContext() {
         serviceCtx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                           .eventLoop(eventLoop.get())
                                           .build();
     }
 
-    @AfterClass
+    @AfterAll
     public static void clearServiceContext() {
         serviceCtx = null;
     }
@@ -143,27 +148,8 @@ public class AuthorizerTest {
         assertThat(a.orElse(b).orElse(c.orElse(d)).orElse(e).toString()).isEqualTo("[A, B, [C, D], E]");
     }
 
-    @Test
-    public void orElseHandler() {
-        orElseHandler(new boolean[] {true, true, true}, -1, true, 0, -1);
-        orElseHandler(new boolean[] {true, true, false}, -1, true, 0, -1);
-        orElseHandler(new boolean[] {true, false, true}, -1, true, 0, -1);
-        orElseHandler(new boolean[] {true, false, false}, -1, true, 0, -1);
-
-        orElseHandler(new boolean[] {false, true, true}, -1, true, 1, 0);
-        orElseHandler(new boolean[] {false, true, false}, -1, true, 1, 0);
-        orElseHandler(new boolean[] {false, false, true}, -1, true, 2, 1);
-        orElseHandler(new boolean[] {false, false, false}, -1, false, -1, 2);
-
-        orElseHandler(new boolean[] {true, true, true}, 0, true, -1, -1);
-        orElseHandler(new boolean[] {false, true, true}, 1, true, -1, 0);
-        orElseHandler(new boolean[] {false, false, true}, 2, true, -1, 1);
-
-        orElseHandler(new boolean[] {false, false, false}, 0, false, -1, 2);
-        orElseHandler(new boolean[] {false, false, false}, 1, false, -1, 2);
-        orElseHandler(new boolean[] {false, false, false}, 2, false, -1, 1);
-    }
-
+    @ParameterizedTest
+    @MethodSource("orElseHandlerArguments")
     public void orElseHandler(boolean[] statuses, int nullHandler, boolean expectedStatus,
                               int expectedSuccessHandler, int expectedFailureHandler) {
         final Authorizer<String>[] authorizers = new Authorizer[statuses.length];
@@ -196,10 +182,32 @@ public class AuthorizerTest {
         }
     }
 
+    private static Stream<Arguments> orElseHandlerArguments() {
+        return Stream.of(
+          Arguments.of(new boolean[] {true, true, true}, -1, true, 0, -1),
+          Arguments.of(new boolean[] {true, true, false}, -1, true, 0, -1),
+          Arguments.of(new boolean[] {true, false, true}, -1, true, 0, -1),
+          Arguments.of(new boolean[] {true, false, false}, -1, true, 0, -1),
+
+          Arguments.of(new boolean[] {false, true, true}, -1, true, 1, 0),
+          Arguments.of(new boolean[] {false, true, false}, -1, true, 1, 0),
+          Arguments.of(new boolean[] {false, false, true}, -1, true, 2, 1),
+          Arguments.of(new boolean[] {false, false, false}, -1, false, -1, 2),
+
+          Arguments.of(new boolean[] {true, true, true}, 0, true, -1, -1),
+          Arguments.of(new boolean[] {false, true, true}, 1, true, -1, 0),
+          Arguments.of(new boolean[] {false, false, true}, 2, true, -1, 1),
+
+          Arguments.of(new boolean[] {false, false, false}, 0, false, -1, 2),
+          Arguments.of(new boolean[] {false, false, false}, 1, false, -1, 2),
+          Arguments.of(new boolean[] {false, false, false}, 2, false, -1, 1)
+        );
+    }
+
     private static Authorizer<String> newMock() {
         @SuppressWarnings("unchecked")
         final Authorizer<String> mock = mock(Authorizer.class);
-        when(mock.orElse(any())).thenCallRealMethod();
+        lenient().when(mock.orElse(any())).thenCallRealMethod();
         return mock;
     }
 

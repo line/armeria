@@ -19,10 +19,12 @@ package com.linecorp.armeria.common.auth.oauth2;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A response {@code Content-Type} header does not match the expected type.
  */
+@UnstableApi
 public class UnsupportedMediaTypeException extends RuntimeException {
 
     private static final long serialVersionUID = 5350546517834409748L;

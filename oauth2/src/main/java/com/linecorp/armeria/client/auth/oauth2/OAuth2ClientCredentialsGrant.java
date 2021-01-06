@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.internal.client.auth.oauth2.ClientCredentialsTokenRequest;
 import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenReques
  * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
  * Implements Access Token loading, storing, obtaining and refreshing.
  */
+@UnstableApi
 public class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGrant {
 
     /**
@@ -61,7 +63,7 @@ public class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGra
     }
 
     @Override
-    protected CompletableFuture<GrantedOAuth2AccessToken> obtainAccessTokenAsync(
+    CompletableFuture<GrantedOAuth2AccessToken> obtainAccessToken(
             @Nullable GrantedOAuth2AccessToken token) {
         return obtainRequest.make(token == null ? null : token.scope());
     }

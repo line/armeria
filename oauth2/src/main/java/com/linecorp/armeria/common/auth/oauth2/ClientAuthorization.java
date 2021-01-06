@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.auth.oauth2.CaseUtil;
 
 /**
@@ -42,6 +43,7 @@ import com.linecorp.armeria.internal.common.auth.oauth2.CaseUtil;
  * network hops.
  * The authorization source might either provide complete authorization token or client credentials.
  */
+@UnstableApi
 public final class ClientAuthorization {
 
     private static final String DEFAULT_AUTHORIZATION_TYPE = "Basic";

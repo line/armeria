@@ -42,6 +42,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.auth.oauth2.CaseUtil;
 import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants;
 
@@ -49,6 +50,7 @@ import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants;
  * Defines a structure of the Access Token Response, as per
  * <a href="https://tools.ietf.org/html/rfc6749#section-5.1">[RFC6749], Section 5.1</a>.
  */
+@UnstableApi
 public class GrantedOAuth2AccessToken implements Serializable {
 
     private static final long serialVersionUID = 8698118404098897958L;
@@ -361,7 +363,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(rawResponse());
+        return rawResponse().hashCode();
     }
 
     @Nullable

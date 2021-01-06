@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.internal.client.auth.oauth2.AbstractAccessTokenRequest;
 import com.linecorp.armeria.internal.client.auth.oauth2.ClientCredentialsTokenRequest;
@@ -28,6 +29,7 @@ import com.linecorp.armeria.internal.client.auth.oauth2.ClientCredentialsTokenRe
 /**
  * Builds {@link OAuth2ClientCredentialsGrant}.
  */
+@UnstableApi
 public final class OAuth2ClientCredentialsGrantBuilder
         extends AbstractOAuth2AuthorizationGrantBuilder<OAuth2ClientCredentialsGrantBuilder> {
 

@@ -16,14 +16,17 @@
 
 package com.linecorp.armeria.server.auth;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -54,20 +57,30 @@ final class AuthorizerChain<T> implements Authorizer<T> {
         LAST_WITH_HANDLER
     }
 
-    private final LinkedList<Authorizer<T>> authorizers = new LinkedList<>();
+    private final List<? extends Authorizer<T>> authorizers;
     private final AuthorizerSelectionStrategy selectionStrategy;
     @Nullable
     private AuthSuccessHandler successHandler;
     @Nullable
     private AuthFailureHandler failureHandler;
 
-    AuthorizerChain(Authorizer<T> firstAuthorizer, AuthorizerSelectionStrategy selectionStrategy) {
-        authorizers.add(requireNonNull(firstAuthorizer, "firstAuthorizer"));
+    AuthorizerChain(Iterable<? extends Authorizer<T>> authorizers,
+                    AuthorizerSelectionStrategy selectionStrategy) {
+        requireNonNull(authorizers, "authorizers");
+        final Iterator<? extends Authorizer<T>> it = authorizers.iterator();
+        checkArgument(it.hasNext(), "List of authorizers is empty");
+        final Authorizer<T> firstAuthorizer = it.next();
+        requireNonNull(firstAuthorizer, "firstAuthorizer");
+        this.authorizers = ImmutableList.copyOf(authorizers);
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         if (selectionStrategy == AuthorizerSelectionStrategy.FIRST) {
             // this could be NULL
-            failureHandler = authorizers.getFirst().failureHandler();
+            failureHandler = firstAuthorizer.failureHandler();
         }
+    }
+
+    AuthorizerChain(Authorizer<T> firstAuthorizer, AuthorizerSelectionStrategy selectionStrategy) {
+        this(ImmutableList.of(requireNonNull(firstAuthorizer, "firstAuthorizer")), selectionStrategy);
     }
 
     /**
@@ -76,8 +89,9 @@ final class AuthorizerChain<T> implements Authorizer<T> {
      */
     @Override
     public Authorizer<T> orElse(Authorizer<T> nextAuthorizer) {
-        authorizers.add(requireNonNull(nextAuthorizer, "nextAuthorizer"));
-        return this;
+        final ImmutableList.Builder<Authorizer<T>> newAuthorizersBuilder = ImmutableList.builder();
+        newAuthorizersBuilder.addAll(authorizers).add(requireNonNull(nextAuthorizer, "nextAuthorizer"));
+        return new AuthorizerChain<>(newAuthorizersBuilder.build(), selectionStrategy);
     }
 
     /**
@@ -91,7 +105,7 @@ final class AuthorizerChain<T> implements Authorizer<T> {
         return authorize(authorizers.iterator(), ctx, data);
     }
 
-    private CompletionStage<Boolean> authorize(Iterator<Authorizer<T>> iterator,
+    private CompletionStage<Boolean> authorize(Iterator<? extends Authorizer<T>> iterator,
                                                ServiceRequestContext ctx, T data) {
         final Authorizer<T> nextAuthorizer = iterator.next();
         return AuthorizerUtil.authorize(nextAuthorizer, ctx, data).thenComposeAsync(result -> {

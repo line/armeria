@@ -29,6 +29,7 @@ import com.google.common.cache.Cache;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
 import com.linecorp.armeria.internal.server.auth.oauth2.TokenIntrospectionRequest;
@@ -43,6 +44,7 @@ import io.netty.util.AttributeKey;
  * Token Introspection. {@code ctx} can be used for storing authorization information about the request for use
  * in business logic.
  */
+@UnstableApi
 public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Token> {
 
     /**

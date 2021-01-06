@@ -47,12 +47,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants;
 
 /**
  * Defines a structure of the Token Introspection Response, as per
  * <a href="https://tools.ietf.org/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
  */
+@UnstableApi
 public class OAuth2TokenDescriptor implements Serializable {
 
     private static final long serialVersionUID = -3976877781134216467L;
@@ -438,7 +440,7 @@ public class OAuth2TokenDescriptor implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(rawResponse());
+        return rawResponse().hashCode();
     }
 
     /**

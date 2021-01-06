@@ -20,11 +20,13 @@ import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 
 /**
  * Represents an OAuth 2.0 Access Token Grant flow to obtain Access Token.
  */
+@UnstableApi
 public interface OAuth2AuthorizationGrant {
 
     /**

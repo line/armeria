@@ -24,13 +24,15 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.auth.oauth2.TokenRevocationRequest;
 
 /**
  * Implements Token Revocation request/response flow,
  * as per <a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>.
  */
-public class TokenRevocation {
+@UnstableApi
+public final class TokenRevocation {
 
     /**
      * Creates a new builder for {@link TokenRevocation}.

@@ -25,12 +25,14 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * Decorates a {@link HttpClient} with an OAuth 2.0 Authorization Grant flow.
  */
-public class OAuth2Client extends SimpleDecoratingHttpClient {
+@UnstableApi
+public final class OAuth2Client extends SimpleDecoratingHttpClient {
 
     /**
      * Creates a new {@link HttpClient} decorator that handles OAuth 2.0 Authorization Grant flow.

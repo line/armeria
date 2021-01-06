@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
@@ -40,6 +41,7 @@ import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
  * and Token Revocation flow (<a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>).
  * @param <T> the type of the authorization result.
  */
+@UnstableApi
 public abstract class AbstractTokenOperationRequest<T> extends AbstractOAuth2Request<T> {
 
     /**

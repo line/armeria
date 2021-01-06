@@ -24,11 +24,13 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Builds {@link TokenRevocation}.
  */
-public class TokenRevocationBuilder {
+@UnstableApi
+public final class TokenRevocationBuilder {
 
     private final WebClient revocationEndpoint;
     private final String revocationEndpointPath;
@@ -60,7 +62,7 @@ public class TokenRevocationBuilder {
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
      */
-    public final TokenRevocationBuilder clientAuthorization(
+    public TokenRevocationBuilder clientAuthorization(
             Supplier<String> authorizationSupplier, String authorizationType) {
         clientAuthorization = ClientAuthorization.ofAuthorization(authorizationSupplier, authorizationType);
         return this;
@@ -73,7 +75,7 @@ public class TokenRevocationBuilder {
      *
      * @param authorizationSupplier A supplier of encoded client authorization token.
      */
-    public final TokenRevocationBuilder clientBasicAuthorization(Supplier<String> authorizationSupplier) {
+    public TokenRevocationBuilder clientBasicAuthorization(Supplier<String> authorizationSupplier) {
         clientAuthorization = ClientAuthorization.ofBasicAuthorization(authorizationSupplier);
         return this;
     }
@@ -88,7 +90,7 @@ public class TokenRevocationBuilder {
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
      */
-    public final TokenRevocationBuilder clientCredentials(
+    public TokenRevocationBuilder clientCredentials(
             Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
         clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier, authorizationType);
         return this;

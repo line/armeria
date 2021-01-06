@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
@@ -38,6 +39,7 @@ import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
  * Implements Access Token Refresh request
  * as per <a href="https://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
  */
+@UnstableApi
 public final class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
 
     /**

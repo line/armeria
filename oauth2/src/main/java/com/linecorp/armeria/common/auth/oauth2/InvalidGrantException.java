@@ -16,46 +16,49 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * The provided authorization grant (e.g., authorization code, resource owner credentials) or
  * refresh token is invalid, expired, revoked, does not match the redirection URI used in the
  * authorization request, or was issued to another client.
  */
+@UnstableApi
 public class InvalidGrantException extends TokenRequestException {
 
-  private static final long serialVersionUID = -7174852945693093094L;
+    private static final long serialVersionUID = -7174852945693093094L;
 
-  /**
-   * Constructs a new {@link InvalidGrantException} using {@code errorDescription} and {@code errorUri}.
-   * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
-   *                         used to assist the client developer in understanding the error that occurred.
-   *                         Values for the {@code errorDescription} parameter MUST NOT include
-   *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
-   * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
-   *                 used to provide the client developer with additional information about the error.
-   *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
-   *                 thus MUST NOT include characters outside
-   *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
-   */
-  public InvalidGrantException(String errorDescription, String errorUri) {
-    super(errorDescription, errorUri);
-  }
+    /**
+     * Constructs a new {@link InvalidGrantException} using {@code errorDescription} and {@code errorUri}.
+     * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
+     *                         used to assist the client developer in understanding the error that occurred.
+     *                         Values for the {@code errorDescription} parameter MUST NOT include
+     *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
+     * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
+     *                 used to provide the client developer with additional information about the error.
+     *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
+     *                 thus MUST NOT include characters outside
+     *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
+     */
+    public InvalidGrantException(String errorDescription, String errorUri) {
+        super(errorDescription, errorUri);
+    }
 
-  /**
-   * Constructs a new {@link InvalidGrantException} using {@code errorDescription} and {@code errorUri}.
-   * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
-   *                         used to assist the client developer in understanding the error that occurred.
-   *                         Values for the {@code errorDescription} parameter MUST NOT include
-   *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
-   * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
-   *                 used to provide the client developer with additional information about the error.
-   *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
-   *                 thus MUST NOT include characters outside
-   *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
-   * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).
-   *              (A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.)
-   */
-  public InvalidGrantException(String errorDescription, String errorUri, Throwable cause) {
-    super(errorDescription, errorUri, cause);
-  }
+    /**
+     * Constructs a new {@link InvalidGrantException} using {@code errorDescription} and {@code errorUri}.
+     * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
+     *                         used to assist the client developer in understanding the error that occurred.
+     *                         Values for the {@code errorDescription} parameter MUST NOT include
+     *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
+     * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
+     *                 used to provide the client developer with additional information about the error.
+     *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
+     *                 thus MUST NOT include characters outside
+     *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
+     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).
+     *              (A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.)
+     */
+    public InvalidGrantException(String errorDescription, String errorUri, Throwable cause) {
+        super(errorDescription, errorUri, cause);
+    }
 }

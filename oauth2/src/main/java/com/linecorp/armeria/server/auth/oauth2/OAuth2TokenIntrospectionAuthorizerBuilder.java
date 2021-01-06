@@ -29,6 +29,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
 import com.linecorp.armeria.internal.server.auth.oauth2.TokenIntrospectionRequest;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.server.auth.Authorizer;
 /**
  * Builds a {@link OAuth2TokenIntrospectionAuthorizer} instance.
  */
+@UnstableApi
 public final class OAuth2TokenIntrospectionAuthorizerBuilder {
 
     private static final long DEFAULT_CACHE_MAX_SIZE = 1000;

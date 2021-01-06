@@ -18,7 +18,9 @@
  * Common artifacts used by <a href="https://en.wikipedia.org/wiki/OAuth#OAuth_2.0">OAuth 2.0</a>
  * implementation.
  */
+@UnstableApi
 @NonNullByDefault
 package com.linecorp.armeria.common.auth.oauth2;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

@@ -16,45 +16,50 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * The authorization server does not support the revocation of the presented token type. That is,
  * the client tried to revoke an access token on a server not supporting this feature.
  */
+@UnstableApi
 public class UnsupportedTokenTypeException extends TokenRequestException {
 
-  private static final long serialVersionUID = 4119934709921411913L;
+    private static final long serialVersionUID = 4119934709921411913L;
 
-  /**
-   * Constructs a new {@link UnsupportedTokenTypeException} using {@code errorDescription} and {@code errorUri}.
-   * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
-   *                         used to assist the client developer in understanding the error that occurred.
-   *                         Values for the {@code errorDescription} parameter MUST NOT include
-   *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
-   * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
-   *                 used to provide the client developer with additional information about the error.
-   *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
-   *                 thus MUST NOT include characters outside
-   *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
-   */
-  public UnsupportedTokenTypeException(String errorDescription, String errorUri) {
-    super(errorDescription, errorUri);
-  }
+    /**
+     * Constructs a new {@link UnsupportedTokenTypeException} using {@code errorDescription} and
+     * {@code errorUri}.
+     * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
+     *                         used to assist the client developer in understanding the error that occurred.
+     *                         Values for the {@code errorDescription} parameter MUST NOT include
+     *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
+     * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
+     *                 used to provide the client developer with additional information about the error.
+     *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
+     *                 thus MUST NOT include characters outside
+     *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
+     */
+    public UnsupportedTokenTypeException(String errorDescription, String errorUri) {
+        super(errorDescription, errorUri);
+    }
 
-  /**
-   * Constructs a new {@link UnsupportedTokenTypeException} using {@code errorDescription} and {@code errorUri}.
-   * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
-   *                         used to assist the client developer in understanding the error that occurred.
-   *                         Values for the {@code errorDescription} parameter MUST NOT include
-   *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
-   * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
-   *                 used to provide the client developer with additional information about the error.
-   *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
-   *                 thus MUST NOT include characters outside
-   *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
-   * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).
-   *              (A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.)
-   */
-  public UnsupportedTokenTypeException(String errorDescription, String errorUri, Throwable cause) {
-    super(errorDescription, errorUri, cause);
-  }
+    /**
+     * Constructs a new {@link UnsupportedTokenTypeException} using {@code errorDescription} and
+     * {@code errorUri}.
+     * @param errorDescription OPTIONAL. Human-readable ASCII [USASCII] text providing additional information,
+     *                         used to assist the client developer in understanding the error that occurred.
+     *                         Values for the {@code errorDescription} parameter MUST NOT include
+     *                         characters outside the set {@code %x20-21} / {@code %x23-5B} / {@code %x5D-7E}.
+     * @param errorUri OPTIONAL. A URI identifying a human-readable web page with information about the error,
+     *                 used to provide the client developer with additional information about the error.
+     *                 Values for the {@code errorUri} parameter MUST conform to the URI-reference syntax and
+     *                 thus MUST NOT include characters outside
+     *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
+     * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).
+     *              (A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.)
+     */
+    public UnsupportedTokenTypeException(String errorDescription, String errorUri, Throwable cause) {
+        super(errorDescription, errorUri, cause);
+    }
 }
