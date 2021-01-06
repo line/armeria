@@ -53,7 +53,7 @@ final class WeightedRandomDistributionEndpointSelectorTest {
                 builder.add(selector.selectEndpoint());
             }
             final List<Endpoint> selected = builder.build();
-            assertThat(selected).usingElementComparator(new EndpointComparator()).containsExactlyInAnyOrder(
+            assertThat(selected).usingElementComparator(EndpointComparator.INSTANCE).containsExactlyInAnyOrder(
                     foo, foo, foo, bar, bar, baz
             );
         }

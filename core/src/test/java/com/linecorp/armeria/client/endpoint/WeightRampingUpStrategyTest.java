@@ -21,7 +21,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.io.Serializable;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -69,7 +68,7 @@ final class WeightRampingUpStrategyTest {
         // Because we set only foo1.com, foo.com is removed.
         endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo1.com")));
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactly(
                                               Endpoint.of("foo1.com")
                                       );
@@ -83,10 +82,10 @@ final class WeightRampingUpStrategyTest {
         endpointGroup.addEndpoint(Endpoint.of("bar.com"));
         assertThat(selector.endpointsRampingUp).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
-        assertThat(endpointAndSteps).containsExactly(
+        assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE).containsExactly(
                 endpointAndStep(Endpoint.of("bar.com"), 1, 500));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
                                               Endpoint.of("bar.com").withWeight(500)
@@ -98,7 +97,7 @@ final class WeightRampingUpStrategyTest {
 
         assertThat(selector.endpointsRampingUp).isEmpty();
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
                                               Endpoint.of("bar.com")
@@ -121,13 +120,14 @@ final class WeightRampingUpStrategyTest {
 
         assertThat(selector.endpointsRampingUp).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps1 = selector.endpointsRampingUp.peek().endpointAndSteps();
-        assertThat(endpointAndSteps1).containsExactlyInAnyOrder(
-                endpointAndStep(Endpoint.of("bar.com"), 1, 100),
-                endpointAndStep(Endpoint.of("bar1.com"), 1, 100),
-                endpointAndStep(Endpoint.of("baz.com"), 1, 100),
-                endpointAndStep(Endpoint.of("baz1.com"), 1, 100));
+        assertThat(endpointAndSteps1).usingElementComparator(EndpointAndStepComparator.INSTANCE)
+                                     .containsExactlyInAnyOrder(
+                                             endpointAndStep(Endpoint.of("bar.com"), 1, 100),
+                                             endpointAndStep(Endpoint.of("bar1.com"), 1, 100),
+                                             endpointAndStep(Endpoint.of("baz.com"), 1, 100),
+                                             endpointAndStep(Endpoint.of("baz1.com"), 1, 100));
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
                                               Endpoint.of("bar.com").withWeight(100),
@@ -152,11 +152,12 @@ final class WeightRampingUpStrategyTest {
         endpointGroup.addEndpoint(Endpoint.of("baz.com"));
         assertThat(selector.endpointsRampingUp).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps1 = selector.endpointsRampingUp.peek().endpointAndSteps();
-        assertThat(endpointAndSteps1).containsExactlyInAnyOrder(
-                endpointAndStep(Endpoint.of("bar.com"), 1, 100),
-                endpointAndStep(Endpoint.of("bar1.com"), 1, 100));
+        assertThat(endpointAndSteps1).usingElementComparator(EndpointAndStepComparator.INSTANCE)
+                                     .containsExactlyInAnyOrder(
+                                             endpointAndStep(Endpoint.of("bar.com"), 1, 100),
+                                             endpointAndStep(Endpoint.of("bar1.com"), 1, 100));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
                                               Endpoint.of("bar.com").withWeight(100),
@@ -172,13 +173,14 @@ final class WeightRampingUpStrategyTest {
         scheduledJobs.poll().run();
         assertThat(selector.endpointsRampingUp).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps2 = selector.endpointsRampingUp.peek().endpointAndSteps();
-        assertThat(endpointAndSteps2).containsExactlyInAnyOrder(
-                endpointAndStep(Endpoint.of("bar.com"), 2, 200),
-                endpointAndStep(Endpoint.of("bar1.com"), 2, 200),
-                endpointAndStep(Endpoint.of("qux.com"), 1, 100),
-                endpointAndStep(Endpoint.of("qux1.com"), 1, 100));
+        assertThat(endpointAndSteps2).usingElementComparator(EndpointAndStepComparator.INSTANCE)
+                                     .containsExactlyInAnyOrder(
+                                             endpointAndStep(Endpoint.of("bar.com"), 2, 200),
+                                             endpointAndStep(Endpoint.of("bar1.com"), 2, 200),
+                                             endpointAndStep(Endpoint.of("qux.com"), 1, 100),
+                                             endpointAndStep(Endpoint.of("qux1.com"), 1, 100));
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
                                               // 1000 * (2 / 10) => weight * (step / numberOfSteps)
@@ -202,7 +204,7 @@ final class WeightRampingUpStrategyTest {
                 ImmutableList.of(Endpoint.of("foo.com").withWeight(100), Endpoint.of("foo1.com")));
         assertThat(selector.endpointsRampingUp).hasSize(0);
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com").withWeight(100), Endpoint.of("foo1.com")
                                       );
@@ -214,11 +216,12 @@ final class WeightRampingUpStrategyTest {
 
         assertThat(selector.endpointsRampingUp).hasSize(1);
         Set<EndpointAndStep> endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
-        assertThat(endpointAndSteps).containsExactlyInAnyOrder(
-                endpointAndStep(Endpoint.of("foo.com").withWeight(3000), 1, 300),
-                endpointAndStep(Endpoint.of("bar.com"), 1, 100));
+        assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
+                                    .containsExactlyInAnyOrder(
+                                            endpointAndStep(Endpoint.of("foo.com").withWeight(3000), 1, 300),
+                                            endpointAndStep(Endpoint.of("bar.com"), 1, 100));
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com").withWeight(300), Endpoint.of("foo1.com"),
                                               Endpoint.of("bar.com").withWeight(100)
@@ -230,11 +233,12 @@ final class WeightRampingUpStrategyTest {
 
         assertThat(selector.endpointsRampingUp).hasSize(1);
         endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
-        assertThat(endpointAndSteps).containsExactlyInAnyOrder(
-                endpointAndStep(Endpoint.of("foo.com").withWeight(3000), 2, 600),
-                endpointAndStep(Endpoint.of("bar.com"), 2, 200));
+        assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
+                                    .containsExactlyInAnyOrder(
+                                            endpointAndStep(Endpoint.of("foo.com").withWeight(3000), 2, 600),
+                                            endpointAndStep(Endpoint.of("bar.com"), 2, 200));
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               // 3000 * 2 / 10 = 600
                                               Endpoint.of("foo.com").withWeight(600), Endpoint.of("foo1.com"),
@@ -248,10 +252,10 @@ final class WeightRampingUpStrategyTest {
                                                     Endpoint.of("foo1.com"),
                                                     Endpoint.of("bar.com")));
         assertThat(selector.endpointsRampingUp).hasSize(1);
-        assertThat(endpointAndSteps).containsExactly(
+        assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE).containsExactly(
                 endpointAndStep(Endpoint.of("bar.com"), 2, 200));
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com").withWeight(599), Endpoint.of("foo1.com"),
                                               Endpoint.of("bar.com").withWeight(200)
@@ -275,10 +279,10 @@ final class WeightRampingUpStrategyTest {
 
         assertThat(selector.endpointsRampingUp).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
-        assertThat(endpointAndSteps).containsExactly(
+        assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE).containsExactly(
                 endpointAndStep(Endpoint.of("bar.com").withWeight(3000), 1, 300));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
                                               Endpoint.of("bar.com").withWeight(300)
@@ -289,7 +293,7 @@ final class WeightRampingUpStrategyTest {
         endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com")));
         assertThat(selector.endpointsRampingUp).isEmpty();
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com")
                                       );
@@ -315,12 +319,13 @@ final class WeightRampingUpStrategyTest {
 
         assertThat(selector.endpointsRampingUp).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
-        assertThat(endpointAndSteps).containsExactlyInAnyOrder(
-                endpointAndStep(Endpoint.of("bar.com").withWeight(3000), 1, 300),
-                endpointAndStep(Endpoint.of("bar1.com"), 1, 100)
-                );
+        assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
+                                    .containsExactlyInAnyOrder(
+                                            endpointAndStep(Endpoint.of("bar.com").withWeight(3000), 1, 300),
+                                            endpointAndStep(Endpoint.of("bar1.com"), 1, 100)
+                                    );
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
                                               Endpoint.of("bar.com").withWeight(300),
@@ -364,7 +369,7 @@ final class WeightRampingUpStrategyTest {
                 (RampingUpEndpointWeightSelector) strategy.newSelector(endpointGroup);
 
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com")
                                       );
@@ -385,11 +390,12 @@ final class WeightRampingUpStrategyTest {
 
         assertThat(selector.endpointsRampingUp).hasSize(1);
         final Set<EndpointAndStep> endpointAndSteps = selector.endpointsRampingUp.peek().endpointAndSteps();
-        assertThat(endpointAndSteps).containsExactlyInAnyOrder(
-                endpointAndStep(Endpoint.of("bar.com"), 1, 100),
-                endpointAndStep(Endpoint.of("bar1.com"), 1, 100));
+        assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
+                                    .containsExactlyInAnyOrder(
+                                            endpointAndStep(Endpoint.of("bar.com"), 1, 100),
+                                            endpointAndStep(Endpoint.of("bar1.com"), 1, 100));
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
-        assertThat(endpointsFromEntry).usingElementComparator(new EndpointComparator())
+        assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
                                               // 1000 * (1 / 10) => weight * (step / numberOfSteps)
@@ -407,12 +413,34 @@ final class WeightRampingUpStrategyTest {
     /**
      * A Comparator which includes the weight of an endpoint to compare.
      */
-    static class EndpointComparator implements Comparator<Endpoint>, Serializable {
-        private static final long serialVersionUID = -3534596922171048613L;
+    enum EndpointComparator implements Comparator<Endpoint> {
+
+        INSTANCE;
 
         @Override
         public int compare(Endpoint o1, Endpoint o2) {
             if (o1.equals(o2) && o1.weight() == o2.weight()) {
+                return 0;
+            }
+            return -1;
+        }
+    }
+
+    /**
+     * A Comparator which includes the weight of an endpoint to compare.
+     */
+    private enum EndpointAndStepComparator implements Comparator<EndpointAndStep> {
+
+        INSTANCE;
+
+        @Override
+        public int compare(EndpointAndStep o1, EndpointAndStep o2) {
+            final Endpoint endpoint1 = o1.endpoint();
+            final Endpoint endpoint2 = o2.endpoint();
+            if (endpoint1.equals(endpoint2) &&
+                endpoint1.weight() == endpoint2.weight() &&
+                o1.step() == o2.step() &&
+                o1.currentWeight() == o2.currentWeight()) {
                 return 0;
             }
             return -1;

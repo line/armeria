@@ -31,7 +31,7 @@ import com.linecorp.armeria.client.Endpoint;
  * This selector selects an {@link Endpoint} using random and the weight of the {@link Endpoint}. If there are
  * A(weight 10), B(weight 4) and C(weight 6) {@link Endpoint}s, the chances that {@link Endpoint}s are selected
  * are 10/20, 4/20 and 6/20, respectively. If {@link Endpoint} A is selected 10 times and B and C are not
- * selected as much as their weight, then A is removed temporarily and the the chances that B and C are selected
+ * selected as much as their weight, then A is removed temporarily and the chances that B and C are selected
  * are 4/10 and 6/10.
  */
 final class WeightedRandomDistributionEndpointSelector {
@@ -109,18 +109,12 @@ final class WeightedRandomDistributionEndpointSelector {
     }
 
     private void decreaseCurrentTotalWeight(int weight) {
-        for (;;) {
-            final long oldWeight = currentTotalWeight;
-            final long newWeight = oldWeight - weight;
-            if (currentTotalWeightUpdater.compareAndSet(this, oldWeight, newWeight)) {
-                // There's no chance that newWeight is lower than 0 because decreasing the weight of each entry
-                // happens only once.
-                if (newWeight == 0) {
-                    entries.forEach(entry -> entry.set(0));
-                    currentTotalWeight = totalWeight;
-                }
-                return;
-            }
+        final long totalWeight = currentTotalWeightUpdater.addAndGet(this, -1 * weight);
+        if (totalWeight == 0) {
+            // There's no chance that newWeight is lower than 0 because decreasing the weight of each entry
+            // happens only once.
+            entries.forEach(entry -> entry.set(0));
+            currentTotalWeight = this.totalWeight;
         }
     }
 

@@ -189,7 +189,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
             final Set<EndpointAndStep> newlyAddedEndpoints = filterOldEndpoints(newEndpoints);
             if (newlyAddedEndpoints.isEmpty()) {
-                // newlyAddedEndpoints is empty which means that settledEndpoints are changed.
+                // newlyAddedEndpoints is empty which means that endpointsFinishedRampingUp are changed.
                 // So rebuild the endpoint selector.
                 buildEndpointSelector();
                 return;
@@ -232,40 +232,40 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
 
         /**
-         * Removes endpoints in settledEndpoints and endpointsInUpdatingEntries that
+         * Removes endpoints in endpointsFinishedRampingUp and endpointsRampingUp that
          * newEndpoints do not contain.
          * This also returns the {@link Set} of {@link EndpointAndStep}s whose endpoints are not in
-         * in settledEndpoints and endpointsInUpdatingEntries.
+         * in endpointsFinishedRampingUp and endpointsRampingUp.
          */
         private Set<EndpointAndStep> filterOldEndpoints(List<Endpoint> newEndpoints) {
             final Map<Endpoint, Endpoint> newEndpointsMap = deduplicateEndpoints(newEndpoints);
 
-            final List<Endpoint> replacedSettledEndpoints = new ArrayList<>();
+            final List<Endpoint> replacedEndpoints = new ArrayList<>();
             for (final Iterator<Endpoint> i = endpointsFinishedRampingUp.iterator(); i.hasNext();) {
-                final Endpoint settledEndpoint = i.next();
-                final Endpoint newEndpoint = newEndpointsMap.remove(settledEndpoint);
+                final Endpoint endpointFinishedRampingUp = i.next();
+                final Endpoint newEndpoint = newEndpointsMap.remove(endpointFinishedRampingUp);
                 if (newEndpoint == null) {
-                    // newEndpoints does not have this settled endpoint so we remove it.
+                    // newEndpoints does not have this endpoint so we remove it.
                     i.remove();
                     continue;
                 }
 
-                if (settledEndpoint.weight() > newEndpoint.weight()) {
-                    // The weight of the new endpoint is lower than the settled endpoint so we just replace it
+                if (endpointFinishedRampingUp.weight() > newEndpoint.weight()) {
+                    // The weight of the new endpoint is lower than the endpoint so we just replace it
                     // because we don't have to ramp up the weight.
-                    replacedSettledEndpoints.add(newEndpoint);
+                    replacedEndpoints.add(newEndpoint);
                     i.remove();
-                } else if (settledEndpoint.weight() < newEndpoint.weight()) {
-                    // The weight of the new endpoint is greater than the settled endpoint so we remove the
-                    // settled one and put the newEndpoint back.
+                } else if (endpointFinishedRampingUp.weight() < newEndpoint.weight()) {
+                    // The weight of the new endpoint is greater than the endpoint so we remove the
+                    // endpointFinishedRampingUp and put the newEndpoint back.
                     newEndpointsMap.put(newEndpoint, newEndpoint);
                     i.remove();
                 } else {
-                    // The weights are same so we keep the settled endpoint.
+                    // The weights are same so we keep the endpointFinishedRampingUp.
                 }
             }
-            if (!replacedSettledEndpoints.isEmpty()) {
-                endpointsFinishedRampingUp.addAll(replacedSettledEndpoints);
+            if (!replacedEndpoints.isEmpty()) {
+                endpointsFinishedRampingUp.addAll(replacedEndpoints);
             }
 
             for (final Iterator<EndpointsRampingUpEntry> i = endpointsRampingUp.iterator();
@@ -307,8 +307,8 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 if (rampingUpEndpoint.weight() == newEndpoint.weight()) {
                     // Same weight so don't do anything. Ramping up happens as it is scheduled.
                 } else if (endpointAndStep.currentWeight() > newEndpoint.weight()) {
-                    // Don't need to update the weight anymore so we add the newEndpoint to settledEndpoints and
-                    // remove it from the iterator.
+                    // Don't need to update the weight anymore so we add the newEndpoint to
+                    // endpointsFinishedRampingUp and remove it from the iterator.
                     endpointsFinishedRampingUp.add(newEndpoint);
                     i.remove();
                 } else {
@@ -454,27 +454,6 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
             Endpoint endpoint() {
                 return endpoint;
-            }
-
-            @Override
-            public boolean equals(Object o) {
-                if (this == o) {
-                    return true;
-                }
-                if (o == null || getClass() != o.getClass()) {
-                    return false;
-                }
-
-                final EndpointAndStep that = (EndpointAndStep) o;
-                // Use weight also.
-                return endpoint.equals(that.endpoint) &&
-                       endpoint.weight() == that.endpoint().weight();
-            }
-
-            @Override
-            public int hashCode() {
-                // Do not use step and currentWeight because they are changed during iteration.
-                return endpoint.hashCode() * 31 + endpoint.weight();
             }
 
             @Override
