@@ -61,6 +61,7 @@ import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
@@ -141,77 +142,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         sb.disableServerHeader();
         sb.disableDateHeader();
 
-        // In the property file, both Spring and Armeria port configuration can coexist.
-        // We use following to define primaryAddress, primaryLocalPort and primarySessionProtocol:
-        // (we consider Spring port is not specified when it's 0.)
-        // 1) Spring port and Armeria port exist:
-        //    - primaryAddress = Spring address
-        //    - primaryLocalPort = Spring port
-        //    - primarySessionProtocol = depends on the springSsl.isEnabled()
-        // 2) Spring port
-        //    - primaryAddress = Spring address
-        //    - primaryLocalPort = Spring port
-        //    - primarySessionProtocol = depends on the springSsl.isEnabled()
-        // 3) Armeria port
-        //    - primaryAddress = null
-        //    - primaryLocalPort = the port of the first Armeria Port
-        //    - primarySessionProtocol = the session protocol of the first Armeria Port
-        // 4) none of
-        //    - primaryAddress = Spring address
-        //    - primaryLocalPort = Spring port
-        //    - primarySessionProtocol = depends on the armeriaSsl.isEnabled().
-        //                               If armeriaSsl is null use SpringSsl
-        //
-        // Please note that Armeria TLS configuration has precedence over Spring SSL.
-
         final ArmeriaSettings armeriaSettings = findBean(ArmeriaSettings.class);
-        final boolean armeriaSslEnabled = isArmeriaSslEnabled(armeriaSettings);
-        final Ssl springSsl = getSsl();
-        final SessionProtocol springSessionProtocol;
-        if (springSsl != null && springSsl.isEnabled()) {
-            if (armeriaSslEnabled) {
-                // TLS will be applied in configureServerWithArmeriaSettings.
-                logger.warn("Both Armeria and Spring TLS configuration exist. " +
-                            "Armeria TLS configuration is used.");
-            } else {
-                configureTls(sb, toArmeriaSslConfiguration(springSsl));
-            }
-            springSessionProtocol = SessionProtocol.HTTPS;
-        } else {
-            springSessionProtocol = SessionProtocol.HTTP;
-        }
-
-        final int springPort = ensureValidPort(getPort());
-        final List<Port> armeriaPorts = armeriaPorts(armeriaSettings);
-        final InetAddress primaryAddress;
-        final int primaryLocalPort;
-        final SessionProtocol primarySessionProtocol;
-        if (springPort > 0 || armeriaPorts.isEmpty()) {
-            // The cases of 1, 2, 4.
-            primaryAddress = getAddress();
-            primaryLocalPort = springPort;
-            if (springPort == 0) {
-                // case 4
-                primarySessionProtocol = armeriaSslEnabled ? SessionProtocol.HTTPS : springSessionProtocol;
-            } else {
-                primarySessionProtocol = springSessionProtocol;
-            }
-            if (primaryAddress != null) {
-                sb.port(new InetSocketAddress(primaryAddress, primaryLocalPort), primarySessionProtocol);
-            } else {
-                sb.port(primaryLocalPort, primarySessionProtocol);
-            }
-        } else {
-            // The case of 3
-            primaryAddress = null;
-            final Port armeriaFirstPort = armeriaPorts.get(0);
-            final List<SessionProtocol> protocols = armeriaFirstPort.getProtocols();
-            primaryLocalPort = armeriaFirstPort.getPort();
-            primarySessionProtocol = protocols != null && !protocols.isEmpty() ? protocols.get(0)
-                                                                               : SessionProtocol.HTTP;
-            // Armeria port is configured in configureServerWithArmeriaSettings.
-        }
-
         if (!isArmeriaCompressionEnabled(armeriaSettings)) {
             final Compression compression = getCompression();
             if (compression != null && compression.getEnabled()) {
@@ -232,6 +163,79 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                findBeans(HealthChecker.class),
                                                findBeans(HealthCheckServiceConfigurator.class),
                                                meterIdPrefixFunctionOrDefault());
+        }
+
+        // In the property file, both Spring and Armeria port configuration can coexist.
+        // We use following to define primaryAddress, primaryLocalPort and primarySessionProtocol:
+        // (we consider Spring port is not specified when it's 0.)
+        // 1) Spring port and Armeria port exist:
+        //    - primaryAddress = Spring address
+        //    - primaryLocalPort = Spring port
+        //    - primarySessionProtocol = depends on the springSsl.isEnabled()
+        // 2) Spring port
+        //    - primaryAddress = Spring address
+        //    - primaryLocalPort = Spring port
+        //    - primarySessionProtocol = depends on the springSsl.isEnabled()
+        // 3) Armeria port
+        //    - primaryAddress = the address of the first Armeria Port
+        //    - primaryLocalPort = the port of the first Armeria Port
+        //    - primarySessionProtocol = the session protocol of the first Armeria Port
+        // 4) none of
+        //    a) The port is configured by other ways (e.g. ArmeriaServerConfigurator)
+        //       - primaryAddress = null
+        //       - primaryLocalPort = the port of the first Armeria Port
+        //       - primarySessionProtocol = the session protocol of the first Armeria Port
+        //    b) The port is not specified.
+        //       - primaryAddress = Spring address
+        //       - primaryLocalPort = Spring port
+        //       - primarySessionProtocol = depends on the armeriaSsl.isEnabled().
+        //                               If armeriaSsl is null use SpringSsl
+        //
+        // Please note that Armeria TLS configuration has precedence over Spring SSL.
+
+        final boolean armeriaSslEnabled = isArmeriaSslEnabled(armeriaSettings);
+        final Ssl springSsl = getSsl();
+        final SessionProtocol springSessionProtocol;
+        if (springSsl != null && springSsl.isEnabled()) {
+            if (armeriaSslEnabled) {
+                // TLS will be applied in configureServerWithArmeriaSettings.
+                logger.warn("Both Armeria and Spring TLS configuration exist. " +
+                            "Armeria TLS configuration is used.");
+            } else {
+                configureTls(sb, toArmeriaSslConfiguration(springSsl));
+            }
+            springSessionProtocol = SessionProtocol.HTTPS;
+        } else {
+            springSessionProtocol = SessionProtocol.HTTP;
+        }
+
+        final int springPort = ensureValidPort(getPort());
+        final List<ServerPort> armeriaPorts = sb.ports();
+        final InetAddress primaryAddress;
+        final int primaryLocalPort;
+        final SessionProtocol primarySessionProtocol;
+        if (springPort > 0 || armeriaPorts.isEmpty()) {
+            // The cases of 1, 2, 4.a
+            primaryAddress = getAddress();
+            primaryLocalPort = springPort;
+            if (springPort == 0) {
+                // case 4.a
+                primarySessionProtocol = armeriaSslEnabled ? SessionProtocol.HTTPS : springSessionProtocol;
+            } else {
+                primarySessionProtocol = springSessionProtocol;
+            }
+            if (primaryAddress != null) {
+                sb.port(new InetSocketAddress(primaryAddress, primaryLocalPort), primarySessionProtocol);
+            } else {
+                sb.port(primaryLocalPort, primarySessionProtocol);
+            }
+        } else {
+            // The cases of 3, 4.b
+            final ServerPort armeriaFirstPort = armeriaPorts.get(0);
+            final InetSocketAddress inetSocketAddress = armeriaFirstPort.localAddress();
+            primaryAddress = inetSocketAddress.getAddress();
+            primaryLocalPort = inetSocketAddress.getPort();
+            primarySessionProtocol = armeriaFirstPort.hasTls() ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
         }
 
         final DataBufferFactoryWrapper<?> factoryWrapper =

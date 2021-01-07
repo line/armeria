@@ -358,6 +358,13 @@ public final class ServerBuilder {
     }
 
     /**
+     * Returns the list of {@link ServerPort}s set so far.
+     */
+    public List<ServerPort> ports() {
+        return ImmutableList.copyOf(ports);
+    }
+
+    /**
      * Sets the {@link ChannelOption} of the server socket bound by {@link Server}.
      * Note that the previously added option will be overridden if the same option is set again.
      *
