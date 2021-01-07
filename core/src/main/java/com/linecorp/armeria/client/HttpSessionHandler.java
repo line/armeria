@@ -304,7 +304,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
-                final ClientHttp1ObjectEncoder requestEncoder = new ClientHttp1ObjectEncoder(channel, protocol);
+                final ClientHttp1ObjectEncoder requestEncoder =
+                        new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming());
                 final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
 
                 final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();

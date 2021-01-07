@@ -50,6 +50,7 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;

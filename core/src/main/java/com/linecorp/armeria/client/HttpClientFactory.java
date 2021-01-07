@@ -41,6 +41,7 @@ import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -98,6 +99,7 @@ final class HttpClientFactory implements ClientFactory {
     private final ConnectionPoolListener connectionPoolListener;
     private MeterRegistry meterRegistry;
     private final ProxyConfigSelector proxyConfigSelector;
+    private final Http1HeaderNaming http1HeaderNaming;
 
     private final ConcurrentMap<EventLoop, HttpChannelPool> pools = new MapMaker().weakKeys().makeMap();
     private final HttpClientDelegate clientDelegate;
@@ -153,6 +155,7 @@ final class HttpClientFactory implements ClientFactory {
         connectionPoolListener = options.connectionPoolListener();
         meterRegistry = options.meterRegistry();
         proxyConfigSelector = options.proxyConfigSelector();
+        http1HeaderNaming = options.http1HeaderNaming();
         maxConnectionAgeMillis = options.maxConnectionAgeMillis();
         maxNumRequests = options.maxNumRequests();
 
@@ -227,6 +230,10 @@ final class HttpClientFactory implements ClientFactory {
 
     ProxyConfigSelector proxyConfigSelector() {
         return proxyConfigSelector;
+    }
+
+    Http1HeaderNaming http1HeaderNaming() {
+        return http1HeaderNaming;
     }
 
     @VisibleForTesting
