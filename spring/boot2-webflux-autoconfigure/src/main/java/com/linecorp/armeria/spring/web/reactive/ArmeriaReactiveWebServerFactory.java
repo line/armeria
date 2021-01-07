@@ -65,7 +65,6 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
-import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 
@@ -177,7 +176,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         //    - primaryLocalPort = Spring port
         //    - primarySessionProtocol = depends on the springSsl.isEnabled()
         // 3) Armeria port
-        //    - primaryAddress = the address of the first Armeria Port
+        //    - primaryAddress = null;
         //    - primaryLocalPort = the port of the first Armeria Port
         //    - primarySessionProtocol = the session protocol of the first Armeria Port
         // 4) none of
@@ -233,7 +232,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
             // The cases of 3, 4.b
             final ServerPort armeriaFirstPort = armeriaPorts.get(0);
             final InetSocketAddress inetSocketAddress = armeriaFirstPort.localAddress();
-            primaryAddress = inetSocketAddress.getAddress();
+            primaryAddress = null;
             primaryLocalPort = inetSocketAddress.getPort();
             primarySessionProtocol = armeriaFirstPort.hasTls() ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
         }
@@ -262,13 +261,6 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
             }
         }
         return false;
-    }
-
-    private static List<Port> armeriaPorts(@Nullable ArmeriaSettings armeriaSettings) {
-        if (armeriaSettings != null) {
-            return armeriaSettings.getPorts();
-        }
-        return ImmutableList.of();
     }
 
     private static boolean isArmeriaCompressionEnabled(@Nullable ArmeriaSettings armeriaSettings) {
