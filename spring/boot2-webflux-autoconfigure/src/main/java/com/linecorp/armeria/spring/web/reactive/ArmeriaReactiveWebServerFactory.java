@@ -22,6 +22,7 @@ import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.conf
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.contentEncodingDecorator;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.KeyStore;
@@ -167,19 +168,19 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         // In the property file, both Spring and Armeria port configuration can coexist.
         // We use following to define primaryAddress, primaryLocalPort and primarySessionProtocol:
         // (we consider Spring port is not specified when it's 0.)
-        // 1) Spring port and Armeria port exist:
+        // 1) Both Armeria and Spring port were specified:
         //    - primaryAddress = Spring address
         //    - primaryLocalPort = Spring port
         //    - primarySessionProtocol = depends on the springSsl.isEnabled()
-        // 2) Spring port
+        // 2) Only Spring port was specified:
         //    - primaryAddress = Spring address
         //    - primaryLocalPort = Spring port
         //    - primarySessionProtocol = depends on the springSsl.isEnabled()
-        // 3) Armeria port
+        // 3) Only Armeria port was specified:
         //    - primaryAddress = null;
         //    - primaryLocalPort = the port of the first Armeria Port
         //    - primarySessionProtocol = the session protocol of the first Armeria Port
-        // 4) none of
+        // 4) No port was specified:
         //    a) The port is configured by other ways (e.g. ArmeriaServerConfigurator)
         //       - primaryAddress = null
         //       - primaryLocalPort = the port of the first Armeria Port
@@ -209,7 +210,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         }
 
         final int springPort = ensureValidPort(getPort());
-        final List<ServerPort> armeriaPorts = sb.ports();
+        final List<ServerPort> armeriaPorts = armeriaPorts(sb);
         final InetAddress primaryAddress;
         final int primaryLocalPort;
         final SessionProtocol primarySessionProtocol;
@@ -251,6 +252,18 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         }
 
         return armeriaWebServer;
+    }
+
+    private static List<ServerPort> armeriaPorts(ServerBuilder sb) {
+        try {
+            final Field ports = ServerBuilder.class.getDeclaredField("ports");
+            ports.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            final List<ServerPort> armeriaPorts = (List<ServerPort>) ports.get(sb);
+            return armeriaPorts;
+        } catch (NoSuchFieldException | IllegalAccessException ignored) {
+            throw new Error(); // Should never reach here.
+        }
     }
 
     private static boolean isArmeriaSslEnabled(@Nullable ArmeriaSettings armeriaSettings) {
