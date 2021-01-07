@@ -60,9 +60,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
                                         ImmutableList.of(Tag.of("protocol", protocol.uriText())));
             keepAliveHandler = new Http2ClientKeepAliveHandler(
                     channel, encoder.frameWriter(), keepAliveTimer,
-                    idleTimeoutMillis, pingIntervalMillis,
-                    maxConnectionAgeMillis,
-                    maxNumRequests);
+                    idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequests);
         } else {
             keepAliveHandler = null;
         }

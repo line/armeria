@@ -431,7 +431,7 @@ public abstract class KeepAliveHandler {
             try {
                 isMaxConnectionAgeExceeded = true;
 
-                // A connection in process will be closed with:
+                // A connection exceeding the max age will be closed with:
                 // - HTTP/2 server: Sending GOAWAY frame after writing headers
                 // - HTTP/1 server: Sending 'Connection: close' header when writing headers
                 // - HTTP/2 client
