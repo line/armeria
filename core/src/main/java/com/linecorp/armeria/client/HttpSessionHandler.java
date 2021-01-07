@@ -45,7 +45,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
-import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
@@ -77,12 +76,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final SocketAddress remoteAddress;
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
-    private final MeterRegistry meterRegistry;
     private final SessionProtocol desiredProtocol;
     private final PoolKey poolKey;
-    private final boolean useHttp1Pipelining;
-    private final long idleTimeoutMillis;
-    private final long pingIntervalMillis;
+    private final HttpClientFactory clientFactory;
 
     @Nullable
     private SocketAddress proxyDestinationAddress;
@@ -122,19 +118,16 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       MeterRegistry meterRegistry, SessionProtocol desiredProtocol, PoolKey poolKey,
-                       boolean useHttp1Pipelining, long idleTimeoutMillis, long pingIntervalMillis) {
+                       SessionProtocol desiredProtocol, PoolKey poolKey,
+                       HttpClientFactory clientFactory) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
-        this.meterRegistry = meterRegistry;
         this.desiredProtocol = desiredProtocol;
         this.poolKey = poolKey;
-        this.useHttp1Pipelining = useHttp1Pipelining;
-        this.idleTimeoutMillis = idleTimeoutMillis;
-        this.pingIntervalMillis = pingIntervalMillis;
+        this.clientFactory = clientFactory;
     }
 
     @Override
@@ -189,6 +182,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             // If pipelining is enabled, return as soon as the request is fully sent.
             // If pipelining is disabled,
             // return after the response is fully received and the request is fully sent.
+            final boolean useHttp1Pipelining = clientFactory.useHttp1Pipelining();
             final CompletableFuture<Void> completionFuture =
                     useHttp1Pipelining ? req.whenComplete()
                                        : CompletableFuture.allOf(req.whenComplete(), res.whenComplete());
@@ -312,17 +306,28 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             if (protocol == H1 || protocol == H1C) {
                 final ClientHttp1ObjectEncoder requestEncoder = new ClientHttp1ObjectEncoder(channel, protocol);
                 final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
-                if (idleTimeoutMillis > 0 || pingIntervalMillis > 0) {
+
+                final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
+                final long pingIntervalMillis = clientFactory.pingIntervalMillis();
+                final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
+                final int maxNumRequests = clientFactory.maxNumRequests();
+                final boolean needKeepAliveHandler = idleTimeoutMillis > 0 || pingIntervalMillis > 0 ||
+                                                     maxConnectionAgeMillis > 0 || maxNumRequests > 0;
+                if (needKeepAliveHandler) {
+
                     final Timer keepAliveTimer =
-                            MoreMeters.newTimer(meterRegistry, "armeria.client.connections.lifespan",
+                            MoreMeters.newTimer(clientFactory.meterRegistry(),
+                                                "armeria.client.connections.lifespan",
                                                 ImmutableList.of(Tag.of("protocol", protocol.uriText())));
                     final Http1ClientKeepAliveHandler keepAliveHandler =
                             new Http1ClientKeepAliveHandler(
                                     channel, requestEncoder, responseDecoder,
-                                    keepAliveTimer, idleTimeoutMillis, pingIntervalMillis);
+                                    keepAliveTimer, idleTimeoutMillis, pingIntervalMillis,
+                                    maxConnectionAgeMillis, maxNumRequests);
                     requestEncoder.setKeepAliveHandler(keepAliveHandler);
                     responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
                 }
+
                 this.requestEncoder = requestEncoder;
                 this.responseDecoder = responseDecoder;
             } else if (protocol == H2 || protocol == H2C) {

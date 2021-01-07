@@ -72,7 +72,11 @@ public abstract class KeepAliveHandler {
 
     private final Channel channel;
     private final String name;
+    private boolean isServer;
     private final Timer keepAliveTimer;
+
+    private final long maxNumRequests;
+    private long currentNumRequests;
 
     @Nullable
     private ScheduledFuture<?> connectionIdleTimeout;
@@ -99,10 +103,13 @@ public abstract class KeepAliveHandler {
     private Future<?> shutdownFuture;
 
     protected KeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
-                               long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis) {
+                               long idleTimeoutMillis, long pingIntervalMillis,
+                               long maxConnectionAgeMillis, long maxNumRequests) {
         this.channel = channel;
         this.name = name;
+        isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
+        this.maxNumRequests = maxNumRequests;
 
         if (idleTimeoutMillis <= 0) {
             connectionIdleTimeNanos = 0;
@@ -146,7 +153,7 @@ public abstract class KeepAliveHandler {
                                                   pingIdleTimeNanos, TimeUnit.NANOSECONDS);
         }
         if (maxConnectionAgeNanos > 0) {
-            maxConnectionAgeFuture = executor().schedule(() -> isMaxConnectionAgeExceeded = true,
+            maxConnectionAgeFuture = executor().schedule(new MaxConnectionAgeExceededTask(ctx),
                                                          maxConnectionAgeNanos, TimeUnit.NANOSECONDS);
         }
     }
@@ -206,8 +213,15 @@ public abstract class KeepAliveHandler {
         return pingState == PingState.SHUTDOWN;
     }
 
-    public final boolean isMaxConnectionAgeExceeded() {
-        return isMaxConnectionAgeExceeded;
+    public final boolean needToCloseConnection() {
+        return isMaxConnectionAgeExceeded || (currentNumRequests > 0 && currentNumRequests >= maxNumRequests);
+    }
+
+    public final void increaseNumRequests() {
+        if (maxNumRequests == 0) {
+            return;
+        }
+        currentNumRequests++;
     }
 
     protected abstract ChannelFuture writePing(ChannelHandlerContext ctx);
@@ -308,11 +322,11 @@ public abstract class KeepAliveHandler {
         }
     }
 
-    private abstract static class AbstractIdleTask implements Runnable {
+    private abstract static class AbstractKeepAliveTask implements Runnable {
 
         private final ChannelHandlerContext ctx;
 
-        AbstractIdleTask(ChannelHandlerContext ctx) {
+        AbstractKeepAliveTask(ChannelHandlerContext ctx) {
             this.ctx = ctx;
         }
 
@@ -328,7 +342,7 @@ public abstract class KeepAliveHandler {
         protected abstract void run(ChannelHandlerContext ctx);
     }
 
-    private final class ConnectionIdleTimeoutTask extends AbstractIdleTask {
+    private final class ConnectionIdleTimeoutTask extends AbstractKeepAliveTask {
 
         private boolean warn;
 
@@ -367,7 +381,7 @@ public abstract class KeepAliveHandler {
         }
     }
 
-    private final class PingIdleTimeoutTask extends AbstractIdleTask {
+    private final class PingIdleTimeoutTask extends AbstractKeepAliveTask {
 
         private boolean warn;
 
@@ -402,6 +416,39 @@ public abstract class KeepAliveHandler {
                 // A PING was sent or received within the ping timeout
                 // - set a new timeout with shorter delay.
                 pingIdleTimeout = executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
+            }
+        }
+    }
+
+    private final class MaxConnectionAgeExceededTask extends AbstractKeepAliveTask {
+
+        MaxConnectionAgeExceededTask(ChannelHandlerContext ctx) {
+            super(ctx);
+        }
+
+        @Override
+        protected void run(ChannelHandlerContext ctx) {
+            try {
+                isMaxConnectionAgeExceeded = true;
+
+                // A connection in process will be closed with:
+                // - HTTP/2 server: Sending GOAWAY frame after writing headers
+                // - HTTP/1 server: Sending 'Connection: close' header when writing headers
+                // - HTTP/2 client
+                //   - Sending GOAWAY frame after receiving the end of a stream
+                //   - Or closed by this task if a connection is idle
+                // - HTTP/1 client
+                //   - Close connection after fully receiving response
+                //   - Or closed by this task if a connection is idle
+
+                if (!isServer && !hasRequestsInProgress(ctx)) {
+                    logger.debug("{} Closing a {} connection exceeding the max connection age: {}ns",
+                                 ctx.channel(), name, maxConnectionAgeNanos);
+                    ctx.channel().close();
+                }
+            } catch (Exception e) {
+                logger.warn("Unexpected error occurred while closing a connection exceeding the max " +
+                            "connection age", e);
             }
         }
     }

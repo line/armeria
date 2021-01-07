@@ -65,7 +65,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             return newFailedFuture(ClosedStreamException.get());
         }
 
-        if (!isGoAwaySent && keepAliveHandler != null && keepAliveHandler.isMaxConnectionAgeExceeded()) {
+        if (!isGoAwaySent && keepAliveHandler != null && keepAliveHandler.needToCloseConnection()) {
             final int lastStreamId = encoder().connection().remote().lastStreamCreated();
             encoder().writeGoAway(ctx(), lastStreamId, Http2Error.NO_ERROR.code(),
                                   MAX_CONNECTION_AGE_DEBUG.retain(), ctx().newPromise());

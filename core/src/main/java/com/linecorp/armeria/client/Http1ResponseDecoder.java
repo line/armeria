@@ -297,6 +297,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         ctx.fireExceptionCaught(cause);
     }
 
+    @Override
+    KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
+    }
+
     void setKeepAliveHandler(ChannelHandlerContext ctx, KeepAliveHandler keepAliveHandler) {
         this.keepAliveHandler = keepAliveHandler;
         maybeInitializeKeepAliveHandler(ctx);

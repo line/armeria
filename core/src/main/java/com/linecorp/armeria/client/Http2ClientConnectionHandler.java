@@ -47,13 +47,22 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.clientFactory = clientFactory;
 
-        if (clientFactory.idleTimeoutMillis() > 0 || clientFactory.pingIntervalMillis() > 0) {
+        final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
+        final long pingIntervalMillis = clientFactory.pingIntervalMillis();
+        final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
+        final int maxNumRequests = clientFactory.maxNumRequests();
+
+        final boolean needKeepAliveHandler = idleTimeoutMillis > 0 || pingIntervalMillis > 0 ||
+                                             maxConnectionAgeMillis > 0 || maxNumRequests > 0;
+        if (needKeepAliveHandler) {
             final Timer keepAliveTimer =
                     MoreMeters.newTimer(clientFactory.meterRegistry(), "armeria.client.connections.lifespan",
                                         ImmutableList.of(Tag.of("protocol", protocol.uriText())));
             keepAliveHandler = new Http2ClientKeepAliveHandler(
                     channel, encoder.frameWriter(), keepAliveTimer,
-                    clientFactory.idleTimeoutMillis(), clientFactory.pingIntervalMillis());
+                    idleTimeoutMillis, pingIntervalMillis,
+                    maxConnectionAgeMillis,
+                    maxNumRequests);
         } else {
             keepAliveHandler = null;
         }
@@ -63,7 +72,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         decoder().frameListener(responseDecoder);
 
         // Setup post build options
-        final long timeout = clientFactory.idleTimeoutMillis();
+        final long timeout = idleTimeoutMillis;
         if (timeout > 0) {
             gracefulShutdownTimeoutMillis(timeout);
         } else {

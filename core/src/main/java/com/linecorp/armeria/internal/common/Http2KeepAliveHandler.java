@@ -70,8 +70,9 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
 
     protected Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, String name,
                                     Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
-                                    long maxConnectionAgeMillis) {
-        super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis);
+                                    long maxConnectionAgeMillis, int maxNumRequests) {
+        super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis,
+              maxConnectionAgeMillis, maxNumRequests);
         this.channel = requireNonNull(channel, "channel");
         this.frameWriter = requireNonNull(frameWriter, "frameWriter");
     }

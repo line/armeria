@@ -102,7 +102,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     @Override
     public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
                               boolean endOfStream) throws Http2Exception {
-        keepAliveChannelRead();
+        keepAliveChannelRead(true);
         DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             // Validate the method.
@@ -212,7 +212,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     public int onDataRead(
             ChannelHandlerContext ctx, int streamId, ByteBuf data,
             int padding, boolean endOfStream) throws Http2Exception {
-        keepAliveChannelRead();
+        keepAliveChannelRead(false);
 
         final DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
@@ -297,7 +297,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) throws Http2Exception {
-        keepAliveChannelRead();
+        keepAliveChannelRead(false);
         final DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             throw connectionError(PROTOCOL_ERROR,
@@ -338,9 +338,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         }
     }
 
-    private void keepAliveChannelRead() {
+    private void keepAliveChannelRead(boolean increaseNumRequests) {
         if (keepAliveHandler != null) {
             keepAliveHandler.onReadOrWrite();
+            if (increaseNumRequests) {
+                keepAliveHandler.increaseNumRequests();
+            }
         }
     }
 }

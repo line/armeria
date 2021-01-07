@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
@@ -53,6 +54,7 @@ abstract class HttpResponseDecoder {
     private final IntObjectMap<HttpResponseWrapper> responses = new IntObjectHashMap<>();
     private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
+
     private int unfinishedResponses;
     private boolean disconnectWhenFinished;
 
@@ -76,6 +78,11 @@ abstract class HttpResponseDecoder {
         final HttpResponseWrapper newRes =
                 new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
+
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        if (keepAliveHandler != null) {
+            keepAliveHandler.increaseNumRequests();
+        }
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
                                 oldRes;
@@ -127,16 +134,24 @@ abstract class HttpResponseDecoder {
         }
     }
 
+    @Nullable
+    abstract KeepAliveHandler keepAliveHandler();
+
     final void disconnectWhenFinished() {
         disconnectWhenFinished = true;
     }
 
     final boolean needsToDisconnectNow() {
-        return disconnectWhenFinished && !hasUnfinishedResponses();
+        return needsToDisconnectWhenFinished() && !hasUnfinishedResponses();
     }
 
     final boolean needsToDisconnectWhenFinished() {
-        return disconnectWhenFinished;
+        if (disconnectWhenFinished) {
+            return true;
+        }
+
+        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
+        return keepAliveHandler != null && keepAliveHandler.needToCloseConnection();
     }
 
     static final class HttpResponseWrapper implements StreamWriter<HttpObject> {

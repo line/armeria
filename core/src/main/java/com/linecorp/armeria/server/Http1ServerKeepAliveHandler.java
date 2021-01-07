@@ -24,9 +24,11 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
 final class Http1ServerKeepAliveHandler extends KeepAliveHandler {
+
     Http1ServerKeepAliveHandler(Channel channel, Timer keepAliveTimer,
-                                long idleTimeoutMillis, long maxConnectionAgeMillis) {
-        super(channel, "server", keepAliveTimer, idleTimeoutMillis, 0, maxConnectionAgeMillis);
+                                long idleTimeoutMillis, long maxConnectionAgeMillis, int maxNumRequests) {
+        super(channel, "server", keepAliveTimer, idleTimeoutMillis, /* pingIntervalMillis(unsupported) */ 0,
+              maxConnectionAgeMillis, maxNumRequests);
     }
 
     @Override

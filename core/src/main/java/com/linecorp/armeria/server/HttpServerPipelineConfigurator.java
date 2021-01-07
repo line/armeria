@@ -170,11 +170,16 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
         final long idleTimeoutMillis = config.idleTimeoutMillis();
+        final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
+        final int maxNumRequests = config.maxNumRequests();
+        final boolean needKeepAliveHandler = idleTimeoutMillis > 0 || maxConnectionAgeMillis > 0 ||
+                                             maxNumRequests > 0;
+
         final KeepAliveHandler keepAliveHandler;
-        if (idleTimeoutMillis > 0) {
+        if (needKeepAliveHandler) {
             final Timer keepAliveTimer = newKeepAliveTimer(H1C);
             keepAliveHandler = new Http1ServerKeepAliveHandler(
-                    p.channel(), keepAliveTimer, idleTimeoutMillis, config.maxConnectionAgeMillis());
+                    p.channel(), keepAliveTimer, idleTimeoutMillis, maxConnectionAgeMillis, maxNumRequests);
         } else {
             keepAliveHandler = null;
         }
@@ -425,10 +430,15 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final Channel ch = ctx.channel();
             final ChannelPipeline p = ctx.pipeline();
             final long idleTimeoutMillis = config.idleTimeoutMillis();
+            final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
+            final int maxNumRequests = config.maxNumRequests();
+            final boolean needKeepAliveHandler = idleTimeoutMillis > 0 || maxConnectionAgeMillis > 0 ||
+                                                 maxNumRequests > 0;
+
             final KeepAliveHandler keepAliveHandler;
-            if (idleTimeoutMillis > 0) {
+            if (needKeepAliveHandler) {
                 keepAliveHandler = new Http1ServerKeepAliveHandler(
-                        ch, newKeepAliveTimer(H1), idleTimeoutMillis, config.maxConnectionAgeMillis());
+                        ch, newKeepAliveTimer(H1), idleTimeoutMillis, maxConnectionAgeMillis, maxNumRequests);
             } else {
                 keepAliveHandler = null;
             }

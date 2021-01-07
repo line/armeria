@@ -69,7 +69,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             return write(id, converted, false);
         }
 
-        if (keepAliveHandler != null && keepAliveHandler.isMaxConnectionAgeExceeded()) {
+        if (keepAliveHandler != null && keepAliveHandler.needToCloseConnection()) {
             converted.headers().set(HttpHeaderNames.CONNECTION, "close");
             sentConnectionCloseHeader = true;
         }

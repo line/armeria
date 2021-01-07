@@ -154,6 +154,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
             if (req == null) {
                 if (msg instanceof HttpRequest) {
+                    if (keepAliveHandler != null) {
+                        keepAliveHandler.increaseNumRequests();
+                    }
                     final HttpRequest nettyReq = (HttpRequest) msg;
                     if (!nettyReq.decoderResult().isSuccess()) {
                         fail(id, HttpResponseStatus.BAD_REQUEST, DATA_DECODER_FAILURE);

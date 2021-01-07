@@ -163,6 +163,7 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
+    private int maxNumRequests = Flags.defaultMaxServerNumRequests();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -516,6 +517,17 @@ public final class ServerBuilder {
      */
     public ServerBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
+    }
+
+    /**
+     * Sets the maximum allowed number of requests that can be served through one connection.
+     * Defaults to {@link Flags#defaultMaxServerNumRequests()}.
+     *
+     * @param maxNumRequests the maximum number of requests. {@code 0} disables the limit.
+     */
+    public ServerBuilder maxNumRequests(int maxNumRequests) {
+        this.maxNumRequests = validateNonNegative(maxNumRequests, "maxNumRequests");
+        return this;
     }
 
     /**
@@ -1521,7 +1533,7 @@ public final class ServerBuilder {
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequests,
                 http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,

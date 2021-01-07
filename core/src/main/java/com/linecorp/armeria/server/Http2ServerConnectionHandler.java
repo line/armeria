@@ -45,10 +45,17 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.gracefulShutdownSupport = gracefulShutdownSupport;
 
-        if (config.idleTimeoutMillis() > 0 || config.pingIntervalMillis() > 0) {
+        final long idleTimeoutMillis = config.idleTimeoutMillis();
+        final long pingIntervalMillis = config.pingIntervalMillis();
+        final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
+        final int maxNumRequests = config.maxNumRequests();
+        final boolean needKeepAliveHandler = idleTimeoutMillis > 0 || pingIntervalMillis > 0 ||
+                                             maxConnectionAgeMillis > 0 || maxNumRequests > 0;
+
+        if (needKeepAliveHandler) {
             keepAliveHandler = new Http2ServerKeepAliveHandler(
                     channel, encoder().frameWriter(), keepAliveTimer,
-                    config.idleTimeoutMillis(), config.pingIntervalMillis(), config.maxConnectionAgeMillis());
+                    idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequests);
         } else {
             keepAliveHandler = null;
         }
@@ -58,7 +65,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         decoder().frameListener(requestDecoder);
 
         // Setup post build options
-        final long timeout = config.idleTimeoutMillis();
+        final long timeout = idleTimeoutMillis;
         if (timeout > 0) {
             gracefulShutdownTimeoutMillis(timeout);
         } else {

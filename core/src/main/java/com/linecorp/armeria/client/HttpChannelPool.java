@@ -55,7 +55,6 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 
-import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -79,6 +78,7 @@ final class HttpChannelPool implements AsyncCloseable {
     private static final Logger logger = LoggerFactory.getLogger(HttpChannelPool.class);
     private static final Channel[] EMPTY_CHANNELS = new Channel[0];
 
+    private final HttpClientFactory clientFactory;
     private final EventLoop eventLoop;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
@@ -90,19 +90,15 @@ final class HttpChannelPool implements AsyncCloseable {
 
     // Fields for creating a new connection:
     private final Bootstrap[] bootstraps;
-    private final MeterRegistry meterRegistry;
     private final int connectTimeoutMillis;
-    private final boolean useHttp1Pipelining;
-    private final long idleTimeoutMillis;
-    private final long pingIntervalMillis;
 
-    private final ProxyConfigSelector proxyConfigSelector;
     private final SslContext sslCtxHttp1Or2;
     private final SslContext sslCtxHttp1Only;
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
                     ConnectionPoolListener listener) {
+        this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
         pool = newEnumMap(
                 Map.class,
@@ -139,13 +135,8 @@ final class HttpChannelPool implements AsyncCloseable {
                 SessionProtocol.HTTP, SessionProtocol.HTTPS,
                 SessionProtocol.H1, SessionProtocol.H1C,
                 SessionProtocol.H2, SessionProtocol.H2C);
-        meterRegistry = clientFactory.meterRegistry();
         connectTimeoutMillis = (Integer) baseBootstrap.config().options()
                                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
-        useHttp1Pipelining = clientFactory.useHttp1Pipelining();
-        idleTimeoutMillis = clientFactory.idleTimeoutMillis();
-        pingIntervalMillis = clientFactory.pingIntervalMillis();
-        proxyConfigSelector = clientFactory.proxyConfigSelector();
     }
 
     private SslContext determineSslContext(SessionProtocol desiredProtocol) {
@@ -423,6 +414,7 @@ final class HttpChannelPool implements AsyncCloseable {
             if (proxyConfig.proxyType() != ProxyType.DIRECT) {
                 final InetSocketAddress proxyAddress = proxyConfig.proxyAddress();
                 assert proxyAddress != null;
+                final ProxyConfigSelector proxyConfigSelector = clientFactory.proxyConfigSelector();
                 proxyConfigSelector.connectFailed(protocol, Endpoint.of(poolKey.host, poolKey.port),
                                                   proxyAddress, UnprocessedRequestException.of(cause));
             }
@@ -454,9 +446,8 @@ final class HttpChannelPool implements AsyncCloseable {
         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
 
         ch.pipeline().addLast(
-                new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture, meterRegistry,
-                                       desiredProtocol, poolKey, useHttp1Pipelining, idleTimeoutMillis,
-                                       pingIntervalMillis));
+                new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture,
+                                       desiredProtocol, poolKey, clientFactory));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future,
