@@ -21,12 +21,8 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.decodePath;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.parseDirectives;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toArmeria;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ClientHeader;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ClientTrailer;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ServerHeader;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ServerTrailer;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ClientHeader;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ClientTrailer;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp2ServerTrailer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -42,6 +38,7 @@ import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -64,6 +61,7 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
+import io.netty.util.AsciiString;
 
 class ArmeriaHttpUtilTest {
 
@@ -168,7 +166,7 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1ClientHeader(in, out);
+        toNettyHttp1ClientHeader(in, out, AsciiString::toString);
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f; g=h; i=j; k=l");
     }
@@ -416,20 +414,26 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.CONTENT_RANGE, "dummy")
                                           .add(HttpHeaderNames.TRAILER, "dummy")
                                           .build();
+    }
 
-        final io.netty.handler.codec.http.HttpHeaders outHttp1 = new DefaultHttpHeaders();
-        toNettyHttp1ServerTrailer(in, outHttp1);
-        assertThat(outHttp1).isEqualTo(new DefaultHttpHeaders().add("foo", "bar"));
+    @Test
+    void traditionalHeaderNaming() {
+        final HttpHeaders in = HttpHeaders.builder()
+                                          .add(HttpHeaderNames.of("foo"), "bar")
+                                          .add(HttpHeaderNames.AUTHORIZATION, "dummy")
+                                          .add(HttpHeaderNames.CONTENT_LENGTH, "dummy")
+                                          .add(HttpHeaderNames.CACHE_CONTROL, "dummy")
+                                          .build();
 
-        final io.netty.handler.codec.http.HttpHeaders outHttp2 = new DefaultHttpHeaders();
-        toNettyHttp1ClientTrailer(in, outHttp2);
-        assertThat(outHttp2).isEqualTo(new DefaultHttpHeaders().add("foo", "bar"));
+        final io.netty.handler.codec.http.HttpHeaders out =
+                new DefaultHttpHeaders();
+        toNettyHttp1ClientHeader(in, out, Http1HeaderNaming.traditional());
 
-        final Http2Headers outHttp2Response = toNettyHttp2ServerTrailer(in);
-        assertThat(outHttp2Response).isEqualTo(new DefaultHttp2Headers().add("foo", "bar"));
-
-        final Http2Headers outHttp2Request = toNettyHttp2ClientTrailer(in);
-        assertThat(outHttp2Request).isEqualTo(new DefaultHttp2Headers().add("foo", "bar"));
+        assertThat(out).isEqualTo(new DefaultHttpHeaders()
+                                          .add("foo", "bar")
+                                          .add("Authorization", "dummy")
+                                          .add("Content-Length", "dummy")
+                                          .add("Cache-Control", "dummy"));
     }
 
     @Test

@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -41,11 +42,13 @@ import io.netty.handler.codec.http.HttpVersion;
 
 final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements ClientHttpObjectEncoder {
 
+    private final Http1HeaderNaming http1HeaderNaming;
     @Nullable
     private Http1ClientKeepAliveHandler keepAliveHandler;
 
-    ClientHttp1ObjectEncoder(Channel ch, SessionProtocol protocol) {
+    ClientHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);
+        this.http1HeaderNaming = http1HeaderNaming;
     }
 
     @Override
@@ -58,7 +61,7 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
         final HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method),
                                                        headers.path(), false);
         final io.netty.handler.codec.http.HttpHeaders nettyHeaders = req.headers();
-        ArmeriaHttpUtil.toNettyHttp1ClientHeader(headers, nettyHeaders);
+        ArmeriaHttpUtil.toNettyHttp1ClientHeader(headers, nettyHeaders, http1HeaderNaming);
 
         if (!nettyHeaders.contains(HttpHeaderNames.USER_AGENT)) {
             nettyHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
@@ -106,7 +109,7 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
     @Override
     protected void convertTrailers(HttpHeaders inputHeaders,
                                    io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        ArmeriaHttpUtil.toNettyHttp1ClientTrailer(inputHeaders, outputHeaders);
+        ArmeriaHttpUtil.toNettyHttp1ClientTrailer(inputHeaders, outputHeaders, http1HeaderNaming);
     }
 
     @Nullable

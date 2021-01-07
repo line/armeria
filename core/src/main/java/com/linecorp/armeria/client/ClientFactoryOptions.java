@@ -31,6 +31,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
@@ -41,6 +42,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.AsciiString;
 
 /**
  * A set of {@link ClientFactoryOption}s and their respective values.
@@ -194,6 +196,13 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<ProxyConfigSelector> PROXY_CONFIG_SELECTOR =
             ClientFactoryOption.define("PROXY_CONFIG_SELECTOR", ProxyConfigSelector.of(ProxyConfig.direct()));
+
+    /**
+     * The {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+     * another HTTP/1 header name.
+     */
+    public static final ClientFactoryOption<Http1HeaderNaming> HTTP1_HEADER_NAMING =
+            ClientFactoryOption.define("HTTP1_HEADER_NAMING", AsciiString::toString);
 
     /**
      * The {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.
@@ -448,6 +457,15 @@ public final class ClientFactoryOptions
      */
     public ProxyConfigSelector proxyConfigSelector() {
         return get(PROXY_CONFIG_SELECTOR);
+    }
+
+    /**
+     * Returns the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+     * another header name. This is useful when communicating with a legacy system that only supports
+     * case sensitive HTTP/1 headers.
+     */
+    public Http1HeaderNaming http1HeaderNaming() {
+        return get(HTTP1_HEADER_NAMING);
     }
 
     /**
