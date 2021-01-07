@@ -33,8 +33,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
@@ -90,20 +88,16 @@ class KeepAliveMaxNumRequestsTest {
         opened = new AtomicInteger();
         closed = new AtomicInteger();
         connectionPoolListener = new ConnectionPoolListener() {
-            private final Logger logger = LoggerFactory.getLogger(KeepAliveMaxNumRequestsTest.class);
-
             @Override
             public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
                                        InetSocketAddress localAddr, AttributeMap attrs) {
                 opened.incrementAndGet();
-                logger.info("opened: {}", opened);
             }
 
             @Override
             public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
                                          InetSocketAddress localAddr, AttributeMap attrs) {
                 closed.incrementAndGet();
-                logger.info("closed : {}", closed);
             }
         };
     }
@@ -117,16 +111,19 @@ class KeepAliveMaxNumRequestsTest {
                              .connectionPoolListener(connectionPoolListener)
                              .idleTimeoutMillis(0);
 
+        final ClientFactory clientFactory;
         final WebClient client;
         if (serverKeepAlive) {
+            clientFactory = clientFactoryBuilder.build();
             client = WebClient.builder(server.uri(protocol))
-                              .factory(clientFactoryBuilder.build())
+                              .factory(clientFactory)
                               .responseTimeoutMillis(0)
                               .build();
         } else {
-            clientFactoryBuilder.maxNumRequests(MAX_NUM_REQUESTS);
+            clientFactory = clientFactoryBuilder.maxNumRequests(MAX_NUM_REQUESTS)
+                                                .build();
             client = WebClient.builder(serverWithNoKeepAlive.uri(protocol))
-                              .factory(clientFactoryBuilder.build())
+                              .factory(clientFactory)
                               .decorator(LoggingClient.newDecorator())
                               .responseTimeoutMillis(0)
                               .build();
@@ -151,6 +148,7 @@ class KeepAliveMaxNumRequestsTest {
                 await().untilAtomic(closed, Matchers.is(2));
             }
         }
+        clientFactory.closeAsync();
     }
 
     private static final class ProtocolProvider implements ArgumentsProvider {
