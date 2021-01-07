@@ -196,11 +196,11 @@ Therefore, Armeria provides various ways that let users group the range of circu
   final BiFunction<String, String, CircuitBreaker> factory =
           (host, method) -> CircuitBreaker.of("my-cb-" + host + '#' + method);
   // Create CircuitBreakers per host and method
-  CircuitBreakerClient.newPerHostAndMethodDecorator(factory, httpRule);
+  CircuitBreakerClient.newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), httpRule);
   // The names of the created CircuitBreaker: my-cb-a.com#GET,
   // my-cb-a.com#POST, my-cb-b.com#GET, my-cb-b.com#POST, ...
 
-  CircuitBreakerRpcClient.newPerHostAndMethodDecorator(factory, rpcRule);
+  CircuitBreakerRpcClient.newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), rpcRule);
   // The names of the created CircuitBreaker: my-cb-a.com#methodA,
   // my-cb-a.com#methodB, my-cb-b.com#methodA, my-cb-b.com#methodB, ...
   ```

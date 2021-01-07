@@ -23,10 +23,10 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.netty.buffer.ByteBuf;
 
 /**
- * An input of {@link HttpDeframer} which is used to read a stream of {@link HttpData}.
+ * An input of {@link HttpDecoder} which is used to read a stream of {@link HttpData}.
  */
 @UnstableApi
-public interface HttpDeframerInput extends SafeCloseable {
+public interface HttpDecoderInput extends SafeCloseable {
 
     /**
      * Returns the number of readable bytes.

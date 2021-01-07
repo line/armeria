@@ -114,6 +114,11 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     @Override
+    public long demand() {
+        return delegate.demand();
+    }
+
+    @Override
     public final CompletableFuture<Void> whenComplete() {
         return delegate.whenComplete();
     }

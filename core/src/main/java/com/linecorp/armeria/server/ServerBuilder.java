@@ -40,7 +40,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
@@ -56,7 +55,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.CommonPools;
@@ -67,6 +65,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -77,7 +76,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
@@ -140,14 +138,6 @@ public final class ServerBuilder {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
-
-    // Prohibit deprecated options
-    @SuppressWarnings("deprecation")
-    private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
-            ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
-            ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
-            ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
-            EpollChannelOption.EPOLL_MODE);
 
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
@@ -378,7 +368,7 @@ public final class ServerBuilder {
      */
     public <T> ServerBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
-        checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
+        checkArgument(!ChannelUtil.prohibitedOptions().contains(option),
                       "prohibited socket option: %s", option);
 
         option.validate(value);
@@ -398,7 +388,7 @@ public final class ServerBuilder {
      */
     public <T> ServerBuilder childChannelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
-        checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
+        checkArgument(!ChannelUtil.prohibitedOptions().contains(option),
                       "prohibited socket option: %s", option);
 
         option.validate(value);

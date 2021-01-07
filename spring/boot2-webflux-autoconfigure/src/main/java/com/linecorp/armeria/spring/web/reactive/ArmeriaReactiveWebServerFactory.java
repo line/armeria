@@ -239,21 +239,24 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                   @Nullable String serverHeader) {
         final ArmeriaHttpHandlerAdapter handler =
                 new ArmeriaHttpHandlerAdapter(httpHandler, factoryWrapper);
-        return sb.service(Route.ofCatchAll(), (ctx, req) -> {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-            final HttpResponse response = HttpResponse.from(future);
-            final Disposable disposable = handler.handle(ctx, req, future, serverHeader).subscribe();
-            response.whenComplete().handle((unused, cause) -> {
-                if (cause != null) {
-                    if (ctx.method() != HttpMethod.HEAD) {
-                        logger.debug("{} Response stream has been cancelled.", ctx, cause);
-                    }
-                    disposable.dispose();
-                }
-                return null;
-            });
-            return response;
-        });
+        return sb.route()
+                 .addRoute(Route.ofCatchAll())
+                 .defaultServiceName("SpringWebFlux")
+                 .build((ctx, req) -> {
+                     final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+                     final HttpResponse response = HttpResponse.from(future);
+                     final Disposable disposable = handler.handle(ctx, req, future, serverHeader).subscribe();
+                     response.whenComplete().handle((unused, cause) -> {
+                         if (cause != null) {
+                             if (ctx.method() != HttpMethod.HEAD) {
+                                 logger.debug("{} Response stream has been cancelled.", ctx, cause);
+                             }
+                             disposable.dispose();
+                         }
+                         return null;
+                     });
+                     return response;
+                 });
     }
 
     private void configureArmeriaService(ServerBuilder sb, DocServiceBuilder docServiceBuilder,

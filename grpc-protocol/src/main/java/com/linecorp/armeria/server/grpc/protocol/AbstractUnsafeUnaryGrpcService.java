@@ -30,22 +30,19 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.common.stream.HttpDeframer;
-import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.EventLoop;
 
 /**
  * An {@link AbstractUnsafeUnaryGrpcService} can be used to implement a gRPC service without depending on gRPC
@@ -74,54 +71,45 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
 
     @Override
     protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+        final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
+        final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(Integer.MAX_VALUE);
+        req.decode(deframer, ctx.alloc())
+           .subscribe(singleSubscriber(deframed), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+
         final CompletableFuture<HttpResponse> responseFuture =
-                req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
-                   .thenCompose(msg -> deframeMessage(msg.content(), ctx.eventLoop(), ctx.alloc()))
-                   .thenCompose(this::handleMessage)
-                   .thenApply(responseMessage -> {
-                       final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                               ctx.alloc(), Integer.MAX_VALUE, false);
-                       final HttpData framed = framer.writePayload(responseMessage);
-                       final HttpHeadersBuilder trailers = HttpHeaders.builder();
-                       GrpcTrailersUtil.addStatusMessageToTrailers(trailers, StatusCodes.OK, null);
-                       return HttpResponse.of(
-                               RESPONSE_HEADERS,
-                               framed,
-                               trailers.build());
-                   })
-                   .exceptionally(t -> {
-                       final HttpHeadersBuilder trailers = RESPONSE_HEADERS.toBuilder();
-                       if (t instanceof ArmeriaStatusException) {
-                           final ArmeriaStatusException statusException = (ArmeriaStatusException) t;
-                           GrpcTrailersUtil.addStatusMessageToTrailers(
-                                   trailers, statusException.getCode(), statusException.getMessage());
-                       } else {
-                           GrpcTrailersUtil.addStatusMessageToTrailers(
-                                   trailers, StatusCodes.INTERNAL, t.getMessage());
-                       }
-                       return HttpResponse.of(trailers.build());
-                   });
+                deframed.thenCompose(this::handleMessage)
+                        .thenApply(responseMessage -> {
+                            final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
+                                    ctx.alloc(), Integer.MAX_VALUE, false);
+                            final HttpData framed = framer.writePayload(responseMessage);
+                            final HttpHeadersBuilder trailers = HttpHeaders.builder();
+                            GrpcTrailersUtil.addStatusMessageToTrailers(trailers, StatusCodes.OK, null);
+                            return HttpResponse.of(
+                                    RESPONSE_HEADERS,
+                                    framed,
+                                    trailers.build());
+                        })
+                        .exceptionally(t -> {
+                            final HttpHeadersBuilder trailers = RESPONSE_HEADERS.toBuilder();
+                            if (t instanceof ArmeriaStatusException) {
+                                final ArmeriaStatusException statusException = (ArmeriaStatusException) t;
+                                GrpcTrailersUtil.addStatusMessageToTrailers(
+                                        trailers, statusException.getCode(), statusException.getMessage());
+                            } else {
+                                GrpcTrailersUtil.addStatusMessageToTrailers(
+                                        trailers, StatusCodes.INTERNAL, t.getMessage());
+                            }
+                            return HttpResponse.of(trailers.build());
+                        });
 
         return HttpResponse.from(responseFuture);
     }
 
-    private static CompletableFuture<ByteBuf> deframeMessage(HttpData framed,
-                                                             EventLoop eventLoop,
-                                                             ByteBufAllocator alloc) {
-        final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
-        final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(Integer.MAX_VALUE);
-        final HttpDeframer<DeframedMessage> deframer = HttpDeframer.of(handler, alloc);
-
-        StreamMessage.of(framed).subscribe(deframer, eventLoop);
-        deframer.subscribe(singleSubscriber(deframed), eventLoop);
-        return deframed;
-    }
-
     private static Subscriber<DeframedMessage> singleSubscriber(CompletableFuture<ByteBuf> deframed) {
-        return new Subscriber<DeframedMessage>()  {
+        return new Subscriber<DeframedMessage>() {
             @Override
             public void onSubscribe(Subscription s) {
-               s.request(1);
+                s.request(1);
             }
 
             @Override

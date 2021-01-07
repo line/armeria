@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
@@ -52,25 +53,17 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, false, false);
+        subscribe(subscriber, executor, EMPTY_OPTIONS);
     }
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                                 SubscriptionOption... options) {
-        requireNonNull(options, "options");
-
-        final boolean withPooledObjects = containsWithPooledObjects(options);
-        final boolean notifyCancellation = containsNotifyCancellation(options);
-        subscribe(subscriber, executor, withPooledObjects, notifyCancellation);
-    }
-
-    private void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
-                           boolean withPooledObjects, boolean notifyCancellation) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        final SubscriptionImpl subscription =
-                new SubscriptionImpl(this, subscriber, executor, withPooledObjects, notifyCancellation);
+        requireNonNull(options, "options");
+
+        final SubscriptionImpl subscription = new SubscriptionImpl(this, subscriber, executor, options);
         final SubscriptionImpl actualSubscription = subscribe(subscription);
         if (actualSubscription != subscription) {
             // Failed to subscribe.
@@ -91,11 +84,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     public final CompletableFuture<Void> whenComplete() {
         return completionFuture;
     }
-
-    /**
-     * Returns the current demand.
-     */
-    abstract long demand();
 
     /**
      * Callback invoked by {@link Subscription#request(long)} to add {@code n} to demand.
@@ -167,6 +155,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         private final AbstractStreamMessage<?> publisher;
         private Subscriber<Object> subscriber;
         private final EventExecutor executor;
+        private final SubscriptionOption[] options;
         private final boolean withPooledObjects;
         private final boolean notifyCancellation;
 
@@ -174,12 +163,13 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
         @SuppressWarnings("unchecked")
         SubscriptionImpl(AbstractStreamMessage<?> publisher, Subscriber<?> subscriber,
-                         EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation) {
+                         EventExecutor executor, SubscriptionOption[] options) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
-            this.withPooledObjects = withPooledObjects;
-            this.notifyCancellation = notifyCancellation;
+            this.options = options;
+            withPooledObjects = containsWithPooledObjects(options);
+            notifyCancellation = containsNotifyCancellation(options);
         }
 
         Subscriber<Object> subscriber() {
@@ -198,6 +188,10 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
         EventExecutor executor() {
             return executor;
+        }
+
+        SubscriptionOption[] options() {
+            return options;
         }
 
         boolean withPooledObjects() {
@@ -241,7 +235,8 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             return MoreObjects.toStringHelper(Subscription.class)
                               .add("publisher", publisher)
                               .add("demand", publisher.demand())
-                              .add("executor", executor).toString();
+                              .add("executor", executor)
+                              .add("options", options).toString();
         }
     }
 

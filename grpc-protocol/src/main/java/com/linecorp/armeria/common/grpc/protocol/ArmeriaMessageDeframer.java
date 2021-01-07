@@ -57,9 +57,9 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.HttpDeframerHandler;
-import com.linecorp.armeria.common.stream.HttpDeframerInput;
-import com.linecorp.armeria.common.stream.HttpDeframerOutput;
+import com.linecorp.armeria.common.stream.HttpDecoder;
+import com.linecorp.armeria.common.stream.HttpDecoderInput;
+import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 
 import io.netty.buffer.ByteBuf;
@@ -76,11 +76,11 @@ import io.netty.buffer.Unpooled;
  * a {@link ByteBuf} to optimize message parsing.
  */
 @UnstableApi
-public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<DeframedMessage> {
+public class ArmeriaMessageDeframer implements HttpDecoder<DeframedMessage> {
 
     public static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
-    private static final String DEBUG_STRING = ArmeriaMessageDeframerHandler.class.getName();
+    private static final String DEBUG_STRING = ArmeriaMessageDeframer.class.getName();
 
     private static final int HEADER_LENGTH = 5;
     private static final int COMPRESSED_FLAG_MASK = 1;
@@ -98,15 +98,15 @@ public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<Defram
     private Decompressor decompressor;
 
     /**
-     * Construct an {@link ArmeriaMessageDeframerHandler} for reading messages out of a gRPC request or
+     * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or
      * response.
      */
-    public ArmeriaMessageDeframerHandler(int maxMessageSizeBytes) {
+    public ArmeriaMessageDeframer(int maxMessageSizeBytes) {
         this.maxMessageSizeBytes = maxMessageSizeBytes > 0 ? maxMessageSizeBytes : Integer.MAX_VALUE;
     }
 
     @Override
-    public void process(HttpDeframerInput in, HttpDeframerOutput<DeframedMessage> out) throws Exception {
+    public void process(HttpDecoderInput in, HttpDecoderOutput<DeframedMessage> out) throws Exception {
         startedDeframing = true;
         int readableBytes = in.readableBytes();
         while (readableBytes >= requiredLength) {
@@ -124,7 +124,7 @@ public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<Defram
      * Processes the gRPC compression header which is composed of the compression flag and the outer
      * frame length.
      */
-    private void readHeader(HttpDeframerInput in) {
+    private void readHeader(HttpDecoderInput in) {
         final int type = in.readUnsignedByte();
         if ((type & RESERVED_MASK) != 0) {
             throw new ArmeriaStatusException(
@@ -150,7 +150,7 @@ public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<Defram
      * Processes the body of the gRPC compression frame. A single compression frame may contain
      * several gRPC messages within it.
      */
-    private DeframedMessage readBody(HttpDeframerInput in) {
+    private DeframedMessage readBody(HttpDecoderInput in) {
         final ByteBuf buf;
         if (requiredLength == 0) {
             buf = Unpooled.EMPTY_BUFFER;
@@ -192,7 +192,7 @@ public class ArmeriaMessageDeframerHandler implements HttpDeframerHandler<Defram
     /**
      * Sets the {@link Decompressor} for this deframer.
      */
-    public ArmeriaMessageDeframerHandler decompressor(@Nullable Decompressor decompressor) {
+    public ArmeriaMessageDeframer decompressor(@Nullable Decompressor decompressor) {
         checkState(!startedDeframing,
                    "Deframing has already started, cannot change decompressor mid-stream.");
         this.decompressor = decompressor;

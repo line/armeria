@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
@@ -69,7 +69,7 @@ class DefaultDnsNameResolverTest {
             final EventLoop eventLoop = CommonPools.workerGroup().next();
             final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(
                     new DnsNameResolverBuilder(eventLoop)
-                            .channelType(EventLoopGroups.datagramChannelType(eventLoop))
+                            .channelType(TransportType.datagramChannelType(eventLoop))
                             .queryTimeoutMillis(Long.MAX_VALUE)
                             .nameServerProvider(name -> DnsServerAddresses.sequential(dnsServer.addr())
                                                                           .stream())

@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
@@ -63,6 +64,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     @Nullable // Updated only via subscriberUpdater.
     private volatile AbortableSubscriber subscriber;
     private volatile boolean publishedAny;
+    private volatile long demand;
 
     /**
      * Creates a new instance with the specified delegate {@link Publisher}.
@@ -86,6 +88,11 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     @Override
     public final boolean isEmpty() {
         return !isOpen() && !publishedAny;
+    }
+
+    @Override
+    public final long demand() {
+        return demand;
     }
 
     @Override
@@ -200,7 +207,17 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         public void request(long n) {
             final Subscription subscription = this.subscription;
             assert subscription != null;
+
+            if (executor.inEventLoop()) {
+                increaseDemand(n);
+            } else {
+                executor.execute(() -> increaseDemand(n));
+            }
             subscription.request(n);
+        }
+
+        private void increaseDemand(long n)  {
+            parent.demand = LongMath.saturatedAdd(parent.demand, n);
         }
 
         @Override
@@ -298,6 +315,9 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         private void onNext0(Object obj) {
+            if (parent.demand != Long.MAX_VALUE) {
+                parent.demand--;
+            }
             try {
                 subscriber.onNext(obj);
             } catch (Throwable t) {

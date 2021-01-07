@@ -120,7 +120,10 @@ public final class EventLoopGroups {
     /**
      * Returns the {@link ServerChannel} class that is available for this {@code eventLoopGroup}, for use in
      * configuring a custom {@link Bootstrap}.
+     *
+     * @deprecated Use {@link TransportType#serverChannelType(EventLoopGroup)}.
      */
+    @Deprecated
     public static Class<? extends ServerChannel> serverChannelType(EventLoopGroup eventLoopGroup) {
         return TransportType.serverChannelType(requireNonNull(eventLoopGroup, "eventLoopGroup"));
     }
@@ -128,7 +131,10 @@ public final class EventLoopGroups {
     /**
      * Returns the available {@link SocketChannel} class for {@code eventLoopGroup}, for use in configuring a
      * custom {@link Bootstrap}.
+     *
+     * @deprecated Use {@link TransportType#socketChannelType(EventLoopGroup)}.
      */
+    @Deprecated
     public static Class<? extends SocketChannel> socketChannelType(EventLoopGroup eventLoopGroup) {
         return TransportType.socketChannelType(requireNonNull(eventLoopGroup, "eventLoopGroup"));
     }
@@ -136,7 +142,10 @@ public final class EventLoopGroups {
     /**
      * Returns the available {@link DatagramChannel} class for {@code eventLoopGroup}, for use in configuring a
      * custom {@link Bootstrap}.
+     *
+     * @deprecated Use {@link TransportType#datagramChannelType(EventLoopGroup)}.
      */
+    @Deprecated
     public static Class<? extends DatagramChannel> datagramChannelType(EventLoopGroup eventLoopGroup) {
         return TransportType.datagramChannelType(requireNonNull(eventLoopGroup, "eventLoopGroup"));
     }
