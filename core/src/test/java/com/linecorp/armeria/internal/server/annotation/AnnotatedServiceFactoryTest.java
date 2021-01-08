@@ -45,7 +45,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.DecoratorAndOrder;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.AnnotatedDecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -78,7 +78,7 @@ class AnnotatedServiceFactoryTest {
 
     @Test
     void ofNoOrdering() throws NoSuchMethodException {
-        final List<DecoratorAndOrder> list =
+        final List<AnnotatedDecoratorAndOrder> list =
                 collectDecorators(TestClass.class,
                                   TestClass.class.getMethod("noOrdering"));
         assertThat(values(list)).containsExactly(Decorator1.class,
@@ -95,7 +95,7 @@ class AnnotatedServiceFactoryTest {
 
     @Test
     void ofMethodScopeOrdering() throws NoSuchMethodException {
-        final List<DecoratorAndOrder> list =
+        final List<AnnotatedDecoratorAndOrder> list =
                 collectDecorators(TestClass.class,
                                   TestClass.class.getMethod("methodScopeOrdering"));
         assertThat(values(list)).containsExactly(Decorator1.class,
@@ -116,7 +116,7 @@ class AnnotatedServiceFactoryTest {
 
     @Test
     void ofGlobalScopeOrdering() throws NoSuchMethodException {
-        final List<DecoratorAndOrder> list =
+        final List<AnnotatedDecoratorAndOrder> list =
                 collectDecorators(TestClass.class,
                                   TestClass.class.getMethod("globalScopeOrdering"));
         assertThat(values(list)).containsExactly(LoggingDecoratorFactoryFunction.class,
@@ -133,7 +133,7 @@ class AnnotatedServiceFactoryTest {
 
     @Test
     void ofUserDefinedRepeatableDecorator() throws NoSuchMethodException {
-        final List<DecoratorAndOrder> list =
+        final List<AnnotatedDecoratorAndOrder> list =
                 collectDecorators(TestClass.class,
                                   TestClass.class.getMethod("userDefinedRepeatableDecorator"));
         assertThat(values(list)).containsExactly(Decorator1.class,
@@ -329,9 +329,9 @@ class AnnotatedServiceFactoryTest {
                 .collect(Collectors.toList());
     }
 
-    private static List<Class<?>> values(List<DecoratorAndOrder> list) {
+    private static List<Class<?>> values(List<AnnotatedDecoratorAndOrder> list) {
         return list.stream()
-                   .map(DecoratorAndOrder::annotation)
+                   .map(AnnotatedDecoratorAndOrder::annotation)
                    .map(annotation -> {
                        if (annotation instanceof Decorator) {
                            return ((Decorator) annotation).value();
@@ -346,8 +346,8 @@ class AnnotatedServiceFactoryTest {
                    .collect(Collectors.toList());
     }
 
-    private static List<Integer> orders(List<DecoratorAndOrder> list) {
-        return list.stream().map(DecoratorAndOrder::order).collect(Collectors.toList());
+    private static List<Integer> orders(List<AnnotatedDecoratorAndOrder> list) {
+        return list.stream().map(AnnotatedDecoratorAndOrder::order).collect(Collectors.toList());
     }
 
     static class Decorator1 implements DecoratingHttpServiceFunction {

@@ -23,6 +23,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.internal.common.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 
 /**
@@ -43,5 +44,5 @@ public @interface Decorator {
     /**
      * The order of decoration, where a {@link Decorator} of lower value will be applied first.
      */
-    int order() default 0;
+    int order() default DecoratorAndOrder.DEFAULT_ORDER;
 }

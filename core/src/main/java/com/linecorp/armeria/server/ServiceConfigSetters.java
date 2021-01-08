@@ -80,6 +80,14 @@ interface ServiceConfigSetters {
     ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator);
 
     /**
+     * Decorates an {@link HttpService} with the specified {@code decorator} and the {@code order}.
+     *
+     * @param decorator the {@link Function} that decorates the {@link HttpService}
+     * @param order the {@code decorator}'s order
+     */
+    ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator, int order);
+
+    /**
      * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
      *
      * @param decorators the {@link Function}s that decorate the {@link HttpService}
@@ -93,6 +101,24 @@ interface ServiceConfigSetters {
      */
     ServiceConfigSetters decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators);
+
+    /**
+     * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
+     *
+     * @param decorators the {@link Function}s that decorate the {@link HttpService}
+     * @param order the order of {@code decorators}
+     */
+    ServiceConfigSetters decorators(int order,
+                                    Function<? super HttpService, ? extends HttpService>... decorators);
+
+    /**
+     * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
+     *
+     * @param decorators the {@link Function}s that decorate the {@link HttpService}
+     * @param order the order of {@code decorators}
+     */
+    ServiceConfigSetters decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators, int order);
 
     /**
      * Sets the default value of the {@link RequestLog#serviceName()} property which is used when

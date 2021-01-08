@@ -79,6 +79,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.internal.common.DecoratorAndOrder;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil.FindOption;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
@@ -558,11 +559,11 @@ public final class AnnotatedServiceFactory {
     private static Function<? super HttpService, ? extends HttpService> decorator(
             Method method, Class<?> clazz) {
 
-        final List<DecoratorAndOrder> decorators = collectDecorators(clazz, method);
+        final List<AnnotatedDecoratorAndOrder> decorators = collectDecorators(clazz, method);
 
         Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
         for (int i = decorators.size() - 1; i >= 0; i--) {
-            final DecoratorAndOrder d = decorators.get(i);
+            final AnnotatedDecoratorAndOrder d = decorators.get(i);
             decorator = decorator.andThen(d.decorator());
         }
         return decorator;
@@ -573,15 +574,15 @@ public final class AnnotatedServiceFactory {
      * decorator annotations.
      */
     @VisibleForTesting
-    static List<DecoratorAndOrder> collectDecorators(Class<?> clazz, Method method) {
-        final List<DecoratorAndOrder> decorators = new ArrayList<>();
+    static List<AnnotatedDecoratorAndOrder> collectDecorators(Class<?> clazz, Method method) {
+        final List<AnnotatedDecoratorAndOrder> decorators = new ArrayList<>();
 
         // Class-level decorators are applied before method-level decorators.
         collectDecorators(decorators, AnnotationUtil.getAllAnnotations(clazz));
         collectDecorators(decorators, AnnotationUtil.getAllAnnotations(method));
 
         // Sort decorators by "order" attribute values.
-        decorators.sort(Comparator.comparing(DecoratorAndOrder::order));
+        decorators.sort(Comparator.comparing(AnnotatedDecoratorAndOrder::order));
 
         return decorators;
     }
@@ -590,7 +591,7 @@ public final class AnnotatedServiceFactory {
      * Adds decorators to the specified {@code list}. Decorators which are annotated with {@link Decorator}
      * and user-defined decorators will be collected.
      */
-    private static void collectDecorators(List<DecoratorAndOrder> list, List<Annotation> annotations) {
+    private static void collectDecorators(List<AnnotatedDecoratorAndOrder> list, List<Annotation> annotations) {
         if (annotations.isEmpty()) {
             return;
         }
@@ -603,19 +604,19 @@ public final class AnnotatedServiceFactory {
         for (final Annotation annotation : annotations) {
             if (annotation instanceof Decorator) {
                 final Decorator d = (Decorator) annotation;
-                list.add(new DecoratorAndOrder(d, newDecorator(d), d.order()));
+                list.add(new AnnotatedDecoratorAndOrder(d, newDecorator(d), d.order()));
                 continue;
             }
 
             if (annotation instanceof Decorators) {
                 final Decorator[] decorators = ((Decorators) annotation).value();
                 for (final Decorator d : decorators) {
-                    list.add(new DecoratorAndOrder(d, newDecorator(d), d.order()));
+                    list.add(new AnnotatedDecoratorAndOrder(d, newDecorator(d), d.order()));
                 }
                 continue;
             }
 
-            DecoratorAndOrder udd = userDefinedDecorator(annotation);
+            AnnotatedDecoratorAndOrder udd = userDefinedDecorator(annotation);
             if (udd != null) {
                 list.add(udd);
                 continue;
@@ -646,7 +647,7 @@ public final class AnnotatedServiceFactory {
      * decorator annotation.
      */
     @Nullable
-    private static DecoratorAndOrder userDefinedDecorator(Annotation annotation) {
+    private static AnnotatedDecoratorAndOrder userDefinedDecorator(Annotation annotation) {
         // User-defined decorator MUST be annotated with @DecoratorFactory annotation.
         final DecoratorFactory d = AnnotationUtil.findFirstDeclared(annotation.annotationType(),
                                                                     DecoratorFactory.class);
@@ -673,7 +674,7 @@ public final class AnnotatedServiceFactory {
             // A user-defined decorator may not have an 'order' attribute.
             // If it does not exist, '0' is used by default.
         }
-        return new DecoratorAndOrder(annotation, factory.newDecorator(annotation), order);
+        return new AnnotatedDecoratorAndOrder(annotation, factory.newDecorator(annotation), order);
     }
 
     /**
@@ -807,31 +808,19 @@ public final class AnnotatedServiceFactory {
     /**
      * An internal class to hold a decorator with its order.
      */
-    @VisibleForTesting
-    static final class DecoratorAndOrder {
+    static final class AnnotatedDecoratorAndOrder extends DecoratorAndOrder<HttpService> {
         // Keep the specified annotation for testing purpose.
         private final Annotation annotation;
-        private final Function<? super HttpService, ? extends HttpService> decorator;
-        private final int order;
 
-        private DecoratorAndOrder(Annotation annotation,
-                                  Function<? super HttpService, ? extends HttpService> decorator,
-                                  int order) {
+        private AnnotatedDecoratorAndOrder(Annotation annotation,
+                                           Function<? super HttpService, ? extends HttpService> decorator,
+                                           int order) {
+            super(decorator, order);
             this.annotation = annotation;
-            this.decorator = decorator;
-            this.order = order;
         }
 
         Annotation annotation() {
             return annotation;
-        }
-
-        Function<? super HttpService, ? extends HttpService> decorator() {
-            return decorator;
-        }
-
-        int order() {
-            return order;
         }
 
         @Override

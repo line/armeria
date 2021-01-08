@@ -82,8 +82,19 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public WebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator, int order) {
+        return (WebClientBuilder) super.rpcDecorator(decorator, order);
+    }
+
+    @Override
     public WebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         return (WebClientBuilder) super.rpcDecorator(decorator);
+    }
+
+    @Override
+    public WebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator,
+                                         int order) {
+        return (WebClientBuilder) super.rpcDecorator(decorator, order);
     }
 
     @Override
@@ -159,8 +170,19 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public WebClientBuilder decorator(Function<? super HttpClient, ? extends HttpClient> decorator,
+                                                  int order) {
+        return (WebClientBuilder) super.decorator(decorator, order);
+    }
+
+    @Override
     public WebClientBuilder decorator(DecoratingHttpClientFunction decorator) {
         return (WebClientBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public WebClientBuilder decorator(DecoratingHttpClientFunction decorator, int order) {
+        return (WebClientBuilder) super.decorator(decorator, order);
     }
 
     @Override

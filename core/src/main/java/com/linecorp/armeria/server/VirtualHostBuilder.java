@@ -39,6 +39,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -60,6 +61,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.DecoratorAndOrder;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -609,6 +611,7 @@ public final class VirtualHostBuilder {
         }
 
         if (!routeDecoratingServices.isEmpty()) {
+            routeDecoratingServices.sort(Comparator.comparing(RouteDecoratingService::order));
             return RouteDecoratingService.newDecorator(
                     Routers.ofRouteDecoratingService(routeDecoratingServices));
         } else {
@@ -670,12 +673,14 @@ public final class VirtualHostBuilder {
             Route route, Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(route, "route");
         requireNonNull(decorator, "decorator");
-        return addRouteDecoratingService(new RouteDecoratingService(route, decorator, Integer.MIN_VALUE));
+        return addRouteDecoratingService(new RouteDecoratingService(route, decorator,
+                                                                    DecoratorAndOrder.DEFAULT_ORDER));
     }
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@link Route}.
-     * FIXME(heowc): Fix javadoc.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
+     * If the order dose not specified, the default value is {@link DecoratorAndOrder#DEFAULT_ORDER}.
      *
      * @param route the route being decorated
      * @param decorator the {@link Function} that decorates {@link HttpService}

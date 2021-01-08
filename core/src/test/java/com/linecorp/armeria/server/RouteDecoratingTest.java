@@ -79,25 +79,8 @@ class RouteDecoratingTest {
               .routeDecorator().pathPrefix("/").build(newDecorator(1))
               .routeDecorator().path("/abc").build(newDecorator(2))
               .routeDecorator().pathPrefix("/abc").build(newDecorator(3))
-              .routeDecorator().pathPrefix("/abc").build(newDecorator(4))
-              .routeDecorator().pathPrefix("/abc/def").build(newDecorator(5))
-              .routeDecorator().path("glob:**def").build(newDecorator(6));
-        }
-    };
-
-    @RegisterExtension
-    static ServerExtension decoratingAndOrderingServer = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/abc", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-              .service("/abc/def", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-              .service("/abc/def/ghi", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-              .routeDecorator().path("/abc").order(6).build(newDecorator(1))
-              .routeDecorator().pathPrefix("/").order(5).build(newDecorator(2))
-              .routeDecorator().pathPrefix("/abc").order(4).build(newDecorator(3))
-              .routeDecorator().pathPrefix("/abc").order(3).build(newDecorator(4))
-              .routeDecorator().pathPrefix("/abc/def").order(2).build(newDecorator(5))
-              .routeDecorator().path("glob:**def").build(newDecorator(6))
+              .routeDecorator().pathPrefix("/abc/def").build(newDecorator(4))
+              .routeDecorator().path("glob:**def").build(newDecorator(5))
 
               .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .decorator("glob:fo*", newDecorator(10))
@@ -188,38 +171,20 @@ class RouteDecoratingTest {
     };
 
     @ParameterizedTest
-    @MethodSource("generateDecorateInOrderFromDecoratingServer")
-    void decorateInOrderFromDecoratingServer(String path, List<Integer> orders) {
+    @MethodSource("generateDecorateInOrder")
+    void decorateInOrder(String path, List<Integer> orders) {
         final WebClient client = WebClient.of(decoratingServer.httpUri());
         client.get(path).aggregate().join();
         assertThat(queue).containsExactlyElementsOf(orders);
     }
 
-    static Stream<Arguments> generateDecorateInOrderFromDecoratingServer() {
+    static Stream<Arguments> generateDecorateInOrder() {
         return Stream.of(
                 Arguments.of("/abc", ImmutableList.of(2, 1)),
                 Arguments.of("/abc/def", ImmutableList.of(5, 3, 1)),
                 Arguments.of("/abc/def/ghi", ImmutableList.of(4, 3, 1)),
                 Arguments.of("/foo", ImmutableList.of(11, 10, 1)),
                 Arguments.of("/bar", ImmutableList.of(11, 10, 1)));
-                Arguments.of("/abc", ImmutableList.of(1, 2)), // 2, 1
-                Arguments.of("/abc/def", ImmutableList.of(6, 1, 4, 3)), // 1, 3, 4, 6
-                Arguments.of("/abc/def/ghi", ImmutableList.of(1, 4, 3, 5))); // 1, 3, 4, 5
-    }
-
-    @ParameterizedTest
-    @MethodSource("generateDecorateInOrderFromDecoratingAndOrderingServer")
-    void decorateInOrderFromDecoratingAndOrderingServer(String path, List<Integer> orders) {
-        final WebClient client = WebClient.of(decoratingAndOrderingServer.httpUri());
-        client.get(path).aggregate().join();
-        assertThat(queue).containsExactlyElementsOf(orders);
-    }
-
-    static Stream<Arguments> generateDecorateInOrderFromDecoratingAndOrderingServer() {
-        return Stream.of(
-                Arguments.of("/abc", ImmutableList.of(2, 1)),
-                Arguments.of("/abc/def", ImmutableList.of(6, 2, 4, 3)),
-                Arguments.of("/abc/def/ghi", ImmutableList.of(2, 4, 3, 5)));
     }
 
     @ParameterizedTest
@@ -296,19 +261,5 @@ class RouteDecoratingTest {
             builder.add("dest", destHeader);
         }
         assertThat(client.execute(builder.build()).aggregate().join().contentUtf8()).isEqualTo(result);
-    }
-
-    void decorator() {
-        final Server server = Server.builder()
-                                   .decorator("glob:/**", newDecorator(1))
-                                   .decorator("glob:/foo/*", newDecorator(2))
-                                   .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                   .build();
-        server.start().join();
-
-        Server.builder()
-              .decorator("glob:/foo/*", newDecorator(3))
-              .decorator("glob:/**", newDecorator(4))
-              .service("/foo", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
     }
 }

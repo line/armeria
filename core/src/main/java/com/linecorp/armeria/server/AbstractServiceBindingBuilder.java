@@ -82,6 +82,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
+    public AbstractServiceBindingBuilder decorator(
+            Function<? super HttpService, ? extends HttpService> decorator, int order) {
+        defaultServiceConfigSetters.decorator(decorator, order);
+        return this;
+    }
+
+    @Override
     public AbstractServiceBindingBuilder decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
         defaultServiceConfigSetters.decorators(decorators);
@@ -92,6 +99,20 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     public AbstractServiceBindingBuilder decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder decorators(
+            int order, Function<? super HttpService, ? extends HttpService>... decorators) {
+        defaultServiceConfigSetters.decorators(order, decorators);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators, int order) {
+        defaultServiceConfigSetters.decorators(decorators, order);
         return this;
     }
 

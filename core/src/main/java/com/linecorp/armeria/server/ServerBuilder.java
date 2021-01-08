@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.DecoratorAndOrder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -1178,6 +1179,16 @@ public final class ServerBuilder {
     }
 
     /**
+     * Decorates all {@link HttpService}s with the specified {@code decorator} and {@code order}.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
+     *
+     * @param decorator the {@link Function} that decorates {@link HttpService}s
+     */
+    public ServerBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator, int order) {
+        return decorator(Route.ofCatchAll(), decorator, order);
+    }
+
+    /**
      * Decorates all {@link HttpService}s with the specified {@link DecoratingHttpServiceFunction}.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
@@ -1190,11 +1201,12 @@ public final class ServerBuilder {
     }
 
     /**
-     * Decorates all {@link HttpService}s with the specified {@link DecoratingHttpServiceFunction}.
-     * FIXME(heowc): Fix javadoc
+     * Decorates all {@link HttpService}s with the specified {@link DecoratingHttpServiceFunction}
+     * and {@code order}. The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
+     * @param order the order of {@link DecoratingHttpServiceFunction}
      */
     public ServerBuilder decorator(
             DecoratingHttpServiceFunction decoratingHttpServiceFunction, int order) {
@@ -1204,6 +1216,7 @@ public final class ServerBuilder {
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
+     * If the order dose not specified, the default value is {@link DecoratorAndOrder#DEFAULT_ORDER}.
      */
     public ServerBuilder decorator(
             String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
@@ -1212,7 +1225,8 @@ public final class ServerBuilder {
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
-     * FIXME(heowc): Fix javadoc.
+     * The specified decorator(s) is/are executed in reverse order of the insertion.
+     * If the order dose not specified, the default value is {@link DecoratorAndOrder#DEFAULT_ORDER}.
      */
     public ServerBuilder decorator(
             String pathPattern, Function<? super HttpService, ? extends HttpService> decorator, int order) {
@@ -1243,17 +1257,16 @@ public final class ServerBuilder {
             Route route, Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(route, "route");
         requireNonNull(decorator, "decorator");
-        return routingDecorator(new RouteDecoratingService(route, decorator, Integer.MIN_VALUE));
+        return routingDecorator(new RouteDecoratingService(route, decorator));
     }
 
     /**
      * Decorates {@link HttpService}s with the specified {@link Route}.
-     * FIXME(heowc): Fix javadoc.
      *
      * @param route the route being decorated
      * @param decorator the {@link Function} that decorates {@link HttpService} which matches
      *                  the specified {@link Route}
-     * @param order the {@code decorator}'s order
+     * @param order the order of {@code decorator}
      */
     public ServerBuilder decorator(
             Route route, Function<? super HttpService, ? extends HttpService> decorator, int order) {

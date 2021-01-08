@@ -25,6 +25,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.internal.common.DecoratorAndOrder;
 
 import io.netty.util.AttributeKey;
 
@@ -83,6 +84,11 @@ final class RouteDecoratingService implements HttpService {
         this.route = requireNonNull(route, "route");
         decorator = requireNonNull(decoratorFunction, "decoratorFunction").apply(this);
         this.order = order;
+    }
+
+    RouteDecoratingService(Route route,
+                           Function<? super HttpService, ? extends HttpService> decoratorFunction) {
+        this(route, decoratorFunction, DecoratorAndOrder.DEFAULT_ORDER);
     }
 
     @Override

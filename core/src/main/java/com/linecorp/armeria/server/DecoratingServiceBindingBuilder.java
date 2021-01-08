@@ -49,7 +49,7 @@ import com.linecorp.armeria.common.MediaType;
 public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilder {
 
     private final ServerBuilder serverBuilder;
-    private int order = Integer.MAX_VALUE;
+    private int order;
 
     DecoratingServiceBindingBuilder(ServerBuilder serverBuilder) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
@@ -178,7 +178,7 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
     }
 
     /**
-     * FIXME(heowc): Fix javadoc.
+     * Sets the order.
      */
     public DecoratingServiceBindingBuilder order(int order) {
         this.order = order;

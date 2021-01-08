@@ -229,6 +229,12 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator,
+                                          int order) {
+        return (ServiceBindingBuilder) super.decorator(decorator, order);
+    }
+
+    @Override
     @SafeVarargs
     public final ServiceBindingBuilder decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
@@ -239,6 +245,19 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     public ServiceBindingBuilder decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         return (ServiceBindingBuilder) super.decorators(decorators);
+    }
+
+    @Override
+    @SafeVarargs
+    public final ServiceBindingBuilder decorators(
+            int order, Function<? super HttpService, ? extends HttpService>... decorators) {
+        return (ServiceBindingBuilder) super.decorators(order, decorators);
+    }
+
+    @Override
+    public ServiceBindingBuilder decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators, int order) {
+        return (ServiceBindingBuilder) super.decorators(decorators, order);
     }
 
     /**

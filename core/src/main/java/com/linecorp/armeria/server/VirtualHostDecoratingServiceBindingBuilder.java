@@ -23,6 +23,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.common.DecoratorAndOrder;
 
 /**
  * A builder class for binding a {@code decorator} to a {@link Route} fluently.
@@ -50,7 +51,7 @@ import com.linecorp.armeria.common.MediaType;
 public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBindingBuilder {
 
     private final VirtualHostBuilder virtualHostBuilder;
-    private int order = Integer.MAX_VALUE;
+    private int order = DecoratorAndOrder.DEFAULT_ORDER;
 
     VirtualHostDecoratingServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
         this.virtualHostBuilder = requireNonNull(virtualHostBuilder, "virtualHostBuilder");
@@ -179,7 +180,7 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     }
 
     /**
-     * FIXME(heowc): Fix javadoc.
+     * Sets the order.
      */
     public VirtualHostDecoratingServiceBindingBuilder order(int order) {
         this.order = order;

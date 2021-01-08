@@ -227,12 +227,33 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
+     * Adds the specified HTTP-level {@code decorator} and {@code order}.
+     *
+     * @param decorator the {@link Function} that transforms an {@link HttpClient} to another
+     */
+    public AbstractClientOptionsBuilder decorator(
+            Function<? super HttpClient, ? extends HttpClient> decorator, int order) {
+        decoration.add(decorator, order);
+        return this;
+    }
+
+    /**
      * Adds the specified HTTP-level {@code decorator}.
      *
      * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
     public AbstractClientOptionsBuilder decorator(DecoratingHttpClientFunction decorator) {
         decoration.add(decorator);
+        return this;
+    }
+
+    /**
+     * Adds the specified HTTP-level {@code decorator} and {@code order}.
+     *
+     * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
+     */
+    public AbstractClientOptionsBuilder decorator(DecoratingHttpClientFunction decorator, int order) {
+        decoration.add(decorator, order);
         return this;
     }
 
@@ -256,12 +277,33 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
+     * Adds the specified RPC-level {@code decorator} and {@code order}.
+     *
+     * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
+     */
+    public AbstractClientOptionsBuilder rpcDecorator(
+            Function<? super RpcClient, ? extends RpcClient> decorator, int order) {
+        decoration.addRpc(decorator, order);
+        return this;
+    }
+
+    /**
      * Adds the specified RPC-level {@code decorator}.
      *
      * @param decorator the {@link DecoratingRpcClientFunction} that intercepts an invocation
      */
     public AbstractClientOptionsBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         decoration.addRpc(decorator);
+        return this;
+    }
+
+    /**
+     * Adds the specified RPC-level {@code decorator} and {@code order}.
+     *
+     * @param decorator the {@link DecoratingRpcClientFunction} that intercepts an invocation
+     */
+    public AbstractClientOptionsBuilder rpcDecorator(DecoratingRpcClientFunction decorator, int order) {
+        decoration.addRpc(decorator, order);
         return this;
     }
 

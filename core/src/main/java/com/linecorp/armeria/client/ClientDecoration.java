@@ -16,10 +16,14 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.util.List;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.internal.common.DecoratorAndOrder;
 
 /**
  * A set of {@link Function}s that transforms a {@link Client} into another.
@@ -82,10 +86,16 @@ public final class ClientDecoration {
     private final List<Function<? super HttpClient, ? extends HttpClient>> decorators;
     private final List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators;
 
-    ClientDecoration(List<Function<? super HttpClient, ? extends HttpClient>> decorators,
-                     List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators) {
-        this.decorators = ImmutableList.copyOf(decorators);
-        this.rpcDecorators = ImmutableList.copyOf(rpcDecorators);
+    ClientDecoration(List<DecoratorAndOrder<HttpClient>> decorators,
+                     List<DecoratorAndOrder<RpcClient>> rpcDecorators) {
+        this.decorators = decorators.stream()
+                                    .sorted((o1, o2) -> Integer.compare(o2.order(), o1.order()))
+                                    .map(DecoratorAndOrder::decorator)
+                                    .collect(toImmutableList());
+        this.rpcDecorators = rpcDecorators.stream()
+                                          .sorted((o1, o2) -> Integer.compare(o2.order(), o1.order()))
+                                          .map(DecoratorAndOrder::decorator)
+                                          .collect(toImmutableList());
     }
 
     /**

@@ -22,13 +22,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import com.linecorp.armeria.internal.common.DecoratorAndOrder;
+
 /**
  * Creates a new {@link ClientDecoration} using the builder pattern.
  */
 public final class ClientDecorationBuilder {
 
-    private final List<Function<? super HttpClient, ? extends HttpClient>> decorators = new ArrayList<>();
-    private final List<Function<? super RpcClient, ? extends RpcClient>> rpcDecorators = new ArrayList<>();
+    private final List<DecoratorAndOrder<HttpClient>> decorators = new ArrayList<>();
+    private final List<DecoratorAndOrder<RpcClient>> rpcDecorators = new ArrayList<>();
 
     ClientDecorationBuilder() {}
 
@@ -48,7 +50,19 @@ public final class ClientDecorationBuilder {
      * @param decorator the {@link Function} that transforms an {@link HttpClient} to another
      */
     public ClientDecorationBuilder add(Function<? super HttpClient, ? extends HttpClient> decorator) {
-        decorators.add(requireNonNull(decorator, "decorator"));
+        return add(decorator, DecoratorAndOrder.DEFAULT_ORDER);
+    }
+
+    /**
+     * Adds the specified HTTP-level {@code decorator}.
+     *
+     * @param decorator the {@link Function} that transforms an {@link HttpClient} to another
+     * @param order the order of {@code decorator}
+     */
+    public ClientDecorationBuilder add(Function<? super HttpClient, ? extends HttpClient> decorator,
+                                       int order) {
+        requireNonNull(decorator, "decorator");
+        decorators.add(new DecoratorAndOrder<>(decorator, order));
         return this;
     }
 
@@ -58,8 +72,18 @@ public final class ClientDecorationBuilder {
      * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
     public ClientDecorationBuilder add(DecoratingHttpClientFunction decorator) {
+        return add(decorator, DecoratorAndOrder.DEFAULT_ORDER);
+    }
+
+    /**
+     * Adds the specified HTTP-level {@code decorator}.
+     *
+     * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
+     * @param order the order of {@code decorator}
+     */
+    public ClientDecorationBuilder add(DecoratingHttpClientFunction decorator, int order) {
         requireNonNull(decorator, "decorator");
-        return add(delegate -> new FunctionalDecoratingHttpClient(delegate, decorator));
+        return add(delegate -> new FunctionalDecoratingHttpClient(delegate, decorator), order);
     }
 
     /**
@@ -77,7 +101,19 @@ public final class ClientDecorationBuilder {
      * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
      */
     public ClientDecorationBuilder addRpc(Function<? super RpcClient, ? extends RpcClient> decorator) {
-        rpcDecorators.add(requireNonNull(decorator, "decorator"));
+        return addRpc(decorator, DecoratorAndOrder.DEFAULT_ORDER);
+    }
+
+    /**
+     * Adds the specified RPC-level {@code decorator}.
+     *
+     * @param decorator the {@link Function} that transforms an {@link RpcClient} to another
+     * @param order the order of {@code decorator}
+     */
+    public ClientDecorationBuilder addRpc(Function<? super RpcClient, ? extends RpcClient> decorator,
+                                          int order) {
+        requireNonNull(decorator, "decorator");
+        rpcDecorators.add(new DecoratorAndOrder<>(decorator, order));
         return this;
     }
 
@@ -87,8 +123,18 @@ public final class ClientDecorationBuilder {
      * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
      */
     public ClientDecorationBuilder addRpc(DecoratingRpcClientFunction decorator) {
+        return addRpc(decorator, DecoratorAndOrder.DEFAULT_ORDER);
+    }
+
+    /**
+     * Adds the specified RPC-level {@code decorator}.
+     *
+     * @param decorator the {@link DecoratingHttpClientFunction} that intercepts an invocation
+     * @param order the order of {@code decorator}
+     */
+    public ClientDecorationBuilder addRpc(DecoratingRpcClientFunction decorator, int order) {
         requireNonNull(decorator, "decorator");
-        return addRpc(delegate -> new FunctionalDecoratingRpcClient(delegate, decorator));
+        return addRpc(delegate -> new FunctionalDecoratingRpcClient(delegate, decorator), order);
     }
 
     /**

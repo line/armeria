@@ -162,6 +162,13 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     @Override
+    public AnnotatedServiceBindingBuilder decorator(
+            Function<? super HttpService, ? extends HttpService> decorator, int order) {
+        defaultServiceConfigSetters.decorator(decorator, order);
+        return this;
+    }
+
+    @Override
     @SafeVarargs
     public final AnnotatedServiceBindingBuilder decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
@@ -173,6 +180,21 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
+    @SafeVarargs
+    public final AnnotatedServiceBindingBuilder decorators(
+            int order, Function<? super HttpService, ? extends HttpService>... decorators) {
+        defaultServiceConfigSetters.decorators(order, decorators);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators, int order) {
+        defaultServiceConfigSetters.decorators(decorators, order);
         return this;
     }
 

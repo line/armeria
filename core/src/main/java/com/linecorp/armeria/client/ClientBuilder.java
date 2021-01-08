@@ -193,8 +193,18 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientBuilder decorator(Function<? super HttpClient, ? extends HttpClient> decorator, int order) {
+        return (ClientBuilder) super.decorator(decorator, order);
+    }
+
+    @Override
     public ClientBuilder decorator(DecoratingHttpClientFunction decorator) {
         return (ClientBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public ClientBuilder decorator(DecoratingHttpClientFunction decorator, int order) {
+        return (ClientBuilder) super.decorator(decorator, order);
     }
 
     @Override
@@ -209,8 +219,18 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator, int order) {
+        return (ClientBuilder) super.rpcDecorator(decorator, order);
+    }
+
+    @Override
     public ClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         return (ClientBuilder) super.rpcDecorator(decorator);
+    }
+
+    @Override
+    public ClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator, int order) {
+        return (ClientBuilder) super.rpcDecorator(decorator, order);
     }
 
     @Override

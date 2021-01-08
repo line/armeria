@@ -21,12 +21,16 @@ import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMi
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.internal.common.DecoratorAndOrder;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -47,8 +51,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private Long maxRequestLength;
     @Nullable
     private Boolean verboseResponses;
-    @Nullable
-    private Function<? super HttpService, ? extends HttpService> decorator;
+    private final List<DecoratorAndOrder<HttpService>> decoratorAndOrders = new ArrayList<>();
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
@@ -91,39 +94,60 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator) {
+        return decorator(decorator, DecoratorAndOrder.DEFAULT_ORDER);
+    }
+
+    @Override
+    public ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator,
+                                          int order) {
         requireNonNull(decorator, "decorator");
-        if (this.decorator != null) {
-            this.decorator = this.decorator.andThen(decorator);
-        } else {
-            this.decorator = decorator;
-        }
+        decoratorAndOrders.add(new DecoratorAndOrder<>(decorator, order));
         return this;
     }
 
     Function<? super HttpService, ? extends HttpService> decorator() {
-        if (decorator == null) {
+        final Optional<? extends Function<? super HttpService, ? extends HttpService>> decorator =
+                decoratorAndOrders.stream()
+                                  .sorted((o1, o2) -> Integer.compare(o2.order(), o1.order()))
+                                  .map(DecoratorAndOrder::decorator)
+                                  .reduce(Function::andThen);
+        if (decorator.isPresent()) {
+            return decorator.get();
+        } else {
             return Function.identity();
         }
-        return decorator;
     }
 
     @Override
     @SafeVarargs
     public final ServiceConfigSetters decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
-        return decorators(ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
+        return decorators(ImmutableList.copyOf(requireNonNull(decorators, "decorators")),
+                          DecoratorAndOrder.DEFAULT_ORDER);
     }
 
     @Override
     public ServiceConfigSetters decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        return decorators(decorators, DecoratorAndOrder.DEFAULT_ORDER);
+    }
 
+    @Override
+    @SafeVarargs
+    public final ServiceConfigSetters decorators(
+            int order, Function<? super HttpService, ? extends HttpService>... decorators) {
+        return decorators(ImmutableList.copyOf(requireNonNull(decorators, "decorators")), order);
+    }
+
+    @Override
+    public ServiceConfigSetters decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators, int order) {
         requireNonNull(decorators, "decorators");
 
         ServiceConfigSetters ret = this;
         for (Function<? super HttpService, ? extends HttpService> decorator : decorators) {
             requireNonNull(decorator, "decorators contains null.");
-            ret = decorator(decorator);
+            ret = decorator(decorator, order);
         }
 
         return ret;

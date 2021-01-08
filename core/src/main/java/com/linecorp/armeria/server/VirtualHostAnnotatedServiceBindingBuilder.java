@@ -209,6 +209,13 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     @Override
+    public VirtualHostAnnotatedServiceBindingBuilder decorator(
+            Function<? super HttpService, ? extends HttpService> decorator, int order) {
+        defaultServiceConfigSetters.decorator(decorator, order);
+        return this;
+    }
+
+    @Override
     @SafeVarargs
     public final VirtualHostAnnotatedServiceBindingBuilder decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
@@ -220,6 +227,21 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     public VirtualHostAnnotatedServiceBindingBuilder decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         defaultServiceConfigSetters.decorators(decorators);
+        return this;
+    }
+
+    @Override
+    @SafeVarargs
+    public final VirtualHostAnnotatedServiceBindingBuilder decorators(
+            int order, Function<? super HttpService, ? extends HttpService>... decorators) {
+        defaultServiceConfigSetters.decorators(order, decorators);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators, int order) {
+        defaultServiceConfigSetters.decorators(decorators, order);
         return this;
     }
 
