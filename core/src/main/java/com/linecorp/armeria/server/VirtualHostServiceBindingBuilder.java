@@ -233,6 +233,12 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder decorator(
+            Function<? super HttpService, ? extends HttpService> decorator, int order) {
+        return (VirtualHostServiceBindingBuilder) super.decorator(decorator, order);
+    }
+
+    @Override
     @SafeVarargs
     public final VirtualHostServiceBindingBuilder decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
@@ -240,9 +246,22 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    @SafeVarargs
+    public final VirtualHostServiceBindingBuilder decorators(
+            int order, Function<? super HttpService, ? extends HttpService>... decorators) {
+        return (VirtualHostServiceBindingBuilder) super.decorators(order, decorators);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         return (VirtualHostServiceBindingBuilder) super.decorators(decorators);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder decorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators, int order) {
+        return (VirtualHostServiceBindingBuilder) super.decorators(decorators, order);
     }
 
     /**
