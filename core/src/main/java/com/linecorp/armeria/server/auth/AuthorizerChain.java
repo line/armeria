@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Chains multiple {@link Authorizer}s together into a single {@link Authorizer}.
  * Utilizes {@link AuthorizerSelectionStrategy} to select corresponding {@link AuthFailureHandler}.
  */
-final class AuthorizerChain<T> implements Authorizer<T> {
+final class AuthorizerChain<T> extends AbstractAuthorizerWithHandlers<T> {
 
     enum AuthorizerSelectionStrategy {
         /**
@@ -59,22 +59,18 @@ final class AuthorizerChain<T> implements Authorizer<T> {
 
     private final List<? extends Authorizer<T>> authorizers;
     private final AuthorizerSelectionStrategy selectionStrategy;
-    @Nullable
-    private AuthSuccessHandler successHandler;
-    @Nullable
-    private AuthFailureHandler failureHandler;
 
-    AuthorizerChain(Iterable<? extends Authorizer<T>> authorizers,
-                    AuthorizerSelectionStrategy selectionStrategy) {
+    private AuthorizerChain(List<? extends Authorizer<T>> authorizers,
+                            AuthorizerSelectionStrategy selectionStrategy) {
         requireNonNull(authorizers, "authorizers");
         this.authorizers = ImmutableList.copyOf(authorizers);
         checkArgument(!this.authorizers.isEmpty(), "authorizers are empty");
-        final Authorizer<T> firstAuthorizer = this.authorizers.get(0);
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
-        if (selectionStrategy == AuthorizerSelectionStrategy.FIRST) {
-            // this could be NULL
-            failureHandler = firstAuthorizer.failureHandler();
-        }
+    }
+
+    AuthorizerChain(Authorizer<T> firstAuthorizer, AuthorizerSelectionStrategy selectionStrategy) {
+        this(firstAuthorizer instanceof AuthorizerChain ? ((AuthorizerChain<T>) firstAuthorizer).authorizers
+                                                        : ImmutableList.of(firstAuthorizer), selectionStrategy);
     }
 
     /**
@@ -84,8 +80,14 @@ final class AuthorizerChain<T> implements Authorizer<T> {
     @Override
     public Authorizer<T> orElse(Authorizer<T> nextAuthorizer) {
         final ImmutableList.Builder<Authorizer<T>> newAuthorizersBuilder = ImmutableList.builder();
-        newAuthorizersBuilder.addAll(authorizers).add(requireNonNull(nextAuthorizer, "nextAuthorizer"));
-        return new AuthorizerChain<>(newAuthorizersBuilder.build(), selectionStrategy);
+        newAuthorizersBuilder.addAll(authorizers);
+        requireNonNull(nextAuthorizer, "nextAuthorizer");
+        if (nextAuthorizer instanceof AuthorizerChain) {
+            newAuthorizersBuilder.addAll(((AuthorizerChain<T>) nextAuthorizer).authorizers);
+        } else {
+            newAuthorizersBuilder.add(nextAuthorizer);
+        }
+        return new AuthorizerChain<T>(newAuthorizersBuilder.build(), selectionStrategy);
     }
 
     /**
@@ -95,92 +97,70 @@ final class AuthorizerChain<T> implements Authorizer<T> {
      *         authorize the request. If the future resolves exceptionally, the request will not be authorized.
      */
     @Override
-    public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data) {
-        return authorize(authorizers.iterator(), ctx, data);
+    public CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
+                                                                           @Nullable T data) {
+        return authorizeAndSupplyHandlers(authorizers.iterator(), true, null, ctx, data);
     }
 
-    private CompletionStage<Boolean> authorize(Iterator<? extends Authorizer<T>> iterator,
-                                               ServiceRequestContext ctx, T data) {
+    private CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(
+            Iterator<? extends Authorizer<T>> iterator,
+            boolean first, @Nullable AuthFailureHandler prevFailureHandler,
+            ServiceRequestContext ctx, @Nullable T data) {
         final Authorizer<T> nextAuthorizer = iterator.next();
-        return AuthorizerUtil.authorize(nextAuthorizer, ctx, data).thenComposeAsync(result -> {
+        return AuthorizerUtil.authorizeAndSupplyHandlers(nextAuthorizer, ctx, data).thenComposeAsync(result -> {
             if (result == null) {
                 throw AuthorizerUtil.newNullResultException(nextAuthorizer);
             } else {
-                if (result) {
-                    // always reset successHandler on success!
+                if (result.status()) {
+                    // always return associated successHandler on success!
                     // this could be NULL
-                    successHandler = nextAuthorizer.successHandler();
-                    return CompletableFuture.completedFuture(true);
+                    return CompletableFuture.completedFuture(
+                            AuthorizationStatus.ofSuccess(result.successHandler()));
                 }
                 // handle failure result
-                final AuthFailureHandler nextFailureHandler = nextAuthorizer.failureHandler();
+                final AuthFailureHandler failureHandler;
+                final AuthFailureHandler nextFailureHandler = result.failureHandler();
                 switch (selectionStrategy) {
+                    case FIRST:
+                        // (re-)assign the handler only for the FIRST element in the chain
+                        if (first) {
+                            failureHandler = nextFailureHandler;
+                        } else { // passthrough the handler form the previous item
+                            failureHandler = prevFailureHandler;
+                        }
+                        break;
                     case FIRST_WITH_HANDLER:
                         // set failureHandler only if it's not yet set
-                        if (failureHandler == null && nextFailureHandler != null) {
+                        if (prevFailureHandler == null && nextFailureHandler != null) {
                             failureHandler = nextFailureHandler;
+                        } else { // passthrough the handler form the previous item
+                            failureHandler = prevFailureHandler;
                         }
                         break;
                     case LAST_WITH_HANDLER:
                         // reset failureHandler on any failure
                         if (nextFailureHandler != null) {
                             failureHandler = nextFailureHandler;
+                        } else { // passthrough the handler form the previous item
+                            failureHandler = prevFailureHandler;
                         }
+                        break;
+                    default:
+                        // passthrough the handler form the previous item
+                        failureHandler = prevFailureHandler;
                         break;
                 }
                 if (!iterator.hasNext()) {
-                    if (selectionStrategy == AuthorizerSelectionStrategy.LAST) {
-                        // this could be NULL
-                        failureHandler = nextFailureHandler;
-                    }
-                    return CompletableFuture.completedFuture(false);
+                    // this is the last item in the chain
+                    return CompletableFuture.completedFuture(
+                            AuthorizationStatus.ofFailure(
+                                    (selectionStrategy == AuthorizerSelectionStrategy.LAST) ? nextFailureHandler
+                                                                                            : failureHandler));
                 }
                 // continue to the next...
-                return authorize(iterator, ctx, data);
+                return authorizeAndSupplyHandlers(iterator, false, failureHandler, ctx, data);
             }
         }, ctx.eventLoop());
-    }
-
-    /**
-     * Returns the {@link AuthSuccessHandler} which handles successfully authorized requests.
-     * This will always match the {@link Authorizer} that succeeded.
-     * <p>
-     * CAUTION: This method has to be called after
-     * {@link AuthorizerChain#authorize(ServiceRequestContext, Object)} executed to produce correct result.
-     * </p>
-     * @return An instance of {@link AuthSuccessHandler} associated with the {@link Authorizer} that succeeded
-     *         to handle successfully authorized requests or {@code null} to use the default.
-     */
-    @Nullable
-    @Override
-    public AuthSuccessHandler successHandler() {
-        return successHandler;
-    }
-
-    /**
-     * Returns the {@link AuthFailureHandler} which handles the requests with failed authorization.
-     * The result of this method will depend on {@link AuthorizerSelectionStrategy} configured.
-     * <ul>
-     *     <li>{@link AuthorizerSelectionStrategy#FIRST} will always return {@link AuthFailureHandler}
-     *     associated with the first {@link Authorizer} in the chain.</li>
-     *     <li>{@link AuthorizerSelectionStrategy#LAST} will always return {@link AuthFailureHandler}
-     *     associated with the last {@link Authorizer} in the chain.</li>
-     *     <li>{@link AuthorizerSelectionStrategy#FIRST_WITH_HANDLER} will return first non-null
-     *     {@link AuthFailureHandler} associated with an executed {@link Authorizer} in the chain.</li>
-     *     <li>{@link AuthorizerSelectionStrategy#LAST_WITH_HANDLER} will return last non-null
-     *     {@link AuthFailureHandler} associated with an executed {@link Authorizer} in the chain.</li>
-     * </ul>
-     * <p>
-     * CAUTION: This method has to be called after
-     * {@link AuthorizerChain#authorize(ServiceRequestContext, Object)} executed to produce correct result.
-     * </p>
-     * @return An instance of {@link AuthFailureHandler} to handle the requests with failed authorization
-     *         or {@code null} to use the default.
-     */
-    @Nullable
-    @Override
-    public AuthFailureHandler failureHandler() {
-        return failureHandler;
     }
 
     @Override

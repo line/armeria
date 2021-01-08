@@ -87,35 +87,40 @@ public final class AuthService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(AuthorizerUtil.authorize(authorizer, ctx, req).handleAsync((result, cause) -> {
+        return HttpResponse.from(AuthorizerUtil.authorizeAndSupplyHandlers(authorizer, ctx, req)
+                                               .handleAsync((result, cause) -> {
             try {
                 final HttpService delegate = (HttpService) unwrap();
                 if (cause == null) {
                     if (result != null) {
-                        return result ? handleSuccess(delegate, ctx, req)
-                                      : handleFailure(delegate, ctx, req, null);
+                        return result.status() ? handleSuccess(delegate, result.successHandler(), ctx, req)
+                                               : handleFailure(delegate, result.failureHandler(), ctx, req,
+                                                               null);
                     }
                     cause = AuthorizerUtil.newNullResultException(authorizer);
                 }
 
-                return handleFailure(delegate, ctx, req, cause);
+                return handleFailure(delegate, result != null ? result.failureHandler() : null,
+                                     ctx, req, cause);
             } catch (Exception e) {
                 return Exceptions.throwUnsafely(e);
             }
         }, ctx.eventLoop()));
     }
 
-    private HttpResponse handleSuccess(HttpService delegate, ServiceRequestContext ctx, HttpRequest req)
+    private HttpResponse handleSuccess(HttpService delegate,
+                                       @Nullable AuthSuccessHandler authorizerSuccessHandler,
+                                       ServiceRequestContext ctx, HttpRequest req)
             throws Exception {
-        final AuthSuccessHandler authorizerSuccessHandler = authorizer.successHandler();
         final AuthSuccessHandler handler = authorizerSuccessHandler == null ? defaultSuccessHandler
                                                                             : authorizerSuccessHandler;
         return handler.authSucceeded(delegate, ctx, req);
     }
 
-    private HttpResponse handleFailure(HttpService delegate, ServiceRequestContext ctx, HttpRequest req,
+    private HttpResponse handleFailure(HttpService delegate,
+                                       @Nullable AuthFailureHandler authorizerFailureHandler,
+                                       ServiceRequestContext ctx, HttpRequest req,
                                        @Nullable Throwable cause) throws Exception {
-        final AuthFailureHandler authorizerFailureHandler = authorizer.failureHandler();
         final AuthFailureHandler handler = authorizerFailureHandler == null ? defaultFailureHandler
                                                                             : authorizerFailureHandler;
         return handler.authFailed(delegate, ctx, req, cause);

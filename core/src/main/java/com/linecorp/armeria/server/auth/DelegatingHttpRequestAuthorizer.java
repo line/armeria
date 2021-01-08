@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.auth;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
@@ -34,7 +33,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * {@link AuthServiceBuilder}.
  * @param <T> token type
  */
-final class DelegatingHttpRequestAuthorizer<T> implements Authorizer<HttpRequest> {
+final class DelegatingHttpRequestAuthorizer<T> extends AbstractAuthorizerWithHandlers<HttpRequest> {
 
     private final Function<? super RequestHeaders, T> tokenExtractor;
     private final Authorizer<? super T> delegate;
@@ -46,23 +45,9 @@ final class DelegatingHttpRequestAuthorizer<T> implements Authorizer<HttpRequest
     }
 
     @Override
-    public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, HttpRequest request) {
-        final T token = tokenExtractor.apply(request.headers());
-        if (token == null) {
-            return CompletableFuture.completedFuture(false);
-        }
-        return delegate.authorize(ctx, token);
-    }
-
-    @Nullable
-    @Override
-    public AuthSuccessHandler successHandler() {
-        return delegate.successHandler();
-    }
-
-    @Nullable
-    @Override
-    public AuthFailureHandler failureHandler() {
-        return delegate.failureHandler();
+    public CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
+                                                                           @Nullable HttpRequest request) {
+        final T token = tokenExtractor.apply(requireNonNull(request, "request").headers());
+        return delegate.authorizeAndSupplyHandlers(ctx, token);
     }
 }

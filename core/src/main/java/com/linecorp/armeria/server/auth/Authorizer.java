@@ -16,11 +16,10 @@
 
 package com.linecorp.armeria.server.auth;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -34,6 +33,7 @@ import com.linecorp.armeria.server.auth.AuthorizerChain.AuthorizerSelectionStrat
  */
 @FunctionalInterface
 public interface Authorizer<T> {
+
     /**
      * Authorizes the given {@code data}.
      *
@@ -44,37 +44,27 @@ public interface Authorizer<T> {
     CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data);
 
     /**
+     * Authorizes the given {@code data}.
+     *
+     * @return a {@link CompletionStage} that will resolve to {@link AuthorizationStatus}. If the future
+     *     resolves exceptionally, the request will not be authorized.
+     */
+    default CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
+                                                                            @Nullable T data) {
+        if (data == null) {
+            return CompletableFuture.completedFuture(AuthorizationStatus.of(false));
+        }
+        return authorize(ctx, data).thenApply(AuthorizationStatus::of);
+    }
+
+    /**
      * Returns a new {@link Authorizer} that delegates the authorization request to the specified
      * {@link Authorizer} if this {@link Authorizer} rejects the authorization request by returning
      * a {@link CompletionStage} completed with {@code false}.
      */
     default Authorizer<T> orElse(Authorizer<T> nextAuthorizer) {
         final Authorizer<T> self = this;
-        return new AuthorizerChain<>(ImmutableList.of(self, nextAuthorizer),
-                                     AuthorizerSelectionStrategy.LAST_WITH_HANDLER);
-    }
-
-    /**
-     * Returns the {@link AuthSuccessHandler} which handles successfully authorized requests.
-     * By default, returns {@code null}, which means to use the default or whatever specified by
-     * the {@link AuthServiceBuilder}.
-     * @return An instance of {@link AuthSuccessHandler} to handle successfully authorized requests
-     *         or {@code null} to use the default.
-     */
-    @Nullable
-    default AuthSuccessHandler successHandler() {
-        return null;
-    }
-
-    /**
-     * Returns the {@link AuthFailureHandler} which handles the requests with failed authorization.
-     * By default, returns {@code null}, which means to use the default or whatever specified by
-     * the {@link AuthServiceBuilder}.
-     * @return An instance of {@link AuthFailureHandler} to handle the requests with failed authorization
-     *         or {@code null} to use the default.
-     */
-    @Nullable
-    default AuthFailureHandler failureHandler() {
-        return null;
+        return new AuthorizerChain<>(self, AuthorizerSelectionStrategy.LAST_WITH_HANDLER)
+                .orElse(nextAuthorizer);
     }
 }

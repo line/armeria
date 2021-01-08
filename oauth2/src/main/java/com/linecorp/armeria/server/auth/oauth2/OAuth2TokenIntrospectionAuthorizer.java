@@ -34,8 +34,9 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
 import com.linecorp.armeria.internal.server.auth.oauth2.TokenIntrospectionRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.auth.AbstractAuthorizerWithHandlers;
 import com.linecorp.armeria.server.auth.AuthFailureHandler;
-import com.linecorp.armeria.server.auth.Authorizer;
+import com.linecorp.armeria.server.auth.AuthorizationStatus;
 
 import io.netty.util.AttributeKey;
 
@@ -45,7 +46,7 @@ import io.netty.util.AttributeKey;
  * in business logic.
  */
 @UnstableApi
-public final class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Token> {
+public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizerWithHandlers<OAuth2Token> {
 
     /**
      * Returns a newly created {@link OAuth2TokenIntrospectionAuthorizerBuilder}.
@@ -117,30 +118,38 @@ public final class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAut
     /**
      * An instance of {@link OAuth2AuthorizationFailureHandler}.
      */
-    @Override
     public AuthFailureHandler failureHandler() {
         return authFailureHandler;
     }
 
     @Override
-    public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, OAuth2Token data) {
+    public CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
+                                                                           @Nullable OAuth2Token data) {
 
+        if (data == null) {
+            // no access token present
+            return CompletableFuture.completedFuture(AuthorizationStatus.ofFailure(authFailureHandler));
+        }
         final String accessToken = data.accessToken();
         final OAuth2TokenDescriptor tokenDescriptor = tokenCache.getIfPresent(accessToken);
         if (tokenDescriptor != null) {
             // just re-validate existing token
-            return CompletableFuture.completedFuture(validateDescriptor(ctx, tokenDescriptor));
+            final AuthorizationStatus status =
+                    validateDescriptor(ctx, tokenDescriptor) ? AuthorizationStatus.ofSuccess(null)
+                            : AuthorizationStatus.ofFailure(authFailureHandler);
+            return CompletableFuture.completedFuture(status);
         }
         // using OAuth 2.0 introspection request to obtain the token descriptor
         return tokenIntrospectionRequest.make(accessToken).thenApply(descriptor -> {
             // first, authorize the new token descriptor
             if (!authorizeNewDescriptor(ctx, descriptor)) {
-                return false;
+                return AuthorizationStatus.ofFailure(authFailureHandler);
             }
             // cache the new token descriptor
             tokenCache.put(accessToken, descriptor);
             // validate new token
-            return validateDescriptor(ctx, descriptor);
+            return validateDescriptor(ctx, descriptor) ? AuthorizationStatus.ofSuccess(null)
+                                                       : AuthorizationStatus.ofFailure(authFailureHandler);
         });
     }
 

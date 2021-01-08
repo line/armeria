@@ -23,10 +23,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -71,15 +69,121 @@ public class AuthorizerTest {
     }
 
     @Test
+    void success() {
+        final Authorizer<String> a = (ctx, data) -> completedFuture(true);
+
+        final Boolean result = a.authorize(serviceCtx, "data")
+                                .toCompletableFuture().join();
+        assertThat(result).isTrue();
+
+        final AuthorizationStatus result2 = a.authorizeAndSupplyHandlers(serviceCtx, "data")
+                                             .toCompletableFuture().join();
+        assertThat(result2.status()).isTrue();
+        assertThat(result2.successHandler()).isNull();
+        assertThat(result2.failureHandler()).isNull();
+    }
+
+    @Test
+    void failure() {
+        final Authorizer<String> a = (ctx, data) -> completedFuture(false);
+
+        final Boolean result = a.authorize(serviceCtx, "data")
+                                .toCompletableFuture().join();
+        assertThat(result).isFalse();
+
+        final AuthorizationStatus result2 = a.authorizeAndSupplyHandlers(serviceCtx, "data")
+                                             .toCompletableFuture().join();
+        assertThat(result2.status()).isFalse();
+        assertThat(result2.successHandler()).isNull();
+        assertThat(result2.failureHandler()).isNull();
+    }
+
+    @Test
+    void throwable() {
+        final Exception expected = new Exception();
+        final Authorizer<String> a = (ctx, data) -> exceptionallyCompletedFuture(expected);
+
+        assertThatThrownBy(() -> a.authorize(serviceCtx, "data").toCompletableFuture().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCause(expected);
+
+        assertThatThrownBy(() -> a.authorizeAndSupplyHandlers(serviceCtx, "data")
+                                  .toCompletableFuture().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCause(expected);
+    }
+
+    @Test
+    void nullStatus() {
+        final Authorizer<String> a = (ctx, data) -> completedFuture(null);
+
+        assertThat(a.authorize(serviceCtx, "data").toCompletableFuture().join()).isNull();
+
+        assertThat(a.authorizeAndSupplyHandlers(serviceCtx, "data").toCompletableFuture().join()).isNull();
+    }
+
+    @Test
+    void successWithHandlers() {
+        final Authorizer<String> a = new NamedAuthorizer<>("A", true);
+
+        final Boolean result1 = a.authorize(serviceCtx, "data")
+                                .toCompletableFuture().join();
+        assertThat(result1).isTrue();
+
+        final AuthorizationStatus result2 = a.authorizeAndSupplyHandlers(serviceCtx, "data")
+                                             .toCompletableFuture().join();
+        assertThat(result2.status()).isTrue();
+        assertThat(result2.successHandler()).isNotNull();
+        assertThat(result2.failureHandler()).isNull();
+    }
+
+    @Test
+    void failureWithHandlers() {
+        final Authorizer<String> a = new NamedAuthorizer<>("A", false);
+
+        final Boolean result1 = a.authorize(serviceCtx, "data")
+                                .toCompletableFuture().join();
+        assertThat(result1).isFalse();
+
+        final AuthorizationStatus result2 = a.authorizeAndSupplyHandlers(serviceCtx, "data")
+                                             .toCompletableFuture().join();
+        assertThat(result2.status()).isFalse();
+        assertThat(result2.successHandler()).isNull();
+        assertThat(result2.failureHandler()).isNotNull();
+    }
+
+    @Test
+    void throwableWithHandlers() {
+        final Exception expected = new Exception();
+        final Authorizer<String> a = new NamedAuthorizer<>("A", expected);
+
+        assertThatThrownBy(() -> a.authorize(serviceCtx, "data").toCompletableFuture().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCause(expected);
+
+        assertThatThrownBy(() -> a.authorizeAndSupplyHandlers(serviceCtx, "data")
+                                  .toCompletableFuture().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCause(expected);
+    }
+
+    @Test
+    void nullStatusWithHandlers() {
+        final Authorizer<String> a = new NullAuthorizer<>();
+
+        assertThat(a.authorize(serviceCtx, "data").toCompletableFuture().join()).isNull();
+
+        assertThat(a.authorizeAndSupplyHandlers(serviceCtx, "data").toCompletableFuture().join()).isNull();
+    }
+
+    @Test
     void orElseFirst() {
-        final Authorizer<String> a = newMock();
-        when(a.authorize(any(), any())).thenReturn(completedFuture(true));
+        final Authorizer<String> a = (ctx, data) -> completedFuture(true);
         final Authorizer<String> b = newMock();
 
         final Boolean result = a.orElse(b).authorize(serviceCtx, "data")
                                 .toCompletableFuture().join();
         assertThat(result).isTrue();
-        verify(a, times(1)).authorize(serviceCtx, "data");
         verify(b, never()).authorize(any(), any());
     }
 
@@ -90,14 +194,12 @@ public class AuthorizerTest {
     @Test
     void orElseFirstException() {
         final Exception expected = new Exception();
-        final Authorizer<String> a = newMock();
-        when(a.authorize(any(), any())).thenReturn(exceptionallyCompletedFuture(expected));
+        final Authorizer<String> a = (ctx, data) -> exceptionallyCompletedFuture(expected);
         final Authorizer<String> b = newMock();
 
         assertThatThrownBy(() -> a.orElse(b).authorize(serviceCtx, "data").toCompletableFuture().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCause(expected);
-        verify(a, times(1)).authorize(serviceCtx, "data");
         verifyNoMoreInteractions(b);
     }
 
@@ -107,29 +209,23 @@ public class AuthorizerTest {
      */
     @Test
     void orElseFirstNull() {
-        final Authorizer<String> a = newMock();
-        when(a.authorize(any(), any())).thenReturn(completedFuture(null));
+        final Authorizer<String> a = (ctx, data) -> completedFuture(null);
         final Authorizer<String> b = newMock();
 
         assertThatThrownBy(() -> a.orElse(b).authorize(serviceCtx, "data").toCompletableFuture().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(NullPointerException.class);
-        verify(a, times(1)).authorize(serviceCtx, "data");
         verifyNoMoreInteractions(b);
     }
 
     @Test
     void orElseSecond() {
-        final Authorizer<String> a = newMock();
-        when(a.authorize(any(), any())).thenReturn(completedFuture(false));
-        final Authorizer<String> b = newMock();
-        when(b.authorize(any(), any())).thenReturn(completedFuture(true));
+        final Authorizer<String> a = (ctx, data) -> completedFuture(false);
+        final Authorizer<String> b = (ctx, data) -> completedFuture(true);
 
         final Boolean result = a.orElse(b).authorize(serviceCtx, "data")
                                 .toCompletableFuture().join();
         assertThat(result).isTrue();
-        verify(a, times(1)).authorize(serviceCtx, "data");
-        verify(b, times(1)).authorize(serviceCtx, "data");
     }
 
     @Test
@@ -145,7 +241,7 @@ public class AuthorizerTest {
         // A + B + C
         assertThat(a.orElse(b).orElse(c).toString()).isEqualTo("[A, B, C]");
         // A + B + (C + D) + E
-        assertThat(a.orElse(b).orElse(c.orElse(d)).orElse(e).toString()).isEqualTo("[A, B, [C, D], E]");
+        assertThat(a.orElse(b).orElse(c.orElse(d)).orElse(e).toString()).isEqualTo("[A, B, C, D, E]");
     }
 
     @ParameterizedTest
@@ -156,18 +252,19 @@ public class AuthorizerTest {
         Authorizer<String> authorizer = null;
         for (int i = 0; i < statuses.length; i++) {
             authorizers[i] = (i == nullHandler) ?
-                             new NamedAuthorizer<>(Integer.toString(i), statuses[i], null, null)
+                             new NamedAuthorizer<>(Integer.toString(i), statuses[i], null, null, null)
                              : new NamedAuthorizer<>(Integer.toString(i), statuses[i]);
             authorizer = (i == 0) ? authorizers[i] : authorizer.orElse(authorizers[i]);
         }
 
         assertThat(authorizer).isNotNull();
         assertThat(serviceCtx).isNotNull();
-        final Boolean result = authorizer.authorize(serviceCtx, "data")
-                                         .toCompletableFuture().join();
-        final AuthSuccessHandler successHandler = authorizer.successHandler();
-        final AuthFailureHandler failureHandler = authorizer.failureHandler();
-        assertThat(result).isEqualTo(expectedStatus);
+        final AuthorizationStatus result = authorizer.authorizeAndSupplyHandlers(serviceCtx, "data")
+                                                     .toCompletableFuture().join();
+        assertThat(result).isNotNull();
+        assertThat(result.status()).isEqualTo(expectedStatus);
+        final AuthSuccessHandler successHandler = result.successHandler();
+        final AuthFailureHandler failureHandler = result.failureHandler();
         if (expectedSuccessHandler >= 0) {
             assertThat(successHandler).isNotNull();
             assertThat(successHandler.toString()).isEqualTo(Integer.toString(expectedSuccessHandler));
@@ -189,14 +286,14 @@ public class AuthorizerTest {
           Arguments.of(new boolean[] {true, false, true}, -1, true, 0, -1),
           Arguments.of(new boolean[] {true, false, false}, -1, true, 0, -1),
 
-          Arguments.of(new boolean[] {false, true, true}, -1, true, 1, 0),
-          Arguments.of(new boolean[] {false, true, false}, -1, true, 1, 0),
-          Arguments.of(new boolean[] {false, false, true}, -1, true, 2, 1),
+          Arguments.of(new boolean[] {false, true, true}, -1, true, 1, -1),
+          Arguments.of(new boolean[] {false, true, false}, -1, true, 1, -1),
+          Arguments.of(new boolean[] {false, false, true}, -1, true, 2, -1),
           Arguments.of(new boolean[] {false, false, false}, -1, false, -1, 2),
 
           Arguments.of(new boolean[] {true, true, true}, 0, true, -1, -1),
-          Arguments.of(new boolean[] {false, true, true}, 1, true, -1, 0),
-          Arguments.of(new boolean[] {false, false, true}, 2, true, -1, 1),
+          Arguments.of(new boolean[] {false, true, true}, 1, true, -1, -1),
+          Arguments.of(new boolean[] {false, false, true}, 2, true, -1, -1),
 
           Arguments.of(new boolean[] {false, false, false}, 0, false, -1, 2),
           Arguments.of(new boolean[] {false, false, false}, 1, false, -1, 2),
@@ -211,26 +308,33 @@ public class AuthorizerTest {
         return mock;
     }
 
-    private static final class NamedAuthorizer<T> implements Authorizer<T> {
+    private static class NamedAuthorizer<T> extends AbstractAuthorizerWithHandlers<T> {
 
         private final String name;
         private final boolean authorize;
+        @Nullable
+        private final Throwable cause;
         @Nullable
         private final AuthSuccessHandler successHandler;
         @Nullable
         private final AuthFailureHandler failureHandler;
 
-        NamedAuthorizer(String name, boolean authorize,
-                        @Nullable AuthSuccessHandler successHandler,
-                        @Nullable AuthFailureHandler failureHandler) {
+        private NamedAuthorizer(String name, boolean authorize, @Nullable Throwable cause,
+                                @Nullable AuthSuccessHandler successHandler,
+                                @Nullable AuthFailureHandler failureHandler) {
             this.name = name;
             this.authorize = authorize;
+            this.cause = cause;
             this.successHandler = successHandler;
             this.failureHandler = failureHandler;
         }
 
         NamedAuthorizer(String name, boolean authorize) {
-            this(name, authorize, new NamedSuccessHandler(name), new NamedFailureHandler(name));
+            this(name, authorize, null, new NamedSuccessHandler(name), new NamedFailureHandler(name));
+        }
+
+        NamedAuthorizer(String name, Throwable cause) {
+            this(name, true, cause, new NamedSuccessHandler(name), new NamedFailureHandler(name));
         }
 
         NamedAuthorizer(String name) {
@@ -238,25 +342,27 @@ public class AuthorizerTest {
         }
 
         @Override
-        public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data) {
-            return completedFuture(authorize);
-        }
-
-        @Nullable
-        @Override
-        public AuthSuccessHandler successHandler() {
-            return successHandler;
-        }
-
-        @Nullable
-        @Override
-        public AuthFailureHandler failureHandler() {
-            return failureHandler;
+        public CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
+                                                                               @Nullable T data) {
+            if (cause != null) {
+                return exceptionallyCompletedFuture(cause);
+            }
+            return completedFuture(authorize ? AuthorizationStatus.ofSuccess(successHandler)
+                                             : AuthorizationStatus.ofFailure(failureHandler));
         }
 
         @Override
         public String toString() {
             return name;
+        }
+    }
+
+    private static class NullAuthorizer<T> extends AbstractAuthorizerWithHandlers<T> {
+
+        @Override
+        public CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
+                                                                               @Nullable T data) {
+            return completedFuture(null);
         }
     }
 
