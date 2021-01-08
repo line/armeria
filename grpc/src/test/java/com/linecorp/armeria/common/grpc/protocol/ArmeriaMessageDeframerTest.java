@@ -17,7 +17,7 @@
 package com.linecorp.armeria.common.grpc.protocol;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
+import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -48,52 +48,43 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
-import com.linecorp.armeria.common.stream.HttpDeframer;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 
 import io.grpc.Codec.Gzip;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import reactor.test.StepVerifier;
 
-class ArmeriaMessageDeframerHandlerTest {
+class ArmeriaMessageDeframerTest {
 
     private static final int MAX_MESSAGE_SIZE = 1024;
 
-    private HttpDeframer<DeframedMessage> deframer;
     private DeframedMessage deframedMessage;
+    private ArmeriaMessageDeframer deframer;
 
     @BeforeEach
     void setUp() {
-        final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(MAX_MESSAGE_SIZE)
+        deframer = new ArmeriaMessageDeframer(MAX_MESSAGE_SIZE)
                 .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
-        deframer = HttpDeframer.of(handler, UnpooledByteBufAllocator.DEFAULT);
         deframedMessage = new DeframedMessage(GrpcTestUtil.requestByteBuf(), 0);
     }
 
     @AfterEach
     void tearDown() throws Exception {
-        deframer.abort();
         deframedMessage.buf().release();
     }
 
-    @ArgumentsSource(DeframerProvider.class)
-    @ParameterizedTest
-    void noRequests(HttpDeframer<DeframedMessage> deframer) {
-        StepVerifier.create(deframer)
-                    .expectNextCount(0)
-                    .verifyTimeout(Duration.ofMillis(100));
-    }
-
-    @ArgumentsSource(DeframerProvider.class)
-    @ParameterizedTest
-    void request_noDataYet(HttpDeframer<DeframedMessage> deframer) {
-        StepVerifier.create(deframer)
+    @Test
+    void request_noDataYet() {
+        final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, false);
+        StepVerifier.create(deframed)
                     .thenRequest(1)
                     .expectNextCount(0)
                     .verifyTimeout(Duration.ofMillis(100));
@@ -101,35 +92,45 @@ class ArmeriaMessageDeframerHandlerTest {
 
     @ArgumentsSource(DeframerProvider.class)
     @ParameterizedTest
-    void deframe_noRequests(HttpDeframer<DeframedMessage> deframer, boolean base64, byte[] data) {
+    void deframe_noRequests(boolean base64, byte[] data) {
         if (base64) {
             data = Base64.getEncoder().encode(data);
         }
-        newStreamMessage(data).subscribe(deframer);
-        StepVerifier.create(deframer)
-                    .expectNextCount(0)
-                    .thenRequest(1)
-                    .expectNextMatches(compareAndRelease(deframedMessage))
-                    .verifyComplete();
-    }
 
-    @ArgumentsSource(DeframerProvider.class)
-    @ParameterizedTest
-    void deframe_hasRequests(HttpDeframer<DeframedMessage> deframer, boolean base64, byte[] data) {
-        if (base64) {
-            data = Base64.getEncoder().encode(data);
-        }
         final StreamMessage<HttpData> source = newStreamMessage(data);
-        StepVerifier.create(deframer)
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
+
+        StepVerifier.create(deframed)
+                    .expectNextCount(0)
                     .thenRequest(1)
-                    .then(() -> source.subscribe(deframer))
                     .expectNextMatches(compareAndRelease(deframedMessage))
                     .verifyComplete();
     }
 
     @ArgumentsSource(DeframerProvider.class)
     @ParameterizedTest
-    void deframe_frameWithManyFragments(HttpDeframer<DeframedMessage> deframer, boolean base64, byte[] data) {
+    void deframe_hasRequests(boolean base64, byte[] data) {
+        final HttpData httpData;
+        if (base64) {
+            httpData = HttpData.wrap(Base64.getEncoder().encode(data));
+        } else {
+            httpData = HttpData.wrap(data);
+        }
+        final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
+        StepVerifier.create(deframed)
+                    .thenRequest(1)
+                    .then(() -> {
+                        source.write(httpData);
+                        source.close();
+                    })
+                    .expectNextMatches(compareAndRelease(deframedMessage))
+                    .verifyComplete();
+    }
+
+    @ArgumentsSource(DeframerProvider.class)
+    @ParameterizedTest
+    void deframe_frameWithManyFragments(boolean base64, byte[] data) {
         final List<byte[]> fragments;
         if (base64) {
             fragments = base64EncodedFragments(data);
@@ -139,20 +140,21 @@ class ArmeriaMessageDeframerHandlerTest {
                              .collect(toImmutableList());
         }
 
-        final DefaultStreamMessage<HttpData> streamMessage = new DefaultStreamMessage<>();
-        streamMessage.subscribe(deframer);
-        StepVerifier.create(deframer)
+        final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
+
+        StepVerifier.create(deframed)
                     .thenRequest(1)
                     .then(() -> {
                         // Only the last fragment should notify the listener.
                         for (int i = 0; i < fragments.size() - 1; i++) {
-                            streamMessage.write(HttpData.wrap(fragments.get(i)));
+                            source.write(HttpData.wrap(fragments.get(i)));
                         }
                     })
                     .expectNextCount(0)
                     .then(() -> {
-                        streamMessage.write(HttpData.wrap(fragments.get(fragments.size() - 1)));
-                        streamMessage.close();
+                        source.write(HttpData.wrap(fragments.get(fragments.size() - 1)));
+                        source.close();
                     })
                     .expectNextMatches(compareAndRelease(deframedMessage))
                     .verifyComplete();
@@ -160,12 +162,11 @@ class ArmeriaMessageDeframerHandlerTest {
 
     @ArgumentsSource(DeframerProvider.class)
     @ParameterizedTest
-    void deframe_frameWithHeaderAndBodyFragment(HttpDeframer<DeframedMessage> deframer, boolean base64,
-                                                byte[] data) {
+    void deframe_frameWithHeaderAndBodyFragment(boolean base64, byte[] data) {
         final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
-        source.subscribe(deframer);
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
 
-        StepVerifier.create(deframer)
+        StepVerifier.create(deframed)
                     .thenRequest(1)
                     .then(() -> {
                         // Frame is split into two fragments - header and body.
@@ -190,14 +191,15 @@ class ArmeriaMessageDeframerHandlerTest {
 
     @ArgumentsSource(DeframerProvider.class)
     @ParameterizedTest
-    void deframe_multipleMessagesBeforeRequests(HttpDeframer<DeframedMessage> deframer, boolean base64,
-                                                byte[] data) {
+    void deframe_multipleMessagesBeforeRequests(boolean base64, byte[] data) {
         if (base64) {
             data = Base64.getEncoder().encode(data);
         }
+
         final StreamMessage<HttpData> source = newStreamMessage(data, data);
-        source.subscribe(deframer);
-        StepVerifier.create(deframer)
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
+
+        StepVerifier.create(deframed)
                     .thenRequest(1)
                     .expectNextMatches(compareAndRelease(deframedMessage))
                     .thenRequest(1)
@@ -207,12 +209,18 @@ class ArmeriaMessageDeframerHandlerTest {
 
     @ArgumentsSource(DeframerProvider.class)
     @ParameterizedTest
-    void deframe_multipleMessagesAfterRequests(HttpDeframer<DeframedMessage> deframer, boolean base64,
-                                               byte[] data) {
+    void deframe_multipleMessagesAfterRequests(boolean base64, byte[] data) {
         final byte[] maybeEncoded = base64 ? Base64.getEncoder().encode(data) : data;
-        StepVerifier.create(deframer)
+        final DefaultStreamMessage<HttpData> source = new DefaultStreamMessage<>();
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
+
+        StepVerifier.create(deframed)
                     .thenRequest(2)
-                    .then(() -> newStreamMessage(maybeEncoded, maybeEncoded).subscribe(deframer))
+                    .then(() -> {
+                        source.write(HttpData.wrap(maybeEncoded));
+                        source.write(HttpData.wrap(maybeEncoded));
+                        source.close();
+                    })
                     .expectNextMatches(compareAndRelease(deframedMessage))
                     .expectNextMatches(compareAndRelease(deframedMessage))
                     .verifyComplete();
@@ -220,24 +228,33 @@ class ArmeriaMessageDeframerHandlerTest {
 
     @ArgumentsSource(DeframerProvider.class)
     @ParameterizedTest
-    void deframe_endOfStream(HttpDeframer<DeframedMessage> deframer) throws Exception {
+    void deframe_endOfStream(boolean base64) throws Exception {
         final StreamMessage<HttpData> empty = StreamMessage.of();
-        StepVerifier.create(deframer)
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(empty, base64);
+
+        StepVerifier.create(deframed)
                     .thenRequest(1)
-                    .then(() -> empty.subscribe(deframer))
                     .verifyComplete();
+    }
+
+    private StreamMessage<DeframedMessage> newDeframedStreamMessage(
+            StreamMessage<HttpData> source, boolean base64) {
+        final UnpooledByteBufAllocator alloc = UnpooledByteBufAllocator.DEFAULT;
+        return new DecodedHttpStreamMessage<>(source, deframer, alloc, byteBufConverter(alloc, base64));
     }
 
     @ArgumentsSource(DeframerProvider.class)
     @ParameterizedTest
-    void deframe_compressed(HttpDeframer<DeframedMessage> deframer, boolean base64) throws Exception {
+    void deframe_compressed(boolean base64) throws Exception {
         byte[] data = GrpcTestUtil.compressedFrame(GrpcTestUtil.requestByteBuf());
         if (base64) {
             data = Base64.getEncoder().encode(data);
         }
 
-        newStreamMessage(data).subscribe(deframer);
-        StepVerifier.create(deframer)
+        final StreamMessage<HttpData> source = newStreamMessage(data);
+        final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, base64);
+
+        StepVerifier.create(deframed)
                     .thenRequest(1)
                     .expectNextMatches(message -> {
                         assertThat(message.stream()).isNotNull();
@@ -262,9 +279,11 @@ class ArmeriaMessageDeframerHandlerTest {
                                                     .build();
          final byte[] frame = GrpcTestUtil.uncompressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
          assertThat(frame.length).isGreaterThan(1024);
+
          final StreamMessage<HttpData> source = newStreamMessage(frame);
-         source.subscribe(deframer);
-         StepVerifier.create(deframer)
+         final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, false);
+
+         StepVerifier.create(deframed)
                      .thenRequest(1)
                      .expectError(ArmeriaStatusException.class)
                      .verify();
@@ -281,9 +300,11 @@ class ArmeriaMessageDeframerHandlerTest {
                               .build();
          final byte[] frame = GrpcTestUtil.compressedFrame(Unpooled.wrappedBuffer(request.toByteArray()));
          assertThat(frame.length).isLessThan(1024);
+
          final StreamMessage<HttpData> source = newStreamMessage(frame);
-         source.subscribe(deframer);
-         StepVerifier.create(deframer)
+         final StreamMessage<DeframedMessage> deframed = newDeframedStreamMessage(source, false);
+
+         StepVerifier.create(deframed)
                      .thenRequest(1)
                      .expectNextMatches(message -> {
                          try (InputStream stream = message.stream()) {
@@ -321,17 +342,11 @@ class ArmeriaMessageDeframerHandlerTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(true, false).map(DeframerProvider::newDeframerWithData);
-        }
-
-        private static Arguments newDeframerWithData(boolean decodeBase64) {
-            final ArmeriaMessageDeframerHandler handler =
-                    new ArmeriaMessageDeframerHandler(MAX_MESSAGE_SIZE)
-                            .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
-            final HttpDeframer<DeframedMessage> deframer =
-                    newHttpDeframer(handler, UnpooledByteBufAllocator.DEFAULT, decodeBase64);
-            final byte[] data = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
-            return Arguments.of(deframer, decodeBase64, data);
+            return Stream.of(true, false)
+                         .map(decodeBase64 -> {
+                             final byte[] data = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
+                             return Arguments.of(decodeBase64, data);
+                         });
         }
     }
 

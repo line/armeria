@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.common.util;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -24,46 +25,45 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.incubator.channel.uring.IOUringEventLoopGroup;
 
 public final class ChannelUtil {
 
-    private static final Class<? extends EventLoopGroup> EPOLL_EVENT_LOOP_CLASS;
-    private static final Class<? extends EventLoopGroup> IOURING_EVENT_LOOP_CLASS;
-
-    static {
-        try {
-            //noinspection unchecked
-            EPOLL_EVENT_LOOP_CLASS = (Class<? extends EventLoopGroup>)
-                    Class.forName("io.netty.channel.epoll.EpollEventLoop", false,
-                                  EpollEventLoopGroup.class.getClassLoader());
-            //noinspection unchecked
-            IOURING_EVENT_LOOP_CLASS = (Class<? extends EventLoopGroup>)
-                    Class.forName("io.netty.incubator.channel.uring.IOUringEventLoop", false,
-                                  IOUringEventLoopGroup.class.getClassLoader());
-        } catch (Exception e) {
-            throw new IllegalStateException("failed to locate EpollEventLoop class", e);
-        }
-    }
-
+    private static final Set<ChannelOption<?>> PROHIBITED_OPTIONS;
     private static final WriteBufferWaterMark DISABLED_WRITE_BUFFER_WATERMARK =
             new WriteBufferWaterMark(0, Integer.MAX_VALUE);
 
-    public static Class<? extends EventLoopGroup> epollEventLoopClass() {
-        return EPOLL_EVENT_LOOP_CLASS;
+    static {
+        // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
+        final ImmutableSet.Builder<ChannelOption<?>> builder = ImmutableSet.builder();
+        //noinspection deprecation
+        builder.add(
+                ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
+                ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
+                ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK);
+
+        try {
+            // Use reflection, just in case a user excluded netty-transport-native-epoll from the dependencies.
+            builder.add((ChannelOption<?>) Class.forName(
+                    "io.netty.channel.epoll.EpollChannelOption", false,
+                    ChannelUtil.class.getClassLoader()).getField("EPOLL_MODE").get(null));
+        } catch (Exception e) {
+            // Ignore
+        }
+
+        PROHIBITED_OPTIONS = builder.build();
     }
 
-    public static Class<? extends EventLoopGroup> ioUringEventLoopClass() {
-        return IOURING_EVENT_LOOP_CLASS;
+    public static Set<ChannelOption<?>> prohibitedOptions() {
+        return PROHIBITED_OPTIONS;
     }
 
     public static CompletableFuture<Void> close(Iterable<? extends Channel> channels) {

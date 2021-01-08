@@ -117,6 +117,15 @@ public interface MeterIdPrefixFunction {
      * Returns a {@link MeterIdPrefixFunction} that returns a newly created {@link MeterIdPrefix} which has
      * the specified labels added.
      */
+    default MeterIdPrefixFunction withTags(Tag... tags) {
+        requireNonNull(tags, "tags");
+        return withTags(Tags.of(tags));
+    }
+
+    /**
+     * Returns a {@link MeterIdPrefixFunction} that returns a newly created {@link MeterIdPrefix} which has
+     * the specified labels added.
+     */
     default MeterIdPrefixFunction withTags(Iterable<Tag> tags) {
         requireNonNull(tags, "tags");
         return andThen((registry, log, meterIdPrefix) -> meterIdPrefix.withTags(tags));

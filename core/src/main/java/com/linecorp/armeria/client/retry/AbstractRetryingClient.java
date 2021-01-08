@@ -276,12 +276,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         if (parentLog.isAvailable(RequestLogProperty.NAME)) {
             final String serviceName = partial.serviceName();
             final String name = partial.name();
-            if (name != null) {
-                if (serviceName != null) {
-                    logBuilder.name(serviceName, name);
-                } else {
-                    logBuilder.name(name);
-                }
+            if (serviceName != null) {
+                logBuilder.name(serviceName, name);
+            } else {
+                logBuilder.name(name);
             }
         }
 
@@ -289,32 +287,28 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         if (parentLogBuilder.isDeferred(RequestLogProperty.REQUEST_CONTENT)) {
             logBuilder.defer(RequestLogProperty.REQUEST_CONTENT);
         }
-        parentLog.whenAvailable(RequestLogProperty.REQUEST_CONTENT).thenApply(requestLog -> {
-            logBuilder.requestContent(requestLog.requestContent(), requestLog.rawRequestContent());
-            return null;
-        });
+        parentLog.whenAvailable(RequestLogProperty.REQUEST_CONTENT)
+                 .thenAccept(requestLog -> logBuilder.requestContent(
+                         requestLog.requestContent(), requestLog.rawRequestContent()));
         if (parentLogBuilder.isDeferred(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
             logBuilder.defer(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
         }
-        parentLog.whenAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW).thenApply(requestLog -> {
-            logBuilder.requestContentPreview(requestLog.requestContentPreview());
-            return null;
-        });
+        parentLog.whenAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)
+                 .thenAccept(requestLog -> logBuilder.requestContentPreview(
+                         requestLog.requestContentPreview()));
 
         // Propagates the response content only when deferResponseContent is called.
         if (parentLogBuilder.isDeferred(RequestLogProperty.RESPONSE_CONTENT)) {
             logBuilder.defer(RequestLogProperty.RESPONSE_CONTENT);
-            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT).thenApply(requestLog -> {
-                logBuilder.responseContent(requestLog.responseContent(), requestLog.rawResponseContent());
-                return null;
-            });
+            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT)
+                     .thenAccept(requestLog -> logBuilder.responseContent(
+                             requestLog.responseContent(), requestLog.rawResponseContent()));
         }
         if (parentLogBuilder.isDeferred(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
             logBuilder.defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
-            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW).thenApply(requestLog -> {
-                logBuilder.responseContentPreview(requestLog.responseContentPreview());
-                return null;
-            });
+            parentLog.whenAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)
+                     .thenAccept(requestLog -> logBuilder.responseContentPreview(
+                             requestLog.responseContentPreview()));
         }
         return derived;
     }

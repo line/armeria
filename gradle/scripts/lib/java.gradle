@@ -46,24 +46,11 @@ configure(projectsWithFlags('java')) {
 
     // Set the sensible compiler options.
     tasks.withType(JavaCompile) {
-        def task = delegate
         sourceCompatibility = project.findProperty('javaSourceCompatibility') ?: '1.8'
         targetCompatibility = project.findProperty('javaTargetCompatibility') ?: '1.8'
         options.encoding = 'UTF-8'
         options.warnings = false
         options.compilerArgs += '-parameters'
-        project.configurations.each { Configuration cfg ->
-            if (cfg.name == 'annotationProcessor' || cfg.name.endsWith('AnnotationProcessor')) {
-                cfg.withDependencies { deps ->
-                    // Use incremental compilation only when there are no annotation processors,
-                    // because it seems to cause compilation errors for some processors such as Lombok.
-                    def useIncrementalCompilation = deps.size() == 0
-                    options.incremental = useIncrementalCompilation
-                    logger.info("${useIncrementalCompilation ? 'Enabling' : 'Disabling'} " +
-                            "incremental compilation for '${task.path}'")
-                }
-            }
-        }
     }
 
     // Enable full exception logging for test failures.
@@ -93,18 +80,11 @@ configure(projectsWithFlags('java')) {
             def dependencyTask = project.tasks.findByName("checkstyle${sourceSet.name.capitalize()}")
             if (dependencyTask instanceof Checkstyle) {
                 tasks.checkstyle.dependsOn dependencyTask
-
-                // Run checkstyle as soon as possible after compilation to get feedback earlier.
-                tasks.named(sourceSet.compileJavaTaskName).configure {
-                    finalizedBy dependencyTask
-                }
             }
         }
 
-        project.ext.getLintTask().dependsOn tasks.checkstyle
-
-        test {
-            dependsOn tasks.lint
-        }
+        def lintTask = project.ext.getLintTask()
+        lintTask.dependsOn tasks.checkstyle
+        tasks.check.dependsOn lintTask
     }
 }

@@ -19,13 +19,13 @@ package com.linecorp.armeria.common.stream;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * An output of {@link HttpDeframer} which holds the decoded data.
+ * An output of {@link HttpDecoder} which holds the decoded data.
  */
 @UnstableApi
 @FunctionalInterface
-public interface HttpDeframerOutput<T> {
+public interface HttpDecoderOutput<T> {
     /**
-     * Adds the decoded item to this {@link HttpDeframerOutput}.
+     * Adds the decoded item to this {@link HttpDecoderOutput}.
      */
     void add(T e);
 }

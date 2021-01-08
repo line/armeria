@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -44,12 +44,12 @@ public final class GrpcClientOptions {
 
     /**
      * The maximum size, in bytes, of messages coming in a response.
-     * The default value is {@value ArmeriaMessageDeframerHandler#NO_MAX_INBOUND_MESSAGE_SIZE},
+     * The default value is {@value ArmeriaMessageDeframer#NO_MAX_INBOUND_MESSAGE_SIZE},
      * which means 'use {@link ClientOptions#MAX_RESPONSE_LENGTH}'.
      */
     public static final ClientOption<Integer> MAX_INBOUND_MESSAGE_SIZE_BYTES =
             ClientOption.define("GRPC_MAX_INBOUND_MESSAGE_SIZE_BYTES",
-                                ArmeriaMessageDeframerHandler.NO_MAX_INBOUND_MESSAGE_SIZE);
+                                ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE);
 
     /**
      * The maximum size, in bytes, of messages sent in a request.

@@ -49,6 +49,8 @@ dependencies {
             }
         }
     }
+    // Enables cglib for testing
+    testImplementation 'org.hibernate.validator:hibernate-validator'
 }
 
 // Use the sources from ':spring:boot2-autoconfigure'.

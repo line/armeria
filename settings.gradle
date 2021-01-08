@@ -44,12 +44,14 @@ includeWithFlags ':tomcat9',                             'java', 'publish', 'rel
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate'
+includeWithFlags ':consul',                              'java', 'publish', 'relocate'
 
 // Published Javadoc-only projects
 includeWithFlags ':javadoc',                             'java', 'publish', 'no_aggregation'
 
 // Unpublished Java projects
 includeWithFlags ':benchmarks',                     'java'
+includeWithFlags ':it:builders',                    'java'
 includeWithFlags ':it:context-storage',             'java'
 includeWithFlags ':it:grpcweb',                     'java', 'akka-grpc_2.13'
 includeWithFlags ':it:kotlin',                      'java', 'relocate'

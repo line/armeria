@@ -61,7 +61,7 @@ import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -281,9 +281,9 @@ public final class GrpcStatus {
      * to the {@link TransportStatusListener} when the response is completed.
      */
     public static void reportStatusLater(HttpHeaders headers,
-                                         HttpDeframer<DeframedMessage> deframer,
+                                         StreamMessage<DeframedMessage> deframedStreamMessage,
                                          TransportStatusListener transportStatusListener) {
-        deframer.whenComplete().handle((unused1, unused2) -> {
+        deframedStreamMessage.whenComplete().handle((unused1, unused2) -> {
             reportStatus(headers, transportStatusListener);
             return null;
         });

@@ -22,6 +22,8 @@ import org.reactivestreams.Subscriber;
 
 final class StreamMessageUtil {
 
+    static final SubscriptionOption[] EMPTY_OPTIONS = {};
+
     static Throwable abortedOrLate(Subscriber<?> oldSubscriber) {
         if (oldSubscriber instanceof AbortingSubscriber) {
             return ((AbortingSubscriber<?>) oldSubscriber).cause();
