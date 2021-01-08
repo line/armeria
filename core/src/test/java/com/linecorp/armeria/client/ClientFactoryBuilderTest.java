@@ -233,4 +233,21 @@ class ClientFactoryBuilderTest {
             }
         }
     }
+
+    @Test
+    void clampedIdleTimeoutShouldAdjustPingTimeout() {
+        final int idleTimeoutMillis = 3000;
+        final int maxConnectionAgeMillis = 1000;
+        final int pingIntervalMillis = 2000;
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .idleTimeoutMillis(idleTimeoutMillis)
+                                                  .maxConnectionAgeMillis(maxConnectionAgeMillis)
+                                                  .pingIntervalMillis(pingIntervalMillis)
+                                                  .build()) {
+            // idleTimeout should not be greater than maxConnectionAge.
+            assertThat(factory.options().idleTimeoutMillis()).isEqualTo(maxConnectionAgeMillis);
+            // pingInterval should be disable because idleTimeout will work first.
+            assertThat(factory.options().pingIntervalMillis()).isEqualTo(0);
+        }
+    }
 }

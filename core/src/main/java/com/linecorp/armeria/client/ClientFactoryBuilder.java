@@ -707,7 +707,7 @@ public final class ClientFactoryBuilder {
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long maxConnectionAgeMillis = newOptions.maxConnectionAgeMillis();
-        final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
+        long idleTimeoutMillis = newOptions.idleTimeoutMillis();
         final long pingIntervalMillis = newOptions.pingIntervalMillis();
         final ImmutableList.Builder<ClientFactoryOptionValue<?>> adjustedOptionsBuilder =
                 ImmutableList.builderWithExpectedSize(2);
@@ -715,6 +715,7 @@ public final class ClientFactoryBuilder {
         if (maxConnectionAgeMillis != 0 && idleTimeoutMillis > maxConnectionAgeMillis) {
             adjustedOptionsBuilder
                     .add(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS.newValue(maxConnectionAgeMillis));
+            idleTimeoutMillis = maxConnectionAgeMillis;
         }
 
         if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
