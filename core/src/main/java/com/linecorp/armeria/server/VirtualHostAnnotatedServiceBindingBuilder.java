@@ -217,7 +217,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     @Override
-    public ServiceConfigSetters decorators(
+    public VirtualHostAnnotatedServiceBindingBuilder decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         defaultServiceConfigSetters.decorators(decorators);
         return this;

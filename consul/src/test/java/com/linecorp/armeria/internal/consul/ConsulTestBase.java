@@ -88,11 +88,12 @@ public abstract class ConsulTestBase {
         }
 
         // A workaround for 'Cannot run program "**/embedded_consul/consul" error=26, Text file busy'
-        await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-            assertThatCode(() -> {
-                consul = builder.build().start();
-            }).doesNotThrowAnyException();
-        });
+        await().timeout(Duration.ofSeconds(30)).pollInSameThread().pollInterval(Duration.ofSeconds(2))
+               .untilAsserted(() -> {
+                   assertThatCode(() -> {
+                       consul = builder.build().start();
+                   }).doesNotThrowAnyException();
+               });
         // Initialize Consul client
         consulClient = ConsulClient.builder(URI.create("http://127.0.0.1:" + consul.getHttpPort()))
                                    .consulToken(CONSUL_TOKEN)

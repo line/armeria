@@ -100,19 +100,19 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters decorators(
+    public ServiceConfigBuilder decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public ServiceConfigSetters defaultServiceName(String defaultServiceName) {
+    public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
         return this;
     }
 
     @Override
-    public ServiceConfigSetters defaultLogName(String defaultLogName) {
+    public ServiceConfigBuilder defaultLogName(String defaultLogName) {
         this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
         return this;
     }

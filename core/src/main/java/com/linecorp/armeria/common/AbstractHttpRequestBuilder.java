@@ -186,7 +186,7 @@ public abstract class AbstractHttpRequestBuilder {
     }
 
     /**
-     * Sets a header for this request. For example:
+     * Adds a header for this request. For example:
      * <pre>{@code
      * HttpRequest.builder()
      *            .get("/")
@@ -200,7 +200,7 @@ public abstract class AbstractHttpRequestBuilder {
     }
 
     /**
-     * Sets multiple headers for this request. For example:
+     * Adds multiple headers for this request. For example:
      * <pre>{@code
      * HttpRequest.builder()
      *            .get("/")
