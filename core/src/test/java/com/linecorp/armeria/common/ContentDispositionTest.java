@@ -35,15 +35,11 @@ import static com.linecorp.armeria.common.ContentDisposition.parse;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
-
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * Unit tests for {@link ContentDisposition}.
@@ -54,20 +50,8 @@ class ContentDispositionTest {
 
     // Forked from https://github.com/spring-projects/spring-framework/blob/d9ccd618ea9cbf339eb5639d24d5a5fabe8157b5/spring-web/src/test/java/org/springframework/http/ContentDispositionTests.java
 
-    private static final DateTimeFormatter formatter = DateTimeFormatter.RFC_1123_DATE_TIME;
-
     @Test
-    void parseWithSize() throws UnsupportedEncodingException {
-        assertThat(parse("form-data; name=\"foo\"; filename=\"foo.txt\"; size=123"))
-                .isEqualTo(ContentDisposition.builder("form-data")
-                                             .name("foo")
-                                             .filename("foo.txt")
-                                             .size(123L)
-                                             .build());
-    }
-
-    @Test
-    void parseFilenameUnquoted() throws UnsupportedEncodingException {
+    void parseFilenameUnquoted() {
         assertThat(parse("form-data; filename=unquoted"))
                 .isEqualTo(ContentDisposition.builder("form-data")
                                              .filename("unquoted")
@@ -76,7 +60,7 @@ class ContentDispositionTest {
 
     // SPR-16091
     @Test
-    void parseFilenameWithSemicolon() throws UnsupportedEncodingException {
+    void parseFilenameWithSemicolon() {
         assertThat(parse("attachment; filename=\"filename with ; semicolon.txt\""))
                 .isEqualTo(ContentDisposition.builder("attachment")
                                              .filename("filename with ; semicolon.txt")
@@ -84,7 +68,7 @@ class ContentDispositionTest {
     }
 
     @Test
-    void parseEncodedFilename() throws UnsupportedEncodingException {
+    void parseEncodedFilename() {
         assertThat(parse("form-data; name=\"name\"; filename*=UTF-8''%E4%B8%AD%E6%96%87.txt"))
                 .isEqualTo(ContentDisposition.builder("form-data")
                                              .name("name")
@@ -94,7 +78,7 @@ class ContentDispositionTest {
 
     // gh-24112
     @Test
-    void parseEncodedFilenameWithPaddedCharset() throws UnsupportedEncodingException {
+    void parseEncodedFilenameWithPaddedCharset() {
         assertThat(parse("attachment; filename*= UTF-8''some-file.zip"))
                 .isEqualTo(ContentDisposition.builder("attachment")
                                              .filename("some-file.zip", StandardCharsets.UTF_8)
@@ -102,7 +86,7 @@ class ContentDispositionTest {
     }
 
     @Test
-    void parseEncodedFilenameWithoutCharset() throws UnsupportedEncodingException {
+    void parseEncodedFilenameWithoutCharset() {
         assertThat(parse("form-data; name=\"name\"; filename*=test.txt"))
                 .isEqualTo(ContentDisposition.builder("form-data")
                                              .name("name")
@@ -111,10 +95,11 @@ class ContentDispositionTest {
     }
 
     @Test
-    void parseEncodedFilenameWithInvalidCharset() {
-        assertThatThrownBy(() -> parse("form-data; name=\"name\"; filename*=UTF-16''test.txt"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Charset: UTF-16 (expected: UTF-8 or ISO-8859-1)");
+    void fallbackInvalidCharsetTo_ISO_8859_1() {
+        final ContentDisposition contentDisposition =
+                parse("form-data; name=\"name\"; filename*=UTF-16''test%A9.txt");
+        assertThat(contentDisposition.filename().getBytes(StandardCharsets.ISO_8859_1))
+                .isEqualTo("test©.txt".getBytes(StandardCharsets.ISO_8859_1));
     }
 
     @Test
@@ -136,17 +121,12 @@ class ContentDispositionTest {
     @Test
     void parseWithEscapedQuote() {
         final BiConsumer<String, String> tester = (description, filename) -> {
-            try {
-                assertThat(parse("form-data; name=\"file\"; filename=\"" + filename + "\"; size=123"))
-                        .as(description)
-                        .isEqualTo(ContentDisposition.builder("form-data")
-                                                     .name("file")
-                                                     .filename(filename)
-                                                     .size(123L)
-                                                     .build());
-            } catch (UnsupportedEncodingException e) {
-                Exceptions.throwUnsafely(e);
-            }
+            assertThat(parse("form-data; name=\"file\"; filename=\"" + filename + '"'))
+                    .as(description)
+                    .isEqualTo(ContentDisposition.builder("form-data")
+                                                 .name("file")
+                                                 .filename(filename)
+                                                 .build());
         };
 
         tester.accept("Escaped quotes should be ignored",
@@ -163,45 +143,12 @@ class ContentDispositionTest {
     }
 
     @Test
-    void parseWithExtraSemicolons() throws UnsupportedEncodingException {
-        assertThat(parse("form-data; name=\"foo\";; ; filename=\"foo.txt\"; size=123"))
+    void parseWithExtraSemicolons() {
+        assertThat(parse("form-data; name=\"foo\";; ; filename=\"foo.txt\""))
                 .isEqualTo(ContentDisposition.builder("form-data")
                                              .name("foo")
                                              .filename("foo.txt")
-                                             .size(123L)
                                              .build());
-    }
-
-    @Test
-    void parseDates() throws UnsupportedEncodingException {
-        final ZonedDateTime creationTime = ZonedDateTime.parse("Mon, 12 Feb 2007 10:15:30 -0500", formatter);
-        final ZonedDateTime modificationTime =
-                ZonedDateTime.parse("Tue, 13 Feb 2007 10:15:30 -0500", formatter);
-        final ZonedDateTime readTime = ZonedDateTime.parse("Wed, 14 Feb 2007 10:15:30 -0500", formatter);
-
-        assertThat(parse("attachment; " +
-                         "creation-date=\"" + creationTime.format(formatter) + "\"; " +
-                         "modification-date=\"" + modificationTime.format(formatter) + "\"; " +
-                         "read-date=\"" + readTime.format(formatter) + '"')).isEqualTo(
-                ContentDisposition.builder("attachment")
-                                  .creationDate(creationTime)
-                                  .modificationDate(modificationTime)
-                                  .readDate(readTime)
-                                  .build());
-    }
-
-    @Test
-    void parseIgnoresInvalidDates() throws UnsupportedEncodingException {
-        final ZonedDateTime readTime = ZonedDateTime.parse("Wed, 14 Feb 2007 10:15:30 -0500", formatter);
-
-        assertThat(
-                parse("attachment; " +
-                      "creation-date=\"-1\"; " +
-                      "modification-date=\"-1\"; " +
-                      "read-date=\"" + readTime.format(formatter) + '"')).isEqualTo(
-                ContentDisposition.builder("attachment")
-                                  .readDate(readTime)
-                                  .build());
     }
 
     @Test
@@ -230,9 +177,8 @@ class ContentDispositionTest {
         assertThat(ContentDisposition.builder("form-data")
                                      .name("foo")
                                      .filename("foo.txt")
-                                     .size(123L)
                                      .build().toString())
-                .isEqualTo("form-data; name=\"foo\"; filename=\"foo.txt\"; size=123");
+                .isEqualTo("form-data; name=\"foo\"; filename=\"foo.txt\"");
     }
 
     @Test
@@ -296,14 +242,12 @@ class ContentDispositionTest {
 
     @Test
     void formatWithEncodedFilenameUsingInvalidCharset() {
-        assertThatThrownBy(() -> ContentDisposition.builder("form-data")
-                                                   .name("name")
-                                                   .filename("test.txt",
-                                                             StandardCharsets.UTF_16)
-                                                   .build()
-                                                   .toString())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Charset: UTF-16 (expected: UTF-8 or ISO-8859-1)");
+        assertThatThrownBy(() -> {
+            ContentDisposition.builder("form-data")
+                              .name("name")
+                              .filename("test.txt", StandardCharsets.UTF_16);
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Charset: UTF-16 (expected: US-ASCII, UTF-8 or ISO-8859-1)");
     }
 
     @Test
@@ -321,5 +265,12 @@ class ContentDispositionTest {
                                              .name("nameC")
                                              .filename("file.txt")
                                              .build());
+    }
+
+    @Test
+    void available() {
+        final boolean res = Charset.availableCharsets().keySet()
+                                   .stream().allMatch(Charset::isSupported);
+        assertThat(res).isTrue();
     }
 }

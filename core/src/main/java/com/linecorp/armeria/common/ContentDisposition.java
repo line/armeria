@@ -136,7 +136,7 @@ public final class ContentDisposition {
      * @return the parsed content disposition
      * @see #asHeaderValue()
      */
-    public static ContentDisposition parse(String contentDisposition) throws UnsupportedEncodingException {
+    public static ContentDisposition parse(String contentDisposition) {
         requireNonNull(contentDisposition, "contentDisposition");
         final List<String> parts = tokenize(contentDisposition);
         final String type = parts.get(0);
@@ -276,11 +276,10 @@ public final class ContentDisposition {
      * @param filename the filename
      * @param charset the charset for the filename
      * @return the encoded header field param
-     * @throws UnsupportedEncodingException if the specified charset is not supported
      *
      * @see <a href="https://tools.ietf.org/html/rfc5987">RFC 5987</a>
      */
-    private static String decodeFilename(String filename, Charset charset) throws UnsupportedEncodingException {
+    private static String decodeFilename(String filename, Charset charset) {
         final byte[] value = filename.getBytes(charset);
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         int index = 0;
@@ -305,7 +304,13 @@ public final class ContentDisposition {
                         filename + " (charset: " + charset + ')');
             }
         }
-        return baos.toString(charset.name());
+        try {
+            return baos.toString(charset.name());
+        } catch (UnsupportedEncodingException e) {
+            // Should never reach here.
+            // The charset should be either UTF-8 or ISO-8859-1.
+            throw new Error();
+        }
     }
 
     private static boolean isRFC5987AttrChar(byte c) {
@@ -344,8 +349,6 @@ public final class ContentDisposition {
      * @see <a href="https://tools.ietf.org/html/rfc5987">RFC 5987</a>
      */
     private static String encodeFilename(String input, Charset charset) {
-        checkArgument(UTF_8.equals(charset) || ISO_8859_1.equals(charset),
-                      "Charset: %s (expected: UTF-8 or ISO-8859-1)", charset);
         final byte[] source = input.getBytes(charset);
         final int len = source.length;
         final StringBuilder sb = new StringBuilder(len << 1);

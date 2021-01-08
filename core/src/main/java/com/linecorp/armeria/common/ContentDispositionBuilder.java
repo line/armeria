@@ -35,7 +35,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
-import java.time.ZonedDateTime;
+import java.nio.charset.StandardCharsets;
 
 import javax.annotation.Nullable;
 
@@ -93,6 +93,11 @@ public final class ContentDispositionBuilder {
         requireNonNull(filename, "filename");
         checkArgument(!filename.isEmpty(), "filename should not be empty.");
         this.filename = filename;
+        if (charset != null) {
+            checkArgument(charset == StandardCharsets.US_ASCII || charset == StandardCharsets.UTF_8 ||
+                          charset == StandardCharsets.ISO_8859_1,
+                          "Charset: %s (expected: US-ASCII, UTF-8 or ISO-8859-1)", charset);
+        }
         this.charset = charset;
         return this;
     }
