@@ -215,13 +215,14 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         final int primaryLocalPort;
         final SessionProtocol primarySessionProtocol;
         if (springPort > 0 || armeriaPorts.isEmpty()) {
-            // The cases of 1, 2, 4.a
+            // The cases of 1, 2, 4.b
             primaryAddress = getAddress();
             primaryLocalPort = springPort;
             if (springPort == 0) {
-                // case 4.a
+                // case 4.b
                 primarySessionProtocol = armeriaSslEnabled ? SessionProtocol.HTTPS : springSessionProtocol;
             } else {
+                // cases 1, 2
                 primarySessionProtocol = springSessionProtocol;
             }
             if (primaryAddress != null) {
@@ -230,7 +231,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 sb.port(primaryLocalPort, primarySessionProtocol);
             }
         } else {
-            // The cases of 3, 4.b
+            // The cases of 3, 4.a
             final ServerPort armeriaFirstPort = armeriaPorts.get(0);
             final InetSocketAddress inetSocketAddress = armeriaFirstPort.localAddress();
             primaryAddress = null;
