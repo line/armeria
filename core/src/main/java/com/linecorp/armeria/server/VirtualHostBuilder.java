@@ -684,6 +684,7 @@ public final class VirtualHostBuilder {
      *
      * @param route the route being decorated
      * @param decorator the {@link Function} that decorates {@link HttpService}
+     * @param order the order of {@code decorator}
      */
     public VirtualHostBuilder decorator(
             Route route, Function<? super HttpService, ? extends HttpService> decorator, int order) {

@@ -1183,6 +1183,7 @@ public final class ServerBuilder {
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decorator the {@link Function} that decorates {@link HttpService}s
+     * @param order the order of {@code decorator}
      */
     public ServerBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator, int order) {
         return decorator(Route.ofCatchAll(), decorator, order);

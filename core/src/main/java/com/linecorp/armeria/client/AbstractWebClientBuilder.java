@@ -173,7 +173,7 @@ public abstract class AbstractWebClientBuilder extends AbstractClientOptionsBuil
      */
     @Override
     public AbstractWebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator,
-                                                     int order) {
+                                                 int order) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the web client builder.");
     }
 
