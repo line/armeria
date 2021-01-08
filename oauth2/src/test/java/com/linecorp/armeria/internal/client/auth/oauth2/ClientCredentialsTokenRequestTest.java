@@ -71,7 +71,7 @@ public class ClientCredentialsTokenRequestTest {
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
         assertThat(response1.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final GrantedOAuth2AccessToken grantedToken1 =
-                GrantedOAuth2AccessToken.of(response1.contentUtf8(), null);
+                GrantedOAuth2AccessToken.parse(response1.contentUtf8(), null);
         assertThat(grantedToken1).isEqualTo(token.grantedToken());
     }
 

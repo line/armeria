@@ -89,7 +89,7 @@ public class GrantedOAuth2AccessTokenTest {
                 "\"scope\":\"read write\"," +
                 "\"example_parameter\":\"example_value\"}";
 
-        final GrantedOAuth2AccessToken token = GrantedOAuth2AccessToken.of(rawResponse, null);
+        final GrantedOAuth2AccessToken token = GrantedOAuth2AccessToken.parse(rawResponse, null);
 
         Thread.sleep(100);
 
@@ -125,7 +125,7 @@ public class GrantedOAuth2AccessTokenTest {
                 "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\"," +
                 "\"example_parameter\":\"example_value\"}";
 
-        final GrantedOAuth2AccessToken token = GrantedOAuth2AccessToken.of(rawResponse, "read write");
+        final GrantedOAuth2AccessToken token = GrantedOAuth2AccessToken.parse(rawResponse, "read write");
 
         Thread.sleep(100);
 
@@ -188,7 +188,7 @@ public class GrantedOAuth2AccessTokenTest {
                 "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\"," +
                 "\"scope\":\"read write\"," +
                 "\"example_parameter\":\"example_value\"}";
-        final GrantedOAuth2AccessToken token1 = GrantedOAuth2AccessToken.of(rawResponse1, null);
+        final GrantedOAuth2AccessToken token1 = GrantedOAuth2AccessToken.parse(rawResponse1, null);
         assertThat(token1.scope()).isEqualTo(toScopeString(scope));
         assertThat(token1.scopeSet()).containsExactly(scope);
 
@@ -198,7 +198,7 @@ public class GrantedOAuth2AccessTokenTest {
                 "\"expires_in\":3600," +
                 "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\"," +
                 "\"example_parameter\":\"example_value\"}";
-        final GrantedOAuth2AccessToken token2 = GrantedOAuth2AccessToken.of(rawResponse2, "read write");
+        final GrantedOAuth2AccessToken token2 = GrantedOAuth2AccessToken.parse(rawResponse2, "read write");
         assertThat(token2.scope()).isEqualTo(toScopeString(scope));
         assertThat(token2.scopeSet()).containsExactly(scope);
 
@@ -209,7 +209,7 @@ public class GrantedOAuth2AccessTokenTest {
                 "\"refresh_token\":\"tGzv3JOkF0XG5Qx2TlKWIA\"," +
                 "\"scope\":\"read write\"," +
                 "\"example_parameter\":\"example_value\"}";
-        final GrantedOAuth2AccessToken token3 = GrantedOAuth2AccessToken.of(rawResponse3, "foo");
+        final GrantedOAuth2AccessToken token3 = GrantedOAuth2AccessToken.parse(rawResponse3, "foo");
         assertThat(token3.scope()).isEqualTo(toScopeString(scope));
         assertThat(token3.scopeSet()).containsExactly(scope);
     }

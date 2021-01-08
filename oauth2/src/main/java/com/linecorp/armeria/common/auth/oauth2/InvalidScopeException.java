@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * owner.
  */
 @UnstableApi
-public class InvalidScopeException extends TokenRequestException {
+public final class InvalidScopeException extends TokenRequestException {
 
     private static final long serialVersionUID = 6364081426172863719L;
 

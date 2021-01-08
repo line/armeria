@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  * Executes submitted {@link Callable} actions asynchronously in sequence.
  */
 @UnstableApi
-public class SerialFuture {
+public final class SerialFuture {
 
     private final Queue<Runnable> actions = new LinkedList<>();
 

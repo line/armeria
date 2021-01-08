@@ -117,7 +117,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * Validates access token and refreshes it if necessary.
      */
     @Override
-    public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
+    public final CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
         return tokenManager.get();
     }
 }

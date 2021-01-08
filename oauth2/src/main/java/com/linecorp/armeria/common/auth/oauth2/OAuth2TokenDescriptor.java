@@ -64,8 +64,8 @@ public class OAuth2TokenDescriptor implements Serializable {
      * @param rawResponse {@code JSON}-formatted raw response body.
      * @return A new instance of {@link OAuth2TokenDescriptor}.
      */
-    public static OAuth2TokenDescriptor of(String rawResponse) {
-        return OAuth2TokenDescriptorBuilder.of(rawResponse);
+    public static OAuth2TokenDescriptor parse(String rawResponse) {
+        return OAuth2TokenDescriptorBuilder.parse(rawResponse);
     }
 
     /**

@@ -25,6 +25,8 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -155,7 +157,7 @@ public final class ClientAuthorization {
      *
      * @return encoded client {@code Authorization} header value.
      */
-    public String authorizationHeaderValue() {
+    public String asHeaderValue() {
         return CaseUtil.firstUpperAllLowerCase(authorizationType) +
                AUTHORIZATION_SEPARATOR + composeAuthorizationString();
     }
@@ -168,7 +170,7 @@ public final class ClientAuthorization {
      * }</pre>.
      * The client MAY omit the {@code client_secret} parameter if the client secret is an empty string.
      */
-    public void setCredentialsAsBodyParameters(QueryParamsBuilder formBuilder) {
+    public void addAsBodyParameters(QueryParamsBuilder formBuilder) {
         requireNonNull(credentialsSupplier, "credentialsSupplier");
         final Map.Entry<String, String> clientCredentials = credentialsSupplier.get();
         formBuilder.add(CLIENT_ID, requireNonNull(clientCredentials.getKey(), CLIENT_ID));
@@ -186,12 +188,23 @@ public final class ClientAuthorization {
      * }</pre>.
      * The client MAY omit the {@code client_secret} parameter if the client secret is an empty string.
      *
-     * @return encoded client credentials request body parameters as a {@link String}.
+     * @return encoded client credentials request body parameters as {@link QueryParams}.
      */
-    public String credentialsBodyParameters() {
+    public QueryParams asBodyParameters() {
         final QueryParamsBuilder formBuilder = QueryParams.builder();
-        setCredentialsAsBodyParameters(formBuilder);
-        return formBuilder.toQueryString();
+        addAsBodyParameters(formBuilder);
+        return formBuilder.build();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("type", authorizationType)
+                          .add("source",
+                               authorizationSupplier != null ? "authorization"
+                                                             : credentialsSupplier != null ? "credentials"
+                                                                                           : null)
+                          .toString();
     }
 
     private static String encodeClientCredentials(String clientId, String clientSecret) {

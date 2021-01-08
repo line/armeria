@@ -27,7 +27,8 @@ import javax.annotation.Nullable;
 
 public class MockOAuth2AccessToken {
 
-    public static final OAuth2TokenDescriptor INACTIVE_TOKEN = OAuth2TokenDescriptor.of("{\"active\":false}");
+    public static final OAuth2TokenDescriptor INACTIVE_TOKEN =
+            OAuth2TokenDescriptor.parse("{\"active\":false}");
 
     private final String accessToken;
     private final GrantedOAuth2AccessToken grantedToken;

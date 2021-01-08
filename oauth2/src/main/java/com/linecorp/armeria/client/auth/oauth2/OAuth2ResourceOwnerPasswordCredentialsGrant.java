@@ -38,7 +38,7 @@ import com.linecorp.armeria.internal.client.auth.oauth2.ResourceOwnerPasswordCre
  * Implements Access Token loading, storing, obtaining and refreshing.
  */
 @UnstableApi
-public class OAuth2ResourceOwnerPasswordCredentialsGrant extends AbstractOAuth2AuthorizationGrant {
+public final class OAuth2ResourceOwnerPasswordCredentialsGrant extends AbstractOAuth2AuthorizationGrant {
 
     /**
      * Creates a new builder for {@link OAuth2ResourceOwnerPasswordCredentialsGrant}.

@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * the client tried to revoke an access token on a server not supporting this feature.
  */
 @UnstableApi
-public class UnsupportedTokenTypeException extends TokenRequestException {
+public final class UnsupportedTokenTypeException extends TokenRequestException {
 
     private static final long serialVersionUID = 4119934709921411913L;
 

@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * for authenticating the client, or is otherwise malformed.
  */
 @UnstableApi
-public class InvalidRequestException extends TokenRequestException {
+public final class InvalidRequestException extends TokenRequestException {
 
     private static final long serialVersionUID = 8692669863107398097L;
 

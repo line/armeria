@@ -20,6 +20,8 @@ import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthorizerChain.AuthorizerSelectionStrategy;
@@ -48,8 +50,8 @@ public interface Authorizer<T> {
      */
     default Authorizer<T> orElse(Authorizer<T> nextAuthorizer) {
         final Authorizer<T> self = this;
-        return new AuthorizerChain<>(self, AuthorizerSelectionStrategy.LAST_WITH_HANDLER)
-                .orElse(nextAuthorizer);
+        return new AuthorizerChain<>(ImmutableList.of(self, nextAuthorizer),
+                                     AuthorizerSelectionStrategy.LAST_WITH_HANDLER);
     }
 
     /**

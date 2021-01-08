@@ -71,7 +71,7 @@ public class TokenIntrospectionRequestTest {
                                  "&token_type_hint=access_token").aggregate().join();
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
         assertThat(response1.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        final OAuth2TokenDescriptor tokenDescriptor1 = OAuth2TokenDescriptor.of(response1.contentUtf8());
+        final OAuth2TokenDescriptor tokenDescriptor1 = OAuth2TokenDescriptor.parse(response1.contentUtf8());
         assertThat(tokenDescriptor1.isActive()).isTrue();
         assertThat(tokenDescriptor1).isEqualTo(token.tokenDescriptor());
 
@@ -84,7 +84,7 @@ public class TokenIntrospectionRequestTest {
                 requestHeaders2, "token=ABC&token_type_hint=access_token").aggregate().join();
         assertThat(response2.status()).isEqualTo(HttpStatus.OK);
         assertThat(response2.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        final OAuth2TokenDescriptor tokenDescriptor2 = OAuth2TokenDescriptor.of(response2.contentUtf8());
+        final OAuth2TokenDescriptor tokenDescriptor2 = OAuth2TokenDescriptor.parse(response2.contentUtf8());
         assertThat(tokenDescriptor2.isActive()).isFalse();
         assertThat(tokenDescriptor2).isEqualTo(MockOAuth2AccessToken.INACTIVE_TOKEN);
 
@@ -98,7 +98,7 @@ public class TokenIntrospectionRequestTest {
                                  "&token_type_hint=access_token").aggregate().join();
         assertThat(response3.status()).isEqualTo(HttpStatus.OK);
         assertThat(response3.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        final OAuth2TokenDescriptor tokenDescriptor3 = OAuth2TokenDescriptor.of(response3.contentUtf8());
+        final OAuth2TokenDescriptor tokenDescriptor3 = OAuth2TokenDescriptor.parse(response3.contentUtf8());
         assertThat(tokenDescriptor3.isActive()).isTrue();
         assertThat(tokenDescriptor3).isEqualTo(token.tokenDescriptor());
     }

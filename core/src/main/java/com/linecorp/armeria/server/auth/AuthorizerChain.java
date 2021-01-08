@@ -67,20 +67,14 @@ final class AuthorizerChain<T> implements Authorizer<T> {
     AuthorizerChain(Iterable<? extends Authorizer<T>> authorizers,
                     AuthorizerSelectionStrategy selectionStrategy) {
         requireNonNull(authorizers, "authorizers");
-        final Iterator<? extends Authorizer<T>> it = authorizers.iterator();
-        checkArgument(it.hasNext(), "List of authorizers is empty");
-        final Authorizer<T> firstAuthorizer = it.next();
-        requireNonNull(firstAuthorizer, "firstAuthorizer");
         this.authorizers = ImmutableList.copyOf(authorizers);
+        checkArgument(!this.authorizers.isEmpty(), "authorizers are empty");
+        final Authorizer<T> firstAuthorizer = this.authorizers.get(0);
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         if (selectionStrategy == AuthorizerSelectionStrategy.FIRST) {
             // this could be NULL
             failureHandler = firstAuthorizer.failureHandler();
         }
-    }
-
-    AuthorizerChain(Authorizer<T> firstAuthorizer, AuthorizerSelectionStrategy selectionStrategy) {
-        this(ImmutableList.of(requireNonNull(firstAuthorizer, "firstAuthorizer")), selectionStrategy);
     }
 
     /**

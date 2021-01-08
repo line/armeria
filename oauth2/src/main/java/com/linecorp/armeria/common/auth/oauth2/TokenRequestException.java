@@ -16,7 +16,24 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ERROR;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ERROR_DESCRIPTION;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ERROR_URI;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.INVALID_CLIENT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.INVALID_GRANT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.INVALID_REQUEST;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.INVALID_SCOPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNAUTHORIZED_CLIENT;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNSUPPORTED_GRANT_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNSUPPORTED_TOKEN_TYPE;
+import static com.linecorp.armeria.internal.common.auth.oauth2.ResponseParserUtil.JSON;
+
+import java.util.LinkedHashMap;
+
 import javax.annotation.Nullable;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -28,12 +45,45 @@ public class TokenRequestException extends RuntimeException {
 
     private static final long serialVersionUID = 3324433572773111913L;
 
+    private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
+            new TypeReference<LinkedHashMap<String, String>>() {};
+
     /**
-     * Returns a {@link TokenRequestExceptionBuilder} to build error-specific types
-     * of {@link TokenRequestException}.
+     * Parses {@code JSON} error response body and created a new instance of {@link TokenRequestException}
+     * using the response data. Returns an error-specific type of {@link TokenRequestException}.
+     * @param rawResponse {@code JSON} formatted error response body.
+     * @return a new instance of {@link TokenRequestException}
      */
-    public static TokenRequestException of(String rawResponse) {
-        return TokenRequestExceptionBuilder.parse(rawResponse);
+    public static TokenRequestException parse(String rawResponse) {
+        final LinkedHashMap<String, String> map;
+        try {
+            map = JSON.readValue(rawResponse, MAP_TYPE);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        final String errorDescription = map.get(ERROR_DESCRIPTION);
+        final String errorUri = map.get(ERROR_URI);
+        final String errorType = map.get(ERROR);
+        if (errorType != null) {
+            switch (errorType.toLowerCase()) {
+                case INVALID_REQUEST:
+                    return new InvalidRequestException(errorDescription, errorUri);
+                case INVALID_CLIENT:
+                    return new InvalidClientException(errorDescription, errorUri);
+                case INVALID_GRANT:
+                    return new InvalidGrantException(errorDescription, errorUri);
+                case UNAUTHORIZED_CLIENT:
+                    return new UnauthorizedClientException(errorDescription, errorUri);
+                case UNSUPPORTED_GRANT_TYPE:
+                    return new UnsupportedGrantTypeException(errorDescription, errorUri);
+                case INVALID_SCOPE:
+                    return new InvalidScopeException(errorDescription, errorUri);
+                case UNSUPPORTED_TOKEN_TYPE:
+                    return new UnsupportedTokenTypeException(errorDescription, errorUri);
+            }
+        }
+        return new TokenRequestException(errorDescription, errorUri);
     }
 
     @Nullable

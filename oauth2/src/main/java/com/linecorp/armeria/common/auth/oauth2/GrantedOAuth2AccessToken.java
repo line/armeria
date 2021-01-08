@@ -71,8 +71,8 @@ public class GrantedOAuth2AccessToken implements Serializable {
      *                     value or fail the request indicating an invalid scope.
      * @return A new instance of {@link GrantedOAuth2AccessToken}.
      */
-    public static GrantedOAuth2AccessToken of(String rawResponse, @Nullable String requestScope) {
-        return GrantedOAuth2AccessTokenBuilder.of(rawResponse, requestScope);
+    public static GrantedOAuth2AccessToken parse(String rawResponse, @Nullable String requestScope) {
+        return GrantedOAuth2AccessTokenBuilder.parse(rawResponse, requestScope);
     }
 
     /**

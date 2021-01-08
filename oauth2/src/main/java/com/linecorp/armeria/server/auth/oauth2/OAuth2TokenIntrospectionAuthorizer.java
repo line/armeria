@@ -45,7 +45,7 @@ import io.netty.util.AttributeKey;
  * in business logic.
  */
 @UnstableApi
-public class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Token> {
+public final class OAuth2TokenIntrospectionAuthorizer implements Authorizer<OAuth2Token> {
 
     /**
      * Returns a newly created {@link OAuth2TokenIntrospectionAuthorizerBuilder}.

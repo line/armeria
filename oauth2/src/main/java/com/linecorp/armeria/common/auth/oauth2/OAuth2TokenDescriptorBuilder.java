@@ -54,7 +54,7 @@ public final class OAuth2TokenDescriptorBuilder {
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
             new TypeReference<LinkedHashMap<String, String>>() {};
 
-    static OAuth2TokenDescriptor of(String rawResponse) {
+    static OAuth2TokenDescriptor parse(String rawResponse) {
 
         final LinkedHashMap<String, String> map;
         try {

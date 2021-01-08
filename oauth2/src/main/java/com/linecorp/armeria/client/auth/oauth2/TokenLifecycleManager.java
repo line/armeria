@@ -105,7 +105,7 @@ class TokenLifecycleManager<T> {
      * Provides managed token object asynchronously. This operation may involve initial token supply or
      * token update operation, if required.
      */
-    public CompletionStage<T> get() {
+    CompletionStage<T> get() {
         final T t = ref.get();
         if (t != null) {
             // token already present

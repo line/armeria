@@ -127,7 +127,7 @@ public class OAuth2TokenDescriptorTest {
                 "\"jti\":\"12345\"," +
                 "\"extension_field\":\"twenty-seven\"}";
 
-        final OAuth2TokenDescriptor descriptor = OAuth2TokenDescriptor.of(rawResponse);
+        final OAuth2TokenDescriptor descriptor = OAuth2TokenDescriptor.parse(rawResponse);
 
         Thread.sleep(100);
 

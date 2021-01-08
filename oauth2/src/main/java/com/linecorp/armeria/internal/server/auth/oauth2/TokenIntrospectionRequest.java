@@ -56,6 +56,6 @@ public final class TokenIntrospectionRequest extends AbstractTokenOperationReque
     @Override
     protected OAuth2TokenDescriptor extractOkResults(AggregatedHttpResponse response,
                                                      QueryParams requestFormData) {
-        return OAuth2TokenDescriptor.of(response.contentUtf8());
+        return OAuth2TokenDescriptor.parse(response.contentUtf8());
     }
 }

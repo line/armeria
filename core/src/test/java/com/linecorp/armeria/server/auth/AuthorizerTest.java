@@ -53,25 +53,25 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 public class AuthorizerTest {
 
     @RegisterExtension
-    static EventLoopExtension eventLoop = new EventLoopExtension();
+    static final EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Nullable
     private static ServiceRequestContext serviceCtx;
 
     @BeforeAll
-    public static void setServiceContext() {
+    static void setServiceContext() {
         serviceCtx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                           .eventLoop(eventLoop.get())
                                           .build();
     }
 
     @AfterAll
-    public static void clearServiceContext() {
+    static void clearServiceContext() {
         serviceCtx = null;
     }
 
     @Test
-    public void orElseFirst() {
+    void orElseFirst() {
         final Authorizer<String> a = newMock();
         when(a.authorize(any(), any())).thenReturn(completedFuture(true));
         final Authorizer<String> b = newMock();
@@ -88,7 +88,7 @@ public class AuthorizerTest {
      * invoked.
      */
     @Test
-    public void orElseFirstException() {
+    void orElseFirstException() {
         final Exception expected = new Exception();
         final Authorizer<String> a = newMock();
         when(a.authorize(any(), any())).thenReturn(exceptionallyCompletedFuture(expected));
@@ -106,7 +106,7 @@ public class AuthorizerTest {
      * the second {@link Authorizer} shouldn't be invoked.
      */
     @Test
-    public void orElseFirstNull() {
+    void orElseFirstNull() {
         final Authorizer<String> a = newMock();
         when(a.authorize(any(), any())).thenReturn(completedFuture(null));
         final Authorizer<String> b = newMock();
@@ -119,7 +119,7 @@ public class AuthorizerTest {
     }
 
     @Test
-    public void orElseSecond() {
+    void orElseSecond() {
         final Authorizer<String> a = newMock();
         when(a.authorize(any(), any())).thenReturn(completedFuture(false));
         final Authorizer<String> b = newMock();
@@ -133,7 +133,7 @@ public class AuthorizerTest {
     }
 
     @Test
-    public void orElseToString() {
+    void orElseToString() {
         final Authorizer<Object> a = new NamedAuthorizer<>("A");
         final Authorizer<Object> b = new NamedAuthorizer<>("B");
         final Authorizer<Object> c = new NamedAuthorizer<>("C");
@@ -150,8 +150,8 @@ public class AuthorizerTest {
 
     @ParameterizedTest
     @MethodSource("orElseHandlerArguments")
-    public void orElseHandler(boolean[] statuses, int nullHandler, boolean expectedStatus,
-                              int expectedSuccessHandler, int expectedFailureHandler) {
+    void orElseHandler(boolean[] statuses, int nullHandler, boolean expectedStatus,
+                       int expectedSuccessHandler, int expectedFailureHandler) {
         final Authorizer<String>[] authorizers = new Authorizer[statuses.length];
         Authorizer<String> authorizer = null;
         for (int i = 0; i < statuses.length; i++) {

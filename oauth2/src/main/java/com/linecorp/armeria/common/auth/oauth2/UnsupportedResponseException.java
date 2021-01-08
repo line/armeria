@@ -25,11 +25,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A response type in not supported by the given request/response flow.
  */
 @UnstableApi
-public class UnsupportedResponseException extends RuntimeException {
+public final class UnsupportedResponseException extends InvalidResponseException {
 
     private static final long serialVersionUID = 4982498806675787821L;
-
-    private final HttpStatus status;
 
     /**
      * Constructs new {@link UnsupportedMediaTypeException}.
@@ -37,8 +35,7 @@ public class UnsupportedResponseException extends RuntimeException {
      * @param message A response content
      */
     public UnsupportedResponseException(HttpStatus status, @Nullable String message) {
-        super(join(status.toString(), message));
-        this.status = status;
+        super(status, message);
     }
 
     /**
@@ -50,18 +47,6 @@ public class UnsupportedResponseException extends RuntimeException {
      */
     public UnsupportedResponseException(HttpStatus status, @Nullable String message,
                                         @Nullable Throwable cause) {
-        super(join(status.toString(), message), cause);
-        this.status = status;
-    }
-
-    private static String join(String status, @Nullable String message) {
-        return (message == null) ? status : status + ": " + message;
-    }
-
-    /**
-     * A status code of the response.
-     */
-    public HttpStatus getStatus() {
-        return status;
+        super(status, message, cause);
     }
 }

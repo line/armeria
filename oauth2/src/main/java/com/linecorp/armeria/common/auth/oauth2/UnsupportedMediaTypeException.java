@@ -25,7 +25,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A response {@code Content-Type} header does not match the expected type.
  */
 @UnstableApi
-public class UnsupportedMediaTypeException extends RuntimeException {
+public final class UnsupportedMediaTypeException extends InvalidResponseException {
 
     private static final long serialVersionUID = 5350546517834409748L;
 
@@ -38,7 +38,7 @@ public class UnsupportedMediaTypeException extends RuntimeException {
      * @param message A response content
      */
     public UnsupportedMediaTypeException(String mediaType, String status, @Nullable String message) {
-        super(join(mediaType, status, message));
+        super(status, join(mediaType, message));
         this.mediaType = mediaType;
     }
 
@@ -52,14 +52,13 @@ public class UnsupportedMediaTypeException extends RuntimeException {
      */
     public UnsupportedMediaTypeException(String mediaType, String status, @Nullable String message,
                                          @Nullable Throwable cause) {
-        super(join(mediaType, status, message), cause);
+        super(status, join(mediaType, message), cause);
         this.mediaType = mediaType;
     }
 
-    private static String join(String mediaType, String status, @Nullable String message) {
+    private static String join(String mediaType, @Nullable String message) {
         final StringBuilder builder = new StringBuilder();
-        builder.append(status).append(": ")
-               .append(HttpHeaderNames.CONTENT_TYPE).append(" - ")
+        builder.append(HttpHeaderNames.CONTENT_TYPE).append(" - ")
                .append(mediaType);
         return (message == null) ? builder.toString() : builder.append(": ").append(message).toString();
     }

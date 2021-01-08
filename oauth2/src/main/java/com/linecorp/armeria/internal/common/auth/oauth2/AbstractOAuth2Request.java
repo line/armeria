@@ -75,14 +75,14 @@ public abstract class AbstractOAuth2Request<T> {
     /**
      * Returns the {@link WebClient} of the authorization endpoint.
      */
-    protected WebClient endpoint() {
+    protected final WebClient endpoint() {
         return endpoint;
     }
 
     /**
      * Returns the authorization endpoint path.
      */
-    protected String endpointPath() {
+    protected final String endpointPath() {
         return endpointPath;
     }
 
@@ -90,7 +90,7 @@ public abstract class AbstractOAuth2Request<T> {
      * Returns the client authorization object.
      */
     @Nullable
-    protected ClientAuthorization clientAuthorization() {
+    protected final ClientAuthorization clientAuthorization() {
         return clientAuthorization;
     }
 
@@ -103,17 +103,17 @@ public abstract class AbstractOAuth2Request<T> {
      * Returns the value for the {@link HttpHeaderNames#AUTHORIZATION}.
      */
     @Nullable
-    protected String authorizationHeaderValue() {
-        return clientAuthorization == null ? null : clientAuthorization.authorizationHeaderValue();
+    protected final String authorizationHeaderValue() {
+        return clientAuthorization == null ? null : clientAuthorization.asHeaderValue();
     }
 
     /**
      * Sets client credentials as form data parameters,
      * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
-    protected void setCredentialsAsBodyParameters(QueryParamsBuilder formBuilder) {
+    protected final void addCredentialsAsBodyParameters(QueryParamsBuilder formBuilder) {
         if (clientAuthorization != null) {
-            clientAuthorization.setCredentialsAsBodyParameters(formBuilder);
+            clientAuthorization.addAsBodyParameters(formBuilder);
         }
     }
 
@@ -137,7 +137,7 @@ public abstract class AbstractOAuth2Request<T> {
         if (authorizationHeaderValue != null) {
             headersBuilder.add(HttpHeaderNames.AUTHORIZATION, authorizationHeaderValue);
         } else {
-            requestFormData = requestFormData.withMutations(this::setCredentialsAsBodyParameters);
+            requestFormData = requestFormData.withMutations(this::addCredentialsAsBodyParameters);
         }
         headersBuilder.add(HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA.toString());
 
@@ -184,7 +184,7 @@ public abstract class AbstractOAuth2Request<T> {
      * @return an instance of {@link TokenRequestException}
      */
     protected TokenRequestException onBadRequestError(AggregatedHttpResponse errorResponse) {
-        return TokenRequestException.of(errorResponse.contentUtf8());
+        return TokenRequestException.parse(errorResponse.contentUtf8());
     }
 
     /**

@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * "WWW-Authenticate" response header field matching the authentication scheme used by the client.
  */
 @UnstableApi
-public class InvalidClientException extends TokenRequestException {
+public final class InvalidClientException extends TokenRequestException {
 
     private static final long serialVersionUID = -1894934023468438715L;
 

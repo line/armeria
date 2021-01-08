@@ -51,7 +51,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
     private static final TypeReference<LinkedHashMap<String, String>> MAP_TYPE =
             new TypeReference<LinkedHashMap<String, String>>() {};
 
-    static GrantedOAuth2AccessToken of(String rawResponse, @Nullable String requestScope) {
+    static GrantedOAuth2AccessToken parse(String rawResponse, @Nullable String requestScope) {
 
         final LinkedHashMap<String, String> map;
         try {

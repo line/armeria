@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * The authenticated client is not authorized to use this authorization grant type.
  */
 @UnstableApi
-public class UnauthorizedClientException extends TokenRequestException {
+public final class UnauthorizedClientException extends TokenRequestException {
 
     private static final long serialVersionUID = 6699243770883393173L;
 

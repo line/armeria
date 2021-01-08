@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * The authorization grant type is not supported by the authorization server.
  */
 @UnstableApi
-public class UnsupportedGrantTypeException extends TokenRequestException {
+public final class UnsupportedGrantTypeException extends TokenRequestException {
 
     private static final long serialVersionUID = 4839477285662565241L;
 
