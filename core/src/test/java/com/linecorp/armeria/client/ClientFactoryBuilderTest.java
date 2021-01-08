@@ -246,7 +246,7 @@ class ClientFactoryBuilderTest {
                                                   .build()) {
             // idleTimeout should not be greater than maxConnectionAge.
             assertThat(factory.options().idleTimeoutMillis()).isEqualTo(maxConnectionAgeMillis);
-            // pingInterval should be disable because idleTimeout will work first.
+            // pingInterval should be disabled because idleTimeout will work first.
             assertThat(factory.options().pingIntervalMillis()).isEqualTo(0);
         }
     }
