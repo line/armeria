@@ -355,7 +355,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                           } else {
                               logger.warn("Failed to send a heart beat to Eureka: {}, " +
                                           "(status: {}, content: {})",
-                                          client.uri(), res.headers().status(), res.contentUtf8());
+                                          client.uri(), res.status(), res.contentUtf8());
                           }
                       }
 
