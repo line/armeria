@@ -72,7 +72,7 @@ public abstract class KeepAliveHandler {
 
     private final Channel channel;
     private final String name;
-    private boolean isServer;
+    private final boolean isServer;
     private final Timer keepAliveTimer;
 
     private final long maxNumRequests;
@@ -95,7 +95,7 @@ public abstract class KeepAliveHandler {
     private boolean isMaxConnectionAgeExceeded;
 
     private boolean isInitialized;
-    private PingState pingState;
+    private PingState pingState = PingState.IDLE;
 
     @Nullable
     private ChannelFuture pingWriteFuture;
@@ -118,10 +118,8 @@ public abstract class KeepAliveHandler {
         }
 
         if (pingIntervalMillis <= 0) {
-            pingState = PingState.SHUTDOWN;
             pingIdleTimeNanos = 0;
         } else {
-            pingState = PingState.IDLE;
             pingIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(pingIntervalMillis);
         }
 
