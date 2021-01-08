@@ -35,7 +35,6 @@ import static com.linecorp.armeria.common.ContentDisposition.parse;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.function.BiConsumer;
 
@@ -265,12 +264,5 @@ class ContentDispositionTest {
                                              .name("nameC")
                                              .filename("file.txt")
                                              .build());
-    }
-
-    @Test
-    void available() {
-        final boolean res = Charset.availableCharsets().keySet()
-                                   .stream().allMatch(Charset::isSupported);
-        assertThat(res).isTrue();
     }
 }
