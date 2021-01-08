@@ -68,6 +68,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
     private volatile int subscribed;
 
     ConcatArrayStreamMessage(StreamMessage<? extends T>[] sources) {
+        assert sources.length != 0;
         this.sources = sources;
     }
 

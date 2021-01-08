@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -149,7 +148,10 @@ public interface StreamMessage<T> extends Publisher<T> {
     @SafeVarargs
     static <T> StreamMessage<T> of(Publisher<? extends T>... publishers) {
         requireNonNull(publishers, "publishers");
-        checkArgument(publishers.length > 0, "publishers is empty");
+        if (publishers.length == 0) {
+            return of();
+        }
+
         @SuppressWarnings("unchecked")
         final StreamMessage<? extends T>[] streamMessages = ImmutableList.copyOf(publishers)
                                                                          .stream()
@@ -165,7 +167,9 @@ public interface StreamMessage<T> extends Publisher<T> {
     @SafeVarargs
     static <T> StreamMessage<T> of(StreamMessage<? extends T>... streamMessages) {
         requireNonNull(streamMessages, "streamMessages");
-        checkArgument(streamMessages.length > 0, "streamMessages is empty");
+        if (streamMessages.length == 0) {
+            return of();
+        }
 
         final StreamMessage<? extends T>[] copied = Arrays.copyOf(streamMessages, streamMessages.length);
         return new ConcatArrayStreamMessage<>(copied);
