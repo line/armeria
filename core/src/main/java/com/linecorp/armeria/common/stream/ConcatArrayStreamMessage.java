@@ -53,9 +53,6 @@ import io.netty.util.concurrent.EventExecutor;
  */
 final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
 
-    // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common
-    // /reactive/src/main/java/io/helidon/common/reactive/MultiConcatArray.java
-
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<ConcatArrayStreamMessage> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(ConcatArrayStreamMessage.class, "subscribed");

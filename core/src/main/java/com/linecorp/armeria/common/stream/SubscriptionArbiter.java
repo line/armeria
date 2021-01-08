@@ -96,7 +96,7 @@ class SubscriptionArbiter implements Subscription {
 
     @Override
     public void request(long n) {
-        addRequest(n);
+        addRequest(newRequestedUpdater, n);
         drain();
     }
 
@@ -105,14 +105,14 @@ class SubscriptionArbiter implements Subscription {
      * {@link Long#MAX_VALUE}.
      * @param n the request amount to add, must be positive (not verified)
      */
-    private void addRequest(long n) {
+    private void addRequest(AtomicLongFieldUpdater<SubscriptionArbiter> updater, long n) {
         for (;;) {
-            final long current = newRequested;
+            final long current = updater.get(this);
             if (current == Long.MAX_VALUE) {
                 return;
             }
-            final long update = LongMath.saturatedAdd(current, n);
-            if (newRequestedUpdater.compareAndSet(this, current, update)) {
+            final long updated = LongMath.saturatedAdd(current, n);
+            if (updater.compareAndSet(this, current, updated)) {
                 return;
             }
         }
@@ -162,7 +162,7 @@ class SubscriptionArbiter implements Subscription {
      * @param n the number of items produced, positive
      */
     final void produced(long n) {
-        addRequest(n);
+        addRequest(newProducedUpdater, n);
         drain();
     }
 

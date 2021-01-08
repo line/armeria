@@ -26,9 +26,6 @@ import reactor.core.publisher.Flux;
 @Test
 public class ConcatArrayStreamMessageTck1Test extends PublisherVerification<Integer> {
 
-    // Forked from https://github.com/oracle/helidon/blob/28cb3e8a34bda691c035d21f90b6278c6a42007c/common
-    // /reactive/src/test/java/io/helidon/common/reactive/MultiConcatArrayTck1Test.java
-
     public ConcatArrayStreamMessageTck1Test() {
         super(new TestEnvironment(200));
     }
