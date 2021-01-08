@@ -95,7 +95,7 @@ public abstract class KeepAliveHandler {
     private boolean isMaxConnectionAgeExceeded;
 
     private boolean isInitialized;
-    private PingState pingState = PingState.IDLE;
+    private PingState pingState;
 
     @Nullable
     private ChannelFuture pingWriteFuture;
@@ -118,8 +118,10 @@ public abstract class KeepAliveHandler {
         }
 
         if (pingIntervalMillis <= 0) {
+            pingState = PingState.SHUTDOWN;
             pingIdleTimeNanos = 0;
         } else {
+            pingState = PingState.IDLE;
             pingIdleTimeNanos = TimeUnit.MILLISECONDS.toNanos(pingIntervalMillis);
         }
 
@@ -436,19 +438,18 @@ public abstract class KeepAliveHandler {
                 // - HTTP/1 server: Sending 'Connection: close' header when writing headers
                 // - HTTP/2 client
                 //   - Sending GOAWAY frame after receiving the end of a stream
-                //   - Or closed by this task if a connection is idle
+                //   - Or closed by this task if the connection is idle
                 // - HTTP/1 client
-                //   - Close connection after fully receiving response
-                //   - Or closed by this task if a connection is idle
+                //   - Close the connection after fully receiving a response
+                //   - Or closed by this task if the connection is idle
 
                 if (!isServer && !hasRequestsInProgress(ctx)) {
-                    logger.debug("{} Closing a {} connection exceeding the max connection age: {}ns",
+                    logger.debug("{} Closing a {} connection exceeding the max age: {}ns",
                                  ctx.channel(), name, maxConnectionAgeNanos);
                     ctx.channel().close();
                 }
             } catch (Exception e) {
-                logger.warn("Unexpected error occurred while closing a connection exceeding the max " +
-                            "connection age", e);
+                logger.warn("Unexpected error occurred while closing a connection exceeding the max age", e);
             }
         }
     }

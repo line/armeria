@@ -169,7 +169,7 @@ public final class ClientFactoryOptions
     /**
      * The client-side max age of a connection for keep-alive in milliseconds.
      * If the value is greater than {@code 0}, a connection is disconnected after the specified
-     * amount of the time since the connection was established.
+     * amount of time since the connection was established.
      */
     public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS =
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());

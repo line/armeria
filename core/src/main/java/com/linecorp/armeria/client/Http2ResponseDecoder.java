@@ -209,6 +209,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         if (endOfStream) {
             res.close();
+
+            if (needsToDisconnectNow() && !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway()) {
+                // The connection has reached its lifespan.
+                // Should send a GOAWAY frame if it did not receive or send a GOAWAY frame.
+                channel().close();
+            }
         }
     }
 
