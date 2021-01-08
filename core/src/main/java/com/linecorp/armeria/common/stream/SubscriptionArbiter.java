@@ -62,7 +62,6 @@ class SubscriptionArbiter implements Subscription {
     private static final AtomicIntegerFieldUpdater<SubscriptionArbiter> wipUpdater =
             AtomicIntegerFieldUpdater.newUpdater(SubscriptionArbiter.class, "wip");
 
-
     /**
      * The new subscription to use.
      */
