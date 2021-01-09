@@ -180,7 +180,7 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     }
 
     /**
-     * Sets the order.
+     * Sets the order of decoration.
      */
     public VirtualHostDecoratingServiceBindingBuilder order(int order) {
         this.order = order;

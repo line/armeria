@@ -21,17 +21,16 @@ import java.util.function.Function;
 import com.google.common.base.MoreObjects;
 
 /**
- * An class to hold a decorator with its order.
+ * A class to hold a decorator with its order.
  */
-public class DecoratorAndOrder<T> {
+public class DecoratorAndOrder<T> implements Comparable<DecoratorAndOrder<T>> {
 
     public static final int DEFAULT_ORDER = 0;
 
     private final Function<? super T, ? extends T> decorator;
     private final int order;
 
-    public DecoratorAndOrder(Function<? super T, ? extends T> decorator,
-                             int order) {
+    public DecoratorAndOrder(Function<? super T, ? extends T> decorator, int order) {
         this.decorator = decorator;
         this.order = order;
     }
@@ -56,5 +55,10 @@ public class DecoratorAndOrder<T> {
                           .add("decorator", decorator())
                           .add("order", order())
                           .toString();
+    }
+
+    @Override
+    public int compareTo(DecoratorAndOrder decoratorAndOrder) {
+        return Integer.compare(decoratorAndOrder.order(), order());
     }
 }

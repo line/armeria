@@ -89,11 +89,11 @@ public final class ClientDecoration {
     ClientDecoration(List<DecoratorAndOrder<HttpClient>> decorators,
                      List<DecoratorAndOrder<RpcClient>> rpcDecorators) {
         this.decorators = decorators.stream()
-                                    .sorted((o1, o2) -> Integer.compare(o2.order(), o1.order()))
+                                    .sorted()
                                     .map(DecoratorAndOrder::decorator)
                                     .collect(toImmutableList());
         this.rpcDecorators = rpcDecorators.stream()
-                                          .sorted((o1, o2) -> Integer.compare(o2.order(), o1.order()))
+                                          .sorted()
                                           .map(DecoratorAndOrder::decorator)
                                           .collect(toImmutableList());
     }

@@ -23,6 +23,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.common.DecoratorAndOrder;
 
 /**
  * A builder class for binding a {@code decorator} with {@link Route} fluently.
@@ -49,7 +50,7 @@ import com.linecorp.armeria.common.MediaType;
 public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilder {
 
     private final ServerBuilder serverBuilder;
-    private int order;
+    private int order = DecoratorAndOrder.DEFAULT_ORDER;
 
     DecoratingServiceBindingBuilder(ServerBuilder serverBuilder) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
@@ -178,7 +179,7 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
     }
 
     /**
-     * Sets the order.
+     * Sets the order of decoration.
      */
     public DecoratingServiceBindingBuilder order(int order) {
         this.order = order;

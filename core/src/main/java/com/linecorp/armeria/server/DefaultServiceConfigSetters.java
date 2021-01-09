@@ -108,7 +108,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     Function<? super HttpService, ? extends HttpService> decorator() {
         final Optional<? extends Function<? super HttpService, ? extends HttpService>> decorator =
                 decoratorAndOrders.stream()
-                                  .sorted((o1, o2) -> Integer.compare(o2.order(), o1.order()))
+                                  .sorted()
                                   .map(DecoratorAndOrder::decorator)
                                   .reduce(Function::andThen);
         if (decorator.isPresent()) {
