@@ -26,6 +26,8 @@ import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.CaseFormat;
+
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
 import org.apache.thrift.TApplicationException;
@@ -346,14 +348,16 @@ public final class ThriftFunction {
         final String ifaceTypeName = typeName(type, funcClass, methodName, "Iface");
         try {
             final Class<?> ifaceType = Class.forName(ifaceTypeName, false, funcClass.getClassLoader());
-            for (Method m : ifaceType.getDeclaredMethods()) {
-                if (!m.getName().equals(methodName)) {
-                    continue;
+            final Method[] declaredMethods = ifaceType.getDeclaredMethods();
+            // check and convert to camel style, maven plugin only support for underscore to camel
+            final String methodNameCamel = methodName.indexOf('_') != -1 ?
+                                           CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, methodName) :
+                                           methodName;
+            for (Method m : declaredMethods) {
+                if (m.getName().equals(methodName) || m.getName().equals(methodNameCamel)) {
+                    return m.getExceptionTypes();
                 }
-
-                return m.getExceptionTypes();
             }
-
             throw new IllegalStateException("failed to find a method: " + methodName);
         } catch (Exception e) {
             throw new IllegalStateException(
