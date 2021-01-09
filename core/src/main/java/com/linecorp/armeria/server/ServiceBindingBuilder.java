@@ -247,19 +247,6 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
         return (ServiceBindingBuilder) super.decorators(decorators);
     }
 
-    @Override
-    @SafeVarargs
-    public final ServiceBindingBuilder decorators(
-            int order, Function<? super HttpService, ? extends HttpService>... decorators) {
-        return (ServiceBindingBuilder) super.decorators(order, decorators);
-    }
-
-    @Override
-    public ServiceBindingBuilder decorators(
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators, int order) {
-        return (ServiceBindingBuilder) super.decorators(decorators, order);
-    }
-
     /**
      * Sets the {@link HttpService} and returns the {@link ServerBuilder} that this
      * {@link ServiceBindingBuilder} was created from.

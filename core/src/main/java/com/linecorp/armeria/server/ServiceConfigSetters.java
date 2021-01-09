@@ -103,24 +103,6 @@ interface ServiceConfigSetters {
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators);
 
     /**
-     * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
-     *
-     * @param decorators the {@link Function}s that decorate the {@link HttpService}
-     * @param order the order of {@code decorators}
-     */
-    ServiceConfigSetters decorators(int order,
-                                    Function<? super HttpService, ? extends HttpService>... decorators);
-
-    /**
-     * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
-     *
-     * @param decorators the {@link Function}s that decorate the {@link HttpService}
-     * @param order the order of {@code decorators}
-     */
-    ServiceConfigSetters decorators(
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators, int order);
-
-    /**
      * Sets the default value of the {@link RequestLog#serviceName()} property which is used when
      * no service name was set via {@link RequestLogBuilder#name(String, String)}.
      *
