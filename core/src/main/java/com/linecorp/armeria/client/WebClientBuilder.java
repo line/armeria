@@ -170,8 +170,7 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
-    public WebClientBuilder decorator(Function<? super HttpClient, ? extends HttpClient> decorator,
-                                                  int order) {
+    public WebClientBuilder decorator(Function<? super HttpClient, ? extends HttpClient> decorator, int order) {
         return (WebClientBuilder) super.decorator(decorator, order);
     }
 

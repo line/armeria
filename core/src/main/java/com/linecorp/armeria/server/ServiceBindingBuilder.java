@@ -230,7 +230,7 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
 
     @Override
     public ServiceBindingBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator,
-                                          int order) {
+                                           int order) {
         return (ServiceBindingBuilder) super.decorator(decorator, order);
     }
 
