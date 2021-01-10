@@ -164,8 +164,7 @@ public final class HealthCheckService implements TransientHttpService {
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
                 .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
-        this.updateListeners = ImmutableList.<HealthCheckUpdateListener>builder()
-                .addAll(updateListeners).build();
+        this.updateListeners = ImmutableList.copyOf(updateListeners);
         this.transientServiceOptions = transientServiceOptions;
 
         if (maxLongPollingTimeoutMillis > 0 &&
@@ -401,14 +400,6 @@ public final class HealthCheckService implements TransientHttpService {
 
         return HttpResponse.from(updateHandler.handle(ctx, req).thenApply(updateResult -> {
             if (updateResult != null) {
-                for (HealthCheckUpdateListener updateListener : updateListeners) {
-                    try {
-                        updateListener.onUpdate(updateResult);
-                    } catch (Throwable t) {
-                        logger.warn("An error occurred when notifying a Update event", t);
-                    }
-                }
-
                 switch (updateResult) {
                     case HEALTHY:
                         serverHealth.setHealthy(true);
@@ -416,6 +407,14 @@ public final class HealthCheckService implements TransientHttpService {
                     case UNHEALTHY:
                         serverHealth.setHealthy(false);
                         break;
+                }
+
+                for (HealthCheckUpdateListener updateListener : updateListeners) {
+                    try {
+                        updateListener.healthUpdated(updateResult);
+                    } catch (Throwable t) {
+                        logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated(): ", t);
+                    }
                 }
             }
             return HttpResponse.of(newResponse(method, isHealthy()));

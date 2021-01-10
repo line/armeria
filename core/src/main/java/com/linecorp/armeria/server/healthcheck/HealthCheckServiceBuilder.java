@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -58,7 +59,8 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     private long pingIntervalMillis = TimeUnit.SECONDS.toMillis(DEFAULT_PING_INTERVAL_SECONDS);
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
-    private final ImmutableList.Builder<HealthCheckUpdateListener> updateListeners = ImmutableList.builder();
+    private final ImmutableList.Builder<HealthCheckUpdateListener> updateListenersBuilder =
+            ImmutableList.builder();
 
     private final TransientServiceOptionsBuilder
             transientServiceOptionsBuilder = new TransientServiceOptionsBuilder();
@@ -267,10 +269,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * @see #updatable(HealthCheckUpdateHandler)
      */
     public HealthCheckServiceBuilder updateListener(HealthCheckUpdateListener updateListener) {
-        if (updateHandler == null) {
-            throw new IllegalStateException("updating healthiness is disabled.");
-        }
-        updateListeners.add(requireNonNull(updateListener, "updateListener"));
+        updateListenersBuilder.add(requireNonNull(updateListener, "updateListener"));
         return this;
     }
 
@@ -292,10 +291,15 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * Returns a newly created {@link HealthCheckService} built from the properties specified so far.
      */
     public HealthCheckService build() {
+        final List<HealthCheckUpdateListener> updateListeners = updateListenersBuilder.build();
+        if (updateHandler == null && !updateListeners.isEmpty()) {
+            throw new IllegalStateException("Should enable updating healthiness to listen update events");
+        }
+
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      pingIntervalMillis, updateHandler, updateListeners.build(),
+                                      pingIntervalMillis, updateHandler, updateListeners,
                                       transientServiceOptionsBuilder.build());
     }
 }

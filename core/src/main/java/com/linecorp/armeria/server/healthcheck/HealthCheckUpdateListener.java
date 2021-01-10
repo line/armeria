@@ -25,5 +25,5 @@ public interface HealthCheckUpdateListener {
     /**
      * Invoked when the healthiness is updated.
      */
-    void onUpdate(HealthCheckUpdateResult result) throws Exception;
+    void healthUpdated(HealthCheckUpdateResult result) throws Exception;
 }
