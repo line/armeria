@@ -26,8 +26,6 @@ import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.CaseFormat;
-
 import org.apache.thrift.AsyncProcessFunction;
 import org.apache.thrift.ProcessFunction;
 import org.apache.thrift.TApplicationException;
@@ -37,6 +35,7 @@ import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessageType;
 
+import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -351,8 +350,8 @@ public final class ThriftFunction {
             final Method[] declaredMethods = ifaceType.getDeclaredMethods();
             // check and convert to camel style, maven plugin only support for underscore to camel
             final String methodNameCamel = methodName.indexOf('_') != -1 ?
-                                           CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, methodName) :
-                                           methodName;
+                                           CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, methodName)
+                                                                         : methodName;
             for (Method m : declaredMethods) {
                 if (m.getName().equals(methodName) || m.getName().equals(methodNameCamel)) {
                     return m.getExceptionTypes();
