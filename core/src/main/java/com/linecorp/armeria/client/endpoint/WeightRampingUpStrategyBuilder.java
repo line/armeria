@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.concurrent.ScheduledExecutorService;
 
 import javax.annotation.Nullable;
 
@@ -28,6 +27,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.CommonPools;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Builds a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
@@ -42,15 +42,15 @@ public final class WeightRampingUpStrategyBuilder {
     private EndpointWeightTransition transition = EndpointWeightTransition.linear();
 
     @Nullable
-    private ScheduledExecutorService executor;
+    private EventExecutor executor;
 
     private long rampingUpIntervalMillis = DEFAULT_RAMPING_UP_INTERVAL_MILLIS;
-    private int totalSteps = DEFAULT_NUMBER_OF_STEPS;
+    private int numberSteps = DEFAULT_NUMBER_OF_STEPS;
     private long rampingUpTaskWindowMillis = DEFAULT_RAMPING_UP_ENTRY_WINDOW_MILLIS;
 
     /**
-     * Sets computing the weight of an {@link Endpoint} during the transition with the specified
-     * {@link EndpointWeightTransition}. {@link EndpointWeightTransition#linear()} is used by default.
+     * Sets the {@link EndpointWeightTransition} which will be used to compute the weight at each step while
+     * ramping up. {@link EndpointWeightTransition#linear()} is used by default.
      */
     public WeightRampingUpStrategyBuilder transition(EndpointWeightTransition transition) {
         this.transition = requireNonNull(transition, "transition");
@@ -58,19 +58,17 @@ public final class WeightRampingUpStrategyBuilder {
     }
 
     /**
-     * Sets the specified {@link ScheduledExecutorService} that will be used to compute the weight of
+     * Sets the {@link EventExecutor} to use to execute tasks for computing new weights. the weight of
      * an {@link Endpoint} using {@link EndpointWeightTransition}. An {@link EventLoop} from
      * {@link CommonPools#workerGroup()} is used by default.
      */
-    public WeightRampingUpStrategyBuilder executor(ScheduledExecutorService executor) {
+    public WeightRampingUpStrategyBuilder executor(EventExecutor executor) {
         this.executor = requireNonNull(executor, "executor");
         return this;
     }
 
     /**
-     * Sets the specified {@code rampingUpInterval}. The weight of an {@link Endpoint} is ramped up
-     * every {@code rampingUpInterval} until the number of ramping reaches to the
-     * {@link #totalSteps(int) totalSteps}.
+     * Sets the interval between weight updates during ramp up.
      * {@value DEFAULT_RAMPING_UP_INTERVAL_MILLIS} millis is used by default.
      */
     public WeightRampingUpStrategyBuilder rampingUpInterval(Duration rampingUpInterval) {
@@ -79,9 +77,7 @@ public final class WeightRampingUpStrategyBuilder {
     }
 
     /**
-     * Sets the specified {@code rampingUpIntervalMillis}. The weight of an {@link Endpoint} is ramped up
-     * every {@code rampingUpIntervalMillis} until the number of ramping reaches to the
-     * {@link #totalSteps(int) totalSteps}.
+     * Sets the interval between weight updates during ramp up.
      * {@value DEFAULT_RAMPING_UP_INTERVAL_MILLIS} millis is used by default.
      */
     public WeightRampingUpStrategyBuilder rampingUpIntervalMillis(long rampingUpIntervalMillis) {
@@ -92,19 +88,17 @@ public final class WeightRampingUpStrategyBuilder {
     }
 
     /**
-     * Sets the specified {@code totalSteps}. The weight of an {@link Endpoint} is ramped up
-     * every {@link #rampingUpIntervalMillis(long) rampingUpIntervalMillis}
-     * until the number of ramping reaches to the {@code totalSteps}.
+     * Sets the number of steps to compute weights for a given {@link Endpoint} while ramping up.
      * {@value DEFAULT_NUMBER_OF_STEPS} is used by default.
      */
-    public WeightRampingUpStrategyBuilder totalSteps(int totalSteps) {
-        checkArgument(totalSteps > 0, "totalSteps: %s (expected: > 0)", totalSteps);
-        this.totalSteps = totalSteps;
+    public WeightRampingUpStrategyBuilder numberSteps(int numberSteps) {
+        checkArgument(numberSteps > 0, "numberSteps: %s (expected: > 0)", numberSteps);
+        this.numberSteps = numberSteps;
         return this;
     }
 
     /**
-     * Sets the specified {@code rampingUpTaskWindow} which will be used to combine weight ramping up task.
+     * Sets the window for combining weight update tasks.
      * If more than one {@link Endpoint} are added within the {@code rampingUpTaskWindow}, the weights of
      * them are ramped up together. If there's already a scheduled job and new {@link Endpoint}s are added
      * within the {@code rampingUpTaskWindow}, they are also ramped up together.
@@ -126,8 +120,8 @@ public final class WeightRampingUpStrategyBuilder {
     }
 
     /**
-     * Sets the specified {@code rampingUpTaskWindowMillis} which will be used to combine weight ramping up
-     * tasks. If more than one {@link Endpoint} are added within the {@code rampingUpTaskWindowMillis},
+     * Sets the window for combining weight update tasks.
+     * If more than one {@link Endpoint} are added within the {@code rampingUpTaskWindowMillis},
      * the weights of them are ramped up together. If there's already a scheduled job and
      * new {@link Endpoint}s are added within the {@code rampingUpTaskWindow}, they are also ramped up together.
      * This is an example of how it works when {@code rampingUpTaskWindowMillis} is 500 milliseconds and
@@ -158,7 +152,7 @@ public final class WeightRampingUpStrategyBuilder {
                    "rampingUpIntervalMillis: %s, rampingUpTaskWindowMillis: %s " +
                    "(expected: rampingUpIntervalMillis > rampingUpTaskWindowMillis)",
                    rampingUpIntervalMillis, rampingUpTaskWindowMillis);
-        final ScheduledExecutorService executor;
+        final EventExecutor executor;
         if (this.executor != null) {
             executor = this.executor;
         } else {
@@ -166,6 +160,6 @@ public final class WeightRampingUpStrategyBuilder {
         }
 
         return new WeightRampingUpStrategy(transition, executor, rampingUpIntervalMillis,
-                                           totalSteps, rampingUpTaskWindowMillis);
+                                           numberSteps, rampingUpTaskWindowMillis);
     }
 }

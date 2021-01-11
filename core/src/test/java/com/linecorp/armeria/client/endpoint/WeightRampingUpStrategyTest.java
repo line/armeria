@@ -21,19 +21,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -45,6 +38,9 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsRampingUpEntry.EndpointAndStep;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.RampingUpEndpointWeightSelector;
 import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSelector.Entry;
+
+import io.netty.channel.DefaultEventLoop;
+import io.netty.util.concurrent.ScheduledFuture;
 
 final class WeightRampingUpStrategyTest {
 
@@ -447,21 +443,11 @@ final class WeightRampingUpStrategyTest {
         }
     }
 
-    private static class ImmediateExecutor implements ScheduledExecutorService {
+    private static class ImmediateExecutor extends DefaultEventLoop {
 
         @Override
         public void execute(Runnable command) {
             command.run();
-        }
-
-        @Override
-        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -471,74 +457,6 @@ final class WeightRampingUpStrategyTest {
             final ScheduledFuture<?> scheduledFuture = mock(ScheduledFuture.class);
             scheduledFutures.add(scheduledFuture);
             return scheduledFuture;
-        }
-
-        @Override
-        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
-                                                         TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void shutdown() {}
-
-        @Override
-        public List<Runnable> shutdownNow() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isShutdown() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isTerminated() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> Future<T> submit(Callable<T> task) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> Future<T> submit(Runnable task, T result) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Future<?> submit(Runnable task) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-                throws InterruptedException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout,
-                                             TimeUnit unit) throws InterruptedException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-                throws InterruptedException, ExecutionException {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-                throws InterruptedException, ExecutionException, TimeoutException {
-            throw new UnsupportedOperationException();
         }
     }
 }

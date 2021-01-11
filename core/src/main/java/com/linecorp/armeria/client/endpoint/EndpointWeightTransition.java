@@ -20,7 +20,8 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.client.Endpoint;
 
 /**
- * Computes the weight of the given {@link Endpoint} using the given {@code currentStep} and {@code totalSteps}.
+ * Computes the weight of the given {@link Endpoint} using the given {@code currentStep}
+ * and {@code numberSteps}.
  */
 @FunctionalInterface
 public interface EndpointWeightTransition {
@@ -30,14 +31,14 @@ public interface EndpointWeightTransition {
      * step increases.
      */
     static EndpointWeightTransition linear() {
-        return (endpoint, currentStep, totalSteps) ->
-                // currentStep is never greater than totalSteps so we can cast long to int.
-                Ints.saturatedCast((long) endpoint.weight() * currentStep / totalSteps);
+        return (endpoint, currentStep, numberSteps) ->
+                // currentStep is never greater than numberSteps so we can cast long to int.
+                Ints.saturatedCast((long) endpoint.weight() * currentStep / numberSteps);
     }
 
     /**
      * Returns the computed weight of the given {@link Endpoint} using the given {@code currentStep} and
-     * {@code totalSteps}.
+     * {@code numberSteps}.
      */
-    int compute(Endpoint endpoint, int currentStep, int totalSteps);
+    int compute(Endpoint endpoint, int currentStep, int numberSteps);
 }
