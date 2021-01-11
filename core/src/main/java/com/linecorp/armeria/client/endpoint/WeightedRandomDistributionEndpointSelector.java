@@ -132,13 +132,6 @@ final class WeightedRandomDistributionEndpointSelector {
             return endpoint;
         }
 
-        boolean increaseCounter() {
-            if (isFull()) {
-                return false;
-            }
-            return incrementAndGet() <= endpoint.weight();
-        }
-
         boolean isFull() {
             return get() >= endpoint.weight();
         }

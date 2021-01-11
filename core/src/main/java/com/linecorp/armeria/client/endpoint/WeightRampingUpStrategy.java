@@ -36,6 +36,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -89,12 +90,12 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         this.weightTransition = requireNonNull(weightTransition, "weightTransition");
         this.executor = requireNonNull(executor, "executor");
         checkArgument(rampingUpIntervalMillis > 0,
-                      "rampingUpIntervalMillis: %s (rampingUpIntervalMillis: > 0)", rampingUpIntervalMillis);
+                      "rampingUpIntervalMillis: %s (expected: > 0)", rampingUpIntervalMillis);
         this.rampingUpIntervalMillis = rampingUpIntervalMillis;
         checkArgument(numberSteps > 0, "numberSteps: %s (expected: > 0)", numberSteps);
         this.numberSteps = numberSteps;
         checkArgument(rampingUpTaskWindowMillis >= 0,
-                      "rampingUpTaskWindowMillis: %s (rampingUpTaskWindowMillis: >0 0)",
+                      "rampingUpTaskWindowMillis: %s (expected: > 0)",
                       rampingUpTaskWindowMillis);
         rampingUpTaskWindowNanos = TimeUnit.MILLISECONDS.toNanos(rampingUpTaskWindowMillis);
         this.ticker = requireNonNull(ticker, "ticker");
@@ -145,11 +146,8 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             // The weight of the same endpoints are summed.
             newEndpoints.forEach(
                     newEndpoint -> newEndpointsMap.compute(newEndpoint, (key, v) -> {
-                        if (v == null) {
-                            return newEndpoint;
-                        }
-                        final int weightSum = newEndpoint.weight() + v.weight();
-                        return newEndpoint.withWeight(weightSum);
+                        return v == null ? newEndpoint
+                                         : newEndpoint.withWeight(newEndpoint.weight() + v.weight());
                     }));
             return newEndpointsMap;
         }
@@ -213,10 +211,12 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         private void buildEndpointSelector() {
             final ImmutableList.Builder<Endpoint> targetEndpointsBuilder = ImmutableList.builder();
             targetEndpointsBuilder.addAll(endpointsFinishedRampingUp);
-            endpointsRampingUp.forEach(
-                    entry -> entry.endpointAndSteps().forEach(
-                            endpointAndStep -> targetEndpointsBuilder.add(
-                                    endpointAndStep.endpoint().withWeight(endpointAndStep.currentWeight()))));
+            for (EndpointsRampingUpEntry entry : endpointsRampingUp) {
+                for (EndpointAndStep endpointAndStep : entry.endpointAndSteps()) {
+                    targetEndpointsBuilder.add(
+                            endpointAndStep.endpoint().withWeight(endpointAndStep.currentWeight()));
+                }
+            }
             endpointSelector = new WeightedRandomDistributionEndpointSelector(targetEndpointsBuilder.build());
         }
 
@@ -362,7 +362,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 } else {
                     final int calculated =
                             weightTransition.compute(endpoint, step, numberSteps);
-                    final int currentWeight = Math.max(Math.min(calculated, endpoint.weight()), 0);
+                    final int currentWeight = Ints.constrainToRange(calculated, 0, endpoint.weight());
                     endpointAndStep.currentWeight(currentWeight);
                 }
             }
