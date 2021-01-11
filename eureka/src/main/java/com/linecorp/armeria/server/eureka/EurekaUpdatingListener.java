@@ -133,7 +133,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     }
 
     private final EurekaWebClient client;
-    private final InstanceInfo instanceInfo;
+    private InstanceInfo instanceInfo;
     @Nullable
     private volatile ScheduledFuture<?> heartBeatFuture;
 
@@ -152,10 +152,11 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     @Override
     public void serverStarted(Server server) throws Exception {
         final InstanceInfo newInfo = fillAndCreateNewInfo(instanceInfo, server);
+        this.instanceInfo = newInfo;
 
         try (ClientRequestContextCaptor contextCaptor = Clients.newContextCaptor()) {
             final HttpResponse response = client.register(newInfo);
-            final ClientRequestContext ctx = contextCaptor.get();
+            final ClientRequestContext ctx = contextCaptor.getOrNull();
             response.aggregate().handle((res, cause) -> {
                 if (closed) {
                     return null;
@@ -172,6 +173,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                                 newInfo.getHostName(), client.uri(), headers.status(), res.contentUtf8());
                 } else {
                     logger.info("Registered {} to Eureka: {}", newInfo.getHostName(), client.uri());
+                    assert ctx != null;
                     scheduleHeartBeat(ctx.eventLoop().withoutContext(), newInfo);
                 }
                 return null;
