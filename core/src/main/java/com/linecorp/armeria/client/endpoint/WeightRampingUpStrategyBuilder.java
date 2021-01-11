@@ -58,9 +58,8 @@ public final class WeightRampingUpStrategyBuilder {
     }
 
     /**
-     * Sets the {@link EventExecutor} to use to execute tasks for computing new weights. the weight of
-     * an {@link Endpoint} using {@link EndpointWeightTransition}. An {@link EventLoop} from
-     * {@link CommonPools#workerGroup()} is used by default.
+     * Sets the {@link EventExecutor} to use to execute tasks for computing new weights. An {@link EventLoop}
+     * from {@link CommonPools#workerGroup()} is used by default.
      */
     public WeightRampingUpStrategyBuilder executor(EventExecutor executor) {
         this.executor = requireNonNull(executor, "executor");
