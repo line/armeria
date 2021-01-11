@@ -56,7 +56,7 @@ import io.netty.util.NetUtil;
 class HealthCheckServiceTest {
 
     private static final SettableHealthChecker checker = new SettableHealthChecker();
-    private static final AtomicReference<Boolean> capturedUpdateResult = new AtomicReference<>();
+    private static final AtomicReference<Boolean> capturedHealthy = new AtomicReference<>();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -71,7 +71,7 @@ class HealthCheckServiceTest {
                                                           .build());
             sb.service("/hc_update_listener", HealthCheckService.builder()
                                                                 .updatable(true)
-                                                                .updateListener(capturedUpdateResult::set)
+                                                                .updateListener(capturedHealthy::set)
                                                                 .build());
             sb.service("/hc_disable_server_listener_update", HealthCheckService.builder()
                                                                                .disableServerListenerUpdate()
@@ -373,19 +373,19 @@ class HealthCheckServiceTest {
     void updateListener() {
         final WebClient client = WebClient.of(server.httpUri());
 
-        capturedUpdateResult.set(null);
+        capturedHealthy.set(null);
 
         // Make unhealthy.
         client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":false}")
               .aggregate().join();
-        assertThat(capturedUpdateResult.get()).isFalse();
+        assertThat(capturedHealthy.get()).isFalse();
 
-        capturedUpdateResult.set(null);
+        capturedHealthy.set(null);
 
         // Make healthy.
         client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":true}")
               .aggregate().join();
-        assertThat(capturedUpdateResult.get()).isTrue();
+        assertThat(capturedHealthy.get()).isTrue();
     }
 
     @Test
