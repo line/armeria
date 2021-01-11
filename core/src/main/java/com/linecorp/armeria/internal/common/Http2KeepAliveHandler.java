@@ -41,7 +41,7 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2PingFrame;
 
 /**
- * A {@link KeepAliveHandler} that sends an HTTP/2 PING frame
+ * A {@link AbstractKeepAliveHandler} that sends an HTTP/2 PING frame
  * when neither read nor write was performed within the specified {@code pingIntervalMillis},
  * and closes the connection when neither read nor write was performed within
  * the given {@code idleTimeoutMillis}.
@@ -56,7 +56,7 @@ import io.netty.handler.codec.http2.Http2PingFrame;
  * @see Flags#defaultServerIdleTimeoutMillis()
  * @see Flags#defaultPingIntervalMillis()
  */
-public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
+public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2KeepAliveHandler.class);
 

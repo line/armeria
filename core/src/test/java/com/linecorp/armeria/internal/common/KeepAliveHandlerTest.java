@@ -44,7 +44,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.internal.common.KeepAliveHandler.PingState;
+import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler.PingState;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -87,8 +87,8 @@ class KeepAliveHandlerTest {
     void testIdle() {
         final AtomicInteger counter = new AtomicInteger();
 
-        final KeepAliveHandler idleTimeoutScheduler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, 1000, 0, 0, 0) {
+        final AbstractKeepAliveHandler idleTimeoutScheduler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 1000, 0, 0, 0) {
 
                     @Override
                     protected boolean pingResetsPreviousPing() {
@@ -117,8 +117,8 @@ class KeepAliveHandlerTest {
     void testPing() {
         final Stopwatch stopwatch = Stopwatch.createStarted();
 
-        final KeepAliveHandler idleTimeoutScheduler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, 0, 1000, 0, 0) {
+        final AbstractKeepAliveHandler idleTimeoutScheduler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 1000, 0, 0) {
 
                     @Override
                     protected boolean pingResetsPreviousPing() {
@@ -148,8 +148,9 @@ class KeepAliveHandlerTest {
     @Test
     void disableMaxConnectionAge() {
         final long maxConnectionAgeMillis = 0;
-        final KeepAliveHandler keepAliveHandler = new KeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
-                                                                       maxConnectionAgeMillis, 0) {
+        final AbstractKeepAliveHandler
+                keepAliveHandler = new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
+                                                                maxConnectionAgeMillis, 0) {
             @Override
             protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                 return null;
@@ -174,8 +175,9 @@ class KeepAliveHandlerTest {
     @Test
     void testMaxConnectionAge() throws InterruptedException {
         final long maxConnectionAgeMillis = 100;
-        final KeepAliveHandler keepAliveHandler = new KeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
-                                                                       maxConnectionAgeMillis, 0) {
+        final AbstractKeepAliveHandler
+                keepAliveHandler = new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
+                                                                maxConnectionAgeMillis, 0) {
             @Override
             protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                 return null;
@@ -210,13 +212,13 @@ class KeepAliveHandlerTest {
         final long idleTime = "CONNECTION_IDLE".equals(mode) ? connectionIdleTimeout : pingInterval;
         final int maxConnectionAgeMillis = 0;
         final int maxNumRequests = 0;
-        final Consumer<KeepAliveHandler> activator =
+        final Consumer<AbstractKeepAliveHandler> activator =
                 "CONNECTION_IDLE".equals(mode) ?
-                KeepAliveHandler::onReadOrWrite : KeepAliveHandler::onPing;
+                AbstractKeepAliveHandler::onReadOrWrite : AbstractKeepAliveHandler::onPing;
 
-        final KeepAliveHandler idleTimeoutScheduler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, connectionIdleTimeout, pingInterval,
-                                     maxConnectionAgeMillis, maxNumRequests) {
+        final AbstractKeepAliveHandler idleTimeoutScheduler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, connectionIdleTimeout,
+                                             pingInterval, maxConnectionAgeMillis, maxNumRequests) {
 
                     @Override
                     protected boolean pingResetsPreviousPing() {
@@ -263,9 +265,9 @@ class KeepAliveHandlerTest {
         final long maxConnectionAgeMillis = 0;
         final ChannelFuture channelFuture = channel.newPromise();
 
-        final KeepAliveHandler keepAliveHandler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                     maxConnectionAgeMillis, 0) {
+        final AbstractKeepAliveHandler keepAliveHandler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
+                                             maxConnectionAgeMillis, 0) {
                     @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return channelFuture;
@@ -309,9 +311,9 @@ class KeepAliveHandlerTest {
         final long maxConnectionAgeMillis = 0;
         final ChannelPromise promise = channel.newPromise();
         final int maxNumRequests = 0;
-        final KeepAliveHandler keepAliveHandler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                     maxConnectionAgeMillis, maxNumRequests) {
+        final AbstractKeepAliveHandler keepAliveHandler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
+                                             maxConnectionAgeMillis, maxNumRequests) {
                     @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return promise;
@@ -358,9 +360,9 @@ class KeepAliveHandlerTest {
         final long maxConnectionAgeMillis = 0;
         final int maxNumRequests = 0;
         final ChannelPromise promise = channel.newPromise();
-        final KeepAliveHandler keepAliveHandler =
-                new KeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                     maxConnectionAgeMillis, maxNumRequests) {
+        final AbstractKeepAliveHandler keepAliveHandler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
+                                             maxConnectionAgeMillis, maxNumRequests) {
                     @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return promise;

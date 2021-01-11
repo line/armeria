@@ -31,9 +31,9 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
-import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -57,15 +57,16 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     private final Http2Connection conn;
     private final Http2ConnectionEncoder encoder;
     private final Http2GoAwayHandler goAwayHandler;
-    @Nullable
-    private final Http2KeepAliveHandler keepAliveHandler;
+    private final KeepAliveHandler keepAliveHandler;
 
     Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory,
-                         @Nullable Http2KeepAliveHandler keepAliveHandler) {
+                         KeepAliveHandler keepAliveHandler) {
         super(channel,
               InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
         this.encoder = encoder;
+        assert keepAliveHandler instanceof Http2ClientKeepAliveHandler ||
+               keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         goAwayHandler = new Http2GoAwayHandler();
     }
@@ -306,15 +307,13 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onPingRead(ChannelHandlerContext ctx, long data) {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onPing();
-        }
+        keepAliveHandler.onPing();
     }
 
     @Override
     public void onPingAckRead(ChannelHandlerContext ctx, long data) {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onPingAck(data);
+        if (keepAliveHandler instanceof Http2ClientKeepAliveHandler) {
+            ((Http2ClientKeepAliveHandler) keepAliveHandler).onPingAck(data);
         }
     }
 

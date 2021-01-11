@@ -20,14 +20,14 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
-final class Http1ClientKeepAliveHandler extends KeepAliveHandler {
+final class Http1ClientKeepAliveHandler extends AbstractKeepAliveHandler {
 
     private static final RequestHeaders HTTP1_PING_REQUEST = RequestHeaders.of(HttpMethod.OPTIONS, "*");
 

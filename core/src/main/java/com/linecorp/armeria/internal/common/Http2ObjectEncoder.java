@@ -48,9 +48,7 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     public final ChannelFuture doWriteData(int id, int streamId, HttpData data, boolean endStream) {
         if (isStreamPresentAndWritable(streamId)) {
             final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-            if (keepAliveHandler != null) {
-                keepAliveHandler.onReadOrWrite();
-            }
+            keepAliveHandler.onReadOrWrite();
             // Write to an existing stream.
             return encoder.writeData(ctx, streamId, toByteBuf(data), 0, endStream, ctx.newPromise());
         }
@@ -109,10 +107,7 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     @Override
     public final void close() {
         closed = true;
-        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (keepAliveHandler != null) {
-            keepAliveHandler.destroy();
-        }
+        keepAliveHandler().destroy();
     }
 
     @Override

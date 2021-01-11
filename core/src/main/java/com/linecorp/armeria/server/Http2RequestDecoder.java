@@ -33,8 +33,9 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
-import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -74,16 +75,17 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final InboundTrafficController inboundTrafficController;
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
-    @Nullable
-    private final Http2KeepAliveHandler keepAliveHandler;
+    private final KeepAliveHandler keepAliveHandler;
     private int nextId;
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme,
-                        @Nullable Http2KeepAliveHandler keepAliveHandler) {
+                        KeepAliveHandler keepAliveHandler) {
         this.cfg = cfg;
         this.channel = channel;
         this.writer = writer;
         this.scheme = scheme;
+        assert keepAliveHandler instanceof Http2ServerKeepAliveHandler ||
+               keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         inboundTrafficController =
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
@@ -326,8 +328,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onPingAckRead(final ChannelHandlerContext ctx, final long data) {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onPingAck(data);
+        if (keepAliveHandler instanceof Http2ServerKeepAliveHandler) {
+            ((Http2ServerKeepAliveHandler) keepAliveHandler).onPingAck(data);
         }
     }
 

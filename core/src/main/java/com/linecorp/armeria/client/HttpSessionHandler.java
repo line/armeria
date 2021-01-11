@@ -19,6 +19,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needKeepAliveHandler;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -312,10 +313,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 final long pingIntervalMillis = clientFactory.pingIntervalMillis();
                 final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
                 final int maxNumRequests = clientFactory.maxNumRequests();
-                final boolean needKeepAliveHandler = idleTimeoutMillis > 0 || pingIntervalMillis > 0 ||
-                                                     maxConnectionAgeMillis > 0 || maxNumRequests > 0;
+                final boolean needKeepAliveHandler =
+                        needKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
+                                             maxConnectionAgeMillis, maxNumRequests);
                 if (needKeepAliveHandler) {
-
                     final Timer keepAliveTimer =
                             MoreMeters.newTimer(clientFactory.meterRegistry(),
                                                 "armeria.client.connections.lifespan",

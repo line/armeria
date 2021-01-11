@@ -18,8 +18,6 @@ package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -29,6 +27,7 @@ import com.linecorp.armeria.internal.client.HttpHeaderUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -43,8 +42,9 @@ import io.netty.handler.codec.http.HttpVersion;
 final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements ClientHttpObjectEncoder {
 
     private final Http1HeaderNaming http1HeaderNaming;
-    @Nullable
-    private Http1ClientKeepAliveHandler keepAliveHandler;
+
+    // A proper keepAliveHandler will be set by setKeepAliveHandler()
+    private KeepAliveHandler keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
 
     ClientHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);
@@ -112,18 +112,19 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
         ArmeriaHttpUtil.toNettyHttp1ClientTrailer(inputHeaders, outputHeaders, http1HeaderNaming);
     }
 
-    @Nullable
     @Override
     public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
     }
 
-    void setKeepAliveHandler(Http1ClientKeepAliveHandler keepAliveHandler) {
+    void setKeepAliveHandler(KeepAliveHandler keepAliveHandler) {
+        assert keepAliveHandler instanceof Http1ClientKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
     }
 
     @Override
     protected boolean isPing(int id) {
-        return keepAliveHandler != null && keepAliveHandler.isPing(id);
+        return keepAliveHandler instanceof Http1ClientKeepAliveHandler &&
+               ((Http1ClientKeepAliveHandler) keepAliveHandler).isPing(id);
     }
 }

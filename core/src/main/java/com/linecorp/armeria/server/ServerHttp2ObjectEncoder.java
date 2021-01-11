@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -25,6 +23,7 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.buffer.ByteBuf;
@@ -39,7 +38,6 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
 
     private static final ByteBuf MAX_CONNECTION_AGE_DEBUG = Unpooled.wrappedBuffer("max-age".getBytes());
 
-    @Nullable
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
@@ -47,9 +45,11 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     private boolean isGoAwaySent;
 
     ServerHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
-                             @Nullable KeepAliveHandler keepAliveHandler,
+                             KeepAliveHandler keepAliveHandler,
                              boolean enableDateHeader, boolean enableServerHeader) {
         super(ctx, encoder);
+        assert keepAliveHandler instanceof Http2ServerKeepAliveHandler ||
+               keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
@@ -65,7 +65,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             return newFailedFuture(ClosedStreamException.get());
         }
 
-        if (!isGoAwaySent && keepAliveHandler != null && keepAliveHandler.needToCloseConnection()) {
+        if (!isGoAwaySent && keepAliveHandler.needToCloseConnection()) {
             final int lastStreamId = encoder().connection().remote().lastStreamCreated();
             encoder().writeGoAway(ctx(), lastStreamId, Http2Error.NO_ERROR.code(),
                                   MAX_CONNECTION_AGE_DEBUG.retain(), ctx().newPromise());
@@ -96,7 +96,6 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         return outHeaders;
     }
 
-    @Nullable
     @Override
     public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
@@ -117,9 +116,6 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     }
 
     private void onKeepAliveReadOrWrite() {
-        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onReadOrWrite();
-        }
+        keepAliveHandler.onReadOrWrite();
     }
 }

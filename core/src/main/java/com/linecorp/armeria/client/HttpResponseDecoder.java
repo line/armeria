@@ -79,10 +79,7 @@ abstract class HttpResponseDecoder {
                 new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
-        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (keepAliveHandler != null) {
-            keepAliveHandler.increaseNumRequests();
-        }
+        keepAliveHandler().increaseNumRequests();
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
                                 oldRes;
@@ -134,7 +131,6 @@ abstract class HttpResponseDecoder {
         }
     }
 
-    @Nullable
     abstract KeepAliveHandler keepAliveHandler();
 
     final void disconnectWhenFinished() {
@@ -146,12 +142,7 @@ abstract class HttpResponseDecoder {
     }
 
     final boolean needsToDisconnectWhenFinished() {
-        if (disconnectWhenFinished) {
-            return true;
-        }
-
-        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        return keepAliveHandler != null && keepAliveHandler.needToCloseConnection();
+        return disconnectWhenFinished || keepAliveHandler().needToCloseConnection();
     }
 
     static final class HttpResponseWrapper implements StreamWriter<HttpObject> {

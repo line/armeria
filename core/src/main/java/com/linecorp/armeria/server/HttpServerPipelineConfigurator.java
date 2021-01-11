@@ -23,6 +23,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
+import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needKeepAliveHandler;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -45,6 +46,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -172,8 +174,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final long idleTimeoutMillis = config.idleTimeoutMillis();
         final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
         final int maxNumRequests = config.maxNumRequests();
-        final boolean needKeepAliveHandler = idleTimeoutMillis > 0 || maxConnectionAgeMillis > 0 ||
-                                             maxNumRequests > 0;
+        final boolean needKeepAliveHandler =
+                needKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
+                                     maxConnectionAgeMillis, maxNumRequests);
 
         final KeepAliveHandler keepAliveHandler;
         if (needKeepAliveHandler) {
@@ -181,7 +184,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             keepAliveHandler = new Http1ServerKeepAliveHandler(
                     p.channel(), keepAliveTimer, idleTimeoutMillis, maxConnectionAgeMillis, maxNumRequests);
         } else {
-            keepAliveHandler = null;
+            keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
                 p.channel(), H1C, keepAliveHandler,
@@ -432,15 +435,16 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final long idleTimeoutMillis = config.idleTimeoutMillis();
             final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
             final int maxNumRequests = config.maxNumRequests();
-            final boolean needKeepAliveHandler = idleTimeoutMillis > 0 || maxConnectionAgeMillis > 0 ||
-                                                 maxNumRequests > 0;
+            final boolean needKeepAliveHandler =
+                    needKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
+                                         maxConnectionAgeMillis, maxNumRequests);
 
             final KeepAliveHandler keepAliveHandler;
             if (needKeepAliveHandler) {
                 keepAliveHandler = new Http1ServerKeepAliveHandler(
                         ch, newKeepAliveTimer(H1), idleTimeoutMillis, maxConnectionAgeMillis, maxNumRequests);
             } else {
-                keepAliveHandler = null;
+                keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
             }
 
             final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
@@ -486,7 +490,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private final class Http2PrefaceOrHttpHandler extends ByteToMessageDecoder {
 
         private final ServerHttp1ObjectEncoder responseEncoder;
-        @Nullable
         private final KeepAliveHandler keepAliveHandler;
         @Nullable
         private String name;
@@ -498,26 +501,20 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-            if (keepAliveHandler != null) {
-                keepAliveHandler.initialize(ctx);
-            }
+            keepAliveHandler.initialize(ctx);
             super.handlerAdded(ctx);
             name = ctx.name();
         }
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            if (keepAliveHandler != null) {
-                keepAliveHandler.destroy();
-            }
+            keepAliveHandler.destroy();
             super.channelInactive(ctx);
         }
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
-            if (keepAliveHandler != null) {
-                keepAliveHandler.onReadOrWrite();
-            }
+            keepAliveHandler.onReadOrWrite();
 
             if (in.readableBytes() < 4) {
                 return;

@@ -16,14 +16,14 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
-final class Http1ServerKeepAliveHandler extends KeepAliveHandler {
+final class Http1ServerKeepAliveHandler extends AbstractKeepAliveHandler {
 
     Http1ServerKeepAliveHandler(Channel channel, Timer keepAliveTimer,
                                 long idleTimeoutMillis, long maxConnectionAgeMillis, int maxNumRequests) {
