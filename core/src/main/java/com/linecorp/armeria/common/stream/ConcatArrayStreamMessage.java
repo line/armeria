@@ -153,7 +153,6 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         private final SubscriptionOption[] options;
 
         private long produced;
-        private int wip;
 
         private volatile int index;
         private volatile int cancelled;
@@ -200,18 +199,14 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         }
 
         void nextSource() {
-            // Increase 'wip' to prevent a next source from subscribing.
-            // 'onComplete()' signal could be sent while subscribing to a publisher.
-            if (!cancelled() && wip++ == 0) {
-                do {
-                    final int index = this.index;
-                    if (index == sources.length) {
-                        downstream.onComplete();
-                    } else {
-                        this.index++;
-                        sources[index].subscribe(this, executor, options);
-                    }
-                } while (--wip != 0);
+            if (!cancelled()) {
+                final int index = this.index;
+                if (index == sources.length) {
+                    downstream.onComplete();
+                } else {
+                    this.index++;
+                    sources[index].subscribe(this, executor, options);
+                }
             }
         }
 
