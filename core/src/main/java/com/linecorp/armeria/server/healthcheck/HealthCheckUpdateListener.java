@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server.healthcheck;
 
 /**
- * A listener interface for receiving {@link HealthCheckUpdateHandler} events.
+ * A listener interface for receiving {@link HealthCheckService} update events.
  */
 @FunctionalInterface
 public interface HealthCheckUpdateListener {
@@ -25,5 +25,5 @@ public interface HealthCheckUpdateListener {
     /**
      * Invoked when the healthiness is updated.
      */
-    void healthUpdated(HealthCheckUpdateResult result) throws Exception;
+    void healthUpdated(boolean isHealthy) throws Exception;
 }

@@ -56,8 +56,7 @@ import io.netty.util.NetUtil;
 class HealthCheckServiceTest {
 
     private static final SettableHealthChecker checker = new SettableHealthChecker();
-    private static final AtomicReference<HealthCheckUpdateResult> capturedUpdateResult =
-            new AtomicReference<>();
+    private static final AtomicReference<Boolean> capturedUpdateResult = new AtomicReference<>();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -74,6 +73,9 @@ class HealthCheckServiceTest {
                                                                 .updatable(true)
                                                                 .updateListener(capturedUpdateResult::set)
                                                                 .build());
+            sb.service("/hc_disable_server_listener_update", HealthCheckService.builder()
+                                                                               .disableServerListenerUpdate()
+                                                                               .build());
             sb.service("/hc_custom",
                        HealthCheckService.builder()
                                          .healthyResponse(AggregatedHttpResponse.of(
@@ -376,14 +378,24 @@ class HealthCheckServiceTest {
         // Make unhealthy.
         client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":false}")
               .aggregate().join();
-        assertThat(capturedUpdateResult.get()).isEqualTo(HealthCheckUpdateResult.UNHEALTHY);
+        assertThat(capturedUpdateResult.get()).isFalse();
 
         capturedUpdateResult.set(null);
 
         // Make healthy.
         client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":true}")
               .aggregate().join();
-        assertThat(capturedUpdateResult.get()).isEqualTo(HealthCheckUpdateResult.HEALTHY);
+        assertThat(capturedUpdateResult.get()).isTrue();
+    }
+
+    @Test
+    void disableServerListenerUpdate() throws Exception {
+        assertResponseEquals("GET /hc_disable_server_listener_update HTTP/1.0",
+                             "HTTP/1.1 503 Service Unavailable\r\n" +
+                             "content-type: application/json; charset=utf-8\r\n" +
+                             "armeria-lphc: 60, 5\r\n" +
+                             "content-length: 17\r\n\r\n" +
+                             "{\"healthy\":false}");
     }
 
     @Test

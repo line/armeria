@@ -17,7 +17,6 @@ package com.linecorp.armeria.server.healthcheck;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -32,6 +31,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -147,7 +147,7 @@ public final class HealthCheckService implements TransientHttpService {
     final Set<PendingResponse> pendingUnhealthyResponses;
     @Nullable
     private final HealthCheckUpdateHandler updateHandler;
-    private final List<HealthCheckUpdateListener> updateListeners;
+    private final boolean serverListenerUpdate;
     private final Set<TransientServiceOption> transientServiceOptions;
 
     @Nullable
@@ -158,13 +158,16 @@ public final class HealthCheckService implements TransientHttpService {
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
                        long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
                        long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
-                       Iterable<HealthCheckUpdateListener> updateListeners,
+                       Iterable<HealthCheckUpdateListener> updateListeners, boolean serverListenerUpdate,
                        Set<TransientServiceOption> transientServiceOptions) {
         serverHealth = new SettableHealthChecker(false);
+        if (!Iterables.isEmpty(updateListeners)) {
+            addServerHealthUpdateListener(ImmutableList.copyOf(updateListeners));
+        }
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
                 .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
-        this.updateListeners = ImmutableList.copyOf(updateListeners);
+        this.serverListenerUpdate = serverListenerUpdate;
         this.transientServiceOptions = transientServiceOptions;
 
         if (maxLongPollingTimeoutMillis > 0 &&
@@ -205,6 +208,18 @@ public final class HealthCheckService implements TransientHttpService {
                                             .build();
 
         ping = setCommonHeaders(ResponseHeaders.of(HttpStatus.PROCESSING));
+    }
+
+    private void addServerHealthUpdateListener(ImmutableList<HealthCheckUpdateListener> updateListeners) {
+        serverHealth.addListener(healthChecker -> {
+            updateListeners.forEach(updateListener -> {
+                try {
+                    updateListener.healthUpdated(healthChecker.isHealthy());
+                } catch (Throwable t) {
+                    logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated(): ", t);
+                }
+            });
+        });
     }
 
     private AggregatedHttpResponse setCommonHeaders(AggregatedHttpResponse res) {
@@ -273,7 +288,9 @@ public final class HealthCheckService implements TransientHttpService {
 
             @Override
             public void serverStarted(Server server) {
-                serverHealth.setHealthy(true);
+                if (serverListenerUpdate) {
+                    serverHealth.setHealthy(true);
+                }
             }
 
             @Override
@@ -407,14 +424,6 @@ public final class HealthCheckService implements TransientHttpService {
                     case UNHEALTHY:
                         serverHealth.setHealthy(false);
                         break;
-                }
-
-                for (HealthCheckUpdateListener updateListener : updateListeners) {
-                    try {
-                        updateListener.healthUpdated(updateResult);
-                    } catch (Throwable t) {
-                        logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated(): ", t);
-                    }
                 }
             }
             return HttpResponse.of(newResponse(method, isHealthy()));

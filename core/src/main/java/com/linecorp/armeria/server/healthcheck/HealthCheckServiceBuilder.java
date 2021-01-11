@@ -61,6 +61,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     private HealthCheckUpdateHandler updateHandler;
     private final ImmutableList.Builder<HealthCheckUpdateListener> updateListenersBuilder =
             ImmutableList.builder();
+    private boolean serverListenerUpdate = true;
 
     private final TransientServiceOptionsBuilder
             transientServiceOptionsBuilder = new TransientServiceOptionsBuilder();
@@ -261,15 +262,22 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     }
 
     /**
-     * Adds a {@link HealthCheckUpdateHandler} which invoked when the healthiness of the {@link Server} is
-     * updated by the {@link HealthCheckUpdateHandler}. This feature is enabled when the
-     * {@link HealthCheckService} is updatable.
+     * Adds a {@link HealthCheckUpdateHandler} which is invoked when the healthiness of the {@link Server} is
+     * updated. This feature is enabled when the {@link HealthCheckService} is updatable.
      *
      * @see #updatable(boolean)
      * @see #updatable(HealthCheckUpdateHandler)
      */
     public HealthCheckServiceBuilder updateListener(HealthCheckUpdateListener updateListener) {
         updateListenersBuilder.add(requireNonNull(updateListener, "updateListener"));
+        return this;
+    }
+
+    /**
+     * Disables automatically updating healthiness by the lifecycle of the {@link Server}.
+     */
+    public HealthCheckServiceBuilder disableServerListenerUpdate() {
+        serverListenerUpdate = false;
         return this;
     }
 
@@ -293,13 +301,14 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     public HealthCheckService build() {
         final List<HealthCheckUpdateListener> updateListeners = updateListenersBuilder.build();
         if (updateHandler == null && !updateListeners.isEmpty()) {
-            throw new IllegalStateException("Should enable updating healthiness to listen update events");
+            throw new IllegalStateException("HealthCheckUpdateListener is allowed only when updatable(true) " +
+                                            "is called. updateListeners: " + updateListeners);
         }
 
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      pingIntervalMillis, updateHandler, updateListeners,
+                                      pingIntervalMillis, updateHandler, updateListeners, serverListenerUpdate,
                                       transientServiceOptionsBuilder.build());
     }
 }
