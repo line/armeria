@@ -1,3 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.linecorp.armeria.spring.ArmeriaAutoConfiguration,\
-  com.linecorp.armeria.spring.ArmeriaBeanPostProcessorConfiguration
+  com.linecorp.armeria.spring.ArmeriaBeanPostProcessorConfiguration,\
+  com.linecorp.armeria.spring.ArmeriaClientAutoConfiguration

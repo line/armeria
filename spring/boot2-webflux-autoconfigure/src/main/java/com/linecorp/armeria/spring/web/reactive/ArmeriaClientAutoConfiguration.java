@@ -28,6 +28,9 @@ import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
 
+import com.linecorp.armeria.spring.AbstractArmeriaClientAutoConfiguration;
+import com.linecorp.armeria.spring.ArmeriaClientConfigurator;
+
 /**
  * An auto-configuration for Armeria-based {@link WebClient}.
  */
@@ -35,7 +38,7 @@ import org.springframework.web.reactive.function.client.WebClient.Builder;
 @ConditionalOnClass(WebClient.Builder.class)
 @ConditionalOnMissingBean(ClientHttpConnector.class)
 @Import({ WebClientAutoConfiguration.class, DataBufferFactoryWrapperConfiguration.class })
-public class ArmeriaClientAutoConfiguration {
+public class ArmeriaClientAutoConfiguration extends AbstractArmeriaClientAutoConfiguration {
 
     /**
      * Returns a {@link ClientHttpConnector} which is configured by a list of

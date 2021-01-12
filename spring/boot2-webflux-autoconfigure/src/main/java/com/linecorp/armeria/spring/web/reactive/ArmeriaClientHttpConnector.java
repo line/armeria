@@ -36,6 +36,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.spring.ArmeriaClientConfigurator;
 
 import reactor.core.publisher.Mono;
 

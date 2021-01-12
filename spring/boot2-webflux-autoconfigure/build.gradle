@@ -42,6 +42,8 @@ task generateSources(type: Copy) {
     include '**/*ExampleHeaders.java'
     include '**/*ExampleRequest.java'
     include '**/*RegistrationBean.java'
+    include '**/AbstractArmeriaClientAutoConfiguration.java'
+    include '**/ArmeriaClientConfigurator.java'
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
     include '**/DocServiceConfigurator.java'
