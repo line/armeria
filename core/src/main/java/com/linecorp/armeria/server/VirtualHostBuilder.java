@@ -59,6 +59,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -593,7 +594,13 @@ public final class VirtualHostBuilder {
     }
 
     VirtualHostBuilder addRouteDecoratingService(RouteDecoratingService routeDecoratingService) {
-        routeDecoratingServices.addFirst(routeDecoratingService);
+        if (Flags.useLegacyRouteDecoratorOrdering()) {
+            // The first inserted decorator is applied first.
+            routeDecoratingServices.addLast(routeDecoratingService);
+        } else {
+            // The last inserted decorator is applied first.
+            routeDecoratingServices.addFirst(routeDecoratingService);
+        }
         return this;
     }
 

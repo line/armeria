@@ -411,6 +411,9 @@ public final class Flags {
                             }))).map(feature -> TransientServiceOption.valueOf(Ascii.toUpperCase(feature)))
                            .collect(toImmutableSet()));
 
+    private static final boolean
+            DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING = getBoolean("useLegacyRouteDecoratorOrdering", false);
+
     static {
         TransportType type = null;
         switch (TRANSPORT_TYPE_NAME) {
@@ -1178,6 +1181,25 @@ public final class Flags {
      */
     public static Set<TransientServiceOption> transientServiceOptions() {
         return TRANSIENT_SERVICE_OPTIONS;
+    }
+
+    /**
+     * Returns whether to order route decorators with legacy order that the first decorator is first applied to.
+     * For example, if a service and decorators are defined like the followings:
+     * <pre>{@code
+     * Server server =
+     *     Server.builder()
+     *           .service("/users", userService)
+     *           .decoratorUnder("/", loggingDecorator)
+     *           .decoratorUnder("/", authDecorator)
+     *           .decoratorUnder("/", traceDecorator)
+     *           .build();
+     * }</pre>
+     * A request will go through the below decorators' order to reach the {@code userService}.
+     * {@code request -> loggingDecorator -> authDecorator -> traceDecorator -> userService}
+     */
+    public static boolean useLegacyRouteDecoratorOrdering() {
+        return DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING;
     }
 
     @Nullable
