@@ -210,8 +210,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
             final ChannelFuture future = ch.write(obj);
             if (!isPing(id)) {
-                final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-                   keepAliveHandler.onReadOrWrite();
+                keepAliveHandler().onReadOrWrite();
             }
             if (endStream) {
                 currentId++;

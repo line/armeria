@@ -41,7 +41,7 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2PingFrame;
 
 /**
- * A {@link AbstractKeepAliveHandler} that sends an HTTP/2 PING frame
+ * A {@link KeepAliveHandler} that sends an HTTP/2 PING frame
  * when neither read nor write was performed within the specified {@code pingIntervalMillis},
  * and closes the connection when neither read nor write was performed within
  * the given {@code idleTimeoutMillis}.

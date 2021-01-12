@@ -729,9 +729,9 @@ public final class ClientFactoryBuilder {
             }
         }
 
-        final List<ClientFactoryOptionValue<?>> clampedOptions = adjustedOptionsBuilder.build();
-        if (!clampedOptions.isEmpty()) {
-            return ClientFactoryOptions.of(newOptions, clampedOptions);
+        final List<ClientFactoryOptionValue<?>> adjustedOptions = adjustedOptionsBuilder.build();
+        if (!adjustedOptions.isEmpty()) {
+            return ClientFactoryOptions.of(newOptions, adjustedOptions);
         } else {
             return newOptions;
         }
