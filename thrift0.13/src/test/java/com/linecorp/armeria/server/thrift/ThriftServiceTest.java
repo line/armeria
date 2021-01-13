@@ -65,6 +65,7 @@ import com.linecorp.armeria.service.test.thrift.main.Name;
 import com.linecorp.armeria.service.test.thrift.main.NameService;
 import com.linecorp.armeria.service.test.thrift.main.NameSortService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
+import com.linecorp.armeria.service.test.thrift.main.SayHelloService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -135,6 +136,22 @@ class ThriftServiceTest {
         invoke(service);
 
         assertThat(client.recv_hello()).isEqualTo("Hello, foo!");
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testSync_SayHelloService_sayHello(SerializationFormat defaultSerializationFormat) throws Exception {
+        final SayHelloService.Client client = new SayHelloService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
+        client.sendSayHello(FOO);
+        assertThat(out.length()).isGreaterThan(0);
+
+        final THttpService service = THttpService.of(
+                (SayHelloService.Iface) name -> "Hello, " + name + '!', defaultSerializationFormat);
+
+        invoke(service);
+
+        assertThat(client.recvSayHello()).isEqualTo("Hello, foo!");
     }
 
     @ParameterizedTest
@@ -648,7 +665,7 @@ class ThriftServiceTest {
     @ArgumentsSource(SerializationFormatProvider.class)
     void testServiceInheritance(SerializationFormat defaultSerializationFormat) {
         // This should not throw an exception
-        THttpService.of((ChildRpcDebugService.Iface)(a1, a2, details) -> new Response("asdf"));
+        THttpService.of((ChildRpcDebugService.Iface) (a1, a2, details) -> new Response("asdf"));
     }
 
     /**
