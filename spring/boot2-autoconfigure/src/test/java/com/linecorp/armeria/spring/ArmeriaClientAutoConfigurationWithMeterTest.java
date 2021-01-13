@@ -17,7 +17,6 @@
 package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -39,13 +38,16 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.metric.MetricCollectingClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.spring.ArmeriaClientAutoConfigurationWithMeterTest.TestConfiguration;
 
 /**
- * This uses {@link ArmeriaAutoConfiguration} for integration tests.
+ * This uses {@link ArmeriaClientAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
@@ -77,13 +79,17 @@ public class ArmeriaClientAutoConfigurationWithMeterTest {
     }
 
     @Test
-    public void test() {
-        await().untilAsserted(() -> {
-            final WebClient webClient = webClientBuilder.build();
-            final String metricReport = webClient.get(newUrl("h1c") + "/internal/metrics")
-                                                 .aggregate().join()
-                                                 .contentUtf8();
-            assertThat(metricReport).contains("# TYPE armeria_client_connections_lifespan_seconds_max");
-        });
+    public void test() throws Exception {
+        final WebClient webClient = webClientBuilder
+                .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("client")))
+                .build();
+        final AggregatedHttpResponse response = webClient.get(newUrl("h1c") + "/customizer")
+                                                         .aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+
+        final String metricReport = webClient.get(newUrl("h1c") + "/internal/metrics")
+                                             .aggregate().join()
+                                             .contentUtf8();
+        assertThat(metricReport).contains("# TYPE client_active_requests gauge");
     }
 }

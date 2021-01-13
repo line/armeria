@@ -51,7 +51,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.spring.ArmeriaClientAutoConfigurationTest.TestConfiguration;
 
 /**
- * This uses {@link ArmeriaAutoConfiguration} for integration tests.
+ * This uses {@link ArmeriaClientAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)

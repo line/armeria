@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.spring;
 
+import java.util.Optional;
+
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -23,6 +25,7 @@ import org.springframework.context.annotation.Bean;
 import com.linecorp.armeria.client.ClientFactory;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 
 /**
  * Abstract class for implementing ArmeriaClientAutoConfiguration of Spring Boot autoconfigure modules.
@@ -33,10 +36,9 @@ public abstract class AbstractArmeriaClientAutoConfiguration {
      * Create a {@link ClientFactory} bean with {@link MeterRegistry} applied.
      */
     @Bean
-    @ConditionalOnBean(MeterRegistry.class)
     @ConditionalOnMissingBean(ClientFactory.class)
-    public ClientFactory clientFactory(MeterRegistry registry) {
-        return ClientFactory.builder().meterRegistry(registry).build();
+    public ClientFactory clientFactory(Optional<MeterRegistry> registry) {
+        return ClientFactory.builder().meterRegistry(registry.orElse(Metrics.globalRegistry)).build();
     }
 
     /**
