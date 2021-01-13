@@ -25,3 +25,5 @@ tasks.shadedJar.doLast {
         }
     }
 }
+
+tasks.checkstyleTest.exclude '**/com/linecorp/armeria/service/test/thrift/main/**'
