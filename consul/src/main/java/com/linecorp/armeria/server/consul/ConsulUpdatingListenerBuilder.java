@@ -20,6 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -55,6 +58,7 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
     private String checkInterval = DEFAULT_CHECK_INTERVAL_MILLIS + "ms";
     private HttpMethod checkMethod = HttpMethod.HEAD;
     private final ConsulClientBuilder consulClientBuilder;
+    private final Set<String> tags = new HashSet<>();
 
     /**
      * Creates a {@link ConsulUpdatingListenerBuilder} with a service name.
@@ -139,6 +143,26 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
         return this;
     }
 
+    /**
+     * Adds a tag to the list of tags associated with the service on registration.
+     *
+     * @param tag the tag to add
+     */
+    public ConsulUpdatingListenerBuilder addTag(String tag) {
+        tags.add(tag);
+        return this;
+    }
+
+    /**
+     * Adds a list of tags to the list of tags associated with the service on registration.
+     *
+     * @param tags the tags to add
+     */
+    public ConsulUpdatingListenerBuilder addTags(String... tags) {
+        this.tags.addAll(Arrays.asList(tags));
+        return this;
+    }
+
     @Override
     public ConsulUpdatingListenerBuilder consulApiVersion(String consulApiVersion) {
         consulClientBuilder.consulApiVersion(consulApiVersion);
@@ -157,6 +181,6 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
      */
     public ConsulUpdatingListener build() {
         return new ConsulUpdatingListener(consulClientBuilder.build(), serviceName, serviceEndpoint,
-                                          checkUri, checkMethod, checkInterval);
+                                          checkUri, checkMethod, checkInterval, tags);
     }
 }

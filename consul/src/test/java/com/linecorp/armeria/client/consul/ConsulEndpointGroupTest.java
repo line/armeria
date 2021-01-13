@@ -125,4 +125,43 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
                            .isNotEqualTo(endpointGroup.selectNow(null)));
         }
     }
+
+    @Test
+    void testConsulEndpointGroupWithDatacenter() {
+        ConsulEndpointGroupBuilder builder =
+                ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                            serviceName)
+                                   .consulApiVersion("v1")
+                                   .consulToken(CONSUL_TOKEN)
+                                   .registryFetchIntervalMillis(1000);
+        // default datacenter
+        try (ConsulEndpointGroup endpointGroup = builder.datacenter("dc1").build()) {
+            await().atMost(3, TimeUnit.SECONDS)
+                   .untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
+        }
+        // non-existent datacenter
+        try (ConsulEndpointGroup endpointGroup = builder.datacenter("dc2").build()) {
+            await().atMost(3, TimeUnit.SECONDS)
+                   .untilAsserted(() -> assertThat(endpointGroup.endpoints()).isEmpty());
+        }
+    }
+
+    @Test
+    void testConsulEndpointGroupWithFilter() {
+        // filter to first endpoint using port
+        final Endpoint endpoint =
+                sampleEndpoints.stream()
+                               .findFirst()
+                               .orElseThrow(() -> new IllegalArgumentException("No sample endpoints."));
+        try (ConsulEndpointGroup endpointGroup =
+                     ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                                 serviceName)
+                                        .consulToken(CONSUL_TOKEN)
+                                        .registryFetchInterval(Duration.ofSeconds(1))
+                                        .filter("ServicePort == " + endpoint.port())
+                                        .build()) {
+            await().atMost(3, TimeUnit.SECONDS)
+                   .untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSize(1));
+        }
+    }
 }

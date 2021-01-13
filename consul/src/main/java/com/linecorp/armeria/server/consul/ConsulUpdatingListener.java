@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.Inet4Address;
 import java.net.URI;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
@@ -69,11 +70,15 @@ public final class ConsulUpdatingListener extends ServerListenerAdapter {
     @Nullable
     private volatile String serviceId;
 
+    private final Set<String> tags;
+
     ConsulUpdatingListener(ConsulClient consulClient, String serviceName, @Nullable Endpoint endpoint,
-                           @Nullable URI checkUri, @Nullable HttpMethod checkMethod, String checkInterval) {
+                           @Nullable URI checkUri, @Nullable HttpMethod checkMethod, String checkInterval,
+                           Set<String> tags) {
         this.consulClient = requireNonNull(consulClient, "consulClient");
         this.serviceName = requireNonNull(serviceName, "serviceName");
         this.endpoint = endpoint;
+        this.tags = tags;
 
         if (checkUri != null) {
             final Check check = new Check();
@@ -92,7 +97,7 @@ public final class ConsulUpdatingListener extends ServerListenerAdapter {
     public void serverStarted(Server server) throws Exception {
         final Endpoint endpoint = getEndpoint(server);
         final String serviceId = serviceName + '.' + Long.toHexString(ThreadLocalRandom.current().nextLong());
-        consulClient.register(serviceId, serviceName, endpoint, check)
+        consulClient.register(serviceId, serviceName, endpoint, check, tags)
                     .aggregate()
                     .handle((res, cause) -> {
                   if (cause != null) {

@@ -28,6 +28,8 @@ import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
 
+import javax.annotation.Nullable;
+
 /**
  * A builder class for {@link ConsulEndpointGroup}.
  * <h3>Examples</h3>
@@ -48,6 +50,10 @@ public final class ConsulEndpointGroupBuilder implements ConsulConfigSetters {
     private long registryFetchIntervalMillis = DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS;
     private boolean useHealthyEndpoints;
     private final ConsulClientBuilder consulClientBuilder;
+    @Nullable
+    private String datacenter;
+    @Nullable
+    private String filter;
 
     ConsulEndpointGroupBuilder(URI consulUri, String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
@@ -96,6 +102,24 @@ public final class ConsulEndpointGroupBuilder implements ConsulConfigSetters {
         return this;
     }
 
+    /**
+     * Sets which <a href="https://www.consul.io/api-docs/catalog#dc-2">datacenter</a> to query.
+     * If not set, the datacenter of the local agent is used by default.
+     */
+    public ConsulEndpointGroupBuilder datacenter(String datacenter) {
+        this.datacenter = datacenter;
+        return this;
+    }
+
+    /**
+     * Filters the endpoints using the Consul <a href="https://www.consul.io/api-docs/features/filtering">filter</a>.
+     * If not set, all endpoints are returned.
+     */
+    public ConsulEndpointGroupBuilder filter(String filter) {
+        this.filter = filter;
+        return this;
+    }
+
     @Override
     public ConsulEndpointGroupBuilder consulApiVersion(String consulApiVersion) {
         consulClientBuilder.consulApiVersion(consulApiVersion);
@@ -113,6 +137,6 @@ public final class ConsulEndpointGroupBuilder implements ConsulConfigSetters {
      */
     public ConsulEndpointGroup build() {
         return new ConsulEndpointGroup(selectionStrategy, consulClientBuilder.build(), serviceName,
-                                       registryFetchIntervalMillis, useHealthyEndpoints);
+                                       registryFetchIntervalMillis, useHealthyEndpoints, datacenter, filter);
     }
 }
