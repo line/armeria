@@ -17,7 +17,6 @@ package com.linecorp.armeria.internal.consul;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -87,7 +86,7 @@ public final class ConsulClient {
      * @return a {@link CompletableFuture} that will be completed with the registered service ID
      */
     public HttpResponse register(String serviceId, String serviceName, Endpoint endpoint,
-                                 @Nullable Check check, Set<String> tags) {
+                                 @Nullable Check check, List<String> tags) {
         return agentClient.register(serviceId, serviceName, endpoint.host(), endpoint.port(), check, tags);
     }
 

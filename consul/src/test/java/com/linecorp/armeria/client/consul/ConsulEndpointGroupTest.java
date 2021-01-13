@@ -128,7 +128,7 @@ class ConsulEndpointGroupTest extends ConsulTestBase {
 
     @Test
     void testConsulEndpointGroupWithDatacenter() {
-        ConsulEndpointGroupBuilder builder =
+        final ConsulEndpointGroupBuilder builder =
                 ConsulEndpointGroup.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
                                             serviceName)
                                    .consulApiVersion("v1")

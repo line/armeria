@@ -17,9 +17,7 @@ package com.linecorp.armeria.internal.consul;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -58,7 +56,7 @@ final class AgentServiceClient {
      * Registers a service into the Consul agent.
      */
     HttpResponse register(String serviceId, String serviceName, String address, int port,
-                          @Nullable Check check, Set<String> tags) {
+                          @Nullable Check check, List<String> tags) {
         final Service service = new Service(serviceId, serviceName, address, port, check, tags);
         try {
             return client.put("/agent/service/register", mapper.writeValueAsString(service));
@@ -100,13 +98,13 @@ final class AgentServiceClient {
         @JsonProperty("Tags")
         private final List<String> tags;
 
-        Service(String id, String name, String address, int port, @Nullable Check check, Set<String> tags) {
+        Service(String id, String name, String address, int port, @Nullable Check check, List<String> tags) {
             this.id = id;
             this.name = name;
             this.address = address;
             this.port = port;
             this.check = check;
-            this.tags = new ArrayList<>(tags);
+            this.tags = tags;
         }
 
         @Override

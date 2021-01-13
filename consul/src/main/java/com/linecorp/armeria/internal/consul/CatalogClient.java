@@ -51,12 +51,12 @@ final class CatalogClient {
     private static final CollectionType collectionTypeForNode =
             TypeFactory.defaultInstance().constructCollectionType(List.class, Node.class);
 
+    private static final String DATACENTER_PARAM = "dc";
+    private static final String FILTER_PARAM = "filter";
+
     static CatalogClient of(ConsulClient consulClient) {
         return new CatalogClient(consulClient);
     }
-
-    private static final String DATACENTER_PARAM = "dc";
-    private static final String FILTER_PARAM = "filter";
 
     private final WebClient client;
     private final ObjectMapper mapper;

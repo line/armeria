@@ -20,11 +20,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
@@ -58,7 +57,7 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
     private String checkInterval = DEFAULT_CHECK_INTERVAL_MILLIS + "ms";
     private HttpMethod checkMethod = HttpMethod.HEAD;
     private final ConsulClientBuilder consulClientBuilder;
-    private final Set<String> tags = new HashSet<>();
+    private final ImmutableSet.Builder<String> tagsBuilder = ImmutableSet.builder();
 
     /**
      * Creates a {@link ConsulUpdatingListenerBuilder} with a service name.
@@ -149,7 +148,7 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
      * @param tag the tag to add
      */
     public ConsulUpdatingListenerBuilder addTag(String tag) {
-        tags.add(tag);
+        tagsBuilder.add(requireNonNull(tag, "tag"));
         return this;
     }
 
@@ -159,7 +158,7 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
      * @param tags the tags to add
      */
     public ConsulUpdatingListenerBuilder addTags(String... tags) {
-        this.tags.addAll(Arrays.asList(tags));
+        tagsBuilder.addAll(ImmutableSet.copyOf(requireNonNull(tags, "tags")));
         return this;
     }
 
@@ -181,6 +180,6 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
      */
     public ConsulUpdatingListener build() {
         return new ConsulUpdatingListener(consulClientBuilder.build(), serviceName, serviceEndpoint,
-                                          checkUri, checkMethod, checkInterval, tags);
+                                          checkUri, checkMethod, checkInterval, tagsBuilder.build().asList());
     }
 }

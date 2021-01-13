@@ -175,7 +175,6 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
     @Test
     void testThatTagsAreAdded() {
         final int port = unusedPorts(1)[0];
-        final Endpoint endpoint = Endpoint.of("127.0.0.1", port).withWeight(1);
         final Server server = Server.builder()
                                     .http(port)
                                     .service("/echo", new EchoService())
@@ -185,10 +184,6 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                                                "testThatTagsAreAdded")
                                       .consulApiVersion("v1")
                                       .consulToken(CONSUL_TOKEN)
-                                      .endpoint(endpoint)
-                                      .checkUri("http://" + endpoint.host() + ':' + endpoint.port() + "/echo")
-                                      .checkMethod(HttpMethod.POST)
-                                      .checkInterval(Duration.ofSeconds(1))
                                       .addTags("production", "v1")
                                       .build();
         server.addListener(listener);

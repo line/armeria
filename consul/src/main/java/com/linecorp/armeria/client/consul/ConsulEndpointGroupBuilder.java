@@ -21,14 +21,14 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.consul.ConsulConfigSetters;
 import com.linecorp.armeria.internal.consul.ConsulClient;
 import com.linecorp.armeria.internal.consul.ConsulClientBuilder;
 import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
-
-import javax.annotation.Nullable;
 
 /**
  * A builder class for {@link ConsulEndpointGroup}.
@@ -107,7 +107,7 @@ public final class ConsulEndpointGroupBuilder implements ConsulConfigSetters {
      * If not set, the datacenter of the local agent is used by default.
      */
     public ConsulEndpointGroupBuilder datacenter(String datacenter) {
-        this.datacenter = datacenter;
+        this.datacenter = requireNonNull(datacenter, "datacenter");
         return this;
     }
 
@@ -116,7 +116,7 @@ public final class ConsulEndpointGroupBuilder implements ConsulConfigSetters {
      * If not set, all endpoints are returned.
      */
     public ConsulEndpointGroupBuilder filter(String filter) {
-        this.filter = filter;
+        this.filter = requireNonNull(filter, "filter");
         return this;
     }
 
