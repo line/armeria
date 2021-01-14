@@ -170,7 +170,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
             if (cancelled()) {
                 subscription.cancel();
             } else {
-                setSubscription(subscription);
+                setUpstreamSubscription(subscription);
             }
         }
 

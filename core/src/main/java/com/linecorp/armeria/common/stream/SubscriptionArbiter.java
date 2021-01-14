@@ -13,6 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+/*
+ * Copyright (c)  2020 Oracle and/or its affiliates. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
 
 package com.linecorp.armeria.common.stream;
 
@@ -46,8 +62,7 @@ import com.linecorp.armeria.internal.common.stream.NoopSubscription;
  */
 class SubscriptionArbiter implements Subscription {
 
-    // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common
-    // /reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
+    // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common/reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
 
     private static final AtomicReferenceFieldUpdater<SubscriptionArbiter, Subscription> newSubscriptionUpdater =
             AtomicReferenceFieldUpdater
@@ -139,7 +154,7 @@ class SubscriptionArbiter implements Subscription {
      * Set the new subscription to resume with.
      * @param subscription the new subscription
      */
-    final void setSubscription(Subscription subscription) {
+    final void setUpstreamSubscription(Subscription subscription) {
         requireNonNull(subscription, "subscription");
         for (;;) {
             final Subscription previous = newSubscription;
