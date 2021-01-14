@@ -34,6 +34,7 @@ import org.apache.thrift.TBaseProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -225,6 +226,19 @@ public final class ThriftServiceMetadata {
      */
     @Nullable
     public ThriftFunction function(String method) {
-        return functions.get(method);
+        ThriftFunction func = functions.get(method);
+        if (func != null) {
+            return func;
+        }
+
+        // check method and convert to underscored style
+        method = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method);
+        func = functions.get(method);
+        if (func != null) {
+            // add it to function, for next call
+            functions.put(method, func);
+        }
+
+        return func;
     }
 }
