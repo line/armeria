@@ -16,12 +16,16 @@
 
 package com.linecorp.armeria.internal.common.auth.oauth2;
 
-import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -34,20 +38,22 @@ import com.linecorp.armeria.common.util.Exceptions;
 @UnstableApi
 public final class SerialFuture {
 
-    private final Queue<Runnable> actions = new LinkedList<>();
+    private final Queue<Runnable> actions = new ConcurrentLinkedQueue<>();
+
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+
+    private final Consumer<Runnable> runner;
 
     @Nullable
-    private Runnable active;
-
-    @Nullable
-    Executor executor;
+    private volatile Runnable active;
 
     /**
      * Constructs {@link SerialFuture} with a supplied {@link Executor}.
      * @param executor An {@link Executor} to execute asynchronous actions.
      */
     public SerialFuture(@Nullable Executor executor) {
-        this.executor = executor;
+        runner = executor == null ? Runnable::run
+                                  : r -> CompletableFuture.runAsync(r, executor);
     }
 
     /**
@@ -65,7 +71,7 @@ public final class SerialFuture {
      * @return Returns a new {@link CompletionStage} with the same result or exception as the {@code action},
      *         that executes the given action when this stage completes.
      */
-    public synchronized <V> CompletionStage<V> executeAsync(Callable<CompletionStage<V>> action) {
+    public <V> CompletionStage<V> executeAsync(Callable<CompletionStage<V>> action) {
         final CompletableFuture<V> result = new CompletableFuture<>();
         actions.add(() -> {
             final CompletionStage<V> future;
@@ -91,9 +97,7 @@ public final class SerialFuture {
             });
         });
 
-        if (active == null) {
-            executeNext();
-        }
+        executeNextIfNoActive();
         return result;
     }
 
@@ -104,7 +108,7 @@ public final class SerialFuture {
      * @return Returns a new {@link CompletionStage} with the same result or exception as the {@code action},
      *         that executes the given action when this stage completes.
      */
-    public synchronized <V> CompletionStage<V> callAsync(Callable<V> action) {
+    public <V> CompletionStage<V> callAsync(Callable<V> action) {
         final CompletableFuture<V> result = new CompletableFuture<>();
         actions.add(() -> {
             try {
@@ -116,19 +120,52 @@ public final class SerialFuture {
             }
         });
 
-        if (active == null) {
-            executeNext();
-        }
+        executeNextIfNoActive();
         return result;
     }
 
-    private synchronized void executeNext() {
-        if ((active = actions.poll()) != null) {
-            if (executor == null) {
-                active.run();
-            } else {
-                CompletableFuture.runAsync(active, executor);
+    /**
+     * Continues to the next item execution only if the {@code active} item not set.
+     * Check the {@code active} item in non-blocking manner.
+     */
+    private void executeNextIfNoActive() {
+        final Runnable active;
+        final ReadLock readLock = lock.readLock();
+        readLock.lock();
+        try {
+            active = this.active;
+        } finally {
+            readLock.unlock();
+        }
+        if (active == null) {
+            final WriteLock writeLock = lock.writeLock();
+            writeLock.lock();
+            try {
+                if (this.active == null) {
+                    executeNext();
+                }
+            } finally {
+                writeLock.unlock();
             }
+        }
+    }
+
+    /**
+     * Polls next item from the queue, resets the {@code active} item and passes it for execution
+     * (done either directly/synchronously or using an {@link Executor}).
+     */
+    private void executeNext() {
+        final Runnable active;
+        final WriteLock writeLock = lock.writeLock();
+        writeLock.lock();
+        try {
+            active = actions.poll();
+            this.active = active;
+        } finally {
+            writeLock.unlock();
+        }
+        if (active != null) {
+            runner.accept(active);
         }
     }
 }

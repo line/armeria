@@ -18,295 +18,70 @@ package com.linecorp.armeria.internal.common.auth.oauth2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.function.IntFunction;
+import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 public class SerialFutureTest {
 
-    volatile int counter;
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testExecuteAsync1(boolean withExecutor) throws Exception {
+        final Executor executor = withExecutor ? Executors.newWorkStealingPool() : null;
+        final SerialFuture serialFuture = new SerialFuture(executor);
 
-    @Test
-    void testExecuteAsyncWithExecutorInParallel1() throws Exception {
-        final Executor executor = Executors.newWorkStealingPool();
-        final SerialFuture serialFuture = new SerialFuture();
-
-        final int n = 10;
+        final int inc = 1;
+        final int count = 20;
         final long timeout = 10L;
-        counter = 0;
+        final int[] seq = createArithmeticSequence(inc, inc, count);
 
-        // test action that allows invoking serialFuture#executeAsync(Callable) in parallel
-        // use Executor to implement asynchronous Callable action
-        final Callable<CompletableFuture<Integer>> testAction = () ->
-            serialFuture.executeAsync(() ->
-                CompletableFuture.supplyAsync(() -> {
-                    int c = counter;
-                    try {
-                        Thread.sleep(timeout);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    c += 1;
-                    counter = c;
-                    return c;
-                }, executor)
-            ).toCompletableFuture();
-        final List<Callable<CompletableFuture<Integer>>> testActions = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            testActions.add(testAction);
-        }
-
-        // invoke test actions in parallel
-        final ForkJoinPool pool = new ForkJoinPool(n);
-        final CompletableFuture<?>[] futures = pool.invokeAll(testActions).parallelStream().map(f -> {
-            try {
-                return f.get();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        }).toArray(CompletableFuture[]::new);
-
+        final VolatileCounter counter = new VolatileCounter();
+        final IntFunction<CompletableFuture<Integer>> testAction = i ->
+                serialFuture.executeAsync(() -> timeoutAction(counter, inc, timeout)).toCompletableFuture();
+        final CompletableFuture<?>[] futures = Arrays.stream(seq)
+                                                     .mapToObj(testAction)
+                                                     .toArray(CompletableFuture[]::new);
         // wait for all futures to complete
         CompletableFuture.allOf(futures).join();
 
-        assertThat(counter).isEqualTo(n);
-        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join()).toArray();
-        checkSequentialRange(array, n);
+        assertThat(counter.get()).isEqualTo(count);
+        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join())
+                                  .toArray();
+        assertThat(array).containsExactly(seq);
     }
 
-    @Test
-    void testExecuteAsyncWithExecutorInParallel2() throws Exception {
-        // execute all actions using dedicated Executor
-        final Executor executor = Executors.newWorkStealingPool();
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testExecuteAsyncInParallel1(boolean withExecutor) throws Exception {
+        final Executor executor = withExecutor ? Executors.newWorkStealingPool() : null;
         final SerialFuture serialFuture = new SerialFuture(executor);
 
-        final int n = 10;
+        final int inc = 1;
+        final int count = 20;
         final long timeout = 10L;
-        counter = 0;
+        final int[] seq = createArithmeticSequence(inc, inc, count);
 
-        // test action that allows invoking serialFuture#executeAsync(Callable) in parallel
-        // use Executor as part of SerialFuture instance
-        final Callable<CompletableFuture<Integer>> testAction = () ->
-            serialFuture.executeAsync(() ->
-                CompletableFuture.supplyAsync(() -> {
-                    int c = counter;
-                    try {
-                        Thread.sleep(timeout);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    c += 1;
-                    counter = c;
-                    return c;
-                })
-            ).toCompletableFuture();
-        final List<Callable<CompletableFuture<Integer>>> testActions = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            testActions.add(testAction);
-        }
-
-        // invoke test actions in parallel
-        final ForkJoinPool pool = new ForkJoinPool(n);
-        final CompletableFuture<?>[] futures = pool.invokeAll(testActions).parallelStream().map(f -> {
-            try {
-                return f.get();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        }).toArray(CompletableFuture[]::new);
-
-        // wait for all futures to complete
-        CompletableFuture.allOf(futures).join();
-
-        assertThat(counter).isEqualTo(n);
-        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join()).toArray();
-        checkSequentialRange(array, n);
-    }
-
-    @Test
-    void testExecuteAsyncWithoutExecutorInParallel() throws Exception {
-        // do not use Executor, execute all actions from the invoker thread
-        final SerialFuture serialFuture = new SerialFuture();
-
-        final int n = 10;
-        final long timeout = 10L;
-        counter = 0;
-
-        // test action that allows invoking serialFuture#executeAsync(Callable) in parallel
-        final Callable<CompletableFuture<Integer>> testAction = () ->
-            serialFuture.executeAsync(() ->
-                CompletableFuture.supplyAsync(() -> {
-                    int c = counter;
-                    try {
-                        Thread.sleep(timeout);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    c += 1;
-                    counter = c;
-                    return c;
-                })
-            ).toCompletableFuture();
-        final List<Callable<CompletableFuture<Integer>>> testActions = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            testActions.add(testAction);
-        }
-
-        // invoke test actions in parallel
-        final ForkJoinPool pool = new ForkJoinPool(n);
-        final CompletableFuture<?>[] futures = pool.invokeAll(testActions).parallelStream().map(f -> {
-            try {
-                return f.get();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        }).toArray(CompletableFuture[]::new);
-
-        // wait for all futures to complete
-        CompletableFuture.allOf(futures).join();
-
-        assertThat(counter).isEqualTo(n);
-        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join()).toArray();
-        checkSequentialRange(array, n);
-    }
-
-    @Test
-    void testExecuteAsyncWithExecutor1() throws Exception {
-        final Executor executor = Executors.newWorkStealingPool();
-        final SerialFuture serialFuture = new SerialFuture();
-
-        final int n = 10;
-        final long timeout = 10L;
-        counter = 0;
-
-        final CompletableFuture<?>[] futures = new CompletableFuture<?>[n];
-        // invoke serialFuture#executeAsync(Callable) one by one from the test thread
-        // use Executor to implement asynchronous Callable action
-        for (int i = 0; i < n; i++) {
-            futures[i] = serialFuture.executeAsync(() ->
-                CompletableFuture.supplyAsync(() -> {
-                    int c = counter;
-                    try {
-                        Thread.sleep(timeout);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                    c += 1;
-                    counter = c;
-                    return c;
-                }, executor)
-            ).toCompletableFuture();
-        }
-        CompletableFuture.allOf(futures).join();
-
-        assertThat(counter).isEqualTo(n);
-        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join()).toArray();
-        checkSequentialRange(array, n);
-    }
-
-    @Test
-    void testExecuteAsyncWithExecutor2() throws Exception {
-        // execute all actions using dedicated Executor
-        final Executor executor = Executors.newWorkStealingPool();
-        final SerialFuture serialFuture = new SerialFuture(executor);
-
-        final int n = 10;
-        final long timeout = 10L;
-        counter = 0;
-
-        final CompletableFuture<?>[] futures = new CompletableFuture<?>[n];
-        // invoke serialFuture#executeAsync(Callable) one by one from the test thread
-        // use Executor as part of SerialFuture instance
-        for (int i = 0; i < n; i++) {
-            futures[i] = serialFuture.executeAsync(() -> {
-                int c = counter;
-                try {
-                    Thread.sleep(timeout);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                c += 1;
-                counter = c;
-                return CompletableFuture.completedFuture(c);
-            }).toCompletableFuture();
-        }
-        CompletableFuture.allOf(futures).join();
-
-        assertThat(counter).isEqualTo(n);
-        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join()).toArray();
-        checkSequentialRange(array, n);
-    }
-
-    @Test
-    void testExecuteAsyncWithoutExecutor() throws Exception {
-        final SerialFuture serialFuture = new SerialFuture();
-
-        final int n = 10;
-        final long timeout = 10L;
-        counter = 0;
-
-        final CompletableFuture<?>[] futures = new CompletableFuture<?>[n];
-        // invoke serialFuture#executeAsync(Callable) one by one from the test thread
-        // do not use Executor, execute all actions from the invoker thread
-        for (int i = 0; i < n; i++) {
-            futures[i] = serialFuture.executeAsync(() -> {
-                int c = counter;
-                try {
-                    Thread.sleep(timeout);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                c += 1;
-                counter = c;
-                return CompletableFuture.completedFuture(c);
-            }).toCompletableFuture();
-        }
-        CompletableFuture.allOf(futures).join();
-
-        assertThat(counter).isEqualTo(n);
-        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join()).toArray();
-        checkSequentialRange(array, n);
-    }
-
-    @Test
-    void testCallAsyncWithExecutorInParallel() throws Exception {
-        // execute all actions using dedicated Executor
-        final Executor executor = Executors.newWorkStealingPool();
-        final SerialFuture serialFuture = new SerialFuture(executor);
-
-        final int n = 10;
-        final long timeout = 10L;
-        counter = 0;
-
+        final VolatileCounter counter = new VolatileCounter();
         // test action that allows invoking serialFuture#callAsync(Callable) in parallel
         // use Executor as part of SerialFuture instance
         final Callable<CompletableFuture<Integer>> testAction = () ->
-            serialFuture.callAsync(() -> {
-                int c = counter;
-                try {
-                    Thread.sleep(timeout);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                c += 1;
-                counter = c;
-                return c;
-            }).toCompletableFuture();
-        final List<Callable<CompletableFuture<Integer>>> testActions = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            testActions.add(testAction);
-        }
-
+                serialFuture.executeAsync(() -> timeoutAction(counter, inc, timeout)).toCompletableFuture();
+        final List<Callable<CompletableFuture<Integer>>> testActions = Arrays.stream(seq)
+                                                                             .mapToObj(i -> testAction)
+                                                                             .collect(Collectors.toList());
         // invoke test actions in parallel
-        final ForkJoinPool pool = new ForkJoinPool(n);
+        final ForkJoinPool pool = new ForkJoinPool(count);
         final CompletableFuture<?>[] futures = pool.invokeAll(testActions).parallelStream().map(f -> {
             try {
                 return f.get();
@@ -314,131 +89,192 @@ public class SerialFutureTest {
                 throw new RuntimeException(e);
             }
         }).toArray(CompletableFuture[]::new);
-
         // wait for all futures to complete
         CompletableFuture.allOf(futures).join();
 
-        assertThat(counter).isEqualTo(n);
-        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join()).toArray();
-        checkSequentialRange(array, n);
+        assertThat(counter.get()).isEqualTo(count);
+        final int[] array = Arrays.stream(futures)
+                                  .mapToInt(future -> (Integer) future.join())
+                                  .toArray();
+        System.out.println(Arrays.toString(array));
+        assertThat(array).containsExactlyInAnyOrder(seq);
     }
 
-    @Test
-    void testCallAsyncWithoutExecutorInParallel() throws Exception {
-        // do not use Executor, execute all actions from the invoker thread
-        final SerialFuture serialFuture = new SerialFuture();
-
-        final int n = 10;
-        final long timeout = 10L;
-        counter = 0;
-
-        // test action that allows invoking serialFuture#callAsync(Callable) in parallel
-        final Callable<CompletableFuture<Integer>> testAction = () ->
-            serialFuture.callAsync(() -> {
-                int c = counter;
-                try {
-                    Thread.sleep(timeout);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                c += 1;
-                counter = c;
-                return c;
-            }).toCompletableFuture();
-        final List<Callable<CompletableFuture<Integer>>> testActions = new ArrayList<>(n);
-        for (int i = 0; i < n; i++) {
-            testActions.add(testAction);
-        }
-
-        // invoke test actions in parallel
-        final ForkJoinPool pool = new ForkJoinPool(n);
-        final CompletableFuture<?>[] futures = pool.invokeAll(testActions).parallelStream().map(f -> {
-            try {
-                return f.get();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        }).toArray(CompletableFuture[]::new);
-
-        // wait for all futures to complete
-        CompletableFuture.allOf(futures).join();
-
-        assertThat(counter).isEqualTo(n);
-        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join()).toArray();
-        checkSequentialRange(array, n);
-    }
-
-    @Test
-    void testCallAsyncWithExecutor() throws Exception {
-        // execute all actions using dedicated Executor
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testExecuteAsync2(boolean withExecutor) throws Exception {
         final Executor executor = Executors.newWorkStealingPool();
+        final SerialFuture serialFuture = new SerialFuture(withExecutor ? executor : null);
+
+        final int inc = 1;
+        final int count = 20;
+        final long timeout = 10L;
+        final int[] seq = createArithmeticSequence(inc, inc, count);
+
+        final VolatileCounter counter = new VolatileCounter();
+        final IntFunction<CompletableFuture<Integer>> testAction = i ->
+                serialFuture.executeAsync(() ->
+                                                  CompletableFuture.supplyAsync(() ->
+                                                                                        simpleTimeoutAction(
+                                                                                                counter, inc,
+                                                                                                timeout),
+                                                                                executor))
+                            .toCompletableFuture();
+        final CompletableFuture<?>[] futures = Arrays.stream(seq)
+                                                     .mapToObj(testAction)
+                                                     .toArray(CompletableFuture[]::new);
+        // wait for all futures to complete
+        CompletableFuture.allOf(futures).join();
+
+        assertThat(counter.get()).isEqualTo(count);
+        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join())
+                                  .toArray();
+        assertThat(array).containsExactly(seq);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testExecuteAsyncInParallel2(boolean withExecutor) throws Exception {
+        final Executor executor = Executors.newWorkStealingPool();
+        final SerialFuture serialFuture = new SerialFuture(withExecutor ? executor : null);
+
+        final int inc = 1;
+        final int count = 20;
+        final long timeout = 10L;
+        final int[] seq = createArithmeticSequence(inc, inc, count);
+
+        final VolatileCounter counter = new VolatileCounter();
+        // test action that allows invoking serialFuture#callAsync(Callable) in parallel
+        // use Executor as part of SerialFuture instance
+        final Callable<CompletableFuture<Integer>> testAction = () ->
+                serialFuture.executeAsync(() ->
+                                                  CompletableFuture.supplyAsync(() ->
+                                                                                        simpleTimeoutAction(
+                                                                                                counter, inc,
+                                                                                                timeout),
+                                                                                executor))
+                            .toCompletableFuture();
+        final List<Callable<CompletableFuture<Integer>>> testActions = Arrays.stream(seq)
+                                                                             .mapToObj(i -> testAction)
+                                                                             .collect(Collectors.toList());
+        // invoke test actions in parallel
+        final ForkJoinPool pool = new ForkJoinPool(count);
+        final CompletableFuture<?>[] futures = pool.invokeAll(testActions).parallelStream().map(f -> {
+            try {
+                return f.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }).toArray(CompletableFuture[]::new);
+        // wait for all futures to complete
+        CompletableFuture.allOf(futures).join();
+
+        assertThat(counter.get()).isEqualTo(count);
+        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join())
+                                  .toArray();
+        System.out.println(Arrays.toString(array));
+        assertThat(array).containsExactlyInAnyOrder(seq);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testCallAsync(boolean withExecutor) throws Exception {
+        final Executor executor = withExecutor ? Executors.newWorkStealingPool() : null;
         final SerialFuture serialFuture = new SerialFuture(executor);
 
-        final int n = 10;
+        final int inc = 1;
+        final int count = 20;
         final long timeout = 10L;
-        counter = 0;
+        final int[] seq = createArithmeticSequence(inc, inc, count);
 
-        final CompletableFuture<?>[] futures = new CompletableFuture<?>[n];
-        // invoke serialFuture#callAsync(Callable) one by one from the test thread
+        final VolatileCounter counter = new VolatileCounter();
+        final IntFunction<CompletableFuture<Integer>> testAction = i ->
+                serialFuture.callAsync(() -> simpleTimeoutAction(counter, inc, timeout)).toCompletableFuture();
+        final CompletableFuture<?>[] futures = Arrays.stream(seq)
+                                                     .mapToObj(testAction)
+                                                     .toArray(CompletableFuture[]::new);
+        // wait for all futures to complete
+        CompletableFuture.allOf(futures).join();
+
+        assertThat(counter.get()).isEqualTo(count);
+        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join())
+                                  .toArray();
+        assertThat(array).containsExactly(seq);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void testCallAsyncInParallel(boolean withExecutor) throws Exception {
+        final Executor executor = withExecutor ? Executors.newWorkStealingPool() : null;
+        final SerialFuture serialFuture = new SerialFuture(executor);
+
+        final int inc = 1;
+        final int count = 20;
+        final long timeout = 10L;
+        final int[] seq = createArithmeticSequence(inc, inc, count);
+
+        final VolatileCounter counter = new VolatileCounter();
+        // test action that allows invoking serialFuture#callAsync(Callable) in parallel
         // use Executor as part of SerialFuture instance
-        for (int i = 0; i < n; i++) {
-            futures[i] = serialFuture.callAsync(() -> {
-                int c = counter;
-                try {
-                    Thread.sleep(timeout);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                c += 1;
-                counter = c;
-                return c;
-            }).toCompletableFuture();
-        }
+        final Callable<CompletableFuture<Integer>> testAction = () ->
+                serialFuture.callAsync(() -> simpleTimeoutAction(counter, inc, timeout)).toCompletableFuture();
+        final List<Callable<CompletableFuture<Integer>>> testActions = Arrays.stream(seq)
+                                                                             .mapToObj(i -> testAction)
+                                                                             .collect(Collectors.toList());
+        // invoke test actions in parallel
+        final ForkJoinPool pool = new ForkJoinPool(count);
+        final CompletableFuture<?>[] futures = pool.invokeAll(testActions).parallelStream().map(f -> {
+            try {
+                return f.get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }).toArray(CompletableFuture[]::new);
+        // wait for all futures to complete
         CompletableFuture.allOf(futures).join();
 
-        assertThat(counter).isEqualTo(n);
-        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join()).toArray();
-        checkSequentialRange(array, n);
+        assertThat(counter.get()).isEqualTo(count);
+        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join())
+                                  .toArray();
+        System.out.println(Arrays.toString(array));
+        assertThat(array).containsExactlyInAnyOrder(seq);
     }
 
-    @Test
-    void testCallAsyncWithoutExecutor() throws Exception {
-        final SerialFuture serialFuture = new SerialFuture();
-
-        final int n = 10;
-        final long timeout = 10L;
-        counter = 0;
-
-        final CompletableFuture<?>[] futures = new CompletableFuture<?>[n];
-        // invoke serialFuture#callAsync(Callable) one by one from the test thread
-        // do not use Executor, execute all actions from the invoker thread
-        for (int i = 0; i < n; i++) {
-            futures[i] = serialFuture.callAsync(() -> {
-                int c = counter;
-                try {
-                    Thread.sleep(timeout);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                c += 1;
-                counter = c;
-                return c;
-            }).toCompletableFuture();
+    private static int simpleTimeoutAction(VolatileCounter counter, int inc, long timeout) {
+        int c = counter.get();
+        try {
+            Thread.sleep(timeout);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
-        CompletableFuture.allOf(futures).join();
-
-        assertThat(counter).isEqualTo(n);
-        final int[] array = Arrays.stream(futures).mapToInt(future -> (Integer) future.join()).toArray();
-        checkSequentialRange(array, n);
+        c += inc;
+        counter.set(c);
+        return c;
     }
 
-    private static void checkSequentialRange(int[] array, int n) {
-        // check that all elements of the array are unique numbers out of the range [1..n]
-        assertThat(array.length).isEqualTo(n);
-        final int[] expected = new int[n];
-        for (int i = 0; i < n; i++) {
-            expected[i] = i + 1;
+    private static CompletionStage<Integer> timeoutAction(VolatileCounter counter, int inc, long timeout) {
+        return CompletableFuture.completedFuture(simpleTimeoutAction(counter, inc, timeout));
+    }
+
+    private static int[] createArithmeticSequence(int start, int inc, int count) {
+        final int[] seq = new int[count];
+        int current = start;
+        for (int i = 0; i < count; i++) {
+            seq[i] = current;
+            current += inc;
         }
-        assertThat(array).containsOnlyOnce(expected);
+        return seq;
+    }
+
+    private static final class VolatileCounter {
+        volatile int counter;
+
+        void set(int counter) {
+            this.counter = counter;
+        }
+
+        int get() {
+            return counter;
+        }
     }
 }
