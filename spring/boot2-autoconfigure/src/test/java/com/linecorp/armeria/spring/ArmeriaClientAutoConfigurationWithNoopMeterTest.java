@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.inject.Inject;
 
@@ -79,7 +80,7 @@ public class ArmeriaClientAutoConfigurationWithNoopMeterTest {
     private Integer port;
 
     @Inject
-    private WebClientBuilder webClientBuilder;
+    private Supplier<WebClientBuilder> webClientBuilder;
 
     private String newUrl(String scheme) {
         return scheme + "://127.0.0.1:" + port;
@@ -88,6 +89,7 @@ public class ArmeriaClientAutoConfigurationWithNoopMeterTest {
     @Test
     public void test() throws Exception {
         final WebClient webClient = webClientBuilder
+                .get()
                 .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("client")))
                 .build();
         final AggregatedHttpResponse response = webClient.get(newUrl("h1c") + "/customizer")

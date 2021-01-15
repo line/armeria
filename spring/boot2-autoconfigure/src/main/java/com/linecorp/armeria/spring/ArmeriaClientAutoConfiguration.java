@@ -18,12 +18,12 @@ package com.linecorp.armeria.spring;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Scope;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
@@ -39,11 +39,13 @@ public class ArmeriaClientAutoConfiguration extends AbstractArmeriaClientAutoCon
      * Create an {@link WebClientBuilder} bean.
      */
     @Bean
-    @Scope("prototype")
     @ConditionalOnMissingBean
-    public WebClientBuilder armeriaWebClientBuilder(Optional<List<ArmeriaClientConfigurator>> configurators) {
-        final WebClientBuilder builder = WebClient.builder();
-        configurators.ifPresent(cs -> cs.forEach(c -> c.configure(builder)));
-        return builder;
+    public Supplier<WebClientBuilder> armeriaWebClientBuilder(
+            Optional<List<ArmeriaClientConfigurator>> configurators) {
+        return () -> {
+            final WebClientBuilder builder = WebClient.builder();
+            configurators.ifPresent(cs -> cs.forEach(c -> c.configure(builder)));
+            return builder;
+        };
     }
 }

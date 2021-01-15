@@ -22,6 +22,7 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.inject.Inject;
 
@@ -102,7 +103,7 @@ public class ArmeriaClientAutoConfigurationTest {
     private Integer port;
 
     @Inject
-    private WebClientBuilder webClientBuilder;
+    private Supplier<WebClientBuilder> webClientBuilder;
 
     private String newUrl(String scheme) {
         return scheme + "://127.0.0.1:" + port;
@@ -110,7 +111,7 @@ public class ArmeriaClientAutoConfigurationTest {
 
     @Test
     public void test() throws Exception {
-        final WebClient webClient = webClientBuilder.build();
+        final WebClient webClient = webClientBuilder.get().build();
         final AggregatedHttpResponse response = webClient.get(newUrl("h1c") + "/customizer")
                                                          .aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
