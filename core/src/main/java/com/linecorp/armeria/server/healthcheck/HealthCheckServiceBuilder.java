@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -304,16 +303,10 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * Returns a newly created {@link HealthCheckService} built from the properties specified so far.
      */
     public HealthCheckService build() {
-        final List<HealthCheckUpdateListener> updateListeners = updateListenersBuilder.build();
-        if (updateHandler == null && !updateListeners.isEmpty()) {
-            throw new IllegalStateException("HealthCheckUpdateListener is allowed only when updatable(true) " +
-                                            "is called. updateListeners: " + updateListeners);
-        }
-
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
-                                      pingIntervalMillis, updateHandler, updateListeners, serverListenerUpdate,
-                                      transientServiceOptionsBuilder.build());
+                                      pingIntervalMillis, updateHandler, updateListenersBuilder.build(),
+                                      serverListenerUpdate, transientServiceOptionsBuilder.build());
     }
 }
