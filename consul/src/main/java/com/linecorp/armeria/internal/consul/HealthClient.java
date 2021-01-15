@@ -52,8 +52,6 @@ final class HealthClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthClient.class);
 
-    private static final String DATACENTER_PARAM = "dc";
-    private static final String FILTER_PARAM = "filter";
     private static final String PASSING_PARAM = "passing";
 
     static HealthClient of(ConsulClient consulClient) {
@@ -78,13 +76,8 @@ final class HealthClient {
         PercentEncoder.encodeComponent(path, serviceName);
         final QueryParamsBuilder paramsBuilder = QueryParams.builder();
         paramsBuilder.add(PASSING_PARAM, "true");
-        if (datacenter != null) {
-            paramsBuilder.add(DATACENTER_PARAM, datacenter);
-        }
-        if (filter != null) {
-            paramsBuilder.add(FILTER_PARAM, filter);
-        }
-        paramsBuilder.build().appendQueryString(path.append('?'));
+        paramsBuilder.add(ConsulClientUtil.queryParams(datacenter, filter));
+        path.append('?').append(paramsBuilder.build().toQueryString());
         return client
                 .get(path.toString())
                 .aggregate()

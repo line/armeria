@@ -38,7 +38,6 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.PercentEncoder;
 
@@ -50,9 +49,6 @@ final class CatalogClient {
 
     private static final CollectionType collectionTypeForNode =
             TypeFactory.defaultInstance().constructCollectionType(List.class, Node.class);
-
-    private static final String DATACENTER_PARAM = "dc";
-    private static final String FILTER_PARAM = "filter";
 
     static CatalogClient of(ConsulClient consulClient) {
         return new CatalogClient(consulClient);
@@ -88,16 +84,9 @@ final class CatalogClient {
         requireNonNull(serviceName, "serviceName");
         final StringBuilder path = new StringBuilder("/catalog/service/");
         PercentEncoder.encodeComponent(path, serviceName);
-        final QueryParamsBuilder paramsBuilder = QueryParams.builder();
-        if (datacenter != null) {
-            paramsBuilder.add(DATACENTER_PARAM, datacenter);
-        }
-        if (filter != null) {
-            paramsBuilder.add(FILTER_PARAM, filter);
-        }
-        final QueryParams params = paramsBuilder.build();
+        final QueryParams params = ConsulClientUtil.queryParams(datacenter, filter);
         if (!params.isEmpty()) {
-            params.appendQueryString(path.append('?'));
+            path.append('?').append(params.toQueryString());
         }
         return client.get(path.toString())
                      .aggregate()
