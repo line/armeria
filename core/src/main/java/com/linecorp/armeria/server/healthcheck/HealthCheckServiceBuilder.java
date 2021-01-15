@@ -262,8 +262,8 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     }
 
     /**
-     * Adds a {@link HealthCheckUpdateHandler} which is invoked when the healthiness of the {@link Server} is
-     * updated. This feature is enabled when the {@link HealthCheckService} is updatable.
+     * Adds a {@link HealthCheckUpdateListener} which is invoked when the healthiness of the {@link Server} is
+     * updated.
      *
      * @see #updatable(boolean)
      * @see #updatable(HealthCheckUpdateHandler)
@@ -274,7 +274,12 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     }
 
     /**
-     * Disables automatically updating healthiness by the lifecycle of the {@link Server}.
+     * Disables setting healthy when the {@link Server} starts. The healthiness is updated using
+     * {@link HealthCheckUpdateHandler}. Please note that it's set unhealthy when the {@link Server} stops
+     * regardless.
+     *
+     * @see #updatable(boolean)
+     * @see #updatable(HealthCheckUpdateHandler)
      */
     public HealthCheckServiceBuilder disableServerListenerUpdate() {
         serverListenerUpdate = false;
