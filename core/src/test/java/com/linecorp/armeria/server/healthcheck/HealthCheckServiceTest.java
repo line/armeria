@@ -74,6 +74,7 @@ class HealthCheckServiceTest {
                                                                 .updateListener(capturedHealthy::set)
                                                                 .build());
             sb.service("/hc_disable_server_listener_update", HealthCheckService.builder()
+                                                                               .updatable(true)
                                                                                .disableServerListenerUpdate()
                                                                                .build());
             sb.service("/hc_custom",

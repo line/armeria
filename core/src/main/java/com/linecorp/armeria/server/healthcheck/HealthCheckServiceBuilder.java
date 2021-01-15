@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -303,6 +304,8 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * Returns a newly created {@link HealthCheckService} built from the properties specified so far.
      */
     public HealthCheckService build() {
+        checkState(serverListenerUpdate || updateHandler != null,
+                   "Healthiness must be updatable by server listener or update handler.");
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
