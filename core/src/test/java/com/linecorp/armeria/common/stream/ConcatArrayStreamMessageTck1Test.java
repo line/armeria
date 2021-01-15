@@ -16,10 +16,14 @@
 
 package com.linecorp.armeria.common.stream;
 
+import java.util.List;
+
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import reactor.core.publisher.Flux;
 
@@ -33,9 +37,9 @@ public class ConcatArrayStreamMessageTck1Test extends PublisherVerification<Inte
     @Override
     public Publisher<Integer> createPublisher(long l) {
         @SuppressWarnings("unchecked")
-        final StreamMessage<Integer>[] streamMessages = new StreamMessage[2];
-        streamMessages[0] = new PublisherBasedStreamMessage<>(Flux.range(0, (int) l / 2));
-        streamMessages[1] = new PublisherBasedStreamMessage<>(Flux.range((int) l / 2, (int) (l - l / 2)));
+        final List<StreamMessage<? extends Integer>> streamMessages = ImmutableList.of(
+                new PublisherBasedStreamMessage<>(Flux.range(0, (int) l / 2)),
+                new PublisherBasedStreamMessage<>(Flux.range((int) l / 2, (int) (l - l / 2))));
         return new ConcatArrayStreamMessage<>(streamMessages);
     }
 

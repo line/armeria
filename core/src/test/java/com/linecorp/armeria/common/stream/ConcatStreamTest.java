@@ -16,8 +16,14 @@
 
 package com.linecorp.armeria.common.stream;
 
-import org.junit.jupiter.api.Test;
+import java.util.List;
 
+import org.junit.jupiter.api.Test;
+import org.reactivestreams.Publisher;
+
+import com.google.common.collect.ImmutableList;
+
+import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 class ConcatStreamTest {
@@ -26,5 +32,39 @@ class ConcatStreamTest {
     void emptyStream() {
         final StreamMessage<Object> source = StreamMessage.of(StreamMessage.of());
         StepVerifier.create(source).verifyComplete();
+    }
+
+    @Test
+    void arrayStreamMessage() {
+        final StreamMessage<Integer>[] array =
+                new StreamMessage[]{ StreamMessage.of(1, 2), StreamMessage.of(3, 4) };
+        final List<StreamMessage<Integer>> list =
+                ImmutableList.of(StreamMessage.of(1, 2), StreamMessage.of(3, 4));
+
+        final StreamMessage<Integer> fromVarargs =
+                StreamMessage.concat(StreamMessage.of(1, 2), StreamMessage.of(3, 4));
+        final StreamMessage<Integer> fromArray = StreamMessage.concat(array);
+        final StreamMessage<Integer> fromList = StreamMessage.concat(list);
+
+        StepVerifier.create(fromArray).expectNext(1, 2, 3, 4).verifyComplete();
+        StepVerifier.create(fromVarargs).expectNext(1, 2, 3, 4).verifyComplete();
+        StepVerifier.create(fromList).expectNext(1, 2, 3, 4).verifyComplete();
+    }
+
+
+    @Test
+    void arrayPublisher() {
+        final Publisher<Integer> source1 = Flux.just(1, 2);
+        final Publisher<Integer> source2 = Flux.just(3, 4);
+        final Publisher<Integer>[] array = new Publisher[]{ source1, source2 };
+        final List<Publisher<Integer>> list = ImmutableList.of(source1, source2);
+
+        final StreamMessage<Integer> fromVarargs = StreamMessage.concat(source1, source2);
+        final StreamMessage<Integer> fromArray = StreamMessage.concat(array);
+        final StreamMessage<Integer> fromList = StreamMessage.concat(list);
+
+        StepVerifier.create(fromArray).expectNext(1, 2, 3, 4).verifyComplete();
+        StepVerifier.create(fromVarargs).expectNext(1, 2, 3, 4).verifyComplete();
+        StepVerifier.create(fromList).expectNext(1, 2, 3, 4).verifyComplete();
     }
 }

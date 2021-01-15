@@ -36,6 +36,7 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -57,15 +58,15 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
     private static final AtomicIntegerFieldUpdater<ConcatArrayStreamMessage> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(ConcatArrayStreamMessage.class, "subscribed");
 
-    private final StreamMessage<? extends T>[] sources;
+    private final List<StreamMessage<? extends T>> sources;
 
     @Nullable
     private ConcatArraySubscriber<T> parent;
 
     private volatile int subscribed;
 
-    ConcatArrayStreamMessage(StreamMessage<? extends T>[] sources) {
-        assert sources.length != 0;
+    ConcatArrayStreamMessage(List<StreamMessage<? extends T>> sources) {
+        assert !sources.isEmpty();
         this.sources = sources;
     }
 
@@ -94,12 +95,12 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         if (parent == null) {
             return 0;
         }
-        return sources[parent.index].demand();
+        return sources.get(parent.index).demand();
     }
 
     @Override
     public CompletableFuture<Void> whenComplete() {
-        return sources[sources.length - 1].whenComplete();
+        return sources.get(sources.size() - 1).whenComplete();
     }
 
     @Override
@@ -148,7 +149,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
                 AtomicIntegerFieldUpdater.newUpdater(ConcatArraySubscriber.class, "cancelled");
 
         private Subscriber<? super T> downstream;
-        private final StreamMessage<? extends T>[] sources;
+        private final List<StreamMessage<? extends T>> sources;
         private final EventExecutor executor;
         private final SubscriptionOption[] options;
 
@@ -157,7 +158,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         private volatile int index;
         private volatile int cancelled;
 
-        ConcatArraySubscriber(Subscriber<? super T> downstream, StreamMessage<? extends T>[] sources,
+        ConcatArraySubscriber(Subscriber<? super T> downstream, List<StreamMessage<? extends T>> sources,
                               EventExecutor executor, SubscriptionOption... options) {
             this.downstream = downstream;
             this.sources = sources;
@@ -201,11 +202,11 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         void nextSource() {
             if (!cancelled()) {
                 final int index = this.index;
-                if (index == sources.length) {
+                if (index == sources.size()) {
                     downstream.onComplete();
                 } else {
                     this.index++;
-                    sources[index].subscribe(this, executor, options);
+                    sources.get(index).subscribe(this, executor, options);
                 }
             }
         }
@@ -239,8 +240,8 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
 
         private void abortUnsubscribedSources(Throwable cause) {
             final int index = this.index;
-            for (int i = index; i < sources.length; i++) {
-                sources[i].abort(cause);
+            for (int i = index; i < sources.size(); i++) {
+                sources.get(i).abort(cause);
             }
         }
     }

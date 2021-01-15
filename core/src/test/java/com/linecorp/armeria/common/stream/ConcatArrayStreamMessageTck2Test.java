@@ -38,7 +38,7 @@ public class ConcatArrayStreamMessageTck2Test extends PublisherVerification<Inte
         for (int i = 0; i < l; i++) {
             sources[i] = StreamMessage.of(i);
         }
-        return StreamMessage.of(sources);
+        return StreamMessage.concat(sources);
     }
 
     @Override
