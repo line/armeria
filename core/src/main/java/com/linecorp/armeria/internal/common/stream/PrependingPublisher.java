@@ -18,13 +18,15 @@ package com.linecorp.armeria.internal.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.linecorp.armeria.common.stream.NoopSubscriber;
 
 public final class PrependingPublisher<T> implements Publisher<T> {
 
@@ -39,40 +41,48 @@ public final class PrependingPublisher<T> implements Publisher<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         requireNonNull(subscriber, "subscriber");
-        final RestSubscriber restSubscriber = new RestSubscriber(subscriber);
+        final RestSubscriber<T> restSubscriber = new RestSubscriber<>(first, subscriber);
         rest.subscribe(restSubscriber);
     }
 
-    final class RestSubscriber implements Subscriber<T>, Subscription {
+    static final class RestSubscriber<T> implements Subscriber<T>, Subscription {
+
+        private final T first;
+        private volatile boolean firstSent;
 
         private Subscriber<? super T> downstream;
-        private final AtomicLong demand = new AtomicLong();
+        private volatile long demand;
+        private static final AtomicLongFieldUpdater<RestSubscriber> demandUpdater =
+                AtomicLongFieldUpdater.newUpdater(RestSubscriber.class, "demand");
+
         @Nullable
         private volatile Subscription upstream;
         @Nullable
         private volatile Throwable upstreamCause;
         private volatile boolean upstreamCompleted;
         private volatile boolean completed;
-        private volatile boolean firstSent;
 
-        RestSubscriber(Subscriber<? super T> downstream) {
+        RestSubscriber(T first, Subscriber<? super T> downstream) {
+            this.first = first;
             this.downstream = downstream;
         }
 
         @Override
         public void onSubscribe(Subscription subscription) {
-            this.upstream = subscription;
+            upstream = subscription;
             downstream.onSubscribe(this);
         }
 
         @Override
         public void onNext(T t) {
-            demand.decrementAndGet();
+            requireNonNull(t, "element");
+            demandUpdater.decrementAndGet(this);
             downstream.onNext(t);
         }
 
         @Override
         public void onError(Throwable t) {
+            requireNonNull(t, "throwable");
             // delay onError until the first piece is sent
             if (!firstSent) {
                 upstreamCause = t;
@@ -100,24 +110,25 @@ public final class PrependingPublisher<T> implements Publisher<T> {
             if (completed) {
                 return;
             }
-            if (demand.getAndAdd(n) > 0) {
+            if (demandUpdater.getAndAdd(this, n) > 0) {
                 return;
             }
             if (!firstSent) {
                 firstSent = true;
                 downstream.onNext(first);
                 if (n < Long.MAX_VALUE) {
-                    demand.decrementAndGet();
+                    demandUpdater.decrementAndGet(this);
                 }
             }
-            if (demand.get() > 0) {
+            if (demand > 0) {
+                final Throwable upstreamCause = this.upstreamCause;
                 if (upstreamCause != null) {
                     downstream.onError(upstreamCause);
                 } else if (upstreamCompleted) {
                     completed = true;
                     downstream.onComplete();
                 } else {
-                    upstream.request(demand.get());
+                    upstream.request(demand);
                 }
             }
         }
@@ -128,7 +139,7 @@ public final class PrependingPublisher<T> implements Publisher<T> {
                 return;
             }
             completed = true;
-            downstream = null;
+            downstream = NoopSubscriber.get();
             upstream.cancel();
         }
     }

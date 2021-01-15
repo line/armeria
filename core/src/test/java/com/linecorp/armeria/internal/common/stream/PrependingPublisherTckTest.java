@@ -23,6 +23,7 @@ import org.reactivestreams.Subscription;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.reactivestreams.tck.flow.support.PublisherVerificationRules;
+import org.testng.Assert;
 import org.testng.SkipException;
 import org.testng.annotations.Test;
 
@@ -65,6 +66,7 @@ public class PrependingPublisherTckTest extends PublisherVerification<Object> {
         try {
             final TestEnvironment env = new TestEnvironment(200);
             whenHasErrorPublisherTest(pub -> {
+                final TestEnvironment.Latch onNextLatch = new TestEnvironment.Latch(env);
                 final TestEnvironment.Latch onErrorLatch = new TestEnvironment.Latch(env);
                 final TestEnvironment.Latch onSubscribeLatch = new TestEnvironment.Latch(env);
                 pub.subscribe(new TestEnvironment.TestSubscriber<Object>(env) {
@@ -78,16 +80,20 @@ public class PrependingPublisherTckTest extends PublisherVerification<Object> {
                     @Override
                     public void onNext(Object element) {
                         onSubscribeLatch.assertClosed("onSubscribe should be called prior to onNext always");
+                        Assert.assertEquals(element, "Hello");
+                        onNextLatch.close();
                     }
 
                     @Override
                     public void onError(Throwable cause) {
                         onSubscribeLatch.assertClosed("onSubscribe should be called prior to onError always");
+                        onNextLatch.assertClosed("onNext should already be called");
                         onErrorLatch.assertOpen(String.format("Error-state Publisher %s called `onError` twice on new Subscriber", pub));
                         onErrorLatch.close();
                     }
                 });
                 onSubscribeLatch.expectClose("Should have received onSubscribe");
+                onNextLatch.expectClose("Should have received onNext");
                 onErrorLatch.expectClose(String.format("Error-state Publisher %s did not call `onError` on new Subscriber", pub));
 
                 env.verifyNoAsyncErrors();
