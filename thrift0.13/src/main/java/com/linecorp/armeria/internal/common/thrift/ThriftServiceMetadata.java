@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Constructor;
 import java.util.Collections;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -54,6 +55,11 @@ public final class ThriftServiceMetadata {
      * {@link ProcessFunction}.
      */
     private final Map<String, ThriftFunction> functions = new HashMap<>();
+
+    /**
+     * Help to change functions safely.
+     */
+    private final ReentrantLock functionsLock = new ReentrantLock();
 
     /**
      * Creates a new instance from a Thrift service implementation that implements one or more Thrift service
@@ -235,8 +241,10 @@ public final class ThriftServiceMetadata {
         method = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method);
         func = functions.get(method);
         if (func != null) {
+            functionsLock.lock();
             // add it to function, for next call
-            functions.put(method, func);
+            functions.putIfAbsent(method, func);
+            functionsLock.unlock();
         }
 
         return func;
