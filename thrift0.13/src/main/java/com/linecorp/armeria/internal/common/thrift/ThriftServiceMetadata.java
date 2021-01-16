@@ -20,11 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Constructor;
 import java.util.Collections;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.Nullable;
 
