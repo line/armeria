@@ -26,7 +26,6 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -42,7 +41,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.SayHelloService;
@@ -51,7 +49,7 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
- * Special test for `fullcamel` option in thrift compiler
+ * Special test for `fullcamel` option in thrift compiler.
  */
 class CamelNameThriftServiceTest {
 
@@ -72,8 +70,6 @@ class CamelNameThriftServiceTest {
 
         promise = new CompletableFuture<>();
     }
-
-
 
     @ParameterizedTest
     @ArgumentsSource(SerializationFormatProvider.class)

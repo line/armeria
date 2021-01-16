@@ -40,7 +40,3 @@ tasks.shadedJar.doLast {
         }
     }
 }
-
-tasks.withType(Checkstyle) {
-    onlyIf { false }
-}

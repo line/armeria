@@ -25,7 +25,3 @@ tasks.shadedJar.doLast {
         }
     }
 }
-
-tasks.withType(Checkstyle) {
-    exclude '**/com/linecorp/armeria/service/test/thrift/main/**'
-}
