@@ -29,7 +29,8 @@
     "client-timeouts",
     "client-retry",
     "client-circuit-breaker",
-    "client-service-discovery"
+    "client-service-discovery",
+    "client-factory-builder"
   ],
   "Advanced": [
     "advanced-logging",

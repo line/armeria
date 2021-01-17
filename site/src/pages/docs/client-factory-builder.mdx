@@ -1,0 +1,131 @@
+# Building a client using ClientFactoryBuilder
+
+A <type://ClientFactoryBuilder> is a builder class that enables you to create a client factory
+which is able to customize various parameters. For example, some people want to make longer connection timeout.
+If so, the builder provides connectTimeoutMillis to change from the default value to what you want to change.
+
+You can simply create <type://ClientFactoryBuilder> as following example:
+
+```java
+final ClientFactory factory =
+          ClientFactory.builder()
+                       // Set the connection timeout to 5 seconds.
+                       .connectTimeoutMillis(5000)
+                       // Disable certificate verification; never do this in production!
+                       .tlsNoVerify()
+                       .build();
+```
+
+## What are available parameters?
+
++-----------------------------------------+--------------------------------------------------------------------+
+|<div style="width:13rem">Parameters</div>| Description                                                        |
++=========================================+====================================================================+
+| `workerGroup`                           | Sets the worker <type://EventLoopGroup> which is responsible for   |
+|                                         | performing socket I/O and running `Client.execute`.                |
+|                                         | If not set, `CommonPools.workGroup` is used                        |
++-----------------------------------------+--------------------------------------------------------------------+
+| `eventLoopSchedulerFactory`             | Sets the factory that creates an <type://EventLoopScheduler> which |
+|                                         | is responsible for assigning an <type://EventLoop> to handle       |
+|                                         | a connection to the specified <type://Endpoint>.                   |
++-----------------------------------------+--------------------------------------------------------------------+
+| `maxNumEventLoopsPerHttp1Endpoint`      | Sets the maximum number of <type://EventLoop>s which will be used  |
+|                                         | to handle HTTP/1.1 connections                                     |
++-----------------------------------------+--------------------------------------------------------------------+
+| `maxNumEventLoopsPerEndpoint`           | Sets the maximum number of <type://EventLoop>s which will be used  |
+|                                         | to handle HTTP/2 connections                                       |
++-----------------------------------------+--------------------------------------------------------------------+
+| `maxNumEventLoopsFunction`              | the <type://ToIntFunction> which takes an <type://Endpoint>        |
+|                                         | and produces the maximum number of <type://EventLoop>s which will  |
+|                                         | used to handle connections to the specified <type://Endpoint>.     |
+|                                         |                                                                    |
+|                                         |                                                                    |
+|                                         |                                                                    |
++-----------------------------------------+--------------------------------------------------------------------+
+| `connectTimeout`                        | the timeout of a socket connection attempt.                        |
++-----------------------------------------+--------------------------------------------------------------------+
+| `connectTimeoutMillis`                  | the timeout of a socket connection attempt in milliseconds.        |
++-----------------------------------------+--------------------------------------------------------------------+
+| `channelOption`                         | the options of sockets created by the <type://ClientFactory>.      |
++-----------------------------------------+--------------------------------------------------------------------+
+| `tlsNoVerify`                           | disables the verification of server's TLS certificate chain.       |
+|                                         | If you want to disable verification for only specific hosts,       |
+|                                         | consider to use `tlsNoVerifyHosts`                                 |
++-----------------------------------------+--------------------------------------------------------------------+
+| `tlsNoVerifyHosts`                      | disables the verification of server's TLS certificate chain        |
+|                                         | for specific hosts. If you want to disable all verification,       |
+|                                         | `tlsNoVerify` will be a good option.                               |
++-----------------------------------------+--------------------------------------------------------------------+
+| `tlsCustomizer`                         | to arbitrarily configure SSL session, you can use this method with |
+|                                         | <type://Consumer> taking <type://SslContextBuilder>                |
++-----------------------------------------+--------------------------------------------------------------------+
+| `tlsAllowUnsafeCiphers`                 | allows the bad cipher suites listed in RFC7540 for TLS handshake   |
++-----------------------------------------+--------------------------------------------------------------------+
+| `addressResolverGroupFactory`           | sets the factory that creates a <type://AddressResolverGroup>      |
+|                                         | which resolves remote addresses into <type://InetSocketAddress>es  |
++-----------------------------------------+--------------------------------------------------------------------+
+| `domainNameResolverCustomizer`          | DNS resolver that customizes the behavior in terms of given        |
+|                                         | customizer.                                                        |
++-----------------------------------------+--------------------------------------------------------------------+
+| `http2InitialConnectionWindowSize`      | initial connection flow-control window size (Note that this        |
+|                                         | setting will affect the connection-level window size, not the      |
+|                                         | window size of streams)                                            |
++-----------------------------------------+--------------------------------------------------------------------+
+| `http2InitialStreamWindowSize`          | initial stream window size (Note that this                         |
+|                                         | setting will affect the streams window size, not the               |
+|                                         | window size of connection-level)                                   |
++-----------------------------------------+--------------------------------------------------------------------+
+| `http2MaxFrameSize`                     | the size of the largest frame payload that this client is willing  |
+|                                         | to receive                                                         |
++-----------------------------------------+--------------------------------------------------------------------+
+| `http2MaxHeaderListSize`                | the maximum size of header list that the client is prepared to     |
+|                                         | accept                                                             |
++-----------------------------------------+--------------------------------------------------------------------+
+| `http1MaxInitialLineLength`             | the maximum length of an HTTP/1 response initial line              |
++-----------------------------------------+--------------------------------------------------------------------+
+| `http1MaxHeaderSize`                    | the maximum length of all headers in an HTTP/1 response            |
++-----------------------------------------+--------------------------------------------------------------------+
+| `http1MaxChunkSize`                     | the maximum length of each chunk in an HTTP/1 response content     |
++-----------------------------------------+--------------------------------------------------------------------+
+| `http1HeaderNaming`                     | the http header naming which converts a lower-cased HTTP/2 header  |
+|                                         | name into another HTTP/1 header name                               |
++-----------------------------------------+--------------------------------------------------------------------+
+| `idleTimeout`                           | the idle timeout of a socket connection which means that if there  |
+|                                         | is no request in progress for this amount of time, the connection  |
+|                                         | will be closed                                                     |
++-----------------------------------------+--------------------------------------------------------------------+
+| `idleTimeoutMillis`                     | the idle timeout of a socket connection in milliseconds            |
++-----------------------------------------+--------------------------------------------------------------------+
+| `pingIntervalMillis`                    | the PING interval in milliseconds                                  |
++-----------------------------------------+--------------------------------------------------------------------+
+| `pingInterval`                          | the PING interval in <type://Duration>                             |
++-----------------------------------------+--------------------------------------------------------------------+
+| `useHttp2Preface`                       | whether to send an HTTP/2 preface string instead of an HTTP/1      |
+|                                         | upgrade request to negotiate the protocol version of a cleartext   |
+|                                         | HTTP connection                                                    |
++-----------------------------------------+--------------------------------------------------------------------+
+| `useHttp1Pipelining`                    | whether to use HTTP pipelining for HTTP/1 connections and disabled |
+|                                         | by default                                                         |
++-----------------------------------------+--------------------------------------------------------------------+
+| `connectionPoolListener`                | the listener which is notified on a connection pool event          |
++-----------------------------------------+--------------------------------------------------------------------+
+| `meterRegistry`                         | the <type://MeterRegistry> which collects various stats            |
++-----------------------------------------+--------------------------------------------------------------------+
+| `proxyConfig`                           | the <type://ProxyConfig> which contains proxy related configuration|
+|                                         | or <type://ProxySelector> that determines the <type://ProxyConfig> |
+|                                         | to be used                                                         |
++-----------------------------------------+--------------------------------------------------------------------+
+
+## Netty specific Channel Options
+
+You can also edit Netty <type://ChannelOption> using `ClientFactoryBuilder.channelOption` method. For example,
+if you want to change the size of send socket buffer, you can edit the value as following:
+
+```java
+final ClientFactory factory =
+            ClientFactory.builder()
+                         // Set the size of send socket buffer as 4096 bytes
+                         .channelOption(ChannelOption.SO_SNDBUF, 4096)
+                         .build();
+```
+
