@@ -39,8 +39,10 @@ final class ArmeriaEndPoint implements EndPoint {
             AtomicReferenceFieldUpdater.newUpdater(ArmeriaEndPoint.class, State.class, "state");
 
     private final ServiceRequestContext ctx;
-    private final InetSocketAddress localAddress;
-
+    @Nullable
+    private final String hostname;
+    @Nullable
+    private volatile InetSocketAddress localAddress;
     @Nullable
     private volatile Connection connection;
     private volatile State state = State.OPEN;
@@ -50,7 +52,6 @@ final class ArmeriaEndPoint implements EndPoint {
         @Override
         protected void needsFillInterest() {}
     };
-
     private final WriteFlusher writeFlusher = new WriteFlusher(this) {
         @Override
         protected void onIncompleteFlush() {}
@@ -58,22 +59,8 @@ final class ArmeriaEndPoint implements EndPoint {
 
     ArmeriaEndPoint(ServiceRequestContext ctx, @Nullable String hostname) {
         this.ctx = ctx;
-        localAddress = addHostname(ctx.localAddress(), hostname);
-
+        this.hostname = hostname;
         setIdleTimeout(getIdleTimeout());
-    }
-
-    /**
-     * Adds the hostname string to the specified {@link InetSocketAddress} so that
-     * Jetty's {@code ServletRequest.getLocalName()} implementation returns the configured hostname.
-     */
-    private static InetSocketAddress addHostname(InetSocketAddress address, @Nullable String hostname) {
-        try {
-            return new InetSocketAddress(InetAddress.getByAddress(
-                    hostname, address.getAddress().getAddress()), address.getPort());
-        } catch (UnknownHostException e) {
-            throw new Error(e); // Should never happen
-        }
     }
 
     @Override
@@ -83,7 +70,22 @@ final class ArmeriaEndPoint implements EndPoint {
 
     @Override
     public InetSocketAddress getLocalAddress() {
-        return localAddress;
+        final InetSocketAddress localAddress = this.localAddress;
+        if (localAddress != null) {
+            return localAddress;
+        }
+
+        // Add the hostname string given by Jetty to the local address so that
+        // Jetty's ServletRequest.getLocalName() implementation returns the configured hostname.
+        try {
+            final InetSocketAddress armeriaLocalAddr  = ctx.localAddress();
+            final InetSocketAddress jettyLocalAddr = new InetSocketAddress(InetAddress.getByAddress(
+                    hostname, armeriaLocalAddr.getAddress().getAddress()), armeriaLocalAddr.getPort());
+            this.localAddress = jettyLocalAddr;
+            return jettyLocalAddr;
+        } catch (UnknownHostException e) {
+            throw new Error(e); // Should never happen
+        }
     }
 
     @Override
