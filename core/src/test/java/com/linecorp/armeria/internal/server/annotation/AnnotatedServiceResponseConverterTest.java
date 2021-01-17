@@ -71,6 +71,7 @@ import com.linecorp.armeria.server.annotation.ProducesOctetStream;
 import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.StatusCode;
+import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import reactor.core.publisher.Flux;
@@ -84,6 +85,7 @@ public class AnnotatedServiceResponseConverterTest {
     private static final byte[] BYTEARRAY = STRING.getBytes(StandardCharsets.UTF_8);
     private static final HttpData HTTPDATA = HttpData.wrap(BYTEARRAY);
     private static final JsonNode JSONNODE;
+    private static final HttpFile HTTPFILE = HttpFile.of(HTTPDATA);
 
     static {
         try {
@@ -117,6 +119,11 @@ public class AnnotatedServiceResponseConverterTest {
                 public JsonNode jsonNode() throws IOException {
                     return JSONNODE;
                 }
+
+                @Get("/httpFile")
+                public HttpFile httpFile() {
+                    return HTTPFILE;
+                }
             });
 
             sb.annotatedService("/publish/single", new Object() {
@@ -142,6 +149,11 @@ public class AnnotatedServiceResponseConverterTest {
                 @ProducesJson   // Can omit this annotation, but it's not recommended.
                 public Publisher<JsonNode> jsonNode() throws IOException {
                     return Mono.just(JSONNODE);
+                }
+
+                @Get("/httpFile")
+                public Publisher<HttpFile> httpFile() {
+                    return Mono.just(HTTPFILE);
                 }
             });
 
@@ -557,6 +569,10 @@ public class AnnotatedServiceResponseConverterTest {
         res = aggregated(client.get("/jsonNode"));
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(JSONNODE));
+
+        res = aggregated(client.get("/httpFile"));
+        assertThat(res.contentType()).isNull();
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
     }
 
     @Test

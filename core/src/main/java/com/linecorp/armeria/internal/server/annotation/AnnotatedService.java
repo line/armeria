@@ -67,6 +67,7 @@ import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.FallthroughException;
+import com.linecorp.armeria.server.annotation.HttpFileResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Path;
@@ -94,7 +95,8 @@ public final class AnnotatedService implements HttpService {
     private static final List<ResponseConverterFunction> defaultResponseConverters =
             ImmutableList.of(new JacksonResponseConverterFunction(),
                              new StringResponseConverterFunction(),
-                             new ByteArrayResponseConverterFunction());
+                             new ByteArrayResponseConverterFunction(),
+                             new HttpFileResponseConverterFunction());
 
     static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
