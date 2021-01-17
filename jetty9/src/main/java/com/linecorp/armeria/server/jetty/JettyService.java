@@ -18,10 +18,8 @@ package com.linecorp.armeria.server.jetty;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.net.UnknownHostException;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -37,14 +35,12 @@ import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpURI;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.http.MetaData;
-import org.eclipse.jetty.io.AbstractEndPoint;
 import org.eclipse.jetty.server.HttpChannel;
 import org.eclipse.jetty.server.HttpInput.Content;
 import org.eclipse.jetty.server.HttpTransport;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.Callback;
-import org.eclipse.jetty.util.thread.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,6 +57,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -78,6 +75,34 @@ import io.netty.util.AsciiString;
 public final class JettyService implements HttpService {
 
     static final Logger logger = LoggerFactory.getLogger(JettyService.class);
+
+    /**
+     * Dynamically resolve {@link Request#setAsyncSupported(boolean, Object)} because its signature
+     * has been changed since 9.4.
+     */
+    private static final MethodHandle jReqSetAsyncSupported;
+
+    static {
+        MethodHandle setAsyncSupported = null;
+        try {
+            // Jetty 9.4+
+            setAsyncSupported = MethodHandles.lookup().unreflect(
+                    Request.class.getMethod("setAsyncSupported", boolean.class, Object.class));
+        } catch (Throwable t) {
+            try {
+                // Jetty 9.3 or below
+                //noinspection JavaReflectionMemberAccess
+                setAsyncSupported = MethodHandles.lookup().unreflect(
+                        Request.class.getMethod("setAsyncSupported", boolean.class, String.class));
+            } catch (Throwable t2) {
+                t2.addSuppressed(t);
+                Exceptions.throwUnsafely(t2);
+            }
+        }
+
+        assert setAsyncSupported != null;
+        jReqSetAsyncSupported = setAsyncSupported;
+    }
 
     /**
      * Creates a new {@link JettyService} from an existing Jetty {@link Server}.
@@ -218,8 +243,7 @@ public final class JettyService implements HttpService {
                 final HttpChannel httpChannel = new HttpChannel(
                         connector,
                         connector.getHttpConfiguration(),
-                        new ArmeriaEndPoint(hostname, connector.getScheduler(),
-                                            ctx.localAddress(), ctx.remoteAddress()),
+                        new ArmeriaEndPoint(ctx, hostname),
                         transport);
 
                 fillRequest(ctx, aReq, httpChannel.getRequest());
@@ -270,7 +294,12 @@ public final class JettyService implements HttpService {
             ServiceRequestContext ctx, AggregatedHttpRequest aReq, Request jReq) {
 
         jReq.setDispatcherType(DispatcherType.REQUEST);
-        jReq.setAsyncSupported(false, "armeria");
+        try {
+            jReqSetAsyncSupported.invoke(jReq, false, "armeria");
+        } catch (Throwable t) {
+            // Should never reach here.
+            Exceptions.throwUnsafely(t);
+        }
         jReq.setSecure(ctx.sessionProtocol().isTls());
         jReq.setMetaData(toRequestMetadata(ctx, aReq));
 
@@ -395,76 +424,6 @@ public final class JettyService implements HttpService {
         public boolean isOptimizedForDirectBuffers() {
             return false;
         }
-    }
-
-    private static final class ArmeriaEndPoint extends AbstractEndPoint {
-
-        private final InetSocketAddress localAddress;
-        private final InetSocketAddress remoteAddress;
-
-        ArmeriaEndPoint(@Nullable String hostname, Scheduler scheduler,
-                        SocketAddress local, SocketAddress remote) {
-            super(scheduler);
-
-            localAddress = addHostname((InetSocketAddress) local, hostname);
-            remoteAddress = (InetSocketAddress) remote;
-
-            setIdleTimeout(getIdleTimeout());
-        }
-
-        @Override
-        public InetSocketAddress getLocalAddress() {
-            return localAddress;
-        }
-
-        @Override
-        public InetSocketAddress getRemoteAddress() {
-            return remoteAddress;
-        }
-
-        /**
-         * Adds the hostname string to the specified {@link InetSocketAddress} so that
-         * Jetty's {@code ServletRequest.getLocalName()} implementation returns the configured hostname.
-         */
-        private static InetSocketAddress addHostname(InetSocketAddress address, @Nullable String hostname) {
-            try {
-                return new InetSocketAddress(InetAddress.getByAddress(
-                        hostname, address.getAddress().getAddress()), address.getPort());
-            } catch (UnknownHostException e) {
-                throw new Error(e); // Should never happen
-            }
-        }
-
-        @Override
-        protected void onIncompleteFlush() {}
-
-        @Override
-        protected void needsFillInterest() {}
-
-        @Override
-        public int fill(ByteBuffer buffer) {
-            return 0;
-        }
-
-        @Override
-        public boolean flush(ByteBuffer... buffer) {
-            return true;
-        }
-
-        @Nullable
-        @Override
-        public Object getTransport() {
-            return null;
-        }
-
-        @Override
-        protected void doShutdownInput() {}
-
-        @Override
-        protected void doShutdownOutput() {}
-
-        @Override
-        protected void doClose() {}
     }
 
     private final class Configurator extends ServerListenerAdapter {
