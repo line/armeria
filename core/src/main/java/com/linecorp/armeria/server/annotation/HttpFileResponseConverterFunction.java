@@ -24,7 +24,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.file.HttpFile;
 
 /**
- * A response converter implementation which creates {@link HttpResponse} from {@link HttpFile}.
+ * A response converter implementation which creates an {@link HttpResponse} when the {@code result} is
+ * an instance of {@link HttpFile}.
  */
 public final class HttpFileResponseConverterFunction implements ResponseConverterFunction {
 
