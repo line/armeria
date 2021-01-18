@@ -7,14 +7,23 @@ If so, the builder provides connectTimeoutMillis to change from the default valu
 You can simply create <type://ClientFactoryBuilder> as following example:
 
 ```java
-final ClientFactory factory =
+try (ClientFactory factory =
           ClientFactory.builder()
                        // Set the connection timeout to 5 seconds.
                        .connectTimeoutMillis(5000)
                        // Disable certificate verification; never do this in production!
                        .tlsNoVerify()
-                       .build();
+                       .build()) {
+   final WebClient client = WebClient.builder()
+                                     .factory(factory)
+                                     .build();
+   // do something with web client
+  }
 ```
+
+As above example, <type://WebClientBuilder> or <type://ClientBuilder> are able to use <type://ClientFactory>
+which is created from <type://ClientFactoryBuilder> using method `factory`. The <type://ClientBuilder> instance
+will use all parameters from the instance <type://ClientFactoryBuilder> that you defined.
 
 ## What are available parameters?
 
@@ -122,10 +131,34 @@ You can also edit Netty <type://ChannelOption> using `ClientFactoryBuilder.chann
 if you want to change the size of send socket buffer, you can edit the value as following:
 
 ```java
-final ClientFactory factory =
-            ClientFactory.builder()
-                         // Set the size of send socket buffer as 4096 bytes
-                         .channelOption(ChannelOption.SO_SNDBUF, 4096)
-                         .build();
+try (ClientFactory factory =
+             ClientFactory.builder()
+                          // Set the size of send socket buffer as 4096 bytes
+                          .channelOption(ChannelOption.SO_SNDBUF, 4096)
+                          .build()) {
+    // do something with factory
+}
 ```
 
+## Set parameters using Client Options
+
+The <type://ClientFactoryBuilder> class provides a manner to define parameters using <type://ClientOption>.
+The <type://ClientOptions> class already has above parameters with proper types. Using <type://ClientOption>,
+you can define your own properties either.
+
+```java
+final EventLoopGroup customExcutorGroup = EventLoopGroups.newEventLoopGroup(2);
+// define custom ClientFactoryOption
+final ClientFactoryOption<Boolean> fooOption = ClientFactoryOption.define("FOO", true);
+try (ClientFactory factory =
+             ClientFactory.builder()
+                          // define a new event loop worker group to execute logic from the builder
+                          .option(ClientFactoryOptions.WORKER_GROUP, customExcutorGroup)
+                          // set the custom factory option in builder
+                          .option(fooOption, false)
+                          .build()) {
+    // options method will return options including fooOption
+    factory.options();
+    // do something with factory
+}
+```
