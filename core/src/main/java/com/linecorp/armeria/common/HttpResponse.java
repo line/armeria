@@ -393,13 +393,13 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified headers whose content is produced from an existing
+     * Creates a new HTTP response with the specified headers whose stream is produced from an existing
      * {@link Publisher}.
      */
-    static HttpResponse of(ResponseHeaders headers, Publisher<? extends HttpData> contentPublisher) {
+    static HttpResponse of(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
         requireNonNull(headers, "headers");
-        requireNonNull(contentPublisher, "contentPublisher");
-        return PublisherBasedHttpResponse.from(headers, contentPublisher);
+        requireNonNull(publisher, "publisher");
+        return PublisherBasedHttpResponse.from(headers, publisher);
     }
 
     /**

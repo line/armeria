@@ -27,8 +27,7 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
         super(publisher);
     }
 
-    static PublisherBasedHttpResponse from(ResponseHeaders headers,
-                                           Publisher<? extends HttpData> contentPublisher) {
-        return new PublisherBasedHttpResponse(new PrependingPublisher<>(headers, contentPublisher));
+    static PublisherBasedHttpResponse from(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
+        return new PublisherBasedHttpResponse(new PrependingPublisher<>(headers, publisher));
     }
 }

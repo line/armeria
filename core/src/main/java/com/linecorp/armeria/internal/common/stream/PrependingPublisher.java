@@ -47,14 +47,12 @@ public final class PrependingPublisher<T> implements Publisher<T> {
 
     static final class RestSubscriber<T> implements Subscriber<T>, Subscription {
 
-        private final T first;
-        private volatile boolean firstSent;
-
-        private Subscriber<? super T> downstream;
-        private volatile long demand;
         private static final AtomicLongFieldUpdater<RestSubscriber> demandUpdater =
                 AtomicLongFieldUpdater.newUpdater(RestSubscriber.class, "demand");
-
+        private final T first;
+        private volatile boolean firstSent;
+        private Subscriber<? super T> downstream;
+        private volatile long demand;
         @Nullable
         private volatile Subscription upstream;
         @Nullable
