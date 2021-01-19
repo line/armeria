@@ -51,7 +51,6 @@ class ConcatStreamTest {
         StepVerifier.create(fromList).expectNext(1, 2, 3, 4).verifyComplete();
     }
 
-
     @Test
     void arrayPublisher() {
         final Publisher<Integer> source1 = Flux.just(1, 2);
