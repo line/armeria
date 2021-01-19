@@ -17,7 +17,11 @@ package com.linecorp.armeria.server.annotation;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Subscriber;
+
+import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -35,7 +39,31 @@ public final class HttpFileResponseConverterFunction implements ResponseConverte
                                         @Nullable Object result,
                                         HttpHeaders trailers) throws Exception {
         if (result instanceof HttpFile) {
-            return ((HttpFile) result).asService().serve(ctx, ctx.request());
+            final HttpResponse delegate = ((HttpFile) result).asService().serve(ctx, ctx.request());
+            return new FilteredHttpResponse(delegate) {
+                private boolean trailerSent;
+
+                @Override
+                protected HttpObject filter(HttpObject obj) {
+                    if (obj instanceof ResponseHeaders) {
+                        return ((ResponseHeaders) obj).toBuilder().set(headers).build();
+                    }
+                    if (obj instanceof HttpHeaders) {
+                        trailerSent = true;
+                        return !trailers.isEmpty() ? ((HttpHeaders) obj).toBuilder().set(trailers).build()
+                                                   : obj;
+                    }
+
+                    return obj;
+                }
+
+                @Override
+                protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+                    if (!trailers.isEmpty() && !trailerSent) {
+                        subscriber.onNext(trailers);
+                    }
+                }
+            };
         }
 
         return ResponseConverterFunction.fallthrough();

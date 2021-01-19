@@ -344,6 +344,21 @@ public class AnnotatedServiceResponseConverterTest {
                                                  .of(HttpHeaderNames.of("x-custom-trailers"), "value"));
                 }
 
+                @Get("/http-file/expect-custom-header")
+                @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
+                public HttpResult<HttpFile> httpFileExpectCustomHeader() {
+                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
+                                         HTTPFILE);
+                }
+
+                @Get("/http-file/expect-custom-trailers")
+                @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
+                public HttpResult<HttpFile> httpFileExpectCustomTrailers() {
+                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
+                                         HTTPFILE,
+                                         HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
+                }
+
                 @Get("/async/expect-bad-request")
                 public HttpResult<CompletionStage<Object>> asyncExpectBadRequest() {
                     final CompletableFuture<Object> future = new CompletableFuture<>();
@@ -693,6 +708,21 @@ public class AnnotatedServiceResponseConverterTest {
             assertThat(response.trailers().get(HttpHeaderNames.of("x-custom-annotated-trailers")))
                     .isEqualTo("annotated-value");
         });
+
+        res = aggregated(client.get("/http-file/expect-custom-header"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
+                "annotated-value");
+
+        res = aggregated(client.get("/http-file/expect-custom-trailers"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-trailers"))).isEqualTo("value");
+        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-annotated-trailers"))).isEqualTo(
+                "annotated-value");
 
         res = aggregated(client.get("/async/expect-bad-request"));
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
