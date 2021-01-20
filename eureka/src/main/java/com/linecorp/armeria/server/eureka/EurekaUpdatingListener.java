@@ -133,7 +133,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     }
 
     private final EurekaWebClient client;
-    private final InstanceInfo instanceInfo;
+    private InstanceInfo instanceInfo;
     @Nullable
     private volatile ScheduledFuture<?> heartBeatFuture;
 
@@ -151,28 +151,29 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
 
     @Override
     public void serverStarted(Server server) throws Exception {
-        final InstanceInfo newInfo = fillAndCreateNewInfo(instanceInfo, server);
+        this.instanceInfo = fillAndCreateNewInfo(instanceInfo, server);
 
         try (ClientRequestContextCaptor contextCaptor = Clients.newContextCaptor()) {
-            final HttpResponse response = client.register(newInfo);
-            final ClientRequestContext ctx = contextCaptor.get();
+            final HttpResponse response = client.register(instanceInfo);
+            final ClientRequestContext ctx = contextCaptor.getOrNull();
             response.aggregate().handle((res, cause) -> {
                 if (closed) {
                     return null;
                 }
                 if (cause != null) {
                     logger.warn("Failed to register {} to Eureka: {}",
-                                newInfo.getHostName(), client.uri(), cause);
+                                instanceInfo.getHostName(), client.uri(), cause);
                     return null;
                 }
 
                 final ResponseHeaders headers = res.headers();
                 if (headers.status() != HttpStatus.NO_CONTENT) {
                     logger.warn("Failed to register {} to Eureka: {}. (status: {}, content: {})",
-                                newInfo.getHostName(), client.uri(), headers.status(), res.contentUtf8());
+                                instanceInfo.getHostName(), client.uri(), headers.status(), res.contentUtf8());
                 } else {
-                    logger.info("Registered {} to Eureka: {}", newInfo.getHostName(), client.uri());
-                    scheduleHeartBeat(ctx.eventLoop().withoutContext(), newInfo);
+                    logger.info("Registered {} to Eureka: {}", instanceInfo.getHostName(), client.uri());
+                    assert ctx != null;
+                    scheduleHeartBeat(ctx.eventLoop().withoutContext(), instanceInfo);
                 }
                 return null;
             });
