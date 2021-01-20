@@ -72,7 +72,7 @@ class SslContextUtilTest {
                                  .build();
             factory.closeAsync();
         }).isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("Attempting to configure a server or HTTP/2 client without");
+          .hasMessageContaining("TLS without the TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 cipher suite");
 
         final ClientFactory factory =
                 ClientFactory.builder()
