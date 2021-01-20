@@ -61,7 +61,7 @@ public final class HttpFileResponseConverterFunction implements ResponseConverte
                     } else if (obj instanceof HttpHeaders) {
                         trailerSent = true;
                         if (!trailers.isEmpty()) {
-                            return ((HttpHeaders) obj).toBuilder().set(trailers).build();
+                            return trailers.toBuilder().set((HttpHeaders) obj).build();
                         }
                     }
                     return obj;
