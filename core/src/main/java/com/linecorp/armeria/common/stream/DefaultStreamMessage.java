@@ -137,8 +137,11 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
         try {
-            invokedOnSubscribe = true;
             subscribe0(subscription.executor(), subscription.options());
+            // 'invokedOnSubscribe' should be set after 'subscribe0()' is completed.
+            // 'onComplete()' could be invoked by a subclass which overrides 'subscribe0()' to subscribe
+            // to other Publishers.
+            invokedOnSubscribe = true;
             subscriber.onSubscribe(subscription);
         } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {

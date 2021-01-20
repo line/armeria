@@ -74,10 +74,10 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     private Subscription upstreamSubscription;
 
     @Nullable
-    @SuppressWarnings("unused") // Updated only via subscriptionUpdater
+    @SuppressWarnings("unused") // Updated only via downstreamSubscriptionUpdater
     private volatile SubscriptionImpl downstreamSubscription;
 
-    @SuppressWarnings("unused") // Updated only via subscribedToDelegateUpdater
+    @SuppressWarnings("unused") // Updated only via subscribedToUpstreamUpdater
     private volatile int subscribedToUpstream;
 
     // Only accessed from subscription's executor.

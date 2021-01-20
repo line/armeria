@@ -16,13 +16,18 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
@@ -121,6 +126,48 @@ public interface StreamMessage<T> extends Publisher<T> {
                 }
                 return new RegularFixedStreamMessage<>(objs);
         }
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} from the specified {@link Publisher}.
+     */
+    static <T> StreamMessage<T> of(Publisher<? extends T> publisher) {
+        requireNonNull(publisher, "publisher");
+
+        if (publisher instanceof StreamMessage) {
+            @SuppressWarnings("unchecked")
+            final StreamMessage<T> cast = (StreamMessage<T>) publisher;
+            return cast;
+        } else {
+            return new PublisherBasedStreamMessage<>(publisher);
+        }
+    }
+
+    /**
+     * Returns a concatenated {@link StreamMessage} which relays items of the specified array of
+     * {@link Publisher}s in order, non-overlappingly, one after the other finishes.
+     */
+    @SafeVarargs
+    static <T> StreamMessage<T> concat(Publisher<? extends T>... publishers) {
+        requireNonNull(publishers, "publishers");
+        return concat(ImmutableList.copyOf(publishers));
+    }
+
+    /**
+     * Returns a concatenated {@link StreamMessage} which relays items of the specified {@link Publisher}s
+     * in order, non-overlappingly, one after the other finishes.
+     */
+    static <T> StreamMessage<T> concat(Iterable<? extends Publisher<? extends T>> publishers) {
+        requireNonNull(publishers, "publishers");
+
+        if (Iterables.isEmpty(publishers)) {
+            return of();
+        }
+        final List<StreamMessage<? extends T>> streamMessages = ImmutableList.copyOf(publishers)
+                                                                             .stream()
+                                                                             .map(StreamMessage::of)
+                                                                             .collect(toImmutableList());
+        return new ConcatArrayStreamMessage<>(streamMessages);
     }
 
     /**

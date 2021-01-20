@@ -208,7 +208,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         final HttpRequestSubscriber reqSubscriber =
                 new HttpRequestSubscriber(channel, requestEncoder, responseDecoder,
                                           req, res, ctx, writeTimeoutMillis);
-        req.subscribe(reqSubscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+        // StreamMessage of an request body uses RequestContext to get the default SubscriberExecutor.
+        try (SafeCloseable ignored = ctx.push()) {
+            req.subscribe(reqSubscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+        }
     }
 
     @Override

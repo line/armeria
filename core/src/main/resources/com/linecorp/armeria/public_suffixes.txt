@@ -434,7 +434,6 @@ app.render.com
 appchizi.com
 appengine.flow.ch
 apple
-applicationcloud.io
 applinzi.com
 apps.fbsbx.com
 apps.lair.io
@@ -2518,6 +2517,7 @@ freeddns.org
 freeddns.us
 freedesktop.org
 freemasonry.museum
+freemyip.com
 freesite.host
 freetls.fastly.net
 frei.no
@@ -6958,7 +6958,6 @@ sc.tz
 sc.ug
 sc.us
 sca
-scapp.io
 scb
 sch.ae
 sch.id

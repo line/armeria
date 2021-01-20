@@ -18,19 +18,9 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import org.reactivestreams.Subscriber;
-
 final class StreamMessageUtil {
 
-    static final SubscriptionOption[] EMPTY_OPTIONS = {};
-
-    static Throwable abortedOrLate(Subscriber<?> oldSubscriber) {
-        if (oldSubscriber instanceof AbortingSubscriber) {
-            return ((AbortingSubscriber<?>) oldSubscriber).cause();
-        }
-
-        return new IllegalStateException("subscribed by other subscriber already");
-    }
+    public static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
     static boolean containsWithPooledObjects(SubscriptionOption... options) {
         requireNonNull(options, "options");
