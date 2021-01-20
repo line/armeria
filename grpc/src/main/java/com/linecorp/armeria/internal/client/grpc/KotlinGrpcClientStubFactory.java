@@ -30,7 +30,6 @@ import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
 import io.grpc.Channel;
 import io.grpc.ServiceDescriptor;
 
-
 /**
  * A gRPC client stub factory for <a href="https://github.com/grpc/grpc-kotlin">gRPC-Kotlin</a>.
  */

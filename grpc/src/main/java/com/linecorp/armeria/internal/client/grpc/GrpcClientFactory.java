@@ -177,7 +177,6 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 params.clientType(), optionsBuilder.build());
     }
 
-
     private static IllegalArgumentException newUnknownClientTypeException(Class<?> clientType) {
         return new IllegalArgumentException(
                 "Unknown client type: " + clientType.getName() +
