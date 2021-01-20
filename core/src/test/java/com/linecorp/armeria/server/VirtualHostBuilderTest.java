@@ -22,15 +22,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
+
+import io.netty.handler.ssl.SslContextBuilder;
 
 class VirtualHostBuilderTest {
 
@@ -186,6 +191,75 @@ class VirtualHostBuilderTest {
                 .accessLogger(LoggerFactory.getLogger("com.foo.test"))
                 .build(template);
         assertThat(h2.accessLogger().getName()).isEqualTo("com.foo.test");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "unspecified, unspecified, failure",
+            "unspecified, disabled,    failure",
+            "unspecified, enabled,     success",
+            "disabled,    unspecified, failure",
+            "disabled,    disabled,    failure",
+            "disabled,    enabled,     success",
+            "enabled,     unspecified, success",
+            "enabled,     disabled,    failure",
+            "enabled,     enabled,     success"
+    })
+    void tlsAllowUnsafeCiphersCustomization(String templateTlsAllowUnsafeCiphers,
+                                            String specifiedTlsAllowUnsafeCiphers,
+                                            String expectedOutcome) {
+
+        final Consumer<SslContextBuilder> tlsCustomizer = sslCtxBuilder -> {
+            // Try to use one of the bad ciphers.
+            sslCtxBuilder.ciphers(ImmutableSet.of(
+                    "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256", // Good cipher suite
+                    "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"     // Bad cipher suite
+            ));
+        };
+
+        final ServerBuilder serverBuilder = Server.builder();
+        switch (templateTlsAllowUnsafeCiphers) {
+            case "enabled":
+                serverBuilder.tlsAllowUnsafeCiphers();
+                break;
+            case "disabled":
+                serverBuilder.tlsAllowUnsafeCiphers(false);
+                break;
+            case "unspecified":
+                break;
+            default:
+                throw new Error(templateTlsAllowUnsafeCiphers);
+        }
+
+        final VirtualHostBuilder virtualHostBuilder =
+                serverBuilder.virtualHost("foo.com")
+                             .tlsSelfSigned()
+                             .tlsCustomizer(tlsCustomizer);
+        switch (specifiedTlsAllowUnsafeCiphers) {
+            case "enabled":
+                virtualHostBuilder.tlsAllowUnsafeCiphers();
+                break;
+            case "disabled":
+                virtualHostBuilder.tlsAllowUnsafeCiphers(false);
+                break;
+            case "unspecified":
+                break;
+            default:
+                throw new Error(specifiedTlsAllowUnsafeCiphers);
+        }
+
+        switch (expectedOutcome) {
+            case "success":
+                virtualHostBuilder.build(serverBuilder.virtualHostTemplate);
+                break;
+            case "failure":
+                assertThatThrownBy(() -> virtualHostBuilder.build(serverBuilder.virtualHostTemplate))
+                        .isInstanceOf(IllegalStateException.class)
+                        .hasMessageContaining("TLS cipher that is not allowed");
+                break;
+            default:
+                throw new Error(expectedOutcome);
+        }
     }
 
     @Test

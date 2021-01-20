@@ -76,7 +76,7 @@ class SslContextUtilTest {
 
         final ClientFactory factory =
                 ClientFactory.builder()
-                             .tlsAllowUnsafeCiphers(true)
+                             .tlsAllowUnsafeCiphers()
                              .tlsCustomizer(builder -> builder.ciphers(ImmutableList.of(cipher)))
                              .build();
         factory.closeAsync();
