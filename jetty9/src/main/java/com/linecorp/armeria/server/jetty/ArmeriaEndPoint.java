@@ -62,7 +62,6 @@ final class ArmeriaEndPoint implements EndPoint {
     ArmeriaEndPoint(ServiceRequestContext ctx, @Nullable String hostname) {
         this.ctx = ctx;
         this.hostname = firstNonNull(hostname, ctx.config().virtualHost().defaultHostname());
-        setIdleTimeout(getIdleTimeout());
     }
 
     @Override
@@ -132,7 +131,7 @@ final class ArmeriaEndPoint implements EndPoint {
 
     @Override
     public boolean isInputShutdown() {
-        return state != State.CLOSED;
+        return state == State.CLOSED;
     }
 
     @Override
