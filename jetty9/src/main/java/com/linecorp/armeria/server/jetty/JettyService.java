@@ -173,9 +173,6 @@ public final class JettyService implements HttpService {
 
         armeriaServer = cfg.server();
         armeriaServer.addListener(configurator);
-        if (hostname == null) {
-            hostname = armeriaServer.defaultHostname();
-        }
     }
 
     void start() throws Exception {
