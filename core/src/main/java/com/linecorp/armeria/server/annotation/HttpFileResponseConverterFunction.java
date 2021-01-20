@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
@@ -39,22 +40,30 @@ public final class HttpFileResponseConverterFunction implements ResponseConverte
                                         @Nullable Object result,
                                         HttpHeaders trailers) throws Exception {
         if (result instanceof HttpFile) {
-            final HttpResponse delegate = ((HttpFile) result).asService().serve(ctx, ctx.request());
-            return new FilteredHttpResponse(delegate) {
+            final HttpResponse originalRes = ((HttpFile) result).asService().serve(ctx, ctx.request());
+
+            if (!shouldOverride(headers, trailers)) {
+                return originalRes;
+            }
+
+            return new FilteredHttpResponse(originalRes) {
                 private boolean trailerSent;
 
                 @Override
                 protected HttpObject filter(HttpObject obj) {
                     if (obj instanceof ResponseHeaders) {
-                        return !headers.isEmpty() ? ((ResponseHeaders) obj).toBuilder().set(headers).build()
-                                                  : obj;
-                    }
-                    if (obj instanceof HttpHeaders) {
-                        trailerSent = true;
-                        return !trailers.isEmpty() ? ((HttpHeaders) obj).toBuilder().set(trailers).build()
-                                                   : obj;
-                    }
+                        final ResponseHeaders originalHeaders = (ResponseHeaders) obj;
 
+                        if (!originalHeaders.status().isInformational()) {
+                            // Do not overwrite the headers set by HttpFile service.
+                            return headers.toBuilder().set(originalHeaders).build();
+                        }
+                    } else if (obj instanceof HttpHeaders) {
+                        trailerSent = true;
+                        if (!trailers.isEmpty()) {
+                            return ((HttpHeaders) obj).toBuilder().set(trailers).build();
+                        }
+                    }
                     return obj;
                 }
 
@@ -68,5 +77,18 @@ public final class HttpFileResponseConverterFunction implements ResponseConverte
         }
 
         return ResponseConverterFunction.fallthrough();
+    }
+
+    private static boolean shouldOverride(ResponseHeaders headers, HttpHeaders trailers) {
+        if (!trailers.isEmpty()) {
+            return true;
+        }
+        if (headers.isEmpty()) {
+            return false;
+        }
+        if (headers.size() == 1 && headers.contains(HttpHeaderNames.STATUS)) {
+            return false;
+        }
+        return true;
     }
 }

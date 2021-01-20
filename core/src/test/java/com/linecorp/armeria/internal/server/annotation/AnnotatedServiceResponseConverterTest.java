@@ -120,7 +120,7 @@ public class AnnotatedServiceResponseConverterTest {
                     return JSONNODE;
                 }
 
-                @Get("/httpFile")
+                @Get("/http-file")
                 public HttpFile httpFile() {
                     return HTTPFILE;
                 }
@@ -151,7 +151,7 @@ public class AnnotatedServiceResponseConverterTest {
                     return Mono.just(JSONNODE);
                 }
 
-                @Get("/httpFile")
+                @Get("/http-file")
                 public Publisher<HttpFile> httpFile() {
                     return Mono.just(HTTPFILE);
                 }
@@ -355,6 +355,16 @@ public class AnnotatedServiceResponseConverterTest {
                 @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
                 public HttpResult<HttpFile> httpFileExpectCustomTrailers() {
                     return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
+                                         HTTPFILE,
+                                         HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
+                }
+
+                @Get("/http-file/expect-headers-not-overwritten")
+                @StatusCode(400)
+                @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
+                public HttpResult<HttpFile> httpFileExpectHeadersNotOverwritten() {
+                    return HttpResult.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED,
+                                                            HttpHeaderNames.of("x-custom-header"), "value"),
                                          HTTPFILE,
                                          HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
                 }
@@ -585,7 +595,7 @@ public class AnnotatedServiceResponseConverterTest {
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(JSONNODE));
 
-        res = aggregated(client.get("/httpFile"));
+        res = aggregated(client.get("/http-file"));
         assertThat(res.contentType()).isNull();
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
     }
@@ -722,6 +732,14 @@ public class AnnotatedServiceResponseConverterTest {
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
         assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-trailers"))).isEqualTo("value");
         assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-annotated-trailers"))).isEqualTo(
+                "annotated-value");
+
+        res = aggregated(client.get("/http-file/expect-headers-not-overwritten"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-trailers"))).isEqualTo("value");
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
                 "annotated-value");
 
         res = aggregated(client.get("/async/expect-bad-request"));
