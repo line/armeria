@@ -853,7 +853,11 @@ public final class ServerBuilder {
      * secure cipher suites.
      * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
      */
+    @Deprecated
     public ServerBuilder tlsAllowUnsafeCiphers() {
         virtualHostTemplate.tlsAllowUnsafeCiphers();
         return this;
@@ -870,7 +874,11 @@ public final class ServerBuilder {
      * more information. This option is disabled by default.
      *
      * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
      */
+    @Deprecated
     public ServerBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         virtualHostTemplate.tlsAllowUnsafeCiphers(tlsAllowUnsafeCiphers);
         return this;

@@ -255,7 +255,7 @@ class VirtualHostBuilderTest {
             case "failure":
                 assertThatThrownBy(() -> virtualHostBuilder.build(serverBuilder.virtualHostTemplate))
                         .isInstanceOf(IllegalStateException.class)
-                        .hasMessageContaining("TLS cipher that is not allowed");
+                        .hasMessageContaining("TLS with a bad cipher suite");
                 break;
             default:
                 throw new Error(expectedOutcome);
