@@ -41,7 +41,6 @@ final class ArmeriaEndPoint implements EndPoint {
             AtomicReferenceFieldUpdater.newUpdater(ArmeriaEndPoint.class, State.class, "state");
 
     private final ServiceRequestContext ctx;
-    @Nullable
     private final String hostname;
     @Nullable
     private volatile InetSocketAddress localAddress;
