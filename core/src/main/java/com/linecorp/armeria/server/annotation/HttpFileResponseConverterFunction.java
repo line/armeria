@@ -46,7 +46,8 @@ public final class HttpFileResponseConverterFunction implements ResponseConverte
                 @Override
                 protected HttpObject filter(HttpObject obj) {
                     if (obj instanceof ResponseHeaders) {
-                        return ((ResponseHeaders) obj).toBuilder().set(headers).build();
+                        return !headers.isEmpty() ? ((ResponseHeaders) obj).toBuilder().set(headers).build()
+                                                  : obj;
                     }
                     if (obj instanceof HttpHeaders) {
                         trailerSent = true;
