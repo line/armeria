@@ -174,7 +174,7 @@ This product depends on JCTools, distributed by Nitsan Wakart and contributors:
 
 This product depends on FindBugs-JSR305, distributed by
 
-  * License: licenses/LICENSE.jsr305.al20.txt (Apache License v2.0)
+  * License: licenses/LICENSE.jsr305.bsd.txt (New BSD License)
   * Homepage: http://findbugs.sourceforge.net/
 
 This product depends on gRPC, distributed by Google:
