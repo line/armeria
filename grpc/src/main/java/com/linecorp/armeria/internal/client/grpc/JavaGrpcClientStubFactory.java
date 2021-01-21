@@ -34,6 +34,11 @@ public final class JavaGrpcClientStubFactory implements GrpcClientStubFactory {
     @Override
     public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
         final String clientTypeName = clientType.getName();
+
+        if (clientTypeName.endsWith("CoroutineStub")) {
+            return null;
+        }
+
         if (!clientTypeName.endsWith("Stub")) {
             return null;
         }
