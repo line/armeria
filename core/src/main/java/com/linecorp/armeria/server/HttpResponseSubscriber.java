@@ -327,6 +327,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     private void fail(Throwable cause) {
         if (tryComplete()) {
             setDone(true);
+            logBuilder().endRequest(cause);
             logBuilder().endResponse(cause);
             final ServiceConfig config = reqCtx.config();
             if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
@@ -394,6 +395,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     }
                     // Write an access log always with a cause. Respect the first specified cause.
                     if (tryComplete()) {
+                        logBuilder().endRequest(cause);
                         logBuilder().endResponse(cause);
                         final ServiceConfig config = reqCtx.config();
                         if (config.transientServiceOptions().contains(
@@ -500,6 +502,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
             if (endOfStream) {
                 if (tryComplete()) {
+                    logBuilder().endRequest();
                     logBuilder().endResponse();
                     final ServiceConfig config = reqCtx.config();
                     if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
