@@ -33,7 +33,7 @@ import io.micrometer.core.instrument.Metrics;
 public abstract class AbstractArmeriaClientAutoConfiguration {
 
     /**
-     * Create a {@link ClientFactory} bean with {@link MeterRegistry} applied.
+     * Creates a {@link ClientFactory} bean with {@link MeterRegistry} applied.
      */
     @Bean
     @ConditionalOnMissingBean(ClientFactory.class)
@@ -42,7 +42,7 @@ public abstract class AbstractArmeriaClientAutoConfiguration {
     }
 
     /**
-     * Create an {@link ArmeriaClientConfigurator} bean that applies the {@link ClientFactory}.
+     * Creates an {@link ArmeriaClientConfigurator} bean that applies the {@link ClientFactory}.
      */
     @Bean
     @ConditionalOnBean(ClientFactory.class)

@@ -32,7 +32,7 @@ import com.linecorp.armeria.server.Server;
 public class ArmeriaSpringBoot1BeanPostProcessorConfiguration {
 
     /**
-     * Create an {@link ArmeriaSpringBoot1BeanPostProcessor} bean.
+     * Creates an {@link ArmeriaSpringBoot1BeanPostProcessor} bean.
      */
     @Bean
     @ConditionalOnMissingBean(ArmeriaSpringBoot1BeanPostProcessor.class)
