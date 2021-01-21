@@ -101,6 +101,8 @@ public final class VirtualHostBuilder {
     @Nullable
     private SelfSignedCertificate selfSignedCertificate;
     private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
+    @Nullable
+    private Boolean tlsAllowUnsafeCiphers;
     private final LinkedList<RouteDecoratingService> routeDecoratingServices = new LinkedList<>();
     @Nullable
     private Function<? super VirtualHost, ? extends Logger> accessLoggerMapper;
@@ -330,6 +332,45 @@ public final class VirtualHostBuilder {
     public VirtualHostBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
         tlsCustomizers.add(tlsCustomizer);
+        return this;
+    }
+
+    /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
+     */
+    @Deprecated
+    public VirtualHostBuilder tlsAllowUnsafeCiphers() {
+        return tlsAllowUnsafeCiphers(true);
+    }
+
+    /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     *
+     * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
+     */
+    @Deprecated
+    public VirtualHostBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
+        this.tlsAllowUnsafeCiphers = tlsAllowUnsafeCiphers;
         return this;
     }
 
@@ -918,16 +959,22 @@ public final class VirtualHostBuilder {
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
         try {
+            final boolean tlsAllowUnsafeCiphers =
+                    this.tlsAllowUnsafeCiphers != null ?
+                    this.tlsAllowUnsafeCiphers : template.tlsAllowUnsafeCiphers;
+
             // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
             boolean sslContextFromThis = false;
 
             // Build a new SslContext or use a user-specified one for backward compatibility.
             if (sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(sslContextBuilderSupplier, tlsCustomizers);
+                sslContext = buildSslContext(sslContextBuilderSupplier, tlsAllowUnsafeCiphers, tlsCustomizers);
                 sslContextFromThis = true;
                 releaseSslContextOnFailure = true;
             } else if (template.sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(template.sslContextBuilderSupplier, template.tlsCustomizers);
+                sslContext = buildSslContext(template.sslContextBuilderSupplier,
+                                             tlsAllowUnsafeCiphers,
+                                             template.tlsCustomizers);
                 releaseSslContextOnFailure = true;
             }
 
@@ -945,15 +992,18 @@ public final class VirtualHostBuilder {
                 }
 
                 if (tlsSelfSigned) {
+                    final SelfSignedCertificate ssc;
                     try {
-                        final SelfSignedCertificate ssc = selfSignedCertificate();
-                        sslContext = buildSslContext(() -> SslContextBuilder.forServer(ssc.certificate(),
-                                                                                       ssc.privateKey()),
-                                                     tlsCustomizers);
-                        releaseSslContextOnFailure = true;
+                        ssc = selfSignedCertificate();
                     } catch (Exception e) {
                         throw new RuntimeException("failed to create a self signed certificate", e);
                     }
+
+                    sslContext = buildSslContext(() -> SslContextBuilder.forServer(ssc.certificate(),
+                                                                                   ssc.privateKey()),
+                                                 tlsAllowUnsafeCiphers,
+                                                 tlsCustomizers);
+                    releaseSslContextOnFailure = true;
                 }
             }
 
@@ -963,7 +1013,7 @@ public final class VirtualHostBuilder {
 
             // Validate the built `SslContext`.
             if (sslContext != null) {
-                validateSslContext(sslContext);
+                validateSslContext(sslContext, tlsAllowUnsafeCiphers);
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
             }
 
@@ -995,10 +1045,11 @@ public final class VirtualHostBuilder {
 
     private static SslContext buildSslContext(
             Supplier<SslContextBuilder> sslContextBuilderSupplier,
+            boolean tlsAllowUnsafeCiphers,
             Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
         return SslContextUtil
                 .createSslContext(sslContextBuilderSupplier,
-                        /* forceHttp1 */ false, /* tlsAllowUnsafeCiphers */ false, tlsCustomizers);
+                        /* forceHttp1 */ false, tlsAllowUnsafeCiphers, tlsCustomizers);
     }
 
     /**
@@ -1006,7 +1057,7 @@ public final class VirtualHostBuilder {
      * key store password is not given to key store when {@link SslContext} was created using
      * {@link KeyManagerFactory}, the validation will fail and an {@link IllegalStateException} will be raised.
      */
-    private static SslContext validateSslContext(SslContext sslContext) {
+    private static SslContext validateSslContext(SslContext sslContext, boolean tlsAllowUnsafeCiphers) {
         if (!sslContext.isServer()) {
             throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
         }
@@ -1020,7 +1071,7 @@ public final class VirtualHostBuilder {
             serverEngine.setNeedClientAuth(false);
 
             final SslContext sslContextClient =
-                    buildSslContext(SslContextBuilder::forClient, ImmutableList.of());
+                    buildSslContext(SslContextBuilder::forClient, tlsAllowUnsafeCiphers, ImmutableList.of());
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
 
