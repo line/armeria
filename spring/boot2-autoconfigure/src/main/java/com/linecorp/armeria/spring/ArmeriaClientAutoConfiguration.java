@@ -36,7 +36,7 @@ import com.linecorp.armeria.client.WebClientBuilder;
 public class ArmeriaClientAutoConfiguration extends AbstractArmeriaClientAutoConfiguration {
 
     /**
-     * Create an {@link WebClientBuilder} bean.
+     * Creates a {@link WebClientBuilder} bean.
      */
     @Bean
     @ConditionalOnMissingBean
