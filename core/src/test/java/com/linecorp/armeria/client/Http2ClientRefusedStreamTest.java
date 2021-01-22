@@ -47,7 +47,7 @@ class Http2ClientRefusedStreamTest {
     };
 
     @Test
-    void shouldThrowUnprocessedRequestExceptionOn_RST_STREAM() {
+    void shouldThrowUnprocessedRequestExceptionOnRefusedStream() {
         assertThatThrownBy(() -> {
             WebClient.of(h2cServer.endpoint().toUri(SessionProtocol.H2C))
                      .get("/").aggregate().join();
