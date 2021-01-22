@@ -1,18 +1,16 @@
 # Building a client using ClientFactoryBuilder
 
-A <type://ClientFactoryBuilder> is a builder class that enables you to create a client factory
-which is able to customize various parameters. For example, some people want to make longer connection timeout.
-If so, the builder provides connectTimeoutMillis to change from the default value to what you want to change.
-
-You can simply create <type://ClientFactoryBuilder> as following example:
+A <type://ClientFactoryBuilder> is a builder class that enables you to create a <type://ClientFactory>
+with custom options. For example, you might need to use the `connectTimeoutMillis` method to adjust the
+connection timeout of your clients.
+If so, the <type://ClientFactoryBuilder> provides `connectTimeoutMillis` to change from the default value
+to what you want to change.
 
 ```java
 try (ClientFactory factory =
           ClientFactory.builder()
                        // Set the connection timeout to 5 seconds.
                        .connectTimeoutMillis(5000)
-                       // Disable certificate verification; never do this in production!
-                       .tlsNoVerify()
                        .build()) {
    final WebClient client = WebClient.builder()
                                      .factory(factory)
@@ -21,42 +19,39 @@ try (ClientFactory factory =
   }
 ```
 
-As above example, <type://WebClientBuilder> or <type://ClientBuilder> are able to use <type://ClientFactory>
-which is created from <type://ClientFactoryBuilder> using method `factory`. The <type://ClientBuilder> instance
-will use all parameters from the instance <type://ClientFactoryBuilder> that you defined.
+As shown in the above example, you can specify a custom <type://ClientFactory> when building a client
+via the <type://ClientFactoryBuilder#factory()> method.
+The client created with the given <type://ClientFactory> will respect the settings such as connection timeout
+as you defined.
 
-## What are available parameters?
+## What options are available?
 
-The parameters that are available in <type://ClientFactoryBuilder> keep changing and growing the total numbers.
-It would be better for you to check latest version of API docs [here](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/ClientFactoryBuilder.html).
+[See](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/ClientFactoryBuilder.html)
+API documentation <type://ClientFactoryBuilder> for the complete list of customizable options.
 
-## Set parameters using Client Options
+## Setting options with ClientOption
 
-The <type://ClientFactoryBuilder> class provides a manner to define parameters using <type://ClientOption>.
-The <type://ClientOptions> class already has above parameters with proper types. Using <type://ClientOption>,
-you can define your own properties either.
+You can customize a <type://ClientFactoryBuilder> using a <type://ClientFactoryOption> as well.
+It's more verbose than calling a dedicated setter method, but it can be useful when you need to
+set a series of options programmatically:
 
 ```java
 final EventLoopGroup customExcutorGroup = EventLoopGroups.newEventLoopGroup(2);
-// define custom ClientFactoryOption
-final ClientFactoryOption<Boolean> fooOption = ClientFactoryOption.define("FOO", true);
 try (ClientFactory factory =
              ClientFactory.builder()
                           // define a new event loop worker group to execute logic from the builder
                           .option(ClientFactoryOptions.WORKER_GROUP, customExcutorGroup)
-                          // set the custom factory option in builder
-                          .option(fooOption, false)
                           .build()) {
-    // options method will return options including fooOption
+    // options method will return options that used in your builder
     factory.options();
     // do something with factory
 }
 ```
 
-## Netty specific Channel Options
+## Specifying Netty ChannelOptions
 
-You can also edit Netty <type://ChannelOption> using `ClientFactoryBuilder.channelOption` method. For example,
-if you want to change the size of send socket buffer, you can edit the value as following:
+You can also specify Netty [`ChannelOption`](https://netty.io/4.1/api/io/netty/channel/ChannelOption.html)
+with <type://ClientFactoryBuilder#channelOption()> method:
 
 ```java
 try (ClientFactory factory =
@@ -68,9 +63,12 @@ try (ClientFactory factory =
 }
 ```
 
-## Setting different EventLoops for different endpoints
+## Specifying different EventLoops for different endpoints
 
-To increase performance or capacity of a client, it could be possible that increasing the number of connections.
+By default, Armeria keeps at most 1 connection per endpoint (host and port pair), which is desirable
+for typical HTTP/2 services. However, you might want to increase the number of connections for
+certain or all endpoints.
+
 The <type://ClientFactoryBuilder> class has a feature to set the number of `EventLoop` threads using
 `maxNumEventLoopsPerEndpoint` and `maxNumEventLoopsFunction`. The former parameter will set the number of `EventLoop`
 threads for each end point (This parameter is used for HTTP/2. If you want to articulate this feature in HTTP/1,
@@ -112,11 +110,11 @@ try (ClientFactory factory =
 Note that if both parameters are used in one factory, except endpoints that specified in `maxNumEventLoopsFunction`,
 `maxNumEventLoopsPerEndpoint` will be used. If you do not set this value, default value, which is 1 is used.
 
-## Customize TLS
+## Customizing TLS
 
-There might be possible that you need to use third-party CA to configure SSL connections.
-To deal with it, <type://ClientFactoryBuilder> supports `tlsCustomizer` parameter. You need to add `Consumer`
-to cover customized ssl connections.
+You can configure the TLS settings of your client connection
+with <type://ClientFactory#tlsCustomizer()>. For example, you could specify a different
+CA certificate chain, configure mTLS or enforce certain cipher suites.
 
 ```java
 final String resourceRoot = "/path/to/resourceRoot";
