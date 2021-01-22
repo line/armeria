@@ -18,10 +18,10 @@ package com.linecorp.armeria.internal.common;
 
 public final class KeepAliveHandlerUtil {
 
-    public static boolean needKeepAliveHandler(long idleTimeoutMillis, long pingIntervalMillis,
-                                               long maxConnectionAgeMillis, int maxNumRequests) {
+    public static boolean needsKeepAliveHandler(long idleTimeoutMillis, long pingIntervalMillis,
+                                                long maxConnectionAgeMillis, int maxNumRequestsPerConnection) {
         return idleTimeoutMillis > 0 || pingIntervalMillis > 0 ||
-               maxConnectionAgeMillis > 0 || maxNumRequests > 0;
+               maxConnectionAgeMillis > 0 || maxNumRequestsPerConnection > 0;
     }
 
     private KeepAliveHandlerUtil() {}

@@ -19,7 +19,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needKeepAliveHandler;
+import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -312,11 +312,12 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
                 final long pingIntervalMillis = clientFactory.pingIntervalMillis();
                 final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
-                final int maxNumRequests = clientFactory.maxNumRequests();
-                final boolean needKeepAliveHandler =
-                        needKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
-                                             maxConnectionAgeMillis, maxNumRequests);
-                if (needKeepAliveHandler) {
+                final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
+                final boolean needsKeepAliveHandler =
+                        needsKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
+                                              maxConnectionAgeMillis, maxNumRequestsPerConnection);
+
+                if (needsKeepAliveHandler) {
                     final Timer keepAliveTimer =
                             MoreMeters.newTimer(clientFactory.meterRegistry(),
                                                 "armeria.client.connections.lifespan",
@@ -325,7 +326,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                             new Http1ClientKeepAliveHandler(
                                     channel, requestEncoder, responseDecoder,
                                     keepAliveTimer, idleTimeoutMillis, pingIntervalMillis,
-                                    maxConnectionAgeMillis, maxNumRequests);
+                                    maxConnectionAgeMillis, maxNumRequestsPerConnection);
                     requestEncoder.setKeepAliveHandler(keepAliveHandler);
                     responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
                 }

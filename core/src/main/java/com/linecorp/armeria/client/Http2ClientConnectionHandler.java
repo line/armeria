@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needKeepAliveHandler;
+import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 
 import com.google.common.collect.ImmutableList;
 
@@ -50,17 +50,17 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
         final long pingIntervalMillis = clientFactory.pingIntervalMillis();
         final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
-        final int maxNumRequests = clientFactory.maxNumRequests();
+        final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
+        final boolean needsKeepAliveHandler = needsKeepAliveHandler(
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
-        final boolean needKeepAliveHandler = needKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
-                                                                  maxConnectionAgeMillis, maxNumRequests);
-        if (needKeepAliveHandler) {
+        if (needsKeepAliveHandler) {
             final Timer keepAliveTimer =
                     MoreMeters.newTimer(clientFactory.meterRegistry(), "armeria.client.connections.lifespan",
                                         ImmutableList.of(Tag.of("protocol", protocol.uriText())));
             keepAliveHandler = new Http2ClientKeepAliveHandler(
                     channel, encoder.frameWriter(), keepAliveTimer,
-                    idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequests);
+                    idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
         } else {
             keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
         }

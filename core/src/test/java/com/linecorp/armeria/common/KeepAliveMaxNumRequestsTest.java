@@ -59,7 +59,7 @@ class KeepAliveMaxNumRequestsTest {
             sb.tlsSelfSigned();
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);
-            sb.maxNumRequests(MAX_NUM_REQUESTS);
+            sb.maxNumRequestsPerConnection(MAX_NUM_REQUESTS);
             sb.service("/", (ctx, req) -> HttpResponse.of(OK));
         }
     };
@@ -120,7 +120,7 @@ class KeepAliveMaxNumRequestsTest {
                               .responseTimeoutMillis(0)
                               .build();
         } else {
-            clientFactory = clientFactoryBuilder.maxNumRequests(MAX_NUM_REQUESTS)
+            clientFactory = clientFactoryBuilder.maxNumRequestsPerConnection(MAX_NUM_REQUESTS)
                                                 .build();
             client = WebClient.builder(serverWithNoKeepAlive.uri(protocol))
                               .factory(clientFactory)

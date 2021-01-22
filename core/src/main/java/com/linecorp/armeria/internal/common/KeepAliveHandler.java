@@ -34,6 +34,11 @@ public interface KeepAliveHandler {
     void destroy();
 
     /**
+     * Returns whether this {@link KeepAliveHandler} manages an HTTP/2 connection.
+     */
+    boolean isHttp2();
+
+    /**
      * Invoked when a read or write is performed.
      */
     void onReadOrWrite();
@@ -42,6 +47,12 @@ public interface KeepAliveHandler {
      * Invoked when a PING read or write is performed.
      */
     void onPing();
+
+    /**
+     * Invoked when a <a href="https://tools.ietf.org/html/rfc7540#section-6.7">PING ACK</a> is received.
+     * Note that this method is only valid for an HTTP/2 connection.
+     */
+    void onPingAck(long data);
 
     /**
      * Returns whether this {@link KeepAliveHandler} is closing or closed.

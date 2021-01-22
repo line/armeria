@@ -93,7 +93,7 @@ final class HttpClientFactory implements ClientFactory {
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
-    private final int maxNumRequests;
+    private final int maxNumRequestsPerConnection;
     private final boolean useHttp2Preface;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
@@ -157,7 +157,7 @@ final class HttpClientFactory implements ClientFactory {
         proxyConfigSelector = options.proxyConfigSelector();
         http1HeaderNaming = options.http1HeaderNaming();
         maxConnectionAgeMillis = options.maxConnectionAgeMillis();
-        maxNumRequests = options.maxNumRequests();
+        maxNumRequestsPerConnection = options.maxNumRequestsPerConnection();
 
         this.options = options;
 
@@ -212,8 +212,8 @@ final class HttpClientFactory implements ClientFactory {
         return maxConnectionAgeMillis;
     }
 
-    int maxNumRequests() {
-        return maxNumRequests;
+    int maxNumRequestsPerConnection() {
+        return maxNumRequestsPerConnection;
     }
 
     boolean useHttp2Preface() {

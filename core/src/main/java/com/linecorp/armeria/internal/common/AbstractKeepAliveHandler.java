@@ -57,7 +57,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private final boolean isServer;
     private final Timer keepAliveTimer;
 
-    private final long maxNumRequests;
+    private final long maxNumRequestsPerConnection;
     private long currentNumRequests;
 
     @Nullable
@@ -86,12 +86,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
                                        long idleTimeoutMillis, long pingIntervalMillis,
-                                       long maxConnectionAgeMillis, long maxNumRequests) {
+                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection) {
         this.channel = channel;
         this.name = name;
         isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
-        this.maxNumRequests = maxNumRequests;
+        this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
 
         if (idleTimeoutMillis <= 0) {
             connectionIdleTimeNanos = 0;
@@ -202,12 +202,13 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public final boolean needToCloseConnection() {
-        return isMaxConnectionAgeExceeded || (currentNumRequests > 0 && currentNumRequests >= maxNumRequests);
+        return isMaxConnectionAgeExceeded || (currentNumRequests > 0 && currentNumRequests >=
+                                                                        maxNumRequestsPerConnection);
     }
 
     @Override
     public final void increaseNumRequests() {
-        if (maxNumRequests == 0) {
+        if (maxNumRequestsPerConnection == 0) {
             return;
         }
         currentNumRequests++;

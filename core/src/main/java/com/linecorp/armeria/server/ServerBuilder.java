@@ -163,7 +163,7 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
-    private int maxNumRequests = Flags.defaultMaxServerNumRequests();
+    private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -494,6 +494,7 @@ public final class ServerBuilder {
     /**
      * Sets the maximum allowed age of a connection in millis for keep-alive. A connection is disconnected
      * after the specified {@code maxConnectionAgeMillis} since the connection was established.
+     * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
@@ -510,6 +511,7 @@ public final class ServerBuilder {
     /**
      * Sets the maximum allowed age of a connection for keep-alive. A connection is disconnected
      * after the specified {@code maxConnectionAge} since the connection was established.
+     * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
@@ -521,12 +523,14 @@ public final class ServerBuilder {
 
     /**
      * Sets the maximum allowed number of requests that can be served through one connection.
-     * Defaults to {@link Flags#defaultMaxServerNumRequests()}.
+     * This option is disabled by default, which means unlimited.
      *
-     * @param maxNumRequests the maximum number of requests. {@code 0} disables the limit.
+     * @param maxNumRequestsPerConnection the maximum number of requests per connection.
+     *                                    {@code 0} disables the limit.
      */
-    public ServerBuilder maxNumRequests(int maxNumRequests) {
-        this.maxNumRequests = validateNonNegative(maxNumRequests, "maxNumRequests");
+    public ServerBuilder maxNumRequestsPerConnection(int maxNumRequestsPerConnection) {
+        this.maxNumRequestsPerConnection =
+                validateNonNegative(maxNumRequestsPerConnection, "maxNumRequestsPerConnection");
         return this;
     }
 
@@ -1533,7 +1537,7 @@ public final class ServerBuilder {
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequests,
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                 http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,

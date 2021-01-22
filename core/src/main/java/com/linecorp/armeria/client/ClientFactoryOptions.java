@@ -170,6 +170,7 @@ public final class ClientFactoryOptions
      * The client-side max age of a connection for keep-alive in milliseconds.
      * If the value is greater than {@code 0}, a connection is disconnected after the specified
      * amount of time since the connection was established.
+     * This option is disabled by default, which means unlimited.
      */
     public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS =
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
@@ -184,9 +185,11 @@ public final class ClientFactoryOptions
 
     /**
      * The client-side maximum allowed number of requests that can be sent through one connection.
+     * This option is disabled by default, which means unlimited.
      */
-    public static final ClientFactoryOption<Integer> MAX_NUM_REQUESTS =
-            ClientFactoryOption.define("MAX_NUM_REQUESTS", Flags.defaultMaxClientNumRequests());
+    public static final ClientFactoryOption<Integer> MAX_NUM_REQUESTS_PER_CONNECTION =
+            ClientFactoryOption.define("MAX_NUM_REQUESTS_PER_CONNECTION",
+                                       Flags.defaultMaxClientNumRequestsPerConnection());
 
     /**
      * Whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
@@ -457,8 +460,8 @@ public final class ClientFactoryOptions
     /**
      * Returns the client-side maximum allowed number of requests that can be sent through one connection.
      */
-    public int maxNumRequests() {
-        return get(MAX_NUM_REQUESTS);
+    public int maxNumRequestsPerConnection() {
+        return get(MAX_NUM_REQUESTS_PER_CONNECTION);
     }
 
     /**

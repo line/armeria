@@ -23,7 +23,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
-import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needKeepAliveHandler;
+import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -173,16 +173,17 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
         final long idleTimeoutMillis = config.idleTimeoutMillis();
         final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
-        final int maxNumRequests = config.maxNumRequests();
-        final boolean needKeepAliveHandler =
-                needKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
-                                     maxConnectionAgeMillis, maxNumRequests);
+        final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
+        final boolean needsKeepAliveHandler =
+                needsKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
+                                      maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
         final KeepAliveHandler keepAliveHandler;
-        if (needKeepAliveHandler) {
+        if (needsKeepAliveHandler) {
             final Timer keepAliveTimer = newKeepAliveTimer(H1C);
-            keepAliveHandler = new Http1ServerKeepAliveHandler(
-                    p.channel(), keepAliveTimer, idleTimeoutMillis, maxConnectionAgeMillis, maxNumRequests);
+            keepAliveHandler = new Http1ServerKeepAliveHandler(p.channel(), keepAliveTimer, idleTimeoutMillis,
+                                                               maxConnectionAgeMillis,
+                                                               maxNumRequestsPerConnection);
         } else {
             keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
         }
@@ -434,15 +435,16 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             final long idleTimeoutMillis = config.idleTimeoutMillis();
             final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
-            final int maxNumRequests = config.maxNumRequests();
-            final boolean needKeepAliveHandler =
-                    needKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
-                                         maxConnectionAgeMillis, maxNumRequests);
+            final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
+            final boolean needsKeepAliveHandler =
+                    needsKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
+                                          maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
             final KeepAliveHandler keepAliveHandler;
-            if (needKeepAliveHandler) {
-                keepAliveHandler = new Http1ServerKeepAliveHandler(
-                        ch, newKeepAliveTimer(H1), idleTimeoutMillis, maxConnectionAgeMillis, maxNumRequests);
+            if (needsKeepAliveHandler) {
+                keepAliveHandler = new Http1ServerKeepAliveHandler(ch, newKeepAliveTimer(H1), idleTimeoutMillis,
+                                                                   maxConnectionAgeMillis,
+                                                                   maxNumRequestsPerConnection);
             } else {
                 keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
             }

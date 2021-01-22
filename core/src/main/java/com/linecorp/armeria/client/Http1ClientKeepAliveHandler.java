@@ -20,14 +20,14 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler;
+import com.linecorp.armeria.internal.common.Http1KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
-final class Http1ClientKeepAliveHandler extends AbstractKeepAliveHandler {
+final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
 
     private static final RequestHeaders HTTP1_PING_REQUEST = RequestHeaders.of(HttpMethod.OPTIONS, "*");
 
@@ -37,9 +37,9 @@ final class Http1ClientKeepAliveHandler extends AbstractKeepAliveHandler {
 
     Http1ClientKeepAliveHandler(Channel channel, ClientHttp1ObjectEncoder encoder, Http1ResponseDecoder decoder,
                                 Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
-                                long maxConnectionAgeMillis, int maxNumRequests) {
+                                long maxConnectionAgeMillis, int maxNumRequestsPerConnection) {
         super(channel, "client", keepAliveTimer, idleTimeoutMillis,
-              pingIntervalMillis, maxConnectionAgeMillis, maxNumRequests);
+              pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
         httpSession = HttpSession.get(requireNonNull(channel, "channel"));
         this.encoder = requireNonNull(encoder, "encoder");
         this.decoder = requireNonNull(decoder, "decoder");

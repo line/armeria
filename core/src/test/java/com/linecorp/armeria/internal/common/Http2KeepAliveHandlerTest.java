@@ -65,7 +65,7 @@ class Http2KeepAliveHandlerTest {
         keepAliveHandler = new Http2KeepAliveHandler(
                 channel, frameWriter, "test", NoopMeterRegistry.get().timer(""),
                 idleTimeoutMillis, pingIntervalMillis,
-                /* maxConnectionAgeMillis */ 0, /* maxNumRequests */ 0) {
+                /* maxConnectionAgeMillis */ 0, /* maxNumRequestsPerConnection */ 0) {
             @Override
             protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
                 return false;

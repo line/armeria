@@ -328,24 +328,20 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     @Override
     public void onPingAckRead(final ChannelHandlerContext ctx, final long data) {
-        if (keepAliveHandler instanceof Http2ServerKeepAliveHandler) {
-            ((Http2ServerKeepAliveHandler) keepAliveHandler).onPingAck(data);
+        if (keepAliveHandler.isHttp2()) {
+            keepAliveHandler.onPingAck(data);
         }
     }
 
     @Override
     public void onPingRead(ChannelHandlerContext ctx, long data) {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onPing();
-        }
+        keepAliveHandler.onPing();
     }
 
     private void keepAliveChannelRead(boolean increaseNumRequests) {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onReadOrWrite();
-            if (increaseNumRequests) {
-                keepAliveHandler.increaseNumRequests();
-            }
+        keepAliveHandler.onReadOrWrite();
+        if (increaseNumRequests) {
+            keepAliveHandler.increaseNumRequests();
         }
     }
 }

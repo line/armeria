@@ -266,15 +266,15 @@ public final class Flags {
                     DEFAULT_DEFAULT_PING_INTERVAL_MILLIS,
                     value -> value >= 0);
 
-    private static final int DEFAULT_DEFAULT_MAX_NUM_REQUESTS = 0; // Disabled
-    private static final int DEFAULT_MAX_SERVER_NUM_REQUESTS =
-            getInt("defaultMaxServerNumRequests",
-                   DEFAULT_DEFAULT_MAX_NUM_REQUESTS,
+    private static final int DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION = 0; // Disabled
+    private static final int DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION =
+            getInt("defaultMaxServerNumRequestsPerConnection",
+                   DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
                    value -> value >= 0);
 
-    private static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS =
-            getInt("defaultMaxClientNumRequests",
-                   DEFAULT_DEFAULT_MAX_NUM_REQUESTS,
+    private static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION =
+            getInt("defaultMaxClientNumRequestsPerConnection",
+                   DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
                     value -> value >= 0);
 
     private static final long DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS = 0; // Disabled
@@ -872,28 +872,28 @@ public final class Flags {
      * Returns the server-side maximum allowed number of requests that can be served through one connection.
      *
      * <p>Note that this flag has no effect if a user specified the value explicitly via
-     * {@link ServerBuilder#maxNumRequests(int)}.
+     * {@link ServerBuilder#maxNumRequestsPerConnection(int)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_NUM_REQUESTS}.
-     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerNumRequests=<integer>} JVM option
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerNumRequestsPerConnection=<integer>} JVM option
      * to override the default value. {@code 0} disables the limit.
      */
-    public static int defaultMaxServerNumRequests() {
-        return DEFAULT_MAX_SERVER_NUM_REQUESTS;
+    public static int defaultMaxServerNumRequestsPerConnection() {
+        return DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION;
     }
 
     /**
      * Returns the client-side maximum allowed number of requests that can be sent through one connection.
      *
      * <p>Note that this flag has no effect if a user specified the value explicitly via
-     * {@link ClientFactoryBuilder#maxNumRequests(int)}.
+     * {@link ClientFactoryBuilder#maxNumRequestsPerConnection(int)}.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_NUM_REQUESTS}.
-     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientNumRequests=<integer>} JVM option
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientNumRequestsPerConnection=<integer>} JVM option
      * to override the default value. {@code 0} disables the limit.
      */
-    public static int defaultMaxClientNumRequests() {
-        return DEFAULT_MAX_CLIENT_NUM_REQUESTS;
+    public static int defaultMaxClientNumRequestsPerConnection() {
+        return DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION;
     }
 
     /**

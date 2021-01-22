@@ -91,6 +91,14 @@ class KeepAliveHandlerTest {
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 1000, 0, 0, 0) {
 
                     @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
+
+                    @Override
                     protected boolean pingResetsPreviousPing() {
                         return true;
                     }
@@ -119,6 +127,14 @@ class KeepAliveHandlerTest {
 
         final AbstractKeepAliveHandler idleTimeoutScheduler =
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 1000, 0, 0) {
+
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
 
                     @Override
                     protected boolean pingResetsPreviousPing() {
@@ -152,6 +168,14 @@ class KeepAliveHandlerTest {
                 keepAliveHandler = new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
                                                                 maxConnectionAgeMillis, 0) {
             @Override
+            public boolean isHttp2() {
+                return false;
+            }
+
+            @Override
+            public void onPingAck(long data) {}
+
+            @Override
             protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                 return null;
             }
@@ -178,6 +202,14 @@ class KeepAliveHandlerTest {
         final AbstractKeepAliveHandler
                 keepAliveHandler = new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0, 0,
                                                                 maxConnectionAgeMillis, 0) {
+            @Override
+            public boolean isHttp2() {
+                return false;
+            }
+
+            @Override
+            public void onPingAck(long data) {}
+
             @Override
             protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                 return null;
@@ -211,14 +243,23 @@ class KeepAliveHandlerTest {
         final AtomicInteger pingCounter = new AtomicInteger();
         final long idleTime = "CONNECTION_IDLE".equals(mode) ? connectionIdleTimeout : pingInterval;
         final int maxConnectionAgeMillis = 0;
-        final int maxNumRequests = 0;
+        final int maxNumRequestsPerConnection = 0;
         final Consumer<AbstractKeepAliveHandler> activator =
                 "CONNECTION_IDLE".equals(mode) ?
                 AbstractKeepAliveHandler::onReadOrWrite : AbstractKeepAliveHandler::onPing;
 
         final AbstractKeepAliveHandler idleTimeoutScheduler =
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, connectionIdleTimeout,
-                                             pingInterval, maxConnectionAgeMillis, maxNumRequests) {
+                                             pingInterval, maxConnectionAgeMillis,
+                                             maxNumRequestsPerConnection) {
+
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
 
                     @Override
                     protected boolean pingResetsPreviousPing() {
@@ -269,6 +310,14 @@ class KeepAliveHandlerTest {
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
                                              maxConnectionAgeMillis, 0) {
                     @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
+
+                    @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return channelFuture;
                     }
@@ -310,10 +359,18 @@ class KeepAliveHandlerTest {
         final long pingInterval = 1000;
         final long maxConnectionAgeMillis = 0;
         final ChannelPromise promise = channel.newPromise();
-        final int maxNumRequests = 0;
+        final int maxNumRequestsPerConnection = 0;
         final AbstractKeepAliveHandler keepAliveHandler =
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                             maxConnectionAgeMillis, maxNumRequests) {
+                                             maxConnectionAgeMillis, maxNumRequestsPerConnection) {
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
+
                     @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return promise;
@@ -358,11 +415,19 @@ class KeepAliveHandlerTest {
         final long idleTimeout = 10000;
         final long pingInterval = 1000;
         final long maxConnectionAgeMillis = 0;
-        final int maxNumRequests = 0;
+        final int maxNumRequestsPerConnection = 0;
         final ChannelPromise promise = channel.newPromise();
         final AbstractKeepAliveHandler keepAliveHandler =
                 new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout, pingInterval,
-                                             maxConnectionAgeMillis, maxNumRequests) {
+                                             maxConnectionAgeMillis, maxNumRequestsPerConnection) {
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
+
                     @Override
                     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
                         return promise;

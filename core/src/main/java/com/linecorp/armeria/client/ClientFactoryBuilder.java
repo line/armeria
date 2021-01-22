@@ -515,6 +515,7 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the maximum allowed age of a connection in millis for keep-alive. A connection is disconnected
      * after the specified {@code maxConnectionAgeMillis} since the connection was established.
+     * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
@@ -531,6 +532,7 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the maximum allowed age of a connection for keep-alive. A connection is disconnected
      * after the specified {@code maxConnectionAge} since the connection was established.
+     * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
@@ -542,13 +544,15 @@ public final class ClientFactoryBuilder {
 
     /**
      * Sets the maximum allowed number of requests that can be sent through one connection.
-     * Defaults to {@link Flags#defaultMaxClientNumRequests()}.
+     * This option is disabled by default, which means unlimited.
      *
-     * @param maxNumRequests the maximum number of requests. {@code 0} disables the limit.
+     * @param maxNumRequestsPerConnection the maximum number of requests per connection.
+     *                                    {@code 0} disables the limit.
      */
-    public ClientFactoryBuilder maxNumRequests(int maxNumRequests) {
-        checkArgument(maxNumRequests >= 0, "maxNumRequests: %s (expected: >= 0)", maxNumRequests);
-        option(ClientFactoryOptions.MAX_NUM_REQUESTS, maxNumRequests);
+    public ClientFactoryBuilder maxNumRequestsPerConnection(int maxNumRequestsPerConnection) {
+        checkArgument(maxNumRequestsPerConnection >= 0, "maxNumRequestsPerConnection: %s (expected: >= 0)",
+                      maxNumRequestsPerConnection);
+        option(ClientFactoryOptions.MAX_NUM_REQUESTS_PER_CONNECTION, maxNumRequestsPerConnection);
         return this;
     }
 

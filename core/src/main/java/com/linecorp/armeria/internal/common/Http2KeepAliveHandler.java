@@ -70,11 +70,16 @@ public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
 
     protected Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, String name,
                                     Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
-                                    long maxConnectionAgeMillis, int maxNumRequests) {
+                                    long maxConnectionAgeMillis, int maxNumRequestsPerConnection) {
         super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis,
-              maxConnectionAgeMillis, maxNumRequests);
+              maxConnectionAgeMillis, maxNumRequestsPerConnection);
         this.channel = requireNonNull(channel, "channel");
         this.frameWriter = requireNonNull(frameWriter, "frameWriter");
+    }
+
+    @Override
+    public boolean isHttp2() {
+        return true;
     }
 
     @Override
@@ -85,6 +90,7 @@ public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
         return future;
     }
 
+    @Override
     public final void onPingAck(long data) {
         final long elapsed = getStopwatchElapsedInNanos();
         if (!isGoodPingAck(data)) {

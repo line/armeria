@@ -16,17 +16,16 @@
 
 package com.linecorp.armeria.internal.common;
 
-import io.netty.channel.ChannelHandlerContext;
+import io.micrometer.core.instrument.Timer;
+import io.netty.channel.Channel;
 
-public enum NoopKeepAliveHandler implements KeepAliveHandler {
-
-    INSTANCE;
-
-    @Override
-    public void initialize(ChannelHandlerContext ctx) {}
-
-    @Override
-    public void destroy() {}
+public abstract class Http1KeepAliveHandler extends AbstractKeepAliveHandler {
+    protected Http1KeepAliveHandler(Channel channel, String name, Timer keepAliveTimer, long idleTimeoutMillis,
+                                    long pingIntervalMillis, long maxConnectionAgeMillis,
+                                    long maxNumRequestsPerConnection) {
+        super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
+              maxNumRequestsPerConnection);
+    }
 
     @Override
     public boolean isHttp2() {
@@ -34,26 +33,7 @@ public enum NoopKeepAliveHandler implements KeepAliveHandler {
     }
 
     @Override
-    public void onReadOrWrite() {}
-
-    @Override
-    public void onPing() {}
-
-    @Override
     public void onPingAck(long data) {
         throw new UnsupportedOperationException();
     }
-
-    @Override
-    public boolean isClosing() {
-        return false;
-    }
-
-    @Override
-    public boolean needToCloseConnection() {
-        return false;
-    }
-
-    @Override
-    public void increaseNumRequests() {}
 }

@@ -71,7 +71,7 @@ public final class ServerConfig {
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
-    private final int maxNumRequests;
+    private final int maxNumRequestsPerConnection;
 
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
@@ -111,7 +111,8 @@ public final class ServerConfig {
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis,
-            int maxNumRequests, int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
+            int maxNumRequestsPerConnection, int http2InitialConnectionWindowSize,
+            int http2InitialStreamWindowSize,
             long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
@@ -137,7 +138,8 @@ public final class ServerConfig {
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.pingIntervalMillis = validateNonNegative(pingIntervalMillis, "pingIntervalMillis");
-        this.maxNumRequests = validateNonNegative(maxNumRequests, "maxNumRequests");
+        this.maxNumRequestsPerConnection =
+                validateNonNegative(maxNumRequestsPerConnection, "maxNumRequestsPerConnection");
         this.maxConnectionAgeMillis = maxConnectionAgeMillis;
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
@@ -438,8 +440,8 @@ public final class ServerConfig {
     /**
      * Returns the maximum allowed number of requests that can be served through one connection.
      */
-    public int maxNumRequests() {
-        return maxNumRequests;
+    public int maxNumRequestsPerConnection() {
+        return maxNumRequestsPerConnection;
     }
 
     /**

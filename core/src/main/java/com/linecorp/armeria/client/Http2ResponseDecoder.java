@@ -149,9 +149,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             res.close(ClosedStreamException.get());
         }
 
-        // Send a GOAWAY frame if the connection has been scheduled for disconnection and
-        // it did not receive or send a GOAWAY frame.
-        if (needsToDisconnectNow() && !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway()) {
+        if (shouldSendGoAway()) {
             channel().close();
         }
     }
@@ -211,9 +209,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         if (endOfStream) {
             res.close();
 
-            if (needsToDisconnectNow() && !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway()) {
-                // The connection has reached its lifespan.
-                // Should send a GOAWAY frame if it did not receive or send a GOAWAY frame.
+            if (shouldSendGoAway()) {
                 channel().close();
             }
         }
@@ -266,7 +262,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         if (endOfStream) {
             res.close();
 
-            if (needsToDisconnectNow() && !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway()) {
+            if (shouldSendGoAway()) {
                 // The connection has reached its lifespan.
                 // Should send a GOAWAY frame if it did not receive or send a GOAWAY frame.
                 channel().close();
@@ -275,6 +271,14 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         // All bytes have been processed.
         return dataLength + padding;
+    }
+
+    /**
+     * Returns {@code true} if a connection has reached its lifespan
+     * and the connection did not receive or send a GOAWAY frame.
+     */
+    private boolean shouldSendGoAway() {
+        return needsToDisconnectNow() && !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway();
     }
 
     @Override
@@ -312,8 +316,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onPingAckRead(ChannelHandlerContext ctx, long data) {
-        if (keepAliveHandler instanceof Http2ClientKeepAliveHandler) {
-            ((Http2ClientKeepAliveHandler) keepAliveHandler).onPingAck(data);
+        if (keepAliveHandler.isHttp2()) {
+            keepAliveHandler.onPingAck(data);
         }
     }
 

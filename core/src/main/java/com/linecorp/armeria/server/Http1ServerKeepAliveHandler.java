@@ -16,19 +16,20 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler;
+import com.linecorp.armeria.internal.common.Http1KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
-final class Http1ServerKeepAliveHandler extends AbstractKeepAliveHandler {
+final class Http1ServerKeepAliveHandler extends Http1KeepAliveHandler {
 
     Http1ServerKeepAliveHandler(Channel channel, Timer keepAliveTimer,
-                                long idleTimeoutMillis, long maxConnectionAgeMillis, int maxNumRequests) {
+                                long idleTimeoutMillis, long maxConnectionAgeMillis,
+                                int maxNumRequestsPerConnection) {
         super(channel, "server", keepAliveTimer, idleTimeoutMillis, /* pingIntervalMillis(unsupported) */ 0,
-              maxConnectionAgeMillis, maxNumRequests);
+              maxConnectionAgeMillis, maxNumRequestsPerConnection);
     }
 
     @Override
