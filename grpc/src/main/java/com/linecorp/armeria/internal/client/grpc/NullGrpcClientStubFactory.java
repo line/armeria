@@ -29,12 +29,12 @@ public enum NullGrpcClientStubFactory implements GrpcClientStubFactory {
 
     @Override
     public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Nullable
     @Override
     public Object newClientStub(Class<?> clientType, Channel channel) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 }
