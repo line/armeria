@@ -40,7 +40,7 @@ final class ResteasyAsynchronousExecutionContextImpl extends AbstractExecutionCo
     private volatile boolean wasSuspended;
 
     ResteasyAsynchronousExecutionContextImpl(SynchronousDispatcher dispatcher,
-                                             ResteasyHttpRequestImpl request,
+                                             AbstractResteasyHttpRequest request,
                                              ResteasyHttpResponseImpl response) {
         super(dispatcher, request, response);
         asyncResponse = new ResteasyAsynchronousResponseImpl(dispatcher, request, response);

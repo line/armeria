@@ -37,7 +37,7 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
     private volatile boolean cancelled;
 
     ResteasyAsynchronousResponseImpl(SynchronousDispatcher dispatcher,
-                                     ResteasyHttpRequestImpl request, ResteasyHttpResponseImpl response) {
+                                     AbstractResteasyHttpRequest request, ResteasyHttpResponseImpl response) {
         super(dispatcher, request, response);
     }
 
@@ -159,7 +159,7 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
 
     @Override
     public boolean setTimeout(long time, TimeUnit unit) {
-        ((ResteasyHttpRequestImpl) request).requestContext().whenRequestTimedOut().thenRun(() -> {
+        ((AbstractResteasyHttpRequest) request).requestContext().whenRequestTimedOut().thenRun(() -> {
             if (timeoutHandler != null) {
                 timeoutHandler.handleTimeout(this);
             }
@@ -168,7 +168,7 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
             }
             resume(new ServiceUnavailableException());
         });
-        ((ResteasyHttpRequestImpl) request).requestContext().setRequestTimeout(
+        ((AbstractResteasyHttpRequest) request).requestContext().setRequestTimeout(
                 Duration.ofMillis(unit.toMillis(time)));
         return true;
     }

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.resteasy;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.server.HttpService;
@@ -82,9 +84,12 @@ public final class ResteasyService implements HttpService {
     @Nullable
     private final SecurityDomain securityDomain;
     private final Cache<String, InitData> uriInfoCache;
+    private final int maxRequestBufferSize;
+    private final int responseBufferSize;
 
     ResteasyService(ResteasyDeployment deployment, String contextPath,
-                    @Nullable SecurityDomain securityDomain) {
+                    @Nullable SecurityDomain securityDomain,
+                    int maxRequestBufferSize, int responseBufferSize) {
         this.deployment = requireNonNull(deployment, "deployment");
         requireNonNull(contextPath, "contextPath");
 
@@ -104,6 +109,13 @@ public final class ResteasyService implements HttpService {
         dispatcher = (SynchronousDispatcher) deployment.getDispatcher();
         providerFactory = deployment.getProviderFactory();
         uriInfoCache = buildCache(URI_INFO_CACHE_MAX_SIZE, null, URI_INFO_CACHE_MAX_IDLE);
+
+        checkArgument(maxRequestBufferSize >= 0,
+                      "maxRequestBufferSize: %s (expected: >= 0)", maxRequestBufferSize);
+        this.maxRequestBufferSize = maxRequestBufferSize;
+        checkArgument(responseBufferSize > 0,
+                      "responseBufferSize: %s (expected: > 0)", responseBufferSize);
+        this.responseBufferSize = responseBufferSize;
     }
 
     /**
@@ -129,18 +141,40 @@ public final class ResteasyService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-        return HttpResponse.from(req.aggregate().thenCompose(r -> {
-            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            final ResteasyHttpResponseImpl resteasyResponse = new ResteasyHttpResponseImpl(responseFuture);
-            final ResteasyUriInfo uriInfo = createResteasyUriInfo(r, contextPath);
-            final ResteasyHttpRequestImpl resteasyRequest =
-                    new ResteasyHttpRequestImpl(ctx, r, resteasyResponse, uriInfo, dispatcher);
-            serveAsync(ctx, resteasyRequest, resteasyResponse);
-            return responseFuture;
-        }));
+        final RequestHeaders headers = req.headers();
+        final Long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH);
+        if (contentLength != null && contentLength <= maxRequestBufferSize) {
+            // aggregate bounded requests
+            return HttpResponse.from(req.aggregate().thenCompose(r -> serveAsync(ctx, r)));
+        } else {
+            return HttpResponse.from(serveAsync(ctx, req));
+        }
     }
 
-    private void serveAsync(ServiceRequestContext ctx, ResteasyHttpRequestImpl request,
+    private CompletableFuture<HttpResponse> serveAsync(ServiceRequestContext ctx, AggregatedHttpRequest req) {
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final ResteasyHttpResponseImpl resteasyResponse =
+                new ResteasyHttpResponseImpl(responseFuture, responseBufferSize);
+        final ResteasyUriInfo uriInfo = createResteasyUriInfo(req.uri(), contextPath);
+        final AbstractResteasyHttpRequest<?> resteasyRequest =
+                new AggregatedResteasyHttpRequestImpl(ctx, req, resteasyResponse, uriInfo, dispatcher);
+        serveAsync(ctx, resteasyRequest, resteasyResponse);
+        return responseFuture;
+    }
+
+    private CompletableFuture<HttpResponse> serveAsync(ServiceRequestContext ctx, HttpRequest req) {
+        final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final ResteasyHttpResponseImpl resteasyResponse =
+                new ResteasyHttpResponseImpl(responseFuture, responseBufferSize);
+        final ResteasyUriInfo uriInfo = createResteasyUriInfo(req.uri(), contextPath);
+        final AbstractResteasyHttpRequest<?> resteasyRequest =
+                new StreamingResteasyHttpRequestImpl(ctx, req, resteasyResponse, uriInfo, dispatcher);
+        // we have to switch the thread context here!
+        CompletableFuture.runAsync(() -> serveAsync(ctx, resteasyRequest, resteasyResponse));
+        return responseFuture;
+    }
+
+    private void serveAsync(ServiceRequestContext ctx, AbstractResteasyHttpRequest<?> request,
                             ResteasyHttpResponseImpl response) {
         final ResteasyProviderFactory defaultInstance = ResteasyProviderFactory.getInstance();
         if (defaultInstance instanceof ThreadLocalResteasyProviderFactory) {
@@ -150,7 +184,7 @@ public final class ResteasyService implements HttpService {
             // manage SecurityContext
             final SecurityContext securityContext;
             if (securityDomain != null) {
-                final BasicToken basicToken = AuthTokenExtractors.basic().apply(request.request().headers());
+                final BasicToken basicToken = AuthTokenExtractors.basic().apply(request.requestHeaders());
                 if (basicToken == null) {
                     // no Basic Authorization present, e.g. "Authorization: Basic YWxhZGRpbjpvcGVuc2VzYW1l"
                     // respond with "Basic" authentication request
@@ -207,8 +241,7 @@ public final class ResteasyService implements HttpService {
         deployment.stop();
     }
 
-    private ResteasyUriInfo createResteasyUriInfo(AggregatedHttpRequest request, String contextPath) {
-        final URI requestUri = request.uri();
+    private ResteasyUriInfo createResteasyUriInfo(URI requestUri, String contextPath) {
         final String uri = requestUri.toString();
         if (InitData.canBeCached(uri)) {
             final InitData initData;

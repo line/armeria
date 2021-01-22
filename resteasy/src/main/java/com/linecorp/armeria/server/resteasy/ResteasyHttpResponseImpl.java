@@ -47,8 +47,6 @@ import io.netty.buffer.Unpooled;
  */
 final class ResteasyHttpResponseImpl implements org.jboss.resteasy.spi.HttpResponse {
 
-    private static final int DEFAULT_BUFFER_SIZE = 4096;
-
     private final MultivaluedMap<String, Object> headers = new MultivaluedMapImpl<>();
     private final Collection<SetCookie> cookies = new LinkedList<>();
     private final ByteBufferBackedOutputStream contentStream;
@@ -66,10 +64,6 @@ final class ResteasyHttpResponseImpl implements org.jboss.resteasy.spi.HttpRespo
         this.responseFuture = requireNonNull(responseFuture, "responseFuture");
         contentStream = new ByteBufferBackedOutputStream(bufferSize, this::onDataFlush);
         contentStreamProxy = contentStream;
-    }
-
-    ResteasyHttpResponseImpl(CompletableFuture<HttpResponse> responseFuture) {
-        this(responseFuture, DEFAULT_BUFFER_SIZE);
     }
 
     private HttpStatus httpStatus() {
@@ -190,7 +184,6 @@ final class ResteasyHttpResponseImpl implements org.jboss.resteasy.spi.HttpRespo
         }
 
         // response stream has not yet been open, lets send the data right away
-        final HttpStatus status = httpStatus();
         final HttpData contentData;
         if (errorMessage != null) {
             contentData = HttpData.ofUtf8(errorMessage);
