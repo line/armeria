@@ -40,7 +40,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -48,6 +47,7 @@ import java.util.Objects;
 import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -238,7 +238,7 @@ public final class ContentDisposition {
         final String type = (index >= 0 ? headerValue.substring(0, index) : headerValue).trim();
         checkArgument(!type.isEmpty(), "Content-Disposition header must not be empty");
 
-        final List<String> parts = new ArrayList<>(4);
+        final ImmutableList.Builder<String> parts = ImmutableList.builderWithExpectedSize(4);
         parts.add(type);
         if (index >= 0) {
             do {
@@ -265,7 +265,7 @@ public final class ContentDisposition {
             }
             while (index < headerValue.length());
         }
-        return parts;
+        return parts.build();
     }
 
     /**
@@ -319,12 +319,13 @@ public final class ContentDisposition {
                c == '.' || c == '^' || c == '_' || c == '`' || c == '|' || c == '~';
     }
 
-    private static String escapeQuotationsInFilename(String filename) {
+    private static void escapeQuotationsInFilename(StringBuilder sb, String filename) {
         if (filename.indexOf('"') == -1 && filename.indexOf('\\') == -1) {
-            return filename;
+            sb.append(filename);
+            return;
         }
+
         boolean escaped = false;
-        final StringBuilder sb = new StringBuilder();
         for (char c : filename.toCharArray()) {
             if (!escaped && c == '"') {
                 sb.append("\\\"");
@@ -337,7 +338,6 @@ public final class ContentDisposition {
         if (escaped) {
             sb.deleteCharAt(sb.length() - 1);
         }
-        return sb.toString();
     }
 
     /**
@@ -345,13 +345,10 @@ public final class ContentDisposition {
      * @param input the header field param
      * @param charset the charset of the header field param string,
      *                only the US-ASCII, UTF-8 and ISO-8859-1 charsets are supported
-     * @return the encoded header field param
      * @see <a href="https://tools.ietf.org/html/rfc5987">RFC 5987</a>
      */
-    private static String encodeFilename(String input, Charset charset) {
+    private static void encodeFilename(StringBuilder sb, String input, Charset charset) {
         final byte[] source = input.getBytes(charset);
-        final int len = source.length;
-        final StringBuilder sb = new StringBuilder(len << 1);
         sb.append(charset.name());
         sb.append("''");
         for (byte b : source) {
@@ -365,7 +362,6 @@ public final class ContentDisposition {
                 sb.append(hex2);
             }
         }
-        return sb.toString();
     }
 
     @Override
@@ -407,10 +403,11 @@ public final class ContentDisposition {
         if (filename != null) {
             if (charset == null || StandardCharsets.US_ASCII.equals(charset)) {
                 sb.append("; filename=\"");
-                sb.append(escapeQuotationsInFilename(filename)).append('\"');
+                escapeQuotationsInFilename(sb, filename);
+                sb.append('\"');
             } else {
                 sb.append("; filename*=");
-                sb.append(encodeFilename(filename, charset));
+                encodeFilename(sb, filename, charset);
             }
         }
         return strVal = sb.toString();
