@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
 import javax.annotation.Nullable;
 
 import org.apache.thrift.AsyncProcessFunction;
@@ -54,7 +55,7 @@ public final class ThriftServiceMetadata {
      * {@link ProcessFunction}.
      */
     private final Map<String, ThriftFunction> functions = new HashMap<>();
-    
+
     /**
      * Creates a new instance from a Thrift service implementation that implements one or more Thrift service
      * interfaces.
