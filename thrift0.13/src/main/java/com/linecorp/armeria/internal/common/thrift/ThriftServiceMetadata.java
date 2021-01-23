@@ -56,12 +56,7 @@ public final class ThriftServiceMetadata {
      * {@link ProcessFunction}.
      */
     private final Map<String, ThriftFunction> functions = new HashMap<>();
-
-    /**
-     * Help to change functions safely.
-     */
-    private final ReentrantLock functionsLock = new ReentrantLock();
-
+    
     /**
      * Creates a new instance from a Thrift service implementation that implements one or more Thrift service
      * interfaces.
