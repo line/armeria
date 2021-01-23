@@ -15,7 +15,8 @@
  */
 package com.linecorp.armeria.dropwizard;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -80,7 +81,7 @@ class ArmeriaServerFactory extends AbstractServerFactory {
 
     @Override
     public Server build(Environment environment) {
-        Objects.requireNonNull(environment, "environment");
+        requireNonNull(environment, "environment");
         printBanner(environment.getName());
         final MetricRegistry metrics = environment.metrics();
         final ThreadPool threadPool = createThreadPool(metrics);
