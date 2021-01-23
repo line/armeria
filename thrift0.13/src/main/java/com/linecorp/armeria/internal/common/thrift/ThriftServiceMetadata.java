@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.common.thrift;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -103,19 +104,26 @@ public final class ThriftServiceMetadata {
         final Set<Class<?>> interfaces = new HashSet<>();
 
         for (Class<?> iface : candidateInterfaces) {
+
             final Map<String, AsyncProcessFunction<?, ?, ?>> asyncProcessMap;
             asyncProcessMap = getThriftAsyncProcessMap(implementation, iface);
             if (asyncProcessMap != null) {
+                final Map<String, String> camelNameMap = getCamelNameMap(asyncProcessMap.keySet(),
+                                                                         iface.getMethods());
                 asyncProcessMap.forEach(
-                        (name, func) -> registerFunction(iface, name, func, implementation));
+                        (name, func) -> registerFunction(iface, name, camelNameMap.get(name),
+                                                         func, implementation));
                 interfaces.add(iface);
             }
 
             final Map<String, ProcessFunction<?, ?>> processMap;
             processMap = getThriftProcessMap(implementation, iface);
             if (processMap != null) {
+                final Map<String, String> camelNameMap = getCamelNameMap(processMap.keySet(),
+                                                                         iface.getMethods());
                 processMap.forEach(
-                        (name, func) -> registerFunction(iface, name, func, implementation));
+                        (name, func) -> registerFunction(iface, name, camelNameMap.get(name), func,
+                                                         implementation));
                 interfaces.add(iface);
             }
         }
@@ -196,8 +204,20 @@ public final class ThriftServiceMetadata {
         }
     }
 
+    private static Map<String, String> getCamelNameMap(Set<String> processorNames, Method[] methods) {
+        final Map<String, String> camelNameMap = new HashMap<>(processorNames.size());
+        for (Method method : methods) {
+            final String name = method.getName();
+            if (!processorNames.contains(name)) {
+                camelNameMap.put(CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, name),
+                                 name);
+            }
+        }
+        return camelNameMap;
+    }
+
     @SuppressWarnings("rawtypes")
-    private void registerFunction(Class<?> iface, String name,
+    private void registerFunction(Class<?> iface, String name, String camelName,
                                   Object func, @Nullable Object implementation) {
         if (functions.containsKey(name)) {
             logger.warn("duplicate Thrift method name: " + name);
@@ -212,6 +232,9 @@ public final class ThriftServiceMetadata {
                 f = new ThriftFunction(iface, (AsyncProcessFunction) func, implementation);
             }
             functions.put(name, f);
+            if (camelName != null) {
+                functions.put(camelName, f);
+            }
         } catch (Exception e) {
             throw new IllegalArgumentException("failed to retrieve function metadata: " +
                                                iface.getName() + '.' + name + "()", e);
@@ -232,21 +255,6 @@ public final class ThriftServiceMetadata {
      */
     @Nullable
     public ThriftFunction function(String method) {
-        ThriftFunction func = functions.get(method);
-        if (func != null) {
-            return func;
-        }
-
-        // check method and convert to underscored style
-        method = CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, method);
-        func = functions.get(method);
-        if (func != null) {
-            functionsLock.lock();
-            // add it to function, for next call
-            functions.putIfAbsent(method, func);
-            functionsLock.unlock();
-        }
-
-        return func;
+        return functions.get(method);
     }
 }

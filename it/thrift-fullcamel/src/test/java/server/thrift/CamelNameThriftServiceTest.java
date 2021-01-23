@@ -46,8 +46,6 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.SayHelloService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
-import io.netty.util.concurrent.ImmediateEventExecutor;
-
 /**
  * Special test for `fullcamel` option in thrift compiler.
  */
@@ -118,10 +116,6 @@ class CamelNameThriftServiceTest {
         final ServiceRequestContext ctx =
                 ServiceRequestContext.builder(req)
                                      .eventLoop(eventLoop.get())
-                                     .serverConfigurator(builder -> {
-                                         builder.blockingTaskExecutor(ImmediateEventExecutor.INSTANCE, false);
-                                         builder.verboseResponses(true);
-                                     })
                                      .build();
 
         final HttpResponse res = service.serve(ctx, req);

@@ -648,7 +648,7 @@ class ThriftServiceTest {
     @ArgumentsSource(SerializationFormatProvider.class)
     void testServiceInheritance(SerializationFormat defaultSerializationFormat) {
         // This should not throw an exception
-        THttpService.of((ChildRpcDebugService.Iface) (a1, a2, details) -> new Response("asdf"));
+        THttpService.of((ChildRpcDebugService.Iface)(a1, a2, details) -> new Response("asdf"));
     }
 
     /**
