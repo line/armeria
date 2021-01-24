@@ -26,7 +26,7 @@ import com.linecorp.armeria.service.test.thrift.main.SayHelloService;
 /**
  * Additional test for camel name support.
  */
-public class ThriftServiceMetadataTests {
+public class ThriftServiceMetadataTest {
 
     @Test
     void testCamelName() {

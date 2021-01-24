@@ -349,9 +349,9 @@ public final class ThriftFunction {
             final Class<?> ifaceType = Class.forName(ifaceTypeName, false, funcClass.getClassLoader());
 
             // Check and convert to camel, thrift java compiler only support underscored to camel
-            final String methodNameCamel = methodName.indexOf('_') != -1 ?
+            final String methodNameCamel = methodName.indexOf('_') >= 0 ?
                                            CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, methodName)
-                                                                         : methodName;
+                                                                        : methodName;
             for (Method m : ifaceType.getDeclaredMethods()) {
                 if (m.getName().equals(methodName) || m.getName().equals(methodNameCamel)) {
                     return m.getExceptionTypes();

@@ -211,7 +211,7 @@ public final class ThriftServiceMetadata {
     }
 
     @SuppressWarnings("rawtypes")
-    private void registerFunction(Class<?> iface, String name, String camelName,
+    private void registerFunction(Class<?> iface, String name, @Nullable String camelName,
                                   Object func, @Nullable Object implementation) {
         if (functions.containsKey(name)) {
             logger.warn("duplicate Thrift method name: " + name);
