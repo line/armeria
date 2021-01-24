@@ -23,11 +23,11 @@ import com.linecorp.armeria.internal.common.stream.PrependingPublisher;
 
 final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpObject> implements HttpResponse {
 
-    PublisherBasedHttpResponse(Publisher<? extends HttpObject> publisher) {
-        super(publisher);
-    }
-
     static PublisherBasedHttpResponse from(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
         return new PublisherBasedHttpResponse(new PrependingPublisher<>(headers, publisher));
+    }
+
+    PublisherBasedHttpResponse(Publisher<? extends HttpObject> publisher) {
+        super(publisher);
     }
 }

@@ -41,62 +41,30 @@ public final class PrependingPublisher<T> implements Publisher<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber) {
         requireNonNull(subscriber, "subscriber");
-        final RestSubscriber<T> restSubscriber = new RestSubscriber<>(first, subscriber);
-        rest.subscribe(restSubscriber);
+        final RestSubscriber<T> restSubscriber = new RestSubscriber<>(first, rest, subscriber);
+        subscriber.onSubscribe(restSubscriber);
     }
 
     static final class RestSubscriber<T> implements Subscriber<T>, Subscription {
 
+        @SuppressWarnings("rawtypes")
         private static final AtomicLongFieldUpdater<RestSubscriber> demandUpdater =
                 AtomicLongFieldUpdater.newUpdater(RestSubscriber.class, "demand");
+
         private final T first;
-        private volatile boolean firstSent;
+        private final Publisher<? extends T> rest;
         private Subscriber<? super T> downstream;
-        private volatile long demand;
         @Nullable
         private volatile Subscription upstream;
-        @Nullable
-        private volatile Throwable upstreamCause;
-        private volatile boolean upstreamCompleted;
-        private volatile boolean completed;
+        private volatile long demand;
+        private volatile boolean firstSent;
+        private volatile boolean subscribed;
+        private volatile boolean cancelled;
 
-        RestSubscriber(T first, Subscriber<? super T> downstream) {
+        RestSubscriber(T first, Publisher<? extends T> rest, Subscriber<? super T> downstream) {
             this.first = first;
+            this.rest = rest;
             this.downstream = downstream;
-        }
-
-        @Override
-        public void onSubscribe(Subscription subscription) {
-            upstream = subscription;
-            downstream.onSubscribe(this);
-        }
-
-        @Override
-        public void onNext(T t) {
-            requireNonNull(t, "element");
-            demandUpdater.decrementAndGet(this);
-            downstream.onNext(t);
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            requireNonNull(t, "throwable");
-            // delay onError until the first piece is sent
-            if (!firstSent) {
-                upstreamCause = t;
-            } else {
-                downstream.onError(t);
-            }
-        }
-
-        @Override
-        public void onComplete() {
-            // delay onComplete until the first piece is sent
-            if (!firstSent) {
-                upstreamCompleted = true;
-            } else {
-                downstream.onComplete();
-            }
         }
 
         @Override
@@ -105,40 +73,85 @@ public final class PrependingPublisher<T> implements Publisher<T> {
                 downstream.onError(new IllegalArgumentException("non-positive request signals are illegal"));
                 return;
             }
-            if (completed) {
+            if (cancelled) {
                 return;
             }
-            if (demandUpdater.getAndAdd(this, n) > 0) {
-                return;
+            for (;;) {
+                final long demand = this.demand;
+                final long newDemand = demand >= Long.MAX_VALUE - n ? Long.MAX_VALUE : demand + n;
+                if (demandUpdater.compareAndSet(this, demand, newDemand)) {
+                    if (demand > 0) {
+                        return;
+                    }
+                    break;
+                }
             }
             if (!firstSent) {
                 firstSent = true;
                 downstream.onNext(first);
-                if (n < Long.MAX_VALUE) {
-                    demandUpdater.decrementAndGet(this);
-                }
+                demandUpdater.getAndUpdate(this, oldDemand -> oldDemand == Long.MAX_VALUE ?
+                                                              oldDemand : oldDemand - 1);
             }
             if (demand > 0) {
-                final Throwable upstreamCause = this.upstreamCause;
-                if (upstreamCause != null) {
-                    downstream.onError(upstreamCause);
-                } else if (upstreamCompleted) {
-                    completed = true;
-                    downstream.onComplete();
-                } else {
-                    upstream.request(demand);
+                if (!subscribed) {
+                    subscribed = true;
+                    rest.subscribe(this);
+                }
+                final Subscription upstream = this.upstream;
+                if (upstream != null) {
+                    final long demand = this.demand;
+                    if (demand > 0) {
+                        if (demandUpdater.compareAndSet(this, demand, 0)) {
+                            upstream.request(demand);
+                        }
+                    }
                 }
             }
         }
 
         @Override
         public void cancel() {
-            if (completed) {
+            if (cancelled) {
                 return;
             }
-            completed = true;
+            cancelled = true;
             downstream = NoopSubscriber.get();
-            upstream.cancel();
+            final Subscription upstream = this.upstream;
+            if (upstream != null) {
+                upstream.cancel();
+            }
+        }
+
+        @Override
+        public void onSubscribe(Subscription subscription) {
+            if (cancelled) {
+                subscription.cancel();
+                return;
+            }
+            upstream = subscription;
+            final long demand = this.demand;
+            if (demand > 0) {
+                if (demandUpdater.compareAndSet(this, demand, 0)) {
+                    subscription.request(demand);
+                }
+            }
+        }
+
+        @Override
+        public void onNext(T t) {
+            requireNonNull(t, "element");
+            downstream.onNext(t);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            requireNonNull(t, "throwable");
+            downstream.onError(t);
+        }
+
+        @Override
+        public void onComplete() {
+            downstream.onComplete();
         }
     }
 }
