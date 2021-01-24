@@ -184,7 +184,7 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                                                "testThatTagsAreAdded")
                                       .consulApiVersion("v1")
                                       .consulToken(CONSUL_TOKEN)
-                                      .addTags("production", "v1")
+                                      .tags("production", "v1")
                                       .build();
         server.addListener(listener);
         server.start().join();

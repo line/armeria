@@ -143,12 +143,12 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
     }
 
     /**
-     * Adds a tag to the list of tags associated with the service on registration.
+     * Adds a list of tags to the list of tags associated with the service on registration.
      *
-     * @param tag the tag to add
+     * @param tags the tags to add
      */
-    public ConsulUpdatingListenerBuilder addTag(String tag) {
-        tagsBuilder.add(requireNonNull(tag, "tag"));
+    public ConsulUpdatingListenerBuilder tags(String... tags) {
+        tagsBuilder.addAll(ImmutableSet.copyOf(requireNonNull(tags, "tags")));
         return this;
     }
 
@@ -157,8 +157,8 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
      *
      * @param tags the tags to add
      */
-    public ConsulUpdatingListenerBuilder addTags(String... tags) {
-        tagsBuilder.addAll(ImmutableSet.copyOf(requireNonNull(tags, "tags")));
+    public ConsulUpdatingListenerBuilder tags(Iterable<String> tags) {
+        tagsBuilder.addAll(requireNonNull(tags, "tags"));
         return this;
     }
 
