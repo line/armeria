@@ -79,7 +79,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
 
         if (!armeriaServerConfigurators.isPresent() &&
             !armeriaServerBuilderConsumers.isPresent()) {
-            // No services to register, no need to start up armeria server.
+            logger.warn("No services to register, will NOT start up armeria server.");
             return null;
         }
 
@@ -133,7 +133,11 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Wrap {@link Server} with {@link SmartLifecycle}.
      */
     @Bean
+    @Nullable
     public SmartLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
+        if (server == null) {
+            return null;
+        }
         return new ArmeriaServerGracefulShutdownLifecycle(server);
     }
 

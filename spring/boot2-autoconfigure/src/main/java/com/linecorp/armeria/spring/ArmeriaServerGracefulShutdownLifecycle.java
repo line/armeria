@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.spring;
 
+import static java.util.Objects.requireNonNull;
+
 import org.springframework.context.SmartLifecycle;
 
 import com.linecorp.armeria.server.Server;
@@ -28,7 +30,7 @@ final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
     private final Server server;
 
     ArmeriaServerGracefulShutdownLifecycle(Server server) {
-        this.server = server;
+        this.server = requireNonNull(server, "requireNonNull");
     }
 
     /**
