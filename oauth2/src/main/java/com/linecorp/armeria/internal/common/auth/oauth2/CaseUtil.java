@@ -20,27 +20,24 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
-
-@UnstableApi
 public final class CaseUtil {
 
-  @Nullable
-  public static String firstUpperCase(@Nullable String word) {
-    if (word == null || word.isEmpty()) {
-      return word;
+    @Nullable
+    public static String firstUpperCase(@Nullable String word) {
+        if (word == null || word.isEmpty()) {
+            return word;
+        }
+        return Ascii.toUpperCase(word.charAt(0)) + word.substring(1);
     }
-    return Ascii.toUpperCase(word.charAt(0)) + word.substring(1);
-  }
 
-  @Nullable
-  public static String firstUpperAllLowerCase(@Nullable String word) {
-    if (word == null || word.isEmpty()) {
-      return word;
+    @Nullable
+    public static String firstUpperAllLowerCase(@Nullable String word) {
+        if (word == null || word.isEmpty()) {
+            return word;
+        }
+        return Ascii.toUpperCase(word.charAt(0)) + Ascii.toLowerCase(word.substring(1));
     }
-    return Ascii.toUpperCase(word.charAt(0)) + Ascii.toLowerCase(word.substring(1));
-  }
 
-  private CaseUtil() {
-  }
+    private CaseUtil() {
+    }
 }

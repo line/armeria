@@ -19,8 +19,8 @@ package com.linecorp.armeria.internal.common.auth.oauth2;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ACCESS_TOKEN;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.TOKEN_TYPE_HINT;
+import static java.util.Objects.requireNonNull;
 
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -80,11 +80,11 @@ public abstract class AbstractTokenOperationRequest<T> extends AbstractOAuth2Req
      *                                       (JSON).
      */
     public CompletableFuture<T> make(String token, @Nullable String tokenType) {
+        requireNonNull(token, TOKEN);
         final QueryParamsBuilder requestFormBuilder = QueryParams.builder();
-
         // populate request form data
         // MANDATORY token
-        requestFormBuilder.add(TOKEN, Objects.requireNonNull(token, TOKEN));
+        requestFormBuilder.add(TOKEN, token);
         // OPTIONAL token_type_hint
         if (tokenType != null) {
             requestFormBuilder.add(TOKEN_TYPE_HINT, tokenType);

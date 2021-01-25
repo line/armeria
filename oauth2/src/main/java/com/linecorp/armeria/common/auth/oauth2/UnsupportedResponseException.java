@@ -30,7 +30,7 @@ public final class UnsupportedResponseException extends InvalidResponseException
     private static final long serialVersionUID = 4982498806675787821L;
 
     /**
-     * Constructs new {@link UnsupportedMediaTypeException}.
+     * Constructs new {@link UnsupportedResponseException}.
      * @param status An {@link HttpStatus} of the response.
      * @param message A response content
      */
@@ -39,7 +39,7 @@ public final class UnsupportedResponseException extends InvalidResponseException
     }
 
     /**
-     * Constructs new {@link UnsupportedMediaTypeException}.
+     * Constructs new {@link UnsupportedResponseException}.
      * @param status An {@link HttpStatus} of the response.
      * @param message A response content
      * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).

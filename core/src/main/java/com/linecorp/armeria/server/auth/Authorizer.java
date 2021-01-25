@@ -46,6 +46,9 @@ public interface Authorizer<T> {
     /**
      * Authorizes the given {@code data}.
      *
+     * @param ctx {@link ServiceRequestContext} of the request being authorized.
+     * @param data an actual authorization data, like {@link HttpRequest}, token extracted from it or
+     *     {@code null} if such authorization data is missing.
      * @return a {@link CompletionStage} that will resolve to {@link AuthorizationStatus}. If the future
      *     resolves exceptionally, the request will not be authorized.
      */

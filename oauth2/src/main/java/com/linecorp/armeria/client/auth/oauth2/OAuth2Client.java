@@ -41,6 +41,7 @@ public final class OAuth2Client extends SimpleDecoratingHttpClient {
      */
     public static Function<? super HttpClient, OAuth2Client> newDecorator(
             OAuth2AuthorizationGrant authorizationGrant) {
+        requireNonNull(authorizationGrant, "authorizationGrant");
         return delegate -> new OAuth2Client(delegate, authorizationGrant);
     }
 

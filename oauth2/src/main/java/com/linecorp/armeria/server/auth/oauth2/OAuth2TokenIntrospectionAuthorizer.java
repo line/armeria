@@ -66,6 +66,9 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
     static final String INVALID_TOKEN = "invalid_token";
     static final String INSUFFICIENT_SCOPE = "insufficient_scope";
 
+    private static final CompletionStage<AuthorizationStatus> SUCCESS_STATUS_FUTURE =
+            CompletableFuture.completedFuture(AuthorizationStatus.SUCCESS);
+
     private final Cache<String, OAuth2TokenDescriptor> tokenCache;
     private final Set<String> permittedScope;
     @Nullable
@@ -74,6 +77,8 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
     private final String realm;
     private final TokenIntrospectionRequest tokenIntrospectionRequest;
     private final AuthFailureHandler authFailureHandler;
+    private final AuthorizationStatus failureStatus;
+    private final CompletionStage<AuthorizationStatus> failureStatusFuture;
 
     OAuth2TokenIntrospectionAuthorizer(Cache<String, OAuth2TokenDescriptor> tokenCache,
                                        @Nullable String accessTokenType, @Nullable String realm,
@@ -87,6 +92,8 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
                 requireNonNull(tokenIntrospectionRequest, "tokenIntrospectionRequest");
         authFailureHandler =
                 new OAuth2AuthorizationFailureHandler(accessTokenType, realm, String.join(" ", permittedScope));
+        failureStatus = AuthorizationStatus.ofFailure(authFailureHandler);
+        failureStatusFuture = CompletableFuture.completedFuture(failureStatus);
     }
 
     /**
@@ -128,28 +135,25 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
 
         if (data == null) {
             // no access token present
-            return CompletableFuture.completedFuture(AuthorizationStatus.ofFailure(authFailureHandler));
+            return failureStatusFuture;
         }
         final String accessToken = data.accessToken();
         final OAuth2TokenDescriptor tokenDescriptor = tokenCache.getIfPresent(accessToken);
         if (tokenDescriptor != null) {
             // just re-validate existing token
-            final AuthorizationStatus status =
-                    validateDescriptor(ctx, tokenDescriptor) ? AuthorizationStatus.ofSuccess(null)
-                            : AuthorizationStatus.ofFailure(authFailureHandler);
-            return CompletableFuture.completedFuture(status);
+            return validateDescriptor(ctx, tokenDescriptor) ? SUCCESS_STATUS_FUTURE : failureStatusFuture;
         }
         // using OAuth 2.0 introspection request to obtain the token descriptor
         return tokenIntrospectionRequest.make(accessToken).thenApply(descriptor -> {
             // first, authorize the new token descriptor
             if (!authorizeNewDescriptor(ctx, descriptor)) {
-                return AuthorizationStatus.ofFailure(authFailureHandler);
+                return failureStatus;
             }
             // cache the new token descriptor
             tokenCache.put(accessToken, descriptor);
             // validate new token
-            return validateDescriptor(ctx, descriptor) ? AuthorizationStatus.ofSuccess(null)
-                                                       : AuthorizationStatus.ofFailure(authFailureHandler);
+            return validateDescriptor(ctx, descriptor) ? AuthorizationStatus.SUCCESS
+                                                       : failureStatus;
         });
     }
 

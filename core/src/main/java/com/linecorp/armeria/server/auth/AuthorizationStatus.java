@@ -28,6 +28,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public interface AuthorizationStatus {
 
     /**
+     * Default Authorization Success status with no {@link AuthSuccessHandler} defined.
+     */
+    AuthorizationStatus SUCCESS = ofSuccess(null);
+
+    /**
      * Creates {@link AuthorizationStatus} based on boolean status.
      */
     static AuthorizationStatus of(boolean status) {

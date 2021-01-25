@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.internal.common.auth.oauth2;
 
-import java.util.Objects;
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -67,8 +68,8 @@ public abstract class AbstractOAuth2Request<T> {
      */
     protected AbstractOAuth2Request(WebClient endpoint, String endpointPath,
                                     @Nullable ClientAuthorization clientAuthorization) {
-        this.endpoint = Objects.requireNonNull(endpoint, "endpoint");
-        this.endpointPath = Objects.requireNonNull(endpointPath, "endpointPath");
+        this.endpoint = requireNonNull(endpoint, "endpoint");
+        this.endpointPath = requireNonNull(endpointPath, "endpointPath");
         this.clientAuthorization = clientAuthorization; // optional
     }
 
@@ -132,14 +133,14 @@ public abstract class AbstractOAuth2Request<T> {
      */
     private HttpRequest createHttpRequest(String endpointPath, QueryParams requestFormData) {
         final RequestHeadersBuilder headersBuilder =
-                RequestHeaders.of(HttpMethod.POST, endpointPath).toBuilder();
+                RequestHeaders.builder(HttpMethod.POST, endpointPath);
         final String authorizationHeaderValue = authorizationHeaderValue();
         if (authorizationHeaderValue != null) {
             headersBuilder.add(HttpHeaderNames.AUTHORIZATION, authorizationHeaderValue);
         } else {
             requestFormData = requestFormData.withMutations(this::addCredentialsAsBodyParameters);
         }
-        headersBuilder.add(HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA.toString());
+        headersBuilder.addObject(HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA);
 
         return HttpRequest.of(headersBuilder.build(), HttpData.ofUtf8(requestFormData.toQueryString()));
     }
@@ -200,7 +201,7 @@ public abstract class AbstractOAuth2Request<T> {
             messageBuilder.append(": ").append(wwwAuthenticate);
         }
         final HttpData errorResponseContents = errorResponse.content();
-        if (!errorResponse.content().isEmpty()) {
+        if (!errorResponseContents.isEmpty()) {
             messageBuilder.append(": ").append(errorResponseContents.toStringUtf8());
         }
         return new InvalidClientException(messageBuilder.toString(), null);

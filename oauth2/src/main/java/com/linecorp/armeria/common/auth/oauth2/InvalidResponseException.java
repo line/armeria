@@ -32,7 +32,7 @@ public class InvalidResponseException extends RuntimeException {
     private final String status;
 
     /**
-     * Constructs new {@link UnsupportedMediaTypeException}.
+     * Constructs new {@link InvalidResponseException}.
      * @param status An {@link HttpStatus} of the response.
      * @param message A response content
      */
@@ -41,7 +41,7 @@ public class InvalidResponseException extends RuntimeException {
     }
 
     /**
-     * Constructs new {@link UnsupportedMediaTypeException}.
+     * Constructs new {@link InvalidResponseException}.
      * @param status An {@link HttpStatus} of the response.
      * @param message A response content
      * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).
@@ -52,7 +52,7 @@ public class InvalidResponseException extends RuntimeException {
     }
 
     /**
-     * Constructs new {@link UnsupportedMediaTypeException}.
+     * Constructs new {@link InvalidResponseException}.
      * @param status An HTTP status of the response.
      * @param message A response content
      */
@@ -62,7 +62,7 @@ public class InvalidResponseException extends RuntimeException {
     }
 
     /**
-     * Constructs new {@link UnsupportedMediaTypeException}.
+     * Constructs new {@link InvalidResponseException}.
      * @param status An HTTP status of the response.
      * @param message A response content
      * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).

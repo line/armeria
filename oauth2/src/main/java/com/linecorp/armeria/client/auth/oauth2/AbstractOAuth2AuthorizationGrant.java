@@ -56,8 +56,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
                                      @Nullable Executor executor) {
         this.refreshRequest = requireNonNull(refreshRequest, "refreshRequest");
         this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
-        tokenManager = new TokenLifecycleManager<>(this::isValid, this::canRefresh,
-                                                   this::shallObtainInsteadOfUpdate,
+        tokenManager = new TokenLifecycleManager<>(this::isValid, AbstractOAuth2AuthorizationGrant::canRefresh,
+                                                   AbstractOAuth2AuthorizationGrant::shallObtainInsteadOfUpdate,
                                                    this::obtainAccessToken, this::refreshAccessToken,
                                                    tokenSupplier, tokenConsumer, executor);
     }
@@ -72,7 +72,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     /**
      * Tests whether the token object can be refreshed or re-obtained.
      */
-    private boolean canRefresh(GrantedOAuth2AccessToken token) {
+    private static boolean canRefresh(GrantedOAuth2AccessToken token) {
         return token.refreshToken() != null;
     }
 
@@ -80,7 +80,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * Tests whether given {@link Throwable} indicates that the token shall be re-obtained
      * after the refresh operation failure.
      */
-    private boolean shallObtainInsteadOfUpdate(Throwable throwable) {
+    private static boolean shallObtainInsteadOfUpdate(Throwable throwable) {
         return throwable instanceof TokenRequestException;
     }
 

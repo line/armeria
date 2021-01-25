@@ -38,6 +38,7 @@ import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
@@ -84,9 +85,12 @@ public class GrantedOAuth2AccessToken implements Serializable {
         return new GrantedOAuth2AccessTokenBuilder(accessToken);
     }
 
+    @VisibleForTesting
     static final String ISSUED_AT = "issued_at";
 
+    @VisibleForTesting
     static final String SCOPE_SEPARATOR = " ";
+    @VisibleForTesting
     static final char AUTHORIZATION_SEPARATOR = ' ';
 
     /**

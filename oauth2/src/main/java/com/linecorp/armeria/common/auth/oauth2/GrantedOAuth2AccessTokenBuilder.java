@@ -225,7 +225,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
      */
     public GrantedOAuth2AccessToken build() {
         return new GrantedOAuth2AccessToken(accessToken, tokenType,
-                                      (issuedAt == null) ? Instant.now() : issuedAt, expiresIn,
+                                            (issuedAt == null) ? Instant.now() : issuedAt, expiresIn,
                                             refreshToken, scope.build(), extras.build(), rawResponse);
     }
 }

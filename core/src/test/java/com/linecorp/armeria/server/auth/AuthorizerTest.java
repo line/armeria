@@ -48,7 +48,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
-public class AuthorizerTest {
+class AuthorizerTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
