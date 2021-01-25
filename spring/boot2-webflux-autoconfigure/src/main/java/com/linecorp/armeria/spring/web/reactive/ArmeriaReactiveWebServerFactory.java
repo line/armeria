@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
@@ -262,8 +263,11 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
             @SuppressWarnings("unchecked")
             final List<ServerPort> armeriaPorts = (List<ServerPort>) ports.get(sb);
             return armeriaPorts;
-        } catch (NoSuchFieldException | IllegalAccessException ignored) {
+        } catch (NoSuchFieldException ignored) {
             throw new Error(); // Should never reach here.
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Failed to get ports in " + ServerBuilder.class.getSimpleName() +
+                                            " via reflection.", e);
         }
     }
 
@@ -296,14 +300,14 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 try {
                     return provider.getKeyStore();
                 } catch (Exception e) {
-                    throw new IllegalStateException(e);
+                    return Exceptions.throwUnsafely(e);
                 }
             };
             trustStoreSupplier = () -> {
                 try {
                     return provider.getTrustStore();
                 } catch (Exception e) {
-                    throw new IllegalStateException(e);
+                    return Exceptions.throwUnsafely(e);
                 }
             };
         } else {
