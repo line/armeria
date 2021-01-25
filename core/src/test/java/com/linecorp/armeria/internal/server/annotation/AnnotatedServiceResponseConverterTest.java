@@ -344,31 +344,6 @@ public class AnnotatedServiceResponseConverterTest {
                                                  .of(HttpHeaderNames.of("x-custom-trailers"), "value"));
                 }
 
-                @Get("/http-file/expect-custom-header")
-                @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
-                public HttpResult<HttpFile> httpFileExpectCustomHeader() {
-                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
-                                         HTTPFILE);
-                }
-
-                @Get("/http-file/expect-custom-trailers")
-                @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
-                public HttpResult<HttpFile> httpFileExpectCustomTrailers() {
-                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
-                                         HTTPFILE,
-                                         HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
-                }
-
-                @Get("/http-file/expect-headers-not-overwritten")
-                @StatusCode(400)
-                @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
-                public HttpResult<HttpFile> httpFileExpectHeadersNotOverwritten() {
-                    return HttpResult.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED,
-                                                            HttpHeaderNames.of("x-custom-header"), "value"),
-                                         HTTPFILE,
-                                         HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
-                }
-
                 @Get("/async/expect-bad-request")
                 public HttpResult<CompletionStage<Object>> asyncExpectBadRequest() {
                     final CompletableFuture<Object> future = new CompletableFuture<>();
@@ -401,6 +376,33 @@ public class AnnotatedServiceResponseConverterTest {
                     return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK,
                                                               HttpHeaderNames.of("header_name_1"),
                                                               "header_value_unchanged"));
+                }
+            });
+
+            sb.annotatedService("/http-file", new Object() {
+                @Get("/expect-custom-header")
+                @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
+                public HttpResult<HttpFile> httpFileExpectCustomHeader() {
+                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
+                                         HTTPFILE);
+                }
+
+                @Get("/expect-custom-trailers")
+                @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
+                public HttpResult<HttpFile> httpFileExpectCustomTrailers() {
+                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
+                                         HTTPFILE,
+                                         HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
+                }
+
+                @Get("/expect-http-file-service-headers-not-overwritten")
+                @StatusCode(400)
+                @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
+                public HttpResult<HttpFile> httpFileExpectHeadersNotOverwritten() {
+                    return HttpResult.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED,
+                                                            HttpHeaderNames.of("x-custom-header"), "value"),
+                                         HTTPFILE,
+                                         HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
                 }
             });
 
@@ -719,29 +721,6 @@ public class AnnotatedServiceResponseConverterTest {
                     .isEqualTo("annotated-value");
         });
 
-        res = aggregated(client.get("/http-file/expect-custom-header"));
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
-        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
-        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
-                "annotated-value");
-
-        res = aggregated(client.get("/http-file/expect-custom-trailers"));
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
-        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
-        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-trailers"))).isEqualTo("value");
-        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-annotated-trailers"))).isEqualTo(
-                "annotated-value");
-
-        res = aggregated(client.get("/http-file/expect-headers-not-overwritten"));
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
-        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
-        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-trailers"))).isEqualTo("value");
-        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
-                "annotated-value");
-
         res = aggregated(client.get("/async/expect-bad-request"));
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
@@ -778,6 +757,36 @@ public class AnnotatedServiceResponseConverterTest {
 
         res = aggregated(client.get("/defer"));
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    public void httpFileResponseConverter() {
+        final WebClient client = WebClient.of(rule.httpUri() + "/http-file");
+
+        AggregatedHttpResponse res;
+
+        res = aggregated(client.get("/expect-custom-header"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
+                "annotated-value");
+
+        res = aggregated(client.get("/expect-custom-trailers"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-trailers"))).isEqualTo("value");
+        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-annotated-trailers"))).isEqualTo(
+                "annotated-value");
+
+        res = aggregated(client.get("/expect-http-file-service-headers-not-overwritten"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-trailers"))).isEqualTo("value");
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
+                "annotated-value");
     }
 
     private static AggregatedHttpResponse aggregated(HttpResponse response) {
