@@ -274,7 +274,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         }
 
         private boolean isCancelled() {
-            return cancelled == 1;
+            return cancelled != 0;
         }
     }
 }
