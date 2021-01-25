@@ -216,7 +216,7 @@ public final class HealthCheckService implements TransientHttpService {
                 try {
                     updateListener.healthUpdated(healthChecker.isHealthy());
                 } catch (Throwable t) {
-                    logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated(): ", t);
+                    logger.warn("Unexpected exception from HealthCheckUpdateListener.healthUpdated():", t);
                 }
             });
         });
