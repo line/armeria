@@ -22,6 +22,7 @@ import java.net.Inet4Address;
 import javax.annotation.Nullable;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.zookeeper.CreateMode;
 import org.slf4j.Logger;
@@ -119,7 +120,9 @@ public final class ZooKeeperUpdatingListener extends ServerListenerAdapter {
     @Override
     public void serverStarted(Server server) throws Exception {
         final ZooKeeperRegistrationSpec registrationSpec = fillAndCreateNewRegistrationSpec(spec, server);
-        client.start();
+        if (client.getState() != CuratorFrameworkState.STARTED) {
+            client.start();
+        }
         client.create()
               .creatingParentsIfNeeded()
               .withMode(registrationSpec.isSequential() ? CreateMode.EPHEMERAL_SEQUENTIAL
