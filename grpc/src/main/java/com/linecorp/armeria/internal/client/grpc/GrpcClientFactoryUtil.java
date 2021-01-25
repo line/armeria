@@ -27,7 +27,6 @@ final class GrpcClientFactoryUtil {
 
     @Nullable
     static <T> Method findStubFactoryMethod(Class<T> clientType) {
-        Method newStubMethod = null;
         for (Method method : clientType.getEnclosingClass().getDeclaredMethods()) {
             final int methodModifiers = method.getModifiers();
             if (!(Modifier.isPublic(methodModifiers) && Modifier.isStatic(methodModifiers))) {
@@ -52,10 +51,8 @@ final class GrpcClientFactoryUtil {
                 continue;
             }
 
-            newStubMethod = method;
-            break;
+            return method;
         }
-        return newStubMethod;
     }
 
     static IllegalStateException newClientStubCreationException(Throwable cause) {
