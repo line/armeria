@@ -238,7 +238,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      */
     public HealthCheckServiceBuilder updatable(boolean updatable) {
         if (updatable) {
-            return updatable(HealthCheckUpdateHandler.ofDefault());
+            return updatable(DefaultHealthCheckUpdateHandler.INSTANCE);
         }
 
         updateHandler = null;
