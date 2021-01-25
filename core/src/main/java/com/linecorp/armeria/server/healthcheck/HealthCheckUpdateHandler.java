@@ -28,7 +28,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 @FunctionalInterface
 public interface HealthCheckUpdateHandler {
-
     /**
      * Determines if the healthiness of the {@link Server} needs to be changed or not from the given
      * {@link HttpRequest}.
