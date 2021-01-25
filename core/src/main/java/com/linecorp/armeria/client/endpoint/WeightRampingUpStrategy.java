@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -74,38 +75,31 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
     private static final Ticker defaultTicker = Ticker.systemTicker();
 
-    static WeightRampingUpStrategy of() {
-        return WeightRampingUpStrategyHolder.INSTANCE;
-    }
-
-    // Use holder not to increase the index of the chooser.
-    private static final class WeightRampingUpStrategyHolder {
-        static final WeightRampingUpStrategy INSTANCE =
-            new WeightRampingUpStrategy(defaultTransition, CommonPools.workerGroup().next(),
+    static final WeightRampingUpStrategy INSTANCE =
+            new WeightRampingUpStrategy(defaultTransition, () -> CommonPools.workerGroup().next(),
                                         DEFAULT_RAMPING_UP_INTERVAL_MILLIS, DEFAULT_NUMBER_OF_STEPS,
                                         DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS, defaultTicker);
-    }
 
     private final EndpointWeightTransition weightTransition;
-    private final EventExecutor executor;
+    private final Supplier<EventExecutor> executorSupplier;
     private final long rampingUpIntervalMillis;
     private final int numberSteps;
     private final long rampingUpTaskWindowNanos;
     private final Ticker ticker;
 
     WeightRampingUpStrategy(EndpointWeightTransition weightTransition,
-                            EventExecutor executor, long rampingUpIntervalMillis,
+                            Supplier<EventExecutor> executorSupplier, long rampingUpIntervalMillis,
                             int numberSteps, long rampingUpTaskWindowMillis) {
-        this(weightTransition, executor, rampingUpIntervalMillis, numberSteps, rampingUpTaskWindowMillis,
-             defaultTicker);
+        this(weightTransition, executorSupplier, rampingUpIntervalMillis, numberSteps,
+             rampingUpTaskWindowMillis, defaultTicker);
     }
 
     @VisibleForTesting
     WeightRampingUpStrategy(EndpointWeightTransition weightTransition,
-                            EventExecutor executor, long rampingUpIntervalMillis,
+                            Supplier<EventExecutor> executorSupplier, long rampingUpIntervalMillis,
                             int numberSteps, long rampingUpTaskWindowMillis, Ticker ticker) {
         this.weightTransition = requireNonNull(weightTransition, "weightTransition");
-        this.executor = requireNonNull(executor, "executor");
+        this.executorSupplier = requireNonNull(executorSupplier, "executorSupplier");
         checkArgument(rampingUpIntervalMillis > 0,
                       "rampingUpIntervalMillis: %s (expected: > 0)", rampingUpIntervalMillis);
         this.rampingUpIntervalMillis = rampingUpIntervalMillis;
@@ -120,12 +114,13 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
     @Override
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
-        return new RampingUpEndpointWeightSelector(endpointGroup);
+        return new RampingUpEndpointWeightSelector(endpointGroup, executorSupplier.get());
     }
 
     @VisibleForTesting
     final class RampingUpEndpointWeightSelector extends AbstractEndpointSelector {
 
+        private final EventExecutor executor;
         private volatile WeightedRandomDistributionEndpointSelector endpointSelector;
 
         private final List<Endpoint> endpointsFinishedRampingUp = new ArrayList<>();
@@ -136,8 +131,9 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         @Nullable
         private List<Endpoint> unhandledNewEndpoints;
 
-        RampingUpEndpointWeightSelector(EndpointGroup endpointGroup) {
+        RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
+            this.executor = executor;
             final List<Endpoint> initialEndpoints =
                     new ArrayList<>(deduplicateEndpoints(endpointGroup.endpoints()).values());
             endpointSelector = new WeightedRandomDistributionEndpointSelector(initialEndpoints);

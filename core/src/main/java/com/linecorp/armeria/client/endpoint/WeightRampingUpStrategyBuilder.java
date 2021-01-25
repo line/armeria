@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -154,14 +155,14 @@ public final class WeightRampingUpStrategyBuilder {
                    "rampingUpIntervalMillis: %s, rampingUpTaskWindowMillis: %s " +
                    "(expected: rampingUpIntervalMillis > rampingUpTaskWindowMillis)",
                    rampingUpIntervalMillis, rampingUpTaskWindowMillis);
-        final EventExecutor executor;
-        if (this.executor != null) {
-            executor = this.executor;
+        final Supplier<EventExecutor> executorSupplier;
+        if (executor != null) {
+            executorSupplier = () -> executor;
         } else {
-            executor = CommonPools.workerGroup().next();
+            executorSupplier = () -> CommonPools.workerGroup().next();
         }
 
-        return new WeightRampingUpStrategy(transition, executor, rampingUpIntervalMillis,
+        return new WeightRampingUpStrategy(transition, executorSupplier, rampingUpIntervalMillis,
                                            numberSteps, rampingUpTaskWindowMillis);
     }
 }

@@ -356,7 +356,7 @@ final class WeightRampingUpStrategyTest {
     private static RampingUpEndpointWeightSelector setInitialEndpoints(DynamicEndpointGroup endpointGroup,
                                                                        int numberOfSteps) {
         final WeightRampingUpStrategy strategy =
-                new WeightRampingUpStrategy(linear(), new ImmediateExecutor(),
+                new WeightRampingUpStrategy(linear(), ImmediateExecutor::new,
                                             20000, numberOfSteps, 1000, ticker::get);
 
         final List<Endpoint> endpoints = ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"));

@@ -60,7 +60,7 @@ public interface EndpointSelectionStrategy {
      */
     @UnstableApi
     static EndpointSelectionStrategy rampingUp() {
-        return WeightRampingUpStrategy.of();
+        return WeightRampingUpStrategy.INSTANCE;
     }
 
     /**
