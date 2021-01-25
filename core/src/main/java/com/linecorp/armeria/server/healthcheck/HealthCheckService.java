@@ -147,7 +147,7 @@ public final class HealthCheckService implements TransientHttpService {
     final Set<PendingResponse> pendingUnhealthyResponses;
     @Nullable
     private final HealthCheckUpdateHandler updateHandler;
-    private final boolean serverListenerUpdate;
+    private final boolean startHealthy;
     private final Set<TransientServiceOption> transientServiceOptions;
 
     @Nullable
@@ -158,7 +158,7 @@ public final class HealthCheckService implements TransientHttpService {
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
                        long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
                        long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
-                       Iterable<HealthCheckUpdateListener> updateListeners, boolean serverListenerUpdate,
+                       Iterable<HealthCheckUpdateListener> updateListeners, boolean startHealthy,
                        Set<TransientServiceOption> transientServiceOptions) {
         serverHealth = new SettableHealthChecker(false);
         if (!Iterables.isEmpty(updateListeners)) {
@@ -167,7 +167,7 @@ public final class HealthCheckService implements TransientHttpService {
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
                 .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
-        this.serverListenerUpdate = serverListenerUpdate;
+        this.startHealthy = startHealthy;
         this.transientServiceOptions = transientServiceOptions;
 
         if (maxLongPollingTimeoutMillis > 0 &&
@@ -288,7 +288,7 @@ public final class HealthCheckService implements TransientHttpService {
 
             @Override
             public void serverStarted(Server server) {
-                if (serverListenerUpdate) {
+                if (startHealthy) {
                     serverHealth.setHealthy(true);
                 }
             }
