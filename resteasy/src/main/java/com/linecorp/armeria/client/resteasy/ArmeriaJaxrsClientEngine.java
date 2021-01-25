@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.resteasy;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayOutputStream;
@@ -37,7 +38,6 @@ import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.InvocationCallback;
-import javax.ws.rs.client.ResponseProcessingException;
 import javax.ws.rs.core.Response;
 
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
@@ -45,6 +45,8 @@ import org.jboss.resteasy.client.jaxrs.engines.AsyncClientHttpEngine;
 import org.jboss.resteasy.client.jaxrs.internal.ClientConfiguration;
 import org.jboss.resteasy.client.jaxrs.internal.ClientInvocation;
 import org.jboss.resteasy.client.jaxrs.internal.ClientResponse;
+
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -56,8 +58,10 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.resteasy.ByteBufferBackedOutputStream;
 import com.linecorp.armeria.internal.common.resteasy.HttpMessageStream;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.Unpooled;
 
@@ -74,6 +78,15 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
     private final int bufferSize;
     @Nullable
     private final Duration readTimeout;
+
+    /**
+     * Constructs {@link ArmeriaJaxrsClientEngine} based on {@link WebClient}.
+     * @param client {@link WebClient} instance to be used by this {@link AsyncClientHttpEngine} to facilitate
+     *               HTTP communications.
+     */
+    public ArmeriaJaxrsClientEngine(WebClient client) {
+        this(client, DEFAULT_BUFFER_SIZE, null);
+    }
 
     /**
      * Constructs {@link ArmeriaJaxrsClientEngine} based on {@link WebClient} and other parameters.
@@ -95,15 +108,6 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
         this.readTimeout = readTimeout;
     }
 
-    /**
-     * Constructs {@link ArmeriaJaxrsClientEngine} based on {@link WebClient}.
-     * @param client {@link WebClient} instance to be used by this {@link AsyncClientHttpEngine} to facilitate
-     *               HTTP communications.
-     */
-    public ArmeriaJaxrsClientEngine(WebClient client) {
-        this(client, DEFAULT_BUFFER_SIZE, null);
-    }
-
     @Override
     public void close() {
     }
@@ -116,7 +120,7 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
     @Override
     @Nullable
     public SSLContext getSslContext() {
-        throw new UnsupportedOperationException("getSslContext");
+        throw new UnsupportedOperationException();
     }
 
     /**
@@ -127,7 +131,7 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
     @Override
     @Nullable
     public HostnameVerifier getHostnameVerifier() {
-        throw new UnsupportedOperationException("getHostnameVerifier");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -138,9 +142,16 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
             return future.get();
         } catch (InterruptedException e) {
             future.cancel(true);
-            throw clientException(e, null);
+            throw new ProcessingException("Invocation interrupted", e);
         } catch (ExecutionException e) {
-            throw clientException(e.getCause(), null);
+            final Throwable cause = Exceptions.peel(e);
+            if (cause instanceof WebApplicationException) {
+                throw (WebApplicationException) cause;
+            } else if (cause instanceof ProcessingException) {
+                throw (ProcessingException) cause;
+            } else {
+                throw new ProcessingException(e);
+            }
         }
     }
 
@@ -148,8 +159,11 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
     public <T> Future<T> submit(ClientInvocation request, boolean buffered,
                                 @Nullable InvocationCallback<T> callback, ResultExtractor<T> extractor) {
 
+        // replaced CompletableFuture.whenComplete() with CompletableFuture.handle()
+        // due to performance issue described at
+        // <a href="https://github.com/line/armeria/pull/1440">#1440</a>.
         return submit(request, buffered, extractor, null)
-                .whenComplete((response, throwable) -> {
+                .handle((response, throwable) -> {
                     if (callback != null) {
                         if (throwable != null) {
                             callback.failed(throwable);
@@ -157,6 +171,7 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
                             callback.completed(response);
                         }
                     }
+                    return response;
                 });
     }
 
@@ -177,11 +192,13 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
         // compose RequestHeaders
         final HttpMethod method = HttpMethod.valueOf(request.getMethod());
         final URI requestUri = request.getUri();
+        final String scheme = checkNotNull(requestUri.getScheme(), "scheme: %s", requestUri);
+        final String authority = checkNotNull(requestUri.getAuthority(), "authority: %s", requestUri);
         final String path = getServicePath(requestUri);
         final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder()
                                                                           .method(method)
-                                                                          .scheme(requestUri.getScheme())
-                                                                          .authority(requestUri.getAuthority())
+                                                                          .scheme(scheme)
+                                                                          .authority(authority)
                                                                           .path(path);
         // copy request headers from ClientInvocation
         request.getHeaders().getHeaders().forEach(requestHeadersBuilder::addObject);
@@ -260,38 +277,30 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
         }
     }
 
-    private static RuntimeException clientException(@Nullable Throwable ex,
-                                                    @Nullable Response clientResponse) {
-
-        final RuntimeException ret;
-        if (ex == null) {
-            ret = new ProcessingException(new NullPointerException());
-        } else if (ex instanceof WebApplicationException) {
-            ret = (WebApplicationException) ex;
-        } else if (ex instanceof ProcessingException) {
-            ret = (ProcessingException) ex;
-        } else if (clientResponse != null) {
-            ret = new ResponseProcessingException(clientResponse, ex);
-        } else {
-            ret = new ProcessingException(ex);
-        }
-        return ret;
-    }
-
     /**
      * Extracts path, query and fragment portions of the {@link URI}.
      */
-    private static String getServicePath(final URI uri) {
-        final StringBuilder builder = new StringBuilder();
-        builder.append(requireNonNull(uri.getRawPath(), "path"));
+    private static String getServicePath(URI uri) {
+        final StringBuilder bufferedBuilder = TemporaryThreadLocals.get().stringBuilder();
+        bufferedBuilder.append(nullOrEmptyToSlash(uri.getRawPath()));
         final String query = uri.getRawQuery();
         if (query != null) {
-            builder.append('?').append(query);
+            bufferedBuilder.append('?').append(query);
         }
         final String fragment = uri.getRawFragment();
         if (fragment != null) {
-            builder.append('#').append(fragment);
+            bufferedBuilder.append('#').append(fragment);
         }
-        return builder.toString();
+        return bufferedBuilder.toString();
+    }
+
+    private static String nullOrEmptyToSlash(@Nullable String absolutePathRef) {
+        if (Strings.isNullOrEmpty(absolutePathRef)) {
+            return "/";
+        }
+
+        checkArgument(absolutePathRef.charAt(0) == '/',
+                      "absolutePathRef: %s (must start with '/')", absolutePathRef);
+        return absolutePathRef;
     }
 }

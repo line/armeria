@@ -188,7 +188,7 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     @Override
     public ResteasyClientBuilder httpEngine(ClientHttpEngine httpEngine) {
         // we'll always use an embedded ArmeriaJaxrsClientEngine
-        throw new UnsupportedOperationException("httpEngine");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -419,7 +419,7 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
      */
     @Override
     public ResteasyClientBuilder sslContext(SSLContext sslContext) {
-        throw new UnsupportedOperationException("sslContext");
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -447,7 +447,7 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
      */
     @Override
     public ResteasyClientBuilder hostnameVerifier(HostnameVerifier verifier) {
-        throw new UnsupportedOperationException("hostnameVerifier");
+        throw new UnsupportedOperationException();
     }
 
     @Override
