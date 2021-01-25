@@ -61,7 +61,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     private HealthCheckUpdateHandler updateHandler;
     private final ImmutableList.Builder<HealthCheckUpdateListener> updateListenersBuilder =
             ImmutableList.builder();
-    private boolean serverListenerUpdate = true;
+    private boolean startHealthy = true;
 
     private final TransientServiceOptionsBuilder
             transientServiceOptionsBuilder = new TransientServiceOptionsBuilder();
@@ -274,15 +274,15 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     }
 
     /**
-     * Disables setting healthy when the {@link Server} starts. The healthiness is updated using
-     * {@link HealthCheckUpdateHandler}. Please note that it's set unhealthy when the {@link Server} stops
-     * regardless.
+     * Disables setting healthy when the {@link Server} starts. This might be useful when you want to update
+     * the healthiness manually later via using {@link HealthCheckUpdateHandler}. Please note that it's set
+     * unhealthy when the {@link Server} stops regardless.
      *
      * @see #updatable(boolean)
      * @see #updatable(HealthCheckUpdateHandler)
      */
-    public HealthCheckServiceBuilder disableServerListenerUpdate() {
-        serverListenerUpdate = false;
+    public HealthCheckServiceBuilder startUnhealthy() {
+        startHealthy = false;
         return this;
     }
 
@@ -304,12 +304,12 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      * Returns a newly created {@link HealthCheckService} built from the properties specified so far.
      */
     public HealthCheckService build() {
-        checkState(serverListenerUpdate || updateHandler != null,
+        checkState(startHealthy || updateHandler != null,
                    "Healthiness must be updatable by server listener or update handler.");
         return new HealthCheckService(healthCheckers.build(),
                                       healthyResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
                                       pingIntervalMillis, updateHandler, updateListenersBuilder.build(),
-                                      serverListenerUpdate, transientServiceOptionsBuilder.build());
+                                      startHealthy, transientServiceOptionsBuilder.build());
     }
 }

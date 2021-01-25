@@ -73,10 +73,10 @@ class HealthCheckServiceTest {
                                                                 .updatable(true)
                                                                 .updateListener(capturedHealthy::set)
                                                                 .build());
-            sb.service("/hc_disable_server_listener_update", HealthCheckService.builder()
-                                                                               .updatable(true)
-                                                                               .disableServerListenerUpdate()
-                                                                               .build());
+            sb.service("/hc_unhealthy_at_startup", HealthCheckService.builder()
+                                                                     .updatable(true)
+                                                                     .startUnhealthy()
+                                                                     .build());
             sb.service("/hc_custom",
                        HealthCheckService.builder()
                                          .healthyResponse(AggregatedHttpResponse.of(
@@ -390,8 +390,8 @@ class HealthCheckServiceTest {
     }
 
     @Test
-    void disableServerListenerUpdate() throws Exception {
-        assertResponseEquals("GET /hc_disable_server_listener_update HTTP/1.0",
+    void startUnhealthy() throws Exception {
+        assertResponseEquals("GET /hc_unhealthy_at_startup HTTP/1.0",
                              "HTTP/1.1 503 Service Unavailable\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
