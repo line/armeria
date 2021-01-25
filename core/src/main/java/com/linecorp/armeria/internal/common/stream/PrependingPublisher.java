@@ -26,6 +26,8 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 
 public final class PrependingPublisher<T> implements Publisher<T> {
@@ -57,8 +59,8 @@ public final class PrependingPublisher<T> implements Publisher<T> {
         @Nullable
         private volatile Subscription upstream;
         private volatile long demand;
-        private volatile boolean firstSent;
-        private volatile boolean subscribed;
+        private boolean firstSent;
+        private boolean subscribed;
         private volatile boolean cancelled;
 
         RestSubscriber(T first, Publisher<? extends T> rest, Subscriber<? super T> downstream) {
@@ -78,7 +80,7 @@ public final class PrependingPublisher<T> implements Publisher<T> {
             }
             for (;;) {
                 final long demand = this.demand;
-                final long newDemand = demand >= Long.MAX_VALUE - n ? Long.MAX_VALUE : demand + n;
+                final long newDemand = LongMath.saturatedAdd(demand, n);
                 if (demandUpdater.compareAndSet(this, demand, newDemand)) {
                     if (demand > 0) {
                         return;
@@ -89,21 +91,23 @@ public final class PrependingPublisher<T> implements Publisher<T> {
             if (!firstSent) {
                 firstSent = true;
                 downstream.onNext(first);
-                demandUpdater.getAndUpdate(this, oldDemand -> oldDemand == Long.MAX_VALUE ?
-                                                              oldDemand : oldDemand - 1);
-            }
-            if (demand > 0) {
-                if (!subscribed) {
-                    subscribed = true;
-                    rest.subscribe(this);
+                if (demand != Long.MAX_VALUE) {
+                    demandUpdater.decrementAndGet(this);
                 }
-                final Subscription upstream = this.upstream;
-                if (upstream != null) {
-                    final long demand = this.demand;
-                    if (demand > 0) {
-                        if (demandUpdater.compareAndSet(this, demand, 0)) {
-                            upstream.request(demand);
-                        }
+            }
+            if (!subscribed) {
+                subscribed = true;
+                rest.subscribe(this);
+            }
+            if (demand == 0) {
+                return;
+            }
+            final Subscription upstream = this.upstream;
+            if (upstream != null) {
+                final long demand = this.demand;
+                if (demand > 0) {
+                    if (demandUpdater.compareAndSet(this, demand, 0)) {
+                        upstream.request(demand);
                     }
                 }
             }
