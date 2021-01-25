@@ -148,7 +148,7 @@ public final class ConsulUpdatingListenerBuilder implements ConsulConfigSetters 
      * @param tags the tags to add
      */
     public ConsulUpdatingListenerBuilder tags(String... tags) {
-        tagsBuilder.addAll(ImmutableSet.copyOf(requireNonNull(tags, "tags")));
+        tagsBuilder.add(requireNonNull(tags, "tags"));
         return this;
     }
 
