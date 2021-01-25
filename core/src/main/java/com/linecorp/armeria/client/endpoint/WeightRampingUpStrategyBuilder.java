@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
@@ -33,20 +34,22 @@ import io.netty.util.concurrent.EventExecutor;
  * Builds a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
  * {@link Endpoint}s. The {@link Endpoint} is selected using weighted random distribution.
  */
+@UnstableApi
 public final class WeightRampingUpStrategyBuilder {
 
-    private static final long DEFAULT_RAMPING_UP_INTERVAL_MILLIS = 2000;
-    private static final int DEFAULT_NUMBER_OF_STEPS = 10;
-    private static final int DEFAULT_RAMPING_UP_ENTRY_WINDOW_MILLIS = 500;
+    static final long DEFAULT_RAMPING_UP_INTERVAL_MILLIS = 2000;
+    static final int DEFAULT_NUMBER_OF_STEPS = 10;
+    static final int DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS = 500;
+    static final EndpointWeightTransition defaultTransition = EndpointWeightTransition.linear();
 
-    private EndpointWeightTransition transition = EndpointWeightTransition.linear();
+    private EndpointWeightTransition transition = defaultTransition;
 
     @Nullable
     private EventExecutor executor;
 
     private long rampingUpIntervalMillis = DEFAULT_RAMPING_UP_INTERVAL_MILLIS;
     private int numberSteps = DEFAULT_NUMBER_OF_STEPS;
-    private long rampingUpTaskWindowMillis = DEFAULT_RAMPING_UP_ENTRY_WINDOW_MILLIS;
+    private long rampingUpTaskWindowMillis = DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS;
 
     /**
      * Sets the {@link EndpointWeightTransition} which will be used to compute the weight at each step while

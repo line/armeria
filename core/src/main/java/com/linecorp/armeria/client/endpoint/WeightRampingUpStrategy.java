@@ -16,6 +16,10 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_NUMBER_OF_STEPS;
+import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_RAMPING_UP_INTERVAL_MILLIS;
+import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS;
+import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.defaultTransition;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
@@ -41,6 +45,7 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsRampingUpEntry.EndpointAndStep;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.Ticker;
 
@@ -68,6 +73,18 @@ import io.netty.util.concurrent.EventExecutor;
 final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
     private static final Ticker defaultTicker = Ticker.systemTicker();
+
+    static WeightRampingUpStrategy of() {
+        return WeightRampingUpStrategyHolder.INSTANCE;
+    }
+
+    // Use holder not to increase the index of the chooser.
+    private static final class WeightRampingUpStrategyHolder {
+        static final WeightRampingUpStrategy INSTANCE =
+            new WeightRampingUpStrategy(defaultTransition, CommonPools.workerGroup().next(),
+                                        DEFAULT_RAMPING_UP_INTERVAL_MILLIS, DEFAULT_NUMBER_OF_STEPS,
+                                        DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS, defaultTicker);
+    }
 
     private final EndpointWeightTransition weightTransition;
     private final EventExecutor executor;

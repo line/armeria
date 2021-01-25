@@ -85,7 +85,6 @@
 *.uberspace.de
 *.vps.myjino.ru
 *.webhare.dev
-*.ye
 *.yokohama.jp
 0.bg
 001www.com
@@ -434,7 +433,6 @@ app.render.com
 appchizi.com
 appengine.flow.ch
 apple
-applicationcloud.io
 applinzi.com
 apps.fbsbx.com
 apps.lair.io
@@ -1110,6 +1108,7 @@ capetown
 capital
 capitalone
 car
+caracal.mythic-beasts.com
 caravan
 carbonia-iglesias.it
 carboniaiglesias.it
@@ -1623,6 +1622,7 @@ com.vi
 com.vn
 com.vu
 com.ws
+com.ye
 com.zm
 comcast
 commbank
@@ -2169,6 +2169,7 @@ edu.ve
 edu.vn
 edu.vu
 edu.ws
+edu.ye
 edu.za
 edu.zm
 education
@@ -2354,6 +2355,7 @@ fedorainfracloud.org
 fedorapeople.org
 feedback
 feira.br
+fentiger.mythic-beasts.com
 fermo.it
 ferrara.it
 ferrari
@@ -2406,6 +2408,7 @@ firestone
 firewall-gateway.com
 firewall-gateway.de
 firewall-gateway.net
+fireweb.app
 firm.co
 firm.dk
 firm.ht
@@ -2515,6 +2518,7 @@ freeddns.org
 freeddns.us
 freedesktop.org
 freemasonry.museum
+freemyip.com
 freesite.host
 freetls.fastly.net
 frei.no
@@ -2745,6 +2749,7 @@ gg.ax
 ggee
 ggf.br
 gh
+ghost.io
 gi
 giehtavuoatna.no
 giessen.museum
@@ -2999,6 +3004,7 @@ gov.vc
 gov.ve
 gov.vn
 gov.ws
+gov.ye
 gov.za
 gov.zm
 gov.zw
@@ -4919,6 +4925,7 @@ mil.tz
 mil.uy
 mil.vc
 mil.ve
+mil.ye
 mil.za
 mil.zm
 mil.zw
@@ -5220,6 +5227,7 @@ mysecuritycamera.com
 mysecuritycamera.net
 mysecuritycamera.org
 myshopblocks.com
+myshopify.com
 mytis.ru
 mytuleap.com
 myvnc.com
@@ -5527,6 +5535,7 @@ net.vi
 net.vn
 net.vu
 net.ws
+net.ye
 net.za
 net.zm
 netbank
@@ -5934,6 +5943,7 @@ on-the-web.tv
 on-web.fr
 on.ca
 onagawa.miyagi.jp
+oncilla.mythic-beasts.com
 ondigitalocean.app
 one
 onfabrica.com
@@ -6141,6 +6151,7 @@ org.vi
 org.vn
 org.vu
 org.ws
+org.ye
 org.yt
 org.za
 org.zm
@@ -6952,7 +6963,6 @@ sc.tz
 sc.ug
 sc.us
 sca
-scapp.io
 scb
 sch.ae
 sch.id
@@ -7918,6 +7928,7 @@ trust
 trust.museum
 trustee.museum
 trv
+try-snowplow.com
 trycloudflare.com
 trysil.no
 ts.it
@@ -9010,6 +9021,7 @@ ybo.party
 ybo.review
 ybo.science
 ybo.trade
+ye
 yk.ca
 yn.cn
 yodobashi
