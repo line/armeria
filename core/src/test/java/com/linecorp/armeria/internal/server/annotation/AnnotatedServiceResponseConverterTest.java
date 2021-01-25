@@ -105,17 +105,17 @@ public class AnnotatedServiceResponseConverterTest {
                     return STRING;
                 }
 
-                @Get("/byteArray")
+                @Get("/byte-array")
                 public byte[] byteArray() {
                     return BYTEARRAY;
                 }
 
-                @Get("/httpData")
+                @Get("/http-data")
                 public HttpData httpData() {
                     return HTTPDATA;
                 }
 
-                @Get("/jsonNode")
+                @Get("/json-node")
                 public JsonNode jsonNode() throws IOException {
                     return JSONNODE;
                 }
@@ -133,19 +133,19 @@ public class AnnotatedServiceResponseConverterTest {
                     return Mono.just(STRING);
                 }
 
-                @Get("/byteArray")
+                @Get("/byte-array")
                 @ProducesOctetStream
                 public Publisher<byte[]> byteArray() {
                     return new ObjectPublisher<>(BYTEARRAY);
                 }
 
-                @Get("/httpData")
+                @Get("/http-data")
                 @ProducesOctetStream
                 public Publisher<HttpData> httpData() {
                     return new ObjectPublisher<>(HTTPDATA);
                 }
 
-                @Get("/jsonNode")
+                @Get("/json-node")
                 @ProducesJson   // Can omit this annotation, but it's not recommended.
                 public Publisher<JsonNode> jsonNode() throws IOException {
                     return Mono.just(JSONNODE);
@@ -164,7 +164,7 @@ public class AnnotatedServiceResponseConverterTest {
                     return new ObjectPublisher<>("a", "b", "c");
                 }
 
-                @Get("/jsonNode")
+                @Get("/json-node")
                 @ProducesJson
                 public Publisher<JsonNode> jsonNode() throws IOException {
                     return new ObjectPublisher<>(mapper.readTree("{\"a\":\"1\"}"),
@@ -187,12 +187,12 @@ public class AnnotatedServiceResponseConverterTest {
             });
 
             sb.annotatedService("/publish/http-result", new Object() {
-                @Get("/mono/jsonNode")
+                @Get("/mono/json-node")
                 public HttpResult<Publisher<JsonNode>> monoJsonNode() throws IOException {
                     return HttpResult.of(Mono.just(JSONNODE));
                 }
 
-                @Get("/jsonNode")
+                @Get("/json-node")
                 @ProducesJson
                 public HttpResult<Publisher<JsonNode>> jsonNode() throws IOException {
                     return HttpResult.of(new ObjectPublisher<>(JSONNODE));
@@ -211,43 +211,43 @@ public class AnnotatedServiceResponseConverterTest {
                     return 100;
                 }
 
-                @Get("/byteArray")
+                @Get("/byte-array")
                 @UserProduceBinary
                 public byte[] byteArray() {
                     return BYTEARRAY;
                 }
 
-                @Get("/httpData")
+                @Get("/http-data")
                 @Produces("application/octet-stream")
                 public HttpData httpData() {
                     return HTTPDATA;
                 }
 
-                @Get("/byteArrayGif")
+                @Get("/byte-array-gif")
                 @Produces("image/gif")
                 public byte[] byteArrayGif() {
                     return BYTEARRAY;
                 }
 
-                @Get("/httpDataPng")
+                @Get("/http-data-png")
                 @Produces("image/png")
                 public HttpData httpDataPng() {
                     return HTTPDATA;
                 }
 
-                @Get("/byteArrayTxt")
+                @Get("/byte-array-txt")
                 @ProducesText
                 public byte[] byteArrayTxt() {
                     return BYTEARRAY;
                 }
 
-                @Get("/httpDataTxt")
+                @Get("/http-data-txt")
                 @ProducesText
                 public HttpData httpDataTxt() {
                     return HTTPDATA;
                 }
 
-                @Get("/jsonNode")
+                @Get("/json-node")
                 @ProducesJson
                 public Map<String, String> jsonNode() throws IOException {
                     return ImmutableMap.of("a", STRING);
@@ -585,15 +585,15 @@ public class AnnotatedServiceResponseConverterTest {
         assertThat(res.contentUtf8()).isEqualTo(STRING);
         assertThat(res.contentAscii()).isNotEqualTo(STRING);
 
-        res = aggregated(client.get("/byteArray"));
+        res = aggregated(client.get("/byte-array"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/httpData"));
+        res = aggregated(client.get("/http-data"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/jsonNode"));
+        res = aggregated(client.get("/json-node"));
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(JSONNODE));
 
@@ -614,7 +614,7 @@ public class AnnotatedServiceResponseConverterTest {
                 .isArray().ofLength(3)
                 .thatContains("a").thatContains("b").thatContains("c");
 
-        res = aggregated(client.get("/jsonNode"));
+        res = aggregated(client.get("/json-node"));
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(res.contentUtf8())
                 .isEqualTo("[{\"a\":\"1\"},{\"b\":\"2\"},{\"c\":\"3\"}]");
@@ -643,31 +643,31 @@ public class AnnotatedServiceResponseConverterTest {
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.content().array()).isEqualTo("100".getBytes());
 
-        res = aggregated(client.get("/byteArray"));
+        res = aggregated(client.get("/byte-array"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/httpData"));
+        res = aggregated(client.get("/http-data"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/byteArrayGif"));
+        res = aggregated(client.get("/byte-array-gif"));
         assertThat(res.contentType()).isEqualTo(MediaType.GIF);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/httpDataPng"));
+        res = aggregated(client.get("/http-data-png"));
         assertThat(res.contentType()).isEqualTo(MediaType.PNG);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/byteArrayTxt"));
+        res = aggregated(client.get("/byte-array-txt"));
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/httpDataTxt"));
+        res = aggregated(client.get("/http-data-txt"));
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/jsonNode"));
+        res = aggregated(client.get("/json-node"));
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(JSONNODE));
     }
@@ -745,12 +745,12 @@ public class AnnotatedServiceResponseConverterTest {
 
         AggregatedHttpResponse res;
 
-        res = aggregated(client.get("/mono/jsonNode"));
+        res = aggregated(client.get("/mono/json-node"));
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(res.contentUtf8()).isEqualTo(ImmutableMap.of("a", STRING));
 
-        res = aggregated(client.get("/jsonNode"));
+        res = aggregated(client.get("/json-node"));
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(res.contentUtf8()).isEqualTo(ImmutableList.of(ImmutableMap.of("a", STRING)));
