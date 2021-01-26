@@ -285,6 +285,23 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Adds gRPC {@link ServerServiceDefinition}s to this {@link GrpcServiceBuilder}.
+     */
+    public GrpcServiceBuilder addServiceDefinitions(ServerServiceDefinition... services) {
+        requireNonNull(services, "services");
+        return addServiceDefinitions(ImmutableList.copyOf(services));
+    }
+
+    /**
+     * Adds gRPC {@link ServerServiceDefinition}s to this {@link GrpcServiceBuilder}.
+     */
+    public GrpcServiceBuilder addServiceDefinitions(Iterable<ServerServiceDefinition> services) {
+        requireNonNull(services, "services");
+        services.forEach(this::addService);
+        return this;
+    }
+
+    /**
      * Sets the {@link DecompressorRegistry} to use when decompressing messages. If not set, will use
      * the default, which supports gzip only.
      */
