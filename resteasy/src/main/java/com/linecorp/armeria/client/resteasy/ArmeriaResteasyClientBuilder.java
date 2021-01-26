@@ -125,15 +125,20 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
         // configure WebClientBuilder using ResteasyClientBuilder configuration
         final ClientFactoryBuilder clientFactoryBuilder = ClientFactory.builder();
 
+        // connectionTimeout -> ClientFactoryBuilder.connectTimeout
+        // Value {@code 0} represents infinity. Negative values are not allowed.
         final long connectTimeout = delegate.getConnectionTimeout(TimeUnit.MILLISECONDS);
         if (connectTimeout > 0L) {
             clientFactoryBuilder.connectTimeoutMillis(connectTimeout);
         }
+
+        // connectionTTL -> ClientFactoryBuilder.idleTimeout
         final long connectionIdleTimeout = delegate.getConnectionTTL(TimeUnit.MILLISECONDS);
-        if (connectionIdleTimeout > 0) {
+        if (connectionIdleTimeout > 0L) {
             clientFactoryBuilder.idleTimeoutMillis(connectionIdleTimeout);
         }
 
+        // defaultProxy -> ClientFactoryBuilder.proxyConfig(CONNECT)
         final String defaultProxyHost = delegate.getDefaultProxyHostname();
         if (defaultProxyHost != null) {
             final int defaultProxyPort = delegate.getDefaultProxyPort();
@@ -148,9 +153,11 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
             clientFactoryBuilder.proxyConfig(ProxyConfig.connect(defaultProxyAddress, proxyProtocol.isTls()));
         }
 
+        // trustManagerDisabled -> ClientFactoryBuilder.tlsNoVerify
         if (delegate.isTrustManagerDisabled()) {
             clientFactoryBuilder.tlsNoVerify();
         }
+        // trustStore, keyStore -> ClientFactoryBuilder.tlsCustomizer
         final KeyStore trustStore = delegate.getTrustStore();
         final KeyStore keyStore = delegate.getKeyStore();
         if (trustStore != null || keyStore != null) {
@@ -163,6 +170,15 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
                                                                delegate.isTrustSelfSignedCertificates())
             );
         }
+
+        // readTimeout -> WebClientBuilder.responseTimeout
+        // The value is the timeout to read a response. Value {@code 0} represents infinity.
+        // Negative values are not allowed.
+        final long readTimeout = delegate.getReadTimeout(TimeUnit.MILLISECONDS);
+        if (readTimeout >= 0L) {
+            webClientBuilder.responseTimeoutMillis(readTimeout);
+        }
+
         webClientBuilder.factory(clientFactoryBuilder.build());
         return webClientBuilder.build();
     }
@@ -170,6 +186,8 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     private ResteasyClient build(WebClient webClient) {
         final long readTimeout = delegate.getReadTimeout(TimeUnit.MILLISECONDS);
         final int bufferSize = delegate.getResponseBufferSize();
+        // responseBufferSize -> ArmeriaJaxrsClientEngine.bufferSize
+        // readTimeout -> ArmeriaJaxrsClientEngine.readTimeout
         final ClientHttpEngine armeriaEngine = new ArmeriaJaxrsClientEngine(
                 webClient,  bufferSize > 0 ? bufferSize : ArmeriaJaxrsClientEngine.DEFAULT_BUFFER_SIZE,
                 readTimeout > 0 ? Duration.ofMillis(readTimeout) : null);
