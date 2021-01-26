@@ -18,14 +18,14 @@ package com.linecorp.armeria.server.auth.oauth2;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.Map;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.WebClient;
@@ -41,16 +41,8 @@ import com.linecorp.armeria.server.auth.Authorizer;
 @UnstableApi
 public final class OAuth2TokenIntrospectionAuthorizerBuilder {
 
-    private static final long DEFAULT_CACHE_MAX_SIZE = 1000;
-    private static final Duration DEFAULT_CACHE_MAX_AGE = Duration.ofHours(1L);
-
-    private static Cache<String, OAuth2TokenDescriptor> createDefaultCache() {
-        final CacheBuilder<Object, Object> cacheBuilder =
-                CacheBuilder.newBuilder().maximumSize(DEFAULT_CACHE_MAX_SIZE)
-                            .concurrencyLevel(Runtime.getRuntime().availableProcessors());
-        cacheBuilder.expireAfterWrite(DEFAULT_CACHE_MAX_AGE);
-        return cacheBuilder.build();
-    }
+    public static final String DEFAULT_CACHE_SPEC = "maximumSize=1024,expireAfterWrite=1h";
+    private static final CaffeineSpec DEFAULT_CACHE_SPEC_OBJ = CaffeineSpec.parse(DEFAULT_CACHE_SPEC);
 
     private final WebClient introspectionEndpoint;
     private final String introspectionEndpointPath;
@@ -67,7 +59,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     private final ImmutableSet.Builder<String> permittedScope = ImmutableSet.builder();
 
     @Nullable
-    private Cache<String, OAuth2TokenDescriptor> tokenCache;
+    private CaffeineSpec cacheSpec;
 
     /**
      * Constructs new new builder for OAuth 2.0 Token Introspection {@link Authorizer},
@@ -182,46 +174,11 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     /**
      * Provides caching facility for OAuth 2.0 {@link OAuth2TokenDescriptor} in order to avoid continuous Token
      * Introspection as per <a href="https://tools.ietf.org/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
+     * Sets the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the tokens.
+     * If not set, {@value DEFAULT_CACHE_SPEC} is used by default.
      */
-    public OAuth2TokenIntrospectionAuthorizerBuilder tokenCache(
-            Cache<String, OAuth2TokenDescriptor> tokenCache) {
-        this.tokenCache = requireNonNull(tokenCache, "tokenCache");
-        return this;
-    }
-
-    /**
-     * Provides caching facility for OAuth 2.0 {@link OAuth2TokenDescriptor} in order to avoid continuous Token
-     * Introspection as per <a href="https://tools.ietf.org/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
-     * @param maxSize Specifies the maximum number of entries the cache may contain.
-     * @param maxAge Specifies that each entry should be automatically removed from the cache once given
-     *               {@link Duration} has elapsed after the entry's creation, or after the most recent
-     *               replacement of its value.
-     */
-    public OAuth2TokenIntrospectionAuthorizerBuilder tokenCacheWithAgePolicy(
-            long maxSize, Duration maxAge) {
-        final CacheBuilder<Object, Object> cacheBuilder =
-                CacheBuilder.newBuilder().maximumSize(maxSize)
-                            .concurrencyLevel(Runtime.getRuntime().availableProcessors());
-        cacheBuilder.expireAfterWrite(requireNonNull(maxAge, "maxAge"));
-        tokenCache = cacheBuilder.build();
-        return this;
-    }
-
-    /**
-     * Provides caching facility for OAuth 2.0 {@link OAuth2TokenDescriptor} in order to avoid continuous Token
-     * Introspection as per <a href="https://tools.ietf.org/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
-     * @param maxSize Specifies the maximum number of entries the cache may contain.
-     * @param maxIdle Specifies that each entry should be automatically removed from the cache once given
-     *                {@link Duration} has elapsed after the entry's creation, the most recent replacement
-     *                of its value, or its last access.
-     */
-    public OAuth2TokenIntrospectionAuthorizerBuilder tokenCacheWithAccessPolicy(
-            long maxSize, Duration maxIdle) {
-        final CacheBuilder<Object, Object> cacheBuilder =
-                CacheBuilder.newBuilder().maximumSize(maxSize)
-                            .concurrencyLevel(Runtime.getRuntime().availableProcessors());
-        cacheBuilder.expireAfterAccess(requireNonNull(maxIdle, "maxIdle"));
-        tokenCache = cacheBuilder.build();
+    public OAuth2TokenIntrospectionAuthorizerBuilder cacheSpec(String cacheSpec) {
+        this.cacheSpec = CaffeineSpec.parse(cacheSpec); // parse right away
         return this;
     }
 
@@ -236,7 +193,10 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
                                                              "introspectionEndpointPath"),
                                               clientAuthorization);
 
-        return new OAuth2TokenIntrospectionAuthorizer(tokenCache == null ? createDefaultCache() : tokenCache,
+        final Cache<String, OAuth2TokenDescriptor> tokenCache =
+                Caffeine.from(cacheSpec == null ? DEFAULT_CACHE_SPEC_OBJ : cacheSpec).build();
+
+        return new OAuth2TokenIntrospectionAuthorizer(tokenCache,
                                                       accessTokenType, realm, permittedScope.build(),
                                                       introspectionRequest);
     }

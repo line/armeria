@@ -25,7 +25,7 @@ import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
-import com.google.common.cache.Cache;
+import com.github.benmanes.caffeine.cache.Cache;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
