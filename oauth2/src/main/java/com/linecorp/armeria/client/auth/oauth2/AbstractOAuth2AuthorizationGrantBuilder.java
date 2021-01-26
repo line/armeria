@@ -80,10 +80,14 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * @param authorizationType One of the registered HTTP authentication schemes as per
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
+     * @throws IllegalStateException if authorizationSupplier already set
      */
     @SuppressWarnings("unchecked")
     public final T clientAuthorization(
             Supplier<String> authorizationSupplier, String authorizationType) {
+        if (clientAuthorization != null) {
+            throw new IllegalStateException("either client authorization or client credentials already set");
+        }
         clientAuthorization = ClientAuthorization.ofAuthorization(authorizationSupplier, authorizationType);
         return (T) this;
     }
@@ -94,9 +98,13 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param authorizationSupplier A supplier of encoded client authorization token.
+     * @throws IllegalStateException if authorizationSupplier already set
      */
     @SuppressWarnings("unchecked")
     public final T clientBasicAuthorization(Supplier<String> authorizationSupplier) {
+        if (clientAuthorization != null) {
+            throw new IllegalStateException("either client authorization or client credentials already set");
+        }
         clientAuthorization = ClientAuthorization.ofBasicAuthorization(authorizationSupplier);
         return (T) this;
     }
@@ -110,10 +118,14 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * @param authorizationType One of the registered HTTP authentication schemes as per
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
+     * @throws IllegalStateException if credentialsSupplier already set
      */
     @SuppressWarnings("unchecked")
     public final T clientCredentials(
             Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
+        if (clientAuthorization != null) {
+            throw new IllegalStateException("either client authorization or client credentials already set");
+        }
         clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier, authorizationType);
         return (T) this;
     }
@@ -124,10 +136,14 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param credentialsSupplier A supplier of client credentials.
+     * @throws IllegalStateException if credentialsSupplier already set
      */
     @SuppressWarnings("unchecked")
     public final T clientCredentials(
             Supplier<? extends Map.Entry<String, String>> credentialsSupplier) {
+        if (clientAuthorization != null) {
+            throw new IllegalStateException("either client authorization or client credentials already set");
+        }
         clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier);
         return (T) this;
     }
