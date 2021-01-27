@@ -35,6 +35,7 @@ import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessageType;
 
+import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -346,14 +347,16 @@ public final class ThriftFunction {
         final String ifaceTypeName = typeName(type, funcClass, methodName, "Iface");
         try {
             final Class<?> ifaceType = Class.forName(ifaceTypeName, false, funcClass.getClassLoader());
+
+            // Check and convert to camel, thrift java compiler only support underscored to camel
+            final String methodNameCamel = methodName.indexOf('_') >= 0 ?
+                                           CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, methodName)
+                                                                        : methodName;
             for (Method m : ifaceType.getDeclaredMethods()) {
-                if (!m.getName().equals(methodName)) {
-                    continue;
+                if (m.getName().equals(methodName) || m.getName().equals(methodNameCamel)) {
+                    return m.getExceptionTypes();
                 }
-
-                return m.getExceptionTypes();
             }
-
             throw new IllegalStateException("failed to find a method: " + methodName);
         } catch (Exception e) {
             throw new IllegalStateException(
