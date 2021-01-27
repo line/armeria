@@ -53,6 +53,7 @@ final class GrpcClientFactoryUtil {
 
             return method;
         }
+        return null;
     }
 
     static IllegalStateException newClientStubCreationException(Throwable cause) {
