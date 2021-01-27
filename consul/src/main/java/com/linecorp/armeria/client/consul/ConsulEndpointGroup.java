@@ -76,17 +76,24 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
     private final String serviceName;
     private final long registryFetchIntervalMillis;
     private final boolean useHealthyEndpoints;
+    @Nullable
+    private final String datacenter;
+    @Nullable
+    private final String filter;
 
     @Nullable
     private volatile ScheduledFuture<?> scheduledFuture;
 
     ConsulEndpointGroup(EndpointSelectionStrategy selectionStrategy, ConsulClient consulClient,
-                        String serviceName, long registryFetchIntervalMillis, boolean useHealthyEndpoints) {
+                        String serviceName, long registryFetchIntervalMillis, boolean useHealthyEndpoints,
+                        @Nullable String datacenter, @Nullable String filter) {
         super(selectionStrategy);
         this.consulClient = requireNonNull(consulClient, "consulClient");
         this.serviceName = requireNonNull(serviceName, "serviceName");
         this.registryFetchIntervalMillis = registryFetchIntervalMillis;
         this.useHealthyEndpoints = useHealthyEndpoints;
+        this.datacenter = datacenter;
+        this.filter = filter;
 
         update();
     }
@@ -100,9 +107,9 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
         final EventLoop eventLoop;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             if (useHealthyEndpoints) {
-                response = consulClient.healthyEndpoints(serviceName);
+                response = consulClient.healthyEndpoints(serviceName, datacenter, filter);
             } else {
-                response = consulClient.endpoints(serviceName);
+                response = consulClient.endpoints(serviceName, datacenter, filter);
             }
             eventLoop = captor.get().eventLoop().withoutContext();
         }

@@ -171,4 +171,30 @@ class ConsulUpdatingListenerTest extends ConsulTestBase {
                .untilAsserted(() ->
                       assertThat(client().healthyEndpoints(serviceName).join()).hasSameSizeAs(sampleEndpoints));
     }
+
+    @Test
+    void testThatTagsAreAdded() {
+        final int port = unusedPorts(1)[0];
+        final Server server = Server.builder()
+                                    .http(port)
+                                    .service("/echo", new EchoService())
+                                    .build();
+        final ServerListener listener =
+                ConsulUpdatingListener.builder(URI.create("http://127.0.0.1:" + consul().getHttpPort()),
+                                               "testThatTagsAreAdded")
+                                      .consulApiVersion("v1")
+                                      .consulToken(CONSUL_TOKEN)
+                                      .tags("production", "v1")
+                                      .build();
+        server.addListener(listener);
+        server.start().join();
+        await().atMost(10, TimeUnit.SECONDS)
+               .untilAsserted(() -> assertThat(
+                       client().healthyEndpoints("testThatTagsAreAdded", null,
+                                                 "Service.Tags contains \"v1\"")
+                               .join()
+                               .size()
+               ).isEqualTo(1));
+        server.stop();
+    }
 }

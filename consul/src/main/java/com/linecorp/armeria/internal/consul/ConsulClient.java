@@ -82,11 +82,12 @@ public final class ConsulClient {
      * @param serviceName a service name to register
      * @param endpoint an endpoint of service to register
      * @param check a check for the service
+     * @param tags tags for the service
      * @return a {@link CompletableFuture} that will be completed with the registered service ID
      */
     public HttpResponse register(String serviceId, String serviceName, Endpoint endpoint,
-                                 @Nullable Check check) {
-        return agentClient.register(serviceId, serviceName, endpoint.host(), endpoint.port(), check);
+                                 @Nullable Check check, List<String> tags) {
+        return agentClient.register(serviceId, serviceName, endpoint.host(), endpoint.port(), check, tags);
     }
 
     /**
@@ -102,14 +103,30 @@ public final class ConsulClient {
      * Get registered endpoints with service name from Consul agent.
      */
     public CompletableFuture<List<Endpoint>> endpoints(String serviceName) {
-        return catalogClient.endpoints(serviceName);
+        return endpoints(serviceName, null, null);
+    }
+
+    /**
+     * Get registered endpoints with service name in datacenter from Consul agent.
+     */
+    public CompletableFuture<List<Endpoint>> endpoints(String serviceName, @Nullable String datacenter,
+                                                       @Nullable String filter) {
+        return catalogClient.endpoints(serviceName, datacenter, filter);
     }
 
     /**
      * Returns the registered endpoints with the specified service name from Consul agent.
      */
     public CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName) {
-        return healthClient.healthyEndpoints(serviceName);
+        return healthyEndpoints(serviceName, null, null);
+    }
+
+    /**
+     * Returns the registered endpoints with the specified service name in datacenter from Consul agent.
+     */
+    public CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName, @Nullable String datacenter,
+                                                              @Nullable String filter) {
+        return healthClient.healthyEndpoints(serviceName, datacenter, filter);
     }
 
     /**
