@@ -29,6 +29,8 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -36,6 +38,11 @@ import io.netty.util.concurrent.EventExecutor;
  * source.
  */
 final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<ConcatPublisherStreamMessage, OuterSubscriber>
+            outerSubscriberUpdater = AtomicReferenceFieldUpdater
+            .newUpdater(ConcatPublisherStreamMessage.class, OuterSubscriber.class, "outerSubscriber");
 
     private final StreamMessage<? extends Publisher<? extends T>> sources;
 
@@ -63,7 +70,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
             return 0;
         }
 
-        final StreamMessage<? extends T> currentPublisher = outerSubscriber.currentPublisher;
+        final StreamMessage<? extends T> currentPublisher = outerSubscriber.currentStreamMessage;
         if (currentPublisher == null) {
             return 0;
         }
@@ -88,37 +95,41 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        final InnerSubscriber<T> innerSubscriber = new InnerSubscriber<>(subscriber, options);
+        final InnerSubscriber<T> innerSubscriber = new InnerSubscriber<>(subscriber, options, this);
         final OuterSubscriber<T> outerSubscriber = new OuterSubscriber<>(innerSubscriber, executor);
-        this.outerSubscriber = outerSubscriber;
-        subscriber.onSubscribe(innerSubscriber);
-        sources.subscribe(outerSubscriber, executor, options);
+        if (outerSubscriberUpdater.compareAndSet(this, null, outerSubscriber)) {
+            subscriber.onSubscribe(innerSubscriber);
+            sources.subscribe(outerSubscriber, executor, options);
+        } else {
+            subscriber.onSubscribe(NoopSubscription.get());
+            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+        }
     }
 
     @Override
     public void abort() {
-        sources.abort();
+        abort(AbortedStreamException.get());
     }
 
     @Override
     public void abort(Throwable cause) {
         sources.abort(cause);
+        final OuterSubscriber<T> outerSubscriber = this.outerSubscriber;
+        if (outerSubscriber != null) {
+            outerSubscriber.abort(cause);
+        }
     }
 
     private static final class OuterSubscriber<T> implements Subscriber<Publisher<? extends T>> {
-
-        @SuppressWarnings("rawtypes")
-        private static final AtomicReferenceFieldUpdater<OuterSubscriber, Subscription> upstreamUpdater =
-                AtomicReferenceFieldUpdater.newUpdater(OuterSubscriber.class, Subscription.class, "upstream");
 
         private final InnerSubscriber<T> innerSubscriber;
         private final EventExecutor executor;
 
         private boolean completed;
-        private boolean inSubscribe;
+        private boolean inInnerOnSubscribe;
 
         @Nullable
-        private volatile StreamMessage<? extends T> currentPublisher;
+        private volatile StreamMessage<? extends T> currentStreamMessage;
         @Nullable
         private volatile Subscription upstream;
 
@@ -131,8 +142,9 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
-            if (upstreamUpdater.compareAndSet(this, null, subscription)) {
-                nextSource();
+            if (upstream == null) {
+                upstream = subscription;
+                subscription.request(1);
             } else {
                 subscription.cancel();
             }
@@ -141,9 +153,9 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         @Override
         public void onNext(Publisher<? extends T> publisher) {
             requireNonNull(publisher, "publisher");
-            inSubscribe = true;
             final StreamMessage<? extends T> streamMessage = StreamMessage.of(publisher);
-            currentPublisher = streamMessage;
+            currentStreamMessage = streamMessage;
+            inInnerOnSubscribe = true;
             streamMessage.subscribe(innerSubscriber, executor, innerSubscriber.options);
         }
 
@@ -155,6 +167,14 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
             }
             completed = true;
             innerSubscriber.onError(cause);
+            abort(cause);
+        }
+
+        private void abort(Throwable cause) {
+            final StreamMessage<? extends T> currentStreamMessage = this.currentStreamMessage;
+            if (currentStreamMessage != null) {
+                currentStreamMessage.abort(cause);
+            }
         }
 
         @Override
@@ -166,7 +186,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
             // If 'innerSubscriber' is not complete, 'downstream' will be completed
             // when 'innerSubscriber' receives `onComplete` signal.
             completed = true;
-            if (!inSubscribe && innerSubscriber.completed) {
+            if (!inInnerOnSubscribe && innerSubscriber.completed) {
                 innerSubscriber.onComplete();
             }
         }
@@ -184,6 +204,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
 
         private Subscriber<? super T> downstream;
         private final SubscriptionOption[] options;
+        private final ConcatPublisherStreamMessage<T> publisher;
 
         @Nullable
         private OuterSubscriber<T> outerSubscriber;
@@ -192,9 +213,11 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         // Updated via cancelledUpdater
         private volatile int cancelled;
 
-        InnerSubscriber(Subscriber<? super T> downstream, SubscriptionOption[] options) {
+        InnerSubscriber(Subscriber<? super T> downstream, SubscriptionOption[] options,
+                        ConcatPublisherStreamMessage<T> publisher) {
             this.downstream = downstream;
             this.options = options;
+            this.publisher = publisher;
         }
 
         /**
@@ -215,7 +238,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
             // Reset 'completed' to subscribe to new Publisher
             completed = false;
             setUpstreamSubscription(subscription);
-            outerSubscriber.inSubscribe = false;
+            outerSubscriber.inInnerOnSubscribe = false;
         }
 
         @Override
@@ -229,8 +252,13 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         }
 
         @Override
-        public void onError(Throwable throwable) {
-            downstream.onError(throwable);
+        public void onError(Throwable cause) {
+            requireNonNull(cause, "cause");
+            if (isCancelled()) {
+                return;
+            }
+            downstream.onError(cause);
+            publisher.abort(cause);
         }
 
         @Override
@@ -266,8 +294,10 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
                     outerSubscriber.upstream.cancel();
                 }
                 super.cancel();
+                final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
+                publisher.abort(cause);
                 if (!completed && containsNotifyCancellation(options)) {
-                    downstream.onError(CancelledSubscriptionException.get());
+                    downstream.onError(cause);
                 }
                 downstream = NoopSubscriber.get();
             }

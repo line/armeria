@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 /**
  * A {@link FixedStreamMessage} that publishes two objects.
@@ -45,12 +44,12 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    final void cleanupObjects() {
+    final void cleanupObjects(@Nullable Throwable cause) {
         if (obj1 != null) {
             try {
                 onRemoval(obj1);
             } finally {
-                PooledObjects.close(obj1);
+                StreamMessageUtil.closeOrAbort(obj1, cause);
             }
             obj1 = null;
         }
@@ -58,7 +57,7 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             try {
                 onRemoval(obj2);
             } finally {
-                PooledObjects.close(obj2);
+                StreamMessageUtil.closeOrAbort(obj2, cause);
             }
             obj2 = null;
         }

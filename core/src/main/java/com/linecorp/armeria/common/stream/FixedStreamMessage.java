@@ -52,7 +52,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private int requested;
 
-    abstract void cleanupObjects();
+    abstract void cleanupObjects(@Nullable Throwable cause);
 
     abstract void doRequest(SubscriptionImpl subscription, long n);
 
@@ -139,7 +139,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
-            cleanupObjects();
+            cleanupObjects(event.cause);
         }
     }
 

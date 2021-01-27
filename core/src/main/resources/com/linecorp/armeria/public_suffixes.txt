@@ -37,6 +37,7 @@
 *.futurecms.at
 *.gateway.dev
 *.hosting.myjino.ru
+*.hosting.ovh.net
 *.in.futurecms.at
 *.jm
 *.kawasaki.jp
@@ -85,7 +86,7 @@
 *.uberspace.de
 *.vps.myjino.ru
 *.webhare.dev
-*.ye
+*.webpaas.ovh.net
 *.yokohama.jp
 0.bg
 001www.com
@@ -1338,6 +1339,7 @@ cleverapps.io
 clic2000.net
 click
 clicketcloud.com
+clickrising.net
 clinic
 clinique
 clinton.museum
@@ -1623,6 +1625,7 @@ com.vi
 com.vn
 com.vu
 com.ws
+com.ye
 com.zm
 comcast
 commbank
@@ -2169,6 +2172,7 @@ edu.ve
 edu.vn
 edu.vu
 edu.ws
+edu.ye
 edu.za
 edu.zm
 education
@@ -3003,6 +3007,7 @@ gov.vc
 gov.ve
 gov.vn
 gov.ws
+gov.ye
 gov.za
 gov.zm
 gov.zw
@@ -4923,6 +4928,7 @@ mil.tz
 mil.uy
 mil.vc
 mil.ve
+mil.ye
 mil.za
 mil.zm
 mil.zw
@@ -5532,6 +5538,7 @@ net.vi
 net.vn
 net.vu
 net.ws
+net.ye
 net.za
 net.zm
 netbank
@@ -6147,6 +6154,7 @@ org.vi
 org.vn
 org.vu
 org.ws
+org.ye
 org.yt
 org.za
 org.zm
@@ -7923,6 +7931,7 @@ trust
 trust.museum
 trustee.museum
 trv
+try-snowplow.com
 trycloudflare.com
 trysil.no
 ts.it
@@ -8743,6 +8752,7 @@ xn--mgbbh1a
 xn--mgbbh1a71e
 xn--mgbc0a9azcg
 xn--mgbca7dzdo
+xn--mgbcpq6gpa1a
 xn--mgberp4a5d4a87g
 xn--mgberp4a5d4ar
 xn--mgbgu82a
@@ -8807,6 +8817,7 @@ xn--pgbs0dh
 xn--porsgu-sta26f.no
 xn--pssu33l.jp
 xn--pssy2u
+xn--q7ce6a
 xn--q9jyb4c
 xn--qcka1pmc
 xn--qqqt11m.jp
@@ -9015,6 +9026,7 @@ ybo.party
 ybo.review
 ybo.science
 ybo.trade
+ye
 yk.ca
 yn.cn
 yodobashi
