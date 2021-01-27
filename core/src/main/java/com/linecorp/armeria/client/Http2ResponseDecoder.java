@@ -298,7 +298,15 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             return;
         }
 
-        res.close(new ClosedStreamException("received a RST_STREAM frame: " + Http2Error.valueOf(errorCode)));
+        final Http2Error http2Error = Http2Error.valueOf(errorCode);
+        final ClosedStreamException cause =
+                new ClosedStreamException("received a RST_STREAM frame: " + http2Error);
+
+        if (http2Error == Http2Error.REFUSED_STREAM) {
+            res.close(UnprocessedRequestException.of(cause));
+        } else {
+            res.close(cause);
+        }
     }
 
     @Override
