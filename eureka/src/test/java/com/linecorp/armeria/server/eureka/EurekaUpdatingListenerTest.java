@@ -57,8 +57,10 @@ class EurekaUpdatingListenerTest {
                               .setSerializationInclusion(Include.NON_NULL);
 
     private static final AtomicReference<HttpData> registerContentCaptor = new AtomicReference<>();
+    private static final AtomicInteger registerCounter = new AtomicInteger();
 
     private static final CompletableFuture<RequestHeaders> heartBeatHeadersCaptor = new CompletableFuture<>();
+    private static final AtomicInteger heartBeatRequestCounter = new AtomicInteger();
     private static final CompletableFuture<RequestHeaders> deregisterHeadersCaptor = new CompletableFuture<>();
 
     @RegisterExtension
@@ -73,12 +75,12 @@ class EurekaUpdatingListenerTest {
                 final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
                 req.aggregate().handle((aggregatedRes, cause) -> {
                     registerContentCaptor.set(aggregatedRes.content());
+                    registerCounter.incrementAndGet();
                     future.complete(HttpResponse.of(HttpStatus.NO_CONTENT));
                     return null;
                 });
                 return HttpResponse.from(future);
             });
-            final AtomicInteger heartBeatRequestCounter = new AtomicInteger();
             sb.service("/apps/" + APP_NAME + '/' + INSTANCE_ID, (ctx, req) -> {
                 req.aggregate();
                 if (req.method() == HttpMethod.PUT) {
@@ -87,6 +89,9 @@ class EurekaUpdatingListenerTest {
                         // This is for the test that EurekaUpdatingListener automatically retries when
                         // RetryingClient is not used.
                         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+                    if (registerContentCaptor.get() == null) {
+                        return HttpResponse.of(HttpStatus.NOT_FOUND);
                     }
                     heartBeatHeadersCaptor.complete(req.headers());
                 } else if (req.method() == HttpMethod.DELETE) {
@@ -132,6 +137,41 @@ class EurekaUpdatingListenerTest {
         application.stop().join();
         final RequestHeaders deregisterHeaders = deregisterHeadersCaptor.join();
         assertThat(deregisterHeaders.path()).isEqualTo("/apps/application0/i-00000000");
+    }
+
+    @Test
+    void reRegisterIfInstanceNoLongerRegistered() throws IOException {
+        final EurekaUpdatingListener listener =
+            EurekaUpdatingListener.builder(eurekaServer.httpUri())
+                .instanceId(INSTANCE_ID)
+                .renewalIntervalMillis(2000)
+                .leaseDurationMillis(10000)
+                .appName(APP_NAME)
+                .build();
+        final int previousRegisterCount = registerCounter.get();
+        final Server application = Server.builder()
+            .http(0)
+            .https(0)
+            .tlsSelfSigned()
+            .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+            .service("/health", HealthCheckService.of())
+            .serverListener(listener)
+            .build();
+        application.start().join();
+        await().until(() -> registerContentCaptor.get() != null);
+        assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 1);
+
+        // remove instance from the registry
+        registerContentCaptor.set(null);
+        await().until(() -> registerContentCaptor.get() != null);
+        assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 2);
+
+        // heart beats are sent, and not cause re-registration
+        final int heartBeatCount = heartBeatRequestCounter.get();
+        await().until(() -> heartBeatRequestCounter.get() >= heartBeatCount + 2);
+        assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 2);
+
+        application.stop().join();
     }
 
     private static InstanceInfo expectedInstanceInfo(Server application) {
