@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,8 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.grpc.testing.MetricsServiceGrpc.MetricsServiceImplBase;
+import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A1Exception;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A2Exception;
@@ -36,6 +39,13 @@ import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A3Exception;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.B1Exception;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.B2Exception;
 
+import io.grpc.BindableService;
+import io.grpc.Metadata;
+import io.grpc.ServerCall;
+import io.grpc.ServerCall.Listener;
+import io.grpc.ServerCallHandler;
+import io.grpc.ServerInterceptor;
+import io.grpc.ServerInterceptors;
 import io.grpc.Status;
 
 class GrpcServiceBuilderTest {
@@ -131,5 +141,57 @@ class GrpcServiceBuilderTest {
         final Status status = Status.DEADLINE_EXCEEDED.withCause(new A1Exception());
         final Status newStatus = GrpcStatus.fromStatusFunction(statusFunction, status);
         assertThat(newStatus).isSameAs(status);
+    }
+
+    @Test
+    void addServices() {
+        final BindableService metricsService = new MetricsServiceImpl();
+        final BindableService reconnectService = new ReconnectServiceImpl();
+
+        final List<String> serviceNames =
+                ImmutableList.of("armeria.grpc.testing.MetricsService",
+                                 "armeria.grpc.testing.ReconnectService");
+
+        final GrpcService grpcService1 =
+                GrpcService.builder().addServices(metricsService, reconnectService).build();
+
+        final GrpcService grpcService2 =
+                GrpcService.builder().addServices(ImmutableList.of(metricsService, reconnectService)).build();
+
+        final GrpcService grpcService3 =
+                GrpcService.builder()
+                           .addServiceDefinitions(
+                                   ServerInterceptors.intercept(metricsService, new DummyInterceptor()),
+                                   ServerInterceptors.intercept(reconnectService, new DummyInterceptor())
+                           )
+                           .build();
+
+        final GrpcService grpcService4 =
+                GrpcService
+                        .builder()
+                        .addServiceDefinitions(
+                                ImmutableList.of(
+                                        ServerInterceptors.intercept(metricsService, new DummyInterceptor()),
+                                        ServerInterceptors.intercept(reconnectService, new DummyInterceptor())
+                                )
+                        )
+                        .build();
+
+        for (GrpcService s : ImmutableList.of(grpcService1, grpcService2, grpcService3, grpcService4)) {
+            assertThat(s.services().stream().map(it -> it.getServiceDescriptor().getName()))
+                    .containsExactlyInAnyOrderElementsOf(serviceNames);
+        }
+    }
+
+    private static class MetricsServiceImpl extends MetricsServiceImplBase {}
+
+    private static class ReconnectServiceImpl extends ReconnectServiceImplBase {}
+
+    private static class DummyInterceptor implements ServerInterceptor {
+        @Override
+        public <ReqT, RespT> Listener<ReqT> interceptCall(ServerCall<ReqT, RespT> call, Metadata headers,
+                                                          ServerCallHandler<ReqT, RespT> next) {
+            return next.startCall(call, headers);
+        }
     }
 }
