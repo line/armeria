@@ -120,7 +120,7 @@ class ServerMaxConnectionAgeTest {
 
     @CsvSource({ "H1C", "H1" })
     @ParameterizedTest
-    void http1MaxConnectionAge(SessionProtocol protocol) throws InterruptedException {
+    void http1MaxConnectionAge(SessionProtocol protocol) {
         final int maxClosedConnection = 5;
         final ConnectionPoolListener connectionPoolListener = new ConnectionPoolListener() {
             @Override

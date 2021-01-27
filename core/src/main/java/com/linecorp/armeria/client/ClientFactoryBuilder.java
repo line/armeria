@@ -45,6 +45,7 @@ import javax.net.ssl.TrustManagerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 
@@ -92,6 +93,8 @@ public final class ClientFactoryBuilder {
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final ClientFactoryOptionValue<Long> MIN_PING_INTERVAL =
             ClientFactoryOptions.PING_INTERVAL_MILLIS.newValue(MIN_PING_INTERVAL_MILLIS);
+
+    static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
 
     static {
         RequestContextUtil.init();
@@ -534,6 +537,50 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets the maximum allowed age of a connection in millis for keep-alive. A connection is disconnected
+     * after the specified {@code maxConnectionAgeMillis} since the connection was established.
+     * This option is disabled by default, which means unlimited.
+     *
+     * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
+     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
+     */
+    public ClientFactoryBuilder maxConnectionAgeMillis(long maxConnectionAgeMillis) {
+        checkArgument(maxConnectionAgeMillis >= MIN_MAX_CONNECTION_AGE_MILLIS || maxConnectionAgeMillis == 0,
+                      "maxConnectionAgeMillis: %s (expected: >= %s or == 0)",
+                      maxConnectionAgeMillis, MIN_MAX_CONNECTION_AGE_MILLIS);
+        option(ClientFactoryOptions.MAX_CONNECTION_AGE_MILLIS, maxConnectionAgeMillis);
+        return this;
+    }
+
+    /**
+     * Sets the maximum allowed age of a connection for keep-alive. A connection is disconnected
+     * after the specified {@code maxConnectionAge} since the connection was established.
+     * This option is disabled by default, which means unlimited.
+     *
+     * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
+     * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
+     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
+     */
+    public ClientFactoryBuilder maxConnectionAge(Duration maxConnectionAge) {
+        return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
+    }
+
+    /**
+     * Sets the maximum allowed number of requests that can be sent through one connection.
+     * This option is disabled by default, which means unlimited.
+     *
+     * @param maxNumRequestsPerConnection the maximum number of requests per connection.
+     *                                    {@code 0} disables the limit.
+     */
+    public ClientFactoryBuilder maxNumRequestsPerConnection(int maxNumRequestsPerConnection) {
+        checkArgument(maxNumRequestsPerConnection >= 0, "maxNumRequestsPerConnection: %s (expected: >= 0)",
+                      maxNumRequestsPerConnection);
+        option(ClientFactoryOptions.MAX_NUM_REQUESTS_PER_CONNECTION, maxNumRequestsPerConnection);
+        return this;
+    }
+
+    /**
      * Sets whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
      */
@@ -687,21 +734,35 @@ public final class ClientFactoryBuilder {
         }
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
-        final long idleTimeoutMillis = newOptions.idleTimeoutMillis();
+        final long maxConnectionAgeMillis = newOptions.maxConnectionAgeMillis();
+        long idleTimeoutMillis = newOptions.idleTimeoutMillis();
         final long pingIntervalMillis = newOptions.pingIntervalMillis();
+        final ImmutableList.Builder<ClientFactoryOptionValue<?>> adjustedOptionsBuilder =
+                ImmutableList.builderWithExpectedSize(2);
+
+        if (maxConnectionAgeMillis != 0 && idleTimeoutMillis > maxConnectionAgeMillis) {
+            adjustedOptionsBuilder
+                    .add(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS.newValue(maxConnectionAgeMillis));
+            idleTimeoutMillis = maxConnectionAgeMillis;
+        }
+
         if (idleTimeoutMillis > 0 && pingIntervalMillis > 0) {
             final long clampedPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
             if (clampedPingIntervalMillis >= idleTimeoutMillis) {
-                return ClientFactoryOptions.of(newOptions, ZERO_PING_INTERVAL);
-            }
-            if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
-                return newOptions;
-            }
-            if (clampedPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
-                return ClientFactoryOptions.of(newOptions, MIN_PING_INTERVAL);
+                adjustedOptionsBuilder.add(ZERO_PING_INTERVAL);
+            } else if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+                // no-op, clampedPingIntervalMillis is equal to pingIntervalMillis
+            } else if (clampedPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
+                adjustedOptionsBuilder.add(MIN_PING_INTERVAL);
             }
         }
-        return newOptions;
+
+        final List<ClientFactoryOptionValue<?>> adjustedOptions = adjustedOptionsBuilder.build();
+        if (!adjustedOptions.isEmpty()) {
+            return ClientFactoryOptions.of(newOptions, adjustedOptions);
+        } else {
+            return newOptions;
+        }
     }
 
     /**

@@ -31,6 +31,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.Channel;
 import reactor.test.StepVerifier;
@@ -164,6 +166,11 @@ class HttpResponseWrapperTest {
     private static class TestHttpResponseDecoder extends HttpResponseDecoder {
         TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
             super(channel, inboundTrafficController);
+        }
+
+        @Override
+        KeepAliveHandler keepAliveHandler() {
+            return NoopKeepAliveHandler.INSTANCE;
         }
     }
 }

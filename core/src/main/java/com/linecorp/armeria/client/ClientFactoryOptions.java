@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.client.ClientFactoryBuilder.MIN_MAX_CONNECTION_AGE_MILLIS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -168,6 +169,31 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<Long> PING_INTERVAL_MILLIS =
             ClientFactoryOption.define("PING_INTERVAL_MILLIS", Flags.defaultPingIntervalMillis());
+
+    /**
+     * The client-side max age of a connection for keep-alive in milliseconds.
+     * If the value is greater than {@code 0}, a connection is disconnected after the specified
+     * amount of time since the connection was established.
+     * This option is disabled by default, which means unlimited.
+     */
+    public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS =
+            ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
+
+    private static long clampedDefaultMaxClientConnectionAge() {
+        final long connectionAgeMillis = Flags.defaultMaxClientConnectionAgeMillis();
+        if (connectionAgeMillis > 0 && connectionAgeMillis < MIN_MAX_CONNECTION_AGE_MILLIS) {
+            return MIN_MAX_CONNECTION_AGE_MILLIS;
+        }
+        return connectionAgeMillis;
+    }
+
+    /**
+     * The client-side maximum allowed number of requests that can be sent through one connection.
+     * This option is disabled by default, which means unlimited.
+     */
+    public static final ClientFactoryOption<Integer> MAX_NUM_REQUESTS_PER_CONNECTION =
+            ClientFactoryOption.define("MAX_NUM_REQUESTS_PER_CONNECTION",
+                                       Flags.defaultMaxClientNumRequestsPerConnection());
 
     /**
      * Whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
@@ -424,6 +450,22 @@ public final class ClientFactoryOptions
      */
     public long pingIntervalMillis() {
         return get(PING_INTERVAL_MILLIS);
+    }
+
+    /**
+     * Returns the client-side max age of a connection for keep-alive in milliseconds.
+     * If the value is greater than {@code 0}, a connection is disconnected after the specified
+     * amount of the time since the connection was established.
+     */
+    public long maxConnectionAgeMillis() {
+        return get(MAX_CONNECTION_AGE_MILLIS);
+    }
+
+    /**
+     * Returns the client-side maximum allowed number of requests that can be sent through one connection.
+     */
+    public int maxNumRequestsPerConnection() {
+        return get(MAX_NUM_REQUESTS_PER_CONNECTION);
     }
 
     /**

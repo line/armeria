@@ -56,7 +56,7 @@ import io.netty.handler.codec.http2.Http2PingFrame;
  * @see Flags#defaultServerIdleTimeoutMillis()
  * @see Flags#defaultPingIntervalMillis()
  */
-public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
+public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2KeepAliveHandler.class);
 
@@ -70,10 +70,16 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
 
     protected Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, String name,
                                     Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
-                                    long maxConnectionAgeMillis) {
-        super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis);
+                                    long maxConnectionAgeMillis, int maxNumRequestsPerConnection) {
+        super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis,
+              maxConnectionAgeMillis, maxNumRequestsPerConnection);
         this.channel = requireNonNull(channel, "channel");
         this.frameWriter = requireNonNull(frameWriter, "frameWriter");
+    }
+
+    @Override
+    public boolean isHttp2() {
+        return true;
     }
 
     @Override
@@ -84,6 +90,7 @@ public abstract class Http2KeepAliveHandler extends KeepAliveHandler {
         return future;
     }
 
+    @Override
     public final void onPingAck(long data) {
         final long elapsed = getStopwatchElapsedInNanos();
         if (!isGoodPingAck(data)) {

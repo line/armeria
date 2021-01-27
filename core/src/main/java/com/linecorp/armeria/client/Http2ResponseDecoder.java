@@ -31,8 +31,9 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
-import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -56,15 +57,16 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     private final Http2Connection conn;
     private final Http2ConnectionEncoder encoder;
     private final Http2GoAwayHandler goAwayHandler;
-    @Nullable
-    private final Http2KeepAliveHandler keepAliveHandler;
+    private final KeepAliveHandler keepAliveHandler;
 
     Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory,
-                         @Nullable Http2KeepAliveHandler keepAliveHandler) {
+                         KeepAliveHandler keepAliveHandler) {
         super(channel,
               InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
         this.encoder = encoder;
+        assert keepAliveHandler instanceof Http2ClientKeepAliveHandler ||
+               keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         goAwayHandler = new Http2GoAwayHandler();
     }
@@ -147,9 +149,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             res.close(ClosedStreamException.get());
         }
 
-        // Send a GOAWAY frame if the connection has been scheduled for disconnection and
-        // it did not receive or send a GOAWAY frame.
-        if (needsToDisconnectNow() && !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway()) {
+        if (shouldSendGoAway()) {
             channel().close();
         }
     }
@@ -208,6 +208,10 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         if (endOfStream) {
             res.close();
+
+            if (shouldSendGoAway()) {
+                channel().close();
+            }
         }
     }
 
@@ -257,10 +261,24 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         if (endOfStream) {
             res.close();
+
+            if (shouldSendGoAway()) {
+                // The connection has reached its lifespan.
+                // Should send a GOAWAY frame if it did not receive or send a GOAWAY frame.
+                channel().close();
+            }
         }
 
         // All bytes have been processed.
         return dataLength + padding;
+    }
+
+    /**
+     * Returns {@code true} if a connection has reached its lifespan
+     * and the connection did not receive or send a GOAWAY frame.
+     */
+    private boolean shouldSendGoAway() {
+        return needsToDisconnectNow() && !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway();
     }
 
     @Override
@@ -293,14 +311,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onPingRead(ChannelHandlerContext ctx, long data) {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onPing();
-        }
+        keepAliveHandler.onPing();
     }
 
     @Override
     public void onPingAckRead(ChannelHandlerContext ctx, long data) {
-        if (keepAliveHandler != null) {
+        if (keepAliveHandler.isHttp2()) {
             keepAliveHandler.onPingAck(data);
         }
     }
@@ -314,6 +330,11 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                ByteBuf payload) {}
+
+    @Override
+    KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
+    }
 
     private void keepAliveChannelRead() {
         if (keepAliveHandler != null) {

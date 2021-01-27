@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
@@ -26,6 +24,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.buffer.Unpooled;
@@ -41,17 +40,17 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 
 final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
-    @Nullable
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
 
     private boolean sentConnectionCloseHeader;
 
-    ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol,
-                             @Nullable KeepAliveHandler keepAliveHandler,
+    ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
                              boolean enableDateHeader, boolean enableServerHeader) {
         super(ch, protocol);
+        assert keepAliveHandler instanceof Http1ServerKeepAliveHandler ||
+               keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
@@ -69,7 +68,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             return write(id, converted, false);
         }
 
-        if (keepAliveHandler != null && keepAliveHandler.isMaxConnectionAgeExceeded()) {
+        if (keepAliveHandler.needToCloseConnection()) {
             converted.headers().set(HttpHeaderNames.CONNECTION, "close");
             sentConnectionCloseHeader = true;
         }
@@ -149,7 +148,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         ArmeriaHttpUtil.toNettyHttp1ServerTrailer(inputHeaders, outputHeaders);
     }
 
-    @Nullable
     @Override
     public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
