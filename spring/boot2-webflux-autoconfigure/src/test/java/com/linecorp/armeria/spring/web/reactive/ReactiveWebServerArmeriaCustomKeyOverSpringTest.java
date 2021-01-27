@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,13 +18,13 @@ package com.linecorp.armeria.spring.web.reactive;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.test.context.ActiveProfiles;
 
-@ActiveProfiles("test_custom_key_alias_1")
-class ReactiveWebServerCustomKeyAlias1Test extends AbstractReactiveWebServerCustomKeyAliasTest {
+@ActiveProfiles("test_armeria_ssl_custom_key_over_spring")
+class ReactiveWebServerArmeriaCustomKeyOverSpringTest extends AbstractReactiveWebServerCustomKeyAliasTest {
 
     @SpringBootApplication
     static class TestConfiguration {}
 
-    ReactiveWebServerCustomKeyAlias1Test() {
+    ReactiveWebServerArmeriaCustomKeyOverSpringTest() {
         // The entry 'key1' contains the self-signed certificate for 'a.com'.
         // For the complete list of the keystore entries, enter the following command:
         //

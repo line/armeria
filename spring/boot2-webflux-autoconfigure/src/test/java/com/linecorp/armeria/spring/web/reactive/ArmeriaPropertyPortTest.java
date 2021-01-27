@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,21 +15,33 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.test.context.ActiveProfiles;
 
-@ActiveProfiles("test_custom_key_alias_1")
-class ReactiveWebServerCustomKeyAlias1Test extends AbstractReactiveWebServerCustomKeyAliasTest {
+import com.linecorp.armeria.spring.LocalArmeriaPorts;
+
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@ActiveProfiles("test_armeria_port")
+class ArmeriaPropertyPortTest {
 
     @SpringBootApplication
     static class TestConfiguration {}
 
-    ReactiveWebServerCustomKeyAlias1Test() {
-        // The entry 'key1' contains the self-signed certificate for 'a.com'.
-        // For the complete list of the keystore entries, enter the following command:
-        //
-        //     keytool -list -v -keystore keystore_with_two_keys.pkcs12 -storepass mystorepass
-        //
-        super("CN=a.com,OU=Unknown,O=Unknown,L=Unknown,ST=Unknown,C=Unknown");
+    @LocalArmeriaPorts
+    List<Integer> armeriaPorts;
+
+    /**
+     * If the property file has Armeria port, then only the Armeria port is used.
+     */
+    @Test
+    void useArmeriaPort() {
+        assertThat(armeriaPorts).hasSize(1);
     }
 }
