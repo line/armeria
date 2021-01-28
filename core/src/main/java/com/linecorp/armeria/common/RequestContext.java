@@ -436,6 +436,24 @@ public interface RequestContext {
     SafeCloseable push();
 
     /**
+     * Immediately run a given {@link Runnable} with this context.
+     */
+    default void run(Runnable runnable) {
+        try (SafeCloseable ignored = push()) {
+            runnable.run();
+        }
+    }
+
+    /**
+     * Immediately call a given {@link Callable} with this context.
+     */
+    default <T> T call(Callable<T> callable) throws Exception {
+        try (SafeCloseable ignored = push()) {
+            return callable.call();
+        }
+    }
+
+    /**
      * Replaces the current {@link RequestContext} in the thread-local with this context without any validation.
      * This method also does not run any callbacks.
      *

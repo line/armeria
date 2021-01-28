@@ -56,6 +56,25 @@ import io.netty.util.concurrent.Promise;
 class RequestContextTest {
 
     @Test
+    void run() {
+        final RequestContext ctx = createContext();
+        ctx.run(() -> {
+            assertCurrentContext(ctx);
+        });
+        assertCurrentContext(null);
+    }
+
+    @Test
+    void call() throws Exception {
+        final RequestContext ctx = createContext();
+        ctx.call(() -> {
+            assertCurrentContext(ctx);
+            return "success";
+        });
+        assertCurrentContext(null);
+    }
+
+    @Test
     void contextAwareEventExecutor() throws Exception {
         final RequestContext context = createContext();
         final Set<Integer> callbacksCalled = Collections.newSetFromMap(new ConcurrentHashMap<>());
