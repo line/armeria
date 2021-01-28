@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,7 +64,6 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Create a started {@link Server} bean.
      */
     @Bean
-    @Nullable
     public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
@@ -79,8 +76,9 @@ public abstract class AbstractArmeriaAutoConfiguration {
 
         if (!armeriaServerConfigurators.isPresent() &&
             !armeriaServerBuilderConsumers.isPresent()) {
-            logger.warn("No services to register, will NOT start up armeria server.");
-            return null;
+            throw new IllegalStateException(
+                    "No services to register," +
+                    "use ArmeriaServerConfigurator or Consumer<ServerBuilder> to config armeria server.");
         }
 
         final ServerBuilder serverBuilder = Server.builder();
@@ -133,11 +131,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Wrap {@link Server} with {@link SmartLifecycle}.
      */
     @Bean
-    @Nullable
     public SmartLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
-        if (server == null) {
-            return null;
-        }
         return new ArmeriaServerGracefulShutdownLifecycle(server);
     }
 
