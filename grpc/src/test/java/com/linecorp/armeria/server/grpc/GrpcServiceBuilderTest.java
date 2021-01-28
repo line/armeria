@@ -189,8 +189,8 @@ class GrpcServiceBuilderTest {
 
     private static class DummyInterceptor implements ServerInterceptor {
         @Override
-        public <ReqT, RespT> Listener<ReqT> interceptCall(ServerCall<ReqT, RespT> call, Metadata headers,
-                                                          ServerCallHandler<ReqT, RespT> next) {
+        public <REQ, RESP> Listener<REQ> interceptCall(ServerCall<REQ, RESP> call, Metadata headers,
+                                                       ServerCallHandler<REQ, RESP> next) {
             return next.startCall(call, headers);
         }
     }
