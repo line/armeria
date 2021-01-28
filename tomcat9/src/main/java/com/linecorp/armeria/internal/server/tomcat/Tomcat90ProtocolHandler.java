@@ -115,6 +115,14 @@ public final class Tomcat90ProtocolHandler implements ProtocolHandler {
     @Override
     public void closeServerSocketGraceful() {}
 
+    /**
+     * Not available in Tomcat 8.5.
+     */
+    @SuppressWarnings("override")
+    public long awaitConnectionsClose(long waitMillis) {
+        return 0;
+    }
+
     @Override
     public boolean isAprRequired() {
         return false;

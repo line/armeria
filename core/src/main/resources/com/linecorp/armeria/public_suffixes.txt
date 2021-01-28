@@ -37,6 +37,7 @@
 *.futurecms.at
 *.gateway.dev
 *.hosting.myjino.ru
+*.hosting.ovh.net
 *.in.futurecms.at
 *.jm
 *.kawasaki.jp
@@ -85,6 +86,7 @@
 *.uberspace.de
 *.vps.myjino.ru
 *.webhare.dev
+*.webpaas.ovh.net
 *.yokohama.jp
 0.bg
 001www.com
@@ -436,6 +438,8 @@ apple
 applinzi.com
 apps.fbsbx.com
 apps.lair.io
+appspacehosted.com
+appspaceusercontent.com
 appspot.com
 aprendemas.cl
 aq
@@ -1337,6 +1341,7 @@ cleverapps.io
 clic2000.net
 click
 clicketcloud.com
+clickrising.net
 clinic
 clinique
 clinton.museum
@@ -2311,6 +2316,7 @@ exposed
 express
 express.aero
 extraspace
+ezproxy.kuleuven.be
 f.bg
 f.se
 fage
@@ -4300,6 +4306,7 @@ kuji.iwate.jp
 kuju.oita.jp
 kujukuri.chiba.jp
 kuki.saitama.jp
+kuleuven.cloud
 kumagaya.saitama.jp
 kumakogen.ehime.jp
 kumamoto.jp
@@ -6259,6 +6266,7 @@ padua.it
 page
 pagefrontapp.com
 pages.dev
+pages.torproject.net
 pages.wiardweb.com
 pagespeedmobilizer.com
 pagexl.com
@@ -7811,6 +7819,7 @@ toray
 toride.ibaraki.jp
 torino.it
 torino.museum
+torproject.net
 torsken.no
 tos.it
 tosa.kochi.jp
@@ -8749,6 +8758,7 @@ xn--mgbbh1a
 xn--mgbbh1a71e
 xn--mgbc0a9azcg
 xn--mgbca7dzdo
+xn--mgbcpq6gpa1a
 xn--mgberp4a5d4a87g
 xn--mgberp4a5d4ar
 xn--mgbgu82a
@@ -8813,6 +8823,7 @@ xn--pgbs0dh
 xn--porsgu-sta26f.no
 xn--pssu33l.jp
 xn--pssy2u
+xn--q7ce6a
 xn--q9jyb4c
 xn--qcka1pmc
 xn--qqqt11m.jp
