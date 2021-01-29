@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.healthcheck;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +32,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -154,14 +154,14 @@ public final class HealthCheckService implements TransientHttpService {
     private Server server;
     private boolean serverStopping;
 
-    HealthCheckService(Iterable<HealthChecker> healthCheckers,
+    HealthCheckService(Set<HealthChecker> healthCheckers,
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
                        long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
                        long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
-                       Iterable<HealthCheckUpdateListener> updateListeners, boolean startHealthy,
+                       List<HealthCheckUpdateListener> updateListeners, boolean startHealthy,
                        Set<TransientServiceOption> transientServiceOptions) {
         serverHealth = new SettableHealthChecker(false);
-        if (!Iterables.isEmpty(updateListeners)) {
+        if (!updateListeners.isEmpty()) {
             addServerHealthUpdateListener(ImmutableList.copyOf(updateListeners));
         }
         this.healthCheckers = ImmutableSet.<HealthChecker>builder()
