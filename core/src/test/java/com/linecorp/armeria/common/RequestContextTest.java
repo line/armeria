@@ -56,7 +56,7 @@ import io.netty.util.concurrent.Promise;
 class RequestContextTest {
 
     @Test
-    void run() {
+    void runWithRunnable() {
         final RequestContext ctx = createContext();
         ctx.run(() -> {
             assertCurrentContext(ctx);
@@ -65,9 +65,9 @@ class RequestContextTest {
     }
 
     @Test
-    void call() throws Exception {
+    void runWithCallable() throws Exception {
         final RequestContext ctx = createContext();
-        ctx.call(() -> {
+        ctx.run(() -> {
             assertCurrentContext(ctx);
             return "success";
         });

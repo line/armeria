@@ -447,7 +447,7 @@ public interface RequestContext {
     /**
      * Immediately call a given {@link Callable} with this context.
      */
-    default <T> T call(Callable<T> callable) throws Exception {
+    default <T> T run(Callable<T> callable) throws Exception {
         try (SafeCloseable ignored = push()) {
             return callable.call();
         }
