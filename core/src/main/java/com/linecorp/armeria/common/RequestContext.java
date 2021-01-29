@@ -439,6 +439,7 @@ public interface RequestContext {
      * Immediately run a given {@link Runnable} with this context.
      */
     default void run(Runnable runnable) {
+        requireNonNull(runnable, "runnable");
         try (SafeCloseable ignored = push()) {
             runnable.run();
         }
@@ -448,6 +449,7 @@ public interface RequestContext {
      * Immediately call a given {@link Callable} with this context.
      */
     default <T> T run(Callable<T> callable) throws Exception {
+        requireNonNull(callable, "callable");
         try (SafeCloseable ignored = push()) {
             return callable.call();
         }
