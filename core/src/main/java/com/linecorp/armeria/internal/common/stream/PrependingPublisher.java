@@ -133,8 +133,11 @@ public final class PrependingPublisher<T> implements Publisher<T> {
                 return;
             }
             upstream = subscription;
-            final long demand = this.demand;
-            if (demand > 0) {
+            for (;;) {
+                final long demand = this.demand;
+                if (demand == 0) {
+                    break;
+                }
                 if (demandUpdater.compareAndSet(this, demand, 0)) {
                     subscription.request(demand);
                 }
