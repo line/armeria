@@ -55,9 +55,9 @@ public final class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
     /**
      * A supplier of user credentials: "username" and "password" used to grant the Access Token. REQUIRED.
      */
-    public OAuth2ResourceOwnerPasswordCredentialsGrantBuilder userCredentialsSupplier(
-            Supplier<Entry<String, String>> userCredentialsSupplier) {
-        this.userCredentialsSupplier = requireNonNull(userCredentialsSupplier, "userCredentialsSupplier");
+    public OAuth2ResourceOwnerPasswordCredentialsGrantBuilder userCredentials(
+            Supplier<Entry<String, String>> userCredentials) {
+        userCredentialsSupplier = requireNonNull(userCredentials, "userCredentials");
         return this;
     }
 
@@ -77,6 +77,6 @@ public final class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
         return new OAuth2ResourceOwnerPasswordCredentialsGrant(
                 (ResourceOwnerPasswordCredentialsTokenRequest) buildObtainRequest(),
                 buildRefreshRequest(), refreshBefore(),
-                tokenSupplier(), tokenConsumer(), executor());
+                tokenPersistencySupplier(), tokenPersistencyConsumer(), executor());
     }
 }

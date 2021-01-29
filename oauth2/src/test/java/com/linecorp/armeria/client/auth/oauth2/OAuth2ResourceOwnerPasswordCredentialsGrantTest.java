@@ -124,7 +124,7 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
 
         final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
                 .builder(authClient, "/token/user/")
-                .userCredentialsSupplier(
+                .userCredentials(
                         () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
         try (Server server = resourceServer.start()) {
@@ -151,7 +151,7 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
 
         final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
                 .builder(authClient, "/token/user/")
-                .userCredentialsSupplier(
+                .userCredentials(
                         () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
         try (Server server = resourceServer.start()) {
@@ -190,7 +190,7 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
 
         final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
                 .builder(authClient, "/token/user/")
-                .userCredentialsSupplier(
+                .userCredentials(
                         () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
                 .clientBasicAuthorization(() -> SERVER_CREDENTIALS).build();
         try (Server server = resourceServer.start()) {
@@ -211,7 +211,7 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
 
         final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
                 .builder(authClient, "/token/user/")
-                .userCredentialsSupplier(
+                .userCredentials(
                         () -> new AbstractMap.SimpleImmutableEntry<>("foo", "bar"))
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
         try (Server server = resourceServer.start()) {

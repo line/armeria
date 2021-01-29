@@ -76,19 +76,19 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * authorization type,
      * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
-     * @param authorizationSupplier A supplier of encoded client authorization token.
+     * @param clientAuthorization A supplier of encoded client authorization token.
      * @param authorizationType One of the registered HTTP authentication schemes as per
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
-     * @throws IllegalStateException if authorizationSupplier already set
+     * @throws IllegalStateException if clientAuthorization already set
      */
     @SuppressWarnings("unchecked")
     public final T clientAuthorization(
-            Supplier<String> authorizationSupplier, String authorizationType) {
-        if (clientAuthorization != null) {
+            Supplier<String> clientAuthorization, String authorizationType) {
+        if (this.clientAuthorization != null) {
             throw new IllegalStateException("either client authorization or client credentials already set");
         }
-        clientAuthorization = ClientAuthorization.ofAuthorization(authorizationSupplier, authorizationType);
+        this.clientAuthorization = ClientAuthorization.ofAuthorization(clientAuthorization, authorizationType);
         return (T) this;
     }
 
@@ -97,15 +97,15 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * {@code Basic} authorization type,
      * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
-     * @param authorizationSupplier A supplier of encoded client authorization token.
-     * @throws IllegalStateException if authorizationSupplier already set
+     * @param clientAuthorization A supplier of encoded client authorization token.
+     * @throws IllegalStateException if clientAuthorization already set
      */
     @SuppressWarnings("unchecked")
-    public final T clientBasicAuthorization(Supplier<String> authorizationSupplier) {
-        if (clientAuthorization != null) {
+    public final T clientBasicAuthorization(Supplier<String> clientAuthorization) {
+        if (this.clientAuthorization != null) {
             throw new IllegalStateException("either client authorization or client credentials already set");
         }
-        clientAuthorization = ClientAuthorization.ofBasicAuthorization(authorizationSupplier);
+        this.clientAuthorization = ClientAuthorization.ofBasicAuthorization(clientAuthorization);
         return (T) this;
     }
 
@@ -114,19 +114,19 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * authorization type,
      * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
-     * @param credentialsSupplier A supplier of client credentials.
+     * @param clientCredentials A supplier of client credentials.
      * @param authorizationType One of the registered HTTP authentication schemes as per
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
-     * @throws IllegalStateException if credentialsSupplier already set
+     * @throws IllegalStateException if clientCredentials already set
      */
     @SuppressWarnings("unchecked")
     public final T clientCredentials(
-            Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
+            Supplier<? extends Map.Entry<String, String>> clientCredentials, String authorizationType) {
         if (clientAuthorization != null) {
             throw new IllegalStateException("either client authorization or client credentials already set");
         }
-        clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier, authorizationType);
+        clientAuthorization = ClientAuthorization.ofCredentials(clientCredentials, authorizationType);
         return (T) this;
     }
 
@@ -135,16 +135,15 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * {@code Basic} authorization type,
      * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
-     * @param credentialsSupplier A supplier of client credentials.
-     * @throws IllegalStateException if credentialsSupplier already set
+     * @param clientCredentials A supplier of client credentials.
+     * @throws IllegalStateException if clientCredentials already set
      */
     @SuppressWarnings("unchecked")
-    public final T clientCredentials(
-            Supplier<? extends Map.Entry<String, String>> credentialsSupplier) {
+    public final T clientCredentials(Supplier<? extends Map.Entry<String, String>> clientCredentials) {
         if (clientAuthorization != null) {
             throw new IllegalStateException("either client authorization or client credentials already set");
         }
-        clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier);
+        clientAuthorization = ClientAuthorization.ofCredentials(clientCredentials);
         return (T) this;
     }
 
@@ -165,13 +164,13 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * A {@link Supplier} to load Access Token from, to be able to restore the previous session. OPTIONAL.
      */
     @SuppressWarnings("unchecked")
-    public final T tokenSupplier(Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier) {
+    public final T tokenPersistencySupplier(Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier) {
         this.tokenSupplier = requireNonNull(tokenSupplier, "tokenSupplier");
         return (T) this;
     }
 
     @Nullable
-    final Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier() {
+    final Supplier<? extends GrantedOAuth2AccessToken> tokenPersistencySupplier() {
         return tokenSupplier;
     }
 
@@ -179,13 +178,13 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * A {@link Consumer} to store Access Token to, to be able restore the previous session. OPTIONAL.
      */
     @SuppressWarnings("unchecked")
-    public final T tokenConsumer(Consumer<? super GrantedOAuth2AccessToken> tokenConsumer) {
+    public final T tokenPersistencyConsumer(Consumer<? super GrantedOAuth2AccessToken> tokenConsumer) {
         this.tokenConsumer = requireNonNull(tokenConsumer, "tokenConsumer");
         return (T) this;
     }
 
     @Nullable
-    final Consumer<? super GrantedOAuth2AccessToken> tokenConsumer() {
+    final Consumer<? super GrantedOAuth2AccessToken> tokenPersistencyConsumer() {
         return tokenConsumer;
     }
 
