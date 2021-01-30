@@ -49,6 +49,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -1088,7 +1089,10 @@ public final class VirtualHostBuilder {
             clientEngine.wrap(appBuf, packetBuf);
             appBuf.clear();
             packetBuf.flip();
-            serverEngine.unwrap(packetBuf, appBuf);
+            final SSLEngineResult result = serverEngine.unwrap(packetBuf, appBuf);
+            if (result.bytesConsumed() == 0) {
+                throw new IllegalStateException("failed to validate SSL/TLS configuration: " + sslContext);
+            }
         } catch (SSLException e) {
             throw new IllegalStateException("failed to validate SSL/TLS configuration: " + e.getMessage(), e);
         } finally {

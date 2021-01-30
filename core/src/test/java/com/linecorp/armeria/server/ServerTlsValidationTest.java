@@ -77,4 +77,23 @@ class ServerTlsValidationTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("failed to validate SSL/TLS configuration");
     }
+
+    @Test
+    void testPkcs12KeyStoreWithPassword() throws Exception {
+        /*
+         * Dummy keystore generation
+         * keytool -genkeypair -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 3650
+         * keypassword = keystorepassword = password
+         */
+        final KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(getClass().getResource("keystore.p12").openStream(), "password".toCharArray());
+
+        final KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(keyStore, "password".toCharArray());
+
+        Server.builder()
+              .service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
+              .tls(kmf)
+              .build();
+    }
 }
