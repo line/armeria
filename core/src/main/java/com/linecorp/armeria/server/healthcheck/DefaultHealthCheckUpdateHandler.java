@@ -33,13 +33,11 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler {
+enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler {
+
+    INSTANCE;
 
     private static final ObjectMapper mapper = new ObjectMapper();
-
-    static final DefaultHealthCheckUpdateHandler INSTANCE = new DefaultHealthCheckUpdateHandler();
-
-    private DefaultHealthCheckUpdateHandler() {}
 
     @Override
     public CompletionStage<HealthCheckUpdateResult> handle(ServiceRequestContext ctx,

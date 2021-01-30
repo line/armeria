@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,6 +56,7 @@ import io.netty.util.NetUtil;
 class HealthCheckServiceTest {
 
     private static final SettableHealthChecker checker = new SettableHealthChecker();
+    private static final AtomicReference<Boolean> capturedHealthy = new AtomicReference<>();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -67,6 +69,14 @@ class HealthCheckServiceTest {
             sb.service("/hc_updatable", HealthCheckService.builder()
                                                           .updatable(true)
                                                           .build());
+            sb.service("/hc_update_listener", HealthCheckService.builder()
+                                                                .updatable(true)
+                                                                .updateListener(capturedHealthy::set)
+                                                                .build());
+            sb.service("/hc_unhealthy_at_startup", HealthCheckService.builder()
+                                                                     .updatable(true)
+                                                                     .startUnhealthy()
+                                                                     .build());
             sb.service("/hc_custom",
                        HealthCheckService.builder()
                                          .healthyResponse(AggregatedHttpResponse.of(
@@ -358,6 +368,35 @@ class HealthCheckServiceTest {
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "60, 5"),
                 HttpData.ofUtf8("{\"healthy\":true}")));
+    }
+
+    @Test
+    void updateListener() {
+        final WebClient client = WebClient.of(server.httpUri());
+
+        capturedHealthy.set(null);
+
+        // Make unhealthy.
+        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":false}")
+              .aggregate().join();
+        assertThat(capturedHealthy.get()).isFalse();
+
+        capturedHealthy.set(null);
+
+        // Make healthy.
+        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":true}")
+              .aggregate().join();
+        assertThat(capturedHealthy.get()).isTrue();
+    }
+
+    @Test
+    void startUnhealthy() throws Exception {
+        assertResponseEquals("GET /hc_unhealthy_at_startup HTTP/1.0",
+                             "HTTP/1.1 503 Service Unavailable\r\n" +
+                             "content-type: application/json; charset=utf-8\r\n" +
+                             "armeria-lphc: 60, 5\r\n" +
+                             "content-length: 17\r\n\r\n" +
+                             "{\"healthy\":false}");
     }
 
     @Test
