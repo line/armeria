@@ -1,0 +1,320 @@
+---
+date: 2021-02-01
+---
+
+## 🌟 New features
+
+- You can now register/discover your servers to/from [Consul](https://www.consul.io/)
+  using a new `armeria-consul` module. #194 #2192 #3002 #3281
+  ```java
+  // Registration
+  Server server = ...;
+  server.addListener(
+    ConsulUpdatingListener.builder(myConsulUri, "myService")
+                          .consulToken(myConsulAccessToken)
+                          .build());
+  server.start().join();
+
+  // Discovery
+  ConsulEndpointGroup endpointGroup =
+    ConsulEndpointGroup.builder(myConsulUri, "myService")
+                       .consulToken(myConsulAccessToken)
+                       .build();
+  ```
+- You can now smoothly ramp up the weight of newly added <type://Endpoint> in
+  an <type://EndpointGroup> using <type://EndpointSelectionStrategy#rampingUp()>
+  to protect a fresh node from getting too much traffic suddenly. #1757 #3217
+  ```java
+  EndpointGroup endpointGroup =
+    DnsAddressEndpointGroup
+      .builder("my.hostname.local")
+      .selectionStrategy(EndpointSelectionStrategy.rampingUp())
+      .build();
+
+  // Customize as necessary.
+  EndpointSelectionStrategy
+    .builderForRampingUp()
+    // Ramp up a fresh endpoint for 60 seconds,
+    // increasing weight every second.
+    .rampingUpInterval(Duration.ofSeconds(1))
+    .numberSteps(60)
+    .build();
+  ```
+- You can now start your server as unhealthy with
+  <type://HealthCheckServiceBuilder#startUnhealthy()>. #3260
+  - This can be useful when you don't want to handle incoming requests immediately
+    after startup but after some operational steps, such as warming up.
+- You can now add <typeplural://HealthCheckUpdateListener> to
+  <type://HealthCheckService> to get notified when healthiness is updated externally,
+  e.g., from a `POST` request handled by <type://HealthCheckUpdateHandler>. #3260
+  - This can be useful when used in combination with `startUnhealthy()` above.
+- You can now specify a custom HTTP header naming rule for HTTP/1 connections,
+  so that you can work around the interoperability issues with old HTTP/1 servers
+  that don't recognize lower-cased headers such as `content-length`. #3196 #3259
+  ```java
+  ClientFactory factory =
+    ClientFactory.builder()
+                 // Send 'Content-Length', not 'content-length'.
+                 .http1HeaderNaming(http1HeaderNaming.traditional())
+                 .build();
+  WebClient client =
+    WebClient.builder()
+             .factory(factory)
+             .build();
+  ```
+- You can now close a connection after handling a certain number of requests or
+  after a certain period of time, rather than keeping it open indefinitely. #203 #3267
+  - [v0.99.7](/release-notes/0.99.7) introduced this feature partially for the server
+    side. We expanded it into both client and server side and also added a way
+    to disconnect after handling a certain number of requests.
+    ```java
+    // For server
+    Server.builder()
+          // A connection will be closed after
+          // sending the 10000th request's response.
+          .maxNumRequestsPerConnection(10000);
+
+    // For client
+    ClientFactory.builder()
+                 // A connection will be closed after
+                 // receiving the 2000th request's response.
+                 .maxNumRequestsPerConnection(2000);
+    ```
+- You can now turn any service into a transient service by decorating it with
+  <type://TransientHttpService> or <type://TransientRpcService>. #3221
+  - By making a service transient, you can disable metric collection by
+    <type://MetricCollectingService>, service logging by <type://LoggingService> or
+    access logging by <type://AccessLogWriter>.
+  - The following example disables metric collection, service and access logs for
+    <type://HealthCheckService>:
+    ```java
+    Server.builder()
+          .serviceUnder(
+            "/internal/l7check",
+            HealthCheckService.of()
+                              .decorate(TransientHttpService.newDecorator()))
+          .build()
+    ```
+- You can now disable the check that rejects potentially unsafe TLS cipher suites
+  when configuring server-side TLS, at your own risk. #3292
+  ```java
+  Server.builder()
+        .tlsAllowUnsafeCiphers()
+        .tlsCustomizer(sslCtxBuilder -> {
+          sslCtxBuilder.ciphers(Set.of(
+            "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA" // Bad cipher suite
+          ))
+        })
+        ...
+  ```
+- You can now get, set and parse a `Content-Disposition` header using
+  <type://ContentDisposition>. #3253
+  ```java
+  // Setting
+  HttpHeaders headers = HttpHeaders.of(
+    HttpHeaderNames.CONTENT_DISPOSITION,
+    ContentDisposition.of("attachment", "fileName", "file.png"));
+
+  // Getting
+  ContentDisposition disposition = headers.contentDisposition();
+  assert "attachment".equals(disposition.type());
+  assert "fileName".equals(disposition.name());
+  assert "file.png".equals(disposition.filename());
+
+  // Parsing
+  ContentDisposition parsed = ContentDisposition.parse(
+    "attachment; name=\"fileName\"; filename=\"file.png\");
+  assert parsed.equals(disposition);
+  ```
+- You can now serve a file by returning an `HttpFile` in an annotated service. #3258 #3287
+  ```java
+  Server
+    .builder()
+    .annotatedService(new Object() {
+      @Get
+      @Head
+      @Path("/files/{fileName}")
+      HttpFile myFile(@Param String fileName) {
+        return HttpFile.of(new File("/var/www/" + fileName));
+      }
+    })
+    .build();
+  ```
+- You can now invoke `Runnable` or `Callable` with <type://RequestContext> set in
+  the thread-local storage using <type://RequestContext#run(Runnable)> and
+  <type://RequestContext#run(Callable)>. #3311
+  ```java
+  Runnable task = () -> {
+    logger.info("Current request: {}", ServiceRequestContext.current());
+  };
+  ctx.run(task);
+  ``` 
+- You can now concat multiple `Publisher`s into one using 
+  <type://StreamMessage#concat(Iterable)>. #3254 #3299
+  ```java
+  StreamMessage<String> stream =
+    StreamMessage.concat(Mono.just("foo"),
+                         Mono.just("bar"));
+  
+  StepVerifier.create(stream)
+              .expectNext("foo")
+              .expectNext("bar")
+              .expectComplete()
+              .verify()
+  
+  // You can also concat a `Publisher` of `Publisher`s.
+  StreamMessage<String> flat =
+    StreamMessage.concat(Flux.just(Mono.just("foo"),
+                                   Mono.just("bar")));
+  ```
+- You can now create an <type://HttpResponse> from a <type://ResponseHeaders> and
+  a stream of <type://HttpData>s using
+  <type://HttpResponse#of(ResponseHeaders,Publisher)>. #3089 #3237
+  ```java
+  HttpResponse res = HttpResponse.of(
+    ResponseHeaders.of(200),
+    Flux.just("one\n", "two\n", "three\n")
+        .map(HttpData::ofUtf8));
+  ```
+- You can now check which native transports are available or not and why they are
+  unavailable using <type://TransportType#isAvailable()> and
+  <type://TransportType#unavailabilityCause()>. #3244
+  ```java
+  if (!TransportType.EPOLL.isAvailable()) {
+    logger.warn("/dev/epoll support not available:",
+                TransportType.EPOLL.unavailabilityCause());
+  }
+  ```
+  - We also added methods like `serverChannelType()`, `socketChannelType()` and
+    `datagramChannelType()`, which may be useful when you need to deal with Netty
+    channels.
+- You can now decode the body of <type://HttpRequest> or <type://HttpResponse> into
+  a <type://StreamMessage> using <type://HttpMessage#decode(HttpDecoder)>. #3215
+  - This feature can be useful when you need to reactively decode an HTTP body.
+    For example, Armeria will use this feature to handle a multipart body.
+- Added <type://StreamMessage#demand()> that returns the remaining demand of
+  the current subscription. #3215
+- Added `withTags(Tag...)` method to <type://MeterIdPrefixFunction>. #3241 #3242
+- You can now register a custom gRPC client stub factory via SPI or
+  <type://GrpcClientOptions#GRPC_CLIENT_STUB_FACTORY> option. #3214 #3294
+- You can now keep using the old decoration ordering for route decorators by
+  specifying the `-Dcom.linecorp.armeria.useLegacyRouteDecoratorOrdering=true`
+  JVM option. #3279
+
+## 📈 Improvements
+
+- You can now run your Armeria application even if `netty-transport-native-epoll` and
+  `netty-incubator-transport-native-io_uring` are not in the class path. #3244
+- You can now use `/dev/epoll` transport on WSL 2. #3244
+- You can now use <type://JettyService> with Jetty 9.3. We previously supported
+  Jetty 9.4 only. #3288
+- We improved how we shut down a <type://Server> in our Spring Boot integration
+  so it's more future-proof. #3266
+
+## 🛠️ Bug fixes
+
+- The future returned by <type://StreamWriter#whenConsumed()> is now completed
+  immediately even when the current demand is `0`. #3213
+- Fixed the violation of Reactive Streams specification when `null` is published. #3212 #3216
+- <type://TomcatService> does not raise a `NullPointerException` when it stops.
+  #3136 #3218
+- Fixed stability and interoperability issues in Eureka service discovery module.
+  #3235 #3275 #3238 #3301
+- The service name generated from a CGLIB-enhanced class does not have synthetic
+  suffix anymore. #3103 #3240
+- <type://HealthCheckedEndpointGroup> now refreshes its <typeplural://Endpoint>'
+  status when their weights are changed. #3236
+- You'll no longer see a `NullPointerException` when retrying a gRPC request.
+- Fixed the incorrect return type of some builder methods. #3220
+- Fixed a UI glitch in the go-to form of <type://DocService> client #3261
+- You'll no longer see a harmless `Http2Exception: Stream N does not exist`
+  warning log message anymore. #3233
+  - You'll see it if there was really a protocol violation, however.
+- Fixed an issue where a <type://RequestLog> is sometimes not completed immediately. #3291
+- TLS is now configured only once in Spring Boot WebFlux integration. #3266
+- Armeria now finds the gRPC `ServiceDescriptor` correctly from the code
+  generated with [Reactive-gRPC](https://github.com/salesforce/reactive-grpc). #3294
+- A request refused with HTTP/2 `REFUSED_STREAM` error code now fails with
+  an <type://UnprocessedRequestException>, so it can be safely retried. #3298
+- <type://THttpService> can now handle the Thrift code generated with the `fullcamel`
+  option. #3272
+- <type://ZooKeeperUpdatingListener> does not raise an `IllegalStateException` anymore
+  even if the given Curator client is started already. #3305
+- Fixed an issue where a Spring lifecycle object is created unnecessarily, even when
+  an Armeria server did not start. #3300
+
+## 🏚️ Deprecations
+
+- `*ChannelType()` methods in <type://EventLoopGroups> have been deprecated in favor of
+  the new methods in <type://TransportType>. #3244
+- <type://CircuitBreakerRpcClient#newPerHostAndMethodDecorator()> has been deprecated
+  in favor of <type://CircuitBreakerRpcClient#newDecorator(CircuitBreakerMapping,CircuitBreakerRuleWithContent)>.
+  #3249
+
+## ☢️ Breaking changes
+
+- `armeria-tomcat9` and `armeria-tomcat8` don't depend on `tomcat-embed-jasper`
+  anymore, which was pulled into runtime dependencies by mistake. #3256
+- You have to recompile your application because we changed the return type of
+  some builder methods. #3220
+- Changes in the API annotated with <type://@UnstableApi>:
+  - `HttpDeframer` has been replaced with <type://HttpMessage#decode(HttpDecoder)>. #3215
+
+## ⛓ Dependencies
+
+- Bouncy Castle 1.67 → 1.68
+- Brave 5.13.1 → 5.13.3
+- Dropwizard 2.0.16 -> 2.0.18, 1.3.25 → 1.3.29
+- Dropwizard Metrics 4.1.15 → 4.1.17
+- gRPC-Java 1.33.1 → 1.35.0
+- gRPC-Kotlin 0.2.1 → 1.0.0
+- java-jwt 3.11.0 → 3.12.1
+- Jetty 9.4.35 → 9.4.36
+- Micrometer 1.6.1 → 1.6.3
+- Netty 4.1.54 → 4.1.58
+  - tcnative 2.0.34 → 2.0.36
+  - io_uring 0.0.1 → 0.0.3
+    - io_uring is now an optional dependency.
+- Protobuf Jackson 1.1.0 → 1.2.0
+- Project Reactor 3.4.0 → 3.4.2
+- RxJava 3.0.7 → 3.0.9
+- ScalaPB runtime 0.10.8 → 0.10.10
+- ScalaPB json4s 0.10.1 → 0.10.3
+- Spring Boot 2.4.0 → 2.4.1
+- Tomcat 9.0.40 → 9.0.41, 8.5.58 → 8.5.61
+  - We don't depend on `tomcat-embed-jasper` anymore. #3256
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'adriancole',
+    'anuraaga',
+    'arhont375',
+    'delegacy',
+    'eisig',
+    'eugene70',
+    'ghkim3221',
+    'heowc',
+    'ikhoon',
+    'imasahiro',
+    'jongmin92',
+    'JunoJunho',
+    'KarboniteKream',
+    'kojilin',
+    'max904-github',
+    'minwoox',
+    'okue',
+    'point1304',
+    'policeman-kh',
+    'progresivoJS',
+    'renaudb',
+    'richieyan',
+    'snaiper80',
+    'syleeeee',
+    'tobias-',
+    'trustin',
+    'tumile',
+    'wickedev'
+  ]}
+/>
