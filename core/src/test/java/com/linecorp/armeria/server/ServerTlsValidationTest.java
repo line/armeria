@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLHandshakeException;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,7 @@ class ServerTlsValidationTest {
                                        .tls(kmf)
                                        .build())
                 .isInstanceOf(IllegalStateException.class)
+                .hasCauseInstanceOf(SSLHandshakeException.class)
                 .hasMessageContaining("failed to validate SSL/TLS configuration");
     }
 
@@ -75,6 +77,7 @@ class ServerTlsValidationTest {
                                        .tls(kmf)
                                        .build())
                 .isInstanceOf(IllegalStateException.class)
+                .hasCauseInstanceOf(SSLHandshakeException.class)
                 .hasMessageContaining("failed to validate SSL/TLS configuration");
     }
 
