@@ -136,10 +136,10 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             notVerified();
         }
         assumeAbortedPublisherAvailable(pub);
-        assertThat(pub.isOpen()).isFalse();
         assertThatThrownBy(() -> pub.whenComplete().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(AbortedStreamException.class);
+        assertThat(pub.isOpen()).isFalse();
 
         final AtomicReference<Throwable> capturedCause = new AtomicReference<>();
         final Latch onErrorLatch = new Latch(env);

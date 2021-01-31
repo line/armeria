@@ -73,7 +73,9 @@ class ConcatPublisherStreamMessageTest {
     @AfterEach
     void tearDown() {
         for (ByteBuf buf : bufs) {
-            assertThat(buf.refCnt()).isZero();
+            await().untilAsserted(() -> {
+                assertThat(buf.refCnt()).isZero();
+            });
         }
     }
 
