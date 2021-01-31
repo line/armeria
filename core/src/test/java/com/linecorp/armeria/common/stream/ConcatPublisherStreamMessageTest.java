@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -39,13 +40,13 @@ import reactor.core.publisher.Flux;
 
 class ConcatPublisherStreamMessageTest {
 
-    ByteBuf[] bufs;
+    private ByteBuf[] bufs;
 
-    StreamMessage<HttpData> oneStreamMessage;
-    StreamMessage<HttpData> twoStreamMessage;
-    StreamMessage<HttpData> regularStreamMessage;
-    StreamMessage<HttpData> publisherBasedStreamMessage;
-    StreamMessage<HttpData> concatenated;
+    private StreamMessage<HttpData> oneStreamMessage;
+    private StreamMessage<HttpData> twoStreamMessage;
+    private StreamMessage<HttpData> regularStreamMessage;
+    private StreamMessage<HttpData> publisherBasedStreamMessage;
+    private StreamMessage<HttpData> concatenated;
 
     @BeforeEach
     void setUp() {
@@ -76,7 +77,7 @@ class ConcatPublisherStreamMessageTest {
         }
     }
 
-    @Test
+    @RepeatedTest(1000)
     void cancelStreamMessages() {
         final AtomicReference<HttpData> dataRef = new AtomicReference<>();
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
