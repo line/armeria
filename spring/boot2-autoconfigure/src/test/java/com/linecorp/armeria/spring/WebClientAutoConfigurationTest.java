@@ -28,6 +28,7 @@ import javax.inject.Inject;
 
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
@@ -49,19 +50,24 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.spring.ArmeriaClientAutoConfigurationTest.TestConfiguration;
+import com.linecorp.armeria.spring.WebClientAutoConfigurationTest.TestConfiguration;
 
 /**
- * This uses {@link ArmeriaClientAutoConfiguration} for integration tests.
+ * This uses {@link WebClientAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
-public class ArmeriaClientAutoConfigurationTest {
+public class WebClientAutoConfigurationTest {
 
     static Queue<Integer> queue = new ArrayDeque<>();
+
+    @BeforeEach
+    void init() {
+        queue = new ArrayDeque<>();
+    }
 
     static DecoratingHttpClientFunction newDecorator(int id) {
         return (delegate, ctx, req) -> {
@@ -79,19 +85,19 @@ public class ArmeriaClientAutoConfigurationTest {
 
         @Bean
         @Order(1)
-        public ArmeriaClientConfigurator clientConfigurator1() {
+        public WebClientConfigurator clientConfigurator1() {
             return builder -> builder.decorator(newDecorator(1));
         }
 
         @Bean
         @Order(-1)
-        public ArmeriaClientConfigurator clientConfigurator2() {
+        public WebClientConfigurator clientConfigurator2() {
             return builder -> builder.decorator(newDecorator(2));
         }
 
         @Bean
         @Order(0)
-        public ArmeriaClientConfigurator clientConfigurator3() {
+        public WebClientConfigurator clientConfigurator3() {
             return builder -> builder.decorator(newDecorator(3));
         }
     }
@@ -105,14 +111,10 @@ public class ArmeriaClientAutoConfigurationTest {
     @Inject
     private Supplier<WebClientBuilder> webClientBuilder;
 
-    private String newUrl(String scheme) {
-        return scheme + "://127.0.0.1:" + port;
-    }
-
     @Test
-    public void test() throws Exception {
+    public void ordering() throws Exception {
         final WebClient webClient = webClientBuilder.get().build();
-        final AggregatedHttpResponse response = webClient.get(newUrl("h1c") + "/customizer")
+        final AggregatedHttpResponse response = webClient.get("h1c://127.0.0.1:" + port + "/customizer")
                                                          .aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(queue).containsExactlyElementsOf(ImmutableList.of(1, 3, 2));

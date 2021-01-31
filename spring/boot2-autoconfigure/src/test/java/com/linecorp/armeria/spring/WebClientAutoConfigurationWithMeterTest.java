@@ -37,20 +37,16 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
-import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.spring.ArmeriaClientAutoConfigurationWithNoopMeterTest.TestConfiguration;
+import com.linecorp.armeria.spring.WebClientAutoConfigurationWithMeterTest.TestConfiguration;
 
 /**
- * This uses {@link ArmeriaClientAutoConfiguration} for integration tests.
+ * This uses {@link WebClientAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
@@ -58,15 +54,10 @@ import com.linecorp.armeria.spring.ArmeriaClientAutoConfigurationWithNoopMeterTe
         "management.metrics.export.defaults.enabled=true") // @AutoConfigureMetrics is not allowed for boot1.
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
-public class ArmeriaClientAutoConfigurationWithNoopMeterTest {
+public class WebClientAutoConfigurationWithMeterTest {
 
     @SpringBootApplication
     public static class TestConfiguration {
-        @Bean
-        public ClientFactory clientFactory() {
-            return ClientFactory.builder().meterRegistry(NoopMeterRegistry.get()).build();
-        }
-
         @Bean
         public Consumer<ServerBuilder> customizer() {
             return sb -> sb.service("/customizer", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
@@ -82,23 +73,16 @@ public class ArmeriaClientAutoConfigurationWithNoopMeterTest {
     @Inject
     private Supplier<WebClientBuilder> webClientBuilder;
 
-    private String newUrl(String scheme) {
-        return scheme + "://127.0.0.1:" + port;
-    }
-
     @Test
     public void test() throws Exception {
-        final WebClient webClient = webClientBuilder
-                .get()
-                .decorator(MetricCollectingClient.newDecorator(MeterIdPrefixFunction.ofDefault("client")))
-                .build();
-        final AggregatedHttpResponse response = webClient.get(newUrl("h1c") + "/customizer")
+        final WebClient webClient = webClientBuilder.get().build();
+        final AggregatedHttpResponse response = webClient.get("h1c://127.0.0.1:" + port + "/customizer")
                                                          .aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        final String metricReport = webClient.get(newUrl("h1c") + "/internal/metrics")
+        final String metricReport = webClient.get("h1c://127.0.0.1:" + port + "/internal/metrics")
                                              .aggregate().join()
                                              .contentUtf8();
-        assertThat(metricReport).doesNotContain("# TYPE client_active_requests gauge");
+        assertThat(metricReport).contains("# TYPE armeria_client_active_requests gauge");
     }
 }

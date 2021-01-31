@@ -21,17 +21,17 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.annotation.Order;
 
-import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 
 /**
- * A configurator to configure a {@link WebClientBuilder}.
+ * A configurator to configure a {@link ClientFactoryBuilder}.
  */
 @FunctionalInterface
-public interface ArmeriaClientConfigurator extends Ordered {
+public interface ClientFactoryConfigurator extends Ordered {
     /**
-     * Configures the client using the specified {@link WebClientBuilder}.
+     * Configures the client using the specified {@link ClientFactoryBuilder}.
      */
-    void configure(WebClientBuilder builder);
+    void configure(ClientFactoryBuilder builder);
 
     /**
      * Returns the evaluation order of this configurator. A user can specify the order with an {@link Order}

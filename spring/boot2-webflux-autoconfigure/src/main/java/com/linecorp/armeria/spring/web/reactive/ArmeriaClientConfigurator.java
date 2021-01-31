@@ -16,12 +16,13 @@
 package com.linecorp.armeria.spring.web.reactive;
 
 import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.spring.WebClientConfigurator;
 
 /**
  * A configurator to configure an {@link WebClientBuilder} for an {@link ArmeriaClientHttpConnector}.
  *
- * @deprecated Use {@link com.linecorp.armeria.spring.ArmeriaClientConfigurator} instead.
+ * @deprecated Use {@link WebClientConfigurator} instead.
  */
 @Deprecated
 @FunctionalInterface
-public interface ArmeriaClientConfigurator extends com.linecorp.armeria.spring.ArmeriaClientConfigurator {}
+public interface ArmeriaClientConfigurator extends WebClientConfigurator {}

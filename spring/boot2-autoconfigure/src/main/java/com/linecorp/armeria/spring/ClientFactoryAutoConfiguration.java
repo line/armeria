@@ -18,34 +18,37 @@ package com.linecorp.armeria.spring;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 
 /**
- * An auto-configuration for {@link WebClient}.
+ * An auto-configuration for {@link ClientFactory}.
  */
 @Configuration
-@ConditionalOnClass(WebClient.class)
-public class ArmeriaClientAutoConfiguration extends AbstractArmeriaClientAutoConfiguration {
+@ConditionalOnClass(ClientFactory.class)
+@AutoConfigureAfter(ClientFactoryMetricsAutoConfiguration.class)
+public class ClientFactoryAutoConfiguration {
 
     /**
-     * Creates a {@link WebClientBuilder} bean.
+     * Creates a {@link ClientFactory} bean.
      */
-    @Bean
     @ConditionalOnMissingBean
-    public Supplier<WebClientBuilder> armeriaWebClientBuilder(
-            Optional<List<ArmeriaClientConfigurator>> configurators) {
-        return () -> {
-            final WebClientBuilder builder = WebClient.builder();
-            configurators.ifPresent(cs -> cs.forEach(c -> c.configure(builder)));
-            return builder;
-        };
+    @Bean
+    public ClientFactory internalClientFactory(Optional<List<ClientFactoryConfigurator>> configurators) {
+        if (configurators.isPresent()) {
+            final ClientFactoryBuilder builder = ClientFactory.builder();
+            configurators.get().forEach(c -> c.configure(builder));
+            return builder.build();
+        } else {
+            return ClientFactory.ofDefault();
+        }
     }
 }

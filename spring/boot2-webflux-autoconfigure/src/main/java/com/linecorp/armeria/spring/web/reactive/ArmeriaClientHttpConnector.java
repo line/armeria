@@ -36,7 +36,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.spring.ArmeriaClientConfigurator;
+import com.linecorp.armeria.spring.WebClientConfigurator;
 
 import reactor.core.publisher.Mono;
 
@@ -47,17 +47,17 @@ import reactor.core.publisher.Mono;
  */
 final class ArmeriaClientHttpConnector implements ClientHttpConnector {
 
-    private final List<ArmeriaClientConfigurator> configurators;
+    private final List<WebClientConfigurator> configurators;
     private final DataBufferFactoryWrapper<?> factoryWrapper;
 
     /**
      * Creates an {@link ArmeriaClientHttpConnector} with the specified
-     * {@link ArmeriaClientConfigurator} and the default {@link DataBufferFactoryWrapper}.
+     * {@link WebClientConfigurator} and the default {@link DataBufferFactoryWrapper}.
      *
      * @param configurator the configurator to be used to build an {@link WebClient}
      */
     @VisibleForTesting
-    ArmeriaClientHttpConnector(ArmeriaClientConfigurator configurator) {
+    ArmeriaClientHttpConnector(WebClientConfigurator configurator) {
         this(ImmutableList.of(requireNonNull(configurator, "configurator")),
              DataBufferFactoryWrapper.DEFAULT);
     }
@@ -65,11 +65,11 @@ final class ArmeriaClientHttpConnector implements ClientHttpConnector {
     /**
      * Creates an {@link ArmeriaClientHttpConnector}.
      *
-     * @param configurators the {@link ArmeriaClientConfigurator}s to be used to build an
+     * @param configurators the {@link WebClientConfigurator}s to be used to build an
      *                      {@link WebClient}
      * @param factoryWrapper the factory wrapper to be used to create a {@link DataBuffer}
      */
-    ArmeriaClientHttpConnector(Iterable<ArmeriaClientConfigurator> configurators,
+    ArmeriaClientHttpConnector(Iterable<? extends WebClientConfigurator> configurators,
                                DataBufferFactoryWrapper<?> factoryWrapper) {
         this.configurators = ImmutableList.copyOf(requireNonNull(configurators, "configurators"));
         this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
