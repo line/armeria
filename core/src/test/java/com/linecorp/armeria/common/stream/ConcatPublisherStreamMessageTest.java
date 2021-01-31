@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -79,7 +78,7 @@ class ConcatPublisherStreamMessageTest {
         }
     }
 
-    @RepeatedTest(1000)
+    @Test
     void cancelStreamMessages() {
         final AtomicReference<HttpData> dataRef = new AtomicReference<>();
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
