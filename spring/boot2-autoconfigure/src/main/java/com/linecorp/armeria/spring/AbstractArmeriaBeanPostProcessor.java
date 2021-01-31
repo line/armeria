@@ -70,7 +70,7 @@ abstract class AbstractArmeriaBeanPostProcessor {
 
     protected InjectionMetadata findLocalArmeriaPortMetadata(
             String beanName, Class<?> clazz, @Nullable PropertyValues pvs) {
-        final String cacheKey = Strings.isNullOrEmpty(beanName) ? beanName : clazz.getName();
+        final String cacheKey = !Strings.isNullOrEmpty(beanName) ? beanName : clazz.getName();
         InjectionMetadata metadata = injectionMetadataCache.get(cacheKey);
         if (InjectionMetadata.needsRefresh(metadata, clazz)) {
             synchronized (injectionMetadataCache) {

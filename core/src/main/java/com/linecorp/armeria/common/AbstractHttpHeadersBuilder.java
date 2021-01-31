@@ -52,6 +52,17 @@ abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> exten
         return self();
     }
 
+    @Nullable
+    public final ContentDisposition contentDisposition() {
+        final HttpHeadersBase getters = getters();
+        return getters != null ? getters.contentDisposition() : null;
+    }
+
+    public final SELF contentDisposition(ContentDisposition contentDisposition) {
+        setters().contentDisposition(contentDisposition);
+        return self();
+    }
+
     // Getters
 
     public final boolean isEndOfStream() {

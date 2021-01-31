@@ -438,6 +438,8 @@ apple
 applinzi.com
 apps.fbsbx.com
 apps.lair.io
+appspacehosted.com
+appspaceusercontent.com
 appspot.com
 aprendemas.cl
 aq
@@ -2314,6 +2316,7 @@ exposed
 express
 express.aero
 extraspace
+ezproxy.kuleuven.be
 f.bg
 f.se
 fage
@@ -4303,6 +4306,7 @@ kuji.iwate.jp
 kuju.oita.jp
 kujukuri.chiba.jp
 kuki.saitama.jp
+kuleuven.cloud
 kumagaya.saitama.jp
 kumakogen.ehime.jp
 kumamoto.jp
@@ -6262,6 +6266,7 @@ padua.it
 page
 pagefrontapp.com
 pages.dev
+pages.torproject.net
 pages.wiardweb.com
 pagespeedmobilizer.com
 pagexl.com
@@ -7814,6 +7819,7 @@ toray
 toride.ibaraki.jp
 torino.it
 torino.museum
+torproject.net
 torsken.no
 tos.it
 tosa.kochi.jp

@@ -172,6 +172,12 @@ public final class MediaType {
     public static final MediaType PLAIN_TEXT_UTF_8 = createConstantUtf8(TEXT_TYPE, "plain");
 
     /**
+     * The <a href="https://tools.ietf.org/html/rfc1521#section-7.1.2">text/plain</a> content type is
+     * the generic subtype for plain text.
+     */
+    public static final MediaType PLAIN_TEXT = createConstant(TEXT_TYPE, "plain");
+
+    /**
      * As described in <a href="https://www.w3.org/TR/eventsource/">Server-Sent Events</a>, this constant
      * ({@code text/event-stream}) is used when sending notifications in the form of DOM events from a server.
      */
@@ -382,6 +388,11 @@ public final class MediaType {
 
     public static final MediaType FORM_DATA =
             createConstant(APPLICATION_TYPE, "x-www-form-urlencoded");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/form-data} media type.
+     */
+    public static final MediaType MULTIPART_FORM_DATA = createConstant("multipart", "form-data");
 
     /**
      * As described in <a href="https://www.rsa.com/rsalabs/node.asp?id=2138">PKCS #12: Personal

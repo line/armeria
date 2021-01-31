@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.server;
 
-import javax.annotation.Nullable;
+import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
-import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
@@ -34,8 +34,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     private final GracefulShutdownSupport gracefulShutdownSupport;
     private final Http2RequestDecoder requestDecoder;
 
-    @Nullable
-    private final Http2KeepAliveHandler keepAliveHandler;
+    private final KeepAliveHandler keepAliveHandler;
 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig config,
@@ -45,12 +44,19 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings);
         this.gracefulShutdownSupport = gracefulShutdownSupport;
 
-        if (config.idleTimeoutMillis() > 0 || config.pingIntervalMillis() > 0) {
+        final long idleTimeoutMillis = config.idleTimeoutMillis();
+        final long pingIntervalMillis = config.pingIntervalMillis();
+        final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
+        final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
+        final boolean needsKeepAliveHandler = needsKeepAliveHandler(
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+
+        if (needsKeepAliveHandler) {
             keepAliveHandler = new Http2ServerKeepAliveHandler(
                     channel, encoder().frameWriter(), keepAliveTimer,
-                    config.idleTimeoutMillis(), config.pingIntervalMillis(), config.maxConnectionAgeMillis());
+                    idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
         } else {
-            keepAliveHandler = null;
+            keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
         }
 
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAliveHandler);
@@ -58,7 +64,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         decoder().frameListener(requestDecoder);
 
         // Setup post build options
-        final long timeout = config.idleTimeoutMillis();
+        final long timeout = idleTimeoutMillis;
         if (timeout > 0) {
             gracefulShutdownTimeoutMillis(timeout);
         } else {
@@ -70,8 +76,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     @Override
     protected boolean needsImmediateDisconnection() {
         return gracefulShutdownSupport.isShuttingDown() ||
-               requestDecoder.goAwayHandler().receivedErrorGoAway() ||
-               (keepAliveHandler != null && keepAliveHandler.isClosing());
+               requestDecoder.goAwayHandler().receivedErrorGoAway() || keepAliveHandler.isClosing();
     }
 
     @Override
@@ -105,18 +110,18 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     }
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
-        if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            keepAliveHandler.initialize(ctx);
+        if (keepAliveHandler != NoopKeepAliveHandler.INSTANCE) {
+            final Channel channel = ctx.channel();
+            if (channel.isActive() && channel.isRegistered()) {
+                keepAliveHandler.initialize(ctx);
+            }
         }
     }
 
     private void destroyKeepAliveHandler() {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.destroy();
-        }
+        keepAliveHandler.destroy();
     }
 
-    @Nullable
     KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
     }

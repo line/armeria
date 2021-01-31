@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -29,9 +27,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.client.HttpHeaderUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -43,13 +41,14 @@ import io.netty.handler.codec.http2.Http2LocalFlowController;
 
 final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements ClientHttpObjectEncoder {
     private final SessionProtocol protocol;
-    @Nullable
-    private final Http2KeepAliveHandler keepAliveHandler;
+    private final KeepAliveHandler keepAliveHandler;
 
     ClientHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
-                             SessionProtocol protocol, @Nullable Http2KeepAliveHandler keepAliveHandler) {
+                             SessionProtocol protocol, KeepAliveHandler keepAliveHandler) {
         super(ctx, encoder);
         this.protocol = requireNonNull(protocol, "protocol");
+        assert keepAliveHandler instanceof Http2ClientKeepAliveHandler ||
+               keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
     }
 
@@ -57,9 +56,7 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
     public ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
         final Http2Connection conn = encoder().connection();
         if (isStreamPresentAndWritable(streamId)) {
-            if (keepAliveHandler != null) {
-                keepAliveHandler.onReadOrWrite();
-            }
+            keepAliveHandler.onReadOrWrite();
             return encoder().writeHeaders(ctx(), streamId, convertHeaders(headers), 0,
                                           endStream, ctx().newPromise());
         }
@@ -102,9 +99,7 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
     @Override
     public ChannelFuture doWriteTrailers(int id, int streamId, HttpHeaders headers) {
         if (isStreamPresentAndWritable(streamId)) {
-            if (keepAliveHandler != null) {
-                keepAliveHandler.onReadOrWrite();
-            }
+            keepAliveHandler.onReadOrWrite();
             return encoder().writeHeaders(ctx(), streamId, ArmeriaHttpUtil.toNettyHttp2ClientTrailer(headers),
                                           0, true, ctx().newPromise());
         }
@@ -112,7 +107,6 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
         return newFailedFuture(ClosedStreamException.get());
     }
 
-    @Nullable
     @Override
     public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;

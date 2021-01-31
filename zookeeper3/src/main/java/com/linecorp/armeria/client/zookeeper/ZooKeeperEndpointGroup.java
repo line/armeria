@@ -25,6 +25,7 @@ import java.util.concurrent.ThreadFactory;
 import javax.annotation.Nullable;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.slf4j.Logger;
@@ -119,7 +120,10 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
         super(selectionStrategy);
         this.internalClient = internalClient;
         this.client = requireNonNull(client, "client");
-        client.start();
+
+        if (client.getState() != CuratorFrameworkState.STARTED) {
+            client.start();
+        }
 
         final String pathForDiscovery = discoverySpec.path();
         final String path = isNullOrEmpty(pathForDiscovery) ? znodePath : znodePath + pathForDiscovery;

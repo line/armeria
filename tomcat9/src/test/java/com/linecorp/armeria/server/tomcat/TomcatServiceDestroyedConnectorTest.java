@@ -39,6 +39,7 @@ class TomcatServiceDestroyedConnectorTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             tomcatWithWebApp = new Tomcat();
+            tomcatWithWebApp.setPort(0);
             tomcatWithWebApp.setBaseDir("build" + File.separatorChar +
                                         "tomcat-" + TomcatServiceDestroyedConnectorTest.class.getSimpleName());
             tomcatWithWebApp.addWebapp("", WebAppContainerTest.webAppRoot().getAbsolutePath());

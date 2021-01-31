@@ -16,11 +16,9 @@
 
 package com.linecorp.armeria.spring;
 
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -34,15 +32,13 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 
-import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.server.docs.DocService;
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
@@ -87,35 +83,19 @@ public abstract class AbstractArmeriaAutoConfiguration {
 
         final List<Port> ports = armeriaSettings.getPorts();
         if (ports.isEmpty()) {
+            assert DEFAULT_PORT.getProtocols() != null;
             serverBuilder.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocols()));
-        } else {
-            configurePorts(serverBuilder, ports);
         }
 
-        final DocServiceBuilder docServiceBuilder = DocService.builder();
-        docServiceConfigurators.ifPresent(
-                configurators -> configurators.forEach(
-                        configurator -> configurator.configure(docServiceBuilder)));
-
-        armeriaServerConfigurators.ifPresent(
-                configurators -> configurators.forEach(
-                        configurator -> configurator.configure(serverBuilder)));
-
-        armeriaServerBuilderConsumers.ifPresent(
-                consumers -> consumers.forEach(
-                        consumer -> consumer.accept(serverBuilder)));
-
-        final String docsPath = armeriaSettings.getDocsPath();
         configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
+                                           armeriaServerConfigurators.orElse(ImmutableList.of()),
+                                           armeriaServerBuilderConsumers.orElse(ImmutableList.of()),
+                                           docServiceConfigurators.orElse(ImmutableList.of()),
                                            meterRegistry.orElse(Metrics.globalRegistry),
-                                           healthCheckers.orElseGet(Collections::emptyList),
-                                           healthCheckServiceConfigurators.orElseGet(Collections::emptyList),
+                                           healthCheckers.orElse(ImmutableList.of()),
+                                           healthCheckServiceConfigurators.orElse(ImmutableList.of()),
                                            meterIdPrefixFunction.orElse(
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")));
-
-        if (!Strings.isNullOrEmpty(docsPath)) {
-            serverBuilder.serviceUnder(docsPath, docServiceBuilder.build());
-        }
 
         final Server server = serverBuilder.build();
 

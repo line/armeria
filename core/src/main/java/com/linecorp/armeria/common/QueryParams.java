@@ -92,10 +92,10 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  *       <li>e.g. {@code "42"}, {@code "string"}, {@code "text/plain; charset=utf-8"}</li>
  *     </ul>
  *   </li>
- *   <li>{@link CacheControl}
+ *   <li>{@link CacheControl} and {@link ContentDisposition}
  *     <ul>
- *       <li>Converted via {@link CacheControl#asHeaderValue() asHeaderValue()}</li>
- *       <li>e.g. {@code "no-cache, no-store, must-revalidate"}</li>
+ *       <li>Converted via {@code asHeaderValue()}</li>
+ *       <li>e.g. {@code "no-cache, no-store, must-revalidate"}, {@code "form-data; name=\"fieldName\""}</li>
  *     </ul>
  *   </li>
  *   <li>{@link Instant}, {@link TemporalAccessor}, {@link Date} and {@link Calendar}

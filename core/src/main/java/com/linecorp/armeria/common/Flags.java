@@ -266,10 +266,26 @@ public final class Flags {
                     DEFAULT_DEFAULT_PING_INTERVAL_MILLIS,
                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS = 0; // Disabled
+    private static final int DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION = 0; // Disabled
+    private static final int DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION =
+            getInt("defaultMaxServerNumRequestsPerConnection",
+                   DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
+                   value -> value >= 0);
+
+    private static final int DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION =
+            getInt("defaultMaxClientNumRequestsPerConnection",
+                   DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS = 0; // Disabled
     private static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS =
             getLong("defaultMaxServerConnectionAgeMillis",
-                    DEFAULT_DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS,
+                    DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
+                    value -> value >= 0);
+
+    private static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS =
+            getLong("defaultMaxClientConnectionAgeMillis",
+                    DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
                     value -> value >= 0);
 
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
@@ -856,11 +872,39 @@ public final class Flags {
     }
 
     /**
+     * Returns the server-side maximum allowed number of requests that can be served through one connection.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#maxNumRequestsPerConnection(int)}.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerNumRequestsPerConnection=<integer>} JVM option
+     * to override the default value. {@code 0} disables the limit.
+     */
+    public static int defaultMaxServerNumRequestsPerConnection() {
+        return DEFAULT_MAX_SERVER_NUM_REQUESTS_PER_CONNECTION;
+    }
+
+    /**
+     * Returns the client-side maximum allowed number of requests that can be sent through one connection.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#maxNumRequestsPerConnection(int)}.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_NUM_REQUESTS_PER_CONNECTION}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientNumRequestsPerConnection=<integer>} JVM option
+     * to override the default value. {@code 0} disables the limit.
+     */
+    public static int defaultMaxClientNumRequestsPerConnection() {
+        return DEFAULT_MAX_CLIENT_NUM_REQUESTS_PER_CONNECTION;
+    }
+
+    /**
      * Returns the default server-side max age of a connection for keep-alive in milliseconds.
      * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
      * amount of the time since the connection was established.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS}.
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxServerConnectionAgeMillis=<integer>} JVM option
      * to override the default value. If the specified value was smaller than 1 second,
      * bumps the max connection age to 1 second.
@@ -869,6 +913,22 @@ public final class Flags {
      */
     public static long defaultMaxServerConnectionAgeMillis() {
         return DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS;
+    }
+
+    /**
+     * Returns the default client-side max age of a connection for keep-alive in milliseconds.
+     * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
+     * amount of the time since the connection was established.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientConnectionAgeMillis=<integer>} JVM option
+     * to override the default value. If the specified value was smaller than 1 second,
+     * bumps the max connection age to 1 second.
+     *
+     * @see ClientFactoryBuilder#maxConnectionAgeMillis(long)
+     */
+    public static long defaultMaxClientConnectionAgeMillis() {
+        return DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS;
     }
 
     /**

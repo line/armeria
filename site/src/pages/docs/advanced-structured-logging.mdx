@@ -283,7 +283,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactoryBuilder;
 ServerBuilder sb = Server.builder();
 
 ContentPreviewerFactoryBuilder builder = ContentPreviewerFactory.builder().maxLength(100);
-builder.text(StandardCharsets.UTF_8 /* default charset */, (ctx, headers) -> {
+builder.text((ctx, headers) -> {
     final MediaType contentType = headers.contentType();
     // Produces the textual preview when the content type is ANY_TEXT_TYPE.
     if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {

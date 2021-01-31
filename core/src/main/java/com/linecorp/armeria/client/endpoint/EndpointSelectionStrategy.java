@@ -21,6 +21,7 @@ import java.util.function.ToLongFunction;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * {@link Endpoint} selection strategy that creates a {@link EndpointSelector}.
@@ -29,7 +30,9 @@ import com.linecorp.armeria.common.HttpRequest;
 public interface EndpointSelectionStrategy {
 
     /**
-     * Returns a weighted round-robin strategy.
+     * Returns a weighted round-robin strategy. The endpoint is selected using
+     * <a href="https://en.wikipedia.org/wiki/Weighted_round_robin#Interleaved_WRR">Interleaved WRR</a>
+     * algorithm.
      *
      * @see #roundRobin()
      * @see #sticky(ToLongFunction)
@@ -46,6 +49,28 @@ public interface EndpointSelectionStrategy {
      */
     static EndpointSelectionStrategy roundRobin() {
         return RoundRobinStrategy.INSTANCE;
+    }
+
+    /**
+     * Returns a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
+     * {@link Endpoint}s using {@link EndpointWeightTransition#linear()}. The {@link Endpoint} is selected
+     * using weighted random distribution.
+     * The weights of {@link Endpoint}s are ramped up by 10 percent every 2 seconds up to 100 percent
+     * by default. If you want to customize the parameters, use {@link #builderForRampingUp()}.
+     */
+    @UnstableApi
+    static EndpointSelectionStrategy rampingUp() {
+        return WeightRampingUpStrategy.INSTANCE;
+    }
+
+    /**
+     * Returns a new {@link WeightRampingUpStrategyBuilder} that builds
+     * a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
+     * {@link Endpoint}s. The {@link Endpoint} is selected using weighted random distribution.
+     */
+    @UnstableApi
+    static WeightRampingUpStrategyBuilder builderForRampingUp() {
+        return new WeightRampingUpStrategyBuilder();
     }
 
     /**

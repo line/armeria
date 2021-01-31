@@ -17,6 +17,8 @@ package com.linecorp.armeria.internal.consul;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -54,8 +56,8 @@ final class AgentServiceClient {
      * Registers a service into the Consul agent.
      */
     HttpResponse register(String serviceId, String serviceName, String address, int port,
-                          @Nullable Check check) {
-        final Service service = new Service(serviceId, serviceName, address, port, check);
+                          @Nullable Check check, List<String> tags) {
+        final Service service = new Service(serviceId, serviceName, address, port, check, tags);
         try {
             return client.put("/agent/service/register", mapper.writeValueAsString(service));
         } catch (JsonProcessingException e) {
@@ -93,12 +95,16 @@ final class AgentServiceClient {
         @JsonProperty("Check")
         private final Check check;
 
-        Service(String id, String name, String address, int port, @Nullable Check check) {
+        @JsonProperty("Tags")
+        private final List<String> tags;
+
+        Service(String id, String name, String address, int port, @Nullable Check check, List<String> tags) {
             this.id = id;
             this.name = name;
             this.address = address;
             this.port = port;
             this.check = check;
+            this.tags = tags;
         }
 
         @Override
@@ -110,6 +116,7 @@ final class AgentServiceClient {
                               .add("address", address)
                               .add("port", port)
                               .add("check", check)
+                              .add("tags", tags)
                               .toString();
         }
     }

@@ -53,6 +53,11 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder contentType(MediaType contentType);
 
     /**
+     * Sets the {@code "content-disposition"} header.
+     */
+    HttpHeadersBuilder contentDisposition(ContentDisposition contentDisposition);
+
+    /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
      * @param name the header name

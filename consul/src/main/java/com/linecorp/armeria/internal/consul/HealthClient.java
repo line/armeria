@@ -40,6 +40,8 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.internal.common.PercentEncoder;
 
 /**
@@ -50,7 +52,7 @@ final class HealthClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthClient.class);
 
-    private static final String PASSING_PARAM = "?passing=true";
+    private static final String PASSING_PARAM = "passing";
 
     static HealthClient of(ConsulClient consulClient) {
         return new HealthClient(consulClient);
@@ -67,11 +69,15 @@ final class HealthClient {
     /**
      * Returns a healthy endpoint list by service name.
      */
-    CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName) {
+    CompletableFuture<List<Endpoint>> healthyEndpoints(String serviceName, @Nullable String datacenter,
+                                                       @Nullable String filter) {
         requireNonNull(serviceName, "serviceName");
         final StringBuilder path = new StringBuilder("/health/service/");
         PercentEncoder.encodeComponent(path, serviceName);
-        path.append(PASSING_PARAM);
+        final QueryParamsBuilder paramsBuilder = QueryParams.builder();
+        paramsBuilder.add(PASSING_PARAM, "true");
+        paramsBuilder.add(ConsulClientUtil.queryParams(datacenter, filter));
+        path.append('?').append(paramsBuilder.build().toQueryString());
         return client
                 .get(path.toString())
                 .aggregate()

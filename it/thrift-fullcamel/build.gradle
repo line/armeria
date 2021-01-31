@@ -1,0 +1,8 @@
+dependencies {
+    // Thrift
+    implementation project(':thrift0.13')
+}
+
+ext {
+    enableThriftFullCamel()
+}

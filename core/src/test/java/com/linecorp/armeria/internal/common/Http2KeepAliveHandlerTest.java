@@ -32,7 +32,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.internal.common.KeepAliveHandler.PingState;
+import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler.PingState;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -62,9 +62,10 @@ class Http2KeepAliveHandlerTest {
         when(channel.eventLoop()).thenReturn(eventLoop.get());
         when(ctx.channel()).thenReturn(channel);
 
-        keepAliveHandler = new Http2KeepAliveHandler(channel, frameWriter, "test",
-                                                     NoopMeterRegistry.get().timer(""),
-                                                     idleTimeoutMillis, pingIntervalMillis, 0) {
+        keepAliveHandler = new Http2KeepAliveHandler(
+                channel, frameWriter, "test", NoopMeterRegistry.get().timer(""),
+                idleTimeoutMillis, pingIntervalMillis,
+                /* maxConnectionAgeMillis */ 0, /* maxNumRequestsPerConnection */ 0) {
             @Override
             protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
                 return false;

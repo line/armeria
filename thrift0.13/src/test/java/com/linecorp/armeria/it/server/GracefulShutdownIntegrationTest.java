@@ -26,12 +26,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
@@ -105,9 +107,19 @@ class GracefulShutdownIntegrationTest {
         }
     };
 
+    private ClientFactory clientFactory;
+
     @BeforeEach
-    void clear() {
+    void setUp() {
         sleepServiceCalled.set(false);
+        clientFactory = ClientFactory.builder()
+                                     .idleTimeoutMillis(0)
+                                     .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        clientFactory.closeAsync();
     }
 
     private static long baselineNanos;
@@ -246,7 +258,9 @@ class GracefulShutdownIntegrationTest {
                                                 baselineNanos + MILLISECONDS.toNanos(1400));
     }
 
-    private static SleepService.Iface newClient() throws Exception {
-        return Clients.newClient(server.httpUri(BINARY) + "/sleep", SleepService.Iface.class);
+    private SleepService.Iface newClient() {
+        return Clients.builder(server.httpUri(BINARY) + "/sleep")
+                      .factory(clientFactory)
+                      .build(SleepService.Iface.class);
     }
 }

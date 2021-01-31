@@ -305,6 +305,26 @@ class HttpHeadersBase
         set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
     }
 
+    @Override
+    @Nullable
+    public ContentDisposition contentDisposition() {
+        final String contentDispositionString = get(HttpHeaderNames.CONTENT_DISPOSITION);
+        if (contentDispositionString == null) {
+            return null;
+        }
+
+        try {
+            return ContentDisposition.parse(contentDispositionString);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    final void contentDisposition(ContentDisposition contentDisposition) {
+        requireNonNull(contentDisposition, "contentDisposition");
+        set(HttpHeaderNames.CONTENT_DISPOSITION, contentDisposition.asHeaderValue());
+    }
+
     // Getters
 
     @Override
