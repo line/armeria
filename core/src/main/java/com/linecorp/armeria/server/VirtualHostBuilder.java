@@ -1091,7 +1091,7 @@ public final class VirtualHostBuilder {
             packetBuf.flip();
             final SSLEngineResult result = serverEngine.unwrap(packetBuf, appBuf);
             if (result.bytesConsumed() == 0) {
-                throw new IllegalStateException("failed to validate SSL/TLS configuration: " + sslContext);
+                throw new IllegalStateException("failed to validate SSL/TLS configuration");
             }
         } catch (SSLException e) {
             throw new IllegalStateException("failed to validate SSL/TLS configuration: " + e.getMessage(), e);
