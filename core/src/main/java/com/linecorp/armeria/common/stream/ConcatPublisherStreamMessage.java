@@ -289,10 +289,6 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void cancel() {
-            if (completed) {
-                return;
-            }
-
             if (cancelledUpdater.compareAndSet(this, 0, 1)) {
                 if (outerSubscriber != null) {
                     final Subscription upstream = outerSubscriber.upstream;
