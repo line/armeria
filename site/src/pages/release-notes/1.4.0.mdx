@@ -126,7 +126,7 @@ date: 2021-02-01
     "attachment; name=\"fileName\"; filename=\"file.png\"");
   assert parsed.equals(disposition);
   ```
-- You can now serve a file by returning an `HttpFile` in an annotated service. #3258 #3287
+- You can now serve a file by returning an <type://HttpFile> in an annotated service. #3258 #3287
   ```java
   Server
     .builder()
@@ -168,7 +168,7 @@ date: 2021-02-01
                                    Mono.just("bar")));
   ```
 - You can now create an <type://HttpResponse> from a <type://ResponseHeaders> and
-  a stream of <type://HttpData>s using
+  a stream of <typeplural://HttpData> using
   <type://HttpResponse#of(ResponseHeaders,Publisher)>. #3089 #3237
   ```java
   HttpResponse res = HttpResponse.of(
@@ -224,7 +224,7 @@ date: 2021-02-01
   suffix anymore. #3103 #3240
 - <type://HealthCheckedEndpointGroup> now refreshes its <typeplural://Endpoint>'
   status when their weights are changed. #3236
-- You'll no longer see a `NullPointerException` when retrying a gRPC request.
+- You'll no longer see a `NullPointerException` when retrying a gRPC request. #3251
 - Fixed the incorrect return type of some builder methods. #3220
 - Fixed a UI glitch in the go-to form of <type://DocService> client #3261
 - You'll no longer see a harmless `Http2Exception: Stream N does not exist`
