@@ -186,7 +186,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
             // If 'innerSubscriber' is not complete, 'downstream' will be completed
             // when 'innerSubscriber' receives `onComplete` signal.
             completed = true;
-            if (!inInnerOnSubscribe && innerSubscriber.completed) {
+            if (!inInnerOnSubscribe && innerSubscriber.currentPublisherCompleted) {
                 innerSubscriber.onComplete();
             }
         }
@@ -209,9 +209,11 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         @Nullable
         private OuterSubscriber<T> outerSubscriber;
 
-        private volatile boolean completed = true;
+        private volatile boolean currentPublisherCompleted = true;
         // Updated via cancelledUpdater
         private volatile int cancelled;
+        // Happen-Before is guaranteed in cancel() because 'cancelled' was written before.
+        private boolean error;
 
         InnerSubscriber(Subscriber<? super T> downstream, SubscriptionOption[] options,
                         ConcatPublisherStreamMessage<T> publisher) {
@@ -236,7 +238,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
                 return;
             }
             // Reset 'completed' to subscribe to new Publisher
-            completed = false;
+            currentPublisherCompleted = false;
             setUpstreamSubscription(subscription);
             outerSubscriber.inInnerOnSubscribe = false;
         }
@@ -257,6 +259,12 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
             if (isCancelled()) {
                 return;
             }
+
+            if (error) {
+                return;
+            }
+            error = true;
+
             downstream.onError(cause);
             publisher.abort(cause);
         }
@@ -266,7 +274,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
             if (isCancelled()) {
                 return;
             }
-            completed = true;
+            currentPublisherCompleted = true;
             if (outerSubscriber.completed) {
                 downstream.onComplete();
             } else {
@@ -299,7 +307,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
                 super.cancel();
                 final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
                 publisher.abort(cause);
-                if (!completed && containsNotifyCancellation(options)) {
+                if (containsNotifyCancellation(options) && !currentPublisherCompleted && !error) {
                     downstream.onError(cause);
                 }
                 downstream = NoopSubscriber.get();
