@@ -19,10 +19,11 @@ package com.linecorp.armeria.common.stream;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 /**
  * A {@link FixedStreamMessage} that publishes an arbitrary number of objects. It is recommended to use
@@ -53,14 +54,14 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    final void cleanupObjects() {
+    final void cleanupObjects(@Nullable Throwable cause) {
         while (fulfilled < objs.length) {
             final T obj = objs[fulfilled];
             objs[fulfilled++] = null;
             try {
                 onRemoval(obj);
             } finally {
-                PooledObjects.close(obj);
+                StreamMessageUtil.closeOrAbort(obj, cause);
             }
         }
     }

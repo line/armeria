@@ -175,7 +175,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         abortable.abort(cause);
-        abortable.onSubscribe(NoopSubscription.get());
+        publisher.subscribe(abortable);
     }
 
     @Override

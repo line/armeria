@@ -171,6 +171,15 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Returns a concatenated {@link StreamMessage} which relays items of the specified {@link Publisher} of
+     * {@link Publisher}s in order, non-overlappingly, one after the other finishes.
+     */
+    static <T> StreamMessage<T> concat(Publisher<? extends Publisher<? extends T>> publishers) {
+        requireNonNull(publishers, "publishers");
+        return new ConcatPublisherStreamMessage<>(of(publishers));
+    }
+
+    /**
      * Returns {@code true} if this stream is not closed yet. Note that a stream may not be
      * {@linkplain #whenComplete() complete} even if it's closed; a stream is complete when it's fully
      * consumed by a {@link Subscriber}.

@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
@@ -92,7 +92,7 @@ class PublisherBasedStreamMessageTest {
         }
 
         // Publisher should not be involved at all because we are aborting without subscribing.
-        verify(delegate, never()).subscribe(any());
+        verify(delegate, only()).subscribe(any(AbortableSubscriber.class));
     }
 
     @Test
