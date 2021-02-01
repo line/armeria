@@ -49,6 +49,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -71,6 +72,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 
@@ -1020,7 +1022,7 @@ public final class VirtualHostBuilder {
 
             // Validate the built `SslContext`.
             if (sslContext != null) {
-                validateSslContext(sslContext, tlsAllowUnsafeCiphers);
+                validateSslContext(sslContext);
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
             }
 
@@ -1064,7 +1066,7 @@ public final class VirtualHostBuilder {
      * key store password is not given to key store when {@link SslContext} was created using
      * {@link KeyManagerFactory}, the validation will fail and an {@link IllegalStateException} will be raised.
      */
-    private static SslContext validateSslContext(SslContext sslContext, boolean tlsAllowUnsafeCiphers) {
+    private static SslContext validateSslContext(SslContext sslContext) {
         if (!sslContext.isServer()) {
             throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
         }
@@ -1077,18 +1079,28 @@ public final class VirtualHostBuilder {
             serverEngine.setUseClientMode(false);
             serverEngine.setNeedClientAuth(false);
 
+            // Create a client-side engine with very permissive settings.
             final SslContext sslContextClient =
-                    buildSslContext(SslContextBuilder::forClient, tlsAllowUnsafeCiphers, ImmutableList.of());
+                    buildSslContext(() -> SslContextBuilder.forClient()
+                                                           .trustManager(InsecureTrustManagerFactory.INSTANCE),
+                                    true, ImmutableList.of());
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
+            clientEngine.setEnabledProtocols(clientEngine.getSupportedProtocols());
+            clientEngine.setEnabledCipherSuites(clientEngine.getSupportedCipherSuites());
 
-            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
             final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
 
-            clientEngine.wrap(appBuf, packetBuf);
-            appBuf.clear();
+            // Wrap an empty app buffer to initiate handshake.
+            wrap(clientEngine, packetBuf);
+
+            // Feed the handshake packet to the server engine.
             packetBuf.flip();
-            serverEngine.unwrap(packetBuf, appBuf);
+            unwrap(serverEngine, packetBuf);
+
+            // See if the server has something to say.
+            packetBuf.clear();
+            wrap(serverEngine, packetBuf);
         } catch (SSLException e) {
             throw new IllegalStateException("failed to validate SSL/TLS configuration: " + e.getMessage(), e);
         } finally {
@@ -1097,6 +1109,41 @@ public final class VirtualHostBuilder {
         }
 
         return sslContext;
+    }
+
+    private static void unwrap(SSLEngine engine, ByteBuffer packetBuf) throws SSLException {
+        final ByteBuffer appBuf = ByteBuffer.allocate(engine.getSession().getApplicationBufferSize());
+        // Limit the number of unwrap() calls to 8 times, to prevent a potential infinite loop.
+        // 8 is an arbitrary number, it can be any number greater than 2.
+        for (int i = 0; i < 8; i++) {
+            appBuf.clear();
+            final SSLEngineResult result = engine.unwrap(packetBuf, appBuf);
+            switch (result.getHandshakeStatus()) {
+                case NEED_UNWRAP:
+                    continue;
+                case NEED_TASK:
+                    engine.getDelegatedTask().run();
+                    continue;
+            }
+            break;
+        }
+    }
+
+    private static void wrap(SSLEngine sslEngine, ByteBuffer packetBuf) throws SSLException {
+        final ByteBuffer appBuf = ByteBuffer.allocate(0);
+        // Limit the number of wrap() calls to 8 times, to prevent a potential infinite loop.
+        // 8 is an arbitrary number, it can be any number greater than 2.
+        for (int i = 0; i < 8; i++) {
+            final SSLEngineResult result = sslEngine.wrap(appBuf, packetBuf);
+            switch (result.getHandshakeStatus()) {
+                case NEED_WRAP:
+                    continue;
+                case NEED_TASK:
+                    sslEngine.getDelegatedTask().run();
+                    continue;
+            }
+            break;
+        }
     }
 
     @Override

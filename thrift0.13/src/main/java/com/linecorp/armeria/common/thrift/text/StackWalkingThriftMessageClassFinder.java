@@ -80,7 +80,7 @@ final class StackWalkingThriftMessageClassFinder extends AbstractThriftMessageCl
             final Enum<?> RETAIN_CLASS_REFERENCE =
                     Arrays.stream((Enum<?>[]) Option.getEnumConstants())
                           .filter(op -> "RETAIN_CLASS_REFERENCE".equals(op.name()))
-                          .findFirst().orElseGet(null);
+                          .findFirst().orElse(null);
 
             if (RETAIN_CLASS_REFERENCE == null) {
                 throw new IllegalStateException("Failed to get RETAIN_CLASS_REFERENCE option");
