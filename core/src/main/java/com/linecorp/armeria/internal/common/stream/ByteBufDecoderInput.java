@@ -27,19 +27,19 @@ import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-final class ByteBufDecoderInput implements HttpDecoderInput {
+public final class ByteBufDecoderInput implements HttpDecoderInput {
 
     private final ByteBufAllocator alloc;
     private final Queue<ByteBuf> queue;
 
     private boolean closed;
 
-    ByteBufDecoderInput(ByteBufAllocator alloc) {
+    public ByteBufDecoderInput(ByteBufAllocator alloc) {
         this.alloc = alloc;
         queue = new ArrayDeque<>();
     }
 
-    boolean add(ByteBuf byteBuf) {
+    public boolean add(ByteBuf byteBuf) {
         if (closed || !byteBuf.isReadable()) {
             byteBuf.release();
             return false;
@@ -175,6 +175,60 @@ final class ByteBufDecoderInput implements HttpDecoderInput {
         }
 
         value.release();
+        throw newEndOfInputException();
+    }
+
+    @Override
+    public byte getByte(int index) {
+        for (ByteBuf buf : queue) {
+            final int readableBytes = buf.readableBytes();
+            if (readableBytes > index) {
+                return buf.getByte(buf.readerIndex() + index);
+            } else {
+                index -= readableBytes;
+            }
+        }
+
+        throw newEndOfInputException();
+    }
+
+    @Override
+    public void skipBytes(int length) {
+        final ByteBuf firstBuf = queue.peek();
+        if (firstBuf == null) {
+            throw newEndOfInputException();
+        }
+
+        final int readableBytes = firstBuf.readableBytes();
+        if (readableBytes > length) {
+            firstBuf.skipBytes(length);
+        } else {
+            queue.remove();
+            firstBuf.release();
+            final int remaining = length - readableBytes;
+            if (remaining > 0) {
+                skipBytesSlow(remaining);
+            }
+        }
+    }
+
+    private void skipBytesSlow(int remaining) {
+        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext();) {
+            final ByteBuf buf = it.next();
+            final int readableBytes = buf.readableBytes();
+            if (readableBytes > remaining) {
+                buf.skipBytes(remaining);
+                return;
+            } else {
+                buf.release();
+                it.remove();
+                remaining -= readableBytes;
+                if (remaining == 0) {
+                    return;
+                }
+            }
+        }
+
         throw newEndOfInputException();
     }
 

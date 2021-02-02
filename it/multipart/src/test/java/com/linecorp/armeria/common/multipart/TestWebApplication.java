@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,17 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.multipart;
 
-/**
- * A complete HTTP message whose content is readily available as a single {@link HttpData}. It can be an
- * HTTP request or an HTTP response depending on what header values it contains. For example, having a
- * {@link HttpHeaderNames#STATUS} header could mean it is an HTTP response.
- */
-interface AggregatedHttpMessage extends AggregatedHttpObject {
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-    /**
-     * Returns the HTTP trailers.
-     */
-    HttpHeaders trailers();
+@SpringBootApplication
+public class TestWebApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(TestWebApplication.class, args);
+    }
 }
