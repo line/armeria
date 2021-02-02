@@ -23,7 +23,6 @@ sb.service("/hello", THttpService.of(new MyThriftHelloService()));
 // Unlike Thrift, you must enable unframed requests explicitly.
 sb.service(GrpcService.builder()
                       .addService(new MyGrpcHelloService())
-                      .supportedSerializationFormats(GrpcSerializationFormats.values())
                       .enableUnframedRequests(true)
                       .build());
 // Add an annotated HTTP service.
