@@ -1,0 +1,129 @@
+---
+date: 2021-02-02
+---
+
+# Armeria Newsletter vol. 2
+
+<video class="hideOnReducedMotion" src="../../images/armeria.m4v" preload="none" autoplay muted loop style="width: 282px; height: 112px;">
+  <img src="../../images/armeria.gif" loading="lazy" width="282" height="112" />
+</video>
+
+## From the devs
+
+✨ [Armeria 1.4.0](/release-notes/1.4.0/) has been released.
+
+- [Consul](https://consul.io/) service discovery support
+  - [Consul Registration for Server](/docs/server-service-registration/#consul-based-service-registration-with-consulupdatinglistener)
+  - [Consul Service Discovery for Client](/docs/client-service-discovery/#consul-based-service-discovery-with-consulendpointgroup)
+- Protect a fresh node from getting too much traffic suddenly by smoothly ramping up the weight of
+  <typeplural://Endpoint> in an <type://EndpointGroup> using <type://EndpointSelectionStrategy#rampingUp()>.
+- Ability to close a connection after handling a certain number of requests or after a certain period of time,
+  rather than keeping it open indefinitely.
+
+🏆 We nominated contributors for a reward!
+
+- From the last contributor reward in April 2019 to Armeria 1.3.0 release in December 2020,
+  Armeria got 63 contributors. 
+- Surprisingly, 52 of them were first-time contributors. 
+- As a token of appreciation, we've sent a thank you note with a gift. 
+- Thanks all for participating with us, and we're looking forward to seeing you keep it up with this year. 😄
+
+## From the community
+
+📝 [Building a gRPC Client Standard with Open Source to Boost Reliability and Velocity](https://doordash.engineering/2021/01/12/building-a-grpc-client-standard-with-open-source/) | by @haithamgabr
+
+- [Doordash engineering](https://doordash.engineering/) has adopted Armeria as a gRPC client, using the features
+  like DNS service discovery, client-side load balancing, and circuit breaker.
+
+🎤 [A Bootiful Podcast: Netty and Armeria founder Trustin Lee](https://spring.io/blog/2021/01/07/a-bootiful-podcast-netty-and-armeria-founder-trustin-lee) | by @trustin and @joshlong
+
+- @joshlong interviews Netty and Amreria founder @trustin. As you may notice from this episode,
+  Trustin is now mainly working on Armeria from [Databricks](https://databricks.com/).
+
+🚀 [http4s-armeria 0.1.0 released](https://github.com/http4s/http4s-armeria)
+
+- A good news for Scala users; you can now use Armeria as a backend for [http4s](https://http4s.org/).
+
+## We need your comments
+
+🤔 Your opinion means a lot to us. Please let us know what you think about these proposals:
+
+- #3051 Use context for when the subscriber is created by Reactor, not Publisher
+- #3155 Unify gRPC timeout scheduler between gRPC server and client.
+
+## Good first issues
+
+Want to contribute but not sure where to start from? Try one of these:
+
+- #3315 Programmatically create a blocking task executor with a custom thread size,
+  perhaps by adding a new builder method to <type://ServerBuilder> that takes the number of threads.
+
+## Stay tuned
+
+Sign up for our newsletters to keep up-to-date with new releases and useful tips!
+
+<div style="max-width: 320px; margin-top: 0.5rem;">
+  <Mailchimp />
+</div>
+
+## Thank you!
+
+<ThankYou
+  message={() => <p>Since our last newsletter, we received awesome contributions from the following contributors:</p>}
+  usernames={[
+    'aanrii',
+    'adriancole',
+    'anuraaga',
+    'arhont375',
+    'cj848',
+    'cnabro',
+    'delegacy',
+    'eisig',
+    'eonezhang',
+    'eugene70',
+    'eunchan-kim',
+    'gary-lo',
+    'ghkim3221',
+    'haithamgabr',
+    'heowc',
+    'hexoul',
+    'ikhoon',
+    'imasahiro',
+    'jongmin92',
+    'joonhaeng',
+    'jorgheymans',
+    'jrhee17',
+    'JunoJunho',
+    'KarboniteKream',
+    'kojilin',
+    'kowshikn',
+    'ks-kim',
+    'm50d',
+    'masonshin',
+    'matsumana',
+    'mauhiz',
+    'max904-github',
+    'minwoox',
+    'okue',
+    'perlun',
+    'policeman-kh',
+    'progresivoJS',
+    'renaudb',
+    'richieyan',
+    'rickyrattlesnake',
+    'rolandblain',
+    'smax48',
+    'snaiper80',
+    'syleeeee',
+    'techno',
+    'TimurKasatkin',
+    'tobias-',
+    'trustin',
+    'tumile',
+    'Ubehebe',
+    'wickedev',
+    'windmeup',
+    'wooyeong',
+    'xmeng1'
+  ]}
+/>
