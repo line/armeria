@@ -52,12 +52,18 @@ public interface Authorizer<T> {
      * @return a {@link CompletionStage} that will resolve to {@link AuthorizationStatus}. If the future
      *     resolves exceptionally, the request will not be authorized.
      */
+    @SuppressWarnings("ReturnOfNull")
     default CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
                                                                             @Nullable T data) {
         if (data == null) {
             return CompletableFuture.completedFuture(AuthorizationStatus.of(false));
         }
-        return authorize(ctx, data).thenApply(AuthorizationStatus::of);
+        return authorize(ctx, data).thenApply(b -> {
+            if (b == null) {
+                return null;
+            }
+            return AuthorizationStatus.of(b);
+        });
     }
 
     /**

@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
@@ -46,7 +47,7 @@ public class SerialFutureTest {
         final long timeout = 10L;
         final int[] seq = createArithmeticSequence(inc, inc, count);
 
-        final VolatileCounter counter = new VolatileCounter();
+        final AtomicInteger counter = new AtomicInteger();
         final IntFunction<CompletableFuture<Integer>> testAction = i ->
                 serialFuture.executeAsync(() -> timeoutAction(counter, inc, timeout)).toCompletableFuture();
         final CompletableFuture<?>[] futures = Arrays.stream(seq)
@@ -72,7 +73,7 @@ public class SerialFutureTest {
         final long timeout = 10L;
         final int[] seq = createArithmeticSequence(inc, inc, count);
 
-        final VolatileCounter counter = new VolatileCounter();
+        final AtomicInteger counter = new AtomicInteger();
         // test action that allows invoking serialFuture#callAsync(Callable) in parallel
         // use Executor as part of SerialFuture instance
         final Callable<CompletableFuture<Integer>> testAction = () ->
@@ -111,7 +112,7 @@ public class SerialFutureTest {
         final long timeout = 10L;
         final int[] seq = createArithmeticSequence(inc, inc, count);
 
-        final VolatileCounter counter = new VolatileCounter();
+        final AtomicInteger counter = new AtomicInteger();
         final IntFunction<CompletableFuture<Integer>> testAction = i ->
                 serialFuture.executeAsync(() ->
                                                   CompletableFuture.supplyAsync(() ->
@@ -143,7 +144,7 @@ public class SerialFutureTest {
         final long timeout = 10L;
         final int[] seq = createArithmeticSequence(inc, inc, count);
 
-        final VolatileCounter counter = new VolatileCounter();
+        final AtomicInteger counter = new AtomicInteger();
         // test action that allows invoking serialFuture#callAsync(Callable) in parallel
         // use Executor as part of SerialFuture instance
         final Callable<CompletableFuture<Integer>> testAction = () ->
@@ -187,7 +188,7 @@ public class SerialFutureTest {
         final long timeout = 10L;
         final int[] seq = createArithmeticSequence(inc, inc, count);
 
-        final VolatileCounter counter = new VolatileCounter();
+        final AtomicInteger counter = new AtomicInteger();
         final IntFunction<CompletableFuture<Integer>> testAction = i ->
                 serialFuture.callAsync(() -> simpleTimeoutAction(counter, inc, timeout)).toCompletableFuture();
         final CompletableFuture<?>[] futures = Arrays.stream(seq)
@@ -213,7 +214,7 @@ public class SerialFutureTest {
         final long timeout = 10L;
         final int[] seq = createArithmeticSequence(inc, inc, count);
 
-        final VolatileCounter counter = new VolatileCounter();
+        final AtomicInteger counter = new AtomicInteger();
         // test action that allows invoking serialFuture#callAsync(Callable) in parallel
         // use Executor as part of SerialFuture instance
         final Callable<CompletableFuture<Integer>> testAction = () ->
@@ -240,7 +241,7 @@ public class SerialFutureTest {
         assertThat(array).containsExactlyInAnyOrder(seq);
     }
 
-    private static int simpleTimeoutAction(VolatileCounter counter, int inc, long timeout) {
+    private static int simpleTimeoutAction(AtomicInteger counter, int inc, long timeout) {
         int c = counter.get();
         try {
             Thread.sleep(timeout);
@@ -252,7 +253,7 @@ public class SerialFutureTest {
         return c;
     }
 
-    private static CompletionStage<Integer> timeoutAction(VolatileCounter counter, int inc, long timeout) {
+    private static CompletionStage<Integer> timeoutAction(AtomicInteger counter, int inc, long timeout) {
         return CompletableFuture.completedFuture(simpleTimeoutAction(counter, inc, timeout));
     }
 
@@ -264,17 +265,5 @@ public class SerialFutureTest {
             current += inc;
         }
         return seq;
-    }
-
-    private static final class VolatileCounter {
-        volatile int counter;
-
-        void set(int counter) {
-            this.counter = counter;
-        }
-
-        int get() {
-            return counter;
-        }
     }
 }

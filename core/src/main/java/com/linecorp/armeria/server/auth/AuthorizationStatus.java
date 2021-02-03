@@ -40,17 +40,6 @@ public interface AuthorizationStatus {
     }
 
     /**
-     * Creates {@link AuthorizationStatus} based on boolean status.
-     */
-    @Nullable
-    static AuthorizationStatus of(@Nullable Boolean status) {
-        if (status == null) {
-            return null;
-        }
-        return new AuthorizationStatusImpl(status);
-    }
-
-    /**
      * Creates {@link AuthorizationStatus} success status with optional {@link AuthSuccessHandler}.
      */
     static AuthorizationStatus ofSuccess(@Nullable AuthSuccessHandler successHandler) {
