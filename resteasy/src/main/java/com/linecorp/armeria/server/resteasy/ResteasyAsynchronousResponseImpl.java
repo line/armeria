@@ -16,16 +16,21 @@
 
 package com.linecorp.armeria.server.resteasy;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
-import javax.ws.rs.ServiceUnavailableException;
+import javax.annotation.Nullable;
+import javax.ws.rs.container.TimeoutHandler;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 
 import org.jboss.resteasy.core.AbstractAsynchronousResponse;
 import org.jboss.resteasy.core.SynchronousDispatcher;
+
+import com.linecorp.armeria.common.TimeoutException;
 
 /**
  * Implements {@link AbstractAsynchronousResponse}.
@@ -56,7 +61,7 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
                 return;
             }
             done = true;
-            finishResponse();
+            onResponseCompletion(null);
         }
     }
 
@@ -70,7 +75,7 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
                 return false;
             }
             done = true;
-            return internalResume(entity, t -> finishResponse());
+            return internalResume(entity, this::onResponseCompletion);
         }
     }
 
@@ -84,7 +89,7 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
                 return false;
             }
             done = true;
-            return internalResume(ex, t -> finishResponse());
+            return internalResume(ex, this::onResponseCompletion);
         }
     }
 
@@ -100,7 +105,7 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
             done = true;
             cancelled = true;
             return internalResume(Response.status(Response.Status.SERVICE_UNAVAILABLE).build(),
-                                  t -> finishResponse());
+                                  this::onResponseCompletion);
         }
     }
 
@@ -117,7 +122,7 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
             cancelled = true;
             return internalResume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
                                           .header(HttpHeaders.RETRY_AFTER, retryAfter).build(),
-                                  t -> finishResponse());
+                                  this::onResponseCompletion);
         }
     }
 
@@ -134,17 +139,17 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
             cancelled = true;
             return internalResume(Response.status(Response.Status.SERVICE_UNAVAILABLE)
                                           .header(HttpHeaders.RETRY_AFTER, retryAfter).build(),
-                                  t -> finishResponse());
+                                  this::onResponseCompletion);
         }
     }
 
-    synchronized void finishResponse() {
+    private void onResponseCompletion(@Nullable Throwable throwable) {
         ((ResteasyHttpResponseImpl) response).finish();
     }
 
     @Override
     public boolean isSuspended() {
-        return !done && !cancelled;
+        return !done;
     }
 
     @Override
@@ -159,17 +164,27 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
 
     @Override
     public boolean setTimeout(long time, TimeUnit unit) {
-        ((AbstractResteasyHttpRequest) request).requestContext().whenRequestTimedOut().thenRun(() -> {
-            if (timeoutHandler != null) {
-                timeoutHandler.handleTimeout(this);
-            }
-            if (done) {
+        if (!isSuspended()) {
+            return false;
+        }
+        ((AbstractResteasyHttpRequest<?>) request).requestContext().setRequestTimeout(
+                Duration.ofMillis(unit.toMillis(time)));
+        ((AbstractResteasyHttpRequest<?>) request).requestContext().whenRequestCancelled().thenAccept(e -> {
+            if (isDone()) {
                 return;
             }
-            resume(new ServiceUnavailableException());
+            final TimeoutHandler handler = timeoutHandler;
+            if (e instanceof TimeoutException && handler != null) {
+                handler.handleTimeout(this);
+            }
+            cancel(); // responds with SERVICE_UNAVAILABLE
         });
-        ((AbstractResteasyHttpRequest) request).requestContext().setRequestTimeout(
-                Duration.ofMillis(unit.toMillis(time)));
         return true;
+    }
+
+    @Override
+    public void setTimeoutHandler(TimeoutHandler handler) {
+        requireNonNull(handler, "handler");
+        super.setTimeoutHandler(handler);
     }
 }
