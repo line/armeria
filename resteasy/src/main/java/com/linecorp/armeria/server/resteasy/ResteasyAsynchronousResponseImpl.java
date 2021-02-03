@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.resteasy;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
@@ -31,6 +30,7 @@ import org.jboss.resteasy.core.AbstractAsynchronousResponse;
 import org.jboss.resteasy.core.SynchronousDispatcher;
 
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Implements {@link AbstractAsynchronousResponse}.
@@ -41,9 +41,18 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
     private volatile boolean done;
     private volatile boolean cancelled;
 
-    ResteasyAsynchronousResponseImpl(SynchronousDispatcher dispatcher,
-                                     AbstractResteasyHttpRequest request, ResteasyHttpResponseImpl response) {
+    ResteasyAsynchronousResponseImpl(SynchronousDispatcher dispatcher, AbstractResteasyHttpRequest<?> request,
+                                     ResteasyHttpResponseImpl response) {
         super(dispatcher, request, response);
+        request.requestContext().whenRequestCancelled().thenAccept(this::whenRequestCancelled);
+    }
+
+    private AbstractResteasyHttpRequest<?> request() {
+        return (AbstractResteasyHttpRequest<?>) request;
+    }
+
+    private ResteasyHttpResponseImpl response() {
+        return (ResteasyHttpResponseImpl) response;
     }
 
     @Override
@@ -143,10 +152,6 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
         }
     }
 
-    private void onResponseCompletion(@Nullable Throwable throwable) {
-        ((ResteasyHttpResponseImpl) response).finish();
-    }
-
     @Override
     public boolean isSuspended() {
         return !done;
@@ -162,29 +167,79 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
         return done;
     }
 
+    /**
+     * Set/update the suspend timeout.
+     * <p>
+     * The new suspend timeout values override any timeout value previously specified.
+     * The asynchronous response must be still in a {@link #isSuspended() suspended} state
+     * for this method to succeed.
+     * </p>
+     *
+     * @param time suspend timeout value in the give time {@code unit}. Value lower
+     *             or equal to {@value #NO_TIMEOUT} causes the context to suspend indefinitely.
+     * @param unit suspend timeout value time unit.
+     * @return {@code true} if the suspend time out has been set, returns {@code false} in case
+     *         the request processing is not in the {@link #isSuspended() suspended} state.
+     */
     @Override
     public boolean setTimeout(long time, TimeUnit unit) {
-        if (!isSuspended()) {
+        if (isDone()) {
             return false;
         }
-        ((AbstractResteasyHttpRequest<?>) request).requestContext().setRequestTimeout(
-                Duration.ofMillis(unit.toMillis(time)));
-        ((AbstractResteasyHttpRequest<?>) request).requestContext().whenRequestCancelled().thenAccept(e -> {
-            if (isDone()) {
-                return;
-            }
-            final TimeoutHandler handler = timeoutHandler;
-            if (e instanceof TimeoutException && handler != null) {
-                handler.handleTimeout(this);
-            }
-            cancel(); // responds with SERVICE_UNAVAILABLE
-        });
+        final ServiceRequestContext context = request().requestContext();
+        if (time <= NO_TIMEOUT) {
+            // prevent the request from ever being timed out
+            context.clearRequestTimeout();
+        } else {
+            context.setRequestTimeoutMillis(unit.toMillis(time));
+        }
         return true;
     }
 
+    /**
+     * Set/replace a time-out handler for the suspended asynchronous response.
+     * <p>
+     * The time-out handler will be invoked when the suspend period of this
+     * asynchronous response times out. The job of the time-out handler is to
+     * resolve the time-out situation by either resuming or cancelling the suspended response.
+     * Extending the suspend period by setting a new suspend time-out< is not supported.
+     * Note that in case the response is suspended {@link #NO_TIMEOUT indefinitely},
+     * the time-out handler may never be invoked.
+     * </p>
+     *
+     * @param handler response time-out handler.
+     */
     @Override
     public void setTimeoutHandler(TimeoutHandler handler) {
         requireNonNull(handler, "handler");
         super.setTimeoutHandler(handler);
+    }
+
+    /**
+     * Invoked when request has been cancelled for any reason, including timeout.
+     * Invokes configured {@link TimeoutHandler} when cancellation triggered by a timeout,
+     * otherwise triggers {@link #cancel()}.
+     * The {@link TimeoutHandler} must either {@link #resume(Object)}/{@link #resume(Throwable)} or
+     * {@link #cancel()} the suspended response.
+     * Resetting timeout inside the timeout handler is not supported.
+     * @param cause {@link Throwable} cancellation cause
+     */
+    private void whenRequestCancelled(Throwable cause) {
+        if (isDone()) {
+            return;
+        }
+        final TimeoutHandler handler = timeoutHandler;
+        if (cause instanceof TimeoutException && handler != null) {
+            // if cancellation caused by a timeout - invoke the timeout handler
+            // timeout handler must resume or cancel the response.
+            handler.handleTimeout(this);
+        } else {
+            // cancel response by default
+            cancel(); // responds with SERVICE_UNAVAILABLE
+        }
+    }
+
+    private void onResponseCompletion(@Nullable Throwable throwable) {
+        response().finish();
     }
 }
