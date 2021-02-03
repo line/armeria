@@ -87,10 +87,11 @@ class DefaultAggregatedHttpRequestTest {
     }
 
     @Test
-    void shouldHaveAllGettersInHttpRequest() throws Exception {
+    void shouldHaveAllGettersInHttpRequest() {
         final List<String> httpRequestMethods = noParameterMethods(HttpRequest.class);
         final List<String> aggregateHttpRequestMethods = noParameterMethods(AggregatedHttpRequest.class,
-                                                                            AggregatedHttpMessage.class);
+                                                                            AggregatedHttpMessage.class,
+                                                                            AggregatedHttpObject.class);
         for (String httpRequestMethod : httpRequestMethods) {
             if (httpRequestMethod.startsWith("builder") || httpRequestMethod.startsWith("aggregate") ||
                 httpRequestMethod.startsWith("toDuplicator")) {
