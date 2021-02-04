@@ -33,7 +33,6 @@ import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpURI;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.http.MetaData;
-import org.eclipse.jetty.http.MetaData.Response;
 import org.eclipse.jetty.server.HttpChannel;
 import org.eclipse.jetty.server.HttpInput.Content;
 import org.eclipse.jetty.server.HttpTransport;
@@ -374,7 +373,7 @@ public final class JettyService implements HttpService {
             }
         }
 
-        private static ResponseHeaders toResponseHeaders(Response info) {
+        private static ResponseHeaders toResponseHeaders(MetaData.Response info) {
             final ResponseHeadersBuilder headers = ResponseHeaders.builder();
             headers.status(info.getStatus());
             info.getFields().forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
