@@ -331,7 +331,7 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void largeFile() throws Exception {
-        testLarge("/jsp/large.txt", true /* Static content has a content-length header. */ );
+        testLarge("/jsp/large.txt", true /* Static content has a content-length header. */);
     }
 
     @Test
