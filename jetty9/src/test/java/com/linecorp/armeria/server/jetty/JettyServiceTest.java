@@ -22,18 +22,22 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
+import javax.servlet.AsyncContext;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
 import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
 import org.eclipse.jetty.plus.annotation.ContainerInitializer;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.ResourceHandler;
 import org.eclipse.jetty.util.resource.Resource;
@@ -41,15 +45,26 @@ import org.eclipse.jetty.util.thread.ThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
+
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.netty.handler.codec.http.HttpHeaderNames;
-
 class JettyServiceTest extends WebAppContainerTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(JettyServiceTest.class);
 
     private static final List<Object> jettyBeans = new ArrayList<>();
 
@@ -82,6 +97,12 @@ class JettyServiceTest extends WebAppContainerTest {
                     JettyService.builder()
                                 .handler(resourceHandler)
                                 .build());
+
+            sb.service(
+                    "/stream/{totalSize}/{chunkSize}",
+                    JettyService.builder()
+                                .handler(new AsyncStreamingHandler())
+                                .build());
         }
     };
 
@@ -113,26 +134,99 @@ class JettyServiceTest extends WebAppContainerTest {
     @Test
     void configurator() throws Exception {
         assertThat(jettyBeans)
-                  .hasAtLeastOneElementOfType(ThreadPool.class)
-                  .hasAtLeastOneElementOfType(WebAppContext.class);
+                .hasAtLeastOneElementOfType(ThreadPool.class)
+                .hasAtLeastOneElementOfType(WebAppContext.class);
     }
 
     @Test
     void defaultHandlerFavicon() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(server.httpUri() + "/default/favicon.ico"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
-                              .startsWith("image/x-icon");
-                assertThat(EntityUtils.toByteArray(res.getEntity()).length)
-                          .isGreaterThan(0);
-            }
-        }
+        final AggregatedHttpResponse res =
+                WebClient.of()
+                         .get(server.httpUri() + "/default/favicon.ico")
+                         .aggregate()
+                         .join();
+
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.parse("image/x-icon"));
+        assertThat(res.content().length()).isGreaterThan(0);
     }
 
     @Test
     void resourceHandlerWithLargeResource() throws Exception {
-        testLarge("/resources/large.txt");
+        testLarge("/resources/large.txt", true);
+    }
+
+    /**
+     * Makes sure asynchronous streaming works for various sizes of responses.
+     */
+    @ParameterizedTest
+    @CsvSource({
+            "8192, 8192",     // 8KiB in a single write
+            "8192, 128",      // 8KiB in many writes
+            "131072, 131072", // 128KiB in a single write
+            "131072, 8192",   // 128KiB in many writes
+    })
+    void asyncRequest(int totalSize, int chunkSize) throws Exception {
+        final AggregatedHttpResponse res =
+                WebClient.of()
+                         .get(server.httpUri() + "/stream/" + totalSize + '/' + chunkSize)
+                         .aggregate()
+                         .join();
+
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentAscii()).hasSize(totalSize)
+                                      .matches("^(?:0123456789abcdef)*$");
+    }
+
+    private static class AsyncStreamingHandler extends AbstractHandler {
+        /**
+         * A 128KiB full of characters.
+         */
+        private static final byte[] chunk = Strings.repeat("0123456789abcdef", 128 * 1024 / 16)
+                                                   .getBytes(StandardCharsets.US_ASCII);
+
+        @Override
+        public void handle(String target, Request baseRequest,
+                           HttpServletRequest request,
+                           HttpServletResponse response) {
+            final ServiceRequestContext ctx = ServiceRequestContext.current();
+            final int totalSize = Integer.parseInt(ctx.pathParam("totalSize"));
+            final int chunkSize = Integer.parseInt(ctx.pathParam("chunkSize"));
+            final AsyncContext asyncCtx = request.startAsync();
+            ctx.eventLoop().schedule(() -> {
+                response.setStatus(200);
+                stream(ctx, asyncCtx, response, totalSize, chunkSize);
+            }, 500, TimeUnit.MILLISECONDS);
+        }
+
+        private static void stream(ServiceRequestContext ctx, AsyncContext asyncCtx, HttpServletResponse res,
+                                   int remainingBytes, int chunkSize) {
+            final int bytesToWrite;
+            final boolean lastChunk;
+            if (remainingBytes <= chunkSize) {
+                bytesToWrite = remainingBytes;
+                lastChunk = true;
+            } else {
+                bytesToWrite = chunkSize;
+                lastChunk = false;
+            }
+
+            try {
+                final ServletOutputStream out = res.getOutputStream();
+                out.write(chunk, 0, bytesToWrite);
+                if (lastChunk) {
+                    out.close();
+                } else {
+                    ctx.eventLoop().execute(
+                            () -> stream(ctx, asyncCtx, res, remainingBytes - bytesToWrite, chunkSize));
+                }
+            } catch (Exception e) {
+                logger.warn("{} Unexpected exception:", ctx, e);
+            } finally {
+                if (lastChunk) {
+                    asyncCtx.complete();
+                }
+            }
+        }
     }
 }
