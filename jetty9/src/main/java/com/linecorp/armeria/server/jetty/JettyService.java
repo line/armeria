@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.servlet.DispatcherType;
@@ -33,6 +34,7 @@ import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpURI;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.http.MetaData;
+import org.eclipse.jetty.http.MetaData.Response;
 import org.eclipse.jetty.server.HttpChannel;
 import org.eclipse.jetty.server.HttpInput.Content;
 import org.eclipse.jetty.server.HttpTransport;
@@ -45,6 +47,8 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -78,6 +82,12 @@ public final class JettyService implements HttpService {
      */
     private static final MethodHandle jReqSetAsyncSupported;
 
+    /**
+     * Dynamically resolve {@link MetaData.Response#getTrailerSupplier()} because it doesn't exist in 9.3.
+     */
+    @Nullable
+    private static final MethodHandle jResGetTrailerSupplier;
+
     static {
         MethodHandle setAsyncSupported = null;
         try {
@@ -98,6 +108,17 @@ public final class JettyService implements HttpService {
 
         assert setAsyncSupported != null;
         jReqSetAsyncSupported = setAsyncSupported;
+
+        MethodHandle getTrailerSupplier = null;
+        try {
+            // Jetty 9.4+
+            getTrailerSupplier = MethodHandles.lookup().unreflect(
+                    MetaData.Response.class.getMethod("getTrailerSupplier"));
+        } catch (Throwable t) {
+            // Jetty 9.3 or below
+            getTrailerSupplier = null;
+        }
+        jResGetTrailerSupplier = getTrailerSupplier;
     }
 
     /**
@@ -325,6 +346,8 @@ public final class JettyService implements HttpService {
     private static final class ArmeriaHttpTransport implements HttpTransport {
 
         final HttpResponseWriter res;
+        @Nullable
+        MetaData.Response info;
 
         ArmeriaHttpTransport(HttpResponseWriter res) {
             this.res = res;
@@ -332,39 +355,44 @@ public final class JettyService implements HttpService {
 
         @Override
         public void send(@Nullable MetaData.Response info, boolean head,
-                         ByteBuffer content, boolean lastContent, Callback callback) {
+                         @Nullable ByteBuffer content, boolean lastContent, Callback callback) {
             try {
                 if (info != null) {
+                    this.info = info;
                     res.write(toResponseHeaders(info));
                 }
 
-                if (head) {
-                    callback.succeeded();
-                    return;
-                }
+                final int length = content != null ? content.remaining() : 0;
+                if (!head && length != 0) {
+                    final HttpData data;
+                    if (content.hasArray()) {
+                        final int from = content.arrayOffset() + content.position();
+                        content.position(content.position() + length);
+                        data = HttpData.wrap(Arrays.copyOfRange(content.array(), from, from + length));
+                    } else {
+                        final byte[] buf = new byte[length];
+                        content.get(buf);
+                        data = HttpData.wrap(buf);
+                    }
 
-                final int length = content.remaining();
-                if (length == 0) {
-                    callback.succeeded();
-                    return;
-                }
-
-                final HttpData data;
-                if (content.hasArray()) {
-                    final int from = content.arrayOffset() + content.position();
-                    content.position(content.position() + length);
-                    data = HttpData.wrap(Arrays.copyOfRange(content.array(), from, from + length));
-                } else {
-                    final byte[] buf = new byte[length];
-                    content.get(buf);
-                    data = HttpData.wrap(buf);
-                }
-
-                if (lastContent) {
-                    res.write(data.withEndOfStream());
+                    if (lastContent) {
+                        final HttpHeaders trailers = toResponseTrailers(info);
+                        if (trailers != null) {
+                            res.write(data);
+                            res.write(trailers);
+                        } else {
+                            res.write(data.withEndOfStream());
+                        }
+                        res.close();
+                    } else {
+                        res.write(data);
+                    }
+                } else if (lastContent) {
+                    final HttpHeaders trailers = toResponseTrailers(info);
+                    if (trailers != null) {
+                        res.write(trailers);
+                    }
                     res.close();
-                } else {
-                    res.write(data);
                 }
 
                 callback.succeeded();
@@ -377,6 +405,41 @@ public final class JettyService implements HttpService {
             final ResponseHeadersBuilder headers = ResponseHeaders.builder();
             headers.status(info.getStatus());
             info.getFields().forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
+            return headers.build();
+        }
+
+        @Nullable
+        private HttpHeaders toResponseTrailers(@Nullable MetaData.Response info) {
+            if (jResGetTrailerSupplier == null) {
+                return null;
+            }
+
+            if (info == null) {
+                info = this.info;
+                if (info == null) {
+                    return null;
+                }
+            }
+
+            final Supplier<HttpFields> trailerSupplier;
+            try {
+                //noinspection unchecked
+                trailerSupplier = (Supplier<HttpFields>) jResGetTrailerSupplier.invoke(info);
+            } catch (Throwable t) {
+                return Exceptions.throwUnsafely(t);
+            }
+
+            if (trailerSupplier == null) {
+                return null;
+            }
+
+            final HttpFields fields = trailerSupplier.get();
+            if (fields == null || fields.size() == 0) {
+                return null;
+            }
+
+            final HttpHeadersBuilder headers = HttpHeaders.builder();
+            fields.forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
             return headers.build();
         }
 

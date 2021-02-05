@@ -17,8 +17,11 @@
 package com.linecorp.armeria.server.jetty;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.io.File;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -27,19 +30,25 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
+import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.annotations.ServletContainerInitializersStarter;
 import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
+import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.plus.annotation.ContainerInitializer;
 import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.server.handler.ResourceHandler;
+import org.eclipse.jetty.util.Jetty;
 import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.thread.ThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
@@ -54,6 +63,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerTest;
@@ -67,6 +77,31 @@ class JettyServiceTest extends WebAppContainerTest {
     private static final Logger logger = LoggerFactory.getLogger(JettyServiceTest.class);
 
     private static final List<Object> jettyBeans = new ArrayList<>();
+
+    /**
+     * Dynamically resolve {@link Response#setTrailers(Supplier)} because it doesn't exist in 9.3.
+     */
+    @Nullable
+    private static final MethodHandle jResSetTrailers;
+
+    static {
+        MethodHandle setTrailers = null;
+        try {
+            setTrailers = MethodHandles.lookup().unreflect(
+                    Response.class.getMethod("setTrailers", Supplier.class));
+        } catch (Throwable t) {
+            // Jetty 9.3
+            if (!Jetty.VERSION.startsWith("9.3.")) {
+                throw new Error("Failed to find Response.setTrailers(Supplier) in Jetty " + Jetty.VERSION, t);
+            }
+        }
+        jResSetTrailers = setTrailers;
+    }
+
+    /**
+     * Trailers are supported since 9.4.
+     */
+    private static final boolean hasTrailersSupport = !Jetty.VERSION.startsWith("v9.3.");
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -99,10 +134,43 @@ class JettyServiceTest extends WebAppContainerTest {
                                 .build());
 
             sb.service(
+                    "/headers-only",
+                    newJettyService((req, res) -> {
+                        res.setStatus(204);
+                        res.addHeader("x-headers", "foo");
+                        res.getOutputStream().close();
+                    }));
+
+            sb.service(
+                    "/headers-trailers",
+                    newJettyService((req, res) -> {
+                        res.setStatus(200);
+                        res.addHeader("x-headers", "bar");
+                        jResSetTrailers.invoke(res, (Supplier<HttpFields>) () -> {
+                            final HttpFields trailers = new HttpFields();
+                            trailers.put("x-trailers", "baz");
+                            return trailers;
+                        });
+                        res.getOutputStream().close();
+                    }));
+
+            sb.service("/headers-data-trailers",
+                       newJettyService((req, res) -> {
+                           res.setStatus(200);
+                           res.addHeader("x-headers", "bar");
+                           jResSetTrailers.invoke(res, (Supplier<HttpFields>) () -> {
+                               final HttpFields trailers = new HttpFields();
+                               trailers.put("x-trailers", "baz");
+                               return trailers;
+                           });
+                           final ServletOutputStream out = res.getOutputStream();
+                           out.print("qux");
+                           out.close();
+                       }));
+
+            sb.service(
                     "/stream/{totalSize}/{chunkSize}",
-                    JettyService.builder()
-                                .handler(new AsyncStreamingHandler())
-                                .build());
+                    newJettyService(new AsyncStreamingHandlerFunction()));
         }
     };
 
@@ -156,6 +224,49 @@ class JettyServiceTest extends WebAppContainerTest {
         testLarge("/resources/large.txt", true);
     }
 
+    @Test
+    void headersOnly() throws Exception {
+        final AggregatedHttpResponse res =
+                WebClient.of()
+                         .get(server.httpUri() + "/headers-only")
+                         .aggregate()
+                         .join();
+
+        assertThat(res.status()).isSameAs(HttpStatus.NO_CONTENT);
+        assertThat(res.headers()).containsAll(HttpHeaders.of("x-headers", "foo"));
+        assertThat(res.trailers()).isEmpty();
+    }
+
+    @Test
+    void headersAndTrailers() throws Exception {
+        assumeThat(jResSetTrailers).isNotNull();
+        final AggregatedHttpResponse res =
+                WebClient.of()
+                         .get(server.httpUri() + "/headers-trailers")
+                         .aggregate()
+                         .join();
+
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers()).containsAll(HttpHeaders.of("x-headers", "bar"));
+        assertThat(res.content().length()).isZero();
+        assertThat(res.trailers()).containsAll(HttpHeaders.of("x-trailers", "baz"));
+    }
+
+    @Test
+    void headersDataAndTrailers() throws Exception {
+        assumeThat(jResSetTrailers).isNotNull();
+        final AggregatedHttpResponse res =
+                WebClient.of()
+                         .get(server.httpUri() + "/headers-data-trailers")
+                         .aggregate()
+                         .join();
+
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers()).containsAll(HttpHeaders.of("x-headers", "bar"));
+        assertThat(res.contentAscii()).isEqualTo("qux");
+        assertThat(res.trailers()).containsAll(HttpHeaders.of("x-trailers", "baz"));
+    }
+
     /**
      * Makes sure asynchronous streaming works for various sizes of responses.
      */
@@ -178,7 +289,29 @@ class JettyServiceTest extends WebAppContainerTest {
                                       .matches("^(?:0123456789abcdef)*$");
     }
 
-    private static class AsyncStreamingHandler extends AbstractHandler {
+    private static JettyService newJettyService(SimpleHandlerFunction func) {
+        return JettyService.builder()
+                           .handler(new AbstractHandler() {
+                               @Override
+                               public void handle(String target, Request baseRequest,
+                                                  HttpServletRequest request,
+                                                  HttpServletResponse response) throws ServletException {
+                                   try {
+                                       func.handle(baseRequest, (Response) response);
+                                   } catch (Throwable t) {
+                                       throw new ServletException(t);
+                                   }
+                               }
+                           })
+                           .build();
+    }
+
+    @FunctionalInterface
+    private interface SimpleHandlerFunction {
+        void handle(Request req, Response res) throws Throwable;
+    }
+
+    private static class AsyncStreamingHandlerFunction implements SimpleHandlerFunction {
         /**
          * A 128KiB full of characters.
          */
@@ -186,20 +319,18 @@ class JettyServiceTest extends WebAppContainerTest {
                                                    .getBytes(StandardCharsets.US_ASCII);
 
         @Override
-        public void handle(String target, Request baseRequest,
-                           HttpServletRequest request,
-                           HttpServletResponse response) {
+        public void handle(Request req, Response res) throws Exception {
             final ServiceRequestContext ctx = ServiceRequestContext.current();
             final int totalSize = Integer.parseInt(ctx.pathParam("totalSize"));
             final int chunkSize = Integer.parseInt(ctx.pathParam("chunkSize"));
-            final AsyncContext asyncCtx = request.startAsync();
+            final AsyncContext asyncCtx = req.startAsync();
             ctx.eventLoop().schedule(() -> {
-                response.setStatus(200);
-                stream(ctx, asyncCtx, response, totalSize, chunkSize);
+                res.setStatus(200);
+                stream(ctx, asyncCtx, res, totalSize, chunkSize);
             }, 500, TimeUnit.MILLISECONDS);
         }
 
-        private static void stream(ServiceRequestContext ctx, AsyncContext asyncCtx, HttpServletResponse res,
+        private static void stream(ServiceRequestContext ctx, AsyncContext asyncCtx, Response res,
                                    int remainingBytes, int chunkSize) {
             final int bytesToWrite;
             final boolean lastChunk;
