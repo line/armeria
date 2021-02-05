@@ -63,8 +63,6 @@ import com.linecorp.armeria.internal.common.resteasy.ByteBufferBackedOutputStrea
 import com.linecorp.armeria.internal.common.resteasy.HttpMessageStream;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
-import io.netty.buffer.Unpooled;
-
 /**
  * An implementation of {@link AsyncClientHttpEngine} based on Armeria {@link WebClient}.
  * This provides the main entry point for JAX-RS client-side based on Armeria.
@@ -228,8 +226,8 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
             final HttpResponse asyncResponse = client.execute(requestWriter);
             final ByteBufferBackedOutputStream requestContentStream
                     = new ByteBufferBackedOutputStream(bufferSize, buff -> {
-                        if (buff.hasRemaining()) {
-                            requestWriter.write(HttpData.wrap(Unpooled.wrappedBuffer(buff)));
+                        if (buff.isReadable()) {
+                            requestWriter.write(HttpData.wrap(buff));
                         }
                     });
             request.getDelegatingOutputStream().setDelegate(requestContentStream);

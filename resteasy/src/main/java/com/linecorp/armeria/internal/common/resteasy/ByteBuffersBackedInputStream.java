@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.internal.common.resteasy;
 
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.InterruptedByTimeoutException;
 import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
@@ -34,23 +34,23 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
+import io.netty.buffer.ByteBuf;
+
 /**
  * An {@link InputStream} implementation that exposes dynamically available content
- * of series of the {@link ByteBuffer} data chunks until the EOS flag set for this stream.
+ * of series of the {@link ByteBuf} data chunks until the EOS flag set for this stream.
  * All {@link InputStream} reading operations will block until next data chunk gets available or
  * EOS flag set for the stream.
  * When the EOS flag set, all the available data will be read fully, but no more
- * new {@link ByteBuffer} data chunks will be permitted.
+ * new {@link ByteBuf} data chunks will be permitted.
  */
 @UnstableApi
 public final class ByteBuffersBackedInputStream extends InputStream {
 
-    private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.wrap(new byte[] {});
-
-    private final BlockingQueue<ByteBuffer> buffers = new LinkedBlockingQueue<>();
+    private final BlockingQueue<ByteBuf> buffers = new LinkedBlockingQueue<>();
     private final AtomicBoolean eos = new AtomicBoolean(false);
     @Nullable
-    private volatile ByteBuffer nextBuffer;
+    private volatile ByteBuf nextBuffer;
     @Nullable
     private final Duration timeout;
     @Nullable
@@ -70,14 +70,14 @@ public final class ByteBuffersBackedInputStream extends InputStream {
     }
 
     @Nullable
-    private ByteBuffer peekBuffer() {
-        final ByteBuffer buffer = nextBuffer;
+    private ByteBuf peekBuffer() {
+        final ByteBuf buffer = nextBuffer;
         return (buffer == null) ? buffers.peek() : buffer;
     }
 
     @Nullable
-    private ByteBuffer buffer() throws InterruptedException, IOException {
-        ByteBuffer buffer = nextBuffer;
+    private ByteBuf buffer() throws InterruptedException, IOException {
+        ByteBuf buffer = nextBuffer;
         if (buffer == null) {
             buffer = takeNext();
         }
@@ -85,8 +85,8 @@ public final class ByteBuffersBackedInputStream extends InputStream {
     }
 
     @Nullable
-    private ByteBuffer next() throws InterruptedException, IOException {
-        final ByteBuffer buffer = takeNext();
+    private ByteBuf next() throws InterruptedException, IOException {
+        final ByteBuf buffer = takeNext();
         return nextBuffer = buffer;
     }
 
@@ -94,8 +94,8 @@ public final class ByteBuffersBackedInputStream extends InputStream {
      * Takes the next buffer from the Queue.
      */
     @Nullable
-    private ByteBuffer takeNext() throws InterruptedException, IOException {
-        ByteBuffer buffer = null;
+    private ByteBuf takeNext() throws InterruptedException, IOException {
+        ByteBuf buffer = null;
         while (buffer == null) {
             if (interruption != null) {
                 final InterruptedIOException ioe = new InterruptedIOException();
@@ -120,7 +120,7 @@ public final class ByteBuffersBackedInputStream extends InputStream {
      * Drains the Queue.
      */
     private void drain() {
-        ByteBuffer buffer;
+        ByteBuf buffer;
         do {
             buffer = buffers.poll();
         } while (buffer != null);
@@ -135,7 +135,7 @@ public final class ByteBuffersBackedInputStream extends InputStream {
 
     /**
      * Marks {@link InputStream} with the EOS, meaning that there will be no more
-     * {@link ByteBuffer} data chunks available to this {@link InputStream}.
+     * {@link ByteBuf} data chunks available to this {@link InputStream}.
      */
     public void setEos() {
         eos.set(true);
@@ -143,9 +143,9 @@ public final class ByteBuffersBackedInputStream extends InputStream {
     }
 
     /**
-     * Adds new input {@link ByteBuffer} data chunk to the {@link InputStream}.
+     * Adds new input {@link ByteBuf} data chunk to the {@link InputStream}.
      */
-    public void add(ByteBuffer buffer) {
+    public void add(ByteBuf buffer) {
         requireNonNull(buffer, "buffer");
         if (eos.get()) {
             throw new IllegalStateException("Already closed");
@@ -174,11 +174,11 @@ public final class ByteBuffersBackedInputStream extends InputStream {
 
     @Override
     public int available() {
-        final ByteBuffer buffer = peekBuffer();
+        final ByteBuf buffer = peekBuffer();
         if (buffer == null) {
             return 0;
         }
-        return buffer.remaining();
+        return buffer.readableBytes();
     }
 
     @Override
@@ -192,9 +192,9 @@ public final class ByteBuffersBackedInputStream extends InputStream {
         return read(buffer -> readFromBuffer(buffer, bytes, off, len));
     }
 
-    private int read(Function<ByteBuffer, Integer> reader) throws IOException {
+    private int read(Function<ByteBuf, Integer> reader) throws IOException {
         try {
-            ByteBuffer buffer = buffer();
+            ByteBuf buffer = buffer();
             if (buffer == null) {
                 return -1;
             }
@@ -216,16 +216,16 @@ public final class ByteBuffersBackedInputStream extends InputStream {
         }
     }
 
-    private static int readFromBuffer(ByteBuffer buffer) {
-        return buffer.hasRemaining() ? (buffer.get() & 0xFF) : -1;
+    private static int readFromBuffer(ByteBuf buffer) {
+        return buffer.isReadable() ? (buffer.readByte() & 0xFF) : -1;
     }
 
-    private static int readFromBuffer(ByteBuffer buffer, byte[] bytes, int off, int len) {
-        if (!buffer.hasRemaining()) {
+    private static int readFromBuffer(ByteBuf buffer, byte[] bytes, int off, int len) {
+        if (!buffer.isReadable()) {
             return -1;
         }
-        len = Math.min(len, buffer.remaining());
-        buffer.get(bytes, off, len);
+        len = Math.min(len, buffer.readableBytes());
+        buffer.readBytes(bytes, off, len);
         return len;
     }
 }

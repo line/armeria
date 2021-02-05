@@ -18,22 +18,23 @@ package com.linecorp.armeria.internal.common.resteasy;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import io.netty.buffer.ByteBuf;
+
 public class ByteBufferBackedOutputStreamTest {
 
     @Test
-    void testWriteBytes() throws Exception {
+    void testWrite1() throws Exception {
         final List<String> tokens = new ArrayList<>();
         final StringBuilder sb = new StringBuilder();
         final ByteBufferBackedOutputStream stream = new ByteBufferBackedOutputStream(3, buffer -> {
             final CharSequence token =
-                    StandardCharsets.ISO_8859_1.decode(buffer);
+                    buffer.readCharSequence(buffer.readableBytes(), StandardCharsets.ISO_8859_1);
             tokens.add(token.toString());
             sb.append(token);
         });
@@ -56,12 +57,12 @@ public class ByteBufferBackedOutputStreamTest {
     }
 
     @Test
-    void testWriteByte() throws Exception {
+    void testWrite2() throws Exception {
         final List<String> tokens = new ArrayList<>();
         final StringBuilder sb = new StringBuilder();
         final ByteBufferBackedOutputStream stream = new ByteBufferBackedOutputStream(3, buffer -> {
             final CharSequence token =
-                    StandardCharsets.ISO_8859_1.decode(buffer);
+                    buffer.readCharSequence(buffer.readableBytes(), StandardCharsets.ISO_8859_1);
             tokens.add(token.toString());
             sb.append(token);
         });
@@ -86,12 +87,40 @@ public class ByteBufferBackedOutputStreamTest {
     }
 
     @Test
+    void testWrite3() throws Exception {
+        final List<String> tokens = new ArrayList<>();
+        final StringBuilder sb = new StringBuilder();
+        final ByteBufferBackedOutputStream stream = new ByteBufferBackedOutputStream(3, buffer -> {
+            final CharSequence token =
+                    buffer.readCharSequence(buffer.readableBytes(), StandardCharsets.ISO_8859_1);
+            tokens.add(token.toString());
+            sb.append(token);
+        });
+
+        final String s1 = "aaabbbcccdddeeefffggghhh9";
+        for (byte b : s1.getBytes(StandardCharsets.ISO_8859_1)) {
+            stream.write(b);
+            stream.flush();
+        }
+
+        assertThat(stream.hasWritten()).isFalse();
+        assertThat(stream.written()).isEqualTo(0);
+        assertThat(stream.hasFlushed()).isTrue();
+
+        assertThat(tokens).hasSize(s1.length());
+        final String[] expected = s1.chars().mapToObj(c -> String.valueOf((char) c)).toArray(String[]::new);
+        assertThat(tokens).containsExactly(expected);
+
+        assertThat(sb.toString()).isEqualTo(s1);
+    }
+
+    @Test
     void testWriteRead() throws Exception {
         final List<String> tokens = new ArrayList<>();
         final StringBuilder sb = new StringBuilder();
         final ByteBufferBackedOutputStream stream = new ByteBufferBackedOutputStream(3, buffer -> {
             final CharSequence token =
-                    StandardCharsets.ISO_8859_1.decode(buffer);
+                    buffer.readCharSequence(buffer.readableBytes(), StandardCharsets.ISO_8859_1);
             tokens.add(token.toString());
             sb.append(token);
         });
@@ -129,8 +158,8 @@ public class ByteBufferBackedOutputStreamTest {
         assertThat(tokens).hasSize(6);
         assertThat(tokens).containsExactly("iii", "jjj", "kkk", "lll", "mmm", "nnn");
 
-        final ByteBuffer dump = stream.dumpWrittenAndClose();
-        assertThat(StandardCharsets.ISO_8859_1.decode(dump).toString())
+        final ByteBuf dump = stream.dumpWrittenAndClose();
+        assertThat(dump.readCharSequence(dump.readableBytes(), StandardCharsets.ISO_8859_1).toString())
                 .isEqualTo("7");
 
         assertThat(sb.toString()).isEqualTo(s2.substring(0, s2.length() - 1));

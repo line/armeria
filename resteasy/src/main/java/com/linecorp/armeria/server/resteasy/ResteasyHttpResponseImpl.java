@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.concurrent.CompletableFuture;
@@ -40,7 +39,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.internal.common.resteasy.ByteBufferBackedOutputStream;
 
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.ByteBuf;
 
 /**
  * Implements {@link org.jboss.resteasy.spi.HttpResponse}.
@@ -154,8 +153,8 @@ final class ResteasyHttpResponseImpl implements org.jboss.resteasy.spi.HttpRespo
         responseFuture.complete(completeResponse());
     }
 
-    private void onDataFlush(ByteBuffer buffer) {
-        if (!buffer.hasRemaining()) {
+    private void onDataFlush(ByteBuf buffer) {
+        if (!buffer.isReadable()) {
             // response stream will be open only if there is something to write to it
             return;
         }
@@ -166,7 +165,7 @@ final class ResteasyHttpResponseImpl implements org.jboss.resteasy.spi.HttpRespo
             responseWriter.write(responseHeaders);
             committed = true; // response is irreversible from this point on
         }
-        responseWriter.write(HttpData.wrap(Unpooled.wrappedBuffer(buffer)));
+        responseWriter.write(HttpData.wrap(buffer));
     }
 
     private HttpResponse completeResponse() {
@@ -188,8 +187,8 @@ final class ResteasyHttpResponseImpl implements org.jboss.resteasy.spi.HttpRespo
         if (errorMessage != null) {
             contentData = HttpData.ofUtf8(errorMessage);
         } else if (contentStream.hasWritten()) {
-            final ByteBuffer writtenBytes = contentStream.dumpWrittenAndClose();
-            contentData = HttpData.wrap(Unpooled.wrappedBuffer(writtenBytes));
+            final ByteBuf writtenBytes = contentStream.dumpWrittenAndClose();
+            contentData = HttpData.wrap(writtenBytes);
         } else {
             contentData = HttpData.empty();
         }

@@ -23,7 +23,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.InterruptedByTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -32,10 +31,16 @@ import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
+
+import io.netty.buffer.Unpooled;
 
 public class ByteBuffersBackedInputStreamTest {
 
@@ -66,7 +71,7 @@ public class ByteBuffersBackedInputStreamTest {
         final ByteBuffersBackedInputStream stream = new ByteBuffersBackedInputStream();
         assertThat(stream.isEos()).isFalse();
         assertThat(stream.available()).isEqualTo(0);
-        strings.forEach(s -> stream.add(ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8))));
+        strings.forEach(s -> stream.add(Unpooled.wrappedBuffer(s.getBytes(StandardCharsets.UTF_8))));
         stream.setEos();
 
         final Scanner scanner = new Scanner(stream).useDelimiter(",");
@@ -102,7 +107,7 @@ public class ByteBuffersBackedInputStreamTest {
         assertThat(stream.available()).isEqualTo(0);
         assertThat(stream.read()).isEqualTo(-1);
 
-        assertThatThrownBy(() -> stream.add(ByteBuffer.wrap(new byte[] {})))
+        assertThatThrownBy(() -> stream.add(Unpooled.wrappedBuffer(new byte[] {})))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Already closed");
     }
@@ -173,7 +178,9 @@ public class ByteBuffersBackedInputStreamTest {
                 .getCause().hasMessageContaining("my fault");
     }
 
-    void runTestBuffered(List<String> strings) throws Exception {
+    @ParameterizedTest
+    @MethodSource("parametersForBufferedAsync")
+    void testBufferedAsync(List<String> strings) throws Exception {
         final ByteBuffersBackedInputStream stream = new ByteBuffersBackedInputStream();
         assertThat(stream.isEos()).isFalse();
         assertThat(stream.available()).isEqualTo(0);
@@ -190,7 +197,7 @@ public class ByteBuffersBackedInputStreamTest {
         });
 
         CompletableFuture.runAsync(() -> {
-            strings.forEach(s -> stream.add(ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8))));
+            strings.forEach(s -> stream.add(Unpooled.wrappedBuffer(s.getBytes(StandardCharsets.UTF_8))));
             stream.setEos();
         });
 
@@ -208,13 +215,10 @@ public class ByteBuffersBackedInputStreamTest {
         assertThat(resultStrings.get(4)).isEqualTo("fifth");
     }
 
-    @Test
-    void testBufferedAsync1() throws Exception {
-        runTestBuffered(ImmutableList.of("first,", "second,", "third,fourth", ",fifth"));
-    }
-
-    @Test
-    void testBufferedAsync2() throws Exception {
-        runTestBuffered(ImmutableList.of("fir", "st,", "secon", "d", ",third,fou", "rth", ",", "fif", "th"));
+    private static Stream<Arguments> parametersForBufferedAsync() {
+        return Stream.of(Arguments.of(ImmutableList.of("first,", "second,", "third,fourth", ",fifth")),
+                         Arguments.of(ImmutableList.of(
+                                 "fir", "st,", "secon", "d", ",third,fou", "rth", ",", "fif", "th"))
+        );
     }
 }

@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.common.resteasy;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
@@ -134,7 +133,7 @@ public final class HttpMessageStream {
         return new HttpMessageSubscriber() {
             @Override
             public void onData(HttpData data) {
-                content.add(ByteBuffer.wrap(data.array(), 0, data.length()));
+                content.add(data.byteBuf());
             }
 
             @Override

@@ -21,23 +21,25 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+
 /**
- * An {@link OutputStream} that uses {@link ByteBuffer} to accumulate stream data before flushing to the
+ * An {@link OutputStream} that uses {@link ByteBuf} to accumulate stream data before flushing to the
  * designated {@link Consumer}.
  */
 public final class ByteBufferBackedOutputStream extends OutputStream {
 
-    private final ByteBuffer buffer;
-    private final Consumer<ByteBuffer> flushConsumer;
+    private final ByteBuf buffer;
+    private final Consumer<ByteBuf> flushConsumer;
     private boolean closed;
     private boolean flushed;
 
-    public ByteBufferBackedOutputStream(int capacity, Consumer<ByteBuffer> flushConsumer) {
+    public ByteBufferBackedOutputStream(int capacity, Consumer<ByteBuf> flushConsumer) {
         checkArgument(capacity > 0, "buffer capacity: %s (expected: > 0)", capacity);
-        buffer = ByteBuffer.allocate(capacity);
+        buffer = Unpooled.buffer(capacity);
         this.flushConsumer = requireNonNull(flushConsumer, "bufferConsumer");
     }
 
@@ -46,8 +48,8 @@ public final class ByteBufferBackedOutputStream extends OutputStream {
         if (closed) {
             throw new IllegalStateException("Already closed");
         }
-        if (buffer.hasRemaining()) {
-            buffer.put((byte) b);
+        if (buffer.isWritable()) {
+            buffer.writeByte(b);
         } else {
             flush();
             write(b);
@@ -59,11 +61,11 @@ public final class ByteBufferBackedOutputStream extends OutputStream {
         if (closed) {
             throw new IllegalStateException("Already closed");
         }
-        final int remaining = buffer.remaining();
+        final int remaining = buffer.writableBytes();
         if (remaining >= len) {
-            buffer.put(b, off, len);
+            buffer.writeBytes(b, off, len);
         } else {
-            buffer.put(b, off, remaining);
+            buffer.writeBytes(b, off, remaining);
             flush();
             write(b, off + remaining, len - remaining);
         }
@@ -71,8 +73,7 @@ public final class ByteBufferBackedOutputStream extends OutputStream {
 
     @Override
     public void flush() throws IOException {
-        buffer.flip();
-        flushConsumer.accept(buffer);
+        flushConsumer.accept(buffer.asReadOnly());
         buffer.clear();
         flushed = true;
     }
@@ -102,14 +103,14 @@ public final class ByteBufferBackedOutputStream extends OutputStream {
      * Indicates whether of the underlying buffer has any content written.
      */
     public boolean hasWritten() {
-        return buffer.position() > 0;
+        return buffer.writerIndex() > 0;
     }
 
     /**
      * Returns a number of bytes written of the underlying buffer so far.
      */
     public int written() {
-        return buffer.position();
+        return buffer.writerIndex();
     }
 
     /**
@@ -117,9 +118,8 @@ public final class ByteBufferBackedOutputStream extends OutputStream {
      * This is a terminating methods that could serve an alternative to {@link #flush()} and {@link #close()}.
      * It allows closing the {@link OutputStream} without flushing the content.
      */
-    public ByteBuffer dumpWrittenAndClose() {
+    public ByteBuf dumpWrittenAndClose() {
         closed = true;
-        buffer.flip();
         return buffer;
     }
 }
