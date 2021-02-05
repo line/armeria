@@ -274,7 +274,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
                 return;
             }
             try {
-                decoder.processOnComplete();
+                decoder.processOnComplete(DecodedHttpStreamMessage.this);
                 close();
             } catch (Exception e) {
                 abort(e);

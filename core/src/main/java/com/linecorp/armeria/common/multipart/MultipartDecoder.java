@@ -59,7 +59,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     }
 
     @Override
-    public void processOnComplete() {
+    public void processOnComplete(HttpDecoderOutput<BodyPart> out) {
         if (parser != null) {
             parser.close();
         }
