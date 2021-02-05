@@ -71,7 +71,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             try {
                 parser.close();
             } catch (MimeParsingException ex) {
-                logger.error(ex.getMessage(), ex);
+                logger.warn(ex.getMessage(), ex);
             }
         }
     }
