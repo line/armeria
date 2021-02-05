@@ -273,8 +273,14 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
             if (cancelled) {
                 return;
             }
-            cleanup();
-            close();
+            try {
+                decoder.processOnComplete();
+                close();
+            } catch (Exception e) {
+                abort(e);
+            } finally {
+                cleanup();
+            }
         }
     }
 }

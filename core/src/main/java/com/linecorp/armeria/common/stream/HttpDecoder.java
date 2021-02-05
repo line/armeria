@@ -103,6 +103,11 @@ public interface HttpDecoder<T> {
     default void processTrailers(HttpHeaders in, HttpDecoderOutput<T> out) throws Exception {}
 
     /**
+     * Invoked when {@link HttpData}s are fully consumed.
+     */
+    default void processOnComplete() throws Exception {}
+
+    /**
      * Invoked when a {@link Throwable} is raised while deframing.
      */
     default void processOnError(Throwable cause) {}

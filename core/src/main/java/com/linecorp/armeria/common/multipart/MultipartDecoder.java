@@ -21,21 +21,23 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.stream.FilteredStreamMessage;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<BodyPart> {
+
+    private static final Logger logger = LoggerFactory.getLogger(MultipartDecoder.class);
 
     private final StreamMessage<BodyPart> decoded;
     private final String boundary;
@@ -44,7 +46,7 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     private MimeParser parser;
 
     MultipartDecoder(StreamMessage<? extends HttpData> upstream, String boundary, ByteBufAllocator alloc) {
-        decoded = newDecodedStreamMessage(upstream, alloc);
+        decoded = new DecodedHttpStreamMessage<>(upstream, this, alloc);
         this.boundary = boundary;
     }
 
@@ -54,6 +56,24 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
             parser = new MimeParser(in, out, boundary);
         }
         parser.parse();
+    }
+
+    @Override
+    public void processOnComplete() {
+        if (parser != null) {
+            parser.close();
+        }
+    }
+
+    @Override
+    public void processOnError(Throwable cause) {
+        if (parser != null) {
+            try {
+                parser.close();
+            } catch (MimeParsingException ex) {
+                logger.error(ex.getMessage(), ex);
+            }
+        }
     }
 
     @Override
@@ -95,40 +115,5 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     @Override
     public void abort(Throwable cause) {
         decoded.abort(cause);
-    }
-
-    private StreamMessage<BodyPart> newDecodedStreamMessage(StreamMessage<? extends HttpData> upstream,
-                                                            ByteBufAllocator alloc) {
-        return new FilteredStreamMessage<BodyPart, BodyPart>(
-                new DecodedHttpStreamMessage<>(upstream, this, alloc)) {
-
-            @Override
-            protected BodyPart filter(BodyPart obj) {
-                return obj;
-            }
-
-            @Override
-            protected Throwable beforeError(Subscriber<? super BodyPart> subscriber, Throwable cause) {
-                if (parser != null) {
-                    try {
-                        parser.close();
-                    } catch (MimeParsingException ex) {
-                        return new CompositeException(ex, cause);
-                    }
-                }
-                return cause;
-            }
-
-            @Override
-            protected void beforeComplete(Subscriber<? super BodyPart> subscriber) {
-                if (parser != null) {
-                    try {
-                        parser.close();
-                    } catch (MimeParsingException ex) {
-                        subscriber.onError(ex);
-                    }
-                }
-            }
-        };
     }
 }
