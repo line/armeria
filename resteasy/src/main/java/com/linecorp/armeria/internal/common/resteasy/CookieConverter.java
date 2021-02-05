@@ -18,14 +18,16 @@ package com.linecorp.armeria.internal.common.resteasy;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toMap;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.ws.rs.ext.RuntimeDelegate;
+
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.CookieBuilder;
@@ -44,13 +46,10 @@ public final class CookieConverter {
 
     public static Map<String, javax.ws.rs.core.Cookie> parse(Iterable<String> cookieHeaders, int version) {
         // This has to be a mutable Map! RESTEasy will fail otherwise
-        final Map<String, javax.ws.rs.core.Cookie> cookies = new LinkedHashMap<>();
-        for (String cookieHeader : cookieHeaders) {
-            Cookie.fromCookieHeader(cookieHeader).stream()
-                  .map(cookie -> new CookieConverter(cookie, version))
-                  .forEach(converter -> cookies.put(converter.name(), converter.toJaxrsCookie()));
-        }
-        return cookies;
+        return Streams.stream(cookieHeaders)
+                      .flatMap(cookieHeader -> Cookie.fromCookieHeader(cookieHeader).stream())
+                      .map(cookie -> new CookieConverter(cookie, version))
+                      .collect(toMap(CookieConverter::name, CookieConverter::toJaxrsSetCookie));
     }
 
     public static Map<String, javax.ws.rs.core.Cookie> parse(Iterable<String> cookieHeaders) {

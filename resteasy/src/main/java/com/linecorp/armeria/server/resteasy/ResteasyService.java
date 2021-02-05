@@ -206,7 +206,7 @@ public final class ResteasyService implements HttpService {
 
                 securityContext = SecurityContextImpl.basic(principal, securityDomain);
             } else {
-                securityContext = SecurityContextImpl.unsecure();
+                securityContext = SecurityContextImpl.insecure();
             }
 
             ResteasyContext.pushContext(SecurityContext.class,

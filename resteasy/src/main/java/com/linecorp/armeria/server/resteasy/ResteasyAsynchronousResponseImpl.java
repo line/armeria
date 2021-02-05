@@ -173,6 +173,8 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
      * The new suspend timeout values override any timeout value previously specified.
      * The asynchronous response must be still in a {@link #isSuspended() suspended} state
      * for this method to succeed.
+     * Note that, extending the suspend period by setting a new suspend time-out from inside
+     * {@link TimeoutHandler} is not supported.
      * </p>
      *
      * @param time suspend timeout value in the give time {@code unit}. Value lower
@@ -202,8 +204,8 @@ final class ResteasyAsynchronousResponseImpl extends AbstractAsynchronousRespons
      * The time-out handler will be invoked when the suspend period of this
      * asynchronous response times out. The job of the time-out handler is to
      * resolve the time-out situation by either resuming or cancelling the suspended response.
-     * Extending the suspend period by setting a new suspend time-out< is not supported.
-     * Note that in case the response is suspended {@link #NO_TIMEOUT indefinitely},
+     * Extending the suspend period by setting a new suspend time-out is not supported.
+     * Note that, in case the response is suspended {@link #NO_TIMEOUT indefinitely},
      * the time-out handler may never be invoked.
      * </p>
      *

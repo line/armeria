@@ -39,7 +39,7 @@ final class SecurityContextImpl implements SecurityContext {
         return new SecurityContextImpl(principal, securityDomain, "BASIC", true);
     }
 
-    public static SecurityContext unsecure() {
+    public static SecurityContext insecure() {
         return new SecurityContextImpl();
     }
 
