@@ -28,6 +28,7 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
@@ -64,6 +65,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Create a started {@link Server} bean.
      */
     @Bean
+    @ConditionalOnMissingBean(Server.class)
     public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
@@ -77,8 +79,8 @@ public abstract class AbstractArmeriaAutoConfiguration {
         if (!armeriaServerConfigurators.isPresent() &&
             !armeriaServerBuilderConsumers.isPresent()) {
             throw new IllegalStateException(
-                    "No services to register," +
-                    "use ArmeriaServerConfigurator or Consumer<ServerBuilder> to config armeria server.");
+                    "No services to register, " +
+                    "use ArmeriaServerConfigurator or Consumer<ServerBuilder> to configure an Armeria server.");
         }
 
         final ServerBuilder serverBuilder = Server.builder();

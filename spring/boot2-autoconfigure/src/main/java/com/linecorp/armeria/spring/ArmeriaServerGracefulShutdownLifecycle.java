@@ -30,7 +30,7 @@ final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
     private final Server server;
 
     ArmeriaServerGracefulShutdownLifecycle(Server server) {
-        this.server = requireNonNull(server, "requireNonNull");
+        this.server = requireNonNull(server, "server");
     }
 
     /**
