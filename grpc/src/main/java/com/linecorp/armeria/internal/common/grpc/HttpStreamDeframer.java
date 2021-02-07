@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.grpc.DecompressorRegistry;
+import io.grpc.Metadata;
 import io.grpc.Status;
 
 public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
@@ -109,7 +110,10 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             try {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
-                transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(statusFunction, t));
+                final Metadata metadata = new Metadata();
+                transportStatusListener.transportReportStatus(
+                        GrpcStatus.fromThrowable(statusFunction, t, metadata),
+                        metadata);
             }
         }
     }
@@ -125,7 +129,9 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     @Override
     public void processOnError(Throwable cause) {
-        transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(statusFunction, cause));
+        final Metadata metadata = new Metadata();
+        transportStatusListener.transportReportStatus(
+                GrpcStatus.fromThrowable(statusFunction, cause, metadata), metadata);
     }
 
     @Override

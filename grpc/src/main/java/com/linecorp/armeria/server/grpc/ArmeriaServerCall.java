@@ -321,20 +321,20 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void close(Status status, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromStatusFunction(statusFunction, status), metadata);
+            doClose(GrpcStatus.fromStatusFunction(statusFunction, status, metadata), metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromStatusFunction(statusFunction, status), metadata);
+                doClose(GrpcStatus.fromStatusFunction(statusFunction, status, metadata), metadata);
             });
         }
     }
 
     private void close(Throwable exception, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromThrowable(statusFunction, exception), metadata);
+            doClose(GrpcStatus.fromThrowable(statusFunction, exception, metadata), metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromThrowable(statusFunction, exception), metadata);
+                doClose(GrpcStatus.fromThrowable(statusFunction, exception, metadata), metadata);
             });
         }
     }
