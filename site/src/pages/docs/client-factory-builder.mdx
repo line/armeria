@@ -1,54 +1,43 @@
 # Customizing a `ClientFactory` with `ClientFactoryBuilder`
 
-A <type://ClientFactoryBuilder> is a builder class that enables you to create a <type://ClientFactory>
-with custom options. For example, you might need to use the `connectTimeoutMillis` method to adjust the
-connection timeout of your clients.
+A <type://ClientFactory> manages connections and protocol-specific properties.
+You can customize the properties via <type://ClientFactoryBuilder>. For example,
+let's say that you want to increase the connection timeout.
 
 ```java
 try (ClientFactory factory =
           ClientFactory.builder()
-                       // Set the connection timeout to 5 seconds.
+                       // Increase the connection timeout to 5 seconds.
                        .connectTimeoutMillis(5000)
                        .build()) {
-   final WebClient client = WebClient.builder()
+   final WebClient client = WebClient.builder("http://armeria.com")
                                      .factory(factory)
                                      .build();
-   // do something with web client
+   client.get("/api").aggregate().join();
   }
 ```
 
-As shown in the above example, you can specify a custom <type://ClientFactory> when building a client
-via the <type://ClientFactoryBuilder#factory()> method.
 The client created with the given <type://ClientFactory> will respect the settings such as connection timeout
 as you defined.
+You might notice that the clients, which are created using the same <type://ClientFactory>,
+share the connection pool. If you don't want to share the connections among the clients,
+you should use different <typeplural://ClientFactory>.
+For the complete list of properties, see <type://ClientFactoryBuilder>.
 
-## What options are available?
+<Tip>
 
-See <type://ClientFactoryBuilder> for the complete list of customizable options.
+  You might want to take a look at <type://ClientBuilder> to distinguish the client-specific properties.
 
-## Setting options with `ClientOption`
+</Tip>
 
-You can customize a <type://ClientFactoryBuilder> using a <type://ClientFactoryOption> as well.
+You can also use <type://ClientFactoryOptions> to build <type://ClientFactory>.
 It's more verbose than calling a dedicated setter method, but it can be useful when you need to
-set a series of options programmatically:
-
-```java
-final EventLoopGroup customExcutorGroup = EventLoopGroups.newEventLoopGroup(2);
-try (ClientFactory factory =
-             ClientFactory.builder()
-                          // define a new event loop worker group to execute logic from the builder
-                          .option(ClientFactoryOptions.WORKER_GROUP, customExcutorGroup)
-                          .build()) {
-    // options method will return options that used in your builder
-    factory.options();
-    // do something with factory
-}
-```
+set a series of options programmatically.
 
 ## Specifying Netty `ChannelOption`s
 
 You can also specify Netty [`ChannelOption`](https://netty.io/4.1/api/io/netty/channel/ChannelOption.html)
-with <type://ClientFactoryBuilder#channelOption()> method:
+via <type://ClientFactoryBuilder#channelOption(ChannelOption,T)>:
 
 ```java
 try (ClientFactory factory =
@@ -95,7 +84,7 @@ try (ClientFactory factory =
 ```
 
 The client might need to send many requests to a certain endpoint, while not bothering other endpoints.
-In that situation, you can use <type://ClientFactoryBuilder#maxNumEventLoopsPerEndpoint(ToIntFunction)>:
+In that situation, you can use <type://ClientFactoryBuilder#maxNumEventLoopsFunction(ToIntFunction)>:
 
 ```java
 try (ClientFactory factory =
@@ -121,7 +110,7 @@ via <type://ClientFactoryBuilder#maxNumEventLoopsPerHttp1Endpoint(int)>.
 ## Customizing TLS
 
 You can configure the TLS settings of your client connection
-with <type://ClientFactory#tlsCustomizer()>. For example, you could specify a different
+with <type://ClientFactoryBuilder#tlsCustomizer(Consumer)>. For example, you could specify a different
 CA certificate chain, configure TLS or enforce certain cipher suites.
 
 ```java
