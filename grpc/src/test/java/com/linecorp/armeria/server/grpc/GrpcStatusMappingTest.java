@@ -61,6 +61,9 @@ import io.grpc.stub.StreamObserver;
 
 class GrpcStatusMappingTest {
 
+    private static final Metadata.Key<String> TEST_KEY =
+            Metadata.Key.of("test_key", Metadata.ASCII_STRING_MARSHALLER);
+
     @RegisterExtension
     static ServerExtension serverWithMapping = new ServerExtension() {
         @Override
@@ -267,7 +270,4 @@ class GrpcStatusMappingTest {
     private static class UnhandledException extends RuntimeException {
         private static final long serialVersionUID = -2330757369375222959L;
     }
-
-    private static final Metadata.Key<String> TEST_KEY =
-            Metadata.Key.of("test_key", Metadata.ASCII_STRING_MARSHALLER);
 }

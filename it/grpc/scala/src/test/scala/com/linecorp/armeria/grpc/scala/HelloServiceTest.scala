@@ -89,13 +89,11 @@ object HelloServiceTest {
         GrpcService
           .builder()
           .addService(HelloServiceGrpc.bindService(new HelloServiceImpl, ExecutionContext.global))
-          .exceptionMapping((e, _) => {
-            e match {
-              case e: AuthError =>
-                Status.UNAUTHENTICATED.withDescription(e.getMessage).withCause(e)
-              case _ => null
-            }
-          })
+          .exceptionMapping {
+            case (e: AuthError, _) =>
+              Status.UNAUTHENTICATED.withDescription(e.getMessage).withCause(e)
+            case _ => null
+          }
           .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
           .build()
       )

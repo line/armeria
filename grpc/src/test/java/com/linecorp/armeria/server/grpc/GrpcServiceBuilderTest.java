@@ -50,6 +50,12 @@ import io.grpc.Status.Code;
 
 class GrpcServiceBuilderTest {
 
+    private static final Metadata.Key<String> TEST_KEY =
+            Metadata.Key.of("test_key", Metadata.ASCII_STRING_MARSHALLER);
+
+    private static final Metadata.Key<String> TEST_KEY2 =
+            Metadata.Key.of("test_key2", Metadata.ASCII_STRING_MARSHALLER);
+
     @Test
     void mixExceptionMappingAndGrpcStatusFunction() {
         assertThatThrownBy(() -> GrpcService.builder()
@@ -242,10 +248,4 @@ class GrpcServiceBuilderTest {
             return next.startCall(call, headers);
         }
     }
-
-    private static final Metadata.Key<String> TEST_KEY =
-            Metadata.Key.of("test_key", Metadata.ASCII_STRING_MARSHALLER);
-
-    private static final Metadata.Key<String> TEST_KEY2 =
-            Metadata.Key.of("test_key2", Metadata.ASCII_STRING_MARSHALLER);
 }

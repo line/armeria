@@ -9,7 +9,6 @@ dependencies {
     testImplementation "com.thesamet.scalapb:scalapb-runtime_2.13"
     testImplementation "com.thesamet.scalapb:scalapb-runtime-grpc_2.13"
     testImplementation "com.thesamet.scalapb:scalapb-json4s_2.13"
-    testImplementation 'io.monix:monix-reactive_2.13'
 }
 
 compileScala.targetCompatibility = 1.8
