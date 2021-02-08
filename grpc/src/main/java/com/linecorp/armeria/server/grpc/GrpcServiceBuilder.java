@@ -503,7 +503,7 @@ public final class GrpcServiceBuilder {
      * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
      * The mapping is used to handle a {@link Throwable} when it is raised.
      *
-     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} )} are mutually exclusive.
+     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
      */
     public <T extends Throwable> GrpcServiceBuilder addExceptionMapping(
             Class<T> exceptionType, Status status, @Nullable BiConsumer<T, Metadata> metadataFunction) {
