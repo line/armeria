@@ -520,7 +520,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             final Runnable pendingTask = this.pendingTask;
             if (pendingTaskUpdater.compareAndSet(this, pendingTask, NO_OP)) {
                 if (pendingTask != null) {
-                    ctx.eventLoop().execute(pendingTask);
+                    if (ctx.eventLoop().inEventLoop()) {
+                        pendingTask.run();
+                    } else {
+                        ctx.eventLoop().execute(pendingTask);
+                    }
                 }
                 break;
             }
@@ -533,7 +537,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 final Runnable oldPendingTask = this.pendingTask;
                 assert oldPendingTask != null;
                 if (oldPendingTask == NO_OP) {
-                    ctx.eventLoop().execute(pendingTask);
+                    if (ctx.eventLoop().inEventLoop()) {
+                        pendingTask.run();
+                    } else {
+                        ctx.eventLoop().execute(pendingTask);
+                    }
                     break;
                 }
                 final Runnable newPendingTask = () -> {

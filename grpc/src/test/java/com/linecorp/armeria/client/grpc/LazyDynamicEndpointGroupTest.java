@@ -123,7 +123,9 @@ class LazyDynamicEndpointGroupTest {
                          });
         assertThat(completed).isFalse();
         assertThat(causeRef.get()).isNull();
+
         endpointGroup.add(server.httpEndpoint());
+
         await().untilAtomic(completed, Matchers.is(true));
         assertThat(responseRef.get()).isNotNull();
     }

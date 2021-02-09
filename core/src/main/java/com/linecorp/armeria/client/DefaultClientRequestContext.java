@@ -82,6 +82,7 @@ public final class DefaultClientRequestContext
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
 
+    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, CompletableFuture>
             whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, CompletableFuture.class, "whenInitialized");
