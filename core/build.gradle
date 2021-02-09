@@ -113,7 +113,7 @@ dependencies {
     [ 'netty-transport', 'netty-codec-http2', 'netty-codec-haproxy', 'netty-resolver-dns' ].each {
         api "io.netty:$it"
     }
-    implementation "io.netty:netty-resolver-dns-native-macos:${managedVersions['io.netty:netty-bom']}:osx-x86_64"
+    implementation "io.netty:netty-resolver-dns-native-macos:${managedVersions['io.netty:netty-resolver-dns-native-macos']}:osx-x86_64"
     implementation "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-transport-native-unix-common']}:linux-x86_64"
     implementation "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
     implementation 'io.netty:netty-tcnative-boringssl-static'
