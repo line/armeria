@@ -197,34 +197,39 @@ class GrpcStatusMappingTest {
                 .satisfies(throwable -> assertStatus(throwable, Status.UNKNOWN, null));
     }
 
-    private static void assertStatus(Throwable throwable, Status status, @Nullable String description) {
-        final StatusRuntimeException e = (StatusRuntimeException) throwable;
-        assertThat(e.getStatus().getCode()).isEqualTo(status.getCode());
-        assertThat(e.getStatus().getDescription()).isEqualTo(description);
+    private static void assertStatus(Throwable actual, Status expectedStatus,
+                                     @Nullable String expectedDescription) {
+        final StatusRuntimeException e = (StatusRuntimeException) actual;
+        assertThat(e.getStatus().getCode()).isEqualTo(expectedStatus.getCode());
+        assertThat(e.getStatus().getDescription()).isEqualTo(expectedDescription);
     }
 
-    private static void assertMetadata(Throwable throwable, Map<Metadata.Key<?>, String> entries) {
-        final StatusRuntimeException e = (StatusRuntimeException) throwable;
+    private static void assertMetadata(Throwable actual, Map<Metadata.Key<?>, String> expectedEntries) {
+        final StatusRuntimeException e = (StatusRuntimeException) actual;
         final Metadata metadata = e.getTrailers();
-        for (Entry<Key<?>, String> entry : entries.entrySet()) {
+        for (Entry<Key<?>, String> entry : expectedEntries.entrySet()) {
             assertThat(metadata.get(entry.getKey())).isEqualTo(entry.getValue());
         }
     }
 
     private static class ExceptionMappingsProvider implements ArgumentsProvider {
-        private static final Map<Metadata.Key<?>, String> EMPTY = ImmutableMap.of();
+        private static final Map<Metadata.Key<?>, String> DEFAULT = ImmutableMap.of();
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             return Stream.of(
-                    Arguments.of(new A1Exception(), Status.RESOURCE_EXHAUSTED, null, EMPTY),
-                    Arguments.of(new A2Exception(), Status.UNIMPLEMENTED, "UNIMPLEMENTED", EMPTY),
-                    Arguments.of(new A3Exception(), Status.UNAUTHENTICATED, "UNAUTHENTICATED", EMPTY),
+                    // 1. exception thrown by gRPC service method
+                    // 2. expected status
+                    // 3. expected description
+                    // 4. expected metadata
+                    Arguments.of(new A1Exception(), Status.RESOURCE_EXHAUSTED, null, DEFAULT),
+                    Arguments.of(new A2Exception(), Status.UNIMPLEMENTED, "UNIMPLEMENTED", DEFAULT),
+                    Arguments.of(new A3Exception(), Status.UNAUTHENTICATED, "UNAUTHENTICATED", DEFAULT),
                     Arguments.of(new B2Exception(), Status.NOT_FOUND, "NOT_FOUND",
                                  ImmutableMap.of(TEST_KEY, "B2")),
                     Arguments.of(new B1Exception(), Status.UNAUTHENTICATED, "UNAUTHENTICATED",
                                  ImmutableMap.of(TEST_KEY, "B1")),
-                    Arguments.of(new UnhandledException(), Status.UNKNOWN, null, EMPTY));
+                    Arguments.of(new UnhandledException(), Status.UNKNOWN, null, DEFAULT));
         }
     }
 
