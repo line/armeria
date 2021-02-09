@@ -568,7 +568,8 @@ public final class GrpcServiceBuilder {
         return (throwable, metadata) -> {
             for (Map.Entry<Class<? extends Throwable>, GrpcStatusFunction> mapping : mappings) {
                 if (mapping.getKey().isInstance(throwable)) {
-                    return mapping.getValue().apply(throwable, metadata).withCause(throwable);
+                    final Status status = mapping.getValue().apply(throwable, metadata);
+                    return status == null ? null : status.withCause(throwable);
                 }
             }
             return null;
