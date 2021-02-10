@@ -297,6 +297,10 @@ public final class DefaultClientRequestContext
         }
 
         final CompletableFuture<Boolean> finalWhenInitialized = whenInitialized;
+        if (finalWhenInitialized.isDone()) {
+            return finalWhenInitialized;
+        }
+
         if (acquiredEventLoop == null) {
             finalWhenInitialized.complete(success);
         } else {
