@@ -77,7 +77,7 @@ public abstract class ConsulTestBase {
         // This EmbeddedConsul tested with Consul version above 1.4.0
         final ConsulStarterBuilder builder =
                 ConsulStarterBuilder.consulStarter()
-                                    .withConsulVersion("1.9.0")
+                                    .withConsulVersion("1.9.3")
                                     .withWaitTimeout(120)
                                     .withCustomConfig(aclConfiguration(CONSUL_TOKEN))
                                     .withToken(CONSUL_TOKEN);
