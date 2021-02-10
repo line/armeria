@@ -98,11 +98,6 @@ class JettyServiceTest extends WebAppContainerTest {
         jResSetTrailers = setTrailers;
     }
 
-    /**
-     * Trailers are supported since 9.4.
-     */
-    private static final boolean hasTrailersSupport = !Jetty.VERSION.startsWith("v9.3.");
-
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
