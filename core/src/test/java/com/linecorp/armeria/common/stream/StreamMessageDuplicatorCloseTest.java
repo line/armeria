@@ -31,6 +31,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
+/**
+ * This test checks that the duplicator does not release the elements that it holds until all subscribers are
+ * received all element via {@link Subscriber#onNext(Object)}.
+ * Previously, the duplicator has a bug that releases the elements when the duplicator is closed even though
+ * there's a subscriber that does not subscribe to the child stream message yet.
+ * See <a href="https://github.com/line/armeria/pull/3337">
+ * Fix not to release elements before subscribed in duplicator</a>
+ */
 class StreamMessageDuplicatorCloseTest {
 
     @Test
