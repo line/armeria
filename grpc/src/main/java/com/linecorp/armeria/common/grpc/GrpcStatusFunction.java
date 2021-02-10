@@ -33,7 +33,8 @@ import io.grpc.Status;
 public interface GrpcStatusFunction extends BiFunction<Throwable, Metadata, Status> {
 
     /**
-     * Maps the specified {@link Throwable} to a gRPC {@link Status}, and mutate the specified {@link Metadata}.
+     * Maps the specified {@link Throwable} to a gRPC {@link Status},
+     * and mutates the specified {@link Metadata}.
      * If {@code null} is returned, the built-in mapping rule is used by default.
      */
     @Nullable
