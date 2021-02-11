@@ -16,9 +16,13 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.common.stream.PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE;
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -33,6 +37,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -141,6 +146,52 @@ public interface StreamMessage<T> extends Publisher<T> {
         } else {
             return new PublisherBasedStreamMessage<>(publisher);
         }
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link File}.
+     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to read
+     * the {@link File}.
+     */
+    static StreamMessage<HttpData> of(File file) {
+        requireNonNull(file, "file");
+        return of(file.toPath());
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
+     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to read
+     * the {@link Path}.
+     */
+    static StreamMessage<HttpData> of(Path path) {
+        requireNonNull(path, "path");
+        return of(path, DEFAULT_FILE_BUFFER_SIZE);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
+     * The specified {@code bufferSize} is used to read the {@link Path}.
+     *
+     * @param path the path of the file
+     * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     */
+    static StreamMessage<HttpData> of(Path path, int bufferSize) {
+        return of(path, ByteBufAllocator.DEFAULT, bufferSize);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
+     * The specified {@code bufferSize} is used to read the {@link Path}.
+     *
+     * @param path the path of the file
+     * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
+     * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     */
+    static StreamMessage<HttpData> of(Path path, ByteBufAllocator alloc, int bufferSize) {
+        requireNonNull(path, "path");
+        requireNonNull(alloc, "alloc");
+        checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
+        return new PathStreamMessage(path, alloc, bufferSize);
     }
 
     /**

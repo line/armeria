@@ -73,9 +73,10 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
                 assertThat(stream.isEmpty()).isTrue();
             }
 
-            if (!(stream instanceof SplitHttpResponse)) {
-                // SplitHttpResponse could complete early to read HTTP headers from HttpResponse before
-                // publishing body
+            if (!(stream instanceof SplitHttpResponse || stream instanceof PathStreamMessage)) {
+                // - SplitHttpResponse could complete early to read HTTP headers from HttpResponse before
+                //   publishing body
+                // - PathStreamMessage immediately completes if a Path size is zero
                 assertThat(stream.whenComplete()).isNotDone();
             }
             sub.requestEndOfStream();
