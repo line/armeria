@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 
 import java.util.Map;
 
+import org.reactivestreams.Publisher;
+
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
@@ -124,6 +126,11 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     @Override
     public WebClientRequestPreparation content(MediaType contentType, HttpData content) {
         return (WebClientRequestPreparation) super.content(contentType, content);
+    }
+
+    @Override
+    public WebClientRequestPreparation content(MediaType contentType, Publisher<? extends HttpData> publisher) {
+        return (WebClientRequestPreparation) super.content(contentType, publisher);
     }
 
     @Override
