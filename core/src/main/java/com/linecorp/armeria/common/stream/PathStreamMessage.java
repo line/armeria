@@ -153,7 +153,6 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         subscriber.onSubscribe(pathSubscription);
     }
 
-
     @Override
     public void abort() {
         abort(AbortedStreamException.get());
