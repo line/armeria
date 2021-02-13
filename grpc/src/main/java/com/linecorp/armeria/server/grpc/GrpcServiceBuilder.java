@@ -29,7 +29,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
-import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -496,7 +496,7 @@ public final class GrpcServiceBuilder {
      * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
      */
     public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {
-        return addExceptionMapping(exceptionType, status, null);
+        return addExceptionMapping(exceptionType, (throwable, meta) -> status);
     }
 
     /**
@@ -506,38 +506,32 @@ public final class GrpcServiceBuilder {
      * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
      */
     public <T extends Throwable> GrpcServiceBuilder addExceptionMapping(
-            Class<T> exceptionType, Status status, @Nullable BiConsumer<T, Metadata> metadataFunction) {
+            Class<T> exceptionType, BiFunction<T, Metadata, Status> statusFunction) {
         requireNonNull(exceptionType, "exceptionType");
-        requireNonNull(status, "status");
+        requireNonNull(statusFunction, "statusFunction");
 
-        checkState(statusFunction == null,
+        checkState(this.statusFunction == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
 
         if (exceptionMappings == null) {
             exceptionMappings = new LinkedList<>();
         }
 
-        addExceptionMapping(exceptionMappings, exceptionType, status, metadataFunction);
+        addExceptionMapping(exceptionMappings, exceptionType,
+                            (throwable, metadata) -> statusFunction.apply((T) throwable, metadata));
         return this;
     }
 
     @VisibleForTesting
     static <T extends Throwable> void addExceptionMapping(
             LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings,
-            Class<T> exceptionType, Status status, @Nullable BiConsumer<T, Metadata> metadataFunction) {
+            Class<T> exceptionType, GrpcStatusFunction function) {
         requireNonNull(exceptionMappings, "exceptionMappings");
         requireNonNull(exceptionType, "exceptionType");
-        requireNonNull(status, "status");
+        requireNonNull(function, "function");
 
         final ListIterator<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> it =
                 exceptionMappings.listIterator();
-
-        final GrpcStatusFunction function = (throwable, metadata) -> {
-            if (metadataFunction != null) {
-                metadataFunction.accept(exceptionType.cast(throwable), metadata);
-            }
-            return status;
-        };
 
         while (it.hasNext()) {
             final Map.Entry<Class<? extends Throwable>, GrpcStatusFunction> next = it.next();

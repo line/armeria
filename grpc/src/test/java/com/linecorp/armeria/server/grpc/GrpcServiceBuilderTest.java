@@ -75,19 +75,18 @@ class GrpcServiceBuilderTest {
     void duplicatedExceptionMappings() {
         final LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings =
                 new LinkedList<>();
-        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class, Status.RESOURCE_EXHAUSTED,
-                                               null);
+        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class,
+                                               (throwable, metadata) -> Status.RESOURCE_EXHAUSTED);
 
         assertThatThrownBy(() -> {
-            GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class, Status.UNIMPLEMENTED,
-                                                   null);
+            GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class,
+                                                   (throwable, metadata) -> Status.UNIMPLEMENTED);
         }).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("is already added with");
 
         assertThatThrownBy(() -> {
-            GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class, Status.UNIMPLEMENTED,
-                                                   (throwable, metadata) -> {
-                                                   });
+            GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class,
+                                                   (throwable, metadata) -> Status.UNIMPLEMENTED);
         }).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("is already added with");
     }
@@ -96,32 +95,32 @@ class GrpcServiceBuilderTest {
     void sortExceptionMappings() {
         final LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings =
                 new LinkedList<>();
-        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class, Status.RESOURCE_EXHAUSTED,
-                                               null);
-        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A2Exception.class, Status.UNIMPLEMENTED,
-                                               null);
+        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class,
+                                               (throwable, metadata) -> Status.RESOURCE_EXHAUSTED);
+        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A2Exception.class,
+                                               (throwable, metadata) -> Status.UNIMPLEMENTED);
 
         assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A2Exception.class, A1Exception.class);
 
-        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, B1Exception.class, Status.UNAUTHENTICATED,
-                                               (throwable, metadata) -> {
-                                               });
+        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, B1Exception.class,
+                                               (throwable, metadata) -> Status.UNAUTHENTICATED);
         assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A2Exception.class,
                                  A1Exception.class,
                                  B1Exception.class);
 
-        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A3Exception.class, Status.UNAUTHENTICATED,
-                                               (throwable, metadata) -> {
-                                               });
+        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A3Exception.class,
+                                               (throwable, metadata) -> Status.UNAUTHENTICATED
+        );
         assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A3Exception.class,
                                  A2Exception.class,
                                  A1Exception.class,
                                  B1Exception.class);
 
-        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, B2Exception.class, Status.NOT_FOUND, null);
+        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, B2Exception.class,
+                                               (throwable, metadata) -> Status.NOT_FOUND);
         assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A3Exception.class,
                                  A2Exception.class,
@@ -151,8 +150,8 @@ class GrpcServiceBuilderTest {
     void mapStatus() {
         final LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings =
                 new LinkedList<>();
-        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A2Exception.class, Status.PERMISSION_DENIED,
-                                               null);
+        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A2Exception.class,
+                                               (throwable, metadata) -> Status.PERMISSION_DENIED);
         final GrpcStatusFunction statusFunction = toGrpcStatusFunction(exceptionMappings);
 
         for (Throwable ex : ImmutableList.of(new A2Exception(), new A3Exception())) {
@@ -175,9 +174,10 @@ class GrpcServiceBuilderTest {
     void mapStatusAndMetadata() {
         final LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings =
                 new LinkedList<>();
-        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, B1Exception.class, Status.ABORTED,
+        GrpcServiceBuilder.addExceptionMapping(exceptionMappings, B1Exception.class,
                                                (throwable, metadata) -> {
                                                    metadata.put(TEST_KEY, throwable.getClass().getSimpleName());
+                                                   return Status.ABORTED;
                                                });
         final GrpcStatusFunction statusFunction = toGrpcStatusFunction(exceptionMappings);
 

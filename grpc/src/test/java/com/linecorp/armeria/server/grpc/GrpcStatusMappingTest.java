@@ -77,14 +77,15 @@ class GrpcStatusMappingTest {
                                                     Status.UNIMPLEMENTED.withDescription("UNIMPLEMENTED"))
                                .addExceptionMapping(A1Exception.class, Status.RESOURCE_EXHAUSTED)
                                .addExceptionMapping(B2Exception.class,
-                                                    Status.NOT_FOUND.withDescription("NOT_FOUND"),
                                                     (throwable, metadata) -> {
                                                         metadata.put(TEST_KEY, "B2");
+                                                        return Status.NOT_FOUND.withDescription("NOT_FOUND");
                                                     })
                                .addExceptionMapping(B1Exception.class,
-                                                    Status.UNAUTHENTICATED.withDescription("UNAUTHENTICATED"),
                                                     (throwable, metadata) -> {
                                                         metadata.put(TEST_KEY, "B1");
+                                                        return Status.UNAUTHENTICATED
+                                                                .withDescription("UNAUTHENTICATED");
                                                     })
                                .build());
         }
