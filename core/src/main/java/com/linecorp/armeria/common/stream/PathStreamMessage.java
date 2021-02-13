@@ -206,18 +206,27 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         }
 
         private void request0(long n) {
+            final long requested = this.requested;
             if (requested == Long.MAX_VALUE) {
                 return;
             }
             if (n == Long.MAX_VALUE) {
-                requested = Long.MAX_VALUE;
+                this.requested = Long.MAX_VALUE;
+            } else {
+                this.requested = LongMath.saturatedAdd(requested, n);
             }
-            requested = LongMath.saturatedAdd(requested, n);
+
+            if (requested > 0) {
+                // PathSubscription is reading a file.
+                // New requests will be handled by 'completed(Integer, ByteBuf)'.
+                return;
+            }
+
             read();
         }
 
         private void read() {
-            if (requested > 0 && !closed && !reading) {
+            if (!reading && !closed && requested > 0) {
                 requested--;
                 reading = true;
                 final ByteBuf buffer = alloc.buffer(bufferSize);
