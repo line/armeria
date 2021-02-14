@@ -97,7 +97,6 @@ public class ArmeriaClientAutoConfigurationTest {
         final String metricReport = webClient.get("/internal/metrics")
                                              .aggregate().join()
                                              .contentUtf8();
-        System.out.println(metricReport);
         assertThat(metricReport).contains("# TYPE armeria_client_active_requests gauge");
     }
 }

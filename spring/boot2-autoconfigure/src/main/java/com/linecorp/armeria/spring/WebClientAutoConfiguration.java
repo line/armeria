@@ -59,7 +59,7 @@ public class WebClientAutoConfiguration {
      */
     @Bean
     public WebClientConfigurator clientFactoryConfigurator(Optional<ClientFactory> clientFactory) {
-        return builder -> builder.factory(clientFactory.orElseGet(ClientFactory::ofDefault));
+        return builder -> builder.factory(clientFactory.orElse(ClientFactory.ofDefault()));
     }
 
     /**

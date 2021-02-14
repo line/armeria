@@ -52,7 +52,8 @@ import com.linecorp.armeria.spring.WebClientAutoConfigurationWithNoopMeterTest.T
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class)
+@SpringBootTest(classes = TestConfiguration.class, properties =
+        "management.metrics.export.defaults.enabled=true") // @AutoConfigureMetrics is not allowed for boot1.
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
 public class WebClientAutoConfigurationWithNoopMeterTest {
