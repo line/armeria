@@ -33,6 +33,7 @@ import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -44,16 +45,18 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.spring.WebClientAutoConfigurationWithNoopMeterTest.TestConfiguration;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * This uses {@link WebClientAutoConfiguration} for integration tests.
  * application-autoConfTest.yml will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestConfiguration.class, properties =
-        "management.metrics.export.defaults.enabled=true") // @AutoConfigureMetrics is not allowed for boot1.
+@SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
 public class WebClientAutoConfigurationWithNoopMeterTest {
@@ -61,9 +64,10 @@ public class WebClientAutoConfigurationWithNoopMeterTest {
     @SpringBootApplication
     public static class TestConfiguration {
 
+        @Primary
         @Bean
-        public ClientFactory clientFactory() {
-            return ClientFactory.builder().meterRegistry(NoopMeterRegistry.get()).build();
+        public MeterRegistry meterRegistry() {
+            return NoopMeterRegistry.get();
         }
 
         @Bean
