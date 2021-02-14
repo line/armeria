@@ -38,14 +38,12 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.spring.WebClientAutoConfigurationWithNoopMeterTest.TestConfiguration;
 
@@ -70,7 +68,7 @@ public class WebClientAutoConfigurationWithNoopMeterTest {
             return NoopMeterRegistry.get();
         }
 
-        @Bean
+         @Bean
         public Consumer<ServerBuilder> customizer() {
             return sb -> sb.service("/customizer", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
         }
