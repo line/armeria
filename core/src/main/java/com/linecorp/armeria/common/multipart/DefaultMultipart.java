@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static com.linecorp.armeria.common.multipart.MultipartEncoder.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -47,11 +48,12 @@ final class DefaultMultipart implements Multipart {
     static final String DEFAULT_BOUNDARY = "!@==boundary==@!";
 
     private final String boundary;
-    private final StreamMessage<? extends BodyPart> parts;
+    private final StreamMessage<BodyPart> parts;
 
     DefaultMultipart(String boundary, StreamMessage<? extends BodyPart> parts) {
         this.boundary = boundary;
-        this.parts = parts;
+        //noinspection unchecked
+        this.parts = (StreamMessage<BodyPart>) parts;
     }
 
     @Override
@@ -59,27 +61,14 @@ final class DefaultMultipart implements Multipart {
         return boundary;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public StreamMessage<BodyPart> bodyParts() {
-        return (StreamMessage<BodyPart>) parts;
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber) {
-        requireNonNull(subscriber, "subscriber");
-        final MultipartEncoder encoder = new MultipartEncoder(boundary);
-        parts.subscribe(encoder);
-        encoder.subscribe(subscriber);
+        return parts;
     }
 
     @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
-        requireNonNull(subscriber, "subscriber");
-        requireNonNull(executor, "executor");
-        final MultipartEncoder encoder = new MultipartEncoder(boundary);
-        parts.subscribe(encoder, executor);
-        encoder.subscribe(subscriber, executor);
+        subscribe(subscriber, executor, EMPTY_OPTIONS);
     }
 
     @Override
@@ -88,14 +77,13 @@ final class DefaultMultipart implements Multipart {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
-        final MultipartEncoder encoder = new MultipartEncoder(boundary);
-        parts.subscribe(encoder, executor, options);
+        final MultipartEncoder encoder = new MultipartEncoder(parts, boundary);
         encoder.subscribe(subscriber, executor, options);
     }
 
     @Override
     public CompletableFuture<AggregatedMultipart> aggregate() {
-        return aggregate0(null, null);
+        return aggregate(defaultSubscriberExecutor());
     }
 
     @Override
@@ -107,7 +95,7 @@ final class DefaultMultipart implements Multipart {
     @Override
     public CompletableFuture<AggregatedMultipart> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
-        return aggregate0(null, alloc);
+        return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
     }
 
     @Override

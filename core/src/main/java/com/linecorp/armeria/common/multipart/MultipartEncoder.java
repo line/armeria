@@ -19,16 +19,15 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
-import org.reactivestreams.Processor;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -43,72 +42,55 @@ import io.netty.util.concurrent.EventExecutor;
  *
  * <p>This class is non-final class intentionally for testing `MultipartEncoderSubsWhiteBoxTckTest`.
  */
-class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<HttpData> {
-
-    private static final AtomicReferenceFieldUpdater<MultipartEncoder, Subscription> upstreamUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(
-                    MultipartEncoder.class, Subscription.class, "upstream");
+class MultipartEncoder implements StreamMessage<HttpData> {
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<MultipartEncoder, Subscriber> downstreamUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(
-                    MultipartEncoder.class, Subscriber.class, "downstream");
-
-    private static final AtomicIntegerFieldUpdater<MultipartEncoder> initializedUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(MultipartEncoder.class, "initialized");
+    private static final AtomicReferenceFieldUpdater<MultipartEncoder, CompletableFuture>
+            completionFutureUpdater = AtomicReferenceFieldUpdater
+            .newUpdater(MultipartEncoder.class, CompletableFuture.class, "completionFuture");
 
     private static final HttpData CRLF = HttpData.ofUtf8("\r\n");
 
-    private static final SubscriptionOption[] EMPTY_OPTIONS = {};
+    static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
     private final String boundary;
-    private final CompletableFuture<DefaultStreamMessage<StreamMessage<HttpData>>> initFuture;
+
+    private final StreamMessage<BodyPart> publisher;
+
+    private boolean subscribed;
+
+    // 'closeCause' will be written before 'closed' and read after 'closed'
+    @Nullable
+    private Throwable closeCause;
+    private volatile boolean closed;
 
     @Nullable
-    private DefaultStreamMessage<StreamMessage<HttpData>> emitter;
+    private volatile CompletableFuture<Void> completionFuture;
 
-    // Updated only via upstreamUpdater
     @Nullable
-    private volatile Subscription upstream;
-    // Set a non-null value via downstreamUpdater or directly set null
-    @Nullable
-    private volatile Subscriber<? super HttpData> downstream;
-    // Updated via initializedUpdater
-    private volatile int initialized;
+    private volatile DefaultStreamMessage<StreamMessage<HttpData>> emitter;
 
-    // Read 'executor' and 'options' only after 'initialized' is written.
-    @Nullable
-    private EventExecutor executor;
-    @Nullable
-    private SubscriptionOption[] options;
-
-    MultipartEncoder(String boundary) {
+    MultipartEncoder(StreamMessage<BodyPart> publisher, String boundary) {
         requireNonNull(boundary, "boundary");
+        requireNonNull(publisher, "publisher");
+
         this.boundary = boundary;
-        initFuture = new CompletableFuture<>();
-    }
-
-    @Override
-    public boolean isOpen() {
-        return emitter == null || emitter.isOpen();
-    }
-
-    @Override
-    public boolean isEmpty() {
-        return emitter == null || emitter.isEmpty();
-    }
-
-    @Override
-    public long demand() {
-        if (emitter == null) {
-            return 0;
-        }
-        return emitter.demand();
+        this.publisher = publisher;
     }
 
     @Override
     public CompletableFuture<Void> whenComplete() {
-        return initFuture.thenCompose(e -> e.whenComplete());
+        final StreamMessage<StreamMessage<HttpData>> emitter = this.emitter;
+        if (emitter != null) {
+            return emitter.whenComplete();
+        }
+
+        final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+        if (completionFutureUpdater.compareAndSet(this, null, completionFuture)) {
+            return completionFuture;
+        } else {
+            return this.completionFuture;
+        }
     }
 
     @Override
@@ -120,58 +102,67 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
-        this.executor = requireNonNull(executor, "executor");
-        this.options = requireNonNull(options, "options");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
 
-        if (emitter != null || !downstreamUpdater.compareAndSet(this, null, subscriber)) {
+        if (executor.inEventLoop()) {
+            subscribe0(subscriber, executor, options);
+        } else {
+            executor.execute(() -> subscribe0(subscriber, executor, options));
+        }
+    }
+
+    private void subscribe0(Subscriber<? super HttpData> subscriber, EventExecutor executor,
+                            SubscriptionOption... options) {
+        if (subscribed) {
             subscriber.onSubscribe(NoopSubscription.get());
             subscriber.onError(new IllegalStateException("Only one Subscriber allowed"));
             return;
         }
-        deferredInit();
+
+        subscribed = true;
+        publisher.subscribe(new BodyPartSubscriber(subscriber, executor, options), executor, options);
     }
 
     @Override
     public void abort() {
-        initFuture.handle((e, t) -> {
-            e.abort();
-            return null;
-        });
+        abort(AbortedStreamException.get());
     }
 
     @Override
     public void abort(Throwable cause) {
-        requireNonNull(cause, "cause");
-        initFuture.handle((e, t) -> {
-            e.abort(cause);
-            return null;
-        });
+        if (closed) {
+            return;
+        }
+
+        closeCause = cause;
+        closed = true;
+
+        final StreamMessage<StreamMessage<HttpData>> emitter = this.emitter;
+        if (emitter != null) {
+            emitter.abort(cause);
+        }
     }
 
     @Override
-    public void onSubscribe(Subscription subscription) {
-        requireNonNull(subscription, "subscription");
-        if (!upstreamUpdater.compareAndSet(this, null, subscription)) {
-            subscription.cancel();
-        }
-        deferredInit();
+    public boolean isOpen() {
+        final StreamMessage<StreamMessage<HttpData>> emitter = this.emitter;
+        return emitter == null || emitter.isOpen();
     }
 
-    private void deferredInit() {
-        final Subscription upstream = this.upstream;
-        final Subscriber<? super HttpData> downstream = this.downstream;
-        if (upstream != null && downstream != null) {
-            // relay request to upstream, already reduced by flatmap
-            if (initializedUpdater.compareAndSet(this, 0, 1)) {
-                emitter = newEmitter(upstream);
-                StreamMessage.concat(StreamMessage.concat(emitter),
-                                     StreamMessage.of(HttpData.ofUtf8("--" + boundary + "--")))
-                             .subscribe(downstream, executor, options);
+    @Override
+    public boolean isEmpty() {
+        final StreamMessage<StreamMessage<HttpData>> emitter = this.emitter;
+        return emitter == null || emitter.isEmpty();
+    }
 
-                initFuture.complete(emitter);
-                this.downstream = null;
-            }
+    @Override
+    public long demand() {
+        final StreamMessage<StreamMessage<HttpData>> emitter = this.emitter;
+        if (emitter == null) {
+            return 0;
         }
+        return emitter.demand();
     }
 
     private static DefaultStreamMessage<StreamMessage<HttpData>> newEmitter(Subscription upstream) {
@@ -190,29 +181,6 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
             return null;
         });
         return emitter;
-    }
-
-    @Override
-    public void onNext(BodyPart bodyPart) {
-        requireNonNull(bodyPart, "bodyPart");
-        emitter.write(createBodyPartPublisher(bodyPart));
-    }
-
-    @Override
-    public void onError(Throwable throwable) {
-        requireNonNull(throwable, "throwable");
-        initFuture.handle((e, t) -> {
-            e.abort(throwable);
-            return null;
-        });
-    }
-
-    @Override
-    public void onComplete() {
-        initFuture.handle((e, t) -> {
-            e.close();
-            return null;
-        });
     }
 
     private StreamMessage<HttpData> createBodyPartPublisher(BodyPart bodyPart) {
@@ -238,5 +206,97 @@ class MultipartEncoder implements Processor<BodyPart, HttpData>, StreamMessage<H
                 bodyPart.content(),
                 // Part postfix
                 StreamMessage.of(CRLF));
+    }
+
+    private final class BodyPartSubscriber implements Subscriber<BodyPart> {
+
+        @Nullable
+        private Subscriber<? super HttpData> downstream;
+        private final EventExecutor executor;
+        private final SubscriptionOption[] options;
+
+        private boolean subscribed;
+
+        private BodyPartSubscriber(Subscriber<? super HttpData> downstream, EventExecutor executor,
+                                   SubscriptionOption[] options) {
+            this.downstream = downstream;
+            this.executor = executor;
+            this.options = options;
+        }
+
+        @Override
+        public void onSubscribe(Subscription subscription) {
+            requireNonNull(subscription, "subscription");
+            if (subscribed) {
+                subscription.cancel();
+                return;
+            }
+
+            assert downstream != null;
+
+            subscribed = true;
+            final DefaultStreamMessage<StreamMessage<HttpData>> newEmitter = newEmitter(subscription);
+            emitter = newEmitter;
+
+            if (closed) {
+                downstream.onError(closeCause);
+                newEmitter.abort(CancelledSubscriptionException.get());
+                return;
+            }
+
+            final CompletableFuture<Void> completionFuture = MultipartEncoder.this.completionFuture;
+            if (completionFuture != null) {
+                completeAsync(newEmitter.whenComplete(), completionFuture);
+            }
+            if (!completionFutureUpdater
+                    .compareAndSet(MultipartEncoder.this, null, newEmitter.whenComplete())) {
+                completeAsync(newEmitter.whenComplete(), MultipartEncoder.this.completionFuture);
+            }
+
+            StreamMessage.concat(StreamMessage.concat(newEmitter),
+                                 StreamMessage.of(HttpData.ofUtf8("--" + boundary + "--")))
+                         .subscribe(downstream, executor, options);
+
+            downstream = null;
+        }
+
+        private void completeAsync(CompletableFuture<Void> first, CompletableFuture<Void> second) {
+            first.handle((unused, cause) -> {
+                if (cause != null) {
+                    second.completeExceptionally(cause);
+                } else {
+                    second.complete(null);
+                }
+                return null;
+            });
+        }
+
+        @Override
+        public void onNext(BodyPart bodyPart) {
+            requireNonNull(bodyPart, "bodyPart");
+            emitter.write(createBodyPartPublisher(bodyPart));
+        }
+
+        @Override
+        public void onError(Throwable cause) {
+            requireNonNull(cause, "cause");
+
+            if (closed) {
+                return;
+            }
+
+            closed = true;
+            emitter.abort(cause);
+        }
+
+        @Override
+        public void onComplete() {
+            if (closed) {
+                return;
+            }
+
+            closed = true;
+            emitter.close();
+        }
     }
 }

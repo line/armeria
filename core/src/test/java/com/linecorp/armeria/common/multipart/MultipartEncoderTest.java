@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import reactor.core.publisher.Flux;
-import reactor.test.publisher.PublisherProbe;
 
 /**
  * Test {@link MultipartEncoder}.
@@ -118,15 +117,14 @@ class MultipartEncoderTest {
     }
 
     @Test
-    void testRequests() throws Exception {
-        final MultipartEncoder enc = new MultipartEncoder("boundary");
+    void testRequests() {
         final BodyPart[] parts = LongStream.range(1, 500)
                                            .mapToObj(i -> BodyPart.builder()
                                                                   .content("part" + i)
                                                                   .build())
                                            .toArray(BodyPart[]::new);
 
-        StreamMessage.of(parts).subscribe(enc);
+        final MultipartEncoder enc = new MultipartEncoder(StreamMessage.of(parts), "boundary");
         final AtomicInteger counter = new AtomicInteger(3);
         final Subscriber<HttpData> subscriber = new Subscriber<HttpData>() {
 
@@ -154,18 +152,9 @@ class MultipartEncoderTest {
     }
 
     @Test
-    void testSubscribingMoreThanOnce() {
-        final MultipartEncoder encoder = new MultipartEncoder("boundary");
-        Flux.<BodyPart>empty().subscribe(encoder);
-        final PublisherProbe<BodyPart> probe = PublisherProbe.of(Flux.empty());
-        probe.flux().subscribe(encoder);
-        probe.assertWasCancelled();
-    }
-
-    @Test
     void testUpstreamError() {
-        final MultipartEncoder decoder = new MultipartEncoder("boundary");
-        Flux.<BodyPart>error(new IllegalStateException("oops")).subscribe(decoder);
+        final StreamMessage<BodyPart> source = StreamMessage.of(Flux.error(new IllegalStateException("oops")));
+        final MultipartEncoder decoder = new MultipartEncoder(source, "boundary");
         final HttpDataAggregator subscriber = new HttpDataAggregator();
         decoder.subscribe(subscriber);
         final CompletableFuture<String> future = subscriber.content().toCompletableFuture();
@@ -178,14 +167,12 @@ class MultipartEncoderTest {
 
     @Test
     void testPartContentPublisherError() {
-        final MultipartEncoder encoder = new MultipartEncoder("boundary");
+        final StreamMessage<BodyPart> source =
+                StreamMessage.of(BodyPart.builder()
+                                         .content(Flux.error(new IllegalStateException("oops")))
+                                         .build());
         final HttpDataAggregator subscriber = new HttpDataAggregator();
-        encoder.subscribe(subscriber);
-
-        Flux.just(BodyPart.builder()
-                           .content(Flux.error(new IllegalStateException("oops")))
-                           .build())
-             .subscribe(encoder);
+        new MultipartEncoder(source, "boundary").subscribe(subscriber);
         final CompletableFuture<String> future = subscriber.content().toCompletableFuture();
 
         assertThatThrownBy(future::join)
@@ -194,9 +181,8 @@ class MultipartEncoderTest {
                 .hasMessageContaining("oops");
     }
 
-    private static String encodeParts(String boundary, BodyPart... parts) throws Exception {
-        final MultipartEncoder encoder = new MultipartEncoder(boundary);
-        StreamMessage.of(parts).subscribe(encoder);
+    private static String encodeParts(String boundary, BodyPart... parts) {
+        final MultipartEncoder encoder = new MultipartEncoder(StreamMessage.of(parts), boundary);
         return Flux.from(encoder)
                    .map(HttpData::array)
                    .reduce(Bytes::concat)

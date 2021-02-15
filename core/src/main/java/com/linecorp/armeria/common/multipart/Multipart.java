@@ -86,7 +86,6 @@ public interface Multipart extends StreamMessage<HttpData> {
     /**
      * Returns a new {@link Multipart} with the specified {@link BodyPart}s.
      */
-    @SuppressWarnings("unchecked")
     static Multipart of(String boundary, Publisher<? extends BodyPart> parts) {
         requireNonNull(parts, "parts");
         return new DefaultMultipart(boundary, StreamMessage.of(parts));
@@ -96,28 +95,28 @@ public interface Multipart extends StreamMessage<HttpData> {
      * Returns a decoded {@link Multipart} from the specified {@link HttpRequest}.
      * You can reactively subscribe to body parts using the {@link Publisher} of {@link #bodyParts()}:
      * <pre>{@code
-     * > import reactor.core.publisher.Flux;
-     * >
-     * > HttpRequest req = ...;
-     * > Multipart multiPart = Multipart.from(req);
-     * >
-     * > Flux.from(multiPart.bodyParts())
-     * >     .subscribe(bodyPart -> {
-     * >         Flux.from(bodyPart.content())
-     * >             .map(HttpData::toStringUtf8)
-     * >             .collectList()
-     * >             .subscribe(contents -> { ... });
-     * >     });
+     * import reactor.core.publisher.Flux;
+     *
+     * HttpRequest req = ...;
+     * Multipart multiPart = Multipart.from(req);
+     *
+     * Flux.from(multiPart.bodyParts())
+     *     .subscribe(bodyPart -> {
+     *         Flux.from(bodyPart.content())
+     *             .map(HttpData::toStringUtf8)
+     *             .collectList()
+     *             .subscribe(contents -> { ... });
+     *     });
      * }</pre>
      * , or aggregate this {@link Multipart} using {@link #aggregate()}:
      * <pre>{@code
-     * > Multipart.from(req).aggregate()
-     * >          .thenAccept(multipart -> {
-     * >              for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
-     * >                  String content = bodyPart.contentUtf8();
-     * >                  ...
-     * >              }
-     * >          });
+     * Multipart.from(req).aggregate()
+     *          .thenAccept(multipart -> {
+     *              for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
+     *                  String content = bodyPart.contentUtf8();
+     *                  ...
+     *              }
+     *          });
      * }</pre>
      *
      * @see #bodyParts()
@@ -165,17 +164,18 @@ public interface Multipart extends StreamMessage<HttpData> {
      * Converts this {@link Multipart} into a new complete {@link HttpRequest}.
      * This method is commonly used to send a multipart request to the specified {@code path} of an endpoint.
      *
-     * <p>For example:<pre>{@code
-     * > HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_DISPOSITION,
-     * >                                      ContentDisposition.of("form-data", "file", "test.txt"));
-     * > byte[] fileData = ...;
-     * > BodyPart filePart = BodyPart.builder()
-     * >                             .headers(headers)
-     * >                             .content(fileData)
-     * >                             .build();
-     * >
-     * > HttpRequest request = Multipart.of(filePart).toHttpRequest("/upload");
-     * > CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();
+     * <p>For example:
+     * <pre>{@code
+     * HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_DISPOSITION,
+     *                                      ContentDisposition.of("form-data", "file", "test.txt"));
+     * byte[] fileData = ...;
+     * BodyPart filePart = BodyPart.builder()
+     *                             .headers(headers)
+     *                             .content(fileData)
+     *                             .build();
+     *
+     * HttpRequest request = Multipart.of(filePart).toHttpRequest("/upload");
+     * CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();
      * }</pre>
      */
     default HttpRequest toHttpRequest(String path) {
@@ -191,35 +191,35 @@ public interface Multipart extends StreamMessage<HttpData> {
      * {@link RequestHeaders}.
      * This method is commonly used to send a multipart request using the specified {@link RequestHeaders}.
      *
-     * <p>For example:<pre>{@code
-     * > HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_DISPOSITION,
-     * >                                      ContentDisposition.of("form-data", "file", "test.txt"));
-     * > byte[] fileData = ...;
-     * > BodyPart filePart = BodyPart.builder()
-     * >                             .headers(headers)
-     * >                             .content(fileData)
-     * >                             .build();
-     * >
-     * > RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.POST, "/upload");
-     * > HttpRequest request = Multipart.of(filePart).toHttpRequest(requestHeaders);
-     * > CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();
+     * <p>For example:
+     * <pre>{@code
+     * HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_DISPOSITION,
+     *                                      ContentDisposition.of("form-data", "file", "test.txt"));
+     * byte[] fileData = ...;
+     * BodyPart filePart = BodyPart.builder()
+     *                             .headers(headers)
+     *                             .content(fileData)
+     *                             .build();
+     *
+     * RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.POST, "/upload");
+     * HttpRequest request = Multipart.of(filePart).toHttpRequest(requestHeaders);
+     * CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();
      * }</pre>
      */
     default HttpRequest toHttpRequest(RequestHeaders requestHeaders) {
         requireNonNull(requestHeaders, "requestHeaders");
-        final String mediaTypeString = requestHeaders.get(HttpHeaderNames.CONTENT_TYPE);
-        final MediaType contentType;
-        if (mediaTypeString != null) {
-            contentType = MediaType.parse(mediaTypeString);
+        MediaType contentType = requestHeaders.contentType();
+        if (contentType != null) {
             checkArgument("multipart".equals(contentType.type()),
                           "Content-Type: %s (expected: multipart content type)", contentType);
-            contentType.withParameter("boundary", boundary());
+            contentType = contentType.withParameter("boundary", boundary());
         } else {
             contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary());
         }
 
+        final MediaType finalMediaType = contentType;
         final RequestHeaders updated = requestHeaders.withMutations(builder -> {
-            builder.add(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+            builder.addObject(HttpHeaderNames.CONTENT_TYPE, finalMediaType);
         });
         return HttpRequest.of(updated, this);
     }
@@ -233,31 +233,32 @@ public interface Multipart extends StreamMessage<HttpData> {
      * Returns all the nested body parts.
      *
      * <p>Note: Once a {@link BodyPart} is subscribed, you should subscribe to {@link BodyPart#content()}
-     * before subscribing to the next {@link BodyPart}.<pre>{@code
-     * > import reactor.core.publisher.Flux;
+     * before subscribing to the next {@link BodyPart}.
+     * <pre>{@code
+     * import reactor.core.publisher.Flux;
      *
-     * > HttpRequest req = ...;
-     * > Multipart multiPart = Multipart.from(req);
+     * HttpRequest req = ...;
+     * Multipart multiPart = Multipart.from(req);
      *
-     * > // Good:
-     * > Flux.from(multiPart.bodyParts())
-     * >     .subscribe(bodyPart -> {
-     * >         Flux.from(bodyPart.content()) // Safely subscribe to BodyPart.content()
-     * >             .map(HttpData::toStringUtf8)
-     * >             .collectList()
-     * >             .subscribe(contents -> { ... });
-     * >     });
+     * // Good:
+     * Flux.from(multiPart.bodyParts())
+     *     .subscribe(bodyPart -> {
+     *         Flux.from(bodyPart.content()) // Safely subscribe to BodyPart.content()
+     *             .map(HttpData::toStringUtf8)
+     *             .collectList()
+     *             .subscribe(contents -> { ... });
+     *     });
      *
-     * > // Bad:
-     * > Flux.from(multiPart.bodyParts())
-     * >     .collectList() // This will subscribe BodyPart.content() first before you subscribe to it.
-     * >     .subscribe(bodyParts -> {
-     * >         bodyParts.forEach(part -> {
-     * >             Flux.from(part.content())
-     * >                 .collectList() // Throws IllegalStateException("Only single subscriber is allowed")
-     * >                 .subscribe(contents -> { ... });
-     * >         });
-     * >     });
+     * // Bad:
+     * Flux.from(multiPart.bodyParts())
+     *     .collectList() // This will subscribe BodyPart.content() first before you subscribe to it.
+     *     .subscribe(bodyParts -> {
+     *         bodyParts.forEach(part -> {
+     *             Flux.from(part.content())
+     *                 .collectList() // Throws IllegalStateException("Only single subscriber is allowed")
+     *                 .subscribe(contents -> { ... });
+     *         });
+     *     });
      * } </pre>
      * If you don't know what this means, use {@link #aggregate()}.
      */
@@ -268,15 +269,16 @@ public interface Multipart extends StreamMessage<HttpData> {
      * Aggregates this {@link Multipart}. The returned {@link CompletableFuture} will be notified when
      * the {@link BodyPart}s of the {@link Multipart} is received fully.
      *
-     * <p>For example: <pre>{@code
-     * > HttpRequest req = ...;
-     * > Multipart.from(req).aggregate()
-     * >          .thenAccept(multipart -> {
-     * >              for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
-     * >                  String content = bodyPart.contentUtf8();
-     * >                  ...
-     * >              }
-     * >          });
+     * <p>For example:
+     * <pre>{@code
+     * HttpRequest req = ...;
+     * Multipart.from(req).aggregate()
+     *          .thenAccept(multipart -> {
+     *              for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
+     *                  String content = bodyPart.contentUtf8();
+     *                  ...
+     *              }
+     *          });
      * }</pre>
      */
     CompletableFuture<AggregatedMultipart> aggregate();
@@ -286,16 +288,17 @@ public interface Multipart extends StreamMessage<HttpData> {
      * The returned {@link CompletableFuture} will be notified when
      * the {@link BodyPart}s of the {@link Multipart} is received fully.
      *
-     * <p>For example: <pre>{@code
-     * > HttpRequest req = ...;
-     * > EventExecutor executor = ...;
-     * > Multipart.from(req).aggregate(executor)
-     * >          .thenAccept(multipart -> {
-     * >              for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
-     * >                  String content = bodyPart.contentUtf8();
-     * >                  ...
-     * >              }
-     * >          });
+     * <p>For example:
+     * <pre>{@code
+     * HttpRequest req = ...;
+     * EventExecutor executor = ...;
+     * Multipart.from(req).aggregate(executor)
+     *          .thenAccept(multipart -> {
+     *              for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
+     *                  String content = bodyPart.contentUtf8();
+     *                  ...
+     *              }
+     *          });
      * }</pre>
      */
     CompletableFuture<AggregatedMultipart> aggregate(EventExecutor executor);

@@ -40,6 +40,7 @@ import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import reactor.core.publisher.Flux;
 
@@ -53,13 +54,13 @@ public class MultipartEncoderTckTest extends PublisherVerification<HttpData> {
 
     @Override
     public Publisher<HttpData> createPublisher(final long l) {
-        final MultipartEncoder encoder = new MultipartEncoder("boundary");
-        Flux.fromStream(LongStream.rangeClosed(1, l)
-                                  .mapToObj(i -> BodyPart.builder()
-                                                         .content("part" + i)
-                                                         .build()
-                                  )).subscribe(encoder);
-        return encoder;
+        final Flux<BodyPart> source =
+                Flux.fromStream(LongStream.rangeClosed(1, l)
+                                          .mapToObj(i -> BodyPart.builder()
+                                                                 .content("part" + i)
+                                                                 .build()
+                                          ));
+        return new MultipartEncoder(StreamMessage.of(source), "boundary");
     }
 
     @Override
