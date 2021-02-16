@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -351,4 +352,14 @@ public interface StreamMessage<T> extends Publisher<T> {
      * on a closed or aborted stream has no effect.
      */
     void abort(Throwable cause);
+
+    /**
+     * Filters values emitted by the current {@code StreamMessage}.
+     * If the {@link Predicate} test succeeds, the value is emitted.
+     * If the {@link Predicate} test fails, the value is ignored and a request of {@code 1} is made upstream.
+     */
+    default StreamMessage<T> filter(Predicate<? super T> predicate) {
+        requireNonNull(predicate, "predicate");
+        return new StreamMessageFilter<>(this, predicate);
+    }
 }
