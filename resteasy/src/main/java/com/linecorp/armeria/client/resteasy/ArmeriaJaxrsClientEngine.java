@@ -25,6 +25,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -139,8 +140,9 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
         try {
             return future.get();
         } catch (InterruptedException e) {
-            future.cancel(true);
             throw new ProcessingException("Invocation interrupted", e);
+        } catch (CancellationException e) {
+            throw new ProcessingException("Invocation cancelled", e);
         } catch (ExecutionException e) {
             final Throwable cause = Exceptions.peel(e);
             if (cause instanceof WebApplicationException) {
