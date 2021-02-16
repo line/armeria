@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.auth.oauth2;
 
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.UNSUPPORTED_TOKEN_TYPE;
+import static com.linecorp.armeria.server.auth.oauth2.OAuth2TokenScopeValidator.INSUFFICIENT_SCOPE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
@@ -64,7 +65,6 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
     static final AttributeKey<Integer> ERROR_CODE = AttributeKey.valueOf("x-oauth2-error");
     static final AttributeKey<String> ERROR_TYPE = AttributeKey.valueOf("x-oauth2-error-type");
     static final String INVALID_TOKEN = "invalid_token";
-    static final String INSUFFICIENT_SCOPE = "insufficient_scope";
 
     private static final CompletionStage<AuthorizationStatus> SUCCESS_STATUS_FUTURE =
             CompletableFuture.completedFuture(AuthorizationStatus.SUCCESS);
@@ -91,7 +91,10 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
         this.tokenIntrospectionRequest =
                 requireNonNull(tokenIntrospectionRequest, "tokenIntrospectionRequest");
         authFailureHandler =
-                new OAuth2AuthorizationFailureHandler(accessTokenType, realm, String.join(" ", permittedScope));
+                new OAuth2AuthorizationFailureHandler(accessTokenType, realm,
+                                                      permittedScope.isEmpty() ? null
+                                                                               :
+                                                      String.join(" ", permittedScope));
         failureStatus = AuthorizationStatus.ofFailure(authFailureHandler);
         failureStatusFuture = CompletableFuture.completedFuture(failureStatus);
     }
@@ -157,7 +160,6 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
         });
     }
 
-    @SuppressWarnings("MethodMayBeStatic")
     private boolean validateDescriptor(ServiceRequestContext ctx, OAuth2TokenDescriptor tokenDescriptor) {
         // check whether the token still valid
         if (!tokenDescriptor.isValid()) {
@@ -166,6 +168,8 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
             return false;
         }
 
+        // set OAuth 2 token to the request context for optional application-level validation
+        OAuth2TokenScopeValidator.setOauth2Context(ctx, tokenDescriptor, realm);
         return true;
     }
 
@@ -192,16 +196,11 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
         }
 
         // check the scopes for access permission
-        if (permittedScope.isEmpty()) {
-            return true;
-        }
-        final Set<String> tokenScopeSet = tokenDescriptor.scopeSet();
-        if (tokenScopeSet.isEmpty() || !tokenScopeSet.containsAll(permittedScope)) {
+        final boolean result = OAuth2TokenScopeValidator.validateScope(tokenDescriptor, permittedScope);
+        if (!result) {
             ctx.setAttr(ERROR_CODE, HttpStatus.FORBIDDEN.code());
             ctx.setAttr(ERROR_TYPE, INSUFFICIENT_SCOPE);
-            return false;
         }
-
-        return true;
+        return result;
     }
 }

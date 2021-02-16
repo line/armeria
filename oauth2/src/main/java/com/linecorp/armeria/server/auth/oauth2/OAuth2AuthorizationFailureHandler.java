@@ -16,28 +16,21 @@
 
 package com.linecorp.armeria.server.auth.oauth2;
 
-import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.BEARER;
-import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ERROR;
-import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.REALM;
-import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.SCOPE;
+import static com.linecorp.armeria.server.auth.oauth2.OAuth2AuthorizationErrorReporter.badRequest;
+import static com.linecorp.armeria.server.auth.oauth2.OAuth2AuthorizationErrorReporter.forbidden;
+import static com.linecorp.armeria.server.auth.oauth2.OAuth2AuthorizationErrorReporter.unauthorized;
 import static com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer.ERROR_CODE;
 import static com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer.ERROR_TYPE;
-
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthFailureHandler;
@@ -106,6 +99,15 @@ class OAuth2AuthorizationFailureHandler implements AuthFailureHandler {
     @Nullable
     private final String scope;
 
+    /**
+     * Constructs {@link OAuth2AuthorizationFailureHandler}.
+     * @param accessTokenType type of the access token, {@code Bearer} used by default
+     * @param realm optional security realm of an application or a service
+     * @param scope optional JSON string containing a space-separated list of scopes associated with this token,
+     *     in the format described at
+     *     <a href="http://tools.ietf.org/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
+     *
+     */
     OAuth2AuthorizationFailureHandler(@Nullable String accessTokenType,
                                       @Nullable String realm,
                                       @Nullable String scope) {
@@ -122,6 +124,8 @@ class OAuth2AuthorizationFailureHandler implements AuthFailureHandler {
      *    <li>invalid_token - 401 Unauthorized</li>
      *    <li>insufficient_scope - 403 Forbidden</li>
      * </ul>
+     * as per <a href="https://tools.ietf.org/id/draft-ietf-oauth-v2-bearer-20.html#rfc.section.3.1">
+     *     The OAuth 2.0 Authorization Framework: Bearer Token Usage</a>
      */
     @Override
     public HttpResponse authFailed(HttpService delegate, ServiceRequestContext ctx, HttpRequest req,
@@ -134,54 +138,24 @@ class OAuth2AuthorizationFailureHandler implements AuthFailureHandler {
                                    "Unexpected exception during OAuth 2 authorization.");
         }
 
+        // obtain ERROR_CODE and ERROR_TYPE from the context set by OAuth2TokenIntrospectionAuthorizer
         final Integer errorCode = ctx.attr(ERROR_CODE);
         final String errorType = ctx.attr(ERROR_TYPE);
         if (errorCode == null) {
-            return unauthorized(errorType); // something else happened - do not authorize
+            // something else happened - do not authorize
+            // we may omit the expected scope for the generic response
+            return unauthorized(errorType, accessTokenType, realm, scope);
         }
 
         switch (errorCode) {
             case 400:
-                if (errorType != null) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8,
-                                           "{\"error\":\"%s\"}", errorType); //e.g."unsupported_token_type"
-                } else {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST);
-                }
+                return badRequest(errorType);
             case 401:
-                return unauthorized(errorType);
+                return unauthorized(errorType, accessTokenType, realm, scope);
             case 403:
-                if (errorType != null) {
-                    return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.JSON_UTF_8,
-                                           "{\"error\":\"%s\"}", errorType); //e.g."insufficient_scope"
-                } else {
-                    return HttpResponse.of(HttpStatus.FORBIDDEN);
-                }
+                return forbidden(errorType);
             default:
                 return HttpResponse.of(errorCode);
         }
-    }
-
-    private HttpResponse unauthorized(@Nullable String errorType) {
-        final Map<String, String> errorFieldsMap = new LinkedHashMap<>(3);
-        if (realm != null) {
-            errorFieldsMap.put(REALM, realm);
-        }
-        if (errorType != null) {
-            errorFieldsMap.put(ERROR, errorType);
-        }
-        if (scope != null && !scope.isEmpty()) {
-            errorFieldsMap.put(SCOPE, scope);
-        }
-        final String errorFields = errorFieldsMap.entrySet().stream()
-                                                 .map(e -> e.getKey() + "=\"" + e.getValue() + '"')
-                                                 .collect(Collectors.joining(", "));
-        final String wwwAuthenticateType = accessTokenType == null ? BEARER : accessTokenType;
-        final String wwwAuthenticate = errorFields.isEmpty() ?
-                wwwAuthenticateType : String.join(" ", wwwAuthenticateType, errorFields);
-        final ResponseHeaders responseHeaders =
-                ResponseHeaders.of(HttpStatus.UNAUTHORIZED,
-                                   HttpHeaderNames.WWW_AUTHENTICATE, wwwAuthenticate);
-        return HttpResponse.of(responseHeaders);
     }
 }
