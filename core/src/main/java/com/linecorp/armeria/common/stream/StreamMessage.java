@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
@@ -360,6 +361,11 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     default StreamMessage<T> filter(Predicate<? super T> predicate) {
         requireNonNull(predicate, "predicate");
-        return new StreamMessageFilter<>(this, predicate);
+        return MappableStreamMessage.of(this, predicate);
+    }
+
+    default <U> StreamMessage<U> map(Function<? super T, ? extends U> function) {
+        requireNonNull(function, "function");
+        return MappableStreamMessage.of(this, function);
     }
 }
