@@ -33,6 +33,17 @@ You can also use <type://ClientFactoryOptions> to build <type://ClientFactory>.
 It's more verbose than calling a dedicated setter method, but it can be useful when you need to
 set a series of options programmatically.
 
+## Lifecycle of `ClientFactory`
+
+Most clients from <type://ClientFactory> usually take an important role such as communicating with opposite side.
+Unless <type://ClientFactory> created clients for testing purpose, you might want to maintain the clients until
+completing their responsibilities.
+A <type://ClientFactory> manages a connection pool or `Eventloop`, which is created by the factory.
+If a <type://ClientFactory> is closed for some reasons, clients, which were spawned from the <type://ClientFactory>,
+will also be closed.
+Because of this nature, you might need to be careful not to close any client's connections by mistakes.
+Therefore, it would be better keep your <type://ClientFactory> lifecycle same as application's lifecycle.
+
 ## Specifying Netty `ChannelOption`s
 
 You can also specify Netty [`ChannelOption`](https://netty.io/4.1/api/io/netty/channel/ChannelOption.html)
