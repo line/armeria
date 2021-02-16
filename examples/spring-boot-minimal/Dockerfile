@@ -8,4 +8,4 @@ ARG JAR_FILE=build/libs/spring-boot-minimal.jar
 ADD ${JAR_FILE} /opt/armeria/app.jar
 USER armeria:armeria
 EXPOSE 8080
-ENTRYPOINT ["java","-jar","/app.jar"]
+ENTRYPOINT ["java","-jar","/opt/armeria/app.jar"]
