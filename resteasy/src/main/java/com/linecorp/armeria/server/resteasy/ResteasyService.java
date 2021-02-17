@@ -24,6 +24,7 @@ import java.security.Principal;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.SecurityContext;
@@ -61,9 +62,10 @@ import com.linecorp.armeria.server.auth.AuthTokenExtractors;
 /**
  * RESTEasy service implementing Armeria's {@link HttpService}. This provides the main entry point for JAX-RS
  * server-side processing based on Armeria.
+ * @param <T> the type of the target custom context class
  */
 @UnstableApi
-public final class ResteasyService implements HttpService {
+public final class ResteasyService<T> implements HttpService {
 
     private static final int URI_INFO_CACHE_MAX_SIZE = 1024;
     private static final Duration URI_INFO_CACHE_MAX_IDLE = Duration.ofMinutes(1L);
@@ -71,10 +73,11 @@ public final class ResteasyService implements HttpService {
     /**
      * Creates a builder for {@link ResteasyService}.
      * @param deployment An instance of {@link ResteasyDeployment}
+     * @param <T> the type of the target custom context class
      * @return new {@link ResteasyServiceBuilder}
      */
-    public static ResteasyServiceBuilder builder(ResteasyDeployment deployment) {
-        return new ResteasyServiceBuilder(deployment);
+    public static <T> ResteasyServiceBuilder<T> builder(ResteasyDeployment deployment) {
+        return new ResteasyServiceBuilder<>(deployment);
     }
 
     private final ResteasyDeployment deployment;
@@ -83,12 +86,18 @@ public final class ResteasyService implements HttpService {
     private final String contextPath;
     @Nullable
     private final SecurityDomain securityDomain;
+    @Nullable
+    private final Class<T> contextClass;
+    @Nullable
+    private final Function<ServiceRequestContext, T> contextConverter;
     private final Cache<String, InitData> uriInfoCache;
     private final int maxRequestBufferSize;
     private final int responseBufferSize;
 
     ResteasyService(ResteasyDeployment deployment, String contextPath,
                     @Nullable SecurityDomain securityDomain,
+                    @Nullable Class<T> contextClass,
+                    @Nullable Function<ServiceRequestContext, T> contextConverter,
                     int maxRequestBufferSize, int responseBufferSize) {
         this.deployment = requireNonNull(deployment, "deployment");
         requireNonNull(contextPath, "contextPath");
@@ -109,6 +118,12 @@ public final class ResteasyService implements HttpService {
         dispatcher = (SynchronousDispatcher) deployment.getDispatcher();
         providerFactory = deployment.getProviderFactory();
         uriInfoCache = buildCache(URI_INFO_CACHE_MAX_SIZE, null, URI_INFO_CACHE_MAX_IDLE);
+
+        checkArgument((contextClass == null && contextConverter == null) ||
+                      (contextClass != null && contextConverter != null),
+                      "contextClass and contextConverter should either be defined or set to NULL");
+        this.contextClass = contextClass;
+        this.contextConverter = contextConverter;
 
         checkArgument(maxRequestBufferSize >= 0,
                       "maxRequestBufferSize: %s (expected: >= 0)", maxRequestBufferSize);
@@ -211,7 +226,11 @@ public final class ResteasyService implements HttpService {
 
             ResteasyContext.pushContext(SecurityContext.class,
                                         securityContext); // should we set unsecure context?
-            ResteasyContext.pushContext(ServiceRequestContext.class, ctx);
+            if (contextConverter != null) {
+                ResteasyContext.pushContext(contextClass, contextConverter.apply(ctx));
+            } else {
+                ResteasyContext.pushContext(ServiceRequestContext.class, ctx);
+            }
             try {
                 dispatcher.invoke(request, response);
             } finally {

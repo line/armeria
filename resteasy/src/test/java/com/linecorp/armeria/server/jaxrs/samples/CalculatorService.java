@@ -50,6 +50,7 @@ public class CalculatorService {
                             @Context HttpHeaders headers,
                             @Context SecurityContext securityContext,
                             @Context Application application,
+                            @Context com.linecorp.armeria.server.resteasy.CustomRequestContext customContext,
                             @CookieParam("param1") Optional<Integer> param1,
                             @CookieParam("param2") Optional<String> param2,
                             @CookieParam("param3") @DefaultValue("bar") String param3,
@@ -61,6 +62,7 @@ public class CalculatorService {
             logger.info("Cookies: " + headers.getCookies());
             logger.info("SecurityContext: " + securityContext); // SecurityContextImpl
             logger.info("Application: [" + application + "], " + application.getProperties()); // JaxRsApp
+            logger.info("CustomRequestContext: " + customContext); // CustomRequestContext
             logger.info("param1: " + param1);
             logger.info("param2: " + param2);
             logger.info("param3: " + param3);

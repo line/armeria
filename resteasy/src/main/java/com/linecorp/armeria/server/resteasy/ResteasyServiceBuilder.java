@@ -19,18 +19,22 @@ package com.linecorp.armeria.server.resteasy;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.Function;
+
 import javax.annotation.Nullable;
 
 import org.jboss.resteasy.plugins.server.embedded.SecurityDomain;
 import org.jboss.resteasy.spi.ResteasyDeployment;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Builds {@link ResteasyService}.
+ * @param <T> the type of the target custom context class
  */
 @UnstableApi
-public final class ResteasyServiceBuilder {
+public final class ResteasyServiceBuilder<T> {
 
     private static final int DEFAULT_MAX_REQUEST_BUFFER_SIZE = 8192;
     private static final int DEFAULT_RESPONSE_BUFFER_SIZE = 4096;
@@ -39,6 +43,10 @@ public final class ResteasyServiceBuilder {
     private String contextPath = "/";
     @Nullable
     private SecurityDomain securityDomain;
+    @Nullable
+    private Class<T> contextClass;
+    @Nullable
+    private Function<ServiceRequestContext, T> contextConverter;
     private int maxRequestBufferSize = DEFAULT_MAX_REQUEST_BUFFER_SIZE;
     private int responseBufferSize = DEFAULT_RESPONSE_BUFFER_SIZE;
 
@@ -49,7 +57,7 @@ public final class ResteasyServiceBuilder {
     /**
      * Sets the context path for {@link ResteasyService}.
      */
-    public ResteasyServiceBuilder path(String contextPath) {
+    public ResteasyServiceBuilder<T> path(String contextPath) {
         this.contextPath = requireNonNull(contextPath, "contextPath");
         if (contextPath.isEmpty()) {
             this.contextPath = "/";
@@ -64,8 +72,22 @@ public final class ResteasyServiceBuilder {
     /**
      * Sets the {@link SecurityDomain} for {@link ResteasyService}.
      */
-    public ResteasyServiceBuilder securityDomain(SecurityDomain securityDomain) {
+    public ResteasyServiceBuilder<T> securityDomain(SecurityDomain securityDomain) {
         this.securityDomain = requireNonNull(securityDomain, "securityDomain");
+        return this;
+    }
+
+    /**
+     * Defines an optional converter that converts Armeria {@link ServiceRequestContext} to a target class.
+     * This could be useful to expose {@link ServiceRequestContext} via custom interface as part of JAX-RS API.
+     * The custom context interface is to be used with JAX-RS {@link javax.ws.rs.core.Context} annotation.
+     * @param contextClass the target custom context class
+     * @param contextConverter the function that adopts {@link ServiceRequestContext} to {@code contextClass}
+     */
+    public ResteasyServiceBuilder<T> requestContextConverter(
+            Class<T> contextClass, Function<ServiceRequestContext, T> contextConverter) {
+        this.contextClass = requireNonNull(contextClass, "contextClass");
+        this.contextConverter = requireNonNull(contextConverter, "contextConverter");
         return this;
     }
 
@@ -93,8 +115,8 @@ public final class ResteasyServiceBuilder {
     /**
      * Builds new {@link ResteasyService}.
      */
-    public ResteasyService build() {
-        return new ResteasyService(deployment, contextPath, securityDomain,
+    public ResteasyService<T> build() {
+        return new ResteasyService<>(deployment, contextPath, securityDomain, contextClass, contextConverter,
                                    maxRequestBufferSize, responseBufferSize);
     }
 }

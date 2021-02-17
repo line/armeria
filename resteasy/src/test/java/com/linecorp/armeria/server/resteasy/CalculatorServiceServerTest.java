@@ -53,7 +53,10 @@ public class CalculatorServiceServerTest {
             final ResteasyDeployment deployment = new ResteasyDeploymentImpl();
             //deployment.setApplicationClass(JaxRsApp.class.getName());
             deployment.setApplication(new JaxRsApp());
-            ResteasyService.builder(deployment).path("/resteasy").build().register(serverBuilder);
+            ResteasyService.<CustomRequestContext>builder(deployment)
+                    .path("/resteasy")
+                    .requestContextConverter(CustomRequestContext.class, CustomRequestContext::new)
+                    .build().register(serverBuilder);
         }
     };
 
