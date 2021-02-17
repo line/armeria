@@ -16,13 +16,12 @@
 
 package com.linecorp.armeria.common.rxjava2;
 
-import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.ctxExists;
-import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.currentCtx;
+import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.assertCurrentCtxIsNull;
+import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.assertSameContext;
 import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.newContext;
 import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.newFlowable;
 import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.newFlowableWithoutCtx;
 import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.newTestSubscriber;
-import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -30,6 +29,7 @@ import java.util.concurrent.Executors;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -40,6 +40,7 @@ import io.reactivex.flowables.ConnectableFlowable;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subscribers.TestSubscriber;
 
+@ExtendWith(RxErrorDetectExtension.class)
 public class ContextAwareFlowableTest {
 
     private final Executor executor = Executors.newSingleThreadExecutor();
@@ -60,7 +61,7 @@ public class ContextAwareFlowableTest {
         final Flowable<Object> flowable =
                 Flowable.create(
                         emitter -> {
-                            assertThat(ctxExists(ctx)).isTrue();
+                            assertSameContext(ctx);
                             executor.execute(() -> {
                                 for (int i = 0; i < 5; i++) {
                                     emitter.onNext("success");
@@ -69,18 +70,18 @@ public class ContextAwareFlowableTest {
                             });
                         }, BackpressureStrategy.BUFFER)
                         .map(o -> {
-                            assertThat(ctxExists(ctx)).isTrue();
+                            assertSameContext(ctx);
                             return o;
                         })
                         .flatMap(o -> {
-                            assertThat(ctxExists(ctx)).isTrue();
+                            assertSameContext(ctx);
                             return newFlowable(o, 5, ctx);
                         });
 
         final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
         try (SafeCloseable ignored = ctx.push()) {
             flowable.map(o -> {
-                assertThat(ctxExists(ctx)).isTrue();
+                assertSameContext(ctx);
                 return o;
             }).subscribe(testObserver);
         }
@@ -94,7 +95,7 @@ public class ContextAwareFlowableTest {
         final ConnectableFlowable<Object> flowable =
                 Flowable.create(
                         emitter -> {
-                            assertThat(currentCtx()).isNull();
+                            assertCurrentCtxIsNull();
                             executor.execute(() -> {
                                 for (int i = 0; i < 5; i++) {
                                     emitter.onNext("success");
@@ -103,11 +104,11 @@ public class ContextAwareFlowableTest {
                             });
                         }, BackpressureStrategy.BUFFER)
                         .map(o -> {
-                            assertThat(currentCtx()).isNull();
+                            assertCurrentCtxIsNull();
                             return o;
                         })
                         .flatMap(o -> {
-                            assertThat(currentCtx()).isNull();
+                            assertCurrentCtxIsNull();
                             return newFlowableWithoutCtx(o, 5);
                         })
                         .observeOn(Schedulers.computation())
@@ -117,7 +118,7 @@ public class ContextAwareFlowableTest {
         final TestSubscriber<Object> testObserver2 = newTestSubscriber(ctx2);
         try (SafeCloseable ignored = ctx2.push()) {
             flowable.map(o -> {
-                assertThat(ctxExists(ctx2)).isTrue();
+                assertSameContext(ctx2);
                 return o;
             }).subscribe(testObserver2);
         }
@@ -125,7 +126,7 @@ public class ContextAwareFlowableTest {
         final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
         try (SafeCloseable ignored = ctx.push()) {
             flowable.map(o -> {
-                assertThat(ctxExists(ctx)).isTrue();
+                assertSameContext(ctx);
                 return o;
             }).subscribe(testObserver);
         }

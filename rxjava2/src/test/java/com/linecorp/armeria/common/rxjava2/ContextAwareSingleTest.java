@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.common.rxjava2;
 
-import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.currentCtx;
+import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.addCallbacks;
+import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.assertCurrentCtxIsNull;
+import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.assertSameContext;
+import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.newContext;
 import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.newSingle;
 import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.newSingleWithoutCtx;
 import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.newTestObserver;
@@ -25,10 +28,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -37,8 +42,8 @@ import io.reactivex.Single;
 import io.reactivex.observers.TestObserver;
 import io.reactivex.schedulers.Schedulers;
 
+@ExtendWith(RxErrorDetectExtension.class)
 public class ContextAwareSingleTest {
-
     private final Executor executor = Executors.newSingleThreadExecutor();
 
     @BeforeAll
@@ -52,22 +57,94 @@ public class ContextAwareSingleTest {
     }
 
     @Test
-    public void single() {
-        final ServiceRequestContext ctx = CtxTestUtil.newContext();
-        final Single<Object> single =
-                CtxTestUtil.addCallbacks(
-                        Single.create(emitter -> {
-                            assertThat(CtxTestUtil.ctxExists(ctx)).isTrue();
-                            executor.execute(() -> emitter.onSuccess("success"));
-                        }), ctx)
-                           .map(o -> {
-                               assertThat(CtxTestUtil.ctxExists(ctx)).isTrue();
-                               return o;
-                           })
-                           .flatMap(o -> {
-                               assertThat(CtxTestUtil.ctxExists(ctx)).isTrue();
-                               return newSingle(o, ctx);
-                           });
+    public void single() throws InterruptedException {
+        final ServiceRequestContext ctx = newContext();
+        final Single<Object> single = addCallbacks(
+                Single.create(emitter -> {
+                    assertSameContext(ctx);
+                    executor.execute(() -> emitter.onSuccess("success"));
+                }), ctx)
+                .map(o -> {
+                    assertSameContext(ctx);
+                    return o;
+                })
+                .flatMap(o -> {
+                    assertSameContext(ctx);
+                    return newSingle(o, ctx);
+                });
+
+        final TestObserver<Object> testObserver = newTestObserver(ctx);
+        try (SafeCloseable ignored = ctx.push()) {
+            single.subscribe(testObserver);
+        }
+        testObserver.await().assertComplete().assertValue("success");
+    }
+
+    @Test
+    public void single_cancel() {
+        final ServiceRequestContext ctx = newContext();
+        final Single<Object> single = addCallbacks(
+                Single.create(emitter -> {
+                    assertSameContext(ctx);
+                    executor.execute(() -> emitter.onSuccess("success"));
+                }), ctx);
+
+        try (SafeCloseable ignored = ctx.push()) {
+            assertThat(single.test(true).isDisposed()).isTrue();
+        }
+    }
+
+    @Test
+    public void single_retry() {
+        final ServiceRequestContext ctx = newContext();
+        final AtomicInteger counter = new AtomicInteger();
+        final Single<Object> single = addCallbacks(
+                Single.create(emitter -> {
+                    assertSameContext(ctx);
+                    executor.execute(() -> {
+                        if (counter.getAndIncrement() == 2) {
+                            emitter.onSuccess("success");
+                        } else {
+                            emitter.onError(new IllegalStateException());
+                        }
+                    });
+                }), ctx)
+                .retry()
+                .map(o -> {
+                    assertSameContext(ctx);
+                    return o;
+                })
+                .flatMap(o -> {
+                    assertSameContext(ctx);
+                    return newSingle(o, ctx);
+                });
+
+        final TestObserver<Object> testObserver = newTestObserver(ctx);
+        try (SafeCloseable ignored = ctx.push()) {
+            single.subscribe(testObserver);
+        }
+        testObserver.awaitTerminalEvent();
+        testObserver.assertValue("success");
+    }
+
+    @Test
+    public void single_toFlowable() {
+        final ServiceRequestContext ctx = newContext();
+        final Single<Object> single = addCallbacks(
+                Single.create(emitter -> {
+                    assertSameContext(ctx);
+                    executor.execute(() -> emitter.onSuccess("success"));
+                }), ctx)
+                .toFlowable()
+                .map(o -> {
+                    assertSameContext(ctx);
+                    return o;
+                })
+                .firstOrError()
+                .flatMap(o -> {
+                    assertSameContext(ctx);
+                    return newSingle(o, ctx);
+                });
 
         final TestObserver<Object> testObserver = newTestObserver(ctx);
         try (SafeCloseable ignored = ctx.push()) {
@@ -79,19 +156,19 @@ public class ContextAwareSingleTest {
 
     @Test
     public void single_subscribeOutsideCtx() {
-        final ServiceRequestContext ctx = CtxTestUtil.newContext();
+        final ServiceRequestContext ctx = newContext();
         Single<Object> single =
                 Single.create(
                         emitter -> {
-                            assertThat(CtxTestUtil.currentCtx()).isNull();
+                            assertCurrentCtxIsNull();
                             executor.execute(() -> emitter.onSuccess("success"));
                         })
                       .map(o -> {
-                          assertThat(CtxTestUtil.currentCtx()).isNull();
+                          assertCurrentCtxIsNull();
                           return o;
                       })
                       .flatMap(o -> {
-                          assertThat(CtxTestUtil.currentCtx()).isNull();
+                          assertCurrentCtxIsNull();
                           return newSingleWithoutCtx(o);
                       });
 
@@ -99,7 +176,7 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             // Ctx is pushed when subscribing, so the tasks inside this test won't have ctx.
             single = single.map(o -> {
-                assertThat(CtxTestUtil.currentCtx()).isNull();
+                assertCurrentCtxIsNull();
                 return o;
             });
         }
@@ -114,11 +191,11 @@ public class ContextAwareSingleTest {
     @Test
     public void single_cache() {
         final CountDownLatch countDownLatch = new CountDownLatch(2);
-        final ServiceRequestContext ctx1 = CtxTestUtil.newContext();
+        final ServiceRequestContext ctx1 = newContext();
         final Single<Object> single =
                 Single.create(
                         emitter -> {
-                            assertThat(CtxTestUtil.currentCtx()).isNull();
+                            assertCurrentCtxIsNull();
                             executor.execute(() -> {
                                 try {
                                     countDownLatch.await();
@@ -128,11 +205,11 @@ public class ContextAwareSingleTest {
                             });
                         })
                       .map(o -> {
-                          assertThat(CtxTestUtil.currentCtx()).isNull();
+                          assertCurrentCtxIsNull();
                           return o;
                       })
                       .flatMap(o -> {
-                          assertThat(CtxTestUtil.currentCtx()).isNull();
+                          assertCurrentCtxIsNull();
                           return newSingleWithoutCtx(o);
                       })
                       .cache()
@@ -142,17 +219,17 @@ public class ContextAwareSingleTest {
         final TestObserver<Object> testObserver1 = newTestObserver(ctx1);
         try (SafeCloseable ignored = ctx1.push()) {
             single.map(o -> {
-                assertThat(CtxTestUtil.ctxExists(ctx1)).isTrue();
+                assertSameContext(ctx1);
                 return o;
             }).subscribe(testObserver1);
             countDownLatch.countDown();
         }
 
-        final ServiceRequestContext ctx2 = CtxTestUtil.newContext();
+        final ServiceRequestContext ctx2 = newContext();
         final TestObserver<Object> testObserver2 = newTestObserver(ctx2);
         try (SafeCloseable ignored = ctx2.push()) {
             single.map(o -> {
-                assertThat(CtxTestUtil.ctxExists(ctx2)).isTrue();
+                assertSameContext(ctx2);
                 return o;
             }).subscribe(testObserver2);
             countDownLatch.countDown();
@@ -167,21 +244,21 @@ public class ContextAwareSingleTest {
 
     @Test
     public void single_subscribeOn() {
-        final ServiceRequestContext ctx = CtxTestUtil.newContext();
+        final ServiceRequestContext ctx = newContext();
         final Single<Object> single =
                 Single.create(
                         emitter -> {
-                            assertThat(currentCtx()).isNull();
+                            assertCurrentCtxIsNull();
                             executor.execute(() -> emitter.onSuccess("success"));
                         })
                       .map(o -> {
-                          assertThat(currentCtx()).isNull();
+                          assertCurrentCtxIsNull();
                           return o;
                       })
                       // ctx won't exist if upstream subscribed with non-ctx thread.
                       .subscribeOn(Schedulers.computation())
                       .map(o -> {
-                          assertThat(CtxTestUtil.ctxExists(ctx)).isTrue();
+                          assertSameContext(ctx);
                           return o;
                       });
 

@@ -48,7 +48,6 @@ public final class RequestContextAssembly {
     @GuardedBy("RequestContextAssembly.class")
     private static BiFunction<? super Observable, ? super Observer, ? extends Observer>
             oldOnObservableSubscribe;
-    @SuppressWarnings("rawtypes")
     @Nullable
     @GuardedBy("RequestContextAssembly.class")
     private static BiFunction<? super Completable, ? super CompletableObserver, ? extends CompletableObserver>
@@ -161,6 +160,7 @@ public final class RequestContextAssembly {
     /**
      * Disable {@link RequestContext} during operators.
      */
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public static synchronized void disable() {
         if (!enabled) {
             return;
@@ -182,6 +182,7 @@ public final class RequestContextAssembly {
 
     private abstract static class BiConditionalOnCurrentRequestContextFunction<T, U>
             implements BiFunction<T, U, U> {
+        @SuppressWarnings("ConstantConditions")
         @Override
         public final U apply(T t, U u) {
             return RequestContext.mapCurrent(requestContext -> applyActual(t, u, requestContext), () -> u);

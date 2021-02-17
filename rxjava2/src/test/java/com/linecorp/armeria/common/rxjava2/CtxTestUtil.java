@@ -20,8 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.ForkJoinPool;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -47,22 +45,22 @@ public final class CtxTestUtil {
         return TestObserver.create(new Observer<Object>() {
             @Override
             public void onSubscribe(@NonNull Disposable d) {
-                assertThat(ctxExists(ctx)).isTrue();
+                assertSameContext(ctx);
             }
 
             @Override
             public void onNext(@NonNull Object o) {
-                assertThat(ctxExists(ctx)).isTrue();
+                assertSameContext(ctx);
             }
 
             @Override
             public void onError(@NonNull Throwable e) {
-                assertThat(ctxExists(ctx)).isTrue();
+                assertSameContext(ctx);
             }
 
             @Override
             public void onComplete() {
-                assertThat(ctxExists(ctx)).isTrue();
+                assertSameContext(ctx);
             }
         });
     }
@@ -72,43 +70,43 @@ public final class CtxTestUtil {
 
             @Override
             public void onSubscribe(Subscription s) {
-                assertThat(ctxExists(ctx)).isTrue();
+                assertSameContext(ctx);
             }
 
             @Override
             public void onNext(@NonNull Object o) {
-                assertThat(ctxExists(ctx)).isTrue();
+                assertSameContext(ctx);
             }
 
             @Override
             public void onError(@NonNull Throwable e) {
-                assertThat(ctxExists(ctx)).isTrue();
+                assertSameContext(ctx);
             }
 
             @Override
             public void onComplete() {
-                assertThat(ctxExists(ctx)).isTrue();
+                assertSameContext(ctx);
             }
         });
     }
 
     static Single<Object> newSingleWithoutCtx(Object input) {
         return Single.create(emitter -> {
-            assertThat(currentCtx()).isNull();
+            assertCurrentCtxIsNull();
             ForkJoinPool.commonPool().execute(() -> emitter.onSuccess(input));
         });
     }
 
     static Single<Object> newSingle(Object input, ServiceRequestContext ctx) {
         return Single.create(emitter -> {
-            assertThat(ctxExists(ctx)).isTrue();
+            assertSameContext(ctx);
             ForkJoinPool.commonPool().execute(() -> emitter.onSuccess(input));
         });
     }
 
     static Flowable<Object> newFlowableWithoutCtx(Object input, int createCount) {
         return Flowable.create(emitter -> {
-            assertThat(currentCtx()).isNull();
+            assertCurrentCtxIsNull();
             ForkJoinPool.commonPool().execute(() -> {
                 for (int i = 0; i < createCount; i++) {
                     emitter.onNext(input);
@@ -120,7 +118,7 @@ public final class CtxTestUtil {
 
     static Flowable<Object> newFlowable(Object input, int emitCount, ServiceRequestContext ctx) {
         return Flowable.create(emitter -> {
-            assertThat(ctxExists(ctx)).isTrue();
+            assertSameContext(ctx);
             ForkJoinPool.commonPool().execute(() -> {
                 for (int i = 0; i < emitCount; i++) {
                     emitter.onNext(input);
@@ -135,23 +133,22 @@ public final class CtxTestUtil {
                                     .build();
     }
 
-    static boolean ctxExists(ServiceRequestContext ctx) {
-        return RequestContext.currentOrNull() == ctx;
-    }
-
     static <T> Single<T> addCallbacks(Single<T> single, ServiceRequestContext ctx) {
-        return single.doOnSubscribe(s -> assertThat(ctxExists(ctx)).isTrue())
-                     .doOnSuccess(t -> assertThat(ctxExists(ctx)).isTrue())
-                     .doOnError(t -> assertThat(ctxExists(ctx)).isTrue())
-                     .doAfterSuccess(t -> assertThat(ctxExists(ctx)).isTrue())
-                     .doFinally(() -> assertThat(ctxExists(ctx)).isTrue())
-                     .doOnDispose(() -> assertThat(ctxExists(ctx)).isTrue())
-                     .doOnEvent((t, throwable) -> assertThat(ctxExists(ctx)).isTrue())
-                     .doAfterTerminate(() -> assertThat(ctxExists(ctx)).isTrue());
+        return single.doOnSubscribe(s -> assertSameContext(ctx))
+                     .doOnSuccess(t -> assertSameContext(ctx))
+                     .doOnError(t -> assertSameContext(ctx))
+                     .doAfterSuccess(t -> assertSameContext(ctx))
+                     .doFinally(() -> assertSameContext(ctx))
+                     .doOnDispose(() -> assertSameContext(ctx))
+                     .doOnEvent((t, throwable) -> assertSameContext(ctx))
+                     .doAfterTerminate(() -> assertSameContext(ctx));
     }
 
-    @Nullable
-    static RequestContext currentCtx() {
-        return RequestContext.currentOrNull();
+    static void assertSameContext(ServiceRequestContext ctx) {
+        assertThat((RequestContext) RequestContext.currentOrNull()).isSameAs(ctx);
+    }
+
+    static void assertCurrentCtxIsNull() {
+        assertThat((RequestContext) RequestContext.currentOrNull()).isNull();
     }
 }
