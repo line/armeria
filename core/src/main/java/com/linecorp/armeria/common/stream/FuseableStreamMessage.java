@@ -59,6 +59,9 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(function, "function");
 
         if (source instanceof FuseableStreamMessage) {
+            // The second type parameter of FuseableStreamMessage is bound to StreamMessage.
+            // (e.g., FuseableStreamMessage<T, U> is subtype of StreamMessage<U>.)
+            // So we don't know the first type when downcasting StreamMessage to FuseableStreamMessage.
             final FuseableStreamMessage<?, T> cast = (FuseableStreamMessage<?, T>) source;
             this.source = cast.source;
 
