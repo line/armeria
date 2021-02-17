@@ -162,41 +162,42 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             requireNonNull(item, "item");
 
             final Subscription upstream = this.upstream;
-            if (upstream != null) {
+            if (upstream == null) {
+                return;
+            }
 
-                Object result = item;
-                try {
-                    for (MapperFunction<Object, Object> function : functions) {
-                        assert result != null;
-                        final Type type = function.type();
-                        if (type == Type.MAP) {
-                            result = function.apply(result);
-                        } else if (type == Type.FILTER) {
-                            final Object filtered = function.apply(result);
-                            if (filtered == null) {
-                                // The given item was filtered out. Should request the next item.
-                                StreamMessageUtil.closeOrAbort(result, null);
-                                result = null;
-                                break;
-                            }
-                        } else {
-                            // Should never reach here.
-                            throw new Error();
+            Object result = item;
+            try {
+                for (MapperFunction<Object, Object> function : functions) {
+                    assert result != null;
+                    final Type type = function.type();
+                    if (type == Type.MAP) {
+                        result = function.apply(result);
+                    } else if (type == Type.FILTER) {
+                        final Object filtered = function.apply(result);
+                        if (filtered == null) {
+                            // The given item was filtered out. Should request the next item.
+                            StreamMessageUtil.closeOrAbort(result, null);
+                            result = null;
+                            break;
                         }
+                    } else {
+                        // Should never reach here.
+                        throw new Error();
                     }
-                } catch (Throwable ex) {
-                    upstream.cancel();
-                    onError(ex);
-                    return;
                 }
+            } catch (Throwable ex) {
+                upstream.cancel();
+                onError(ex);
+                return;
+            }
 
-                if (result != null) {
-                    @SuppressWarnings("unchecked")
-                    final U cast = (U) result;
-                    downstream.onNext(cast);
-                } else {
-                    upstream.request(1);
-                }
+            if (result != null) {
+                @SuppressWarnings("unchecked")
+                final U cast = (U) result;
+                downstream.onNext(cast);
+            } else {
+                upstream.request(1);
             }
         }
 
@@ -212,9 +213,9 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void request(long n) {
-            final Subscription s = upstream;
-            if (s != null) {
-                s.request(n);
+            final Subscription upstream = this.upstream;
+            if (upstream != null) {
+                upstream.request(n);
             }
         }
 
