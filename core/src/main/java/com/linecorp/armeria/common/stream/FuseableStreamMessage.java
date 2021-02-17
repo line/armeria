@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -33,33 +34,40 @@ import org.reactivestreams.Subscription;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.stream.MapperFunction.Type;
+import com.linecorp.armeria.common.stream.FuseableStreamMessage.MapperFunction.Type;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class MappableStreamMessage<T, U> implements StreamMessage<U> {
+final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
-    static <T> MappableStreamMessage<T, T> of(StreamMessage<? extends T> source,
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<FuseableStreamMessage> subscribedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(FuseableStreamMessage.class, "subscribed");
+
+    static <T> FuseableStreamMessage<T, T> of(StreamMessage<? extends T> source,
                                               Predicate<? super T> predicate) {
-        return new MappableStreamMessage<>(source, MapperFunction.of(predicate));
+        return new FuseableStreamMessage<>(source, MapperFunction.of(predicate));
     }
 
-    static <T, R> MappableStreamMessage<T, R> of(StreamMessage<? extends T> source,
+    static <T, R> FuseableStreamMessage<T, R> of(StreamMessage<? extends T> source,
                                                  Function<? super T, ? extends R> function) {
-        return new MappableStreamMessage<>(source, MapperFunction.of(function));
+        return new FuseableStreamMessage<>(source, MapperFunction.of(function));
     }
 
-    private final StreamMessage<T> source;
+    private final StreamMessage<Object> source;
     private final List<MapperFunction<Object, Object>> functions;
 
+    private volatile int subscribed;
+
     @SuppressWarnings("unchecked")
-    MappableStreamMessage(StreamMessage<? extends T> source, MapperFunction<? super T, ? extends U> function) {
+    FuseableStreamMessage(StreamMessage<? extends T> source, MapperFunction<? super T, ? extends U> function) {
         requireNonNull(source, "source");
         requireNonNull(function, "function");
 
-        if (source instanceof MappableStreamMessage) {
+        if (source instanceof FuseableStreamMessage) {
             @SuppressWarnings("unchecked")
-            final MappableStreamMessage<T, ?> cast = (MappableStreamMessage<T, ?>) source;
+            final FuseableStreamMessage<T, ?> cast = (FuseableStreamMessage<T, ?>) source;
             this.source = cast.source;
 
             // Extract source functions and fuse them with function
@@ -70,13 +78,13 @@ final class MappableStreamMessage<T, U> implements StreamMessage<U> {
                             .add((MapperFunction<Object, Object>) function)
                             .build();
         } else {
-            this.source = (StreamMessage<T>) source;
+            this.source = (StreamMessage<Object>) source;
             functions = ImmutableList.of((MapperFunction<Object, Object>) function);
         }
     }
 
     @VisibleForTesting
-    StreamMessage<T> upstream() {
+    StreamMessage<Object> upstream() {
         return source;
     }
 
@@ -108,8 +116,15 @@ final class MappableStreamMessage<T, U> implements StreamMessage<U> {
     @Override
     public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        // TODO(ikhoon): Handle multiple subscrition
-        source.subscribe(new MappableSubscriber<>(subscriber, functions), executor, options);
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+        if (subscribedUpdater.compareAndSet(this, 0, 1)) {
+            source.subscribe(new FuseableSubscriber<>(subscriber, functions), executor, options);
+        } else {
+            subscriber.onSubscribe(NoopSubscription.get());
+            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+        }
     }
 
     @Override
@@ -122,12 +137,12 @@ final class MappableStreamMessage<T, U> implements StreamMessage<U> {
         source.abort(cause);
     }
 
-    private static final class MappableSubscriber<U> implements Subscriber<Object>, Subscription {
+    private static final class FuseableSubscriber<U> implements Subscriber<Object>, Subscription {
 
         @SuppressWarnings("rawtypes")
-        private static final AtomicReferenceFieldUpdater<MappableSubscriber, Subscription> upstreamUpdater =
+        private static final AtomicReferenceFieldUpdater<FuseableSubscriber, Subscription> upstreamUpdater =
                 AtomicReferenceFieldUpdater
-                        .newUpdater(MappableSubscriber.class, Subscription.class, "upstream");
+                        .newUpdater(FuseableSubscriber.class, Subscription.class, "upstream");
 
         private final Subscriber<? super U> downstream;
         private final List<MapperFunction<Object, Object>> functions;
@@ -135,7 +150,7 @@ final class MappableStreamMessage<T, U> implements StreamMessage<U> {
         @Nullable
         private volatile Subscription upstream;
 
-        MappableSubscriber(Subscriber<? super U> downstream, List<MapperFunction<Object, Object>> functions) {
+        FuseableSubscriber(Subscriber<? super U> downstream, List<MapperFunction<Object, Object>> functions) {
             requireNonNull(downstream, "downstream");
             this.downstream = downstream;
             this.functions = functions;
@@ -167,9 +182,11 @@ final class MappableStreamMessage<T, U> implements StreamMessage<U> {
                         if (type == Type.MAP) {
                             result = function.apply(result);
                         } else if (type == Type.FILTER) {
-                            result = function.apply(result);
-                            if (result == null) {
+                            final Object filtered = function.apply(result);
+                            if (filtered == null) {
                                 // The given item was filtered out. Should request the next item.
+                                StreamMessageUtil.closeOrAbort(result,null);
+                                result = null;
                                 break;
                             }
                         } else {
@@ -225,5 +242,80 @@ final class MappableStreamMessage<T, U> implements StreamMessage<U> {
                 s.cancel();
             }
         }
+    }
+
+    /**
+     * Represents either a {@link Function} or a {@link Predicate} depending on {@link #type()}.
+     */
+    interface MapperFunction<T, R> extends Function<T, R> {
+
+        /**
+         * Creates a new {@link MapperFunction} from the specified {@link Function}.
+         */
+        static <T, R> MapperFunction<T, R> of(Function<? super T, ? extends R> function) {
+            requireNonNull(function, "function");
+            return new MapperFunction<T, R>() {
+
+                @Override
+                public R apply(T o) {
+                    final R result = function.apply(o);
+                    requireNonNull(result, "function.apply() returned null");
+                    return result;
+                }
+
+                @Override
+                public Type type() {
+                    return Type.MAP;
+                }
+            };
+        }
+
+        /**
+         * Creates a new {@link MapperFunction} from the specified {@link Predicate}.
+         */
+        static <T> MapperFunction<T, T> of(Predicate<? super T> predicate) {
+            requireNonNull(predicate, "predicate");
+
+            return new MapperFunction<T, T>() {
+
+                @Override
+                public T apply(T o) {
+                    final boolean result = predicate.test(o);
+                    if (result) {
+                        return o;
+                    } else {
+                        return null;
+                    }
+                }
+
+                @Override
+                public Type type() {
+                    return Type.FILTER;
+                }
+            };
+        }
+
+        /**
+         * Applies this function to the given argument.
+         *
+         * <li>
+         *   <ul>{@link Type#FILTER} - Returns the given argument itself if the argument passes the filter,
+         *                             or null otherwise.
+         *   <ul>{@link Type#MAP} - the give argument is transformed to another. {@code null} is not allowed</ul>
+         * </li>
+         */
+        @Nullable
+        @Override
+        R apply(T t);
+
+        enum Type {
+            FILTER,
+            MAP
+        }
+
+        /**
+         * Returns the {@link Type} of this {@link MapperFunction}.
+         */
+        Type type();
     }
 }

@@ -355,17 +355,24 @@ public interface StreamMessage<T> extends Publisher<T> {
     void abort(Throwable cause);
 
     /**
-     * Filters values emitted by the current {@code StreamMessage}.
+     * Filters values emitted by the this {@link StreamMessage}.
      * If the {@link Predicate} test succeeds, the value is emitted.
-     * If the {@link Predicate} test fails, the value is ignored and a request of {@code 1} is made upstream.
+     * If the {@link Predicate} test fails, the value is ignored and a request of {@code 1} is made to upstream.
      */
     default StreamMessage<T> filter(Predicate<? super T> predicate) {
         requireNonNull(predicate, "predicate");
-        return MappableStreamMessage.of(this, predicate);
+        return FuseableStreamMessage.of(this, predicate);
     }
 
+    /**
+     * Transforms the items emitted by this {@link StreamMessage} by applying the specified {@link Function}.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value.
+     */
     default <U> StreamMessage<U> map(Function<? super T, ? extends U> function) {
         requireNonNull(function, "function");
-        return MappableStreamMessage.of(this, function);
+        return FuseableStreamMessage.of(this, function);
     }
 }
