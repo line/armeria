@@ -152,6 +152,12 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Creates a new {@link StreamMessage} that streams the specified {@link File}.
      * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to read
      * the {@link File}.
+     * If the size of a {@link File} is less then {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE},
+     * the returned {@link StreamMessage} will emit only one {@link HttpData}.
+     * If the size of a {@link File} is bigger then {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE},
+     * the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE} except for the last one.
+     *
      */
     static StreamMessage<HttpData> of(File file) {
         requireNonNull(file, "file");
@@ -162,6 +168,11 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
      * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to read
      * the {@link Path}.
+     * If the size of a {@link Path} is less then {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE},
+     * the returned {@link StreamMessage} will emit only one {@link HttpData}.
+     * If the size of a {@link Path} is bigger then {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE},
+     * the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE} except for the last one.
      */
     static StreamMessage<HttpData> of(Path path) {
         requireNonNull(path, "path");
@@ -171,6 +182,12 @@ public interface StreamMessage<T> extends Publisher<T> {
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
      * The specified {@code bufferSize} is used to read the {@link Path}.
+     *
+     * If the size of a {@link Path} is less then {@code bufferSize},
+     * the returned {@link StreamMessage} will emit only one {@link HttpData}.
+     * If the size of a {@link Path} is bigger then {@code bufferSize},
+     * the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * {@code bufferSize} except for the last one.
      *
      * @param path the path of the file
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers

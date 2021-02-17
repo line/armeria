@@ -26,22 +26,24 @@ import java.nio.channels.CompletionHandler;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 final class PathStreamMessage implements StreamMessage<HttpData> {
@@ -121,18 +123,24 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         }
         subscribed = true;
 
+        final ExecutorService blockingExecutor =
+                ServiceRequestContext.mapCurrent(ServiceRequestContext::blockingTaskExecutor, null);
         final AsynchronousFileChannel fileChannel;
         try {
-            fileChannel = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
+            if (blockingExecutor != null) {
+                fileChannel = AsynchronousFileChannel.open(path, ImmutableSet.of(StandardOpenOption.READ),
+                                                           blockingExecutor);
+            } else {
+                fileChannel = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
+            }
             if (fileChannel.size() == 0) {
                 subscriber.onSubscribe(NoopSubscription.get());
 
                 if (completionFuture.isCompletedExceptionally()) {
-                    try {
-                        completionFuture.get();
-                    } catch (Exception ex) {
-                       subscriber.onError(Exceptions.peel(ex));
-                    }
+                    completionFuture.handle((unused, cause) -> {
+                        subscriber.onError(Exceptions.peel(cause));
+                        return null;
+                    });
                 } else {
                     subscriber.onComplete();
                     completionFuture.complete(null);
@@ -265,7 +273,7 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         public void completed(Integer result, ByteBuf byteBuf) {
             executor.execute(() -> {
                 if (closed) {
-                    ReferenceCountUtil.release(byteBuf);
+                    byteBuf.release();
                     maybeCloseFileChannel();
                 } else {
                     if (result > -1) {
@@ -275,6 +283,7 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
                         reading = false;
                         read();
                     } else {
+                        byteBuf.release();
                         maybeCloseFileChannel();
                         close0(null);
                     }
@@ -285,7 +294,7 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         @Override
         public void failed(Throwable ex, ByteBuf byteBuf) {
             executor.execute(() -> {
-                ReferenceCountUtil.release(byteBuf);
+                byteBuf.release();
                 maybeCloseFileChannel();
                 close0(ex);
             });
