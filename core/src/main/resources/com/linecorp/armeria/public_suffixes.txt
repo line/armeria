@@ -607,6 +607,7 @@ avoues.fr
 aw
 awaji.hyogo.jp
 aws
+awsglobalaccelerator.com
 awsmppl.com
 ax
 axa
@@ -1475,6 +1476,7 @@ co.zw
 coach
 coal.museum
 coastaldefence.museum
+code.run
 codes
 codespot.com
 cody.museum
@@ -2299,6 +2301,7 @@ eu.meteorapp.com
 eu.org
 eu.platform.sh
 eun.eg
+eurodir.ru
 eurovision
 eus
 evenassi.no
@@ -4772,9 +4775,11 @@ mc
 mc.ax
 mc.eu.org
 mc.it
+mcdir.me
 mcdir.ru
 mckinsey
 mcpe.me
+mcpre.ru
 md
 md.ci
 md.us
@@ -5730,6 +5735,7 @@ nore-og-uvdal.no
 norfolk.museum
 north-kazakhstan.su
 north.museum
+northflank.app
 northwesternmutual
 norton
 nose.osaka.jp

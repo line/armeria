@@ -1,0 +1,16 @@
+plugins {
+    id 'application'
+}
+
+dependencies {
+    implementation project(':core')
+    runtimeOnly 'org.slf4j:slf4j-simple'
+
+    testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation project(':junit5')
+}
+
+application {
+    mainClassName = 'example.armeria.server.blog.Main'
+}
