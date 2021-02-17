@@ -61,7 +61,8 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
     private volatile int subscribed;
 
     @SuppressWarnings("unchecked")
-    FuseableStreamMessage(StreamMessage<? extends T> source, MapperFunction<? super T, ? extends U> function) {
+    private FuseableStreamMessage(StreamMessage<? extends T> source,
+                                  MapperFunction<? super T, ? extends U> function) {
         requireNonNull(source, "source");
         requireNonNull(function, "function");
 
@@ -134,6 +135,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
         source.abort(cause);
     }
 
@@ -185,7 +187,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                             final Object filtered = function.apply(result);
                             if (filtered == null) {
                                 // The given item was filtered out. Should request the next item.
-                                StreamMessageUtil.closeOrAbort(result,null);
+                                StreamMessageUtil.closeOrAbort(result, null);
                                 result = null;
                                 break;
                             }
@@ -236,10 +238,10 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void cancel() {
-            final Subscription s = upstream;
-            upstream = null;
-            if (s != null) {
-                s.cancel();
+            final Subscription upstream = this.upstream;
+            this.upstream = null;
+            if (upstream != null) {
+                upstream.cancel();
             }
         }
     }
@@ -300,8 +302,9 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
          *
          * <li>
          *   <ul>{@link Type#FILTER} - Returns the given argument itself if the argument passes the filter,
-         *                             or null otherwise.
-         *   <ul>{@link Type#MAP} - the give argument is transformed to another. {@code null} is not allowed</ul>
+         *                             or {@code null} otherwise.</ul>
+         *   <ul>{@link Type#MAP} - Returns transformed value from the given arguemtn.
+         *                          {@code null} is not allowed to return.</ul>
          * </li>
          */
         @Nullable

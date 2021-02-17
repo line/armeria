@@ -93,6 +93,7 @@ class FuseableStreamMessageTest {
         final StreamMessage<HttpData> filtered =
                 StreamMessage.of(source)
                              .filter(data -> data.byteBuf().readInt() > 3);
+
         final AtomicBoolean completed = new AtomicBoolean();
         filtered.subscribe(new Subscriber<HttpData>() {
             @Override
@@ -107,9 +108,7 @@ class FuseableStreamMessageTest {
             }
 
             @Override
-            public void onError(Throwable t) {
-
-            }
+            public void onError(Throwable t) {}
 
             @Override
             public void onComplete() {
