@@ -4,7 +4,6 @@ environment:
   matrix:
     - PROFILE: 'java14'
       APPVEYOR_BUILD_WORKER_IMAGE: 'Ubuntu'
-      APPVEYOR_BUILD_WORKER_CLOUD: 'Ubuntu'
 matrix:
   fast_finish: false
 
