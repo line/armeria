@@ -59,8 +59,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(function, "function");
 
         if (source instanceof FuseableStreamMessage) {
-            @SuppressWarnings("unchecked")
-            final FuseableStreamMessage<T, ?> cast = (FuseableStreamMessage<T, ?>) source;
+            final FuseableStreamMessage<?, T> cast = (FuseableStreamMessage<?, T>) source;
             this.source = cast.source;
 
             // Extract source functions and fuse them with function
