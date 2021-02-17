@@ -3,8 +3,6 @@ environment:
   GRADLE_CLI_OPTS: '--no-daemon --console=rich --stacktrace'
   matrix:
     - PROFILE: 'java14'
-      APPVEYOR_BUILD_WORKER_IMAGE: 'bionic'
-      APPVEYOR_BUILD_WORKER_CLOUD: 'verda'
 matrix:
   fast_finish: false
 
