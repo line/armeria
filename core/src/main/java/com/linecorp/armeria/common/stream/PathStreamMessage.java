@@ -25,6 +25,7 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 
@@ -50,10 +51,14 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
 
     static final int DEFAULT_FILE_BUFFER_SIZE = 4096;
 
+    private static final Set<StandardOpenOption> READ_OPERATION = ImmutableSet.of(StandardOpenOption.READ);
+
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     private final Path path;
     private final ByteBufAllocator alloc;
+    @Nullable
+    private final ExecutorService blockingTaskExecutor;
     private final int bufferSize;
 
     private boolean subscribed;
@@ -61,9 +66,11 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
     @Nullable
     private volatile PathSubscription pathSubscription;
 
-    PathStreamMessage(Path path, ByteBufAllocator alloc, int bufferSize) {
+    PathStreamMessage(Path path, ByteBufAllocator alloc,
+                      @Nullable ExecutorService blockingTaskExecutor, int bufferSize) {
         this.path = requireNonNull(path, "path");
         this.alloc = requireNonNull(alloc, "alloc");
+        this.blockingTaskExecutor = blockingTaskExecutor;
         this.bufferSize = bufferSize;
     }
 
@@ -123,16 +130,17 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         }
         subscribed = true;
 
-        final ExecutorService blockingExecutor =
-                ServiceRequestContext.mapCurrent(ServiceRequestContext::blockingTaskExecutor, null);
+        final ExecutorService blockingTaskExecutor;
+        if (this.blockingTaskExecutor != null) {
+            blockingTaskExecutor = this.blockingTaskExecutor;
+        } else {
+            blockingTaskExecutor =
+                    ServiceRequestContext.mapCurrent(ServiceRequestContext::blockingTaskExecutor, null);
+        }
         final AsynchronousFileChannel fileChannel;
         try {
-            if (blockingExecutor != null) {
-                fileChannel = AsynchronousFileChannel.open(path, ImmutableSet.of(StandardOpenOption.READ),
-                                                           blockingExecutor);
-            } else {
-                fileChannel = AsynchronousFileChannel.open(path, StandardOpenOption.READ);
-            }
+            // The default thread pool is used if blockingTaskExecutor is null
+            fileChannel = AsynchronousFileChannel.open(path, READ_OPERATION, blockingTaskExecutor);
             if (fileChannel.size() == 0) {
                 subscriber.onSubscribe(NoopSubscription.get());
 

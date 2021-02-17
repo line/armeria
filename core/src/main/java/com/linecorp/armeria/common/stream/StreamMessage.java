@@ -25,6 +25,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -199,6 +200,11 @@ public interface StreamMessage<T> extends Publisher<T> {
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
      * The specified {@code bufferSize} is used to read the {@link Path}.
+     * If the size of a {@link Path} is less then {@code bufferSize},
+     * the returned {@link StreamMessage} will emit only one {@link HttpData}.
+     * If the size of a {@link Path} is bigger then {@code bufferSize},
+     * the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * {@code bufferSize} except for the last one.
      *
      * @param path the path of the file
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
@@ -209,6 +215,29 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(alloc, "alloc");
         checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
         return new PathStreamMessage(path, alloc, bufferSize);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
+     * The specified {@code bufferSize} is used to read the {@link Path}.
+     * The specified {@link ExecutorService} is used to perform blocking IO read.
+     *
+     * <p>If the size of a {@link Path} is less then {@code bufferSize},
+     * the returned {@link StreamMessage} will emit only one {@link HttpData}.
+     * If the size of a {@link Path} is bigger then {@code bufferSize},
+     * the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * {@code bufferSize} except for the last one.
+     *
+     * @param path the path of the file
+     * @param executor the {@link ExecutorService} which performs blocking IO read
+     * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
+     * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     */
+    static StreamMessage<HttpData> of(Path path, ExecutorService executor, ByteBufAllocator alloc, int bufferSize) {
+        requireNonNull(path, "path");
+        requireNonNull(alloc, "alloc");
+        checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
+        return new PathStreamMessage(path, alloc, executor, bufferSize);
     }
 
     /**
