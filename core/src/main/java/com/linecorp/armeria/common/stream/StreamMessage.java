@@ -355,7 +355,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     void abort(Throwable cause);
 
     /**
-     * Filters values emitted by the this {@link StreamMessage}.
+     * Filters values emitted by this {@link StreamMessage}.
      * If the {@link Predicate} test succeeds, the value is emitted.
      * If the {@link Predicate} test fails, the value is ignored and a request of {@code 1} is made to upstream.
      */

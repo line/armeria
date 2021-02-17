@@ -48,7 +48,7 @@ class FuseableStreamMessageTest {
 
         StepVerifier.create(biggerThan4)
                     .thenRequest(1)
-                    .expectNext(4)
+                    .expectNext(6)
                     .thenRequest(1)
                     .expectNext(8)
                     .verifyComplete();
@@ -72,7 +72,7 @@ class FuseableStreamMessageTest {
     void multipleMap() {
         final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5, 6);
         final StreamMessage<Boolean> result =
-                streamMessage.map(x -> x - 1)  // Integer
+                streamMessage.map(x -> x - 1)  // Integer => Integer
                              .map(Objects::toString) // Integer => String
                              .map(str -> Integer.parseInt(str) % 2 == 0); // String => Boolean
 

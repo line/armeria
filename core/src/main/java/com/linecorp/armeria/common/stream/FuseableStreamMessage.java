@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -35,15 +34,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.stream.FuseableStreamMessage.MapperFunction.Type;
-import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
 final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicIntegerFieldUpdater<FuseableStreamMessage> subscribedUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(FuseableStreamMessage.class, "subscribed");
 
     static <T> FuseableStreamMessage<T, T> of(StreamMessage<? extends T> source,
                                               Predicate<? super T> predicate) {
@@ -57,8 +51,6 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
     private final StreamMessage<Object> source;
     private final List<MapperFunction<Object, Object>> functions;
-
-    private volatile int subscribed;
 
     @SuppressWarnings("unchecked")
     private FuseableStreamMessage(StreamMessage<? extends T> source,
@@ -120,12 +112,8 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
-        if (subscribedUpdater.compareAndSet(this, 0, 1)) {
-            source.subscribe(new FuseableSubscriber<>(subscriber, functions), executor, options);
-        } else {
-            subscriber.onSubscribe(NoopSubscription.get());
-            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
-        }
+
+        source.subscribe(new FuseableSubscriber<>(subscriber, functions), executor, options);
     }
 
     @Override
@@ -214,18 +202,12 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onError(Throwable throwable) {
-            if (upstream != null) {
-                upstream = null;
-                downstream.onError(throwable);
-            }
+            downstream.onError(throwable);
         }
 
         @Override
         public void onComplete() {
-            if (upstream != null) {
-                upstream = null;
-                downstream.onComplete();
-            }
+            downstream.onComplete();
         }
 
         @Override
@@ -303,7 +285,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
          * <li>
          *   <ul>{@link Type#FILTER} - Returns the given argument itself if the argument passes the filter,
          *                             or {@code null} otherwise.</ul>
-         *   <ul>{@link Type#MAP} - Returns transformed value from the given arguemtn.
+         *   <ul>{@link Type#MAP} - Returns transformed value from the given argument.
          *                          {@code null} is not allowed to return.</ul>
          * </li>
          */
