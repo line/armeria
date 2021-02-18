@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestOptions;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 
 /**
@@ -31,12 +32,21 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 public class DefaultHttpRequest extends DefaultStreamMessage<HttpObject> implements HttpRequestWriter {
 
     private final RequestHeaders headers;
+    private final RequestOptions options;
 
     /**
      * Creates a new instance with the specified headers.
      */
     public DefaultHttpRequest(RequestHeaders headers) {
+        this(headers, RequestOptions.of());
+    }
+
+    /**
+     * Creates a new instance with the specified headers and options.
+     */
+    public DefaultHttpRequest(RequestHeaders headers, RequestOptions options) {
         this.headers = requireNonNull(headers, "headers");
+        this.options = requireNonNull(options, "options");
     }
 
     @Override
@@ -45,8 +55,15 @@ public class DefaultHttpRequest extends DefaultStreamMessage<HttpObject> impleme
     }
 
     @Override
+    public RequestOptions options() {
+        return options;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .addValue(headers()).toString();
+                          .addValue(headers())
+                          .addValue(options())
+                          .toString();
     }
 }

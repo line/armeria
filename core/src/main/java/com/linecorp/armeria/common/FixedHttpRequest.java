@@ -33,14 +33,25 @@ final class FixedHttpRequest {
             extends EmptyFixedStreamMessage<HttpObject> implements HttpRequest {
 
         private final RequestHeaders headers;
+        private final RequestOptions options;
+
+        EmptyFixedHttpRequest(RequestHeaders headers, RequestOptions options) {
+            this.headers = headers;
+            this.options = options;
+        }
 
         EmptyFixedHttpRequest(RequestHeaders headers) {
-            this.headers = headers;
+            this(headers, RequestOptions.of());
         }
 
         @Override
         public RequestHeaders headers() {
             return headers;
+        }
+
+        @Override
+        public RequestOptions options() {
+            return options;
         }
     }
 
@@ -48,15 +59,26 @@ final class FixedHttpRequest {
             extends OneElementFixedStreamMessage<HttpObject> implements HttpRequest {
 
         private final RequestHeaders headers;
+        private final RequestOptions options;
 
-        OneElementFixedHttpRequest(RequestHeaders headers, HttpObject obj) {
+        OneElementFixedHttpRequest(RequestHeaders headers, RequestOptions options, HttpObject obj) {
             super(obj);
             this.headers = headers;
+            this.options = options;
+        }
+
+        OneElementFixedHttpRequest(RequestHeaders headers, HttpObject obj) {
+            this(headers, RequestOptions.of(), obj);
         }
 
         @Override
         public RequestHeaders headers() {
             return headers;
+        }
+
+        @Override
+        public RequestOptions options() {
+            return options;
         }
     }
 
@@ -64,16 +86,27 @@ final class FixedHttpRequest {
             extends TwoElementFixedStreamMessage<HttpObject> implements HttpRequest {
 
         private final RequestHeaders headers;
+        private final RequestOptions options;
 
         TwoElementFixedHttpRequest(
-                RequestHeaders headers, HttpObject obj1, HttpObject obj2) {
+                RequestHeaders headers, RequestOptions options, HttpObject obj1, HttpObject obj2) {
             super(obj1, obj2);
             this.headers = headers;
+            this.options = options;
+        }
+
+        TwoElementFixedHttpRequest(RequestHeaders headers, HttpObject obj1, HttpObject obj2) {
+            this(headers, RequestOptions.of(), obj1, obj2);
         }
 
         @Override
         public RequestHeaders headers() {
             return headers;
+        }
+
+        @Override
+        public RequestOptions options() {
+            return options;
         }
     }
 
@@ -81,15 +114,26 @@ final class FixedHttpRequest {
             extends RegularFixedStreamMessage<HttpObject> implements HttpRequest {
 
         private final RequestHeaders headers;
+        private final RequestOptions options;
 
-        RegularFixedHttpRequest(RequestHeaders headers, HttpObject... objs) {
+        RegularFixedHttpRequest(RequestHeaders headers, RequestOptions options, HttpObject... objs) {
             super(objs);
             this.headers = headers;
+            this.options = options;
+        }
+
+        RegularFixedHttpRequest(RequestHeaders headers, HttpObject... objs) {
+            this(headers, RequestOptions.of(), objs);
         }
 
         @Override
         public RequestHeaders headers() {
             return headers;
+        }
+
+        @Override
+        public RequestOptions options() {
+            return options;
         }
     }
 

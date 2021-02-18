@@ -18,6 +18,7 @@
 *.ck
 *.cloud.metacentrum.cz
 *.cns.joyent.com
+*.code.run
 *.compute-1.amazonaws.com
 *.compute.amazonaws.com
 *.compute.amazonaws.com.cn
@@ -54,6 +55,7 @@
 *.nagoya.jp
 *.nodebalancer.linode.com
 *.nom.br
+*.northflank.app
 *.np
 *.oci.customer-oci.com
 *.ocp.customer-oci.com
@@ -607,6 +609,7 @@ avoues.fr
 aw
 awaji.hyogo.jp
 aws
+awsglobalaccelerator.com
 awsmppl.com
 ax
 axa
@@ -2299,6 +2302,7 @@ eu.meteorapp.com
 eu.org
 eu.platform.sh
 eun.eg
+eurodir.ru
 eurovision
 eus
 evenassi.no
@@ -4772,9 +4776,11 @@ mc
 mc.ax
 mc.eu.org
 mc.it
+mcdir.me
 mcdir.ru
 mckinsey
 mcpe.me
+mcpre.ru
 md
 md.ci
 md.us

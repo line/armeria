@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import java.time.Duration;
 import java.util.Map;
 
 import com.google.errorprone.annotations.FormatMethod;
@@ -165,5 +166,15 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     @Override
     public HttpRequestBuilder cookies(Iterable<? extends Cookie> cookies) {
         return (HttpRequestBuilder) super.cookies(cookies);
+    }
+
+    @Override
+    public HttpRequestBuilder responseTimeout(Duration responseTimeout) {
+        return (HttpRequestBuilder) super.responseTimeout(responseTimeout);
+    }
+
+    @Override
+    public HttpRequestBuilder responseTimeoutMillis(long responseTimeoutMillis) {
+        return (HttpRequestBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
     }
 }

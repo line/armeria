@@ -28,7 +28,7 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 public abstract class FilteredHttpRequest
         extends FilteredStreamMessage<HttpObject, HttpObject> implements HttpRequest {
 
-    private final RequestHeaders headers;
+    private final HttpRequest delegate;
 
     /**
      * Creates a new {@link FilteredHttpRequest} that filters objects published by {@code delegate}
@@ -50,11 +50,16 @@ public abstract class FilteredHttpRequest
     @UnstableApi
     protected FilteredHttpRequest(HttpRequest delegate, boolean withPooledObjects) {
         super(delegate, withPooledObjects);
-        headers = delegate.headers();
+        this.delegate = delegate;
     }
 
     @Override
     public RequestHeaders headers() {
-        return headers;
+        return delegate.headers();
+    }
+
+    @Override
+    public RequestOptions options() {
+        return delegate.options();
     }
 }

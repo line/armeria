@@ -34,9 +34,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestBuilder;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
@@ -194,6 +197,35 @@ class HttpClientResponseTimeoutTest {
 
             assertThat(cctx.isCancelled()).isTrue();
             assertThat(cctx.cancellationCause()).isInstanceOf(IllegalStateException.class);
+        }
+    }
+
+    @CsvSource({
+            "2000, 0, 2000",  // disable the response timeout of a client
+            "-1, 2000, 2000", // disable the response timeout of a request
+    })
+    @ParameterizedTest
+    void timeoutWithRequestOption(long timeoutMillisForRequest, long timeoutMillisForClient,
+                                  long expectTimeoutMillis) {
+        final HttpRequestBuilder builder = HttpRequest.builder()
+                                                      .get("/no-timeout");
+
+        if (timeoutMillisForRequest >= 0) {
+            builder.responseTimeoutMillis(timeoutMillisForRequest);
+        }
+        final HttpRequest req = builder.build();
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .responseTimeoutMillis(timeoutMillisForClient)
+                                          .build();
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final CompletableFuture<AggregatedHttpResponse> response = client.execute(req).aggregate();
+            final ClientRequestContext ctx = captor.get();
+            assertThat(ctx.responseTimeoutMillis()).isEqualTo(expectTimeoutMillis);
+            await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
+                assertThatThrownBy(response::join)
+                        .isInstanceOf(CompletionException.class)
+                        .hasCauseInstanceOf(ResponseTimeoutException.class);
+            });
         }
     }
 

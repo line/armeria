@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import java.time.Duration;
 import java.util.Map;
 
 import com.google.errorprone.annotations.FormatMethod;
@@ -177,5 +178,15 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     @Override
     public WebClientRequestPreparation cookies(Iterable<? extends Cookie> cookies) {
         return (WebClientRequestPreparation) super.cookies(cookies);
+    }
+
+    @Override
+    public WebClientRequestPreparation responseTimeout(Duration responseTimeout) {
+        return (WebClientRequestPreparation) super.responseTimeout(responseTimeout);
+    }
+
+    @Override
+    public WebClientRequestPreparation responseTimeoutMillis(long responseTimeoutMillis) {
+        return (WebClientRequestPreparation) super.responseTimeoutMillis(responseTimeoutMillis);
     }
 }

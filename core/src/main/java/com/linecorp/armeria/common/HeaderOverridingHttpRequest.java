@@ -115,6 +115,11 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
+    public RequestOptions options() {
+        return delegate.options();
+    }
+
+    @Override
     public URI uri() {
         return headers.uri();
     }

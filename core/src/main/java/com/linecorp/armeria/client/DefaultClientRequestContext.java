@@ -192,8 +192,16 @@ public final class DefaultClientRequestContext
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
         if (responseCancellationScheduler == null) {
+            long responseTimeoutMillis = options.responseTimeoutMillis();
+            if (req != null) {
+                final long responseTimeoutForRequest = req.options().responseTimeoutMillis();
+                if (responseTimeoutForRequest > -1) {
+                    // Use the responseTimeout of a HttpRequest if specified.
+                    responseTimeoutMillis = responseTimeoutForRequest;
+                }
+            }
             this.responseCancellationScheduler =
-                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
+                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }

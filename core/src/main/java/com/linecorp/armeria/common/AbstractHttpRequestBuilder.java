@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,6 +61,7 @@ public abstract class AbstractHttpRequestBuilder {
     @Nullable
     private String path;
     private boolean disablePathParams;
+    private long responseTimeoutMillis = -1;
 
     /**
      * Shortcut to set GET method and path.
@@ -354,23 +357,48 @@ public abstract class AbstractHttpRequestBuilder {
     }
 
     /**
+     * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
+     * the specified {@link Duration} since the {@link Response} started or {@link Request} was fully sent.
+     * {@link Duration#ZERO} disable the limit.
+     */
+    public AbstractHttpRequestBuilder responseTimeout(Duration timeout) {
+        responseTimeoutMillis(requireNonNull(timeout, "timeout").toMillis());
+        return this;
+    }
+
+    /**
+     * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
+     * the specified {@code responseTimeoutMillis} since the {@link Response} started or {@link Request} was
+     * fully sent.
+     * {@code 0} disable the limit.
+     */
+    public AbstractHttpRequestBuilder responseTimeoutMillis(long responseTimeoutMillis) {
+        checkArgument(responseTimeoutMillis >= 0, "responseTimeoutMillis: %s (expected: >= 0)",
+                      responseTimeoutMillis);
+        this.responseTimeoutMillis = responseTimeoutMillis;
+        return this;
+    }
+
+    /**
      * Creates a new {@link HttpRequest}.
      */
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
+        final RequestOptions requestOptions = requestOptions();
+
         if (content == null || content.isEmpty()) {
             if (content != null) {
                 content.close();
             }
             if (httpTrailers == null) {
-                return new EmptyFixedHttpRequest(requestHeaders);
+                return new EmptyFixedHttpRequest(requestHeaders, requestOptions);
             }
-            return new OneElementFixedHttpRequest(requestHeaders, httpTrailers.build());
+            return new OneElementFixedHttpRequest(requestHeaders, requestOptions, httpTrailers.build());
         }
         if (httpTrailers == null) {
-            return new OneElementFixedHttpRequest(requestHeaders, content);
+            return new OneElementFixedHttpRequest(requestHeaders, requestOptions, content);
         }
-        return new TwoElementFixedHttpRequest(requestHeaders, content, httpTrailers.build());
+        return new TwoElementFixedHttpRequest(requestHeaders, requestOptions, content, httpTrailers.build());
     }
 
     private RequestHeaders requestHeaders() {
@@ -384,6 +412,14 @@ public abstract class AbstractHttpRequestBuilder {
             requestHeadersBuilder.setInt(CONTENT_LENGTH, content.length());
         }
         return requestHeadersBuilder.build();
+    }
+
+    private RequestOptions requestOptions() {
+        if (responseTimeoutMillis == -1) {
+            return RequestOptions.of();
+        } else {
+            return new DefaultRequestOptions(responseTimeoutMillis);
+        }
     }
 
     private String buildPath() {

@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
@@ -34,6 +36,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestOptions;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -76,6 +79,11 @@ class Http1ConnectionReuseTest {
             @Override
             public RequestHeaders headers() {
                 return RequestHeaders.of(HttpMethod.GET, "/");
+            }
+
+            @Override
+            public RequestOptions options() {
+                return RequestOptions.of();
             }
 
             @Override
