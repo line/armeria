@@ -21,7 +21,7 @@ import static com.linecorp.armeria.common.DefaultRequestOptions.EMPTY;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A {@link RequestOptions} for {@link HttpRequest}.
+ * A {@link RequestOptions} for an {@link HttpRequest}.
  */
 @SuppressWarnings("InterfaceMayBeAnnotatedFunctional")
 @UnstableApi

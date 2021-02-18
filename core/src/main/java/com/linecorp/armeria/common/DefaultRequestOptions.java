@@ -22,13 +22,7 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
-
-/**
- * A set of {@link RequestOptions}s and their respective values.
- */
-@UnstableApi
-public final class DefaultRequestOptions implements RequestOptions {
+final class DefaultRequestOptions implements RequestOptions {
 
     static final DefaultRequestOptions EMPTY = new DefaultRequestOptions(-1);
 

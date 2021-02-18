@@ -288,8 +288,8 @@ public interface HttpRequest extends Request, HttpMessage {
 
     /**
      * Returns the options of this request.
-     * Note that if this request is a server-side request,
-     * an {@linkplain RequestOptions#of()} empty option} is always returned.
+     * Note that an {@linkplain RequestOptions#of()} empty option} is always returned,
+     * if this request is a server-side request.
      */
     RequestOptions options();
 
