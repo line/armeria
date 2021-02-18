@@ -365,7 +365,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Transforms the items emitted by this {@link StreamMessage} by applying the specified {@link Function}.
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified {@link Function}.
      * As per
      * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
      * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return

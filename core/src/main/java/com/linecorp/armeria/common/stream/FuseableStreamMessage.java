@@ -65,7 +65,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             final FuseableStreamMessage<?, T> cast = (FuseableStreamMessage<?, T>) source;
             this.source = cast.source;
 
-            // Extract source functions and fuse them with function
+            // Extract source functions and fuse them with the function
             final List<MapperFunction<Object, Object>> functions = cast.functions;
             this.functions =
                     ImmutableList.<MapperFunction<Object, Object>>builderWithExpectedSize(functions.size() + 1)
@@ -288,7 +288,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
          * <li>
          *   <ul>{@link Type#FILTER} - Returns the given argument itself if the argument passes the filter,
          *                             or {@code null} otherwise.</ul>
-         *   <ul>{@link Type#MAP} - Returns transformed value from the given argument.
+         *   <ul>{@link Type#MAP} - Returns a transformed value from the given argument.
          *                          {@code null} is not allowed to return.</ul>
          * </li>
          */
