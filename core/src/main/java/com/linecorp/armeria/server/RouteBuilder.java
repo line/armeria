@@ -76,6 +76,8 @@ public final class RouteBuilder {
      */
     private final boolean isFallback;
 
+    private boolean setDeferredException = true;
+
     RouteBuilder() {
         this(false);
     }
@@ -427,6 +429,15 @@ public final class RouteBuilder {
     }
 
     /**
+     * Sets whether the {@link Route} would set a deferred exception to a {@link RoutingContext} instance.
+     * Currently, it is used only when configuring {@link Route}s to fallback services.
+     */
+    RouteBuilder setDeferredExceptionToRoutingContext(boolean setDeferredException) {
+        this.setDeferredException = setDeferredException;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Route} based on the properties of this builder.
      */
     public Route build() {
@@ -437,12 +448,13 @@ public final class RouteBuilder {
         }
         final Set<HttpMethod> pathMethods = methods.isEmpty() ? HttpMethod.knownMethods() : methods;
         return new DefaultRoute(pathMapping, pathMethods, consumes, produces,
-                                paramPredicates, headerPredicates, isFallback);
+                                paramPredicates, headerPredicates, isFallback, setDeferredException);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(pathMapping, methods, consumes, produces);
+        return Objects.hash(pathMapping, methods, consumes, produces,
+                            paramPredicates, headerPredicates, isFallback, setDeferredException);
     }
 
     @Override
@@ -461,7 +473,9 @@ public final class RouteBuilder {
                consumes.equals(that.consumes) &&
                produces.equals(that.produces) &&
                paramPredicates.equals(that.paramPredicates) &&
-               headerPredicates.equals(that.headerPredicates);
+               headerPredicates.equals(that.headerPredicates) &&
+               isFallback == that.isFallback &&
+               setDeferredException == that.setDeferredException;
     }
 
     @Override
@@ -473,6 +487,8 @@ public final class RouteBuilder {
                           .add("produces", produces)
                           .add("paramPredicates", paramPredicates)
                           .add("headerPredicates", headerPredicates)
+                          .add("isFallback", isFallback)
+                          .add("setDeferredException", setDeferredException)
                           .toString();
     }
 

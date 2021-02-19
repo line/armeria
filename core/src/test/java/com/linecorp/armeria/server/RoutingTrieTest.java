@@ -238,7 +238,7 @@ class RoutingTrieTest {
         final Node<?> found = trie.findNode(targetPath);
         assertThat(found).isNotNull();
         assertThat(found.parent()).isNotNull();
-        assertThat(found.parent()).isSameAs(trie.findNode(parentPath, true));
+        assertThat(found.parent()).isSameAs(trie.findNode(parentPath, true, node -> node));
         testValues(found, values);
         return found;
     }
@@ -248,7 +248,7 @@ class RoutingTrieTest {
         assertThat(found).isNotNull();
         assertThat(found.values).isEmpty();
         assertThat(found.parent()).isNotNull();
-        assertThat(found.parent()).isSameAs(trie.findNode(parentPath, true));
+        assertThat(found.parent()).isSameAs(trie.findNode(parentPath, true, node -> node));
         return found;
     }
 

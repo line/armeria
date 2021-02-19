@@ -96,6 +96,11 @@ public interface Route {
     RoutingResult apply(RoutingContext routingCtx, boolean isRouteDecorator);
 
     /**
+     * Returns the {@link PathMapping} of this {@link Route}.
+     */
+    PathMapping pathMapping();
+
+    /**
      * Returns the names of the path parameters extracted by this mapping.
      */
     Set<String> paramNames();
@@ -185,4 +190,9 @@ public interface Route {
      * was matched.
      */
     boolean isFallback();
+
+    /**
+     * Returns a new {@link RouteBuilder} with the values of this {@link Route} instance.
+     */
+    RouteBuilder toBuilder();
 }

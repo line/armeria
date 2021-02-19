@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.StreamSupport;
 
@@ -44,7 +45,11 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Lists;
+
+import com.linecorp.armeria.server.RoutingTrie.Node;
+import com.linecorp.armeria.server.RoutingTrie.NodeProcessor;
 
 /**
  * A factory that creates a {@link Router} instance.
@@ -71,13 +76,29 @@ public final class Routers {
                             RejectedRouteHandler.class.getSimpleName(), e);
             }
         };
+        final BiFunction<Route, ServiceConfig, ServiceConfig> fallbackValueConfigurator =
+                (route, serviceConfig) -> {
+                    final Route existingRoute = serviceConfig.route();
+                    if (route.complexity() != existingRoute.complexity() ||
+                        !route.methods().containsAll(existingRoute.methods())) {
+                        return serviceConfig.withRoute(
+                                route.toBuilder()
+                                     .pathMapping(existingRoute.pathMapping())
+                                     // Do not propagate an exception raised while resolving a route
+                                     // to fallback services.
+                                     .setDeferredExceptionToRoutingContext(false)
+                                     .build());
+                    }
+                    return serviceConfig;
+                };
         final Set<Route> ambiguousRoutes =
                 resolveAmbiguousRoutes(StreamSupport.stream(configs.spliterator(), false)
                                                     .map(ServiceConfig::route)
                                                     .collect(toImmutableList()));
-        return wrapVirtualHostRouter(defaultRouter(configs, virtualHost.fallbackServiceConfig(),
-                                                   ServiceConfig::route, rejectionConsumer, false),
-                                     ambiguousRoutes);
+        return wrapVirtualHostRouter(
+                defaultRouter(configs, virtualHost.fallbackServiceConfig(), fallbackValueConfigurator,
+                              ServiceConfig::route, rejectionConsumer, false),
+                ambiguousRoutes);
     }
 
     /**
@@ -86,7 +107,7 @@ public final class Routers {
     public static Router<RouteDecoratingService> ofRouteDecoratingService(
             List<RouteDecoratingService> routeDecoratingServices) {
         return wrapRouteDecoratingServiceRouter(
-                sequentialRouter(routeDecoratingServices, null, RouteDecoratingService::route,
+                sequentialRouter(routeDecoratingServices, null, null, RouteDecoratingService::route,
                                  (route1, route2) -> {/* noop */}, true),
                 resolveAmbiguousRoutes(routeDecoratingServices.stream()
                                                               .map(RouteDecoratingService::route)
@@ -128,11 +149,12 @@ public final class Routers {
      * transformed to a {@link Router}.
      */
     private static <V> Router<V> defaultRouter(Iterable<V> values, @Nullable V fallbackValue,
+                                               @Nullable BiFunction<Route, V, V> fallbackValueConfigurator,
                                                Function<V, Route> routeResolver,
                                                BiConsumer<Route, Route> rejectionHandler,
                                                boolean isRouteDecorator) {
-        return new CompositeRouter<>(routers(values, fallbackValue, routeResolver, rejectionHandler,
-                                             isRouteDecorator),
+        return new CompositeRouter<>(routers(values, fallbackValue, fallbackValueConfigurator,
+                                             routeResolver, rejectionHandler, isRouteDecorator),
                                      Function.identity());
     }
 
@@ -141,6 +163,7 @@ public final class Routers {
      */
     @VisibleForTesting
     static <V> List<Router<V>> routers(Iterable<V> values, @Nullable V fallbackValue,
+                                       @Nullable BiFunction<Route, V, V> fallbackValueConfigurator,
                                        Function<V, Route> routeResolver,
                                        BiConsumer<Route, Route> rejectionHandler,
                                        boolean isRouteDecorator) {
@@ -162,13 +185,15 @@ public final class Routers {
 
             // Changed the router type.
             if (!group.isEmpty()) {
-                builder.add(router(addingTrie, group, fallbackValue, routeResolver, isRouteDecorator));
+                builder.add(router(addingTrie, group, fallbackValue, fallbackValueConfigurator,
+                                   routeResolver, isRouteDecorator));
             }
             addingTrie = !addingTrie;
             group.add(value);
         }
         if (!group.isEmpty()) {
-            builder.add(router(addingTrie, group, fallbackValue, routeResolver, isRouteDecorator));
+            builder.add(router(addingTrie, group, fallbackValue, fallbackValueConfigurator,
+                               routeResolver, isRouteDecorator));
         }
         return builder.build();
     }
@@ -177,12 +202,13 @@ public final class Routers {
      * Returns only the sequential implementation of {@link Router}.
      */
     private static <V> Router<V> sequentialRouter(Iterable<V> values, @Nullable V fallbackValue,
+                                                  @Nullable BiFunction<Route, V, V> fallbackValueConfigurator,
                                                   Function<V, Route> routeResolver,
                                                   BiConsumer<Route, Route> rejectionHandler,
                                                   boolean isRouteDecorator) {
         rejectDuplicateMapping(values, routeResolver, rejectionHandler);
-        return router(false, Lists.newArrayList(values), fallbackValue, routeResolver,
-                      isRouteDecorator);
+        return router(false, Lists.newArrayList(values), fallbackValue, fallbackValueConfigurator,
+                      routeResolver, isRouteDecorator);
     }
 
     private static <V> void rejectDuplicateMapping(
@@ -238,6 +264,7 @@ public final class Routers {
      * Returns a {@link Router} implementation which is using one of {@link RoutingTrie} and {@link List}.
      */
     private static <V> Router<V> router(boolean isTrie, List<V> values, @Nullable V fallbackValue,
+                                        @Nullable BiFunction<Route, V, V> fallbackValueConfigurator,
                                         Function<V, Route> routeResolver, boolean isRouteDecorator) {
         final Comparator<V> valueComparator =
                 Comparator.comparingInt(e -> -1 * routeResolver.apply(e).complexity());
@@ -257,8 +284,11 @@ public final class Routers {
                     final String path = route.paths().get(0);
                     final int pathLen = path.length();
                     if (pathLen > 1 && path.charAt(pathLen - 1) == '/') {
+                        final V newFallbackValue =
+                                fallbackValueConfigurator != null ?
+                                fallbackValueConfigurator.apply(route, fallbackValue) : fallbackValue;
                         builder.add(path.substring(0, pathLen - 1),
-                                    fallbackValue, /* hasHighPrecedence */ false);
+                                    newFallbackValue,/* hasHighPrecedence */false);
                     }
                 }
             }
@@ -285,53 +315,60 @@ public final class Routers {
      */
     private static <V> Routed<V> findBest(RoutingContext routingCtx, @Nullable List<V> values,
                                           Function<V, Route> routeResolver) {
+        if (values == null) {
+            return Routed.empty();
+        }
+        return findBest(valuesToRoutedList(routingCtx, values, routeResolver, false));
+    }
+
+    /**
+     * Finds the most suitable service from the given {@link ServiceConfig} list.
+     */
+    private static <V> Routed<V> findBest(List<Routed<V>> routes) {
         Routed<V> result = Routed.empty();
-        if (values != null) {
-            for (V value : values) {
-                final Route route = routeResolver.apply(value);
-                final RoutingResult routingResult = route.apply(routingCtx, false);
-                if (routingResult.isPresent()) {
-                    //
-                    // The services are sorted as follows:
-                    //
-                    // 1) the service with method and media type negotiation
-                    //    (consumable and producible)
-                    // 2) the service with method and producible media type negotiation
-                    // 3) the service with method and consumable media type negotiation
-                    // 4) the service with method negotiation
-                    // 5) the other services (in a registered order)
-                    //
-                    // 1) and 2) may produce a score between the lowest and the highest because they should
-                    // negotiate the produce type with the value of 'Accept' header.
-                    // 3), 4) and 5) always produces the lowest score.
-                    //
+        for (Routed<V> route : routes) {
+            final RoutingResult routingResult = route.routingResult();
+            if (routingResult.isPresent()) {
+                //
+                // The services are sorted as follows:
+                //
+                // 1) the service with method and media type negotiation
+                //    (consumable and producible)
+                // 2) the service with method and producible media type negotiation
+                // 3) the service with method and consumable media type negotiation
+                // 4) the service with method negotiation
+                // 5) the other services (in a registered order)
+                //
+                // 1) and 2) may produce a score between the lowest and the highest because they should
+                // negotiate the produce type with the value of 'Accept' header.
+                // 3), 4) and 5) always produces the lowest score.
+                //
 
-                    // Found the best matching.
-                    if (routingResult.hasHighestScore()) {
-                        result = Routed.of(route, routingResult, value);
-                        break;
-                    }
+                // Found the best matching.
+                if (routingResult.hasHighestScore()) {
+                    result = route;
+                    break;
+                }
 
-                    // We have still a chance to find a better matching.
-                    if (result.isPresent()) {
-                        if (routingResult.score() > result.routingResult().score()) {
-                            // Replace the candidate with the new one only if the score is better.
-                            // If the score is same, we respect the order of service registration.
-                            result = Routed.of(route, routingResult, value);
-                        }
-                    } else {
-                        // Keep the result as a candidate.
-                        result = Routed.of(route, routingResult, value);
+                // We have still a chance to find a better matching.
+                if (result.isPresent()) {
+                    if (routingResult.score() > result.routingResult().score()) {
+                        // Replace the candidate with the new one only if the score is better.
+                        // If the score is same, we respect the order of service registration.
+                        result = route;
                     }
+                } else {
+                    // Keep the result as a candidate.
+                    result = route;
                 }
             }
         }
         return result;
     }
 
-    private static <V> List<Routed<V>> findAll(RoutingContext routingCtx, List<V> values,
-                                               Function<V, Route> routeResolver,
-                                               boolean isRouteDecorator) {
+    private static <V> List<Routed<V>> valuesToRoutedList(RoutingContext routingCtx, List<V> values,
+                                                          Function<V, Route> routeResolver,
+                                                          boolean isRouteDecorator) {
         final ImmutableList.Builder<Routed<V>> builder = ImmutableList.builderWithExpectedSize(values.size());
 
         for (V value : values) {
@@ -358,18 +395,42 @@ public final class Routers {
 
         @Override
         public Routed<V> find(RoutingContext routingCtx) {
-            return findBest(routingCtx, trie.find(routingCtx.path()), routeResolver);
+            final ResultCachingNodeProcessor processor = new ResultCachingNodeProcessor(routingCtx);
+            trie.find(routingCtx.path(), processor);
+            return findBest(processor.routeCollector.build());
         }
 
         @Override
         public List<Routed<V>> findAll(RoutingContext routingCtx) {
-            return Routers.findAll(routingCtx, trie.findAll(routingCtx.path()),
-                                   routeResolver, isRouteDecorator);
+            return valuesToRoutedList(routingCtx, trie.findAll(routingCtx.path()),
+                                      routeResolver, isRouteDecorator);
         }
 
         @Override
         public void dump(OutputStream output) {
             trie.dump(output);
+        }
+
+        private final class ResultCachingNodeProcessor implements NodeProcessor<V> {
+            private final RoutingContext routingCtx;
+            private final ImmutableList.Builder<Routed<V>> routeCollector = new Builder<>();
+
+            private ResultCachingNodeProcessor(RoutingContext routingCtx) {
+                this.routingCtx = routingCtx;
+            }
+
+            @Nullable
+            @Override
+            public Node<V> process(Node<V> node) {
+                final List<Routed<V>> list =
+                        valuesToRoutedList(routingCtx, node.values, routeResolver, isRouteDecorator);
+                if (list.isEmpty()) {
+                    // Not acceptable node.
+                    return null;
+                }
+                routeCollector.addAll(list);
+                return node;
+            }
         }
     }
 
@@ -392,7 +453,7 @@ public final class Routers {
 
         @Override
         public List<Routed<V>> findAll(RoutingContext routingCtx) {
-            return Routers.findAll(routingCtx, values, routeResolver, isRouteDecorator);
+            return Routers.valuesToRoutedList(routingCtx, values, routeResolver, isRouteDecorator);
         }
 
         @Override
