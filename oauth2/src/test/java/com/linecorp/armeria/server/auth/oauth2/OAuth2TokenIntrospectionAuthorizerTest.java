@@ -41,7 +41,6 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 public class OAuth2TokenIntrospectionAuthorizerTest {
@@ -72,7 +71,7 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
         }
     };
 
-    private final ServerRule resourceServerRule = new ServerRule(false) {
+    private final ServerExtension resourceServer = new ServerExtension(false) {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final WebClient introspectClient = WebClient.of(authServer.httpUri());
@@ -111,9 +110,9 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
 
     @Test
     public void testOk() throws Exception {
-        try (Server resourceServer = resourceServerRule.start()) {
+        try (Server server = resourceServer.start()) {
 
-            final WebClient client = WebClient.of(resourceServerRule.httpUri());
+            final WebClient client = WebClient.of(resourceServer.httpUri());
 
             final RequestHeaders requestHeaders1 = RequestHeaders.of(
                     HttpMethod.GET, "/resource-read-write/",
@@ -137,9 +136,9 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
 
     @Test
     public void testUnauthorized() throws Exception {
-        try (Server resourceServer = resourceServerRule.start()) {
+        try (Server server = resourceServer.start()) {
 
-            final WebClient client = WebClient.of(resourceServerRule.httpUri());
+            final WebClient client = WebClient.of(resourceServer.httpUri());
 
             final RequestHeaders requestHeaders1 = RequestHeaders.of(
                     HttpMethod.GET, "/resource-read-write/",
