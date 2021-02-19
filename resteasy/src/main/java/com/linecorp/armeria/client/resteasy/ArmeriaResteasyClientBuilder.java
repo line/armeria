@@ -76,46 +76,58 @@ import com.linecorp.armeria.common.SessionProtocol;
 public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
 
     /**
+     * Creates new {@link ResteasyClientBuilder} based on {@link WebClientBuilder}
+     * and {@link ClientFactoryBuilder}.
+     */
+    public static ResteasyClientBuilder newBuilder(WebClientBuilder webClientBuilder,
+                                                   ClientFactoryBuilder clientFactoryBuilder) {
+        return new ArmeriaResteasyClientBuilder(webClientBuilder, clientFactoryBuilder);
+    }
+
+    /**
      * Creates new {@link ResteasyClientBuilder} based on {@link WebClientBuilder}.
      */
     public static ResteasyClientBuilder newBuilder(WebClientBuilder webClientBuilder) {
-        return new ArmeriaResteasyClientBuilder(webClientBuilder);
+        return new ArmeriaResteasyClientBuilder(webClientBuilder, ClientFactory.builder());
     }
 
     /**
      * Creates new {@link ResteasyClient} based on {@link WebClient}.
      */
     public static ResteasyClient newClient(WebClient webClient) {
-        final WebClientBuilder webClientBuilder = WebClient.builder();
-        return new ArmeriaResteasyClientBuilder(webClientBuilder).build(webClient);
+        return new ArmeriaResteasyClientBuilder(WebClient.builder(), ClientFactory.builder())
+                .build(webClient);
     }
 
     /**
      * Creates new {@link ResteasyClient} based on {@link Configuration}.
      */
     public static ResteasyClient newClient(Configuration configuration) {
-        final WebClientBuilder webClientBuilder = WebClient.builder();
-        return new ArmeriaResteasyClientBuilder(webClientBuilder).withConfig(configuration).build();
+        return new ArmeriaResteasyClientBuilder(WebClient.builder(), ClientFactory.builder())
+                .withConfig(configuration)
+                .build();
     }
 
     /**
      * Creates new {@link ResteasyClient} using default settings.
      */
     public static ResteasyClient newClient() {
-        final WebClientBuilder webClientBuilder = WebClient.builder();
-        return new ArmeriaResteasyClientBuilder(webClientBuilder).build(webClientBuilder.build());
+        return new ArmeriaResteasyClientBuilder(WebClient.builder(), ClientFactory.builder())
+                .build();
     }
 
     private final ResteasyClientBuilder delegate;
     private final WebClientBuilder webClientBuilder;
+    private final ClientFactoryBuilder clientFactoryBuilder;
 
-    ArmeriaResteasyClientBuilder(WebClientBuilder webClientBuilder) {
+    ArmeriaResteasyClientBuilder(WebClientBuilder webClientBuilder, ClientFactoryBuilder clientFactoryBuilder) {
         final ClientBuilder clientBuilder = ClientBuilder.newBuilder();
         checkArgument(clientBuilder instanceof ResteasyClientBuilder,
                       "ClientBuilder: %s (expected: ResteasyClientBuilder)",
                       clientBuilder.getClass().getName());
         delegate = (ResteasyClientBuilder) clientBuilder;
         this.webClientBuilder = requireNonNull(webClientBuilder, "webClientBuilder");
+        this.clientFactoryBuilder = requireNonNull(clientFactoryBuilder, "clientFactoryBuilder");
     }
 
     /**
@@ -123,7 +135,6 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
      */
     private WebClient buildWebClient() {
         // configure WebClientBuilder using ResteasyClientBuilder configuration
-        final ClientFactoryBuilder clientFactoryBuilder = ClientFactory.builder();
 
         // connectionTimeout -> ClientFactoryBuilder.connectTimeout
         // Value {@code 0} represents infinity. Negative values are not allowed.

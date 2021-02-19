@@ -96,20 +96,22 @@ public final class ResteasyServiceBuilder<T> {
      * limit or the request does not include {@code Content-Length}, the request will be handled as unbuffered
      * (streaming) request.
      */
-    public void maxRequestBufferSize(int maxRequestBufferSize) {
+    public ResteasyServiceBuilder<T> maxRequestBufferSize(int maxRequestBufferSize) {
         checkArgument(maxRequestBufferSize >= 0,
                       "maxRequestBufferSize: %s (expected: >= 0)", maxRequestBufferSize);
         this.maxRequestBufferSize = maxRequestBufferSize;
+        return this;
     }
 
     /**
      * Sets the size of the response buffer to handle response content. If the response content exceeds this
      * limit the response will be handled as unbuffered (streaming) response.
      */
-    public void responseBufferSize(int responseBufferSize) {
+    public ResteasyServiceBuilder<T> responseBufferSize(int responseBufferSize) {
         checkArgument(responseBufferSize > 0,
                       "responseBufferSize: %s (expected: > 0)", responseBufferSize);
         this.responseBufferSize = responseBufferSize;
+        return this;
     }
 
     /**
