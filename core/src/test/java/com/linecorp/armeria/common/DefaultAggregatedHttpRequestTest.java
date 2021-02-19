@@ -87,7 +87,7 @@ class DefaultAggregatedHttpRequestTest {
     }
 
     @Test
-    void shouldHaveAllGettersInHttpRequest() throws Exception {
+    void shouldHaveAllGettersInHttpRequest() {
         final List<String> httpRequestMethods = noParameterMethods(HttpRequest.class);
         final List<String> aggregateHttpRequestMethods = noParameterMethods(AggregatedHttpRequest.class,
                                                                             AggregatedHttpMessage.class);
@@ -95,6 +95,10 @@ class DefaultAggregatedHttpRequestTest {
             if (httpRequestMethod.startsWith("builder") || httpRequestMethod.startsWith("aggregate") ||
                 httpRequestMethod.startsWith("toDuplicator")) {
                 // Not a getter.
+                continue;
+            }
+            if (httpRequestMethod.startsWith("options")) {
+                // Only valid for HttpRequest
                 continue;
             }
             assertThat(aggregateHttpRequestMethods).contains(httpRequestMethod);
