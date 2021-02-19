@@ -81,18 +81,21 @@ final class DefaultRequestOptions implements RequestOptions {
         }
 
         final DefaultRequestOptions that = (DefaultRequestOptions) o;
-        return responseTimeoutMillis == that.responseTimeoutMillis;
+
+        return responseTimeoutMillis == that.responseTimeoutMillis &&
+               attributeMap.equals(that.attributeMap);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(responseTimeoutMillis);
+        return Objects.hash(responseTimeoutMillis, attributeMap);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("responseTimeoutMillis", responseTimeoutMillis)
+                          .add("attributeMap", attributeMap)
                           .toString();
     }
 }
