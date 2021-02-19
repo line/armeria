@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import java.time.Duration;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
@@ -29,6 +31,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+
+import io.netty.util.AttributeKey;
 
 /**
  * Prepares and executes a new {@link HttpRequest} for {@link WebClient}.
@@ -188,5 +192,10 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     @Override
     public WebClientRequestPreparation responseTimeoutMillis(long responseTimeoutMillis) {
         return (WebClientRequestPreparation) super.responseTimeoutMillis(responseTimeoutMillis);
+    }
+
+    @Override
+    public <V> WebClientRequestPreparation setAttr(AttributeKey<V> key, @Nullable V value) {
+        return (WebClientRequestPreparation) super.setAttr(key, value);
     }
 }

@@ -19,8 +19,12 @@ package com.linecorp.armeria.common;
 import java.time.Duration;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
+
+import io.netty.util.AttributeKey;
 
 /**
  * Builds a new {@link HttpRequest}.
@@ -176,5 +180,10 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     @Override
     public HttpRequestBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         return (HttpRequestBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
+    }
+
+    @Override
+    public <V> HttpRequestBuilder setAttr(AttributeKey<V> key, @Nullable V value) {
+        return (HttpRequestBuilder) super.setAttr(key, value);
     }
 }

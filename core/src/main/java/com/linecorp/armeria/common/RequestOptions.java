@@ -18,12 +18,16 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.DefaultRequestOptions.EMPTY;
 
+import java.util.Iterator;
+import java.util.Map.Entry;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.netty.util.AttributeKey;
 
 /**
  * A {@link RequestOptions} for an {@link HttpRequest}.
  */
-@SuppressWarnings("InterfaceMayBeAnnotatedFunctional")
 @UnstableApi
 public interface RequestOptions {
 
@@ -39,4 +43,9 @@ public interface RequestOptions {
      * {@code -1} disables this option and the response timeout of a client is used instead.
      */
     long responseTimeoutMillis();
+
+    /**
+     * Returns the {@link Iterator} of all {@link Entry}s this {@link RequestOptions} contains.
+     */
+    Iterator<Entry<AttributeKey<?>, Object>> attrs();
 }

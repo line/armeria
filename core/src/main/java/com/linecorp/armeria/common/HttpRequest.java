@@ -291,6 +291,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * Note that an {@linkplain RequestOptions#of()} empty option} is always returned,
      * if this request is a server-side request.
      */
+    @UnstableApi
     RequestOptions options();
 
     /**

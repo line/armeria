@@ -40,6 +40,8 @@ import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 
+import io.netty.util.AttributeKey;
+
 /**
  * Builds a new {@link HttpRequest}.
  */
@@ -48,6 +50,7 @@ public abstract class AbstractHttpRequestBuilder {
     // TODO(tumile): Add content(Publisher).
 
     private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
+
     @Nullable
     private HttpHeadersBuilder httpTrailers;
     @Nullable
@@ -61,6 +64,10 @@ public abstract class AbstractHttpRequestBuilder {
     @Nullable
     private String path;
     private boolean disablePathParams;
+
+    // request options
+    @Nullable
+    private DefaultAttributeMap attributeMap;
     private long responseTimeoutMillis = -1;
 
     /**
@@ -359,7 +366,7 @@ public abstract class AbstractHttpRequestBuilder {
     /**
      * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
      * the specified {@link Duration} since the {@link Response} started or {@link Request} was fully sent.
-     * {@link Duration#ZERO} disable the limit.
+     * {@link Duration#ZERO} disables the limit.
      */
     public AbstractHttpRequestBuilder responseTimeout(Duration timeout) {
         responseTimeoutMillis(requireNonNull(timeout, "timeout").toMillis());
@@ -370,7 +377,7 @@ public abstract class AbstractHttpRequestBuilder {
      * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
      * the specified {@code responseTimeoutMillis} since the {@link Response} started or {@link Request} was
      * fully sent.
-     * {@code 0} disable the limit.
+     * {@code 0} disables the limit.
      */
     public AbstractHttpRequestBuilder responseTimeoutMillis(long responseTimeoutMillis) {
         checkArgument(responseTimeoutMillis >= 0, "responseTimeoutMillis: %s (expected: >= 0)",
@@ -380,11 +387,30 @@ public abstract class AbstractHttpRequestBuilder {
     }
 
     /**
+     * Associates the specified value with the given {@link AttributeKey} in this request.
+     * If this context previously contained a mapping for the {@link AttributeKey}, the old value is replaced
+     * by the specified value.
+     */
+    public <V> AbstractHttpRequestBuilder setAttr(AttributeKey<V> key, @Nullable V value) {
+        requireNonNull(key, "key");
+
+        if (attributeMap == null) {
+            attributeMap = new DefaultAttributeMap(null);
+        }
+
+        attributeMap.setAttr(key, value);
+        return this;
+    }
+
+    /**
      * Creates a new {@link HttpRequest}.
      */
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
-        final RequestOptions requestOptions = requestOptions();
+        final RequestOptions requestOptions = DefaultRequestOptions.of(responseTimeoutMillis, attributeMap);
+
+        // TODO(ikhoon): Apply requestOptions to PublisherBasedHttpRequest
+        //               once https://github.com/line/armeria/pull/3343 is merged.
 
         if (content == null || content.isEmpty()) {
             if (content != null) {
@@ -412,14 +438,6 @@ public abstract class AbstractHttpRequestBuilder {
             requestHeadersBuilder.setInt(CONTENT_LENGTH, content.length());
         }
         return requestHeadersBuilder.build();
-    }
-
-    private RequestOptions requestOptions() {
-        if (responseTimeoutMillis == -1) {
-            return RequestOptions.of();
-        } else {
-            return new DefaultRequestOptions(responseTimeoutMillis);
-        }
     }
 
     private String buildPath() {
