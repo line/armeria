@@ -18,6 +18,7 @@
 *.ck
 *.cloud.metacentrum.cz
 *.cns.joyent.com
+*.code.run
 *.compute-1.amazonaws.com
 *.compute.amazonaws.com
 *.compute.amazonaws.com.cn
@@ -54,6 +55,7 @@
 *.nagoya.jp
 *.nodebalancer.linode.com
 *.nom.br
+*.northflank.app
 *.np
 *.oci.customer-oci.com
 *.ocp.customer-oci.com
@@ -607,6 +609,7 @@ avoues.fr
 aw
 awaji.hyogo.jp
 aws
+awsglobalaccelerator.com
 awsmppl.com
 ax
 axa
@@ -824,6 +827,7 @@ biz.ki
 biz.ls
 biz.mv
 biz.mw
+biz.my
 biz.ni
 biz.nr
 biz.pk
@@ -1131,7 +1135,6 @@ casa
 casacam.net
 casadelamoneda.museum
 case
-caseih
 caserta.it
 cash
 casino
@@ -2046,6 +2049,7 @@ ed.jp
 ed.pw
 edeka
 edgeapp.net
+edgecompute.app
 edgestack.me
 edogawa.tokyo.jp
 edu
@@ -2299,6 +2303,7 @@ eu.meteorapp.com
 eu.org
 eu.platform.sh
 eun.eg
+eurodir.ru
 eurovision
 eus
 evenassi.no
@@ -4772,9 +4777,11 @@ mc
 mc.ax
 mc.eu.org
 mc.it
+mcdir.me
 mcdir.ru
 mckinsey
 mcpe.me
+mcpre.ru
 md
 md.ci
 md.us
@@ -5553,7 +5560,6 @@ neues.museum
 neustar
 new
 newhampshire.museum
-newholland
 newjersey.museum
 newmexico.museum
 newport.museum
@@ -5738,6 +5744,7 @@ noshiro.akita.jp
 not.br
 notaires.fr
 notaires.km
+noticeable.news
 noticias.bo
 noto.ishikawa.jp
 notodden.no
