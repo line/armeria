@@ -23,14 +23,14 @@
     "client-http",
     "client-thrift",
     "client-grpc",
+    "client-factory-builder",
     "client-decorator",
     "client-retrofit",
     "client-custom-http-headers",
     "client-timeouts",
     "client-retry",
     "client-circuit-breaker",
-    "client-service-discovery",
-    "client-factory-builder"
+    "client-service-discovery"
   ],
   "Advanced": [
     "advanced-logging",
