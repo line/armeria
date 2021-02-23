@@ -1187,6 +1187,14 @@ public final class ServerBuilder {
     }
 
     /**
+     * Returns the {@link VirtualHostBuilder} for building the default
+     * <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
+     */
+    public List<VirtualHostBuilder> defaultVirtualHostBuilders() {
+        return virtualHostBuilders;
+    }
+
+    /**
      * Configures a {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
@@ -1661,5 +1669,36 @@ public final class ServerBuilder {
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader);
+    }
+
+    public final ServerConfig buildServerConfig(ServerConfig existingConfig) {
+        final AnnotatedServiceExtensions extensions =
+                virtualHostTemplate.annotatedServiceExtensions();
+
+        assert extensions != null;
+
+        final VirtualHost defaultVirtualHost =
+                defaultVirtualHostBuilder.build(virtualHostTemplate);
+        final List<VirtualHost> virtualHosts =
+                virtualHostBuilders.stream()
+                        .map(vhb -> vhb.build(virtualHostTemplate))
+                        .collect(toImmutableList());
+        // Pre-populate the domain name mapping for later matching.
+        final Mapping<String, SslContext> sslContexts;
+        final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
+
+
+        return new ServerConfig(
+                existingConfig.ports(), setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
+                workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                http2InitialConnectionWindowSize,
+                http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
+                http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
+                http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
+                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
+                enableServerHeader, enableDateHeader, requestIdGenerator);
     }
 }
