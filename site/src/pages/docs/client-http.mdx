@@ -74,7 +74,7 @@ A lot of core features such as logging, metrics and distributed tracing are impl
 - <type://CookieClient> which stores cookies of responses using <type://CookieJar>.
 - <type://ConcurrencyLimitingClient> limits the concurrent number of active requests.
 - <type://ContentPreviewingClient> which
-  [previews the content](https://armeria.dev/docs/advanced-structured-logging/#enabling-content-previews) of
+  [previews the content](/docs/advanced-structured-logging/#enabling-content-previews) of
   requests and responses.
 - <type://DecodingClient> which decompresses a
   [compressed](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding) response.
@@ -155,7 +155,7 @@ set it through <type://WebClientBuilder#factory()>.
 
 ```java
 import com.linecorp.armeria.client.ClientFactory;
-// Create a customized ClientFactory                                  
+// Create a customized ClientFactory
 ClientFactory clientFactory =
     ClientFactory.builder()
                  // Increase the connect timeout from 3.2s to 10s.
