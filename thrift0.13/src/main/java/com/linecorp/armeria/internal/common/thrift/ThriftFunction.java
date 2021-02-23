@@ -375,6 +375,7 @@ public final class ThriftFunction {
 
     /**
      * Convert method name to LowCamel by algorithm in thrift java compiler.
+     * See: https://github.com/apache/thrift/blob/master/compiler/cpp/src/thrift/generate/t_java_generator.cc#L4608.
      */
     static String getCamelMethodName(String name) {
         final StringBuilder builder = new StringBuilder();
