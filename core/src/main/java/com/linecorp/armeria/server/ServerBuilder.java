@@ -181,6 +181,7 @@ public final class ServerBuilder {
     private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
+    private Function<String, String> serviceNaming = Function.identity();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -694,6 +695,14 @@ public final class ServerBuilder {
      */
     public ServerBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return this;
+    }
+
+    /**
+     * Sets a global naming convention for the name of services.
+     */
+    public ServerBuilder serviceNaming(Function<String, String> serviceNaming) {
+        this.serviceNaming = requireNonNull(serviceNaming, "serviceNaming");
         return this;
     }
 
@@ -1599,7 +1608,7 @@ public final class ServerBuilder {
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
+                meterRegistry, serviceNaming, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler), sslContexts);
 
@@ -1673,7 +1682,7 @@ public final class ServerBuilder {
                 http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                meterRegistry, channelOptions, childChannelOptions,
+                meterRegistry, serviceNaming, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader);
     }
