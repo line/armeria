@@ -7,10 +7,8 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -18,43 +16,36 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.annotation.Blocking;
+import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.RequestConverter;
+import com.linecorp.armeria.server.annotation.RequestObject;
 
 public final class BlogService {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private final AtomicInteger idGenerator = new AtomicInteger();
-
     private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
 
     /**
      * Creates a {@link BlogPost} from an {@link HttpRequest}. The {@link HttpRequest} is
-     * converted into {@link JsonNode} by the {@link JacksonRequestConverterFunction}.
+     * converted into {@link BlogPost} by the {@link BlogPostRequestConverter}.
      */
     @Post("/blogs")
-    @ExceptionHandler(BadRequestExceptionHandler.class)
-    public HttpResponse createBlogPost(JsonNode jsonNode) throws JsonProcessingException {
-        // Use integer for simplicity.
-        final int id = idGenerator.getAndIncrement();
-        final String title = stringValue(jsonNode, "title");
-        final String content = stringValue(jsonNode, "content");
-        final BlogPost blogPost = new BlogPost(id, title, content);
-
+    @RequestConverter(BlogPostRequestConverter.class)
+    public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingException {
         // Use a map to store the blog. In real world, you should use a database.
-        blogPosts.put(id, blogPost);
+        blogPosts.put(blogPost.id(), blogPost);
 
         // Send the created blog post as the response.
-        // We can add additional property such as a url(e.g. "http://tutorial.com/blogs/1")
-        // to respect the Rest API.
+        // We can add additional property such as a url of
+        // the created blog post.(e.g. "http://tutorial.com/blogs/0") to respect the Rest API.
         return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, mapper.writeValueAsBytes(blogPost));
     }
 
@@ -73,19 +64,22 @@ public final class BlogService {
      */
     @Get("/blogs")
     @ProducesJson
-    public Iterable<BlogPost> getBlogPosts() throws JsonProcessingException {
-        return blogPosts.entrySet()
-                        .stream()
-                        .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
-                        .map(Entry::getValue).collect(toImmutableList());
+    public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descending) {
+        if (descending) {
+            return blogPosts.entrySet()
+                            .stream()
+                            .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
+                            .map(Entry::getValue).collect(toImmutableList());
+        }
+        return blogPosts.values().stream().collect(toImmutableList());
     }
 
     /**
      * Updates the {@link BlogPost} whose {@link BlogPost#id()} is the {@code :id} in the path parameter.
      */
     @Put("/blogs/:id")
-    @RequestConverter(BlogPostRequestConverter.class)
-    public HttpResponse updateBlogPost(@Param int id, BlogPost blogPost) throws JsonProcessingException {
+    public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost)
+            throws JsonProcessingException {
         final BlogPost oldBlogPost = blogPosts.get(id);
         if (oldBlogPost == null) {
             return HttpResponse.of(HttpStatus.NOT_FOUND);
@@ -102,29 +96,14 @@ public final class BlogService {
      */
     @Blocking
     @Delete("/blogs/:id")
+    @ExceptionHandler(BadRequestExceptionHandler.class)
     public HttpResponse deleteBlogPost(@Param int id) {
         final BlogPost removed = blogPosts.remove(id);
         if (removed == null) {
-            return HttpResponse.of(HttpStatus.NOT_FOUND);
+            throw new IllegalArgumentException("The blog post does not exist. id: " + id);
+            // Or we can simply return a NOT_FOUND response.
+            // return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
         return HttpResponse.of(HttpStatus.NO_CONTENT);
-    }
-
-    static String stringValue(JsonNode jsonNode, String field) {
-        final JsonNode value = getValue(jsonNode, field);
-        return value.textValue();
-    }
-
-    static int intValue(JsonNode jsonNode, String field) {
-        final JsonNode value = getValue(jsonNode, field);
-        return value.intValue();
-    }
-
-    private static JsonNode getValue(JsonNode jsonNode, String field) {
-        final JsonNode value = jsonNode.get(field);
-        if (value == null) {
-            throw new IllegalArgumentException(field + " is missing!");
-        }
-        return value;
     }
 }
