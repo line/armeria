@@ -1478,7 +1478,6 @@ co.zw
 coach
 coal.museum
 coastaldefence.museum
-code.run
 codes
 codespot.com
 cody.museum
@@ -2515,6 +2514,8 @@ fr-1.paas.massivegrid.net
 fr.eu.org
 fr.it
 fra1-de.cloudjiffy.net
+framer.app
+framercanvas.com
 frana.no
 francaise.museum
 frankfurt.museum
@@ -5737,7 +5738,6 @@ nore-og-uvdal.no
 norfolk.museum
 north-kazakhstan.su
 north.museum
-northflank.app
 northwesternmutual
 norton
 nose.osaka.jp

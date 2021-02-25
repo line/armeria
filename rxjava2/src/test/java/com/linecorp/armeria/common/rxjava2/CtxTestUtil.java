@@ -151,4 +151,8 @@ public final class CtxTestUtil {
     static void assertCurrentCtxIsNull() {
         assertThat((RequestContext) RequestContext.currentOrNull()).isNull();
     }
+
+    static void assertCurrentCtxIsNotNull() {
+        assertThat((RequestContext) RequestContext.currentOrNull()).isNotNull();
+    }
 }

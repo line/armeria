@@ -25,6 +25,8 @@ import static com.linecorp.armeria.common.rxjava2.CtxTestUtil.newTestSubscriber;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,8 +44,10 @@ import io.reactivex.subscribers.TestSubscriber;
 
 @ExtendWith(RxErrorDetectExtension.class)
 public class ContextAwareFlowableTest {
-
-    private final Executor executor = Executors.newSingleThreadExecutor();
+    private final ScheduledExecutorService scheduledExecutorService =
+            Executors.newSingleThreadScheduledExecutor();
+    private final Executor executor =
+            command -> scheduledExecutorService.schedule(command, 10, TimeUnit.MILLISECONDS);
 
     @BeforeAll
     static void setUp() {
@@ -56,7 +60,7 @@ public class ContextAwareFlowableTest {
     }
 
     @Test
-    public void flowable() {
+    public void flowable() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
         final Flowable<Object> flowable =
                 Flowable.create(
@@ -85,12 +89,11 @@ public class ContextAwareFlowableTest {
                 return o;
             }).subscribe(testObserver);
         }
-        testObserver.awaitTerminalEvent();
-        testObserver.assertValueCount(25);
+        testObserver.await().assertValueCount(25);
     }
 
     @Test
-    public void flowable_publish() {
+    public void flowable_publish() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
         final ConnectableFlowable<Object> flowable =
                 Flowable.create(
@@ -133,9 +136,7 @@ public class ContextAwareFlowableTest {
         // Must be outside of ctx scope to avoid IllegalContextPushingException.
         flowable.connect();
 
-        testObserver.awaitTerminalEvent();
-        testObserver.assertValueCount(25);
-        testObserver2.awaitTerminalEvent();
-        testObserver2.assertValueCount(25);
+        testObserver.await().assertValueCount(25);
+        testObserver2.await().assertValueCount(25);
     }
 }

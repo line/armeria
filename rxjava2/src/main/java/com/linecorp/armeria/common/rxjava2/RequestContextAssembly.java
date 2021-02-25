@@ -41,6 +41,8 @@ import io.reactivex.plugins.RxJavaPlugins;
 
 /**
  * Utility class to keep {@link RequestContext} during RxJava operations.
+ * This plugin doesn't support Flowable#parallel.
+ * https://github.com/ReactiveX/RxJava/issues/7190
  */
 public final class RequestContextAssembly {
     @SuppressWarnings("rawtypes")
