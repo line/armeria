@@ -23,6 +23,7 @@
     "client-http",
     "client-thrift",
     "client-grpc",
+    "client-factory",
     "client-decorator",
     "client-retrofit",
     "client-custom-http-headers",
