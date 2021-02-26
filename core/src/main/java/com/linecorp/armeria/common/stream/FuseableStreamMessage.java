@@ -253,6 +253,19 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         /**
+         * Use {{@link #and(MapperFunction)}} instead.
+         */
+        @Override
+        default <V> Function<T, V> andThen(Function<? super R, ? extends V> after) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        default <V> Function<V, R> compose(Function<? super V, ? extends T> before) {
+            throw new UnsupportedOperationException();
+        }
+
+        /**
          * Applies this function to the given argument.
          *
          * If this {@link MapperFunction} is created from {@link Predicate},
