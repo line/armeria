@@ -10,7 +10,7 @@ final ClientFactory factory =
                              // Increase the connection timeout to 5 seconds.
                              .connectTimeoutMillis(5000)
                              .build());
-final WebClient client = WebClient.builder("http://armeria.com")
+final WebClient client = WebClient.builder("https://armeria.dev")
                                   .factory(factory)
                                   .build();
 client.get("/api").aggregate().join();
@@ -67,10 +67,10 @@ You can do this via <type://ClientFactoryBuilder#maxNumEventLoopsPerEndpoint(int
 
 ```java
 ClientFactory factory =
-         ClientFactory.builder()
-                      // A client will use maximum 5 EventLoops from the worker group per endpoint
-                      .maxNumEventLoopsPerEndpoint(5)
-                      .build();
+        ClientFactory.builder()
+                     // A client will use maximum 5 EventLoops from the worker group per endpoint
+                     .maxNumEventLoopsPerEndpoint(5)
+                     .build();
 WebClient.builder().factory(factory).build();
 
 ClientFactory factory =
@@ -81,10 +81,10 @@ ClientFactory factory =
 WebClient.builder().factory(factory).build();
 
 ClientFactory factory =
-         ClientFactory.builder()
-                      // A client will use maximum 5 EventLoops per HTTP/1.1 endpoint
-                      .maxNumEventLoopsPerHttp1Endpoint(5)
-                      .build();
+        ClientFactory.builder()
+                     // A client will use maximum 5 EventLoops per HTTP/1.1 endpoint
+                     .maxNumEventLoopsPerHttp1Endpoint(5)
+                     .build();
 ```
 
 The client might need to send many requests to a certain endpoint, while sending small number of requests to others.
