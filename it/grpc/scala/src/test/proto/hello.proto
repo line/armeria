@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package com.linecorp.armeria.grpc.scala;
+
+service HelloService {
+  rpc HelloError (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
