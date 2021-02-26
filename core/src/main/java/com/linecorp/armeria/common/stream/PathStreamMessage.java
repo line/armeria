@@ -33,6 +33,8 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.math.LongMath;
@@ -48,6 +50,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 final class PathStreamMessage implements StreamMessage<HttpData> {
+
+    private static final Logger logger = LoggerFactory.getLogger(PathStreamMessage.class);
 
     static final int DEFAULT_FILE_BUFFER_SIZE = 4096;
 
@@ -137,7 +141,8 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
             blockingTaskExecutor =
                     ServiceRequestContext.mapCurrent(ServiceRequestContext::blockingTaskExecutor, null);
         }
-        final AsynchronousFileChannel fileChannel;
+        AsynchronousFileChannel fileChannel = null;
+        boolean success = false;
         try {
             // The default thread pool is used if blockingTaskExecutor is null
             fileChannel = AsynchronousFileChannel.open(path, READ_OPERATION, blockingTaskExecutor);
@@ -155,11 +160,20 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
                 }
                 return;
             }
+            success = true;
         } catch (IOException e) {
             subscriber.onSubscribe(NoopSubscription.get());
             subscriber.onError(e);
             completionFuture.completeExceptionally(e);
             return;
+        } finally {
+            if (!success && fileChannel != null) {
+                try {
+                    fileChannel.close();
+                } catch (IOException e) {
+                    logger.warn("Unexpected exception while closing {}.", fileChannel, e);
+                }
+            }
         }
 
         final PathSubscription pathSubscription =

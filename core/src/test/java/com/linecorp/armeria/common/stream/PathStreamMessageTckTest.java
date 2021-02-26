@@ -69,7 +69,7 @@ public class PathStreamMessageTckTest extends StreamMessageVerification<HttpData
                 bytes[i] = '0';
             }
             Files.write(path, bytes);
-            return new PathStreamMessage(path, ByteBufAllocator.DEFAULT, 1);
+            return new PathStreamMessage(path, ByteBufAllocator.DEFAULT, null,  1);
         } catch (IOException e) {
             return Exceptions.throwUnsafely(e);
         }
@@ -77,7 +77,7 @@ public class PathStreamMessageTckTest extends StreamMessageVerification<HttpData
 
     @Override
     public StreamMessage<HttpData> createFailedPublisher() {
-        return new PathStreamMessage(Paths.get("/unknown/" + UUID.randomUUID()), ByteBufAllocator.DEFAULT, 1);
+        return new PathStreamMessage(Paths.get("/unknown/" + UUID.randomUUID()), ByteBufAllocator.DEFAULT, null, 1);
     }
 
     @Override

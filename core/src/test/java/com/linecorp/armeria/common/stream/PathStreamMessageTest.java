@@ -16,15 +16,20 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBufAllocator;
-import reactor.test.StepVerifier;
 
 class PathStreamMessageTest {
 
@@ -32,13 +37,32 @@ class PathStreamMessageTest {
     void readFile() {
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
         final StreamMessage<HttpData> publisher = StreamMessage.of(path, ByteBufAllocator.DEFAULT, 12);
-        StepVerifier.create(publisher)
-                    .expectNext(HttpData.ofAscii("A1234567890\n"))
-                    .expectNext(HttpData.ofAscii("B1234567890\n"))
-                    .expectNext(HttpData.ofAscii("C1234567890\n"))
-                    .expectNext(HttpData.ofAscii("D1234567890\n"))
-                    .expectNext(HttpData.ofAscii("E1234567890\n"))
-                    .expectComplete()
-                    .verify();
+        final AtomicBoolean completed = new AtomicBoolean();
+        final StringBuilder stringBuilder = new StringBuilder();
+        publisher.subscribe(new Subscriber<HttpData>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(HttpData httpData) {
+                final String str = httpData.toStringUtf8();
+                assertThat(str.length()).isLessThanOrEqualTo(12);
+                stringBuilder.append(str);
+            }
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {
+                completed.set(true);
+            }
+        });
+
+        await().untilTrue(completed);
+        assertThat(stringBuilder.toString())
+                .isEqualTo("A1234567890\nB1234567890\nC1234567890\nD1234567890\nE1234567890\n");
     }
 }
