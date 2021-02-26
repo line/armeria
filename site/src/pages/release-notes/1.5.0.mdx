@@ -1,0 +1,58 @@
+---
+date: 2021-02-13
+---
+
+## 🌟 New features
+
+- You can now run asynchronous Servlets in <type://JettyService>. #3320 #3331
+  ```java
+  JettyService.builder()
+              .handler(new AbstractHandler() {
+                  @Override
+                  public void handle(String target, Request baseRequest,
+                                     HttpServletRequest request,
+                                     HttpServletResponse response) {
+                      // Call request.startAsync() to put it in the asynchronous mode.
+                      final AsyncContext asyncCtx = request.startAsync();
+                      ...
+                  }
+              })
+  ```
+  - You can also send the trailers using `Response.setTrailers(Supplier)`.
+
+## 📈 Improvements
+
+- Various improvements for documentation. #3319 #3322
+
+## 🛠️ Bug fixes
+
+- You no longer see an `IllegalStateException` if a gRPC call is sent to a non-ready
+  <type://EndpointGroup>. #3332 #3338
+- <type://RetryingClient> does not raise an `IllegalArgumentException` when a streaming
+  response has more than 50 chunks. #3337
+- You can now correctly receive a gRPC response even if a gRPC client requests one message. #3328
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- netty-resolver-dns-native-macos are newly added.
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'anuraaga',
+    'ikhoon',
+    'inch772',
+    'minwoox',
+    'okue',
+    'trustin'
+  ]}
+/>

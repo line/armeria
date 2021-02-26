@@ -1,0 +1,6 @@
+dependencies {
+    testImplementation project(':core')
+    testImplementation project(':grpc')
+    testImplementation 'com.salesforce.servicelibs:reactor-grpc-stub'
+    testImplementation 'javax.annotation:javax.annotation-api'
+}

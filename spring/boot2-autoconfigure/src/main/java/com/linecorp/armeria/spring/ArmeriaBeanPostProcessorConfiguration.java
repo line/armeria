@@ -16,6 +16,7 @@
 package com.linecorp.armeria.spring;
 
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -30,6 +31,7 @@ import com.linecorp.armeria.server.Server;
 @Configuration
 @ConditionalOnBean(Server.class)
 @ConditionalOnClass(ArmeriaBeanPostProcessor.class)
+@AutoConfigureAfter(name = "com.linecorp.armeria.spring.ArmeriaAutoConfiguration")
 public class ArmeriaBeanPostProcessorConfiguration {
 
     /**

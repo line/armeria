@@ -144,3 +144,15 @@ h6 {
     display: initial;
   }
 }
+
+.tweet-box {
+  // No sidebar
+  @media (max-width: @layout-width-0-max) {
+    width: 100%;
+  }
+
+  // Single or double sidebar
+  @media (min-width: @layout-width-1-min) {
+    width: 40%;
+  }
+}

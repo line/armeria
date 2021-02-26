@@ -331,15 +331,15 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void largeFile() throws Exception {
-        testLarge("/jsp/large.txt");
+        testLarge("/jsp/large.txt", true /* Static content has a content-length header. */);
     }
 
     @Test
     public void largeResponse() throws Exception {
-        testLarge("/jsp/large.jsp");
+        testLarge("/jsp/large.jsp", false /* Dynamic content doesn't have a content-length header */);
     }
 
-    protected void testLarge(String path) throws IOException {
+    protected void testLarge(String path, boolean requiresContentLength) throws IOException {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server().httpUri().resolve(path)))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
@@ -347,9 +347,11 @@ public abstract class WebAppContainerTest {
                         .startsWith("text/plain");
 
                 final byte[] content = EntityUtils.toByteArray(res.getEntity());
-                // Check if the content-length header matches.
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH.toString()).getValue())
-                        .isEqualTo(String.valueOf(content.length));
+                if (requiresContentLength) {
+                    // Check if the content-length header matches.
+                    assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH.toString()).getValue())
+                            .isEqualTo(String.valueOf(content.length));
+                }
 
                 // Check if the content contains what's expected.
                 assertThat(Arrays.stream(CR_OR_LF.split(new String(content, StandardCharsets.UTF_8)))
