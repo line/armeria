@@ -21,6 +21,8 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
@@ -36,7 +38,6 @@ class FuseableStreamMessageTest {
 
     @Test
     void composedFilter() {
-
         final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8);
         final StreamMessage<Integer> even = streamMessage.filter(x -> x % 2 == 0);
         final StreamMessage<Integer> biggerThan4 = even.filter(x -> x > 4);
@@ -119,6 +120,61 @@ class FuseableStreamMessageTest {
         await().untilTrue(completed);
 
         for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
+    }
+
+    @Test
+    void shouldReleaseBufWhenExceptionIsRaised() {
+        final ByteBuf[] bufs = new ByteBuf[7];
+        final HttpData[] source = new HttpData[bufs.length];
+        for (int i = 0; i < bufs.length; i++) {
+            bufs[i] = Unpooled.copyInt(i);
+            source[i] = HttpData.wrap(bufs[i]);
+        }
+        final IllegalStateException cause = new IllegalStateException("Oops...");
+        final StreamMessage<HttpData> filtered =
+                StreamMessage.of(source)
+                             .filter(data -> {
+                                 if (data.byteBuf().readInt() < 3) {
+                                     return true;
+                                 } else {
+                                     throw cause;
+                                 }
+                             });
+
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
+        final AtomicInteger received = new AtomicInteger();
+        filtered.subscribe(new Subscriber<HttpData>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(HttpData httpData) {
+                received.incrementAndGet();
+                assertThat(httpData.byteBuf().refCnt()).isOne();
+                httpData.close();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                causeRef.set(t);
+            }
+
+            @Override
+            public void onComplete() {}
+        }, SubscriptionOption.WITH_POOLED_OBJECTS);
+
+        await().untilAsserted(() -> {
+            assertThat(causeRef).hasValue(cause);
+        });
+
+        assertThat(received).hasValue(3);
+
+        for (ByteBuf buf : bufs) {
+            // Make sure that the unsubscribed elements is released.
             assertThat(buf.refCnt()).isZero();
         }
     }

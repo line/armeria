@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.stream;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
@@ -31,9 +30,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.stream.FuseableStreamMessage.MapperFunction.Type;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -49,12 +45,13 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         return new FuseableStreamMessage<>(source, MapperFunction.of(function));
     }
 
+    // The `source` might not produce `T` and the emitted objects will be transformed to `U` by the `function`.
     private final StreamMessage<Object> source;
-    private final List<MapperFunction<Object, Object>> functions;
+    private final MapperFunction<Object, U> function;
 
     @SuppressWarnings("unchecked")
     private FuseableStreamMessage(StreamMessage<? extends T> source,
-                                  MapperFunction<? super T, ? extends U> function) {
+                                  MapperFunction<T, U> function) {
         requireNonNull(source, "source");
         requireNonNull(function, "function");
 
@@ -66,15 +63,10 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             this.source = cast.source;
 
             // Extract source functions and fuse them with the function
-            final List<MapperFunction<Object, Object>> functions = cast.functions;
-            this.functions =
-                    ImmutableList.<MapperFunction<Object, Object>>builderWithExpectedSize(functions.size() + 1)
-                            .addAll(functions)
-                            .add((MapperFunction<Object, Object>) function)
-                            .build();
+            this.function = cast.function.and(function);
         } else {
             this.source = (StreamMessage<Object>) source;
-            functions = ImmutableList.of((MapperFunction<Object, Object>) function);
+            this.function = (MapperFunction<Object, U>) function;
         }
     }
 
@@ -115,7 +107,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        source.subscribe(new FuseableSubscriber<>(subscriber, functions), executor, options);
+        source.subscribe(new FuseableSubscriber<U>(subscriber, function), executor, options);
     }
 
     @Override
@@ -137,15 +129,15 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                         .newUpdater(FuseableSubscriber.class, Subscription.class, "upstream");
 
         private final Subscriber<? super U> downstream;
-        private final List<MapperFunction<Object, Object>> functions;
+        private final MapperFunction<Object, U> function;
 
         @Nullable
         private volatile Subscription upstream;
 
-        FuseableSubscriber(Subscriber<? super U> downstream, List<MapperFunction<Object, Object>> functions) {
+        FuseableSubscriber(Subscriber<? super U> downstream, MapperFunction<Object, U> function) {
             requireNonNull(downstream, "downstream");
             this.downstream = downstream;
-            this.functions = functions;
+            this.function = function;
         }
 
         @Override
@@ -167,39 +159,22 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             if (upstream == null) {
                 return;
             }
-
-            Object result = item;
+            U result = null;
             try {
-                for (MapperFunction<Object, Object> function : functions) {
-                    assert result != null;
-                    final Type type = function.type();
-                    if (type == Type.MAP) {
-                        result = function.apply(result);
-                    } else if (type == Type.FILTER) {
-                        final Object filtered = function.apply(result);
-                        if (filtered == null) {
-                            // The given item was filtered out. Should request the next item.
-                            StreamMessageUtil.closeOrAbort(result, null);
-                            result = null;
-                            break;
-                        }
-                    } else {
-                        // Should never reach here.
-                        throw new Error();
-                    }
+                result = function.apply(item);
+                if (result != null) {
+                    downstream.onNext(result);
+                } else {
+                    StreamMessageUtil.closeOrAbort(item);
+                    upstream.request(1);
                 }
             } catch (Throwable ex) {
+                StreamMessageUtil.closeOrAbort(item);
+                if (result != null && item != result) {
+                    StreamMessageUtil.closeOrAbort(result);
+                }
                 upstream.cancel();
                 onError(ex);
-                return;
-            }
-
-            if (result != null) {
-                @SuppressWarnings("unchecked")
-                final U cast = (U) result;
-                downstream.onNext(cast);
-            } else {
-                upstream.request(1);
             }
         }
 
@@ -232,8 +207,9 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     /**
-     * Represents either a {@link Function} or a {@link Predicate} depending on {@link #type()}.
+     * Represents either a {@link Function} or a {@link Predicate}.
      */
+    @FunctionalInterface
     interface MapperFunction<T, R> extends Function<T, R> {
 
         /**
@@ -241,19 +217,10 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
          */
         static <T, R> MapperFunction<T, R> of(Function<? super T, ? extends R> function) {
             requireNonNull(function, "function");
-            return new MapperFunction<T, R>() {
-
-                @Override
-                public R apply(T o) {
-                    final R result = function.apply(o);
-                    requireNonNull(result, "function.apply() returned null");
-                    return result;
-                }
-
-                @Override
-                public Type type() {
-                    return Type.MAP;
-                }
+            return o -> {
+                final R result = function.apply(o);
+                requireNonNull(result, "function.apply() returned null");
+                return result;
             };
         }
 
@@ -263,21 +230,24 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         static <T> MapperFunction<T, T> of(Predicate<? super T> predicate) {
             requireNonNull(predicate, "predicate");
 
-            return new MapperFunction<T, T>() {
-
-                @Override
-                public T apply(T o) {
-                    final boolean result = predicate.test(o);
-                    if (result) {
-                        return o;
-                    } else {
-                        return null;
-                    }
+            return o -> {
+                final boolean result = predicate.test(o);
+                if (result) {
+                    return o;
+                } else {
+                    return null;
                 }
+            };
+        }
 
-                @Override
-                public Type type() {
-                    return Type.FILTER;
+        default <V> MapperFunction<T, V> and(MapperFunction<? super R, ? extends V> after) {
+            return (T in) -> {
+                final R out = apply(in);
+                if (out != null) {
+                    return after.apply(out);
+                } else {
+                    // Stop chaining
+                    return null;
                 }
             };
         }
@@ -285,25 +255,13 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         /**
          * Applies this function to the given argument.
          *
-         * <li>
-         *   <ul>{@link Type#FILTER} - Returns the given argument itself if the argument passes the filter,
-         *                             or {@code null} otherwise.</ul>
-         *   <ul>{@link Type#MAP} - Returns a transformed value from the given argument.
-         *                          {@code null} is not allowed to return.</ul>
-         * </li>
+         * If this {@link MapperFunction} is created from {@link Predicate},
+         * returns the given argument itself if the argument passes the filter, or {@code null} otherwise.
+         * If this {@link MapperFunction} is created from {@link }, Returns a transformed value from the
+         * given argument and {@code null} is not allowed to return.
          */
         @Nullable
         @Override
         R apply(T t);
-
-        enum Type {
-            FILTER,
-            MAP
-        }
-
-        /**
-         * Returns the {@link Type} of this {@link MapperFunction}.
-         */
-        Type type();
     }
 }
