@@ -15,8 +15,7 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.multipart.DefaultMultipart.DEFAULT_BOUNDARY;
+import static com.linecorp.armeria.common.multipart.DefaultMultipart.randomBoundary;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -28,8 +27,6 @@ import com.google.common.collect.Iterables;
 import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -42,20 +39,20 @@ import io.netty.util.concurrent.EventExecutor;
  * A reactive {@link Multipart} that represents
  * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html">multiple part messages</a>.
  */
-public interface Multipart extends StreamMessage<HttpData> {
+public interface Multipart {
 
     /**
      * Returns a new {@link Multipart} with the specified {@link BodyPart}s.
      */
     static Multipart of(BodyPart... parts) {
-        return of(DEFAULT_BOUNDARY, parts);
+        return of(randomBoundary(), parts);
     }
 
     /**
      * Returns a new {@link Multipart} with the specified {@link BodyPart}s.
      */
     static Multipart of(Iterable<? extends BodyPart> parts) {
-        return of(DEFAULT_BOUNDARY, parts);
+        return of(randomBoundary(), parts);
     }
 
     /**
@@ -80,7 +77,7 @@ public interface Multipart extends StreamMessage<HttpData> {
      * Returns a new {@link Multipart} with the specified {@link BodyPart}s.
      */
     static Multipart of(Publisher<? extends BodyPart> parts) {
-        return of(DEFAULT_BOUNDARY, parts);
+        return of(randomBoundary(), parts);
     }
 
     /**
@@ -178,13 +175,7 @@ public interface Multipart extends StreamMessage<HttpData> {
      * CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();
      * }</pre>
      */
-    default HttpRequest toHttpRequest(String path) {
-        requireNonNull(path, "path");
-        final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary());
-        return HttpRequest.of(
-                RequestHeaders.of(HttpMethod.POST, path,
-                                  HttpHeaderNames.CONTENT_TYPE, contentType.toString()), this);
-    }
+    HttpRequest toHttpRequest(String path);
 
     /**
      * Converts this {@link Multipart} into a new complete {@link HttpRequest} with the specified
@@ -206,23 +197,13 @@ public interface Multipart extends StreamMessage<HttpData> {
      * CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();
      * }</pre>
      */
-    default HttpRequest toHttpRequest(RequestHeaders requestHeaders) {
-        requireNonNull(requestHeaders, "requestHeaders");
-        MediaType contentType = requestHeaders.contentType();
-        if (contentType != null) {
-            checkArgument("multipart".equals(contentType.type()),
-                          "Content-Type: %s (expected: multipart content type)", contentType);
-            contentType = contentType.withParameter("boundary", boundary());
-        } else {
-            contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary());
-        }
+    HttpRequest toHttpRequest(RequestHeaders requestHeaders);
 
-        final MediaType finalMediaType = contentType;
-        final RequestHeaders updated = requestHeaders.withMutations(builder -> {
-            builder.addObject(HttpHeaderNames.CONTENT_TYPE, finalMediaType);
-        });
-        return HttpRequest.of(updated, this);
-    }
+    /**
+     * Returns a {@link StreamMessage} that emits the {{@link #bodyParts()}} as a stream of {@link HttpData}.
+     */
+    @CheckReturnValue
+    StreamMessage<HttpData> toStreamMessage();
 
     /**
      * Returns the boundary string.

@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.EventExecutor;
@@ -185,7 +186,8 @@ class MultipartEncoder implements StreamMessage<HttpData> {
 
     private StreamMessage<HttpData> createBodyPartPublisher(BodyPart bodyPart) {
         // start boundary
-        final StringBuilder sb = new StringBuilder("--").append(boundary).append("\r\n");
+        final StringBuilder sb = TemporaryThreadLocals.get().stringBuilder();
+        sb.append("--").append(boundary).append("\r\n");
 
         // headers lines
         for (Entry<AsciiString, String> header : bodyPart.headers()) {

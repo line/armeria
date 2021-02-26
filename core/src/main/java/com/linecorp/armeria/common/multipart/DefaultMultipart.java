@@ -15,12 +15,15 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.multipart.MultipartEncoder.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
@@ -31,7 +34,12 @@ import com.google.common.base.MoreObjects;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -40,12 +48,16 @@ import com.linecorp.armeria.internal.common.HttpObjectAggregator;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
-final class DefaultMultipart implements Multipart {
+final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
 
     /**
-     * The default boundary used for encoding multipart messages.
+     * Returns a random boundary used for encoding multipart messages.
      */
-    static final String DEFAULT_BOUNDARY = "!@==boundary==@!";
+    static String randomBoundary() {
+        final byte[] bytes = new byte[16];
+        ThreadLocalRandom.current().nextBytes(bytes);
+        return Base64.getEncoder().encodeToString(bytes);
+    }
 
     private final String boundary;
     private final StreamMessage<BodyPart> parts;
@@ -116,6 +128,39 @@ final class DefaultMultipart implements Multipart {
         }
         return UnmodifiableFuture.wrap(
                 aggregator.completionFuture.thenApply(parts -> AggregatedMultipart.of(boundary, parts)));
+    }
+
+    @Override
+    public HttpRequest toHttpRequest(RequestHeaders requestHeaders) {
+        requireNonNull(requestHeaders, "requestHeaders");
+        MediaType contentType = requestHeaders.contentType();
+        if (contentType != null) {
+            checkArgument("multipart".equals(contentType.type()),
+                          "Content-Type: %s (expected: multipart content type)", contentType);
+            contentType = contentType.withParameter("boundary", boundary());
+        } else {
+            contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary());
+        }
+
+        final MediaType finalMediaType = contentType;
+        final RequestHeaders updated = requestHeaders.withMutations(builder -> {
+            builder.addObject(HttpHeaderNames.CONTENT_TYPE, finalMediaType);
+        });
+        return HttpRequest.of(updated, this);
+    }
+
+    @Override
+    public StreamMessage<HttpData> toStreamMessage() {
+        return this;
+    }
+
+    @Override
+    public HttpRequest toHttpRequest(String path) {
+        requireNonNull(path, "path");
+        final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary());
+        return HttpRequest.of(
+                RequestHeaders.of(HttpMethod.POST, path,
+                                  HttpHeaderNames.CONTENT_TYPE, contentType.toString()), this);
     }
 
     @Override

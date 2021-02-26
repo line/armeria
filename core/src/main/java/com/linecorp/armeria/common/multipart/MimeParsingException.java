@@ -40,16 +40,28 @@ public final class MimeParsingException extends RuntimeException {
     private static final long serialVersionUID = 5242709471451591960L;
 
     /**
-     * Creates a new exception with the specified message.
+     * Creates a new exception.
      */
-    MimeParsingException(String message) {
+    public MimeParsingException() {}
+
+    /**
+     * Creates a new exception with the specified {@code message}.
+     */
+    public MimeParsingException(String message) {
         super(message);
     }
 
     /**
      * Creates a new exception with the specified {@link Throwable}.
      */
-    MimeParsingException(Throwable cause) {
+    public MimeParsingException(Throwable cause) {
         super(cause);
+    }
+
+    /**
+     * Creates a new exception with the specified {@code message} and {@link Throwable}.
+     */
+    public MimeParsingException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

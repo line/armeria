@@ -180,12 +180,31 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
 
     @Override
     public byte getByte(int index) {
-        for (ByteBuf buf : queue) {
+        final ByteBuf firstBuf = queue.peek();
+        if (firstBuf == null) {
+            throw newEndOfInputException();
+        }
+
+        final int readableBytes = firstBuf.readableBytes();
+        if (readableBytes > index) {
+            return firstBuf.getByte(firstBuf.readerIndex() + index);
+        } else {
+            return getByteSlow(index - readableBytes);
+        }
+    }
+
+    private byte getByteSlow(int remaining) {
+        final Iterator<ByteBuf> iterator = queue.iterator();
+        // The first buf was already checked in getByte().
+        iterator.next();
+
+        while (iterator.hasNext()) {
+            final ByteBuf buf = iterator.next();
             final int readableBytes = buf.readableBytes();
-            if (readableBytes > index) {
-                return buf.getByte(buf.readerIndex() + index);
+            if (readableBytes > remaining) {
+                return buf.getByte(buf.readerIndex() + remaining);
             } else {
-                index -= readableBytes;
+                remaining -= readableBytes;
             }
         }
 
@@ -203,17 +222,20 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
         if (readableBytes > length) {
             firstBuf.skipBytes(length);
         } else {
-            queue.remove();
-            firstBuf.release();
-            final int remaining = length - readableBytes;
-            if (remaining > 0) {
-                skipBytesSlow(remaining);
-            }
+            skipBytesSlow(length - readableBytes);
         }
     }
 
     private void skipBytesSlow(int remaining) {
-        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext();) {
+        // The first buf was already checked in skipBytes().
+        queue.remove().release();
+
+        if (remaining <= 0) {
+            // Nothing to skip
+            return;
+        }
+
+        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext(); ) {
             final ByteBuf buf = it.next();
             final int readableBytes = buf.readableBytes();
             if (readableBytes > remaining) {

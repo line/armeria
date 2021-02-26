@@ -31,6 +31,7 @@
 package com.linecorp.armeria.common.multipart;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -60,7 +61,7 @@ final class MimeParser {
     private static final Logger logger = LoggerFactory.getLogger(MimeParser.class);
 
     private static final ByteBuf NEED_MORE = Unpooled.buffer(1);
-    private static final Charset HEADER_ENCODING = Charset.forName("ISO8859-1");
+    private static final Charset HEADER_ENCODING = StandardCharsets.ISO_8859_1;
 
     /**
      * Boundary as bytes.
@@ -78,7 +79,7 @@ final class MimeParser {
     private final int[] badCharacters = new int[128];
 
     /**
-     * BnM algorithm : Good Suffix Shift table.
+     * BnM algorithm: Good Suffix Shift table.
      */
     private final int[] goodSuffixes;
 
@@ -110,14 +111,13 @@ final class MimeParser {
     private BodyPartBuilder bodyPartBuilder;
 
     /**
-     * that publisher that publishes body part contents.
+     * The publisher that emits body part contents.
      */
     @Nullable
     private DefaultStreamMessage<HttpData> bodyPartPublisher;
 
     /**
-     * Read and process body partsList until we see the terminating boundary
-     * line.
+     * Read and process body parts until we see the terminating boundary line.
      */
     private boolean done;
 
@@ -132,7 +132,7 @@ final class MimeParser {
     private int boundaryStart;
 
     /**
-     * Indicates if this parser is closed.
+     * Indicates whether this parser is closed.
      */
     private boolean closed;
 

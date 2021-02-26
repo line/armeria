@@ -16,10 +16,12 @@
 package com.linecorp.armeria.common.multipart;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.common.multipart.DefaultMultipart.DEFAULT_BOUNDARY;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.common.multipart.DefaultMultipart.randomBoundary;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -36,7 +38,7 @@ public interface AggregatedMultipart {
      * @param bodyParts the body part of the multipart message
      */
     static AggregatedMultipart of(AggregatedBodyPart... bodyParts) {
-        return of(DEFAULT_BOUNDARY, bodyParts);
+        return of(randomBoundary(), bodyParts);
     }
 
     /**
@@ -46,7 +48,7 @@ public interface AggregatedMultipart {
      */
     static AggregatedMultipart of(Iterable<? extends AggregatedBodyPart> bodyParts) {
         requireNonNull(bodyParts, "bodyParts");
-        return of(DEFAULT_BOUNDARY, bodyParts);
+        return of(randomBoundary(), bodyParts);
     }
 
     /**
@@ -111,5 +113,16 @@ public interface AggregatedMultipart {
         return bodyParts().stream()
                           .filter(part -> name.equals(part.name()))
                           .collect(toImmutableList());
+    }
+
+    /**
+     * Returns the all control names of the body parts. The control
+     * name is the {@code name} parameter of the {@code "content-disposition"}
+     * header for a body part with disposition type {@code form-data}.
+     */
+    default Set<String> names() {
+        return bodyParts().stream()
+                          .map(AggregatedBodyPart::name)
+                          .collect(toImmutableSet());
     }
 }
