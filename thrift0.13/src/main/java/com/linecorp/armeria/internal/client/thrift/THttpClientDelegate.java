@@ -107,7 +107,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         }
 
         try {
-            final TMessage header = new TMessage(fullMethod(ctx, method), func.messageType(), seqId);
+            final TMessage header = new TMessage(fullMethod(ctx, func.name()), func.messageType(), seqId);
 
             final ByteBuf buf = ctx.alloc().buffer(128);
 
