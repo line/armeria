@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.*;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -39,7 +40,6 @@ import io.netty.buffer.ByteBufAllocator;
 
 class PathStreamMessageTest {
 
-
     @ArgumentsSource(SubscriptionOptionsProvider.class)
     @ParameterizedTest
     void readFile(SubscriptionOption[] options) {
@@ -59,6 +59,7 @@ class PathStreamMessageTest {
                 assertThat(str.length()).isLessThanOrEqualTo(12);
 
                 assertThat(httpData.isPooled()).isEqualTo(containsWithPooledObjects(options));
+                httpData.close();
                 stringBuilder.append(str);
             }
 
