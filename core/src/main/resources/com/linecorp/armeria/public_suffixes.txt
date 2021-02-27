@@ -827,6 +827,7 @@ biz.ki
 biz.ls
 biz.mv
 biz.mw
+biz.my
 biz.ni
 biz.nr
 biz.pk
@@ -1134,7 +1135,6 @@ casa
 casacam.net
 casadelamoneda.museum
 case
-caseih
 caserta.it
 cash
 casino
@@ -2049,6 +2049,7 @@ ed.jp
 ed.pw
 edeka
 edgeapp.net
+edgecompute.app
 edgestack.me
 edogawa.tokyo.jp
 edu
@@ -2513,6 +2514,8 @@ fr-1.paas.massivegrid.net
 fr.eu.org
 fr.it
 fra1-de.cloudjiffy.net
+framer.app
+framercanvas.com
 frana.no
 francaise.museum
 frankfurt.museum
@@ -5559,7 +5562,6 @@ neues.museum
 neustar
 new
 newhampshire.museum
-newholland
 newjersey.museum
 newmexico.museum
 newport.museum
@@ -5744,6 +5746,7 @@ noshiro.akita.jp
 not.br
 notaires.fr
 notaires.km
+noticeable.news
 noticias.bo
 noto.ishikawa.jp
 notodden.no

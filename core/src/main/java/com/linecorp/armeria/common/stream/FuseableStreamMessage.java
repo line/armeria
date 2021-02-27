@@ -268,10 +268,10 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         /**
          * Applies this function to the given argument.
          *
-         * If this {@link MapperFunction} is created from {@link Predicate},
+         * <p>If this {@link MapperFunction} is created from {@link Predicate},
          * returns the given argument itself if the argument passes the filter, or {@code null} otherwise.
-         * If this {@link MapperFunction} is created from {@link }, Returns a transformed value from the
-         * given argument and {@code null} is not allowed to return.
+         * If this {@link MapperFunction} is created from {@link Function}, returns a transformed value from the
+         * given argument. {@code null} is not allowed to return.
          */
         @Nullable
         @Override
