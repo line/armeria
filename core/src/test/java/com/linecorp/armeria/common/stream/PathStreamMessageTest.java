@@ -16,14 +16,20 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -33,8 +39,10 @@ import io.netty.buffer.ByteBufAllocator;
 
 class PathStreamMessageTest {
 
-    @Test
-    void readFile() {
+
+    @ArgumentsSource(SubscriptionOptionsProvider.class)
+    @ParameterizedTest
+    void readFile(SubscriptionOption[] options) {
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
         final StreamMessage<HttpData> publisher = StreamMessage.of(path, ByteBufAllocator.DEFAULT, 12);
         final AtomicBoolean completed = new AtomicBoolean();
@@ -49,6 +57,8 @@ class PathStreamMessageTest {
             public void onNext(HttpData httpData) {
                 final String str = httpData.toStringUtf8();
                 assertThat(str.length()).isLessThanOrEqualTo(12);
+
+                assertThat(httpData.isPooled()).isEqualTo(containsWithPooledObjects(options));
                 stringBuilder.append(str);
             }
 
@@ -59,10 +69,20 @@ class PathStreamMessageTest {
             public void onComplete() {
                 completed.set(true);
             }
-        });
+        }, options);
 
         await().untilTrue(completed);
         assertThat(stringBuilder.toString())
                 .isEqualTo("A1234567890\nB1234567890\nC1234567890\nD1234567890\nE1234567890\n");
+    }
+
+    private static class SubscriptionOptionsProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            return Stream.of(
+                    Arguments.of((Object) EMPTY_OPTIONS),
+                    Arguments.of((Object) new SubscriptionOption[]{ SubscriptionOption.WITH_POOLED_OBJECTS }));
+        }
     }
 }

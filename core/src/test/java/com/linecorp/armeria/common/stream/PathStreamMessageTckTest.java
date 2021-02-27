@@ -77,7 +77,8 @@ public class PathStreamMessageTckTest extends StreamMessageVerification<HttpData
 
     @Override
     public StreamMessage<HttpData> createFailedPublisher() {
-        return new PathStreamMessage(Paths.get("/unknown/" + UUID.randomUUID()), ByteBufAllocator.DEFAULT, null, 1);
+        return new PathStreamMessage(Paths.get("/unknown/" + UUID.randomUUID()),
+                                     ByteBufAllocator.DEFAULT, null, 1);
     }
 
     @Override

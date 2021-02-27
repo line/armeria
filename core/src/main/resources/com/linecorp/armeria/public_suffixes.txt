@@ -18,6 +18,7 @@
 *.ck
 *.cloud.metacentrum.cz
 *.cns.joyent.com
+*.code.run
 *.compute-1.amazonaws.com
 *.compute.amazonaws.com
 *.compute.amazonaws.com.cn
@@ -54,6 +55,7 @@
 *.nagoya.jp
 *.nodebalancer.linode.com
 *.nom.br
+*.northflank.app
 *.np
 *.oci.customer-oci.com
 *.ocp.customer-oci.com
@@ -825,6 +827,7 @@ biz.ki
 biz.ls
 biz.mv
 biz.mw
+biz.my
 biz.ni
 biz.nr
 biz.pk
@@ -1132,7 +1135,6 @@ casa
 casacam.net
 casadelamoneda.museum
 case
-caseih
 caserta.it
 cash
 casino
@@ -1476,7 +1478,6 @@ co.zw
 coach
 coal.museum
 coastaldefence.museum
-code.run
 codes
 codespot.com
 cody.museum
@@ -2048,6 +2049,7 @@ ed.jp
 ed.pw
 edeka
 edgeapp.net
+edgecompute.app
 edgestack.me
 edogawa.tokyo.jp
 edu
@@ -2301,6 +2303,7 @@ eu.meteorapp.com
 eu.org
 eu.platform.sh
 eun.eg
+eurodir.ru
 eurovision
 eus
 evenassi.no
@@ -2511,6 +2514,8 @@ fr-1.paas.massivegrid.net
 fr.eu.org
 fr.it
 fra1-de.cloudjiffy.net
+framer.app
+framercanvas.com
 frana.no
 francaise.museum
 frankfurt.museum
@@ -5557,7 +5562,6 @@ neues.museum
 neustar
 new
 newhampshire.museum
-newholland
 newjersey.museum
 newmexico.museum
 newport.museum
@@ -5734,7 +5738,6 @@ nore-og-uvdal.no
 norfolk.museum
 north-kazakhstan.su
 north.museum
-northflank.app
 northwesternmutual
 norton
 nose.osaka.jp
@@ -5743,6 +5746,7 @@ noshiro.akita.jp
 not.br
 notaires.fr
 notaires.km
+noticeable.news
 noticias.bo
 noto.ishikawa.jp
 notodden.no

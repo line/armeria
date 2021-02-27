@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -47,6 +48,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 final class PathStreamMessage implements StreamMessage<HttpData> {
@@ -178,7 +180,8 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
 
         final PathSubscription pathSubscription =
                 new PathSubscription(fileChannel, subscriber, executor,
-                                     bufferSize, containsNotifyCancellation(options));
+                                     bufferSize, containsNotifyCancellation(options),
+                                     containsWithPooledObjects(options));
         this.pathSubscription = pathSubscription;
         subscriber.onSubscribe(pathSubscription);
     }
@@ -207,6 +210,7 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         private final int bufferSize;
         private final EventExecutor executor;
         private final boolean notifyCancellation;
+        private final boolean withPooledObjects;
 
         private boolean reading;
         private boolean closed;
@@ -215,12 +219,14 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         private volatile int position;
 
         private PathSubscription(AsynchronousFileChannel fileChannel, Subscriber<? super HttpData> downstream,
-                                 EventExecutor executor, int bufferSize, boolean notifyCancellation) {
+                                 EventExecutor executor, int bufferSize, boolean notifyCancellation,
+                                 boolean withPooledObjects) {
             this.fileChannel = fileChannel;
             this.downstream = downstream;
             this.executor = executor;
             this.bufferSize = bufferSize;
             this.notifyCancellation = notifyCancellation;
+            this.withPooledObjects = withPooledObjects;
         }
 
         @Override
@@ -301,7 +307,14 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
                     if (result > -1) {
                         position += result;
                         byteBuf.writerIndex(result);
-                        downstream.onNext(HttpData.wrap(byteBuf));
+                        final HttpData data;
+                        if (withPooledObjects) {
+                            data = HttpData.wrap(byteBuf);
+                        } else {
+                            data = HttpData.wrap(ByteBufUtil.getBytes(byteBuf));
+                            byteBuf.release();
+                        }
+                        downstream.onNext(data);
                         reading = false;
                         read();
                     } else {
