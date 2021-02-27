@@ -79,14 +79,14 @@ public class MultipartDecoderTckTest extends StreamMessageVerification<BodyPart>
     @Test
     public void required_completionFutureMustCompleteOnTermination0() throws Throwable {
         activePublisherTest(0, true, pub -> {
-            final ManualSubscriber<BodyPart> sub = env.newManualSubscriber(pub);
+            final ManualSubscriber<BodyPart> sub = env().newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
 
-            // Remove a validation whether a stream is closed on an empty stream from the upstream test case.
+            // Remove a validation whether a stream is closed on an empty stream from the original test case.
             // Because a MultipartDecoder wraps an input source with DecodedHttpStreamMessage which don't know
-            // whether the upstream is empty before receiving onComplete().
+            // whether the input source is empty before receiving onComplete().
 
-            // TODO(ikhoon): Need to gerneralize this test suit?
+            // TODO(ikhoon): Gerneralize this test suit?
 
             assertThat(stream.whenComplete()).isNotDone();
             sub.requestEndOfStream();

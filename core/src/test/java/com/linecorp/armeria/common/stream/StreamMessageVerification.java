@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.SplitHttpResponse;
 
 public abstract class StreamMessageVerification<T> extends PublisherVerification<T> {
 
-    protected final TestEnvironment env;
+    private final TestEnvironment env;
 
     protected StreamMessageVerification() {
         this(new TestEnvironment(1000, 200));
@@ -49,6 +49,10 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
     protected StreamMessageVerification(TestEnvironment env) {
         super(env);
         this.env = env;
+    }
+
+    protected final TestEnvironment env() {
+        return env;
     }
 
     @Override
