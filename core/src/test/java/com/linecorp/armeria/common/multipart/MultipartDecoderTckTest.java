@@ -13,49 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-/*
- * Copyright (c)  2020 Oracle and/or its affiliates. All rights reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
-
 package com.linecorp.armeria.common.multipart;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
 import java.util.stream.LongStream;
-import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
-import org.reactivestreams.tck.PublisherVerification;
-import org.reactivestreams.tck.TestEnvironment;
+import org.reactivestreams.tck.TestEnvironment.ManualSubscriber;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessageVerification;
 
 import io.netty.buffer.ByteBufAllocator;
-import reactor.core.publisher.Flux;
 
-public class MultipartDecoderTckTest extends PublisherVerification<BodyPart> {
-
-    // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartDecoderTckTest.java
-
-    public MultipartDecoderTckTest() {
-        super(new TestEnvironment(200));
-    }
+public class MultipartDecoderTckTest extends StreamMessageVerification<BodyPart> {
 
     static Publisher<HttpData> upstream(final long l) {
-        final Stream<HttpData> stream =
+        final HttpData[] bodyParts =
                 LongStream.rangeClosed(1, l)
                           .mapToObj(i -> {
                                         String chunk = "";
@@ -73,19 +53,49 @@ public class MultipartDecoderTckTest extends PublisherVerification<BodyPart> {
                                         }
                                         return HttpData.ofUtf8(chunk);
                                     }
-                          );
-        return Flux.fromStream(stream);
+                          ).toArray(HttpData[]::new);
+        return StreamMessage.of(bodyParts);
     }
 
     @Override
-    public Publisher<BodyPart> createPublisher(final long l) {
+    public StreamMessage<BodyPart> createPublisher(final long l) {
         return new MultipartDecoder(StreamMessage.of(upstream(l)), "boundary",
                                     ByteBufAllocator.DEFAULT);
     }
 
     @Override
-    public Publisher<BodyPart> createFailedPublisher() {
+    public StreamMessage<BodyPart> createFailedPublisher() {
         return null;
+    }
+
+    @Nullable
+    @Override
+    public StreamMessage<BodyPart> createAbortedPublisher(long elements) {
+        // MultipartDecoder just delegates to upstream
+        return null;
+    }
+
+    @Override
+    @Test
+    public void required_completionFutureMustCompleteOnTermination0() throws Throwable {
+        activePublisherTest(0, true, pub -> {
+            final ManualSubscriber<BodyPart> sub = env.newManualSubscriber(pub);
+            final StreamMessage<?> stream = (StreamMessage<?>) pub;
+
+            // Remove a validation whether a stream is closed on an empty stream from the upstream test case.
+            // Because a MultipartDecoder wraps an input source with DecodedHttpStreamMessage which don't know
+            // whether the upstream is empty before receiving onComplete().
+
+            // TODO(ikhoon): Need to gerneralize this test suit?
+
+            assertThat(stream.whenComplete()).isNotDone();
+            sub.requestEndOfStream();
+
+            await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompleted());
+            assertThat(stream.isOpen()).isFalse();
+            assertThat(stream.isEmpty()).isTrue();
+            sub.expectNone();
+        });
     }
 
     @Override
