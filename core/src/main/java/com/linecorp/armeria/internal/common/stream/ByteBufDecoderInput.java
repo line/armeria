@@ -194,12 +194,12 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
     }
 
     private byte getByteSlow(int remaining) {
-        final Iterator<ByteBuf> iterator = queue.iterator();
+        final Iterator<ByteBuf> it = queue.iterator();
         // The first buf was already checked in getByte().
-        iterator.next();
+        it.next();
 
-        while (iterator.hasNext()) {
-            final ByteBuf buf = iterator.next();
+        while (it.hasNext()) {
+            final ByteBuf buf = it.next();
             final int readableBytes = buf.readableBytes();
             if (readableBytes > remaining) {
                 return buf.getByte(buf.readerIndex() + remaining);
@@ -235,7 +235,7 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
             return;
         }
 
-        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext(); ) {
+        for (final Iterator<ByteBuf> it = queue.iterator(); it.hasNext();) {
             final ByteBuf buf = it.next();
             final int readableBytes = buf.readableBytes();
             if (readableBytes > remaining) {

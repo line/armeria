@@ -150,17 +150,17 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
     }
 
     @Override
-    public StreamMessage<HttpData> toStreamMessage() {
-        return this;
-    }
-
-    @Override
     public HttpRequest toHttpRequest(String path) {
         requireNonNull(path, "path");
         final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary());
         return HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, path,
                                   HttpHeaderNames.CONTENT_TYPE, contentType.toString()), this);
+    }
+
+    @Override
+    public StreamMessage<HttpData> toStreamMessage() {
+        return this;
     }
 
     @Override
