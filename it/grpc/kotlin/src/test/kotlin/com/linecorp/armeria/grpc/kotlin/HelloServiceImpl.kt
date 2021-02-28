@@ -14,11 +14,10 @@
  * under the License.
  */
 
-package com.linecrop.armeria.grpc.kotlin
+package com.linecorp.armeria.grpc.kotlin
 
 import com.linecorp.armeria.grpc.kotlin.Hello.HelloReply
 import com.linecorp.armeria.grpc.kotlin.Hello.HelloRequest
-import com.linecorp.armeria.grpc.kotlin.HelloServiceGrpcKt
 import com.linecorp.armeria.server.ServiceRequestContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

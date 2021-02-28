@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecrop.armeria.grpc.kotlin
+package com.linecorp.armeria.grpc.kotlin
 
 import com.linecorp.armeria.client.Clients
 import com.linecorp.armeria.grpc.kotlin.Hello.HelloRequest
