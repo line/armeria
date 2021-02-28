@@ -69,4 +69,18 @@ final class RequestContextSubscriber<T> extends BasicFuseableSubscriber<T, T> {
     public T poll() throws Exception {
         return qs.poll();
     }
+
+    @Override
+    public void request(long n) {
+        try (SafeCloseable ignored = assemblyContext.push()) {
+            super.request(n);
+        }
+    }
+
+    @Override
+    public void cancel() {
+        try (SafeCloseable ignored = assemblyContext.push()) {
+            super.cancel();
+        }
+    }
 }

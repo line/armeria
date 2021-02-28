@@ -18,25 +18,30 @@ package com.linecorp.armeria.common.rxjava3;
 
 import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.assertCurrentCtxIsNull;
 import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.assertSameContext;
+import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.newBackpressureAwareFlowable;
 import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.newContext;
 import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.newFlowable;
 import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.newFlowableWithoutCtx;
+import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.newSingle;
 import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.newTestSubscriber;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.reactivex.rxjava3.core.BackpressureStrategy;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.flowables.ConnectableFlowable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
@@ -44,11 +49,6 @@ import io.reactivex.rxjava3.subscribers.TestSubscriber;
 
 @ExtendWith(RxErrorDetectExtension.class)
 public class ContextAwareFlowableTest {
-    private final ScheduledExecutorService scheduledExecutorService =
-            Executors.newSingleThreadScheduledExecutor();
-    private final Executor executor =
-            command -> scheduledExecutorService.schedule(command, 10, TimeUnit.MILLISECONDS);
-
     @BeforeAll
     static void setUp() {
         RequestContextAssembly.enable();
@@ -62,25 +62,193 @@ public class ContextAwareFlowableTest {
     @Test
     public void flowable() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
+        final Flowable<Object> flowable = newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx)
+                .map(o -> {
+                    assertSameContext(ctx);
+                    return o;
+                })
+                .flatMap(o -> {
+                    assertSameContext(ctx);
+                    return newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx);
+                });
+
+        final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
+        try (SafeCloseable ignored = ctx.push()) {
+            flowable.map(o -> {
+                assertSameContext(ctx);
+                return o;
+            }).subscribe(testObserver);
+        }
+        testObserver.await().assertValueCount(25);
+    }
+
+    /**
+     * Generating backpressure-aware streams.
+     * Due to entry has possibility to be requested multiple times in different thread,
+     * RequestContextSubscriber needs to put upstream's request/cancel in the scope.
+     */
+    @ParameterizedTest
+    @MethodSource("flowableProvider")
+    public void flowable_request(Flowable<Object> upstream, ServiceRequestContext ctx)
+            throws InterruptedException {
         final Flowable<Object> flowable =
-                Flowable.create(
-                        emitter -> {
-                            assertSameContext(ctx);
-                            executor.execute(() -> {
-                                for (int i = 0; i < 5; i++) {
-                                    emitter.onNext("success");
-                                }
-                                emitter.onComplete();
-                            });
-                        }, BackpressureStrategy.BUFFER)
-                        .map(o -> {
-                            assertSameContext(ctx);
-                            return o;
-                        })
+                upstream.observeOn(Schedulers.computation(), false, 2)
                         .flatMap(o -> {
                             assertSameContext(ctx);
-                            return newFlowable(o, 5, ctx);
+                            return newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx);
                         });
+
+        final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
+        try (SafeCloseable ignored = ctx.push()) {
+            flowable.map(o -> {
+                assertSameContext(ctx);
+                return o;
+            }).subscribe(testObserver);
+        }
+        testObserver.await().assertValueCount(25);
+    }
+
+    @Test
+    public void flowable_cancel() throws InterruptedException {
+        final ServiceRequestContext ctx = newContext();
+        final Flowable<Object> flowable = newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx)
+                .map(o -> {
+                    assertSameContext(ctx);
+                    return o;
+                })
+                .flatMap(o -> {
+                    assertSameContext(ctx);
+                    return newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx);
+                });
+
+        try (SafeCloseable ignored = ctx.push()) {
+            assertThat(flowable.map(o -> {
+                assertSameContext(ctx);
+                return o;
+            }).test(1, true).isCancelled()).isTrue();
+        }
+    }
+
+    @Test
+    public void flowable_buffer() throws InterruptedException {
+        final ServiceRequestContext ctx = newContext();
+        final Flowable<Object> flowable = newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx)
+                .buffer(5)
+                .flatMap(o -> {
+                    assertSameContext(ctx);
+                    return newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx);
+                });
+
+        final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
+        try (SafeCloseable ignored = ctx.push()) {
+            flowable.map(o -> {
+                assertSameContext(ctx);
+                return o;
+            }).subscribe(testObserver);
+        }
+        testObserver.await().assertValueCount(5);
+    }
+
+    @Test
+    public void flowable_concatMap() throws InterruptedException {
+        final ServiceRequestContext ctx = newContext();
+        final Flowable<Object> flowable = newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx)
+                .concatMapSingle(o -> {
+                    assertSameContext(ctx);
+                    return newSingle(o, ctx);
+                });
+
+        final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
+        try (SafeCloseable ignored = ctx.push()) {
+            flowable.map(o -> {
+                assertSameContext(ctx);
+                return o;
+            }).subscribe(testObserver);
+        }
+        testObserver.await().assertValueCount(5);
+    }
+
+    @Test
+    public void flowable_concatMapEager() throws InterruptedException {
+        final ServiceRequestContext ctx = newContext();
+        final Flowable<Object> flowable = newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx)
+                .concatMapEager(o -> {
+                    assertSameContext(ctx);
+                    return newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx);
+                });
+
+        final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
+        try (SafeCloseable ignored = ctx.push()) {
+            flowable.map(o -> {
+                assertSameContext(ctx);
+                return o;
+            }).subscribe(testObserver);
+        }
+        testObserver.await().assertValueCount(25);
+    }
+
+    @Test
+    public void flowable_subscribeOutsideCtx() throws InterruptedException {
+        final ServiceRequestContext ctx = newContext();
+        Flowable<Object> flowable = newFlowableWithoutCtx(ImmutableList.of(1, 2, 3, 4, 5))
+                .subscribeOn(Schedulers.computation())
+                .map(o -> {
+                    assertCurrentCtxIsNull();
+                    return o;
+                })
+                .flatMap(o -> {
+                    assertCurrentCtxIsNull();
+                    return newFlowableWithoutCtx(ImmutableList.of(1, 2, 3, 4, 5));
+                });
+
+        try (SafeCloseable ignored = ctx.push()) {
+            flowable = flowable.map(o -> {
+                assertCurrentCtxIsNull();
+                return o;
+            });
+        }
+        final TestSubscriber<Object> testObserver = TestSubscriber.create();
+        flowable.subscribe(testObserver);
+        testObserver.await().assertValueCount(25);
+    }
+
+    @Test
+    public void flowable_observeOn() throws InterruptedException {
+        final ServiceRequestContext ctx = newContext();
+        final Flowable<Object> flowable = newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx)
+                .observeOn(Schedulers.computation())
+                .map(o -> {
+                    assertSameContext(ctx);
+                    return o;
+                })
+                .flatMap(o -> {
+                    assertSameContext(ctx);
+                    return newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx);
+                });
+
+        final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
+        try (SafeCloseable ignored = ctx.push()) {
+            flowable.map(o -> {
+                assertSameContext(ctx);
+                return o;
+            }).subscribe(testObserver);
+        }
+        testObserver.await().assertValueCount(25);
+    }
+
+    @Test
+    public void flowable_subscribeOn() throws InterruptedException {
+        final ServiceRequestContext ctx = newContext();
+        final Flowable<Object> flowable = newFlowableWithoutCtx(ImmutableList.of(1, 2, 3, 4, 5))
+                .subscribeOn(Schedulers.computation())
+                .map(o -> {
+                    assertSameContext(ctx);
+                    return o;
+                })
+                .flatMap(o -> {
+                    assertSameContext(ctx);
+                    return newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx);
+                });
 
         final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
         try (SafeCloseable ignored = ctx.push()) {
@@ -95,27 +263,17 @@ public class ContextAwareFlowableTest {
     @Test
     public void flowable_publish() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
-        final ConnectableFlowable<Object> flowable =
-                Flowable.create(
-                        emitter -> {
-                            assertCurrentCtxIsNull();
-                            executor.execute(() -> {
-                                for (int i = 0; i < 5; i++) {
-                                    emitter.onNext("success");
-                                }
-                                emitter.onComplete();
-                            });
-                        }, BackpressureStrategy.BUFFER)
-                        .map(o -> {
-                            assertCurrentCtxIsNull();
-                            return o;
-                        })
-                        .flatMap(o -> {
-                            assertCurrentCtxIsNull();
-                            return newFlowableWithoutCtx(o, 5);
-                        })
-                        .observeOn(Schedulers.computation())
-                        .publish();
+        final ConnectableFlowable<Integer> flowable = newFlowableWithoutCtx(ImmutableList.of(1, 2, 3, 4, 5))
+                .map(o -> {
+                    assertCurrentCtxIsNull();
+                    return o;
+                })
+                .flatMap(o -> {
+                    assertCurrentCtxIsNull();
+                    return newFlowableWithoutCtx(ImmutableList.of(1, 2, 3, 4, 5));
+                })
+                .observeOn(Schedulers.computation())
+                .publish();
 
         final ServiceRequestContext ctx2 = newContext();
         final TestSubscriber<Object> testObserver2 = newTestSubscriber(ctx2);
@@ -138,5 +296,12 @@ public class ContextAwareFlowableTest {
 
         testObserver.await().assertValueCount(25);
         testObserver2.await().assertValueCount(25);
+    }
+
+    static Stream<Arguments> flowableProvider() {
+        final ServiceRequestContext ctx1 = newContext();
+        final ServiceRequestContext ctx2 = newContext();
+        return Stream.of(arguments(newBackpressureAwareFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx1), ctx1),
+                         arguments(newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx2), ctx2));
     }
 }

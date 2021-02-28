@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.rxjava3;
 
-import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.addCallbacks;
+import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.assertCtxInCallbacks;
 import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.assertCurrentCtxIsNotNull;
 import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.assertCurrentCtxIsNull;
 import static com.linecorp.armeria.common.rxjava3.CtxTestUtil.assertSameContext;
@@ -68,11 +68,7 @@ public class ContextAwareSingleTest {
     @Test
     public void single() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
-        final Single<Object> single = addCallbacks(
-                Single.create(emitter -> {
-                    assertSameContext(ctx);
-                    executor.execute(() -> emitter.onSuccess("success"));
-                }), ctx)
+        final Single<Object> single = newSingle("success", ctx)
                 .map(o -> {
                     assertSameContext(ctx);
                     return o;
@@ -86,18 +82,40 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             single.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValue("success");
+        testObserver.await().assertValue("success");
+    }
+
+    @Test
+    public void single_error() throws InterruptedException {
+        final ServiceRequestContext ctx = newContext();
+        final Single<Object> maybe = assertCtxInCallbacks(
+                Single.create(emitter -> {
+                    assertSameContext(ctx);
+                    executor.execute(() -> emitter.onError(new IllegalStateException()));
+                }), ctx);
+
+        final TestObserver<Object> testObserver = newTestObserver(ctx);
+        try (SafeCloseable ignored = ctx.push()) {
+            maybe.subscribe(testObserver);
+        }
+        testObserver.await().assertError(IllegalStateException.class);
+    }
+
+    @Test
+    public void single_cancel() {
+        final ServiceRequestContext ctx = newContext();
+        final Single<Object> single = newSingle("success", ctx);
+
+        try (SafeCloseable ignored = ctx.push()) {
+            assertThat(single.test(true).isDisposed()).isTrue();
+        }
     }
 
     @Test
     public void single_delaySubscription() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
-        final Single<Object> single = addCallbacks(
-                Single.create(emitter -> {
-                    assertSameContext(ctx);
-                    executor.execute(() -> emitter.onSuccess("success"));
-                }), ctx)
-                .delaySubscription(addCallbacks(
+        final Single<Object> single = newSingle("success", ctx)
+                .delaySubscription(assertCtxInCallbacks(
                         Single.create(emitter -> {
                             assertSameContext(ctx);
                             executor.execute(() -> emitter.onSuccess("other"));
@@ -115,17 +133,13 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             single.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValue("success");
+        testObserver.await().assertValue("success");
     }
 
     @Test
     public void single_delay() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
-        final Single<Object> single = addCallbacks(
-                Single.create(emitter -> {
-                    assertSameContext(ctx);
-                    executor.execute(() -> emitter.onSuccess("success"));
-                }), ctx)
+        final Single<Object> single = newSingle("success", ctx)
                 .delay(1, TimeUnit.SECONDS)
                 .map(o -> {
                     assertSameContext(ctx);
@@ -140,17 +154,13 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             single.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValue("success");
+        testObserver.await().assertValue("success");
     }
 
     @Test
     public void single_observeOn() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
-        final Single<Object> single = addCallbacks(
-                Single.create(emitter -> {
-                    assertSameContext(ctx);
-                    executor.execute(() -> emitter.onSuccess("success"));
-                }), ctx)
+        final Single<Object> single = newSingle("success", ctx)
                 .observeOn(Schedulers.computation())
                 .map(o -> {
                     assertSameContext(ctx);
@@ -165,17 +175,13 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             single.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValue("success");
+        testObserver.await().assertValue("success");
     }
 
     @Test
     public void single_contains() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
-        final Single<Object> single = addCallbacks(
-                Single.create(emitter -> {
-                    assertSameContext(ctx);
-                    executor.execute(() -> emitter.onSuccess("success"));
-                }), ctx)
+        final Single<Object> single = newSingle("success", ctx)
                 .contains("success")
                 .map(o -> {
                     assertSameContext(ctx);
@@ -190,28 +196,14 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             single.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValue(Boolean.TRUE);
-    }
-
-    @Test
-    public void single_cancel() {
-        final ServiceRequestContext ctx = newContext();
-        final Single<Object> single = addCallbacks(
-                Single.create(emitter -> {
-                    assertSameContext(ctx);
-                    executor.execute(() -> emitter.onSuccess("success"));
-                }), ctx);
-
-        try (SafeCloseable ignored = ctx.push()) {
-            assertThat(single.test(true).isDisposed()).isTrue();
-        }
+        testObserver.await().assertValue(Boolean.TRUE);
     }
 
     @Test
     public void single_retry() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
         final AtomicInteger counter = new AtomicInteger();
-        final Single<Object> single = addCallbacks(
+        final Single<Object> single = assertCtxInCallbacks(
                 Single.create(emitter -> {
                     assertSameContext(ctx);
                     executor.execute(() -> {
@@ -236,17 +228,13 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             single.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValue("success");
+        testObserver.await().assertValue("success");
     }
 
     @Test
     public void single_toFlowable() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
-        final Single<Object> single = addCallbacks(
-                Single.create(emitter -> {
-                    assertSameContext(ctx);
-                    executor.execute(() -> emitter.onSuccess("success"));
-                }), ctx)
+        final Single<Object> single = newSingle("success", ctx)
                 .toFlowable()
                 .map(o -> {
                     assertSameContext(ctx);
@@ -262,22 +250,14 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             single.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValue("success");
+        testObserver.await().assertValue("success");
     }
 
     @Test
     public void single_concatWith() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
-        final Flowable<Object> flowable = addCallbacks(
-                Single.create(emitter -> {
-                    assertSameContext(ctx);
-                    executor.execute(() -> emitter.onSuccess("success1"));
-                }), ctx)
-                .concatWith(addCallbacks(
-                        Single.create(emitter -> {
-                            assertSameContext(ctx);
-                            executor.execute(() -> emitter.onSuccess("success2"));
-                        }), ctx))
+        final Flowable<Object> flowable = newSingle("success1", ctx)
+                .concatWith(newSingle("success2", ctx))
                 .map(o -> {
                     assertSameContext(ctx);
                     return o;
@@ -291,17 +271,13 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             flowable.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValues("success1", "success2");
+        testObserver.await().assertValues("success1", "success2");
     }
 
     @Test
     public void single_repeat() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
-        final Flowable<Object> flowable = addCallbacks(
-                Single.create(emitter -> {
-                    assertSameContext(ctx);
-                    executor.execute(() -> emitter.onSuccess("success"));
-                }), ctx)
+        final Flowable<Object> flowable = newSingle("success", ctx)
                 .repeat(3)
                 .map(o -> {
                     assertSameContext(ctx);
@@ -316,7 +292,7 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             flowable.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValues("success", "success", "success");
+        testObserver.await().assertValues("success", "success", "success");
     }
 
     @Test
@@ -346,21 +322,15 @@ public class ContextAwareSingleTest {
             });
         }
         single.subscribe(testObserver);
-        testObserver.await().assertComplete().assertValue("success");
+        testObserver.await().assertValue("success");
     }
 
     @Test
     public void single_zip() throws InterruptedException {
         final ServiceRequestContext ctx = newContext();
         final Single<Object> single =
-                Single.zip(addCallbacks(Single.create(emitter -> {
-                               assertSameContext(ctx);
-                               executor.execute(() -> emitter.onSuccess("Hello"));
-                           }), ctx),
-                           addCallbacks(Single.create(emitter -> {
-                               assertSameContext(ctx);
-                               executor.execute(() -> emitter.onSuccess("World"));
-                           }), ctx),
+                Single.zip(newSingle("Hello", ctx),
+                           newSingle("World", ctx),
                            (value1, value2) -> {
                                assertSameContext(ctx);
                                return value1 + " " + value2;
@@ -378,7 +348,7 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             single.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValue("Hello World");
+        testObserver.await().assertValue("Hello World");
     }
 
     /**
@@ -436,8 +406,8 @@ public class ContextAwareSingleTest {
             countDownLatch.countDown();
         }
 
-        testObserver1.await().assertComplete().assertValue("success");
-        testObserver2.await().assertComplete().assertValue("success");
+        testObserver1.await().assertValue("success");
+        testObserver2.await().assertValue("success");
     }
 
     @Test
@@ -464,6 +434,6 @@ public class ContextAwareSingleTest {
         try (SafeCloseable ignored = ctx.push()) {
             single.subscribe(testObserver);
         }
-        testObserver.await().assertComplete().assertValue("success");
+        testObserver.await().assertValue("success");
     }
 }
