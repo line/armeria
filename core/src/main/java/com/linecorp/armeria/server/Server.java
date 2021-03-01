@@ -101,7 +101,8 @@ public final class Server implements ListenableAsyncCloseable {
         return new ServerBuilder();
     }
 
-    private final ServerConfig config;
+    private ServerConfig config;
+    private HttpServerPipelineConfigurator pipelineConfigurator;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
 
@@ -398,9 +399,11 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     public void reconfigure(ReconfigurableServer rs) {
-        final ServerBuilder sb = rs.reconfigure(Server.builder());
-        // Here we build our new configuration object. Now time to replace the old config with the new.
-        final ServerConfig config = sb.buildServerConfig(this.config());
+        final ServerBuilder sb = Server.builder();
+        rs.reconfigure(sb);
+        final ServerConfig newConfiguration = sb.buildServerConfig(this.config());
+        config = newConfiguration;
+        pipelineConfigurator.updateConfig(config);
     }
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
@@ -476,9 +479,11 @@ public final class Server implements ListenableAsyncCloseable {
             b.group(bossGroup, config.workerGroup());
             b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
-            b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts,
-                                                              gracefulShutdownSupport));
-
+            pipelineConfigurator = new HttpServerPipelineConfigurator(
+                                                                    config,
+                                                                    port, sslContexts,
+                                                                    gracefulShutdownSupport);
+            b.childHandler(pipelineConfigurator);
             return b.bind(port.localAddress());
         }
 

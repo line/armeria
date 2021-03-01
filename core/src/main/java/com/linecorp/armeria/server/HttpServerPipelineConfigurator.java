@@ -106,7 +106,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             (byte) 0x51, (byte) 0x55, (byte) 0x49, (byte) 0x54, (byte) 0x0A
     };
 
-    private final ServerConfig config;
+    private ServerConfig config;
     private final ServerPort port;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -235,6 +235,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         settings.maxConcurrentStreams(Math.min(config.http2MaxStreamsPerConnection(), Integer.MAX_VALUE));
         settings.maxHeaderListSize(config.http2MaxHeaderListSize());
         return settings;
+    }
+
+    void updateConfig(ServerConfig config) {
+        this.config = requireNonNull(config, "config");
     }
 
     private final class ProtocolDetectionHandler extends ByteToMessageDecoder {

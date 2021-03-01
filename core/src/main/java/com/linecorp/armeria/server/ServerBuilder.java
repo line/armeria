@@ -1671,7 +1671,7 @@ public final class ServerBuilder {
                 enableServerHeader, enableDateHeader);
     }
 
-    public final ServerConfig buildServerConfig(ServerConfig existingConfig) {
+    final ServerConfig buildServerConfig(ServerConfig existingConfig) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
