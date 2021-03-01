@@ -1187,14 +1187,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Returns the {@link VirtualHostBuilder} for building the default
-     * <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
-     */
-    public List<VirtualHostBuilder> defaultVirtualHostBuilders() {
-        return virtualHostBuilders;
-    }
-
-    /**
      * Configures a {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
