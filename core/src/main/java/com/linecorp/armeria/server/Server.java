@@ -398,6 +398,10 @@ public final class Server implements ListenableAsyncCloseable {
                           .toString();
     }
 
+    /**
+     * Reconfigure Server configuration.
+     * @param rs ReconfigurableServer.
+     */
     public void reconfigure(ReconfigurableServer rs) {
         final ServerBuilder sb = Server.builder();
         rs.reconfigure(sb);
@@ -428,7 +432,7 @@ public final class Server implements ListenableAsyncCloseable {
             // Initialize the server sockets asynchronously.
             final CompletableFuture<Void> future = new CompletableFuture<>();
             final List<ServerPort> ports = config().ports();
-        
+
             final Iterator<ServerPort> it = ports.iterator();
             assert it.hasNext();
 

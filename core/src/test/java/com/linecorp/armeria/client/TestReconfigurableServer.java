@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.client;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -28,9 +31,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 class TestReconfigurableServer {
 
     @Test
@@ -43,8 +43,8 @@ class TestReconfigurableServer {
         });
 
         sb.service("/test11/{name}", (ctx, req) -> {
-            String param = ctx.pathParam("name");
-            return HttpResponse.of("Hello, "+param.toUpperCase());
+            final String param = ctx.pathParam("name");
+            return HttpResponse.of("Hello, " + param.toUpperCase());
         });
 
         final Server server = sb.build();
@@ -103,9 +103,7 @@ class TestReconfigurableServer {
     public void test_we_dont_reconfigure_empty_serviceconfig() throws Exception {
         final ServerBuilder sb = Server.builder();
         sb.http(8081);
-        sb.service("/test1", (ctx, req) -> {
-            return HttpResponse.of("Hello, world!");
-        });
+        sb.service("/test1", (ctx, req) -> HttpResponse.of("Hello, world!"));
 
         final Server server = sb.build();
 

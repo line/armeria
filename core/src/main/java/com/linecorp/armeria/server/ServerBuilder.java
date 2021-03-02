@@ -1663,7 +1663,7 @@ public final class ServerBuilder {
                 enableServerHeader, enableDateHeader);
     }
 
-    final ServerConfig buildServerConfig(ServerConfig existingConfig) {
+    ServerConfig buildServerConfig(ServerConfig existingConfig) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1679,10 +1679,9 @@ public final class ServerBuilder {
         final Mapping<String, SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
 
-
         return new ServerConfig(
-                existingConfig.ports(), setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
-                workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
+                existingConfig.ports(), setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
+                virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                 http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
