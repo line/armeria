@@ -291,6 +291,7 @@ class DefaultRequestLogTest {
         log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
         log.endRequest();
         assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).isEqualTo(DefaultRequestLogTest.class.getCanonicalName());
     }
 
     @Test

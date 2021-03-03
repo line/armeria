@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.metric.ServiceNamingRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -91,7 +92,7 @@ public final class ServerConfig {
 
     private final MeterRegistry meterRegistry;
 
-    private final Function<String, String> serviceNaming;
+    private final ServiceNamingRule serviceNaming;
 
     private final int proxyProtocolMaxTlvSize;
 
@@ -121,7 +122,7 @@ public final class ServerConfig {
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
-            MeterRegistry meterRegistry, Function<String, String> serviceNaming, int proxyProtocolMaxTlvSize,
+            MeterRegistry meterRegistry, ServiceNamingRule serviceNaming, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
@@ -551,7 +552,7 @@ public final class ServerConfig {
     /**
      * Returns a global naming convention for the name of services.
      */
-    public Function<String, String> serviceNaming() {
+    public ServiceNamingRule serviceNaming() {
         return serviceNaming;
     }
 
@@ -653,7 +654,7 @@ public final class ServerConfig {
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
-            @Nullable MeterRegistry meterRegistry, Function<String, String> serviceNaming,
+            @Nullable MeterRegistry meterRegistry, ServiceNamingRule serviceNaming,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,

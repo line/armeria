@@ -65,6 +65,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.metric.ServiceNamingRule;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -181,7 +182,7 @@ public final class ServerBuilder {
     private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
-    private Function<String, String> serviceNaming = Function.identity();
+    private ServiceNamingRule serviceNaming = ServiceNamingRule.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -699,9 +700,9 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets a global naming convention for the name of services.
+     * Sets a global naming rule for the name of services.
      */
-    public ServerBuilder serviceNaming(Function<String, String> serviceNaming) {
+    public ServerBuilder serviceNaming(ServiceNamingRule serviceNaming) {
         this.serviceNaming = requireNonNull(serviceNaming, "serviceNaming");
         return this;
     }
