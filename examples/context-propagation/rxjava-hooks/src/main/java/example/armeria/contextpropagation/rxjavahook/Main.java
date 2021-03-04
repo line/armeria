@@ -28,6 +28,7 @@ public class Main {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             backend.stop().join();
             frontend.stop().join();
+            RequestContextAssembly.disable();
         }));
 
         backend.start().join();
