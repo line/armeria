@@ -5,14 +5,15 @@ You can customize the properties via <type://ClientFactoryBuilder>. For example,
 let's say that you want to increase the connection timeout.
 
 ```java
-final ClientFactory factory =
-                ClientFactory.builder()
-                             // Increase the connection timeout to 5 seconds.
-                             .connectTimeoutMillis(5000)
-                             .build());
-final WebClient client = WebClient.builder("https://armeria.dev")
-                                  .factory(factory)
-                                  .build();
+ClientFactory factory =
+            ClientFactory.builder()
+                         // Increase the connection timeout to 5 seconds.
+                         .connectTimeoutMillis(5000)
+                         .build());
+WebClient client =
+        WebClient.builder("https://armeria.dev")
+                 .factory(factory)
+                 .build();
 client.get("/api").aggregate().join();
 ```
 
@@ -47,7 +48,7 @@ You can also specify Netty [`ChannelOption`](https://netty.io/4.1/api/io/netty/c
 via <type://ClientFactoryBuilder#channelOption(ChannelOption,T)>:
 
 ```java
-final ClientFactory factory =
+ClientFactory factory =
         ClientFactory.builder()
                      // Set the size of send socket buffer as 4096 bytes
                      .channelOption(ChannelOption.SO_SNDBUF, 4096)
@@ -112,7 +113,7 @@ with <type://ClientFactoryBuilder#tlsCustomizer(Consumer)>.
 For example, you could specify a different CA certificate chain or enforce certain cipher suites.
 
 ```java
-final String resourceRoot = "/path/to/resource/";
+String resourceRoot = "/path/to/resource/";
 ClientFactory builder =
         ClientFactory.builder()
                      .tlsCustomizer(
