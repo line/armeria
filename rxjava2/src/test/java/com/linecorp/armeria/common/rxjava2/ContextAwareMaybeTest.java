@@ -273,10 +273,6 @@ public class ContextAwareMaybeTest {
                 .map(o -> {
                     assertSameContext(ctx);
                     return o;
-                })
-                .flatMapMaybe(o -> {
-                    assertSameContext(ctx);
-                    return newMaybe(o, ctx);
                 });
 
         final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);

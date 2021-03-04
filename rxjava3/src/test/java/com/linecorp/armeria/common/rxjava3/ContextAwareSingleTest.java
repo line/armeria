@@ -261,10 +261,6 @@ public class ContextAwareSingleTest {
                 .map(o -> {
                     assertSameContext(ctx);
                     return o;
-                })
-                .flatMapSingle(o -> {
-                    assertSameContext(ctx);
-                    return newSingle(o, ctx);
                 });
 
         final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
