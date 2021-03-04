@@ -9,5 +9,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.contextpropagation.rxjava.Main'
+    mainClassName = 'example.armeria.contextpropagation.rxjavahook.Main'
 }

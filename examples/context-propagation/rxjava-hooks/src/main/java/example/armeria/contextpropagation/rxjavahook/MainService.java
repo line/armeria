@@ -1,4 +1,4 @@
-package example.armeria.contextpropagation.rxjava;
+package example.armeria.contextpropagation.rxjavahook;
 
 import static java.util.Objects.requireNonNull;
 

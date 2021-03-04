@@ -1,4 +1,4 @@
-package example.armeria.contextpropagation.rxjava;
+package example.armeria.contextpropagation.rxjavahook;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
