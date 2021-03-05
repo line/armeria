@@ -35,12 +35,11 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 
-class WebClientRequest implements HttpRequest {
+final class WebClientRequest implements HttpRequest {
 
     private final HttpRequest delegate;
     private final long responseTimeoutMillis;
     private final Map<AttributeKey<?>, Object> attributes;
-
 
     WebClientRequest(HttpRequest delegate,
                      long responseTimeoutMillis,
