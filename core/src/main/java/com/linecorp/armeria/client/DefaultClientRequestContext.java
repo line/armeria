@@ -191,28 +191,12 @@ public final class DefaultClientRequestContext
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
-        long responseTimeoutMillis = options.responseTimeoutMillis();
-        if (req instanceof WebClientRequest) {
-            final WebClientRequest clientRequest = (WebClientRequest) req;
-            final long responseTimeoutForRequest = clientRequest.responseTimeoutMillis();
-            if (responseTimeoutForRequest > -1) {
-                // Use the responseTimeout of a HttpRequest if specified.
-                responseTimeoutMillis = responseTimeoutForRequest;
-            }
-
-            if (!clientRequest.attrs().isEmpty()) {
-                //noinspection unchecked
-                clientRequest.attrs().forEach((k, v) -> setAttr((AttributeKey<Object>) k, v));
-            }
-        }
-
         if (responseCancellationScheduler == null) {
             this.responseCancellationScheduler =
-                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
-
         writeTimeoutMillis = options.writeTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
         additionalRequestHeaders = options.get(ClientOptions.HEADERS);

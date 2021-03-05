@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -39,6 +40,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.AttributeKey;
 
@@ -62,12 +64,33 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
      * Builds and executes the request.
      */
     public HttpResponse execute() {
-        HttpRequest httpRequest = buildRequest();
-        if (responseTimeoutMillis != -1 || attributes != null) {
-            httpRequest = new WebClientRequest(httpRequest, responseTimeoutMillis, attributes);
+        final HttpRequest httpRequest = buildRequest();
+        final Consumer<ClientRequestContext> customizer = newContextCustomizer();
+
+        if (customizer != null) {
+            try (SafeCloseable ignored = Clients.withContextCustomizer(customizer)) {
+                return client.execute(httpRequest);
+            }
+        } else {
+            return client.execute(httpRequest);
+        }
+    }
+
+    @Nullable
+    private Consumer<ClientRequestContext> newContextCustomizer() {
+        if (responseTimeoutMillis == -1 && attributes == null) {
+            return null;
         }
 
-        return client.execute(httpRequest);
+        return ctx -> {
+            if (responseTimeoutMillis > -1) {
+                ctx.setResponseTimeoutMillis(responseTimeoutMillis);
+            }
+            if (attributes != null) {
+                //noinspection unchecked
+                attributes.forEach((k, v) -> ctx.setAttr((AttributeKey<Object>) k, v));
+            }
+        };
     }
 
     /**

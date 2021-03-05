@@ -97,10 +97,6 @@ class DefaultAggregatedHttpRequestTest {
                 // Not a getter.
                 continue;
             }
-            if (httpRequestMethod.startsWith("options")) {
-                // Only valid for HttpRequest
-                continue;
-            }
             assertThat(aggregateHttpRequestMethods).contains(httpRequestMethod);
         }
     }
