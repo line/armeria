@@ -16,14 +16,12 @@
 
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,24 +31,22 @@ import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Publisher;
+
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
-
-import io.netty.util.AttributeKey;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * Builds a new {@link HttpRequest}.
  */
 public abstract class AbstractHttpRequestBuilder {
 
-    // TODO(tumile): Add content(Publisher).
-
     private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
-
     @Nullable
     private HttpHeadersBuilder httpTrailers;
     @Nullable
@@ -62,13 +58,10 @@ public abstract class AbstractHttpRequestBuilder {
     @Nullable
     private HttpData content;
     @Nullable
+    private Publisher<? extends HttpData> publisher;
+    @Nullable
     private String path;
     private boolean disablePathParams;
-
-    // request options
-    @Nullable
-    private DefaultAttributeMap attributeMap;
-    private long responseTimeoutMillis = -1;
 
     /**
      * Shortcut to set GET method and path.
@@ -192,6 +185,18 @@ public abstract class AbstractHttpRequestBuilder {
         requireNonNull(content, "content");
         requestHeadersBuilder.contentType(contentType);
         this.content = content;
+        return this;
+    }
+
+    /**
+     * Sets the {@link Publisher} for this request.
+     */
+    public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
+        requireNonNull(contentType, "contentType");
+        requireNonNull(publisher, "publisher");
+        checkState(content == null, "content has been set already");
+        requestHeadersBuilder.contentType(contentType);
+        this.publisher = publisher;
         return this;
     }
 
@@ -364,67 +369,31 @@ public abstract class AbstractHttpRequestBuilder {
     }
 
     /**
-     * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
-     * the specified {@link Duration} since the {@link Response} started or {@link Request} was fully sent.
-     * {@link Duration#ZERO} disables the limit.
-     */
-    public AbstractHttpRequestBuilder responseTimeout(Duration timeout) {
-        responseTimeoutMillis(requireNonNull(timeout, "timeout").toMillis());
-        return this;
-    }
-
-    /**
-     * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
-     * the specified {@code responseTimeoutMillis} since the {@link Response} started or {@link Request} was
-     * fully sent.
-     * {@code 0} disables the limit.
-     */
-    public AbstractHttpRequestBuilder responseTimeoutMillis(long responseTimeoutMillis) {
-        checkArgument(responseTimeoutMillis >= 0, "responseTimeoutMillis: %s (expected: >= 0)",
-                      responseTimeoutMillis);
-        this.responseTimeoutMillis = responseTimeoutMillis;
-        return this;
-    }
-
-    /**
-     * Associates the specified value with the given {@link AttributeKey} in this request.
-     * If this context previously contained a mapping for the {@link AttributeKey}, the old value is replaced
-     * by the specified value.
-     */
-    public <V> AbstractHttpRequestBuilder setAttr(AttributeKey<V> key, @Nullable V value) {
-        requireNonNull(key, "key");
-
-        if (attributeMap == null) {
-            attributeMap = new DefaultAttributeMap(null);
-        }
-
-        attributeMap.setAttr(key, value);
-        return this;
-    }
-
-    /**
      * Creates a new {@link HttpRequest}.
      */
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
-        final RequestOptions requestOptions = DefaultRequestOptions.of(responseTimeoutMillis, attributeMap);
-
-        // TODO(ikhoon): Apply requestOptions to PublisherBasedHttpRequest
-        //               once https://github.com/line/armeria/pull/3343 is merged.
-
+        if (publisher != null) {
+            if (httpTrailers == null) {
+                return HttpRequest.of(requestHeaders, publisher);
+            } else {
+                return HttpRequest.of(requestHeaders,
+                                      StreamMessage.concat(publisher, StreamMessage.of(httpTrailers.build())));
+            }
+        }
         if (content == null || content.isEmpty()) {
             if (content != null) {
                 content.close();
             }
             if (httpTrailers == null) {
-                return new EmptyFixedHttpRequest(requestHeaders, requestOptions);
+                return new EmptyFixedHttpRequest(requestHeaders);
             }
-            return new OneElementFixedHttpRequest(requestHeaders, requestOptions, httpTrailers.build());
+            return new OneElementFixedHttpRequest(requestHeaders, httpTrailers.build());
         }
         if (httpTrailers == null) {
-            return new OneElementFixedHttpRequest(requestHeaders, requestOptions, content);
+            return new OneElementFixedHttpRequest(requestHeaders, content);
         }
-        return new TwoElementFixedHttpRequest(requestHeaders, requestOptions, content, httpTrailers.build());
+        return new TwoElementFixedHttpRequest(requestHeaders, content, httpTrailers.build());
     }
 
     private RequestHeaders requestHeaders() {

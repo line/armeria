@@ -46,7 +46,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.RequestOptions;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -193,20 +192,17 @@ public final class DefaultClientRequestContext
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
         long responseTimeoutMillis = options.responseTimeoutMillis();
-        if (req != null) {
-            final RequestOptions requestOptions = req.options();
-            final long responseTimeoutForRequest = requestOptions.responseTimeoutMillis();
+        if (req instanceof WebClientRequest) {
+            final WebClientRequest clientRequest = (WebClientRequest) req;
+            final long responseTimeoutForRequest = clientRequest.responseTimeoutMillis();
             if (responseTimeoutForRequest > -1) {
                 // Use the responseTimeout of a HttpRequest if specified.
                 responseTimeoutMillis = responseTimeoutForRequest;
             }
 
-            final Iterator<Entry<AttributeKey<?>, Object>> attrs = requestOptions.attrs();
-            while (attrs.hasNext()) {
-                final Entry<AttributeKey<?>, Object> entry = attrs.next();
-                // Copy attributes of request to context
+            if (!clientRequest.attrs().isEmpty()) {
                 //noinspection unchecked
-                setAttr((AttributeKey<Object>)entry.getKey(), entry.getValue());
+                clientRequest.attrs().forEach((k, v) -> setAttr((AttributeKey<Object>) k, v));
             }
         }
 

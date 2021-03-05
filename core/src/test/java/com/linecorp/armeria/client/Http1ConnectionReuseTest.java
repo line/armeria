@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestOptions;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -77,11 +76,6 @@ class Http1ConnectionReuseTest {
             @Override
             public RequestHeaders headers() {
                 return RequestHeaders.of(HttpMethod.GET, "/");
-            }
-
-            @Override
-            public RequestOptions options() {
-                return RequestOptions.of();
             }
 
             @Override

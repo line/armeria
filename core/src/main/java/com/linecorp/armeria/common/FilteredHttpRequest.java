@@ -57,9 +57,4 @@ public abstract class FilteredHttpRequest
     public RequestHeaders headers() {
         return delegate.headers();
     }
-
-    @Override
-    public RequestOptions options() {
-        return delegate.options();
-    }
 }

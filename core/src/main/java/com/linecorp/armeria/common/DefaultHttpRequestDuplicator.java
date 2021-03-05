@@ -29,7 +29,7 @@ import io.netty.util.concurrent.EventExecutor;
 final class DefaultHttpRequestDuplicator
         extends DefaultStreamMessageDuplicator<HttpObject> implements HttpRequestDuplicator {
 
-    private final HttpRequest req;
+    private final RequestHeaders headers;
 
     DefaultHttpRequestDuplicator(HttpRequest req, EventExecutor executor, long maxRequestLength) {
         super(requireNonNull(req, "req"), obj -> {
@@ -38,41 +38,33 @@ final class DefaultHttpRequestDuplicator
             }
             return 0;
         }, executor, maxRequestLength);
-        this.req = req;
+        headers = req.headers();
     }
 
     @Override
     public HttpRequest duplicate() {
-        return duplicate(req.headers());
+        return duplicate(headers);
     }
 
     @Override
     public HttpRequest duplicate(RequestHeaders newHeaders) {
         requireNonNull(newHeaders, "newHeaders");
-        return new DuplicatedHttpRequest(super.duplicate(), newHeaders, req.options());
+        return new DuplicatedHttpRequest(super.duplicate(), newHeaders);
     }
 
     private class DuplicatedHttpRequest
             extends StreamMessageWrapper<HttpObject> implements HttpRequest {
 
         private final RequestHeaders headers;
-        private final RequestOptions options;
 
-        DuplicatedHttpRequest(StreamMessage<? extends HttpObject> delegate,
-                              RequestHeaders headers, RequestOptions options) {
+        DuplicatedHttpRequest(StreamMessage<? extends HttpObject> delegate, RequestHeaders headers) {
             super(delegate);
             this.headers = headers;
-            this.options = options;
         }
 
         @Override
         public RequestHeaders headers() {
             return headers;
-        }
-
-        @Override
-        public RequestOptions options() {
-            return options;
         }
 
         // Override to return HttpRequestDuplicator.

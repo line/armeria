@@ -16,15 +16,12 @@
 
 package com.linecorp.armeria.common;
 
-import java.time.Duration;
 import java.util.Map;
 
-import javax.annotation.Nullable;
+import org.reactivestreams.Publisher;
 
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
-
-import io.netty.util.AttributeKey;
 
 /**
  * Builds a new {@link HttpRequest}.
@@ -120,6 +117,11 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     }
 
     @Override
+    public HttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
+        return (HttpRequestBuilder) super.content(contentType, publisher);
+    }
+
+    @Override
     public HttpRequestBuilder header(CharSequence name, Object value) {
         return (HttpRequestBuilder) super.header(name, value);
     }
@@ -170,20 +172,5 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     @Override
     public HttpRequestBuilder cookies(Iterable<? extends Cookie> cookies) {
         return (HttpRequestBuilder) super.cookies(cookies);
-    }
-
-    @Override
-    public HttpRequestBuilder responseTimeout(Duration responseTimeout) {
-        return (HttpRequestBuilder) super.responseTimeout(responseTimeout);
-    }
-
-    @Override
-    public HttpRequestBuilder responseTimeoutMillis(long responseTimeoutMillis) {
-        return (HttpRequestBuilder) super.responseTimeoutMillis(responseTimeoutMillis);
-    }
-
-    @Override
-    public <V> HttpRequestBuilder setAttr(AttributeKey<V> key, @Nullable V value) {
-        return (HttpRequestBuilder) super.setAttr(key, value);
     }
 }

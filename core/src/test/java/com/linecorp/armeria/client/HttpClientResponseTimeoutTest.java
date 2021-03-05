@@ -38,8 +38,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpRequestBuilder;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
@@ -205,20 +203,19 @@ class HttpClientResponseTimeoutTest {
             "-1, 2000, 2000", // disable the response timeout of a request
     })
     @ParameterizedTest
-    void timeoutWithRequestOption(long timeoutMillisForRequest, long timeoutMillisForClient,
-                                  long expectTimeoutMillis) {
-        final HttpRequestBuilder builder = HttpRequest.builder()
-                                                      .get("/no-timeout");
+    void timeoutWithWebClientPreparation(long timeoutMillisForRequest, long timeoutMillisForClient,
+                                         long expectTimeoutMillis) {
 
-        if (timeoutMillisForRequest >= 0) {
-            builder.responseTimeoutMillis(timeoutMillisForRequest);
-        }
-        final HttpRequest req = builder.build();
         final WebClient client = WebClient.builder(server.httpUri())
                                           .responseTimeoutMillis(timeoutMillisForClient)
                                           .build();
+        final WebClientRequestPreparation preparation = client.prepare()
+                                                              .get("/no-timeout");
+        if (timeoutMillisForRequest >= 0) {
+            preparation.responseTimeoutMillis(timeoutMillisForRequest);
+        }
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final CompletableFuture<AggregatedHttpResponse> response = client.execute(req).aggregate();
+            final CompletableFuture<AggregatedHttpResponse> response = preparation.execute().aggregate();
             final ClientRequestContext ctx = captor.get();
             assertThat(ctx.responseTimeoutMillis()).isEqualTo(expectTimeoutMillis);
             await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {

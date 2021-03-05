@@ -23,11 +23,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
@@ -62,7 +61,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Create a started {@link Server} bean.
      */
     @Bean
-    @Nullable
+    @ConditionalOnMissingBean(Server.class)
     public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
@@ -75,8 +74,9 @@ public abstract class AbstractArmeriaAutoConfiguration {
 
         if (!armeriaServerConfigurators.isPresent() &&
             !armeriaServerBuilderConsumers.isPresent()) {
-            // No services to register, no need to start up armeria server.
-            return null;
+            throw new IllegalStateException(
+                    "No services to register, " +
+                    "use ArmeriaServerConfigurator or Consumer<ServerBuilder> to configure an Armeria server.");
         }
 
         final ServerBuilder serverBuilder = Server.builder();

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package com.linecorp.armeria.grpc.reactor;
+
+service HelloService {
+  rpc LotsOfRepliesWithoutScheduler (HelloRequest) returns (stream HelloReply) {}
+  rpc HelloError (HelloRequest) returns (HelloReply) {}
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}

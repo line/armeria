@@ -23,36 +23,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextCaptor;
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.util.AsciiString;
-import io.netty.util.AttributeKey;
 import reactor.test.StepVerifier;
 
 class HttpRequestBuilderTest {
-
-    @RegisterExtension
-    static ServerExtension server = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.service("/ping", (ctx, req) -> HttpResponse.of("pong"));
-        }
-    };
 
     @Test
     void buildSimple() {
@@ -257,18 +241,29 @@ class HttpRequestBuilderTest {
     }
 
     @Test
-    void buildWithAttributes() {
-        final AttributeKey<String> foo = AttributeKey.valueOf("foo");
-        final HttpRequest request = HttpRequest.builder()
-                                               .get("/ping")
-                                               .setAttr(foo, "bar")
-                                               .build();
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final CompletableFuture<AggregatedHttpResponse> res =
-                    WebClient.of(server.httpUri()).execute(request).aggregate();
-            final ClientRequestContext ctx = captor.get();
-            assertThat(ctx.ownAttr(foo)).isEqualTo("bar");
-            assertThat(res.join().contentUtf8()).isEqualTo("pong");
-        }
+    void buildWithPublisher() {
+        final HttpRequest request =
+                HttpRequest.builder()
+                           .method(HttpMethod.GET)
+                           .path("/")
+                           .content(MediaType.PLAIN_TEXT_UTF_8, StreamMessage.of(HttpData.ofUtf8("hello")))
+                           .build();
+
+        StepVerifier.create(request)
+                    .expectNext(HttpData.ofUtf8("hello"))
+                    .verifyComplete();
+
+        final HttpRequest requestWithTrailers =
+                HttpRequest.builder()
+                           .method(HttpMethod.GET)
+                           .path("/")
+                           .content(MediaType.PLAIN_TEXT_UTF_8, StreamMessage.of(HttpData.ofUtf8("hello")))
+                           .trailers(HttpHeaders.of("foo", "bar"))
+                           .build();
+
+        StepVerifier.create(requestWithTrailers)
+                    .expectNext(HttpData.ofUtf8("hello"))
+                    .expectNext(HttpHeaders.of("foo", "bar"))
+                    .verifyComplete();
     }
 }

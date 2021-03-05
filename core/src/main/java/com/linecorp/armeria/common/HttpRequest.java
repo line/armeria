@@ -287,14 +287,6 @@ public interface HttpRequest extends Request, HttpMessage {
     RequestHeaders headers();
 
     /**
-     * Returns the options of this request.
-     * Note that an {@linkplain RequestOptions#of()} empty option} is always returned,
-     * if this request is a server-side request.
-     */
-    @UnstableApi
-    RequestOptions options();
-
-    /**
      * Returns the URI of this request. This method is a shortcut for {@code headers().uri()}.
      */
     default URI uri() {

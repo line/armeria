@@ -23,26 +23,14 @@ import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 final class PublisherBasedHttpRequest extends PublisherBasedStreamMessage<HttpObject> implements HttpRequest {
 
     private final RequestHeaders headers;
-    private final RequestOptions options;
-
-    PublisherBasedHttpRequest(RequestHeaders headers, RequestOptions options,
-                              Publisher<? extends HttpObject> publisher) {
-        super(publisher);
-        this.headers = headers;
-        this.options = options;
-    }
 
     PublisherBasedHttpRequest(RequestHeaders headers, Publisher<? extends HttpObject> publisher) {
-        this(headers, RequestOptions.of(), publisher);
+        super(publisher);
+        this.headers = headers;
     }
 
     @Override
     public RequestHeaders headers() {
         return headers;
-    }
-
-    @Override
-    public RequestOptions options() {
-        return options;
     }
 }
