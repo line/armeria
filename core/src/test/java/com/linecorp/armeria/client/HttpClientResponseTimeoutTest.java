@@ -217,7 +217,9 @@ class HttpClientResponseTimeoutTest {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final CompletableFuture<AggregatedHttpResponse> response = preparation.execute().aggregate();
             final ClientRequestContext ctx = captor.get();
-            assertThat(ctx.responseTimeoutMillis()).isEqualTo(expectTimeoutMillis);
+            final long responseTimeoutMillis = ctx.responseTimeoutMillis();
+            assertThat(responseTimeoutMillis).isLessThanOrEqualTo(expectTimeoutMillis);
+            assertThat(responseTimeoutMillis).isGreaterThan(0);
             await().timeout(Duration.ofSeconds(5)).untilAsserted(() -> {
                 assertThatThrownBy(response::join)
                         .isInstanceOf(CompletionException.class)
