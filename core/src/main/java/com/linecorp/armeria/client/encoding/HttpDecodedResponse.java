@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.encoding;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -39,18 +40,22 @@ import io.netty.buffer.ByteBufAllocator;
  */
 final class HttpDecodedResponse extends FilteredHttpResponse {
 
+    private final HttpResponse delegate;
     private final Map<String, StreamDecoderFactory> availableDecoders;
     private final ByteBufAllocator alloc;
+    private final boolean strictContentEncoding;
 
     @Nullable
     private StreamDecoder responseDecoder;
     private boolean headersReceived;
 
     HttpDecodedResponse(HttpResponse delegate, Map<String, StreamDecoderFactory> availableDecoders,
-                        ByteBufAllocator alloc) {
+                        ByteBufAllocator alloc, boolean strictContentEncoding) {
         super(delegate, true);
+        this.delegate = delegate;
         this.availableDecoders = availableDecoders;
         this.alloc = alloc;
+        this.strictContentEncoding = strictContentEncoding;
     }
 
     @Override
@@ -80,10 +85,16 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
             if (contentEncoding != null) {
                 final StreamDecoderFactory decoderFactory =
                         availableDecoders.get(Ascii.toLowerCase(contentEncoding));
-                // If the server returned an encoding we don't support (shouldn't happen since we set
-                // Accept-Encoding), decoding will be skipped which is ok.
                 if (decoderFactory != null) {
                     responseDecoder = decoderFactory.newDecoder(alloc);
+                } else {
+                    // The server returned an encoding we don't support.
+                    // This shouldn't happen normally since we set Accept-Encoding.
+                    if (strictContentEncoding) {
+                        delegate.abort(new UnsupportedEncodingException("encoding: " + contentEncoding));
+                    } else {
+                        // Decoding is skipped.
+                    }
                 }
             }
 
