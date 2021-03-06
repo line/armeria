@@ -151,14 +151,10 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link File}.
-     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to read
-     * the {@link File}.
-     * If the size of a {@link File} is less then {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE},
-     * the returned {@link StreamMessage} will emit only one {@link HttpData}.
-     * If the size of a {@link File} is bigger then {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE},
-     * the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
-     * {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE} except for the last one.
-     *
+     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * create a buffer used to read data from the {@link File}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
      */
     static StreamMessage<HttpData> of(File file) {
         requireNonNull(file, "file");
@@ -167,7 +163,9 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
-     * The returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * create a buffer used to read data from the {@link Path}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
      */
     static StreamMessage<HttpData> of(Path path) {
@@ -177,7 +175,8 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
-     * The returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@code bufferSize}.
      *
      * @param path the path of the file
@@ -189,7 +188,8 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
-     * The returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@code bufferSize}.
      *
      * @param path the path of the file
@@ -205,7 +205,8 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
-     * The returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@code bufferSize}.
      *
      * @param path the path of the file
