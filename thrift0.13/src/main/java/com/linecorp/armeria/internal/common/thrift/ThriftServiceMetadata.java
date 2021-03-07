@@ -35,7 +35,6 @@ import org.apache.thrift.TBaseProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
@@ -200,11 +199,18 @@ public final class ThriftServiceMetadata {
 
     private static Map<String, String> getCamelNameMap(Set<String> processorNames, Method[] methods) {
         final Map<String, String> camelNameMap = new HashMap<>(processorNames.size());
+        final Map<String, String> processorNameMap = new HashMap<>(processorNames.size());
+
+        // generate lowCamel name map
+        for (String name : processorNames) {
+            processorNameMap.put(ThriftFunction.getCamelMethodName(name), name);
+        }
+
+        // check lowCamel name
         for (Method method : methods) {
             final String name = method.getName();
             if (!processorNames.contains(name)) {
-                camelNameMap.put(CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, name),
-                                 name);
+                camelNameMap.put(processorNameMap.get(name), name);
             }
         }
         return camelNameMap;
