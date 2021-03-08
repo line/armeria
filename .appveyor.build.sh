@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 
-JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jre_x64_linux_hotspot_8u242b08.tar.gz'
+JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jre_x64_linux_hotspot_8u282b08.tar.gz'
 JRE8_VERSION='AdoptOpenJDK-8u242b08'
 JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.6%2B10/OpenJDK11U-jre_x64_linux_hotspot_11.0.6_10.tar.gz'
 JRE11_VERSION='AdoptOpenJDK-11.0.6_10'
