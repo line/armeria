@@ -29,6 +29,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -55,6 +56,9 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
 
     private static final Logger logger = LoggerFactory.getLogger(PathStreamMessage.class);
 
+    private static final AtomicIntegerFieldUpdater<PathStreamMessage> subscribedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(PathStreamMessage.class, "subscribed");
+
     static final int DEFAULT_FILE_BUFFER_SIZE = 8192;
 
     private static final Set<StandardOpenOption> READ_OPERATION = ImmutableSet.of(StandardOpenOption.READ);
@@ -67,7 +71,7 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
     private final ExecutorService blockingTaskExecutor;
     private final int bufferSize;
 
-    private boolean subscribed;
+    private volatile int subscribed;
 
     @Nullable
     private volatile PathSubscription pathSubscription;
@@ -120,6 +124,13 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
+
+        if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
+            subscriber.onSubscribe(NoopSubscription.get());
+            subscriber.onError(new IllegalStateException("Only single subscriber is allowed!"));
+            return;
+        }
+
         if (executor.inEventLoop()) {
             subscribe0(subscriber, executor, options);
         } else {
@@ -129,13 +140,6 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
 
     private void subscribe0(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                             SubscriptionOption... options) {
-        if (subscribed) {
-            subscriber.onSubscribe(NoopSubscription.get());
-            subscriber.onError(new IllegalStateException("Only single subscriber is allowed!"));
-            return;
-        }
-        subscribed = true;
-
         final ExecutorService blockingTaskExecutor;
         if (this.blockingTaskExecutor != null) {
             blockingTaskExecutor = this.blockingTaskExecutor;
