@@ -33,7 +33,8 @@ import com.google.common.base.Splitter;
 /**
  * A specification of a {@link TokenBucket} configuration represented by a string. The string syntax is
  * a series of comma-separated {@link BandwidthLimit} configurations and each values is semicolon-separated,
- * as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>.
+ * as per <a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/">RateLimit Header
+ * Fields for HTTP</a>.
  *
  * @see #parseTokenBucket(String) for detailed format of the specification.
  */
@@ -143,7 +144,9 @@ final class TokenBucketSpec {
      * For example: "100;window=60;burst=1000".
      * <br>
      * This method used to compose Quota Policy response header to inform the client about rate
-     * limiting policy as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>.
+     * limiting policy as per
+     * <a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/">RateLimit Header Fields
+     * for HTTP</a>.
      *
      * @return A {@link String} representation of the {@link BandwidthLimit}.
      */
@@ -174,7 +177,9 @@ final class TokenBucketSpec {
      * For example: "100;window=60;burst=1000, 5000;window=3600".
      * <br>
      * This method used to compose Quota Policy response header to inform the client about rate
-     * limiting policy as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>.
+     * limiting policy as per
+     * <a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/">RateLimit Header Fields
+     * for HTTP</a>.
      *
      * @return A {@link String} representation of the {@link TokenBucket}.
      */

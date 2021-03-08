@@ -306,12 +306,12 @@ public final class ClientFactoryBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
@@ -324,12 +324,12 @@ public final class ClientFactoryBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
@@ -379,7 +379,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection flow-control
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
      * window size</a>. The HTTP/2 connection is first established with
      * {@value Http2CodecUtil#DEFAULT_WINDOW_SIZE} bytes of connection flow-control window size,
      * and it is changed if and only if {@code http2InitialConnectionWindowSize} is set.
@@ -396,7 +396,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
      * for HTTP/2 stream-level flow control. Note that this setting affects the window size of all streams,
      * not the connection-level window size.
      *
@@ -411,7 +411,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public ClientFactoryBuilder http2MaxFrameSize(int http2MaxFrameSize) {
@@ -424,7 +424,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      * that indicates the maximum size of header list that the client is prepared to accept, in octets.
      */
     public ClientFactoryBuilder http2MaxHeaderListSize(long http2MaxHeaderListSize) {
@@ -495,7 +495,7 @@ public final class ClientFactoryBuilder {
      * Sets the PING interval in milliseconds.
      * When neither read nor write was performed for the given {@code pingIntervalMillis},
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
@@ -519,7 +519,7 @@ public final class ClientFactoryBuilder {
      * Sets the PING interval.
      * When neither read nor write was performed for the given {@code pingInterval},
      * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
+     * an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
      * is sent for HTTP/1.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or

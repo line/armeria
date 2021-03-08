@@ -116,7 +116,7 @@ class DefaultAggregatedHttpResponseTest {
         assertThat(AggregatedHttpResponse.of(headers).headers().get(CONTENT_LENGTH)).isNull();
 
         // 304 response can have the 'Content-length' header when it is a response to a conditional
-        // GET request. See https://tools.ietf.org/html/rfc7230#section-3.3.2
+        // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
         headers = ResponseHeaders.of(HttpStatus.NOT_MODIFIED, CONTENT_LENGTH, 100);
         assertThat(AggregatedHttpResponse.of(headers).headers().getInt(CONTENT_LENGTH)).isEqualTo(100);
     }

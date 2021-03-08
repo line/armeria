@@ -62,7 +62,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * <a href="https://developers.google.com/protocol-buffers/docs/techniques#streaming">Streaming Multiple Messages</a>
  * for more information.
  * However, {@link Publisher}, {@link Stream} and {@link Iterable} are supported when converting to
- * <a href="https://tools.ietf.org/html/rfc7159#section-5">JSON array</a>.
+ * <a href="https://datatracker.ietf.org/doc/html/rfc7159#section-5">JSON array</a>.
  *
  * <p>Note that this {@link ResponseConverterFunction} is applied to an annotated service by default,
  * so you don't have to specify this converter explicitly unless you want to use your own {@link Printer}.
