@@ -78,7 +78,7 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
 
     @Nullable
     private Consumer<ClientRequestContext> newContextCustomizer() {
-        if (responseTimeoutMillis == -1 && attributes == null) {
+        if (responseTimeoutMillis == -1 && (attributes == null || attributes.isEmpty())) {
             return null;
         }
 
