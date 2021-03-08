@@ -62,7 +62,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             final FuseableStreamMessage<?, T> cast = (FuseableStreamMessage<?, T>) source;
             this.source = cast.source;
 
-            // Extract source functions and fuse them with the function
+            // Extract source function and fuse it with the function
             this.function = cast.function.and(function);
         } else {
             this.source = (StreamMessage<Object>) source;
@@ -122,11 +122,6 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     private static final class FuseableSubscriber<U> implements Subscriber<Object>, Subscription {
-
-        @SuppressWarnings("rawtypes")
-        private static final AtomicReferenceFieldUpdater<FuseableSubscriber, Subscription> upstreamUpdater =
-                AtomicReferenceFieldUpdater
-                        .newUpdater(FuseableSubscriber.class, Subscription.class, "upstream");
 
         private final Subscriber<? super U> downstream;
         private final MapperFunction<Object, U> function;
@@ -240,7 +235,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         default <V> MapperFunction<T, V> and(MapperFunction<? super R, ? extends V> after) {
-            return (T in) -> {
+            return in -> {
                 final R out = apply(in);
                 if (out != null) {
                     return after.apply(out);
@@ -268,10 +263,10 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         /**
          * Applies this function to the given argument.
          *
-         * <p>If this {@link MapperFunction} is created from {@link Predicate},
+         * <p>If this {@link MapperFunction} is created from a {@link Predicate},
          * returns the given argument itself if the argument passes the filter, or {@code null} otherwise.
-         * If this {@link MapperFunction} is created from {@link Function}, returns a transformed value from the
-         * given argument. {@code null} is not allowed to return.
+         * If this {@link MapperFunction} is created from a {@link Function}, returns a transformed value from
+         * the given argument. {@code null} is not allowed to return.
          */
         @Nullable
         @Override
