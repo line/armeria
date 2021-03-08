@@ -34,7 +34,7 @@ public interface ServiceNamingRule {
      * Server server = Server
      *   .builder()
      *   .service(...)
-     *   .serviceNaming(ServiceNamingRule.simpleName)
+     *   .serviceNaming(ServiceNamingRule.simpleName())
      *   .build()
      * }</pre>
      *
