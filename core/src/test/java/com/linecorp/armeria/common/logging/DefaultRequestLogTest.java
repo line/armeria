@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.ServiceNamingRule;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -330,6 +331,24 @@ class DefaultRequestLogTest {
 
     @Test
     void logServiceNameWithServiceNaming() {
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        final Server server = Server.builder()
+                                    .service("/", (_ctx, _req) -> HttpResponse.of(HttpStatus.OK))
+                                    .serviceNaming(ServiceNamingRule.simpleName())
+                                    .build();
+        when(ctx.config()).thenReturn(server.config().defaultVirtualHost().serviceConfigs().get(0));
+        log = new DefaultRequestLog(ctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).isEqualTo(DefaultRequestLogTest.class.getSimpleName());
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_custom() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
         final Server server = Server.builder()

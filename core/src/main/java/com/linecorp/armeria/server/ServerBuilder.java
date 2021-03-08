@@ -65,6 +65,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.ServiceNamingRule;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -182,7 +183,7 @@ public final class ServerBuilder {
     private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
-    private ServiceNamingRule serviceNaming = ServiceNamingRule.ofDefault();
+    private ServiceNamingRule serviceNaming = serviceName -> serviceName;
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -701,6 +702,8 @@ public final class ServerBuilder {
 
     /**
      * Sets a global naming rule for the name of services.
+     *
+     * @see RequestOnlyLog#serviceName()
      */
     public ServerBuilder serviceNaming(ServiceNamingRule serviceNaming) {
         this.serviceNaming = requireNonNull(serviceNaming, "serviceNaming");

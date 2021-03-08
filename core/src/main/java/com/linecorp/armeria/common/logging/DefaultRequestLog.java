@@ -1076,7 +1076,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             }
 
             if (config != null) {
-                serviceName = config.server().config().serviceNaming().apply(newServiceName);
+                serviceName = config.server().config().serviceNaming().convert(newServiceName);
             } else {
                 serviceName = newServiceName;
             }
