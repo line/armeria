@@ -18,6 +18,8 @@ package com.linecorp.armeria.common;
 
 import java.util.Map;
 
+import org.reactivestreams.Publisher;
+
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
@@ -112,6 +114,11 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     @Override
     public HttpRequestBuilder content(MediaType contentType, HttpData content) {
         return (HttpRequestBuilder) super.content(contentType, content);
+    }
+
+    @Override
+    public HttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
+        return (HttpRequestBuilder) super.content(contentType, publisher);
     }
 
     @Override

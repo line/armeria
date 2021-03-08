@@ -62,7 +62,116 @@ String location = redirected.headers().get(HttpHeaderNames.LOCATION);
 AggregatedHttpResponse actual = webClient.get(location).aggregate().join();
 ```
 
+## Decorating a WebClient
+
+You can enrich your <type://WebClient> by decorating it with decorators.
+A decorator wraps another client to intercept an outgoing request or an incoming response.
+A lot of core features such as logging, metrics and distributed tracing are implemented as decorators.
+
+- <type://BraveClient> which [traces](/docs/advanced-zipkin) outbound requests using 
+  [Brave](https://github.com/openzipkin/brave).
+- <type://CircuitBreakerClient> which [opens a circuit](/docs/client-circuit-breaker) on failed responses.
+- <type://CookieClient> which stores cookies of responses using <type://CookieJar>.
+- <type://ConcurrencyLimitingClient> which limits the concurrent number of active requests.
+- <type://ContentPreviewingClient> which
+  [previews the content](/docs/advanced-structured-logging/#enabling-content-previews) of
+  requests and responses.
+- <type://DecodingClient> which decompresses a
+  [compressed](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Encoding) response.
+- <type://MetricCollectingClient> which 
+  [collects metrics](/docs/advanced-metrics#collecting-client-side-metrics) using 
+  [Micrometer](https://micrometer.io/).
+- <type://LoggingClient> which logs requests and responses.
+- <type://RetryingClient> which [automatically retries](/docs/client-retry) failed requests.
+  
+```java
+import brave.http.HttpTracing;
+import com.linecorp.armeria.client.brave.BraveClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
+import com.linecorp.armeria.client.cookie.CookieClient;
+import com.linecorp.armeria.client.encoding.DecodingClient;
+import com.linecorp.armeria.client.limit.ConcurrencyLimitingClient;
+import com.linecorp.armeria.client.logging.ContentPreviewingClient;
+import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.metric.MetricCollectingClient;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+
+HttpTracing tracing = ...;
+WebClient.builder()
+         .decorator(BraveClient.newDecorator(tracing))
+         .decorator(CircuitBreakerClient.newDecorator(
+             CircuitBreaker.ofDefaultName(), CircuitBreakerRule.onServerErrorStatus()))
+         .decorator(ConcurrencyLimitingClient.newDecorator(64))
+         .decorator(ContentPreviewingClient.newDecorator(128))
+         .decorator(CookieClient.newDecorator())
+         .decorator(DecodingClient.newDecorator())
+         .decorator(MetricCollectingClient.newDecorator(
+             MeterIdPrefixFunction.ofDefault("armeria.client")))
+         .decorator(LoggingClient.newDecorator())
+         .decorator(RetryingClient.newDecorator(RetryRule.onUnprocessed()))
+         ...
+         .build();
+```
+
+Please see [Decorating a client](/docs/client-decorator) to learn how it works.
+
+## Service discovery with WebClient
+
+Armeria provides the various [service discovery](https://microservices.io/patterns/client-side-discovery.html)
+mechanisms with <type://EndpointGroup>, 
+from Kubernetes-style [DNS records](/docs/client-service-discovery#dns-based-service-discovery-with-dnsendpointgroup) 
+to [Consul](/docs/client-service-discovery#consul-based-service-discovery-with-consulendpointgroup).
+Requests are sent to dynamically retrieved <typeplural://Endpoint> by specifying an <type://EndpointGroup>
+to a <type://WebClient>.
+
+```java
+import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
+
+// Retrieve the Endpoint list from SRV records
+DnsServiceEndpointGroup group =
+    DnsServiceEndpointGroup.of("k8s.default.svc.cluster.local.");
+    
+// Filter out unhealthy endpoints
+HealthCheckedEndpointGroup healthCheckedGroup =
+        HealthCheckedEndpointGroup.of(group, "/monitor/l7check");
+        
+WebClient.builder(SessionProtocol.HTTP, healthCheckedGroup)
+         ...
+         .build();
+```
+
+Please check [Client-side load balancing and service discovery](/docs/client-service-discovery)
+for more information.
+
+## Configuring ClientFactory
+
+A <type://ClientFactory> manages connections and protocol-specific properties.
+You can build your own <type://ClientFactory> using <type://ClientFactoryBuilder> and 
+set it through <type://WebClientBuilder#factory()>.
+
+```java
+import com.linecorp.armeria.client.ClientFactory;
+// Create a customized ClientFactory
+ClientFactory clientFactory =
+    ClientFactory.builder()
+                 // Increase the connect timeout from 3.2s to 10s.
+                 .connectTimeout(Duration.ofSeconds(10))
+                 .
+                 .build();
+
+WebClient client =
+        WebClient.builder()
+                 .factory(clientFactory)
+                 .build();
+```
+
+Please check [Customizing a `ClientFactory` with `ClientFactoryBuilder`](/docs/client-factory)
+for the details.
+
 ## See also
 - [Retrofit integration](/docs/client-retrofit)
-
 

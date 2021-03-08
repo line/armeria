@@ -260,6 +260,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void doRequest(int numMessages) {
+        if (method.getType().serverSendsOneMessage() && numMessages == 1) {
+            // At least 2 requests are required for receiving trailers.
+            numMessages = 2;
+        }
         if (upstream == null) {
             pendingRequests += numMessages;
         } else {

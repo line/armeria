@@ -26,6 +26,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -431,4 +433,32 @@ public interface StreamMessage<T> extends Publisher<T> {
      * on a closed or aborted stream has no effect.
      */
     void abort(Throwable cause);
+
+    /**
+     * Filters values emitted by this {@link StreamMessage}.
+     * If the {@link Predicate} test succeeds, the value is emitted.
+     * If the {@link Predicate} test fails, the value is ignored and a request of {@code 1} is made to upstream.
+     */
+    default StreamMessage<T> filter(Predicate<? super T> predicate) {
+        requireNonNull(predicate, "predicate");
+        return FuseableStreamMessage.of(this, predicate);
+    }
+
+    /**
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified {@link Function}.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value.
+     */
+    default <U> StreamMessage<U> map(Function<? super T, ? extends U> function) {
+        requireNonNull(function, "function");
+        if (function == Function.identity()) {
+            @SuppressWarnings("unchecked")
+            final StreamMessage<U> cast = (StreamMessage<U>) this;
+            return cast;
+        }
+
+        return FuseableStreamMessage.of(this, function);
+    }
 }

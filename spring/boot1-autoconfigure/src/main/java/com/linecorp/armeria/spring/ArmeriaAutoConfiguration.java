@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.spring;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,6 +28,7 @@ import com.linecorp.armeria.server.Server;
  */
 @Configuration
 @EnableConfigurationProperties(ArmeriaSettings.class)
-@ConditionalOnMissingBean(Server.class)
+@ConditionalOnClass(Server.class)
+@ConditionalOnProperty(name = "armeria.server-enabled", havingValue = "true", matchIfMissing = true)
 public class ArmeriaAutoConfiguration extends AbstractArmeriaAutoConfiguration {
 }

@@ -8,7 +8,6 @@ import example.armeria.grpc.kotlin.Hello.HelloRequest
 import example.armeria.grpc.kotlin.HelloServiceGrpcKt.HelloServiceCoroutineStub
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -53,22 +52,6 @@ class HelloServiceTest {
         }
     }
 
-    @ParameterizedTest
-    @MethodSource("uris")
-    fun parallelReplyFromServerSideBlockingCall(uri: String) {
-        runBlocking {
-            val helloService = Clients.newClient(uri, HelloServiceCoroutineStub::class.java)
-            repeat(30) {
-                launch {
-                    val message = helloService.shortBlockingHello(
-                        HelloRequest.newBuilder().setName("$it Armeria").build()
-                    ).message
-                    assertThat(message).isEqualTo("Hello, $it Armeria!")
-                }
-            }
-        }
-    }
-
     @Test
     fun lotsOfReplies() {
         runBlocking {
@@ -78,38 +61,6 @@ class HelloServiceTest {
                     assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
                 }
             assertThat(sequence).isEqualTo(5)
-        }
-    }
-
-    @Test
-    fun parallelBlockingLotsOfReplies() {
-        runBlocking {
-            repeat(30) {
-                launch {
-                    var sequence = 0
-                    helloService.blockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
-                        .collect {
-                            assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
-                        }
-                    assertThat(sequence).isEqualTo(5)
-                }
-            }
-        }
-    }
-
-    @Test
-    fun parallelShortBlockingLotsOfReplies() {
-        runBlocking {
-            repeat(30) {
-                launch {
-                    var sequence = 0
-                    helloService.shortBlockingLotsOfReplies(HelloRequest.newBuilder().setName("Armeria").build())
-                        .collect {
-                            assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
-                        }
-                    assertThat(sequence).isEqualTo(5)
-                }
-            }
         }
     }
 

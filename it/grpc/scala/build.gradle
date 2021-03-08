@@ -1,0 +1,23 @@
+plugins {
+    id 'scala'
+}
+
+dependencies {
+    testImplementation project(':core')
+    testImplementation project(':grpc')
+    testImplementation project(':scalapb_2.13')
+    testImplementation "com.thesamet.scalapb:scalapb-runtime_2.13"
+    testImplementation "com.thesamet.scalapb:scalapb-runtime-grpc_2.13"
+    testImplementation "com.thesamet.scalapb:scalapb-json4s_2.13"
+}
+
+compileScala.targetCompatibility = 1.8
+ScalaCompileOptions.metaClass.useAnt = false
+
+sourceSets {
+    test {
+        scala {
+            srcDirs "${protobuf.generatedFilesBaseDir}/test/scalapb"
+        }
+    }
+}
