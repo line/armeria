@@ -87,7 +87,7 @@ class DefaultAggregatedHttpRequestTest {
     }
 
     @Test
-    void shouldHaveAllGettersInHttpRequest() throws Exception {
+    void shouldHaveAllGettersInHttpRequest() {
         final List<String> httpRequestMethods = noParameterMethods(HttpRequest.class);
         final List<String> aggregateHttpRequestMethods = noParameterMethods(AggregatedHttpRequest.class,
                                                                             AggregatedHttpMessage.class);

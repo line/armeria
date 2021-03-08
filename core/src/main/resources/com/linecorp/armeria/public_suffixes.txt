@@ -48,6 +48,7 @@
 *.kunden.ortsinfo.at
 *.landing.myjino.ru
 *.lcl.dev
+*.lclstage.dev
 *.linodeobjects.com
 *.magentosite.cloud
 *.mm
@@ -77,6 +78,7 @@
 *.spectrum.myjino.ru
 *.statics.cloud
 *.stg.dev
+*.stgstage.dev
 *.stolos.io
 *.svc.firenet.ch
 *.sys.qcx.io
@@ -1381,6 +1383,7 @@ cloudns.org
 cloudns.pro
 cloudns.pw
 cloudns.us
+cloudsite.builders
 cloudycluster.net
 club
 club.aero
@@ -7101,6 +7104,7 @@ servep2p.com
 servepics.com
 servequake.com
 servesarcasm.com
+service.gov.scot
 service.gov.uk
 service.one
 services
@@ -7401,6 +7405,7 @@ square7.net
 sr
 sr.gov.pl
 sr.it
+srht.site
 srl
 srv.br
 ss
