@@ -16,16 +16,19 @@
 
 package com.linecorp.armeria.client.encoding;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.UnsupportedEncodingException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -63,6 +66,11 @@ class DecodingClientTest {
                 return HttpResponse.of(
                         ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_ENCODING, "unsupported"),
                         HttpData.ofUtf8("unsupported content encoding"));
+            });
+
+            sb.service("/echo-encoding", (ctx, req) -> {
+                return HttpResponse
+                        .of(firstNonNull(req.headers().get(HttpHeaderNames.ACCEPT_ENCODING), "none"));
             });
         }
     };
@@ -158,5 +166,30 @@ class DecodingClientTest {
                 .getCause()
                 .isInstanceOf(UnsupportedEncodingException.class)
                 .hasMessage("encoding: unsupported");
+    }
+
+    @Test
+    void shouldFilterOutUnsupportedAcceptEncoding() {
+        final Function<? super HttpClient, DecodingClient> decodingClient =
+                DecodingClient.builder()
+                              .decoderFactory(
+                                      com.linecorp.armeria.common.encoding.StreamDecoderFactory.gzip())
+                              .autoFillAcceptEncoding(false)
+                              .newDecorator();
+
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(decodingClient)
+                                          .build();
+        // 'br' is specified.
+        RequestHeaders header = RequestHeaders.of(HttpMethod.GET, "/echo-encoding",
+                                                  HttpHeaderNames.ACCEPT_ENCODING, "br");
+        AggregatedHttpResponse response = client.execute(header).aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo("none");
+
+        // 'gzip,br' is specified.
+        header = RequestHeaders.of(HttpMethod.GET, "/echo-encoding",
+                                   HttpHeaderNames.ACCEPT_ENCODING, "gzip,br");
+        response = client.execute(header).aggregate().join();
+        assertThat(response.contentUtf8()).isEqualTo("gzip");
     }
 }

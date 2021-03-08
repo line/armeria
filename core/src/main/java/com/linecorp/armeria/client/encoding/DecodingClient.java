@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -35,6 +37,7 @@ import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 
 /**
  * A {@link DecoratingClient} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
@@ -107,9 +110,7 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
                 return unwrap().execute(ctx, req);
             }
 
-            req = req.withHeaders(req.headers().toBuilder()
-                                     .set(HttpHeaderNames.ACCEPT_ENCODING, acceptEncodingHeader));
-            ctx.updateRequest(req);
+            req = updateAcceptEncoding(ctx, req, acceptEncodingHeader);
         } else {
             // Respect user-defined accept-encoding.
             final String acceptEncoding = req.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
@@ -132,13 +133,36 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
             final Map<String, StreamDecoderFactory> availableFactories = factoryBuilder.build();
             if (availableFactories.isEmpty()) {
                 // Unsupported encoding.
+                req = updateAcceptEncoding(ctx, req, null);
                 return unwrap().execute(ctx, req);
             } else {
+
+                if (encodings.length != availableFactories.size()) {
+                    // Use only supported encodings.
+                    final String acceptEncodingHeader = String.join(",", availableFactories.keySet());
+                    req = updateAcceptEncoding(ctx, req, acceptEncodingHeader);
+                }
                 decoderFactories = availableFactories;
             }
         }
 
         final HttpResponse res = unwrap().execute(ctx, req);
         return new HttpDecodedResponse(res, decoderFactories, ctx.alloc(), strictContentEncoding);
+    }
+
+    private static HttpRequest updateAcceptEncoding(ClientRequestContext ctx, HttpRequest req,
+                                                    @Nullable String acceptEncoding) {
+        final RequestHeadersBuilder headersBuilder;
+        if (acceptEncoding == null) {
+            headersBuilder = req.headers().toBuilder()
+                                .removeAndThen(HttpHeaderNames.ACCEPT_ENCODING);
+        } else {
+            headersBuilder = req.headers().toBuilder()
+                                .set(HttpHeaderNames.ACCEPT_ENCODING, acceptEncoding);
+        }
+
+        final HttpRequest updated = req.withHeaders(headersBuilder);
+        ctx.updateRequest(updated);
+        return updated;
     }
 }
