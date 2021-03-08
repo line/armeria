@@ -236,10 +236,10 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         @Override
         public void request(long n) {
             if (n <= 0L) {
-                cancel();
                 downstream.onError(
                         new IllegalArgumentException("Rule §3.9 violated: non-positive subscription requests " +
                                                      "are forbidden."));
+                cancel();
             } else {
                 request0(n);
             }
