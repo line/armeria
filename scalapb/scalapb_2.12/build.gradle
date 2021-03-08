@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     implementation project(':grpc')
-    implementation 'org.scala-lang:scala-library:2.12.12'
+    implementation 'org.scala-lang:scala-library:2.12.13'
 
     // ScalaPB
     api "com.thesamet.scalapb:scalapb-json4s_2.12"
