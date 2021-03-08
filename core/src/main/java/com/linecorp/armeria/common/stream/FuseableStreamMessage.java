@@ -133,6 +133,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
         @Nullable
         private volatile Subscription upstream;
+        private volatile boolean canceled;
 
         FuseableSubscriber(Subscriber<? super U> downstream, MapperFunction<Object, U> function) {
             requireNonNull(downstream, "downstream");
@@ -151,9 +152,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         public void onNext(Object item) {
             requireNonNull(item, "item");
 
-            final Subscription upstream = this.upstream;
-            if (upstream == null) {
-                // The subscription has been canceled.
+            if (canceled) {
                 return;
             }
 
@@ -188,19 +187,20 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void request(long n) {
-            final Subscription upstream = this.upstream;
-            if (upstream != null) {
-                upstream.request(n);
+            if (canceled) {
+                return;
             }
+            upstream.request(n);
         }
 
         @Override
         public void cancel() {
-            final Subscription upstream = this.upstream;
-            this.upstream = null;
-            if (upstream != null) {
-                upstream.cancel();
+            if (canceled) {
+                return;
             }
+
+            canceled = true;
+            upstream.cancel();
         }
     }
 
