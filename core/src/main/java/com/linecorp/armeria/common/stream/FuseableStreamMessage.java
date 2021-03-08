@@ -143,10 +143,6 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
-            if (!upstreamUpdater.compareAndSet(this, null, subscription)) {
-                subscription.cancel();
-                throw new IllegalStateException("Subscription already set!");
-            }
             upstream = subscription;
             downstream.onSubscribe(this);
         }
@@ -157,8 +153,10 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
             final Subscription upstream = this.upstream;
             if (upstream == null) {
+                // The subscription has been canceled.
                 return;
             }
+
             U result = null;
             try {
                 result = function.apply(item);
@@ -257,12 +255,13 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
          */
         @Override
         default <V> Function<T, V> andThen(Function<? super R, ? extends V> after) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException("Must use and(MapperFunction) instead.");
         }
 
         @Override
         default <V> Function<V, R> compose(Function<? super V, ? extends T> before) {
-            throw new UnsupportedOperationException();
+            throw new UnsupportedOperationException(
+                    "compose is not allowed for " + MapperFunction.class.getName());
         }
 
         /**

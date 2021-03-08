@@ -373,6 +373,12 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     default <U> StreamMessage<U> map(Function<? super T, ? extends U> function) {
         requireNonNull(function, "function");
+        if (function == Function.identity()) {
+            @SuppressWarnings("unchecked")
+            final StreamMessage<U> cast = (StreamMessage<U>) this;
+            return cast;
+        }
+
         return FuseableStreamMessage.of(this, function);
     }
 }
