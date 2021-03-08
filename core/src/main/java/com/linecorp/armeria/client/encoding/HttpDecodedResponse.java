@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -91,7 +92,8 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
                     // The server returned an encoding we don't support.
                     // This shouldn't happen normally since we set Accept-Encoding.
                     if (strictContentEncoding) {
-                        delegate.abort(new UnsupportedEncodingException("encoding: " + contentEncoding));
+                        Exceptions.throwUnsafely(
+                                new UnsupportedEncodingException("encoding: " + contentEncoding));
                     } else {
                         // Decoding is skipped.
                     }

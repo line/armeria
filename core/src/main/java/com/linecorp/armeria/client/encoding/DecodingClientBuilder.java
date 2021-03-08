@@ -48,9 +48,9 @@ public final class DecodingClientBuilder {
      * If not specified, {@link StreamDecoderFactory#gzip()} and {@link StreamDecoderFactory#deflate()} are
      * used by default.
      */
-    public DecodingClientBuilder decoderFactory(StreamDecoderFactory... decoderFactories) {
+    public DecodingClientBuilder decoderFactories(StreamDecoderFactory... decoderFactories) {
         requireNonNull(decoderFactories, "decoderFactories");
-        return decoderFactory(ImmutableList.copyOf(decoderFactories));
+        return decoderFactories(ImmutableList.copyOf(decoderFactories));
     }
 
     /**
@@ -58,7 +58,7 @@ public final class DecodingClientBuilder {
      * If not specified, {@link StreamDecoderFactory#gzip()} and {@link StreamDecoderFactory#deflate()} are
      * used by default.
      */
-    public DecodingClientBuilder decoderFactory(Iterable<? extends StreamDecoderFactory> decoderFactories) {
+    public DecodingClientBuilder decoderFactories(Iterable<? extends StreamDecoderFactory> decoderFactories) {
         requireNonNull(decoderFactories, "decoderFactories");
         this.decoderFactories = ImmutableList.copyOf(decoderFactories);
         return this;
@@ -66,7 +66,7 @@ public final class DecodingClientBuilder {
 
     /**
      * Automatically fills possible {@link HttpHeaderNames#ACCEPT_ENCODING}s specified in
-     * {@link #decoderFactory(StreamDecoderFactory...)} if an {@link HttpHeaderNames#ACCEPT_ENCODING} is not
+     * {@link #decoderFactories(StreamDecoderFactory...)} if an {@link HttpHeaderNames#ACCEPT_ENCODING} is not
      * set in {@link RequestHeaders}.
      * This option is enabled by default.
      */
@@ -100,7 +100,6 @@ public final class DecodingClientBuilder {
      * Returns a newly-created {@link DecodingClient} based on the properties of this builder.
      */
     public DecodingClient build(HttpClient delegate) {
-        final List<StreamDecoderFactory> decoderFactories = this.decoderFactories;
         return new DecodingClient(delegate, decoderFactories, autoFillAcceptEncoding, strictContentEncoding);
     }
 }

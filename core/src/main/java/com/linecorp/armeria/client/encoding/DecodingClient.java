@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -44,6 +45,8 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
  * content of an {@link HttpResponse}.
  */
 public final class DecodingClient extends SimpleDecoratingHttpClient {
+
+    private static final Splitter ENCODING_SPLITTER = Splitter.on(',').trimResults();
 
     /**
      * Creates a new {@link DecodingClient} decorator with the default encodings of 'gzip' and 'deflate'.
@@ -111,41 +114,47 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
             }
 
             req = updateAcceptEncoding(ctx, req, acceptEncodingHeader);
-        } else {
-            // Respect user-defined accept-encoding.
-            final String acceptEncoding = req.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
-            if (Strings.isNullOrEmpty(acceptEncoding)) {
-                // No accept-encoding is specified.
-                return unwrap().execute(ctx, req);
-            }
+            return executeAndDecodeResponse(ctx, req, decoderFactories);
+        }
 
-            final String[] encodings = acceptEncoding.split(",");
-            final ImmutableMap.Builder<String, StreamDecoderFactory> factoryBuilder =
-                    ImmutableMap.builderWithExpectedSize(encodings.length);
+        // Respect user-defined accept-encoding.
+        final String acceptEncoding = req.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
+        if (Strings.isNullOrEmpty(acceptEncoding)) {
+            // No accept-encoding is specified.
+            return unwrap().execute(ctx, req);
+        }
 
-            for (String encoding : encodings) {
-                final StreamDecoderFactory factory = decoderFactories.get(encoding);
-                if (factory != null) {
-                    factoryBuilder.put(factory.encodingHeaderValue(), factory);
-                }
-            }
+        final List<String> encodings = ImmutableList.copyOf(ENCODING_SPLITTER.split(acceptEncoding));
+        final ImmutableMap.Builder<String, StreamDecoderFactory> factoryBuilder =
+                ImmutableMap.builderWithExpectedSize(encodings.size());
 
-            final Map<String, StreamDecoderFactory> availableFactories = factoryBuilder.build();
-            if (availableFactories.isEmpty()) {
-                // Unsupported encoding.
-                req = updateAcceptEncoding(ctx, req, null);
-                return unwrap().execute(ctx, req);
-            } else {
-
-                if (encodings.length != availableFactories.size()) {
-                    // Use only supported encodings.
-                    final String acceptEncodingHeader = String.join(",", availableFactories.keySet());
-                    req = updateAcceptEncoding(ctx, req, acceptEncodingHeader);
-                }
-                decoderFactories = availableFactories;
+        for (String encoding : encodings) {
+            final StreamDecoderFactory factory = decoderFactories.get(encoding);
+            if (factory != null) {
+                factoryBuilder.put(factory.encodingHeaderValue(), factory);
             }
         }
 
+        final Map<String, StreamDecoderFactory> availableFactories = factoryBuilder.build();
+        if (availableFactories.isEmpty()) {
+            // Unsupported encoding.
+            req = updateAcceptEncoding(ctx, req, null);
+            return unwrap().execute(ctx, req);
+        }
+
+        if (encodings.size() != availableFactories.size()) {
+            // Use only supported encodings.
+            final String acceptEncodingHeader = String.join(",", availableFactories.keySet());
+            req = updateAcceptEncoding(ctx, req, acceptEncodingHeader);
+        }
+        decoderFactories = availableFactories;
+
+        return executeAndDecodeResponse(ctx, req, decoderFactories);
+    }
+
+    private HttpDecodedResponse executeAndDecodeResponse(
+            ClientRequestContext ctx, HttpRequest req,
+            Map<String, StreamDecoderFactory> decoderFactories) throws Exception {
         final HttpResponse res = unwrap().execute(ctx, req);
         return new HttpDecodedResponse(res, decoderFactories, ctx.alloc(), strictContentEncoding);
     }

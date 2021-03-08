@@ -172,7 +172,7 @@ class DecodingClientTest {
     void shouldFilterOutUnsupportedAcceptEncoding() {
         final Function<? super HttpClient, DecodingClient> decodingClient =
                 DecodingClient.builder()
-                              .decoderFactory(
+                              .decoderFactories(
                                       com.linecorp.armeria.common.encoding.StreamDecoderFactory.gzip())
                               .autoFillAcceptEncoding(false)
                               .newDecorator();
