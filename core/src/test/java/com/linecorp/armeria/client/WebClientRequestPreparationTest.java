@@ -48,7 +48,7 @@ class WebClientRequestPreparationTest {
                     WebClient.of(server.httpUri())
                              .prepare()
                              .get("/ping")
-                             .setAttr(foo, "bar")
+                             .attr(foo, "bar")
                              .execute()
                              .aggregate();
             final ClientRequestContext ctx = captor.get();

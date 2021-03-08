@@ -121,7 +121,7 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
      * If this context previously contained a mapping for the {@link AttributeKey}, the old value is replaced
      * by the specified value.
      */
-    public <V> WebClientRequestPreparation setAttr(AttributeKey<V> key, @Nullable V value) {
+    public <V> WebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
         requireNonNull(key, "key");
 
         if (attributes == null) {
