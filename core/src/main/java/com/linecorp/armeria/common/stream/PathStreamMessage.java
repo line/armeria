@@ -55,7 +55,7 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
 
     private static final Logger logger = LoggerFactory.getLogger(PathStreamMessage.class);
 
-    static final int DEFAULT_FILE_BUFFER_SIZE = 4096;
+    static final int DEFAULT_FILE_BUFFER_SIZE = 8192;
 
     private static final Set<StandardOpenOption> READ_OPERATION = ImmutableSet.of(StandardOpenOption.READ);
 
@@ -304,7 +304,7 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
                     byteBuf.release();
                     maybeCloseFileChannel();
                 } else {
-                    if (result > -1) {
+                    if (result >= 0) {
                         position += result;
                         byteBuf.writerIndex(result);
                         final HttpData data;
@@ -339,7 +339,8 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
             if (fileChannel.isOpen()) {
                 try {
                     fileChannel.close();
-                } catch (IOException ignored) {
+                } catch (IOException cause) {
+                    logger.warn("Unexpected exception while closing {}.", fileChannel, cause);
                 }
             }
         }

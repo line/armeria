@@ -31,6 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -71,6 +72,41 @@ class PathStreamMessageTest {
                 completed.set(true);
             }
         }, options);
+
+        await().untilTrue(completed);
+        assertThat(stringBuilder.toString())
+                .isEqualTo("A1234567890\nB1234567890\nC1234567890\nD1234567890\nE1234567890\n");
+    }
+
+    @CsvSource({ "1", "12", "128" })
+    @ParameterizedTest
+    void differentBufferSize(int bufferSize) {
+        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
+        final StreamMessage<HttpData> publisher = StreamMessage.of(path, ByteBufAllocator.DEFAULT, bufferSize);
+
+        final StringBuilder stringBuilder = new StringBuilder();
+        final AtomicBoolean completed = new AtomicBoolean();
+        publisher.subscribe(new Subscriber<HttpData>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(HttpData httpData) {
+                final String str = httpData.toStringUtf8();
+                assertThat(str.length()).isLessThanOrEqualTo(bufferSize);
+                stringBuilder.append(str);
+            }
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {
+                completed.set(true);
+            }
+        });
 
         await().untilTrue(completed);
         assertThat(stringBuilder.toString())
