@@ -52,8 +52,7 @@ import reactor.core.publisher.Flux;
 
 class MimeParserTest {
 
-    // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media
-    // /multipart/src/test/java/io/helidon/media/multipart/MimeParserTest.java
+    // Forked from https://github.com/oracle/helidon/blob/ab23ce10cb55043e5e4beea1037a65bb8968354b/media/multipart/src/test/java/io/helidon/media/multipart/MimeParserTest.java
 
     @Test
     void testSkipPreambule() {

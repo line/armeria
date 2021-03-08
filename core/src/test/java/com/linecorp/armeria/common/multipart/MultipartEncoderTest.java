@@ -63,8 +63,7 @@ import reactor.core.publisher.Flux;
  */
 class MultipartEncoderTest {
 
-    // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media
-    // /multipart/src/test/java/io/helidon/media/multipart/MultiPartEncoderTest.java
+    // Forked from https://github.com/oracle/helidon/blob/9d209a1a55f927e60e15b061700384e438ab5a01/media/multipart/src/test/java/io/helidon/media/multipart/MultiPartEncoderTest.java
 
     @Test
     void testEncodeOnePart() throws Exception {

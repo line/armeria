@@ -55,8 +55,7 @@ import io.netty.buffer.Unpooled;
  */
 final class MimeParser {
 
-    // Forked from https://github.com/oracle/helidon/blob/a9363a3d226a3154e2fb99abe230239758504436/media
-    // /multipart/src/main/java/io/helidon/media/multipart/MimeParser.java
+    // Forked from https://github.com/oracle/helidon/blob/a9363a3d226a3154e2fb99abe230239758504436/media/multipart/src/main/java/io/helidon/media/multipart/MimeParser.java
 
     private static final Logger logger = LoggerFactory.getLogger(MimeParser.class);
 

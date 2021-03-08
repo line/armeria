@@ -31,6 +31,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.io.BaseEncoding;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpData;
@@ -50,13 +51,15 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
 
+    private static final BaseEncoding base64 = BaseEncoding.base64().omitPadding();
+
     /**
      * Returns a random boundary used for encoding multipart messages.
      */
     static String randomBoundary() {
-        final byte[] bytes = new byte[16];
+        final byte[] bytes = new byte[12];
         ThreadLocalRandom.current().nextBytes(bytes);
-        return Base64.getEncoder().encodeToString(bytes);
+        return "ArmeriaBoundary" + base64.encode(bytes);
     }
 
     private final String boundary;
