@@ -306,12 +306,12 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
                 } else {
                     if (result >= 0) {
                         position += result;
-                        byteBuf.writerIndex(result);
                         final HttpData data;
                         if (withPooledObjects) {
+                            byteBuf.writerIndex(result);
                             data = HttpData.wrap(byteBuf);
                         } else {
-                            data = HttpData.wrap(ByteBufUtil.getBytes(byteBuf));
+                            data = HttpData.wrap(ByteBufUtil.getBytes(byteBuf, 0, result));
                             byteBuf.release();
                         }
                         downstream.onNext(data);
