@@ -153,6 +153,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             requireNonNull(item, "item");
 
             if (canceled) {
+                StreamMessageUtil.closeOrAbort(item);
                 return;
             }
 
