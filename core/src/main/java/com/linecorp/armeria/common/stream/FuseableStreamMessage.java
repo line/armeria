@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
