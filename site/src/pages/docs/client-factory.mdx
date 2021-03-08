@@ -6,10 +6,10 @@ let's say that you want to increase the connection timeout.
 
 ```java
 ClientFactory factory =
-            ClientFactory.builder()
-                         // Increase the connection timeout to 5 seconds.
-                         .connectTimeoutMillis(5000)
-                         .build());
+        ClientFactory.builder()
+                     // Increase the connection timeout to 5 seconds.
+                     .connectTimeoutMillis(5000)
+                     .build());
 WebClient client =
         WebClient.builder("https://armeria.dev")
                  .factory(factory)
