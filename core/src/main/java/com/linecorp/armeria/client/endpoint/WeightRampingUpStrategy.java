@@ -16,7 +16,7 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_NUMBER_OF_STEPS;
+import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_TOTAL_STEPS;
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_RAMPING_UP_INTERVAL_MILLIS;
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS;
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.defaultTransition;
@@ -77,34 +77,34 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
     static final WeightRampingUpStrategy INSTANCE =
             new WeightRampingUpStrategy(defaultTransition, () -> CommonPools.workerGroup().next(),
-                                        DEFAULT_RAMPING_UP_INTERVAL_MILLIS, DEFAULT_NUMBER_OF_STEPS,
+                                        DEFAULT_RAMPING_UP_INTERVAL_MILLIS, DEFAULT_TOTAL_STEPS,
                                         DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS, defaultTicker);
 
     private final EndpointWeightTransition weightTransition;
     private final Supplier<EventExecutor> executorSupplier;
     private final long rampingUpIntervalMillis;
-    private final int numberSteps;
+    private final int totalSteps;
     private final long rampingUpTaskWindowNanos;
     private final Ticker ticker;
 
     WeightRampingUpStrategy(EndpointWeightTransition weightTransition,
                             Supplier<EventExecutor> executorSupplier, long rampingUpIntervalMillis,
-                            int numberSteps, long rampingUpTaskWindowMillis) {
-        this(weightTransition, executorSupplier, rampingUpIntervalMillis, numberSteps,
+                            int totalSteps, long rampingUpTaskWindowMillis) {
+        this(weightTransition, executorSupplier, rampingUpIntervalMillis, totalSteps,
              rampingUpTaskWindowMillis, defaultTicker);
     }
 
     @VisibleForTesting
     WeightRampingUpStrategy(EndpointWeightTransition weightTransition,
                             Supplier<EventExecutor> executorSupplier, long rampingUpIntervalMillis,
-                            int numberSteps, long rampingUpTaskWindowMillis, Ticker ticker) {
+                            int totalSteps, long rampingUpTaskWindowMillis, Ticker ticker) {
         this.weightTransition = requireNonNull(weightTransition, "weightTransition");
         this.executorSupplier = requireNonNull(executorSupplier, "executorSupplier");
         checkArgument(rampingUpIntervalMillis > 0,
                       "rampingUpIntervalMillis: %s (expected: > 0)", rampingUpIntervalMillis);
         this.rampingUpIntervalMillis = rampingUpIntervalMillis;
-        checkArgument(numberSteps > 0, "numberSteps: %s (expected: > 0)", numberSteps);
-        this.numberSteps = numberSteps;
+        checkArgument(totalSteps > 0, "totalSteps: %s (expected: > 0)", totalSteps);
+        this.totalSteps = totalSteps;
         checkArgument(rampingUpTaskWindowMillis >= 0,
                       "rampingUpTaskWindowMillis: %s (expected: > 0)",
                       rampingUpTaskWindowMillis);
@@ -329,7 +329,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                     // Should replace the existing endpoint with the new one.
                     final int step = endpointAndStep.step();
                     final EndpointAndStep replaced = new EndpointAndStep(newEndpoint, step);
-                    replaced.currentWeight(weightTransition.compute(newEndpoint, step, numberSteps));
+                    replaced.currentWeight(weightTransition.compute(newEndpoint, step, totalSteps));
                     replacedEndpoints.add(replaced);
                     i.remove();
                 }
@@ -369,12 +369,12 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 final EndpointAndStep endpointAndStep = i.next();
                 final int step = endpointAndStep.incrementAndGetStep();
                 final Endpoint endpoint = endpointAndStep.endpoint();
-                if (step == numberSteps) {
+                if (step == totalSteps) {
                     endpointsFinishedRampingUp.add(endpoint);
                     i.remove();
                 } else {
                     final int calculated =
-                            weightTransition.compute(endpoint, step, numberSteps);
+                            weightTransition.compute(endpoint, step, totalSteps);
                     final int currentWeight = Ints.constrainToRange(calculated, 0, endpoint.weight());
                     endpointAndStep.currentWeight(currentWeight);
                 }
