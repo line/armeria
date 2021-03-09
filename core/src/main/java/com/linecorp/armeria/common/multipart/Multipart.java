@@ -37,7 +37,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A reactive {@link Multipart} that represents
- * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html">multiple part messages</a>.
+ * <a href="https://datatracker.ietf.org/doc/html/rfc1341#page-28">Multiple part messages</a>.
  */
 public interface Multipart {
 

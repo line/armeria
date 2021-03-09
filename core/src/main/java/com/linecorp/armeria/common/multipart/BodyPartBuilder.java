@@ -95,7 +95,7 @@ public final class BodyPartBuilder {
      * {@link MediaType#OCTET_STREAM} if the {@code "content-disposition"} header is present with
      * a non empty value, otherwise {@link MediaType#PLAIN_TEXT}.
      *
-     * @see <a href="https://tools.ietf.org/html/rfc7578#section-4.4">RFC-7578</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc7578#section-4.4">RFC-7578</a>
      */
     private static MediaType defaultContentType(@Nullable ContentDisposition contentDisposition) {
         if (contentDisposition != null && contentDisposition.filename() != null) {

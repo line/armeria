@@ -15,7 +15,7 @@
  */
 
 /**
- * <a href="https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html">Multiple part messages</a> support.
+ * <a href="https://datatracker.ietf.org/doc/html/rfc1341#page-28">Multiple part messages</a> support.
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.multipart;
