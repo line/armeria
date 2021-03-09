@@ -1649,20 +1649,6 @@ public final class ServerBuilder {
         return null;
     }
 
-    @Override
-    public String toString() {
-        return ServerConfig.toString(
-                getClass(), ports, null, ImmutableList.of(), workerGroup, shutdownWorkerGroupOnStop,
-                maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
-                http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
-                http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                meterRegistry, channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader);
-    }
-
     ServerConfig buildServerConfig(ServerConfig existingConfig) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
@@ -1679,6 +1665,20 @@ public final class ServerBuilder {
         final Mapping<String, SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
 
+        if (pingIntervalMillis > 0) {
+            pingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
+            if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
+                pingIntervalMillis = 0;
+            }
+        }
+
+        if (maxConnectionAgeMillis > 0) {
+            maxConnectionAgeMillis = Math.max(maxConnectionAgeMillis, MIN_MAX_CONNECTION_AGE_MILLIS);
+            if (idleTimeoutMillis == 0 || idleTimeoutMillis > maxConnectionAgeMillis) {
+                idleTimeoutMillis = maxConnectionAgeMillis;
+            }
+        }
+
         return new ServerConfig(
                 existingConfig.ports(), setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
@@ -1691,5 +1691,19 @@ public final class ServerBuilder {
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator);
+    }
+
+    @Override
+    public String toString() {
+        return ServerConfig.toString(
+                getClass(), ports, null, ImmutableList.of(), workerGroup, shutdownWorkerGroupOnStop,
+                maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
+                http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
+                http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
+                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                meterRegistry, channelOptions, childChannelOptions,
+                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
+                enableServerHeader, enableDateHeader);
     }
 }

@@ -403,10 +403,9 @@ public final class Server implements ListenableAsyncCloseable {
      * @param rs ReconfigurableServer.
      */
     public void reconfigure(ReconfigurableServer rs) {
-        final ServerBuilder sb = Server.builder();
+        final ServerBuilder sb = builder();
         rs.reconfigure(sb);
-        final ServerConfig newConfiguration = sb.buildServerConfig(this.config());
-        config = newConfiguration;
+        config = sb.buildServerConfig(config());
         pipelineConfigurator.updateConfig(config);
     }
 
@@ -484,9 +483,9 @@ public final class Server implements ListenableAsyncCloseable {
             b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
             pipelineConfigurator = new HttpServerPipelineConfigurator(
-                                                                    config,
-                                                                    port, sslContexts,
-                                                                    gracefulShutdownSupport);
+                                       config,
+                                       port, sslContexts,
+                                       gracefulShutdownSupport);
             b.childHandler(pipelineConfigurator);
             return b.bind(port.localAddress());
         }
