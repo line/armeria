@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
 import io.netty.buffer.ByteBufAllocator;
 
@@ -60,6 +61,10 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+        if (cause instanceof CancelledSubscriptionException) {
+            // We already handle it in beforeCancel().
+            return cause;
+        }
         responseDecoder.finish();
         return cause;
     }

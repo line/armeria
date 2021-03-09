@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
 
 /**
@@ -152,6 +153,10 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+        if (cause instanceof CancelledSubscriptionException) {
+            // We already handle it in beforeCancel().
+            return cause;
+        }
         closeEncoder();
         return cause;
     }

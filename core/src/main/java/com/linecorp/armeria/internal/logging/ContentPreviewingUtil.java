@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 public final class ContentPreviewingUtil {
@@ -80,8 +81,11 @@ public final class ContentPreviewingUtil {
             }
 
             @Override
-            protected Throwable beforeError(Subscriber<? super HttpObject> subscriber,
-                                            Throwable cause) {
+            protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+                if (cause instanceof CancelledSubscriptionException) {
+                    // We already handle it in beforeCancel().
+                    return cause;
+                }
                 try {
                     // Call produce() to release the resources in the previewer. Consider adding close() method.
                     requestContentPreviewer.produce();
@@ -156,6 +160,10 @@ public final class ContentPreviewingUtil {
 
             @Override
             protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+                if (cause instanceof CancelledSubscriptionException) {
+                    // We already handle it in beforeCancel().
+                    return cause;
+                }
                 if (responseContentPreviewer != null) {
                     // Call produce() to release the resources in the previewer. Consider adding close() method.
                     responseContentPreviewer.produce();
