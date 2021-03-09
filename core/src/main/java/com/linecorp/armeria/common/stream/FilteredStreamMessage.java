@@ -103,13 +103,6 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         return cause;
     }
 
-    /**
-     * A callback executed just before calling the upstream {@link Subscription#cancel()}.
-     * Override this method to execute any cleanup logic that may be needed before completing or failing the
-     * subscription.
-     */
-    protected void beforeCancel(Subscriber<? super U> subscriber, Subscription subscription) {}
-
     @Override
     public final boolean isOpen() {
         return upstream.isOpen();
@@ -148,17 +141,15 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private void subscribe(Subscriber<? super U> subscriber, EventExecutor executor, boolean withPooledObjects,
                            boolean notifyCancellation) {
-        upstream.subscribe(new FilteringSubscriber(subscriber, withPooledObjects),
-                           executor, filteringSubscriptionOptions(notifyCancellation));
+        upstream.subscribe(new FilteringSubscriber(subscriber, withPooledObjects, notifyCancellation),
+                           executor, filteringSubscriptionOptions());
     }
 
-    private SubscriptionOption[] filteringSubscriptionOptions(boolean notifyCancellation) {
+    private SubscriptionOption[] filteringSubscriptionOptions() {
         final ArrayList<SubscriptionOption> list = new ArrayList<>(2);
+        list.add(SubscriptionOption.NOTIFY_CANCELLATION);
         if (filterSupportsPooledObjects) {
             list.add(SubscriptionOption.WITH_POOLED_OBJECTS);
-        }
-        if (notifyCancellation) {
-            list.add(SubscriptionOption.NOTIFY_CANCELLATION);
         }
         return list.toArray(EMPTY_OPTIONS);
     }
@@ -182,16 +173,19 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         private final Subscriber<? super U> delegate;
         private final boolean subscribedWithPooledObjects;
+        private final boolean notifyCancellation;
 
-        FilteringSubscriber(Subscriber<? super U> delegate, boolean subscribedWithPooledObjects) {
+        FilteringSubscriber(Subscriber<? super U> delegate, boolean subscribedWithPooledObjects,
+                            boolean notifyCancellation) {
             this.delegate = requireNonNull(delegate, "delegate");
             this.subscribedWithPooledObjects = subscribedWithPooledObjects;
+            this.notifyCancellation = notifyCancellation;
         }
 
         @Override
         public void onSubscribe(Subscription s) {
             beforeSubscribe(delegate, s);
-            delegate.onSubscribe(new SubscriptionWrapper(s, delegate));
+            delegate.onSubscribe(s);
         }
 
         @Override
@@ -205,7 +199,12 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onError(Throwable t) {
+            // Should call beforeError() before checking CancelledSubscriptionException so that
+            // the subclass can clean up the resources.
             final Throwable filteredCause = beforeError(delegate, t);
+            if (t instanceof CancelledSubscriptionException && !notifyCancellation) {
+                return;
+            }
             if (filteredCause != null) {
                 delegate.onError(filteredCause);
             } else {
@@ -221,28 +220,6 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         public void onComplete() {
             beforeComplete(delegate);
             delegate.onComplete();
-        }
-    }
-
-    private final class SubscriptionWrapper implements Subscription {
-
-        private final Subscription subscription;
-        private final Subscriber<? super U> subscriber;
-
-        SubscriptionWrapper(Subscription s, Subscriber<? super U> subscriber) {
-            subscription = s;
-            this.subscriber = subscriber;
-        }
-
-        @Override
-        public void request(long n) {
-            subscription.request(n);
-        }
-
-        @Override
-        public void cancel() {
-            beforeCancel(subscriber, subscription);
-            subscription.cancel();
         }
     }
 }

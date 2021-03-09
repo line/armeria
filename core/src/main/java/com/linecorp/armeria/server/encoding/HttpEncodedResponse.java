@@ -26,7 +26,6 @@ import java.util.zip.DeflaterOutputStream;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +39,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
 
 /**
@@ -153,17 +151,8 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        if (cause instanceof CancelledSubscriptionException) {
-            // We already handle it in beforeCancel().
-            return cause;
-        }
         closeEncoder();
         return cause;
-    }
-
-    @Override
-    protected void beforeCancel(Subscriber<? super HttpObject> subscriber, Subscription subscription) {
-        closeEncoder();
     }
 
     private void closeEncoder() {

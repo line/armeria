@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +37,6 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 public final class ContentPreviewingUtil {
@@ -77,34 +75,17 @@ public final class ContentPreviewingUtil {
 
             @Override
             protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-                produceRequestContentPreview(requestContentPreviewer);
+                produceRequestContentPreview();
             }
 
             @Override
             protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-                if (cause instanceof CancelledSubscriptionException) {
-                    // We already handle it in beforeCancel().
-                    return cause;
-                }
-                try {
-                    // Call produce() to release the resources in the previewer. Consider adding close() method.
-                    requestContentPreviewer.produce();
-                } catch (Exception e) {
-                    logger.warn("Unexpected exception while producing the request content preview. " +
-                                "previewer: {}", requestContentPreviewer, e);
-                }
-
-                // Set null to make it sure the log is complete.
-                logBuilder.requestContentPreview(null);
+                // There's no harm to produce the content preview even though an exception is raised.
+                produceRequestContentPreview();
                 return cause;
             }
 
-            @Override
-            protected void beforeCancel(Subscriber<? super HttpObject> subscriber, Subscription subscription) {
-                produceRequestContentPreview(requestContentPreviewer);
-            }
-
-            private void produceRequestContentPreview(ContentPreviewer requestContentPreviewer) {
+            private void produceRequestContentPreview() {
                 String produced = null;
                 try {
                     produced = requestContentPreviewer.produce();
@@ -155,30 +136,17 @@ public final class ContentPreviewingUtil {
 
             @Override
             protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-                produceResponseContentPreview(responseContentPreviewer);
+                produceResponseContentPreview();
             }
 
             @Override
             protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-                if (cause instanceof CancelledSubscriptionException) {
-                    // We already handle it in beforeCancel().
-                    return cause;
-                }
-                if (responseContentPreviewer != null) {
-                    // Call produce() to release the resources in the previewer. Consider adding close() method.
-                    responseContentPreviewer.produce();
-                }
-                // Set null to make it sure the log is complete.
-                ctx.logBuilder().responseContentPreview(null);
+                // There's no harm to produce the content preview even though an exception is raised.
+                produceResponseContentPreview();
                 return cause;
             }
 
-            @Override
-            protected void beforeCancel(Subscriber<? super HttpObject> subscriber, Subscription subscription) {
-                produceResponseContentPreview(responseContentPreviewer);
-            }
-
-            private void produceResponseContentPreview(@Nullable ContentPreviewer responseContentPreviewer) {
+            private void produceResponseContentPreview() {
                 if (responseContentPreviewer != null) {
                     String produced = null;
                     try {

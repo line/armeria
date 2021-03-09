@@ -21,7 +21,6 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import com.google.common.base.Ascii;
 
@@ -31,7 +30,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -110,20 +108,9 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        if (cause instanceof CancelledSubscriptionException) {
-            // We already handle it in beforeCancel().
-            return cause;
-        }
         if (responseDecoder != null) {
             responseDecoder.finish();
         }
         return cause;
-    }
-
-    @Override
-    protected void beforeCancel(Subscriber<? super HttpObject> subscriber, Subscription subscription) {
-        if (responseDecoder != null) {
-            responseDecoder.finish();
-        }
     }
 }
