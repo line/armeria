@@ -21,6 +21,7 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.base.Ascii;
 
@@ -112,5 +113,12 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
             responseDecoder.finish();
         }
         return cause;
+    }
+
+    @Override
+    protected void beforeCancel(Subscription subscription) {
+        if (responseDecoder != null) {
+            responseDecoder.finish();
+        }
     }
 }

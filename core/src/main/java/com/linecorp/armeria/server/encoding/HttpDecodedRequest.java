@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.encoding;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.HttpData;
@@ -61,5 +62,10 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
         responseDecoder.finish();
         return cause;
+    }
+
+    @Override
+    protected void beforeCancel(Subscription subscription) {
+        responseDecoder.finish();
     }
 }

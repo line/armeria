@@ -21,6 +21,9 @@ import static java.util.Objects.requireNonNull;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.FilteredHttpRequest;
 import com.linecorp.armeria.common.FilteredHttpResponse;
@@ -38,6 +41,8 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 public final class ContentPreviewingUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(ContentPreviewingUtil.class);
 
     /**
      * Sets up the request {@link ContentPreviewer} to set
@@ -71,18 +76,39 @@ public final class ContentPreviewingUtil {
 
             @Override
             protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-                logBuilder.requestContentPreview(requestContentPreviewer.produce());
+                produceRequestContentPreview(requestContentPreviewer);
             }
 
             @Override
             protected Throwable beforeError(Subscriber<? super HttpObject> subscriber,
                                             Throwable cause) {
-                // Call produce() to release the resources in the previewer. Consider adding close() method.
-                requestContentPreviewer.produce();
+                try {
+                    // Call produce() to release the resources in the previewer. Consider adding close() method.
+                    requestContentPreviewer.produce();
+                } catch (Exception e) {
+                    logger.warn("Unexpected exception while producing the request content preview. " +
+                                "previewer: {}", requestContentPreviewer, e);
+                }
 
                 // Set null to make it sure the log is complete.
                 logBuilder.requestContentPreview(null);
                 return cause;
+            }
+
+            @Override
+            protected void beforeCancel(Subscription subscription) {
+                produceRequestContentPreview(requestContentPreviewer);
+            }
+
+            private void produceRequestContentPreview(ContentPreviewer requestContentPreviewer) {
+                String produced = null;
+                try {
+                    produced = requestContentPreviewer.produce();
+                } catch (Exception e) {
+                    logger.warn("Unexpected exception while producing the request content preview. " +
+                                "previewer: {}", requestContentPreviewer, e);
+                }
+                logBuilder.requestContentPreview(produced);
             }
         };
     }
@@ -125,12 +151,7 @@ public final class ContentPreviewingUtil {
 
             @Override
             protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-                if (responseContentPreviewer != null) {
-                    ctx.logBuilder().responseContentPreview(responseContentPreviewer.produce());
-                } else {
-                    // Call requestContentPreview(null) to make sure that the log is complete.
-                    ctx.logBuilder().responseContentPreview(null);
-                }
+                produceResponseContentPreview(responseContentPreviewer);
             }
 
             @Override
@@ -142,6 +163,27 @@ public final class ContentPreviewingUtil {
                 // Set null to make it sure the log is complete.
                 ctx.logBuilder().responseContentPreview(null);
                 return cause;
+            }
+
+            @Override
+            protected void beforeCancel(Subscription subscription) {
+                produceResponseContentPreview(responseContentPreviewer);
+            }
+
+            private void produceResponseContentPreview(@Nullable ContentPreviewer responseContentPreviewer) {
+                if (responseContentPreviewer != null) {
+                    String produced = null;
+                    try {
+                        produced = responseContentPreviewer.produce();
+                    } catch (Exception e) {
+                        logger.warn("Unexpected exception while producing the response content preview. " +
+                                    "previewer: {}", responseContentPreviewer, e);
+                    }
+                    ctx.logBuilder().responseContentPreview(produced);
+                } else {
+                    // Call requestContentPreview(null) to make sure that the log is complete.
+                    ctx.logBuilder().responseContentPreview(null);
+                }
             }
         };
     }

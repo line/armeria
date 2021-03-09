@@ -103,6 +103,13 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         return cause;
     }
 
+    /**
+     * A callback executed just before calling the upstream {@link Subscription#cancel()}.
+     * Override this method to execute any cleanup logic that may be needed before completing or failing the
+     * subscription.
+     */
+    protected void beforeCancel(Subscription subscription) {}
+
     @Override
     public final boolean isOpen() {
         return upstream.isOpen();
@@ -184,7 +191,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         @Override
         public void onSubscribe(Subscription s) {
             beforeSubscribe(delegate, s);
-            delegate.onSubscribe(s);
+            delegate.onSubscribe(new SubscriptionWrapper(s));
         }
 
         @Override
@@ -214,6 +221,26 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         public void onComplete() {
             beforeComplete(delegate);
             delegate.onComplete();
+        }
+    }
+
+    private final class SubscriptionWrapper implements Subscription {
+
+        private final Subscription subscription;
+
+        SubscriptionWrapper(Subscription s) {
+            subscription = s;
+        }
+
+        @Override
+        public void request(long n) {
+            subscription.request(n);
+        }
+
+        @Override
+        public void cancel() {
+            beforeCancel(subscription);
+            subscription.cancel();
         }
     }
 }

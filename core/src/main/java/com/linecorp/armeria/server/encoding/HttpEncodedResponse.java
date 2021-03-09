@@ -26,6 +26,7 @@ import java.util.zip.DeflaterOutputStream;
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -153,6 +154,11 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
         closeEncoder();
         return cause;
+    }
+
+    @Override
+    protected void beforeCancel(Subscription subscription) {
+        closeEncoder();
     }
 
     private void closeEncoder() {
