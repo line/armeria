@@ -40,7 +40,7 @@ final class AcceptOriginCookiePolicy implements CookiePolicy {
 
     /**
      * Accepts a cookie if its domain is non-null, not a public suffix, and matches the server host as
-     * specified by RFC 6265 <a href="https://tools.ietf.org/html/rfc6265#section-5.1.3">Domain Matching</a>.
+     * specified by RFC 6265 <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-5.1.3">Domain Matching</a>.
      */
     @Override
     public boolean accept(URI uri, Cookie cookie) {

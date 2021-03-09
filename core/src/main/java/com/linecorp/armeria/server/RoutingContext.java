@@ -52,13 +52,13 @@ public interface RoutingContext {
 
     /**
      * Returns the absolute path retrieved from the request,
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     String path();
 
     /**
      * Returns the query retrieved from the request,
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     @Nullable
     String query();

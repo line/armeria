@@ -488,8 +488,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 // - The response has 'Content-Length' or 'Transfer-Encoding: chunked',
                 //   i.e. possible to determine the end of the response.
                 //
-                // See: https://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.1.2.1
-                //      https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+                // See: https://datatracker.ietf.org/doc/html/rfc2616#section-8.1.2.1
+                //      https://datatracker.ietf.org/doc/html/rfc2616#section-4.4
                 needsToClose = !(HttpUtil.isKeepAlive(res) &&
                                  (HttpUtil.isContentLengthSet(res) ||
                                   HttpUtil.isTransferEncodingChunked(res)));

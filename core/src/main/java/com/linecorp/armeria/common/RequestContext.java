@@ -331,7 +331,7 @@ public interface RequestContext {
 
     /**
      * Returns the absolute path part of the current {@link Request} URI, excluding the query part,
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     String path();
 
@@ -343,7 +343,7 @@ public interface RequestContext {
 
     /**
      * Returns the query part of the current {@link Request} URI, without the leading {@code '?'},
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     @Nullable
     String query();

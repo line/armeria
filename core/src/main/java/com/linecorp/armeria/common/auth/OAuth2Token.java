@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpHeaderNames;
 
 /**
- * The bearer token of <a href="https://tools.ietf.org/html/rfc6750">OAuth 2.0 authentication</a>.
+ * The bearer token of <a href="https://datatracker.ietf.org/doc/rfc6750/">OAuth 2.0 authentication</a>.
  */
 public final class OAuth2Token {
 

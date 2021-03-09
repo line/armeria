@@ -45,7 +45,7 @@ import io.netty.handler.codec.http.HttpConstants;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC 6265</a> compliant cookie encoder for server side.
+ * A <a href="https://datatracker.ietf.org/doc/rfc6265/">RFC 6265</a> compliant cookie encoder for server side.
  *
  * <p>Note that multiple cookies must be sent as separate "Set-Cookie" headers.</p>
  *
