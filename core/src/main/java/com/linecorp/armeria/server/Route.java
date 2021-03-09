@@ -179,4 +179,9 @@ public interface Route {
      * Returns the {@link Set} of {@link MediaType}s that this {@link Route} produces.
      */
     Set<MediaType> produces();
+
+    /**
+     * Returns whether an incoming HTTP request is mapped into a fallback {@link Route}.
+     */
+    boolean isFallback();
 }

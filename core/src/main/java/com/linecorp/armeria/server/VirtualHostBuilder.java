@@ -961,7 +961,7 @@ public final class VirtualHostBuilder {
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
-                new ServiceConfigBuilder(Route.ofCatchAll(), FallbackService.INSTANCE)
+                new ServiceConfigBuilder(FallbackService.ROUTE, FallbackService.INSTANCE)
                         .build(requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, shutdownAccessLogWriterOnStop);
 

@@ -46,11 +46,12 @@ final class DefaultRoute implements Route {
 
     private final int hashCode;
     private final int complexity;
+    private final boolean isFallback;
 
     DefaultRoute(PathMapping pathMapping, Set<HttpMethod> methods,
                  Set<MediaType> consumes, Set<MediaType> produces,
                  List<RoutingPredicate<QueryParams>> paramPredicates,
-                 List<RoutingPredicate<HttpHeaders>> headerPredicates) {
+                 List<RoutingPredicate<HttpHeaders>> headerPredicates, boolean isFallback) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         checkArgument(!requireNonNull(methods, "methods").isEmpty(), "methods is empty.");
         this.methods = Sets.immutableEnumSet(methods);
@@ -58,9 +59,10 @@ final class DefaultRoute implements Route {
         this.produces = ImmutableSet.copyOf(requireNonNull(produces, "produces"));
         this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
         this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
+        this.isFallback = isFallback;
 
         hashCode = Objects.hash(this.pathMapping, this.methods, this.consumes, this.produces,
-                                this.paramPredicates, this.headerPredicates);
+                                this.paramPredicates, this.headerPredicates, isFallback);
 
         int complexity = 0;
         if (!consumes.isEmpty()) {
@@ -232,6 +234,11 @@ final class DefaultRoute implements Route {
     }
 
     @Override
+    public boolean isFallback() {
+        return isFallback;
+    }
+
+    @Override
     public int hashCode() {
         return hashCode;
     }
@@ -252,7 +259,8 @@ final class DefaultRoute implements Route {
                consumes.equals(that.consumes) &&
                produces.equals(that.produces) &&
                headerPredicates.equals(that.headerPredicates) &&
-               paramPredicates.equals(that.paramPredicates);
+               paramPredicates.equals(that.paramPredicates) &&
+               isFallback == that.isFallback;
     }
 
     @Override

@@ -69,6 +69,8 @@ public final class RouteBuilder {
 
     private final List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
 
+    private boolean isFallback;
+
     RouteBuilder() {}
 
     /**
@@ -414,6 +416,14 @@ public final class RouteBuilder {
     }
 
     /**
+     * Sets the {@link Route} to match a {@link FallbackService}.
+     */
+    RouteBuilder isFallback() {
+        isFallback = true;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Route} based on the properties of this builder.
      */
     public Route build() {
@@ -424,7 +434,7 @@ public final class RouteBuilder {
         }
         final Set<HttpMethod> pathMethods = methods.isEmpty() ? HttpMethod.knownMethods() : methods;
         return new DefaultRoute(pathMapping, pathMethods, consumes, produces,
-                                paramPredicates, headerPredicates);
+                                paramPredicates, headerPredicates, isFallback);
     }
 
     @Override

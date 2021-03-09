@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 final class FallbackService implements HttpService {
 
     static final FallbackService INSTANCE = new FallbackService();
+    static final Route ROUTE = Route.builder().catchAll().isFallback().build();
 
     private FallbackService() {}
 
