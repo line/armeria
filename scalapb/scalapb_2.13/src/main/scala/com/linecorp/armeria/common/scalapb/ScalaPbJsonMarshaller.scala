@@ -28,7 +28,7 @@ import java.io.{InputStream, OutputStream}
 import java.util.concurrent.ConcurrentMap
 import scala.io.{Codec, Source}
 import scalapb.json4s.{Parser, Printer}
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, GeneratedSealedOneof}
 
 /**
  * A [[com.linecorp.armeria.common.grpc.GrpcJsonMarshaller]] that serializes and deserializes
@@ -39,13 +39,16 @@ final class ScalaPbJsonMarshaller private (
     jsonParser: Parser = jsonDefaultParser
 ) extends GrpcJsonMarshaller {
 
-  override def serializeMessage[A](marshaller: Marshaller[A], message: A, os: OutputStream): Unit = {
-    if (!message.isInstanceOf[GeneratedMessage])
-      throw new IllegalStateException(
-        s"Unexpected message type: ${message.getClass} (expected: ${classOf[GeneratedMessage]})")
-    val msg = message.asInstanceOf[GeneratedMessage]
-    os.write(jsonPrinter.print(msg).getBytes())
-  }
+  override def serializeMessage[A](marshaller: Marshaller[A], message: A, os: OutputStream): Unit =
+    message match {
+      case msg: GeneratedSealedOneof =>
+        os.write(jsonPrinter.print(msg.asMessage).getBytes())
+      case msg: GeneratedMessage =>
+        os.write(jsonPrinter.print(msg).getBytes())
+      case _ =>
+        throw new IllegalStateException(
+          s"Unexpected message type: ${message.getClass} (expected: ${classOf[GeneratedMessage]})")
+    }
 
   override def deserializeMessage[A](marshaller: Marshaller[A], in: InputStream): A = {
     val companion = getMessageCompanion(marshaller)

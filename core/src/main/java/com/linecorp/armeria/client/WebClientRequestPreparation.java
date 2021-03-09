@@ -16,7 +16,15 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
+import java.time.Duration;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
+
+import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 
@@ -30,6 +38,11 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.util.SafeCloseable;
+
+import io.netty.util.AttributeKey;
 
 /**
  * Prepares and executes a new {@link HttpRequest} for {@link WebClient}.
@@ -37,6 +50,11 @@ import com.linecorp.armeria.common.MediaType;
 public final class WebClientRequestPreparation extends AbstractHttpRequestBuilder {
 
     private final WebClient client;
+
+    // request options
+    @Nullable
+    private Map<AttributeKey<?>, Object> attributes;
+    private long responseTimeoutMillis = -1;
 
     WebClientRequestPreparation(WebClient client) {
         this.client = client;
@@ -46,7 +64,76 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
      * Builds and executes the request.
      */
     public HttpResponse execute() {
-        return client.execute(buildRequest());
+        final HttpRequest httpRequest = buildRequest();
+        final Consumer<ClientRequestContext> customizer = newContextCustomizer();
+
+        if (customizer != null) {
+            try (SafeCloseable ignored = Clients.withContextCustomizer(customizer)) {
+                return client.execute(httpRequest);
+            }
+        } else {
+            return client.execute(httpRequest);
+        }
+    }
+
+    @Nullable
+    private Consumer<ClientRequestContext> newContextCustomizer() {
+        if (responseTimeoutMillis == -1 && (attributes == null || attributes.isEmpty())) {
+            return null;
+        }
+
+        return ctx -> {
+            if (responseTimeoutMillis > -1) {
+                ctx.setResponseTimeoutMillis(responseTimeoutMillis);
+            }
+            if (attributes != null) {
+                //noinspection unchecked
+                attributes.forEach((k, v) -> ctx.setAttr((AttributeKey<Object>) k, v));
+            }
+        };
+    }
+
+    /**
+     * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
+     * the specified {@link Duration} since the {@link Response} started or {@link Request} was fully sent.
+     * {@link Duration#ZERO} disables the limit.
+     */
+    public WebClientRequestPreparation responseTimeout(Duration timeout) {
+        responseTimeoutMillis(requireNonNull(timeout, "timeout").toMillis());
+        return this;
+    }
+
+    /**
+     * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
+     * the specified {@code responseTimeoutMillis} since the {@link Response} started or {@link Request} was
+     * fully sent.
+     * {@code 0} disables the limit.
+     */
+    public WebClientRequestPreparation responseTimeoutMillis(long responseTimeoutMillis) {
+        checkArgument(responseTimeoutMillis >= 0, "responseTimeoutMillis: %s (expected: >= 0)",
+                      responseTimeoutMillis);
+        this.responseTimeoutMillis = responseTimeoutMillis;
+        return this;
+    }
+
+    /**
+     * Associates the specified value with the given {@link AttributeKey} in this request.
+     * If this context previously contained a mapping for the {@link AttributeKey}, the old value is replaced
+     * by the specified value.
+     */
+    public <V> WebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
+        requireNonNull(key, "key");
+
+        if (attributes == null) {
+            attributes = new HashMap<>();
+        }
+
+        if (value == null) {
+            attributes.remove(key);
+        } else {
+            attributes.put(key, value);
+        }
+        return this;
     }
 
     // Override the return types of the chaining methods in the superclass.
