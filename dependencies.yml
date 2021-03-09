@@ -173,6 +173,9 @@ com.twitter:
   finagle-serversets_2.13:
     version: '20.10.0'
 
+cz.alenkacz:
+  gradle-scalafmt: { version: '1.14.0' }
+
 gradle.plugin.net.davidecavestro:
   gradle-jxr-plugin: { version: '0.2.1' }
 
@@ -517,6 +520,17 @@ org.reflections:
     relocations:
     - from: org.reflections
       to: com.linecorp.armeria.internal.shaded.reflections
+
+org.scala-lang:
+  scala-library: { version: '2.13.5' }
+org.scala-lang.modules:
+  scala-collection-compat_2.12: { version: '2.4.2' }
+  scala-java8-compat_2.12: { version: &SCALA_JAVA8_COMPAT_VERSION '0.9.1' }
+  scala-java8-compat_2.13: { version: *SCALA_JAVA8_COMPAT_VERSION }
+
+org.scalameta:
+  munit_2.12: { version: &MUNIT_VERSION '0.7.22' }
+  munit_2.13: { version: *MUNIT_VERSION }
 
 org.slf4j:
   jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.30' }

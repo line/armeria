@@ -1,0 +1,161 @@
+import versions from '../../../gen-src/versions.json';
+
+# Scala integration
+
+<Tip>
+
+The `armeria-scala` module is still experimental. We may make a breaking change if we find a better way
+to bridge Armeria to Scala.
+
+</Tip>
+
+The `com.linecorp.armeria.scala` package provides various useful extension methods and implicit conversions
+for an Armeria application written in [Scala](https://www.scala-lang.org/). To enable it, you first need
+the `armeria-scala_2.12` or `armeria-scala_2.13` dependency:
+
+<CodeBlock language="groovy" filename="build.sbt">{`
+libraryDependencies += "com.linecorp.armeria" %% "armeria-scala" % "${versions['com.linecorp.armeria:armeria-bom']}"
+`}</CodeBlock>
+
+and then import `com.linecorp.armeria.scala.implicits._` in your Scala code:
+
+```scala
+import com.linecorp.armeria.scala.implicits._
+```
+
+## Conversion between Java `CompletionStage` and Scala `Future`
+
+You can convert a Java `CompletionStage` to a Scala `Future` using the `toScala` method:
+
+```scala
+import com.linecorp.armeria.common.HttpResponse
+import com.linecorp.armeria.scala.implicits._
+import com.linecorp.armeria.server.Server
+
+import java.util.concurrent.CompletableFuture
+import scala.concurrent.Future
+
+val server =
+  Server
+    .builder()
+    .service("/", (ctx, req) => HttpResponse.of(200))
+    .build()
+
+val javaFuture: CompletableFuture[Void] = server.start()
+val scalaFuture: Future[Unit] = javaFuture.toScala // 👈
+```
+
+You can also convert a Scala `Future` to a Java `CompletionStage` using the `toJava` method:
+
+```scala
+import java.util.concurrent.CompletionStage
+val javaFuture: CompletionStage[Void] = scalaFuture.toJava
+```
+
+You'll also find the extension method `toHttpResponse` added to `Future[HttpResponse]` and
+`CompletionStage[HttpResponse]` when converting an asynchronous result into an <type://HttpResponse>:
+
+```scala
+import com.linecorp.armeria.common.MediaType
+import com.linecorp.armeria.scala.implicits._
+
+val future: Future[String] = ...
+val response =
+  future
+    .map { value => HttpResponse.of(MediaType.PLAIN_TEXT_UTF_8, value) }
+    .toHttpResponse // 👈
+```
+
+<Tip>
+
+You might wonder why we implemented our own extension methods rather then letting you use
+`FutureConverters` in [`scala-java8-compat`](https://github.com/scala/scala-java8-compat).
+It is because `armeria-scala` provides richer and more natural conversions, such as:
+
+- Conversion to <type://HttpResponse>
+- Conversion from `CompletionStage[Void]` to `Future[Unit]`
+- Conversion from `Future[Unit]` to `CompletionStage[Void]`
+
+</Tip>
+
+## `directExecutionContext`
+
+In an asynchronous system that the entire application logic runs on event loops, it is often useful
+in term of performance to invoke the callbacks attached to a `Future` directly rather than submitting
+the callbacks to another `ExecutionContext`. You can use `directExecutionContext` in such a case:
+
+```scala
+import com.linecorp.armeria.common.HttpRequest
+import com.linecorp.armeria.scala.directExecutionContext
+import com.linecorp.armeria.scala.implicits._
+import com.linecorp.armeria.server.HttpService
+import com.linecorp.armeria.server.ServiceRequestContext
+
+
+class MyHttpService extends HttpService {
+  override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
+    // Perform some asynchronous operation.
+    val future: Future[String] = ...
+
+    // Convert the result to a response.
+    future
+      .map { value =>
+        HttpResponse.of(MediaType.PLAIN_TEXT_UTF_8, value)
+      }(directExecutionContext) // 👈
+      .toHttpResponse
+  }
+}
+```
+
+## Context-aware `ExecutionContext`
+
+You can use the `eventLoopExecutionContext` extension method in <type://RequestContext> to specify a Scala
+`ExecutionContext` that submits all tasks to the current context's event loop thread:
+
+```scala
+import com.linecorp.armeria.scala.implicits._
+
+val ctx = ServiceRequestContext.current
+Future {
+  // Do some non-blocking job here.
+}(ctx.eventLoopExecutionContext) // 👈
+```
+
+For long-running tasks running on the server side, you can use `blockingTaskExecutionContext`:
+
+```scala
+import com.linecorp.armeria.scala.implicits._
+
+val ctx = ServiceRequestContext.current
+Future {
+  Thread.sleep(1000)
+}(ctx.blockingTaskExecutionContext) // 👈
+```
+
+## Collection converters
+
+`com.linecorp.armeria.scala.implicits._` will add `toScala` and `toJava` conversion extension methods to
+Java collections and Scala collections respectively. It means you don't need to import
+`scala.jdk.CollectionConverters._` if you imported Armeria's implicits.
+
+```scala
+import com.linecorp.armeria.scala.implicits._
+import com.linecorp.armeria.server.Server
+
+val server: Server = ...
+val scalaList = server.activePorts.toScala // 👈
+```
+
+## Implicit conversion between Java `Duration` and Scala `FiniteDuration`
+
+A Scala `FiniteDuration` is implicitly converted into a Java `Duration` and vice versa for your convenience:
+
+```scala
+import com.linecorp.armeria.scala.implicits._
+import scala.concurrent.duration._
+
+Server
+  .builder()
+  .requestTimeout(5.seconds) // 👈
+  ...
+```
