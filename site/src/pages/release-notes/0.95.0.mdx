@@ -18,7 +18,9 @@ date: 2019-10-26
   @Blocking
   public HttpResponse reallyHeavyComputation(...) {...}
   ```
-- Armeria server now adds [`Server`](https://tools.ietf.org/html/rfc7231#section-7.4.2) and [`Date`](https://tools.ietf.org/html/rfc7231#section-7.1.1.2) headers to responses by default. #2137, #2188
+- Armeria server now adds [`Server`](https://datatracker.ietf.org/doc/html/rfc7231#section-7.4.2) and
+  [`Date`](https://datatracker.ietf.org/doc/html/rfc7231#section-7.1.1.2) headers to responses by default.
+  #2137, #2188
   - If you do not want that behavior, you should call:
     ```java
     Server.builder()

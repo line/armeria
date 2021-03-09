@@ -44,7 +44,7 @@ import io.netty.util.Mapping;
  * A {@link VirtualHost} contains the following information:
  * <ul>
  *   <li>the hostname pattern, as defined in
- *       <a href="https://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a></li>
+ *       <a href="https://datatracker.ietf.org/doc/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a></li>
  *   <li>{@link SslContext} if TLS is enabled</li>
  *   <li>the list of available {@link HttpService}s and their {@link Route}s</li>
  * </ul>
@@ -220,7 +220,7 @@ public final class VirtualHost {
 
     /**
      * Returns the hostname pattern of this virtual host, as defined in
-     * <a href="https://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>.
      */
     public String hostnamePattern() {
         return hostnamePattern;

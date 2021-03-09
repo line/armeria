@@ -208,10 +208,10 @@ public final class SslContextUtil {
     private static String badCipherSuiteMessage(String cipher) {
         return "Attempted to configure TLS with a bad cipher suite (" + cipher + "). " +
                "Do not use any cipher suites listed in " +
-               "https://httpwg.org/specs/rfc7540.html#BadCipherSuites";
+               "https://datatracker.ietf.org/doc/html/rfc7540#appendix-A";
     }
 
-    // https://httpwg.org/specs/rfc7540.html#BadCipherSuites
+    // https://datatracker.ietf.org/doc/html/rfc7540#appendix-A
     @VisibleForTesting
     static final Set<String> BAD_HTTP2_CIPHERS =
             ImmutableSet.of(

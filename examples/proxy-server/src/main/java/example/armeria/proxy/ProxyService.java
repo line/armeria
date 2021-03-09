@@ -24,7 +24,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public final class ProxyService extends AbstractHttpService {
 
     // This is a simplified example. Please refer to
-    // https://tools.ietf.org/html/rfc7230#section-5.7.1 for more information about Via header.
+    // https://datatracker.ietf.org/doc/html/rfc7230#section-5.7.1 for more information about Via header.
     private static final String viaHeaderValue = "HTTP/2.0 Armeria proxy"; // The pseudonym is Armeria proxy.
 
     /**
@@ -119,7 +119,7 @@ public final class ProxyService extends AbstractHttpService {
     }
 
     private static HttpRequest addForwarded(ServiceRequestContext ctx, HttpRequest req) {
-        // This is a simplified example. Please refer to https://tools.ietf.org/html/rfc7239
+        // This is a simplified example. Please refer to https://datatracker.ietf.org/doc/rfc7239/
         // for more information about Forwarded header.
         final StringBuilder sb = new StringBuilder();
         sb.append("for: ").append(ctx.<InetSocketAddress>remoteAddress().getAddress().getHostAddress());
