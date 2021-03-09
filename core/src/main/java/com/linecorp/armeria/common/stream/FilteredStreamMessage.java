@@ -108,7 +108,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
      * Override this method to execute any cleanup logic that may be needed before completing or failing the
      * subscription.
      */
-    protected void beforeCancel(Subscription subscription) {}
+    protected void beforeCancel(Subscriber<? super U> subscriber, Subscription subscription) {}
 
     @Override
     public final boolean isOpen() {
@@ -191,7 +191,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         @Override
         public void onSubscribe(Subscription s) {
             beforeSubscribe(delegate, s);
-            delegate.onSubscribe(new SubscriptionWrapper(s));
+            delegate.onSubscribe(new SubscriptionWrapper(s, delegate));
         }
 
         @Override
@@ -227,9 +227,11 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     private final class SubscriptionWrapper implements Subscription {
 
         private final Subscription subscription;
+        private final Subscriber<? super U> subscriber;
 
-        SubscriptionWrapper(Subscription s) {
+        SubscriptionWrapper(Subscription s, Subscriber<? super U> subscriber) {
             subscription = s;
+            this.subscriber = subscriber;
         }
 
         @Override
@@ -239,7 +241,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void cancel() {
-            beforeCancel(subscription);
+            beforeCancel(subscriber, subscription);
             subscription.cancel();
         }
     }

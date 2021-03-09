@@ -96,7 +96,7 @@ public final class ContentPreviewingUtil {
             }
 
             @Override
-            protected void beforeCancel(Subscription subscription) {
+            protected void beforeCancel(Subscriber<? super HttpObject> subscriber, Subscription subscription) {
                 produceRequestContentPreview(requestContentPreviewer);
             }
 
@@ -166,7 +166,7 @@ public final class ContentPreviewingUtil {
             }
 
             @Override
-            protected void beforeCancel(Subscription subscription) {
+            protected void beforeCancel(Subscriber<? super HttpObject> subscriber, Subscription subscription) {
                 produceResponseContentPreview(responseContentPreviewer);
             }
 

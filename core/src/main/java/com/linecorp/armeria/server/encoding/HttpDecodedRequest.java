@@ -65,7 +65,7 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
     }
 
     @Override
-    protected void beforeCancel(Subscription subscription) {
+    protected void beforeCancel(Subscriber<? super HttpObject> subscriber, Subscription subscription) {
         responseDecoder.finish();
     }
 }

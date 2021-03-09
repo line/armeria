@@ -143,7 +143,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
             }
 
             @Override
-            protected void beforeCancel(Subscription subscription) {
+            protected void beforeCancel(Subscriber<? super HttpObject> subscriber, Subscription subscription) {
                 publisher.close();
             }
         };
