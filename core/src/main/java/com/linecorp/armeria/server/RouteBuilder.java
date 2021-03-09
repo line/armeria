@@ -56,7 +56,7 @@ public final class RouteBuilder {
 
     static final Route CATCH_ALL_ROUTE = new RouteBuilder().catchAll().build();
 
-    static final Route FALLBACK_ROUTE = new RouteBuilder().catchAll().fallback().build();
+    static final Route FALLBACK_ROUTE = new RouteBuilder(true).catchAll().build();
 
     @Nullable
     private PathMapping pathMapping;
@@ -71,9 +71,18 @@ public final class RouteBuilder {
 
     private final List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
 
-    private boolean isFallback;
+    /**
+     * See {@link Route#isFallback()}.
+     */
+    private final boolean isFallback;
 
-    RouteBuilder() {}
+    RouteBuilder() {
+        this(false);
+    }
+
+    RouteBuilder(boolean isFallback) {
+        this.isFallback = isFallback;
+    }
 
     /**
      * Sets the {@link Route} to match the specified {@code pathPattern}. e.g.
@@ -414,14 +423,6 @@ public final class RouteBuilder {
      */
     RouteBuilder matchesHeaders(List<RoutingPredicate<HttpHeaders>> headerPredicates) {
         this.headerPredicates.addAll(requireNonNull(headerPredicates, "headerPredicates"));
-        return this;
-    }
-
-    /**
-     * Sets the {@link Route#isFallback()} flag.
-     */
-    RouteBuilder fallback() {
-        isFallback = true;
         return this;
     }
 
