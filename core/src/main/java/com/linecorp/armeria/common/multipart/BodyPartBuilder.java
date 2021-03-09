@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.multipart;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -54,8 +56,6 @@ public final class BodyPartBuilder {
         return this;
     }
 
-    // TODO(ikhoon): Add builder methods for `File` and `Path` contents
-
     /**
      * Adds a new body part backed by the specified {@link Publisher}.
      * @param publisher publisher for the part content
@@ -80,6 +80,44 @@ public final class BodyPartBuilder {
     public BodyPartBuilder content(byte[] contents) {
         requireNonNull(contents, "contents");
         return content(HttpData.copyOf(contents));
+    }
+
+    /**
+     * Adds the specified {@link File} as a body part content.
+     * The default buffer size({@code 8192}) is used to create a buffer used to read data from
+     * the {@link Path}.
+     */
+    public BodyPartBuilder content(File file) {
+        requireNonNull(file, "file");
+        return content(file.toPath());
+    }
+
+    /**
+     * Adds the specified {@link File} as a body part content.
+     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
+     */
+    public BodyPartBuilder content(File file, int bufferSize) {
+        requireNonNull(file, "file");
+        return content(file.toPath(), bufferSize);
+    }
+
+    /**
+     * Adds the specified {@link Path} as a body part content.
+     * The default buffer size({@code 8192}) is used to create a buffer used to read data from
+     * the {@link Path}.
+     */
+    public BodyPartBuilder content(Path path) {
+        requireNonNull(path, "path");
+        return content(StreamMessage.of(path));
+    }
+
+    /**
+     * Adds the specified {@link Path} as a body part content.
+     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
+     */
+    public BodyPartBuilder content(Path path, int bufferSize) {
+        requireNonNull(path, "path");
+        return content(StreamMessage.of(path, bufferSize));
     }
 
     /**
