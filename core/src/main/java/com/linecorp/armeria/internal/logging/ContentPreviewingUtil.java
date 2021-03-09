@@ -80,7 +80,7 @@ public final class ContentPreviewingUtil {
 
             @Override
             protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-                // There's no harm to produce the content preview even though an exception is raised.
+                // There's no harm to produce the content preview when an exception is raised.
                 produceRequestContentPreview();
                 return cause;
             }
@@ -141,7 +141,7 @@ public final class ContentPreviewingUtil {
 
             @Override
             protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-                // There's no harm to produce the content preview even though an exception is raised.
+                // There's no harm to produce the content preview when an exception is raised.
                 produceResponseContentPreview();
                 return cause;
             }
