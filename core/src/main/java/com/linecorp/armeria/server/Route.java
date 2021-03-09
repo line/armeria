@@ -181,8 +181,8 @@ public interface Route {
     Set<MediaType> produces();
 
     /**
-     * Returns whether this {@link Route} is a fallback, which is matched only when no configured {@link Route}s
-     * were matched.
+     * Returns whether this {@link Route} is a fallback, which is matched only when no configured {@link Route}
+     * was matched.
      */
     boolean isFallback();
 }
