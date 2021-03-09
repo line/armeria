@@ -16,9 +16,9 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_TOTAL_STEPS;
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_RAMPING_UP_INTERVAL_MILLIS;
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS;
+import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_TOTAL_STEPS;
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.defaultTransition;
 import static java.util.Objects.requireNonNull;
 
