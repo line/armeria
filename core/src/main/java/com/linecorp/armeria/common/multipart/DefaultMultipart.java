@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.multipart.MultipartEncoder.EMPTY_OPTIO
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
