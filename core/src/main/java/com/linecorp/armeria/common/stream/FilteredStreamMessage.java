@@ -103,8 +103,6 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         return cause;
     }
 
-    // TODO(ikhoon): Add onCancel() handler
-
     @Override
     public final boolean isOpen() {
         return upstream.isOpen();
