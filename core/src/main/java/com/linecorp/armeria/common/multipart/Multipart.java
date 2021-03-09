@@ -131,9 +131,9 @@ public interface Multipart {
             throw new IllegalStateException("boundary header is missing");
         }
 
-        // HttpRequest publishes only HttpData
         @SuppressWarnings("unchecked")
-        final StreamMessage<HttpData> cast = (StreamMessage<HttpData>) (StreamMessage<?>) request;
+        final StreamMessage<HttpData> cast =
+                (StreamMessage<HttpData>) (StreamMessage<?>) request.filter(HttpData.class::isInstance);
         return from(boundary, cast);
     }
 
