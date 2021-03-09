@@ -85,7 +85,7 @@ public final class BodyPartBuilder {
     /**
      * Adds the specified {@link File} as a body part content.
      * The default buffer size({@code 8192}) is used to create a buffer used to read data from
-     * the {@link Path}.
+     * the {@link File}.
      */
     public BodyPartBuilder content(File file) {
         requireNonNull(file, "file");
@@ -94,7 +94,7 @@ public final class BodyPartBuilder {
 
     /**
      * Adds the specified {@link File} as a body part content.
-     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
+     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link File}.
      */
     public BodyPartBuilder content(File file, int bufferSize) {
         requireNonNull(file, "file");
