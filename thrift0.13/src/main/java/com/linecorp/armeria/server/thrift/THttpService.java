@@ -450,8 +450,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                         TApplicationException.INVALID_MESSAGE_TYPE,
                         "unexpected TMessageType: " + typeString(typeValue));
 
-                handlePreDecodeException(ctx, httpRes, exceptionTranslator.apply(ctx, cause),
-                                         serializationFormat, seqId, methodName);
+                handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
                 return;
             }
 
@@ -462,8 +461,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 final TApplicationException cause = new TApplicationException(
                         TApplicationException.UNKNOWN_METHOD, "unknown method: " + header.name);
 
-                handlePreDecodeException(ctx, httpRes, exceptionTranslator.apply(ctx, cause),
-                                         serializationFormat, seqId, methodName);
+                handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
                 return;
             }
 
@@ -482,8 +480,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 final TApplicationException cause = new TApplicationException(
                         TApplicationException.PROTOCOL_ERROR, "failed to decode arguments: " + e);
 
-                handlePreDecodeException(ctx, httpRes, exceptionTranslator.apply(ctx, cause),
-                                         serializationFormat, seqId, methodName);
+                handlePreDecodeException(ctx, httpRes, cause, serializationFormat, seqId, methodName);
                 return;
             }
         } finally {
@@ -491,6 +488,15 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         }
 
         invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes);
+    }
+
+    private Throwable translateException(ServiceRequestContext ctx, Throwable cause) {
+        final Throwable translated = exceptionTranslator.apply(ctx, cause);
+        if (translated == null) {
+            logger.warn("exceptionTranslator.apply() returned null.");
+            return cause;
+        }
+        return translated;
     }
 
     private static String typeString(byte typeValue) {
@@ -517,7 +523,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         try (SafeCloseable ignored = ctx.push()) {
             reply = unwrap().serve(ctx, call);
         } catch (Throwable cause) {
-            final Throwable translated = exceptionTranslator.apply(ctx, cause);
+            final Throwable translated = translateException(ctx, cause);
             handleException(ctx, RpcResponse.ofFailure(translated), res, serializationFormat,
                             seqId, func, translated);
             return;
@@ -531,14 +537,14 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
             if (cause != null) {
                 handleException(ctx, reply, res, serializationFormat, seqId, func,
-                                exceptionTranslator.apply(ctx, cause));
+                                translateException(ctx, cause));
                 return null;
             }
 
             try {
                 handleSuccess(ctx, reply, res, serializationFormat, seqId, func, result);
             } catch (Throwable t) {
-                final Throwable translated = exceptionTranslator.apply(ctx, t);
+                final Throwable translated = translateException(ctx, t);
                 handleException(ctx, RpcResponse.ofFailure(translated), res, serializationFormat,
                                 seqId, func, translated);
             }
