@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
@@ -50,6 +51,9 @@ class MultipartEncoder implements StreamMessage<HttpData> {
             completionFutureUpdater = AtomicReferenceFieldUpdater
             .newUpdater(MultipartEncoder.class, CompletableFuture.class, "completionFuture");
 
+    private static final AtomicIntegerFieldUpdater<MultipartEncoder> subscribedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(MultipartEncoder.class, "subscribed");
+
     private static final HttpData CRLF = HttpData.ofUtf8("\r\n");
 
     static final SubscriptionOption[] EMPTY_OPTIONS = {};
@@ -58,7 +62,7 @@ class MultipartEncoder implements StreamMessage<HttpData> {
 
     private final StreamMessage<BodyPart> publisher;
 
-    private boolean subscribed;
+    private volatile int subscribed;
 
     // 'closeCause' will be written before 'closed' and read after 'closed'
     @Nullable
@@ -106,6 +110,12 @@ class MultipartEncoder implements StreamMessage<HttpData> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
+        if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
+            subscriber.onSubscribe(NoopSubscription.get());
+            subscriber.onError(new IllegalStateException("Only one Subscriber allowed"));
+            return;
+        }
+
         if (executor.inEventLoop()) {
             subscribe0(subscriber, executor, options);
         } else {
@@ -115,13 +125,6 @@ class MultipartEncoder implements StreamMessage<HttpData> {
 
     private void subscribe0(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                             SubscriptionOption... options) {
-        if (subscribed) {
-            subscriber.onSubscribe(NoopSubscription.get());
-            subscriber.onError(new IllegalStateException("Only one Subscriber allowed"));
-            return;
-        }
-
-        subscribed = true;
         publisher.subscribe(new BodyPartSubscriber(subscriber, executor, options), executor, options);
     }
 

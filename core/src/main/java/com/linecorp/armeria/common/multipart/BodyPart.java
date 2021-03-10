@@ -34,8 +34,6 @@ import com.linecorp.armeria.common.stream.StreamMessage;
  */
 public interface BodyPart {
 
-    // TODO(ikhoon): Add publishers for File and Path
-
     /**
      * Returns a new UTF-8-encoded {@link BodyPart} using the specified {@link ContentDisposition} and
      * {@link CharSequence}.
