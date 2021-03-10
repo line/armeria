@@ -24,7 +24,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.web.server.LocalServerPort;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -56,9 +55,6 @@ class SpringServerMultipartTest {
                           .responseTimeoutMillis(0)
                           .decorator(ContentPreviewingClient.newDecorator(factory))
                           .decorator(LoggingClient.newDecorator())
-                          .factory(ClientFactory.builder()
-                                                .idleTimeoutMillis(0)
-                                                .build())
                           .build();
     }
 

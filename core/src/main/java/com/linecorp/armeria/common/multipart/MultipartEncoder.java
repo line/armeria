@@ -41,10 +41,8 @@ import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Reactive processor that encodes a stream of {@link BodyPart}s into an HTTP payload.
- *
- * <p>This class is non-final class intentionally for testing `MultipartEncoderSubsWhiteBoxTckTest`.
  */
-class MultipartEncoder implements StreamMessage<HttpData> {
+final class MultipartEncoder implements StreamMessage<HttpData> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<MultipartEncoder, CompletableFuture>

@@ -283,9 +283,7 @@ final class MimeParser {
 
     /**
      * Reads the next part body content.
-     *
-     * @return list of read-only ByteBuffer, or {@code EMPTY_BUF} if more data is
-     *         required and no body content can be returned.
+     * Returns {@link #NEED_MORE} if more data is required and no body content can be returned.
      */
     private ByteBuf readBody() {
         // matches boundary
