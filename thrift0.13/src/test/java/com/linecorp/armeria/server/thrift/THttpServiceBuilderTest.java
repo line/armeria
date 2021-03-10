@@ -60,9 +60,10 @@ class THttpServiceBuilderTest {
 
     @Test
     void translatedException() throws TException {
-        final FooService.Iface client = Clients.builder(
-                server.uri(SessionProtocol.HTTP, BINARY).resolve("/exception"))
-                                              .build(FooService.Iface.class);
+        final FooService.Iface client =
+                Clients.builder(server.uri(SessionProtocol.HTTP, BINARY)
+                                      .resolve("/exception"))
+                       .build(FooService.Iface.class);
         final Throwable thrown = catchThrowable(client::bar1);
         assertThat(thrown).isInstanceOf(FooServiceException.class);
         assertThat(((FooServiceException) thrown).getStringVal()).isEqualTo("Illegal state!");
