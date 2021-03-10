@@ -67,7 +67,7 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
     static final String INVALID_TOKEN = "invalid_token";
 
     private static final CompletionStage<AuthorizationStatus> SUCCESS_STATUS_FUTURE =
-            CompletableFuture.completedFuture(AuthorizationStatus.SUCCESS);
+            CompletableFuture.completedFuture(AuthorizationStatus.ofSuccess());
 
     private final Cache<String, OAuth2TokenDescriptor> tokenCache;
     private final Set<String> permittedScope;
@@ -155,7 +155,7 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
             // cache the new token descriptor
             tokenCache.put(accessToken, descriptor);
             // validate new token
-            return validateDescriptor(ctx, descriptor) ? AuthorizationStatus.SUCCESS
+            return validateDescriptor(ctx, descriptor) ? AuthorizationStatus.ofSuccess()
                                                        : failureStatus;
         });
     }

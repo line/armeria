@@ -56,7 +56,7 @@ public final class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
      * A supplier of user credentials: "username" and "password" used to grant the Access Token. REQUIRED.
      */
     public OAuth2ResourceOwnerPasswordCredentialsGrantBuilder userCredentials(
-            Supplier<Entry<String, String>> userCredentials) {
+            Supplier<? extends Entry<String, String>> userCredentials) {
         userCredentialsSupplier = requireNonNull(userCredentials, "userCredentials");
         return this;
     }

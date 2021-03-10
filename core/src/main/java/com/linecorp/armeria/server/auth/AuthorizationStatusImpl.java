@@ -23,6 +23,9 @@ import javax.annotation.Nullable;
  */
 class AuthorizationStatusImpl implements AuthorizationStatus {
 
+    static final AuthorizationStatusImpl SUCCESS = new AuthorizationStatusImpl(true);
+    static final AuthorizationStatusImpl FAILURE = new AuthorizationStatusImpl(false);
+
     private final boolean status;
     @Nullable
     private final AuthSuccessHandler successHandler;
@@ -37,16 +40,16 @@ class AuthorizationStatusImpl implements AuthorizationStatus {
         this.failureHandler = failureHandler;
     }
 
+    private AuthorizationStatusImpl(boolean status) {
+        this(status, null, null);
+    }
+
     AuthorizationStatusImpl(@Nullable AuthSuccessHandler successHandler) {
         this(true, successHandler, null);
     }
 
     AuthorizationStatusImpl(@Nullable AuthFailureHandler failureHandler) {
         this(false, null, failureHandler);
-    }
-
-    AuthorizationStatusImpl(boolean status) {
-        this(status, null, null);
     }
 
     @Override
