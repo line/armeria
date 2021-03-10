@@ -94,9 +94,11 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     /**
      * A callback executed just before calling {@link Subscriber#onError(Throwable)} on {@code subscriber}.
-     * Override this method to execute any cleanup logic that may be needed before failing the
-     * subscription. This method may rewrite the {@code cause} and then return a new one so that the new
-     * {@link Throwable} would be passed to {@link Subscriber#onError(Throwable)}.
+     * This callback is also executed when {@link Subscription#cancel()} is called regardless you specified
+     * {@link SubscriptionOption#NOTIFY_CANCELLATION} when subscribing.
+     * Override this method to execute any cleanup logic that may be needed. This method may rewrite the
+     * {@code cause} and then return a new one so that the new {@link Throwable}
+     * would be passed to {@link Subscriber#onError(Throwable)}.
      */
     @Nullable
     protected Throwable beforeError(Subscriber<? super U> subscriber, Throwable cause) {
