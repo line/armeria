@@ -103,6 +103,11 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         return cause;
     }
 
+    /**
+     * A callback executed when this {@link StreamMessage} is canceled by the {@link Subscriber}.
+     */
+    protected void onCancellation(Subscriber<? super U> subscriber) {}
+
     @Override
     public final boolean isOpen() {
         return upstream.isOpen();
@@ -143,6 +148,12 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                            boolean notifyCancellation) {
         upstream.subscribe(new FilteringSubscriber(subscriber, withPooledObjects),
                            executor, filteringSubscriptionOptions(notifyCancellation));
+        upstream.whenComplete().handle((unused, cause) -> {
+            if (cause instanceof CancelledSubscriptionException) {
+                onCancellation(subscriber);
+            }
+            return null;
+        });
     }
 
     private SubscriptionOption[] filteringSubscriptionOptions(boolean notifyCancellation) {

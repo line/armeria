@@ -70,10 +70,6 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         this.encodingType = encodingType;
         this.encodableContentTypePredicate = encodableContentTypePredicate;
         this.minBytesToForceChunkedAndEncoding = minBytesToForceChunkedAndEncoding;
-        whenComplete().handle((unused, cause) -> {
-            closeEncoder();
-            return null;
-        });
     }
 
     @Override
@@ -155,6 +151,17 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         }
     }
 
+    @Override
+    protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+        closeEncoder();
+        return cause;
+    }
+
+    @Override
+    protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
+        closeEncoder();
+    }
+
     private void closeEncoder() {
         if (encoderClosed) {
             return;
@@ -166,9 +173,7 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         try {
             encodingStream.close();
         } catch (IOException e) {
-            throw new IllegalStateException(
-                    "Error closing encodingStream, this should not happen with byte arrays.",
-                    e);
+            logger.warn("Unexpected exception is raised while closing the encoding stream.", e);
         }
     }
 

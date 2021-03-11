@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.encoding;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.FilteredHttpRequest;
@@ -40,14 +42,6 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
                        ByteBufAllocator alloc) {
         super(delegate);
         responseDecoder = decoderFactory.newDecoder(alloc);
-        whenComplete().handle((unused, cause) -> {
-            if (decoderFinished) {
-                return null;
-            }
-            decoderFinished = true;
-            responseDecoder.finish();
-            return null;
-        });
     }
 
     @Override
@@ -61,13 +55,32 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-        if (decoderFinished) {
+        final HttpData lastData = closeResponseDecoder();
+        if (lastData == null) {
             return;
         }
-        decoderFinished = true;
-        final HttpData lastData = responseDecoder.finish();
         if (!lastData.isEmpty()) {
             subscriber.onNext(lastData);
         }
+    }
+
+    @Override
+    protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
+        closeResponseDecoder();
+        return cause;
+    }
+
+    @Override
+    protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
+        closeResponseDecoder();
+    }
+
+    @Nullable
+    private HttpData closeResponseDecoder() {
+        if (decoderFinished) {
+            return null;
+        }
+        decoderFinished = true;
+        return responseDecoder.finish();
     }
 }
