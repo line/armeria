@@ -67,13 +67,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         DONE,
     }
 
-    enum CloseStatus {
-        NOT_CLOSED,
-        COMPLETED,
-        ERROR,
-        CANCELED
-    }
-
     private final ChannelHandlerContext ctx;
     private final ServerHttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
@@ -212,7 +205,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                                 " (service: " + service() + ')'));
                         return;
                     }
-
                     setDone(false);
 
                     final HttpHeaders merged = mergeTrailers(trailers, reqCtx.additionalResponseTrailers());
@@ -269,20 +261,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     }
 
     private State setDone(boolean cancel) {
-        if (cancel) {
-            maybeCancelSubscription();
+        if (cancel && subscription != null && !isSubscriptionCompleted) {
+            isSubscriptionCompleted = true;
+            subscription.cancel();
         }
         reqCtx.requestCancellationScheduler().clearTimeout(false);
         final State oldState = state;
         state = State.DONE;
         return oldState;
-    }
-
-    private void maybeCancelSubscription() {
-        if (subscription != null && !isSubscriptionCompleted) {
-            isSubscriptionCompleted = true;
-            subscription.cancel();
-        }
     }
 
     @Override
@@ -537,8 +523,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
             if (!isSubscriptionCompleted) {
                 assert subscription != null;
-                // Even thought an 'endOfStream' is received, need to send a request signal to the upstream
-                // for completing or canceling this 'HttpResponseSubscriber'
+                // Even though an 'endOfStream' is received, we still need to send a request signal to the
+                // upstream for completing or canceling this 'HttpResponseSubscriber'
                 subscription.request(1);
             }
             return;
