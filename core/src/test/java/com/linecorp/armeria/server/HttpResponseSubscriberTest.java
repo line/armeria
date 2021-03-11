@@ -60,7 +60,6 @@ public class HttpResponseSubscriberTest {
                 streaming.write(HttpHeaders.of("status", "0"));
                 streaming.close();
                 streaming.whenComplete().handle((unused, cause) -> {
-                    System.out.println(cause);
                     completed.set(cause == null);
                     return null;
                 });
