@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotif
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -45,13 +44,11 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
 
-    private static final SubscriptionOption[] EMPTY_OPTIONS = new SubscriptionOption[0];
-
     private final StreamMessage<T> upstream;
     private final boolean filterSupportsPooledObjects;
 
     /**
-     * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code delegate}
+     * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code upstream}
      * before passing to a subscriber.
      */
     protected FilteredStreamMessage(StreamMessage<T> upstream) {
@@ -60,7 +57,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     /**
      * (Advanced users only) Creates a new {@link FilteredStreamMessage} that filters objects published by
-     * {@code delegate} before passing to a subscriber.
+     * {@code upstream} before passing to a subscriber.
      *
      * @param withPooledObjects if {@code true}, {@link #filter(Object)} receives the pooled {@link HttpData}
      *                          as is, without making a copy. If you don't know what this means,
@@ -69,7 +66,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
      */
     @UnstableApi
     protected FilteredStreamMessage(StreamMessage<T> upstream, boolean withPooledObjects) {
-        this.upstream = requireNonNull(upstream, "delegate");
+        this.upstream = requireNonNull(upstream, "upstream");
         filterSupportsPooledObjects = withPooledObjects;
     }
 
@@ -93,9 +90,13 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     protected void beforeComplete(Subscriber<? super U> subscriber) {}
 
     /**
-     * A callback executed just before calling {@link Subscriber#onError(Throwable)} on {@code subscriber}.
-     * This callback is also executed when {@link Subscription#cancel()} is called regardless you specified
-     * {@link SubscriptionOption#NOTIFY_CANCELLATION} when subscribing.
+     * A callback that is executed one of followings:
+     * <ul>
+     *   <li>before calling {@link Subscriber#onError(Throwable)} by the {@code upstream}.</li>
+     *   <li>after {@link Subscription#cancel()} is called by the {@link Subscriber} regardless you specified
+     *       {@link SubscriptionOption#NOTIFY_CANCELLATION} when subscribing.</li>
+     * </ul>
+     *
      * Override this method to execute any cleanup logic that may be needed. This method may rewrite the
      * {@code cause} and then return a new one so that the new {@link Throwable}
      * would be passed to {@link Subscriber#onError(Throwable)}.
@@ -143,17 +144,14 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private void subscribe(Subscriber<? super U> subscriber, EventExecutor executor, boolean withPooledObjects,
                            boolean notifyCancellation) {
-        upstream.subscribe(new FilteringSubscriber(subscriber, withPooledObjects, notifyCancellation),
-                           executor, filteringSubscriptionOptions());
-    }
-
-    private SubscriptionOption[] filteringSubscriptionOptions() {
-        final ArrayList<SubscriptionOption> list = new ArrayList<>(2);
-        list.add(SubscriptionOption.NOTIFY_CANCELLATION);
+        final FilteringSubscriber filteringSubscriber =
+                new FilteringSubscriber(subscriber, withPooledObjects, notifyCancellation);
         if (filterSupportsPooledObjects) {
-            list.add(SubscriptionOption.WITH_POOLED_OBJECTS);
+            upstream.subscribe(filteringSubscriber, executor,
+                               SubscriptionOption.NOTIFY_CANCELLATION, SubscriptionOption.WITH_POOLED_OBJECTS);
+        } else {
+            upstream.subscribe(filteringSubscriber, executor, SubscriptionOption.NOTIFY_CANCELLATION);
         }
-        return list.toArray(EMPTY_OPTIONS);
     }
 
     @Override
