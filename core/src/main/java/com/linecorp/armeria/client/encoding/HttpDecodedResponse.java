@@ -45,12 +45,23 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
     @Nullable
     private StreamDecoder responseDecoder;
     private boolean headersReceived;
+    private boolean decoderClosed;
 
     HttpDecodedResponse(HttpResponse delegate, Map<String, StreamDecoderFactory> availableDecoders,
                         ByteBufAllocator alloc) {
         super(delegate, true);
         this.availableDecoders = availableDecoders;
         this.alloc = alloc;
+        whenComplete().handle((unused, cause) -> {
+            if (decoderClosed) {
+                return null;
+            }
+            decoderClosed = true;
+            if (responseDecoder != null) {
+                responseDecoder.finish();
+            }
+            return null;
+        });
     }
 
     @Override
@@ -97,6 +108,10 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+        if (decoderClosed) {
+            return;
+        }
+        decoderClosed = true;
         if (responseDecoder == null) {
             return;
         }
@@ -104,13 +119,5 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
         if (!lastData.isEmpty()) {
             subscriber.onNext(lastData);
         }
-    }
-
-    @Override
-    protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        if (responseDecoder != null) {
-            responseDecoder.finish();
-        }
-        return cause;
     }
 }

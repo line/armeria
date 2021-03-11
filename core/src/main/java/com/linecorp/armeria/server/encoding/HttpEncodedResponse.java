@@ -60,6 +60,8 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
 
     private boolean headersSent;
 
+    private boolean encoderClosed;
+
     HttpEncodedResponse(HttpResponse delegate,
                         HttpEncodingType encodingType,
                         Predicate<MediaType> encodableContentTypePredicate,
@@ -68,6 +70,10 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         this.encodingType = encodingType;
         this.encodableContentTypePredicate = encodableContentTypePredicate;
         this.minBytesToForceChunkedAndEncoding = minBytesToForceChunkedAndEncoding;
+        whenComplete().handle((unused, cause) -> {
+            closeEncoder();
+            return null;
+        });
     }
 
     @Override
@@ -149,13 +155,11 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         }
     }
 
-    @Override
-    protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        closeEncoder();
-        return cause;
-    }
-
     private void closeEncoder() {
+        if (encoderClosed) {
+            return;
+        }
+        encoderClosed = true;
         if (encodingStream == null) {
             return;
         }

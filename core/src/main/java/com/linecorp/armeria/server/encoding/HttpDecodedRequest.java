@@ -34,10 +34,20 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     private final StreamDecoder responseDecoder;
 
+    private boolean decoderFinished;
+
     HttpDecodedRequest(HttpRequest delegate, StreamDecoderFactory decoderFactory,
                        ByteBufAllocator alloc) {
         super(delegate);
         responseDecoder = decoderFactory.newDecoder(alloc);
+        whenComplete().handle((unused, cause) -> {
+            if (decoderFinished) {
+                return null;
+            }
+            decoderFinished = true;
+            responseDecoder.finish();
+            return null;
+        });
     }
 
     @Override
@@ -51,15 +61,13 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
+        if (decoderFinished) {
+            return;
+        }
+        decoderFinished = true;
         final HttpData lastData = responseDecoder.finish();
         if (!lastData.isEmpty()) {
             subscriber.onNext(lastData);
         }
-    }
-
-    @Override
-    protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        responseDecoder.finish();
-        return cause;
     }
 }
