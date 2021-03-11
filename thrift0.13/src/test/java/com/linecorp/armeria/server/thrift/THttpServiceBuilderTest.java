@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -46,20 +47,25 @@ class THttpServiceBuilderTest {
         protected void configure(ServerBuilder sb) throws Exception {
             final AsyncIface service = mock(AsyncIface.class);
             doThrow(new IllegalStateException()).when(service).bar1(any());
+            doThrow(new IllegalArgumentException()).when(service).bar2(any());
             sb.service("/exception", THttpService.builder()
                                                  .addService(service)
-                                                 .exceptionMapper((ctx, cause) -> {
+                                                 .exceptionHandler((ctx, cause) -> {
                                                      if (cause instanceof IllegalStateException) {
-                                                         return new FooServiceException("Illegal state!");
+                                                         return RpcResponse.ofFailure(
+                                                                 new FooServiceException("Illegal state!"));
                                                      }
-                                                     return cause;
+                                                     if (cause instanceof IllegalArgumentException) {
+                                                         return RpcResponse.of("I'm generous");
+                                                     }
+                                                     return RpcResponse.ofFailure(cause);
                                                  })
                                                  .build());
         }
     };
 
     @Test
-    void translatedException() throws TException {
+    void exceptionHandler() throws TException {
         final FooService.Iface client =
                 Clients.builder(server.uri(SessionProtocol.HTTP, BINARY)
                                       .resolve("/exception"))
@@ -67,6 +73,8 @@ class THttpServiceBuilderTest {
         final Throwable thrown = catchThrowable(client::bar1);
         assertThat(thrown).isInstanceOf(FooServiceException.class);
         assertThat(((FooServiceException) thrown).getStringVal()).isEqualTo("Illegal state!");
+
+        assertThat(client.bar2()).isEqualTo("I'm generous");
     }
 
     @Test

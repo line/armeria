@@ -32,10 +32,10 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
 
+import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
-import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -64,6 +64,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class THttpServiceBuilder {
 
+    private static final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+            default_exception_handler = (ctx, cause) -> RpcResponse.ofFailure(cause);
+
     private final ImmutableListMultimap.Builder<String, Object> implementationsBuilder =
             ImmutableListMultimap.builder();
     private SerializationFormat defaultSerializationFormat = ThriftSerializationFormats.BINARY;
@@ -71,8 +74,8 @@ public final class THttpServiceBuilder {
     private boolean createOtherSerializations = true;
     @Nullable
     private Function<? super RpcService, ? extends RpcService> decoratorFunction;
-    private BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionMapper =
-            Functions.second();
+    private BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+            exceptionHandler = default_exception_handler;
 
     THttpServiceBuilder() { }
 
@@ -148,11 +151,13 @@ public final class THttpServiceBuilder {
     }
 
     /**
-     * Adds the {@link BiFunction} that maps the given {@link Throwable} into another {@link Throwable}.
+     * Adds the {@link BiFunction} that returns an {@link RpcResponse} using the given {@link Throwable}
+     * and {@link ServiceRequestContext}.
      */
-    public THttpServiceBuilder exceptionMapper(
-            BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionMapper) {
-        this.exceptionMapper = requireNonNull(exceptionMapper, "exceptionMapper");
+    public THttpServiceBuilder exceptionHandler(
+            BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+                    exceptionHandler) {
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
         return this;
     }
 
@@ -192,7 +197,7 @@ public final class THttpServiceBuilder {
         builder.add(defaultSerializationFormat);
         builder.addAll(otherSerializationFormats);
 
-        return new THttpService(decorate(tcs), defaultSerializationFormat, builder.build(), exceptionMapper);
+        return new THttpService(decorate(tcs), defaultSerializationFormat, builder.build(), exceptionHandler);
     }
 
     /**

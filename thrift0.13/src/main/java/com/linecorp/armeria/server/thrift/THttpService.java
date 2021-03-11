@@ -266,17 +266,18 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private final ThriftCallService thriftService;
     private final SerializationFormat defaultSerializationFormat;
     private final Set<SerializationFormat> supportedSerializationFormats;
-    private final BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionMapper;
+    private final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+            exceptionHandler;
 
-    THttpService(RpcService delegate,
-                 SerializationFormat defaultSerializationFormat,
+    THttpService(RpcService delegate, SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> supportedSerializationFormats,
-                 BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionMapper) {
+                 BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+                         exceptionHandler) {
         super(delegate);
         thriftService = findThriftService(delegate);
         this.defaultSerializationFormat = defaultSerializationFormat;
         this.supportedSerializationFormats = ImmutableSet.copyOf(supportedSerializationFormats);
-        this.exceptionMapper = exceptionMapper;
+        this.exceptionHandler = exceptionHandler;
     }
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
@@ -489,15 +490,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes);
     }
 
-    private Throwable translateException(ServiceRequestContext ctx, Throwable cause) {
-        final Throwable translated = exceptionMapper.apply(ctx, cause);
-        if (translated == null) {
-            logger.warn("exceptionMapper.apply() returned null.");
-            return cause;
-        }
-        return translated;
-    }
-
     private static String typeString(byte typeValue) {
         switch (typeValue) {
             case TMessageType.CALL:
@@ -522,9 +514,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         try (SafeCloseable ignored = ctx.push()) {
             reply = unwrap().serve(ctx, call);
         } catch (Throwable cause) {
-            final Throwable translated = translateException(ctx, cause);
-            handleException(ctx, RpcResponse.ofFailure(translated), res, serializationFormat,
-                            seqId, func, translated);
+            handleException(ctx, res, serializationFormat, seqId, func, cause);
             return;
         }
 
@@ -535,17 +525,15 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             }
 
             if (cause != null) {
-                handleException(ctx, reply, res, serializationFormat, seqId, func,
-                                translateException(ctx, cause));
+                handleException(ctx, res, serializationFormat, seqId, func, cause);
                 return null;
             }
 
             try {
                 handleSuccess(ctx, reply, res, serializationFormat, seqId, func, result);
             } catch (Throwable t) {
-                final Throwable translated = translateException(ctx, t);
-                handleException(ctx, RpcResponse.ofFailure(translated), res, serializationFormat,
-                                seqId, func, translated);
+                handleException(ctx, res, serializationFormat, seqId, func, t);
+                return null;
             }
 
             return null;
@@ -595,6 +583,29 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             SerializationFormat serializationFormat) {
         ctx.logBuilder().responseContent(rpcRes, null);
         respond(serializationFormat, HttpData.empty(), httpRes);
+    }
+
+    private void handleException(ServiceRequestContext ctx, CompletableFuture<HttpResponse> res,
+                                 SerializationFormat serializationFormat, int seqId,
+                                 ThriftFunction func, Throwable cause) {
+        final RpcResponse response = handleException(ctx, cause);
+        response.handle((result, convertedCause) -> {
+            if (convertedCause != null) {
+                handleException(ctx, response, res, serializationFormat, seqId, func, convertedCause);
+            } else {
+                handleSuccess(ctx, response, res, serializationFormat, seqId, func, result);
+            }
+            return null;
+        });
+    }
+
+    private RpcResponse handleException(ServiceRequestContext ctx, Throwable cause) {
+        final RpcResponse res = exceptionHandler.apply(ctx, cause);
+        if (res == null) {
+            logger.warn("exceptionHandler.apply() returned null.");
+            return RpcResponse.ofFailure(cause);
+        }
+        return res;
     }
 
     private static void handleException(
