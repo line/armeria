@@ -200,7 +200,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                                 " (service: " + service() + ')'));
                         return;
                     }
-                    setDone(true);
+
+                    // Mark as DONE and send a request for receiving onComplete() or canceling the upstream
+                    setDone(false);
+                    subscription.request(1);
+
                     final HttpHeaders merged = mergeTrailers(trailers, reqCtx.additionalResponseTrailers());
                     logBuilder().responseTrailers(merged);
                     responseEncoder.writeTrailers(req.id(), req.streamId(), merged)
@@ -210,7 +214,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
                     if (endOfStream) {
-                        setDone(true);
+                        // Mark as DONE and send a request for expecting onComplete() or canceling the upstream
+                        setDone(false);
+                        subscription.request(1);
                     }
 
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
@@ -228,6 +234,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 break;
             }
             case DONE:
+                subscription.cancel();
                 PooledObjects.close(o);
                 return;
         }
