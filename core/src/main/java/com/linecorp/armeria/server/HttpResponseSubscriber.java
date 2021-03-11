@@ -234,6 +234,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 break;
             }
             case DONE:
+                isSubscriptionCompleted = true;
                 subscription.cancel();
                 PooledObjects.close(o);
                 return;
