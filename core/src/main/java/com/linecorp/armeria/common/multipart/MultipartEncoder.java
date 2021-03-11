@@ -114,15 +114,6 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
             return;
         }
 
-        if (executor.inEventLoop()) {
-            subscribe0(subscriber, executor, options);
-        } else {
-            executor.execute(() -> subscribe0(subscriber, executor, options));
-        }
-    }
-
-    private void subscribe0(Subscriber<? super HttpData> subscriber, EventExecutor executor,
-                            SubscriptionOption... options) {
         publisher.subscribe(new BodyPartSubscriber(subscriber, executor, options), executor, options);
     }
 
@@ -239,6 +230,10 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
 
             subscribed = true;
             final DefaultStreamMessage<StreamMessage<HttpData>> newEmitter = newEmitter(subscription);
+
+            // The 'emitter' should be set before reading 'closed' flag.
+            // It guarantees that the emitter.abort() or downstream.onError() is always called with
+            // 'closedCause'
             emitter = newEmitter;
 
             if (closed) {
@@ -250,10 +245,11 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
             final CompletableFuture<Void> completionFuture = MultipartEncoder.this.completionFuture;
             if (completionFuture != null) {
                 completeAsync(newEmitter.whenComplete(), completionFuture);
-            }
-            if (!completionFutureUpdater
-                    .compareAndSet(MultipartEncoder.this, null, newEmitter.whenComplete())) {
-                completeAsync(newEmitter.whenComplete(), MultipartEncoder.this.completionFuture);
+            } else {
+                if (!completionFutureUpdater
+                        .compareAndSet(MultipartEncoder.this, null, newEmitter.whenComplete())) {
+                    completeAsync(newEmitter.whenComplete(), MultipartEncoder.this.completionFuture);
+                }
             }
 
             StreamMessage.concat(StreamMessage.concat(newEmitter),
