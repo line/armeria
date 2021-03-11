@@ -62,17 +62,16 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
 
     private volatile int subscribed;
 
+    // 'closeCause' will be written before 'closed' and read after 'closed'
     @Nullable
     private Throwable closeCause;
-    private boolean closed;
+    private volatile boolean closed;
 
     @Nullable
     private volatile CompletableFuture<Void> completionFuture;
 
     @Nullable
     private volatile DefaultStreamMessage<StreamMessage<HttpData>> emitter;
-    @Nullable
-    private volatile EventExecutor executor;
 
     MultipartEncoder(StreamMessage<BodyPart> publisher, String boundary) {
         requireNonNull(boundary, "boundary");
@@ -124,7 +123,6 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
 
     private void subscribe0(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                             SubscriptionOption... options) {
-        this.executor = executor;
         publisher.subscribe(new BodyPartSubscriber(subscriber, executor, options), executor, options);
     }
 
@@ -135,15 +133,6 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
 
     @Override
     public void abort(Throwable cause) {
-        final EventExecutor executor = this.executor;
-        if (executor == null && executor.inEventLoop()) {
-            abort0(cause);
-        } else {
-            executor.execute(() -> abort0(cause));
-        }
-    }
-
-    private void abort0(Throwable cause) {
         if (closed) {
             return;
         }
