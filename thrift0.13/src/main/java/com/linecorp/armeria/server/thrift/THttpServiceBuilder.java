@@ -65,7 +65,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public final class THttpServiceBuilder {
 
     private static final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
-            default_exception_handler = (ctx, cause) -> RpcResponse.ofFailure(cause);
+            defaultExceptionHandler = (ctx, cause) -> RpcResponse.ofFailure(cause);
 
     private final ImmutableListMultimap.Builder<String, Object> implementationsBuilder =
             ImmutableListMultimap.builder();
@@ -75,7 +75,7 @@ public final class THttpServiceBuilder {
     @Nullable
     private Function<? super RpcService, ? extends RpcService> decoratorFunction;
     private BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
-            exceptionHandler = default_exception_handler;
+            exceptionHandler = defaultExceptionHandler;
 
     THttpServiceBuilder() { }
 
