@@ -48,7 +48,7 @@ class THttpServiceBuilderTest {
             doThrow(new IllegalStateException()).when(service).bar1(any());
             sb.service("/exception", THttpService.builder()
                                                  .addService(service)
-                                                 .exceptionTranslator((ctx, cause) -> {
+                                                 .exceptionMapper((ctx, cause) -> {
                                                      if (cause instanceof IllegalStateException) {
                                                          return new FooServiceException("Illegal state!");
                                                      }

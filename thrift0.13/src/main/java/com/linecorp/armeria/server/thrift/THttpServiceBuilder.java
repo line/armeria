@@ -71,7 +71,7 @@ public final class THttpServiceBuilder {
     private boolean createOtherSerializations = true;
     @Nullable
     private Function<? super RpcService, ? extends RpcService> decoratorFunction;
-    private BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionTranslator =
+    private BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionMapper =
             Functions.second();
 
     THttpServiceBuilder() { }
@@ -148,11 +148,11 @@ public final class THttpServiceBuilder {
     }
 
     /**
-     * Adds the {@link BiFunction} that translates the given {@link Throwable} into another {@link Throwable}.
+     * Adds the {@link BiFunction} that maps the given {@link Throwable} into another {@link Throwable}.
      */
-    public THttpServiceBuilder exceptionTranslator(
-            BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionTranslator) {
-        this.exceptionTranslator = requireNonNull(exceptionTranslator, "exceptionTranslator");
+    public THttpServiceBuilder exceptionMapper(
+            BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionMapper) {
+        this.exceptionMapper = requireNonNull(exceptionMapper, "exceptionMapper");
         return this;
     }
 
@@ -192,8 +192,7 @@ public final class THttpServiceBuilder {
         builder.add(defaultSerializationFormat);
         builder.addAll(otherSerializationFormats);
 
-        return new THttpService(decorate(tcs), defaultSerializationFormat, builder.build(),
-                                exceptionTranslator);
+        return new THttpService(decorate(tcs), defaultSerializationFormat, builder.build(), exceptionMapper);
     }
 
     /**

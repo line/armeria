@@ -266,18 +266,17 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private final ThriftCallService thriftService;
     private final SerializationFormat defaultSerializationFormat;
     private final Set<SerializationFormat> supportedSerializationFormats;
-    private final BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionTranslator;
+    private final BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionMapper;
 
     THttpService(RpcService delegate,
                  SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> supportedSerializationFormats,
-                 BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable>
-                         exceptionTranslator) {
+                 BiFunction<ServiceRequestContext, ? super Throwable, ? extends Throwable> exceptionMapper) {
         super(delegate);
         thriftService = findThriftService(delegate);
         this.defaultSerializationFormat = defaultSerializationFormat;
         this.supportedSerializationFormats = ImmutableSet.copyOf(supportedSerializationFormats);
-        this.exceptionTranslator = exceptionTranslator;
+        this.exceptionMapper = exceptionMapper;
     }
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
@@ -491,9 +490,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     }
 
     private Throwable translateException(ServiceRequestContext ctx, Throwable cause) {
-        final Throwable translated = exceptionTranslator.apply(ctx, cause);
+        final Throwable translated = exceptionMapper.apply(ctx, cause);
         if (translated == null) {
-            logger.warn("exceptionTranslator.apply() returned null.");
+            logger.warn("exceptionMapper.apply() returned null.");
             return cause;
         }
         return translated;
