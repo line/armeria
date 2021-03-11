@@ -67,6 +67,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         DONE,
     }
 
+    enum CloseStatus {
+        NOT_CLOSED,
+        COMPLETED,
+        ERROR,
+        CANCELED
+    }
+
     private final ChannelHandlerContext ctx;
     private final ServerHttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
@@ -76,6 +83,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     private Subscription subscription;
     private State state = State.NEEDS_HEADERS;
     private boolean isComplete;
+
+    private boolean isSubscriptionCompleted;
 
     private boolean loggedResponseHeadersFirstBytesTransferred;
 
@@ -106,7 +115,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         assert this.subscription == null;
         this.subscription = subscription;
         if (state == State.DONE) {
-            subscription.cancel();
+            if (!isSubscriptionCompleted) {
+                isSubscriptionCompleted = true;
+                subscription.cancel();
+            }
             return;
         }
 
@@ -201,9 +213,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                         return;
                     }
 
-                    // Mark as DONE and send a request for receiving onComplete() or canceling the upstream
                     setDone(false);
-                    subscription.request(1);
 
                     final HttpHeaders merged = mergeTrailers(trailers, reqCtx.additionalResponseTrailers());
                     logBuilder().responseTrailers(merged);
@@ -214,9 +224,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
                     if (endOfStream) {
-                        // Mark as DONE and send a request for expecting onComplete() or canceling the upstream
                         setDone(false);
-                        subscription.request(1);
                     }
 
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
@@ -261,8 +269,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     }
 
     private State setDone(boolean cancel) {
-        if (cancel && subscription != null) {
-            subscription.cancel();
+        if (cancel) {
+            maybeCancelSubscription();
         }
         reqCtx.requestCancellationScheduler().clearTimeout(false);
         final State oldState = state;
@@ -270,8 +278,16 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         return oldState;
     }
 
+    private void maybeCancelSubscription() {
+        if (subscription != null && !isSubscriptionCompleted) {
+            isSubscriptionCompleted = true;
+            subscription.cancel();
+        }
+    }
+
     @Override
     public void onError(Throwable cause) {
+        isSubscriptionCompleted = true;
         if (cause instanceof HttpResponseException) {
             // Timeout may occur when the aggregation of the error response takes long.
             // If timeout occurs, respond with 503 Service Unavailable.
@@ -303,6 +319,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
     @Override
     public void onComplete() {
+        isSubscriptionCompleted = true;
         if (reqCtx.requestCancellationScheduler().isFinished()) {
             // We have already returned a failed response due to a timeout.
             return;
@@ -516,8 +533,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                         reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
                     }
                 }
-            } else {
+            }
+
+            if (!isSubscriptionCompleted) {
                 assert subscription != null;
+                // Even thought an 'endOfStream' is received, need to send a request signal to the upstream
+                // for completing or canceling this 'HttpResponseSubscriber'
                 subscription.request(1);
             }
             return;
