@@ -1499,95 +1499,7 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        final AnnotatedServiceExtensions extensions =
-                virtualHostTemplate.annotatedServiceExtensions();
-
-        assert extensions != null;
-
-        final VirtualHost defaultVirtualHost =
-                defaultVirtualHostBuilder.build(virtualHostTemplate);
-        final List<VirtualHost> virtualHosts =
-                virtualHostBuilders.stream()
-                                   .map(vhb -> vhb.build(virtualHostTemplate))
-                                   .collect(toImmutableList());
-
-        // Pre-populate the domain name mapping for later matching.
-        final Mapping<String, SslContext> sslContexts;
-        final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
-
-        final Collection<ServerPort> ports;
-
-        this.ports.forEach(
-                port -> checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
-                                   "protocols: %s (expected: at least one %s or %s)",
-                                   port.protocols(), HTTP, HTTPS));
-
-        if (defaultSslContext == null) {
-            sslContexts = null;
-            if (!this.ports.isEmpty()) {
-                ports = resolveDistinctPorts(this.ports);
-                for (final ServerPort p : ports) {
-                    if (p.hasTls()) {
-                        throw new IllegalArgumentException("TLS not configured; cannot serve HTTPS");
-                    }
-                }
-            } else {
-                ports = ImmutableList.of(new ServerPort(0, HTTP));
-            }
-        } else {
-            if (!Flags.useOpenSsl() && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
-                throw new IllegalStateException(
-                        "TLS configured but this is Java 8 and neither OpenSSL nor Jetty ALPN could be " +
-                        "detected. To use TLS with Armeria, you must either use Java 9+, enable OpenSSL, " +
-                        "usually by adding a build dependency on the " +
-                        "io.netty:netty-tcnative-boringssl-static artifact or enable Jetty ALPN as described " +
-                        "at https://www.eclipse.org/jetty/documentation/9.4.x/alpn-chapter.html");
-            }
-
-            if (!this.ports.isEmpty()) {
-                ports = resolveDistinctPorts(this.ports);
-            } else {
-                ports = ImmutableList.of(new ServerPort(0, HTTPS));
-            }
-
-            final DomainMappingBuilder<SslContext>
-                    mappingBuilder = new DomainMappingBuilder<>(defaultSslContext);
-            for (VirtualHost h : virtualHosts) {
-                final SslContext sslCtx = h.sslContext();
-                if (sslCtx != null) {
-                    mappingBuilder.add(h.hostnamePattern(), sslCtx);
-                }
-            }
-            sslContexts = mappingBuilder.build();
-        }
-
-        if (pingIntervalMillis > 0) {
-            pingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
-            if (idleTimeoutMillis > 0 && pingIntervalMillis >= idleTimeoutMillis) {
-                pingIntervalMillis = 0;
-            }
-        }
-
-        if (maxConnectionAgeMillis > 0) {
-            maxConnectionAgeMillis = Math.max(maxConnectionAgeMillis, MIN_MAX_CONNECTION_AGE_MILLIS);
-            if (idleTimeoutMillis == 0 || idleTimeoutMillis > maxConnectionAgeMillis) {
-                idleTimeoutMillis = maxConnectionAgeMillis;
-            }
-        }
-
-        final Server server = new Server(new ServerConfig(
-                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
-                workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
-                http2InitialConnectionWindowSize,
-                http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
-                http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
-                http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
-
+        final Server server = new Server(buildServerConfig(this.ports));
         serverListeners.forEach(server::addListener);
         return server;
     }
@@ -1650,6 +1562,10 @@ public final class ServerBuilder {
     }
 
     ServerConfig buildServerConfig(ServerConfig existingConfig) {
+        return buildServerConfig(existingConfig.ports());
+    }
+
+    private ServerConfig buildServerConfig(List<ServerPort> listOfPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1664,6 +1580,52 @@ public final class ServerBuilder {
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
+        final Collection<ServerPort> ports;
+
+        this.ports.forEach(
+                port -> checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
+                        "protocols: %s (expected: at least one %s or %s)",
+                        port.protocols(), HTTP, HTTPS));
+
+        if (defaultSslContext == null) {
+            sslContexts = null;
+            if (!listOfPorts.isEmpty()) {
+                ports = resolveDistinctPorts(listOfPorts);
+                for (final ServerPort p : ports) {
+                    if (p.hasTls()) {
+                        throw new IllegalArgumentException("TLS not configured; cannot serve HTTPS");
+                    }
+                }
+            } else {
+                ports = ImmutableList.of(new ServerPort(0, HTTP));
+            }
+        } else {
+            if (!Flags.useOpenSsl() && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
+                throw new IllegalStateException(
+                        "TLS configured but this is Java 8 and neither OpenSSL nor Jetty ALPN could be " +
+                                "detected. To use TLS with Armeria, you must either use Java 9+, enable " +
+                                "OpenSSL, usually by adding a build dependency on the " +
+                                "io.netty:netty-tcnative-boringssl-static artifact or " +
+                                "enable Jetty ALPN as described " +
+                                "at https://www.eclipse.org/jetty/documentation/9.4.x/alpn-chapter.html");
+            }
+
+            if (!listOfPorts.isEmpty()) {
+                ports = resolveDistinctPorts(listOfPorts);
+            } else {
+                ports = ImmutableList.of(new ServerPort(0, HTTPS));
+            }
+
+            final DomainMappingBuilder<SslContext>
+                    mappingBuilder = new DomainMappingBuilder<>(defaultSslContext);
+            for (VirtualHost h : virtualHosts) {
+                final SslContext sslCtx = h.sslContext();
+                if (sslCtx != null) {
+                    mappingBuilder.add(h.hostnamePattern(), sslCtx);
+                }
+            }
+            sslContexts = mappingBuilder.build();
+        }
 
         if (pingIntervalMillis > 0) {
             pingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
@@ -1680,7 +1642,7 @@ public final class ServerBuilder {
         }
 
         return new ServerConfig(
-                existingConfig.ports(), setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
+                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                 http2InitialConnectionWindowSize,
@@ -1690,7 +1652,7 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator);
+                enableServerHeader, enableDateHeader, requestIdGenerator, sslContexts);
     }
 
     @Override
