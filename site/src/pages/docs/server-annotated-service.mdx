@@ -753,6 +753,52 @@ public class MyAnnotatedService {
 }
 ```
 
+## Specifying a blocking task executor
+
+An annotated service is executed by an [EventLoop](https://netty.io/4.1/api/io/netty/channel/EventLoop.html),
+so you must not make a blocking call within the `EventLoop`. If you want to make a blocking call,
+you should delegate the call to another thread. You can use your own thread or a blocking task executor that
+Armeria provides.
+
+In order to use the blocking task executor, you can
+[inject](/docs/server-annotated-service#other-classes-automatically-injected) the
+<type://ServiceRequestContext> and call <type://ServiceRequestContext#blockingTaskExecutor()>:
+
+```java
+public class MyAnnotatedService {
+
+    @Get("/hello")
+    public HttpResponse hello(ServiceRequestContext ctx) {
+        CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+        // Delegate a blocking call to the blocking task executor.
+        ctx.blockingTaskExecutor().submit(() -> {
+            Statement stmt = ...;
+            // Make a blocking call.
+            ResultSet resultSet = stmt.executeQuery(...);
+            HttpResponse res = responseFrom(resultSet);
+            future.complete(res);
+        });
+        return HttpResponse.from(future);
+    }
+```
+
+Or, you can just use the <type://Blocking> annotation:
+
+```java
+public class MyAnnotatedService {
+
+    @Blocking
+    @Get("/hello")
+    public HttpResponse hello() {
+        // A blocking task executor executes this method.
+        Statement stmt = ...;
+        // Make a blocking call.
+        ResultSet resultSet = stmt.executeQuery(...);
+        HttpResponse res = responseFrom(resultSet);
+        return res;
+    }
+```
+
 ## Using `ServerBuilder` to configure converters and exception handlers
 
 You can specify converters and exception handlers using <type://ServerBuilder>, without using the annotations
