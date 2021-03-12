@@ -60,6 +60,9 @@ com.github.jengelman.gradle.plugins:
 com.github.node-gradle:
   gradle-node-plugin: { version: '2.2.4' }
 
+com.graphql-java:
+  graphql-java: { version: '16.2' }
+
 com.google.api:
   gax-grpc: { version: '1.60.1' }
 

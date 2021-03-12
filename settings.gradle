@@ -12,6 +12,7 @@ includeWithFlags ':core',                                'java', 'publish', 'sha
 includeWithFlags ':eureka',                              'java', 'publish', 'relocate'
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate'
+includeWithFlags ':graphql',                             'java', 'publish', 'relocate'
 includeWithFlags ':jetty9',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
