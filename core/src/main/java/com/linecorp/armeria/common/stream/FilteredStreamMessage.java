@@ -106,7 +106,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     /**
      * A callback executed when this {@link StreamMessage} is canceled by the {@link Subscriber}.
      */
-    protected void onCancellation(Subscriber<? super U> subscriber) {}
+    protected void onCancellation() {}
 
     @Override
     public final boolean isOpen() {
@@ -150,7 +150,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                            executor, filteringSubscriptionOptions(notifyCancellation));
         upstream.whenComplete().handle((unused, cause) -> {
             if (cause instanceof CancelledSubscriptionException) {
-                onCancellation(subscriber);
+                onCancellation();
             }
             return null;
         });

@@ -114,7 +114,7 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
     }
 
     @Override
-    protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
+    protected void onCancellation() {
         closeResponseDecoder();
     }
 
