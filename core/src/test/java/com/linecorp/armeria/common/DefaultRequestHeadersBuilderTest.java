@@ -260,6 +260,17 @@ class DefaultRequestHeadersBuilderTest {
         assertThat(acceptLanguages).isEqualTo(languageRanges);
     }
 
+    @Test
+    void testCookieBuilderTest() {
+        final Cookie cookie = Cookie.of("cookie", "value");
+        final RequestHeaders headers = RequestHeaders.builder()
+                .path("/")
+                .method(HttpMethod.GET)
+                .cookie(cookie)
+                .build();
+        assertThat(headers.get(HttpHeaderNames.COOKIE)).isEqualTo(cookie.toCookieHeader());
+    }
+
     /**
      * Makes sure {@link RequestHeadersBuilder} overrides all {@link HttpHeadersBuilder} methods
      * with the correct return type.

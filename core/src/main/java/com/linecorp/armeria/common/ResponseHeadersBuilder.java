@@ -42,6 +42,15 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
      */
     ResponseHeadersBuilder status(HttpStatus status);
 
+    /**
+     * Sets the {@code "set-cookie"} header.
+     * @param cookies the specified cookies.
+     * @return {@code this}
+     */
+    default ResponseHeadersBuilder setCookie(Cookie... cookies) {
+        return add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(cookies));
+    }
+
     // Override the return type of the chaining methods in the superclass.
 
     @Override

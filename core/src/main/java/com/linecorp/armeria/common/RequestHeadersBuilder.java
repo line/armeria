@@ -110,6 +110,16 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
                 requireNonNull(acceptedLanguages, "acceptedLanguages")));
     }
 
+    /**
+     * Sets the {@code "cookie"} header.
+     * @param cookie the specified cookie
+     * @return {@code this}
+     */
+    default RequestHeadersBuilder cookie(Cookie cookie) {
+        requireNonNull(cookie, "cookie");
+        return add(HttpHeaderNames.COOKIE, cookie.toCookieHeader());
+    }
+
     // Override the return type of the chaining methods in the superclass.
 
     @Override
