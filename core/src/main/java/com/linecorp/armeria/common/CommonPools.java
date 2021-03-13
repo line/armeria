@@ -17,12 +17,10 @@
 package com.linecorp.armeria.common;
 
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.common.util.BlockingTaskExecutorBuilder;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServerBuilder;
 
 import io.netty.channel.EventLoopGroup;
@@ -37,12 +35,8 @@ public final class CommonPools {
 
     static {
         // Threads spawned as needed and reused, with a 60s timeout and unbounded work queue.
-        final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(
-                Flags.numCommonBlockingTaskThreads(),
-                ThreadFactories.newThreadFactory("armeria-common-blocking-tasks", true));
-        scheduledThreadPoolExecutor.setKeepAliveTime(60, TimeUnit.SECONDS);
-        scheduledThreadPoolExecutor.allowCoreThreadTimeOut(true);
-        BLOCKING_TASK_EXECUTOR = scheduledThreadPoolExecutor;
+        BLOCKING_TASK_EXECUTOR = BlockingTaskExecutorBuilder.builder()
+                                                            .build();
 
         WORKER_GROUP = EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(),
                                                          "armeria-common-worker", true);

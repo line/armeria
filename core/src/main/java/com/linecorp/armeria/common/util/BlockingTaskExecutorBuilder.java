@@ -33,20 +33,12 @@ import com.linecorp.armeria.common.Flags;
  */
 public final class BlockingTaskExecutorBuilder {
 
-    private static final String DEFAULT_THREAD_NAME_PREFIX = "armeria-common-blocking-tasks";
-    private static final int DEFAULT_KEEP_ALIVE_TIME_SECONDS = 60;
+    private String threadNamePrefix = "armeria-common-blocking-tasks";
+    private int numThreads = Flags.numCommonBlockingTaskThreads();
+    private long keepAliveTime = 60;
+    private boolean allowCoreThreadTimeout = true;
 
-    private String threadNamePrefix;
-    private int numThreads;
-    private long keepAliveTime;
-    private boolean allowCoreThreadTimeout;
-
-    private BlockingTaskExecutorBuilder() {
-        threadNamePrefix = DEFAULT_THREAD_NAME_PREFIX;
-        numThreads = Flags.numCommonBlockingTaskThreads();
-        keepAliveTime = DEFAULT_KEEP_ALIVE_TIME_SECONDS;
-        allowCoreThreadTimeout = true;
-    }
+    private BlockingTaskExecutorBuilder() { }
 
     /**
      * Returns a new builder which builds a new blocking task {@link ScheduledExecutorService}.
