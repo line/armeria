@@ -23,7 +23,6 @@ import org.reactivestreams.Subscriber;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableObserver;
@@ -88,9 +87,7 @@ public final class RequestContextAssembly {
                 new BiConditionalOnCurrentRequestContextFunction<Observable, Observer>() {
                     @Override
                     Observer applyActual(Observable observable, Observer observer, RequestContext ctx) {
-                        try (SafeCloseable ignored = ctx.push()) {
-                            return new RequestContextObserver<>(observer, ctx);
-                        }
+                        return new RequestContextObserver<>(observer, ctx);
                     }
                 }
         ));
@@ -102,9 +99,7 @@ public final class RequestContextAssembly {
                     @Override
                     CompletableObserver applyActual(Completable completable, CompletableObserver observer,
                                                     RequestContext ctx) {
-                        try (SafeCloseable ignored = ctx.push()) {
-                            return new RequestContextCompletableObserver(observer, ctx);
-                        }
+                        return new RequestContextCompletableObserver(observer, ctx);
                     }
                 }));
 
@@ -115,9 +110,7 @@ public final class RequestContextAssembly {
                     @Override
                     SingleObserver applyActual(Single single, SingleObserver observer,
                                                RequestContext ctx) {
-                        try (SafeCloseable ignored = ctx.push()) {
-                            return new RequestContextSingleObserver<>(observer, ctx);
-                        }
+                        return new RequestContextSingleObserver<>(observer, ctx);
                     }
                 }));
 
@@ -129,9 +122,7 @@ public final class RequestContextAssembly {
                             @Override
                             MaybeObserver applyActual(Maybe maybe, MaybeObserver observer,
                                                       RequestContext ctx) {
-                                try (SafeCloseable ignored = ctx.push()) {
-                                    return new RequestContextMaybeObserver(observer, ctx);
-                                }
+                                return new RequestContextMaybeObserver(observer, ctx);
                             }
                         }
                 ));
@@ -143,13 +134,11 @@ public final class RequestContextAssembly {
                     @Override
                     FlowableSubscriber applyActual(Flowable flowable, Subscriber subscriber,
                                                    RequestContext ctx) {
-                        try (SafeCloseable ignored = ctx.push()) {
-                            if (subscriber instanceof ConditionalSubscriber) {
-                                return new RequestContextConditionalSubscriber(
-                                        (ConditionalSubscriber) subscriber, ctx);
-                            }
-                            return new RequestContextSubscriber(subscriber, ctx);
+                        if (subscriber instanceof ConditionalSubscriber) {
+                            return new RequestContextConditionalSubscriber(
+                                    (ConditionalSubscriber) subscriber, ctx);
                         }
+                        return new RequestContextSubscriber(subscriber, ctx);
                     }
                 }
         ));
