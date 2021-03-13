@@ -22,7 +22,6 @@ package com.linecorp.armeria.server;
 public interface ReconfigurableServer {
     /**
      * Reconfigures the server using the specified {@link ServerBuilder}.
-     * @param sb ServerBuilder.
      */
     void reconfigure(ServerBuilder sb);
 }
