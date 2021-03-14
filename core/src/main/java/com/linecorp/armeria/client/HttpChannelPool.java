@@ -394,17 +394,22 @@ final class HttpChannelPool implements AsyncCloseable {
 
         final Bootstrap bootstrap = getBootstrap(desiredProtocol);
 
-        final Channel channel = bootstrap.register().channel();
-        configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
-        final ChannelFuture connectFuture = channel.connect(remoteAddress);
-
-        connectFuture.addListener((ChannelFuture future) -> {
-            if (future.isSuccess()) {
-                initSession(desiredProtocol, poolKey, future, sessionPromise);
-            } else {
-                invokeProxyConnectFailed(desiredProtocol, poolKey, future.cause());
-                sessionPromise.tryFailure(future.cause());
+        bootstrap.register().addListener((ChannelFuture registerFuture) -> {
+            if (!registerFuture.isSuccess()) {
+                sessionPromise.tryFailure(registerFuture.cause());
+                return;
             }
+
+            final Channel channel = registerFuture.channel();
+            configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
+            channel.connect(remoteAddress).addListener((ChannelFuture connectFuture) -> {
+                if (connectFuture.isSuccess()) {
+                    initSession(desiredProtocol, poolKey, connectFuture, sessionPromise);
+                } else {
+                    invokeProxyConnectFailed(desiredProtocol, poolKey, connectFuture.cause());
+                    sessionPromise.tryFailure(connectFuture.cause());
+                }
+            });
         });
     }
 
