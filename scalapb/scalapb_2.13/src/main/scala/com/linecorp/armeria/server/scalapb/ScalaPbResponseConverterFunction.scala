@@ -50,6 +50,8 @@ import scala.collection.mutable.ArrayBuffer
  * However, [[org.reactivestreams.Publisher]], [[java.util.stream.Stream]], [[scala.Iterable]] and
  * [[java.util.List]] are supported when converting to
  * [[https://datatracker.ietf.org/doc/html/rfc7159#section-5 JSON array]].
+ * And [[https://datatracker.ietf.org/doc/rfc7464/ JavaScript Object Notation (JSON) Text Sequences]]
+ * is supported for [[org.reactivestreams.Publisher]], [[java.util.stream.Stream]].
  *
  * Note that this [[com.linecorp.armeria.server.annotation.ResponseConverterFunction]] is applied to
  * the annotated service by default, so you don't have to set explicitly unless you want to

@@ -64,15 +64,19 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  * for more information.
  * However, {@link Publisher}, {@link Stream} and {@link Iterable} are supported when converting to
  * <a href="https://datatracker.ietf.org/doc/html/rfc7159#section-5">JSON array</a>.
+ * And <a href="https://datatracker.ietf.org/doc/rfc7464/">JavaScript Object Notation (JSON) Text Sequences</a>
+ * is supported for {@link Publisher}, {@link Stream}.
  *
  * <p>Note that this {@link ResponseConverterFunction} is applied to an annotated service by default,
  * so you don't have to specify this converter explicitly unless you want to use your own {@link Printer}.
+ * The {@link JsonFormat#printer()} is used for the default JSON printer without additional configurations.
  */
 @UnstableApi
 public final class ProtobufResponseConverterFunction implements ResponseConverterFunction {
 
     static final MediaType X_PROTOBUF = MediaType.create("application", "x-protobuf");
-    private static final Printer defaultJsonPrinter = JsonFormat.printer().omittingInsignificantWhitespace();
+    // TODO(ikhoon): Add .omittingInsignificantWhitespace() for the sensible default when 2.0 is released?
+    private static final Printer defaultJsonPrinter = JsonFormat.printer();
 
     private final Printer jsonPrinter;
 
