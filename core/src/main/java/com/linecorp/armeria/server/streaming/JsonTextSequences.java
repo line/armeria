@@ -159,8 +159,9 @@ public final class JsonTextSequences {
      * @param trailers the HTTP trailers
      * @param contentConverter the function which converts the content object into a UTF-8 JSON string.
      */
-    public static HttpResponse fromPublisher(ResponseHeaders headers, Publisher<?> contentPublisher,
-                                             HttpHeaders trailers, Function<Object, String> contentConverter) {
+    public static <T> HttpResponse fromPublisher(ResponseHeaders headers, Publisher<T> contentPublisher,
+                                                 HttpHeaders trailers,
+                                                 Function<? super T, String> contentConverter) {
         requireNonNull(contentConverter, "contentConverter");
         return streamingFrom(contentPublisher, sanitizeHeaders(headers), trailers,
                              o -> toHttpData(contentConverter, o));
@@ -238,9 +239,9 @@ public final class JsonTextSequences {
      * @param executor the executor which iterates the stream
      * @param contentConverter the function which converts the content object into a UTF-8 JSON string
      */
-    public static HttpResponse fromStream(ResponseHeaders headers, Stream<?> contentStream,
-                                          HttpHeaders trailers, Executor executor,
-                                          Function<Object, String> contentConverter) {
+    public static <T> HttpResponse fromStream(ResponseHeaders headers, Stream<T> contentStream,
+                                              HttpHeaders trailers, Executor executor,
+                                              Function<? super T, String> contentConverter) {
         requireNonNull(contentConverter, "contentConverter");
         return streamingFrom(contentStream, sanitizeHeaders(headers), trailers,
                              o -> toHttpData(contentConverter, o), executor);
@@ -301,8 +302,9 @@ public final class JsonTextSequences {
      * @param trailers the HTTP trailers
      * @param contentConverter the function which converts the content object into a UTF-8 JSON string.
      */
-    public static HttpResponse fromObject(ResponseHeaders headers, @Nullable Object content,
-                                          HttpHeaders trailers, Function<Object, String> contentConverter) {
+    public static <T> HttpResponse fromObject(ResponseHeaders headers, @Nullable T content,
+                                              HttpHeaders trailers,
+                                              Function<? super T, String> contentConverter) {
         requireNonNull(headers, "headers");
         requireNonNull(trailers, "trailers");
         requireNonNull(contentConverter, "contentConverter");
@@ -372,7 +374,7 @@ public final class JsonTextSequences {
         }
     }
 
-    private static HttpData toHttpData(Function<Object, String> contentConverter, @Nullable Object value) {
+    private static <T> HttpData toHttpData(Function<? super T, String> contentConverter, @Nullable T value) {
         final String content = contentConverter.apply(value);
         requireNonNull(content, "contentConverter.apply() returned null");
         final byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);

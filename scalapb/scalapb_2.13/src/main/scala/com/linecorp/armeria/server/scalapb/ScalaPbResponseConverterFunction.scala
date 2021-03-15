@@ -88,11 +88,15 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
       case _ if contentType != null && MediaType.JSON_SEQ.is(contentType) =>
         result match {
           case publisher: Publisher[_] =>
-            JsonTextSequences.fromPublisher(headers, publisher, trailers, obj => toJson(obj))
+            JsonTextSequences.fromPublisher(
+              headers,
+              publisher.asInstanceOf[Publisher[Any]],
+              trailers,
+              obj => toJson(obj))
           case stream: Stream[_] =>
             JsonTextSequences.fromStream(
               headers,
-              stream,
+              stream.asInstanceOf[Stream[Any]],
               trailers,
               ctx.blockingTaskExecutor(),
               obj => toJson(obj))
