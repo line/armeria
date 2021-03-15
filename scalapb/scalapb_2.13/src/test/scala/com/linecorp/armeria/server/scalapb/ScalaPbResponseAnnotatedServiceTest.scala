@@ -16,16 +16,12 @@
 
 package com.linecorp.armeria.server.scalapb
 
-import _root_.scalapb.json4s.Parser
 import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet}
 import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common._
 import com.linecorp.armeria.scalapb.testing.messages.SimpleResponse
-import com.linecorp.armeria.server.annotation._
 import com.linecorp.armeria.server.scalapb.ScalaPbResponseAnnotatedServiceTest.server
 import com.linecorp.armeria.server.{ServerBuilder, ServiceRequestContext}
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
-import java.io.ByteArrayOutputStream
 import java.util.stream.Stream
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
 import org.assertj.core.api.Assertions.assertThat
@@ -36,6 +32,26 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
 import scala.concurrent.{ExecutionContext, Future}
+import scalapb.json4s.Parser
+import com.linecorp.armeria.common.{
+  AggregatedHttpResponse,
+  HttpRequest,
+  HttpResponse,
+  HttpStatus,
+  MediaType,
+  MediaTypeNames
+}
+import com.linecorp.armeria.server.annotation.{
+  Blocking,
+  ExceptionHandler,
+  ExceptionHandlerFunction,
+  Get,
+  Produces,
+  ProducesJson,
+  ProducesJsonSequences,
+  ProducesProtobuf
+}
+import java.io.ByteArrayOutputStream
 
 class ScalaPbResponseAnnotatedServiceTest {
 
