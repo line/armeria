@@ -19,7 +19,9 @@ import static com.linecorp.armeria.internal.server.ResponseConversionUtil.stream
 import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
@@ -150,6 +152,21 @@ public final class JsonTextSequences {
     }
 
     /**
+     * Creates a new JSON Text Sequences from the specified {@link Publisher}.
+     *
+     * @param headers the HTTP headers supposed to send
+     * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
+     * @param trailers the HTTP trailers
+     * @param contentConverter the function which converts the content object into a UTF-8 JSON string.
+     */
+    public static HttpResponse fromPublisher(ResponseHeaders headers, Publisher<?> contentPublisher,
+                                             HttpHeaders trailers, Function<Object, String> contentConverter) {
+        requireNonNull(contentConverter, "contentConverter");
+        return streamingFrom(contentPublisher, sanitizeHeaders(headers), trailers,
+                             o -> toHttpData(contentConverter, o));
+    }
+
+    /**
      * Creates a new JSON Text Sequences from the specified {@link Stream}.
      *
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -213,6 +230,23 @@ public final class JsonTextSequences {
     }
 
     /**
+     * Creates a new JSON Text Sequences from the specified {@link Stream}.
+     *
+     * @param headers the HTTP headers supposed to send
+     * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
+     * @param trailers the HTTP trailers
+     * @param executor the executor which iterates the stream
+     * @param contentConverter the function which converts the content object into a UTF-8 JSON string
+     */
+    public static HttpResponse fromStream(ResponseHeaders headers, Stream<?> contentStream,
+                                          HttpHeaders trailers, Executor executor,
+                                          Function<Object, String> contentConverter) {
+        requireNonNull(contentConverter, "contentConverter");
+        return streamingFrom(contentStream, sanitizeHeaders(headers), trailers,
+                             o -> toHttpData(contentConverter, o), executor);
+    }
+
+    /**
      * Creates a new JSON Text Sequences of the specified {@code content}.
      *
      * @param content the object supposed to send as contents
@@ -257,6 +291,22 @@ public final class JsonTextSequences {
         requireNonNull(trailers, "trailers");
         requireNonNull(mapper, "mapper");
         return HttpResponse.of(sanitizeHeaders(headers), toHttpData(mapper, content), trailers);
+    }
+
+    /**
+     * Creates a new JSON Text Sequences of the specified {@code content}.
+     *
+     * @param headers the HTTP headers supposed to send
+     * @param content the object supposed to send as contents
+     * @param trailers the HTTP trailers
+     * @param contentConverter the function which converts the content object into a UTF-8 JSON string.
+     */
+    public static HttpResponse fromObject(ResponseHeaders headers, @Nullable Object content,
+                                          HttpHeaders trailers, Function<Object, String> contentConverter) {
+        requireNonNull(headers, "headers");
+        requireNonNull(trailers, "trailers");
+        requireNonNull(contentConverter, "contentConverter");
+        return HttpResponse.of(sanitizeHeaders(headers), toHttpData(contentConverter, content), trailers);
     }
 
     private static ResponseHeaders sanitizeHeaders(ResponseHeaders headers) {
@@ -320,6 +370,18 @@ public final class JsonTextSequences {
         } catch (Exception e) {
             return Exceptions.throwUnsafely(e);
         }
+    }
+
+    private static HttpData toHttpData(Function<Object, String> contentConverter, @Nullable Object value) {
+        final String content = contentConverter.apply(value);
+        requireNonNull(content, "contentConverter.apply() returned null");
+        final byte[] contentBytes = content.getBytes(StandardCharsets.UTF_8);
+        final int contentLength = contentBytes.length;
+        final byte[] jsonText = new byte[contentLength + 2];
+        jsonText[0] = RECORD_SEPARATOR;
+        System.arraycopy(contentBytes, 0, jsonText, 1, contentLength);
+        jsonText[contentLength + 1] = LINE_FEED;
+        return HttpData.wrap(jsonText);
     }
 
     private JsonTextSequences() {}

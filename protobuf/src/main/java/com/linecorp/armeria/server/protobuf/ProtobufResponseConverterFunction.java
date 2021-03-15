@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.streaming.JsonTextSequences;
 
 /**
  * A {@link ResponseConverterFunction} which creates an {@link HttpResponse} with
@@ -71,7 +72,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 public final class ProtobufResponseConverterFunction implements ResponseConverterFunction {
 
     static final MediaType X_PROTOBUF = MediaType.create("application", "x-protobuf");
-    private static final Printer defaultJsonPrinter = JsonFormat.printer();
+    private static final Printer defaultJsonPrinter = JsonFormat.printer().omittingInsignificantWhitespace();
 
     private final Printer jsonPrinter;
 
@@ -128,6 +129,23 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             }
             return HttpResponse.of(headers, toJsonHttpData(result, charset), trailers);
         } else {
+            if (isJsonSeq(contentType)) {
+                checkArgument(result != null, "a null value is not allowed for %s", contentType);
+                if (result instanceof Publisher) {
+                    @SuppressWarnings("unchecked")
+                    final Publisher<Object> publisher = (Publisher<Object>) result;
+                    return JsonTextSequences.fromPublisher(headers, publisher, trailers, this::toJson);
+                }
+                if (result instanceof Stream) {
+                    @SuppressWarnings("unchecked")
+                    final Stream<Object> stream = (Stream<Object>) result;
+                    return JsonTextSequences
+                            .fromStream(headers, stream, trailers, ctx.blockingTaskExecutor(),
+                                        this::toJson);
+                }
+                return JsonTextSequences.fromObject(headers, result, trailers, this::toJson);
+            }
+
             throw new IllegalArgumentException(
                     "Cannot convert a " + result + " to Protocol Buffers wire format");
         }
@@ -179,5 +197,9 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
         } catch (Exception e) {
             return Exceptions.throwUnsafely(e);
         }
+    }
+
+    private static boolean isJsonSeq(@Nullable MediaType mediaType) {
+        return mediaType != null && mediaType.is(MediaType.JSON_SEQ);
     }
 }

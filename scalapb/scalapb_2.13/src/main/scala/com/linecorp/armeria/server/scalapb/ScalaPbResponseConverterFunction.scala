@@ -16,21 +16,22 @@
 
 package com.linecorp.armeria.server.scalapb
 
+import _root_.scalapb.GeneratedMessage
+import _root_.scalapb.json4s.Printer
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.collect.Iterables
-import com.linecorp.armeria.common.{HttpData, HttpHeaders, HttpResponse, MediaType, ResponseHeaders}
+import com.linecorp.armeria.common._
 import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{defaultJsonPrinter, isJson, isProtobuf}
+import com.linecorp.armeria.server.streaming.JsonTextSequences
 import java.nio.charset.{Charset, StandardCharsets}
 import java.util.stream.Stream
 import javax.annotation.Nullable
 import org.reactivestreams.Publisher
 import scala.collection.mutable.ArrayBuffer
-import scalapb.GeneratedMessage
-import scalapb.json4s.Printer
 
 /**
  * A [[com.linecorp.armeria.server.annotation.ResponseConverterFunction]] which creates an
@@ -83,6 +84,20 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
             aggregateFrom(stream, headers, trailers, toJsonHttpData(_, charset), ctx.blockingTaskExecutor)
           case _ =>
             HttpResponse.of(headers, toJsonHttpData(result, charset), trailers)
+        }
+      case _ if contentType != null && MediaType.JSON_SEQ.is(contentType) =>
+        result match {
+          case publisher: Publisher[_] =>
+            JsonTextSequences.fromPublisher(headers, publisher, trailers, obj => toJson(obj))
+          case stream: Stream[_] =>
+            JsonTextSequences.fromStream(
+              headers,
+              stream,
+              trailers,
+              ctx.blockingTaskExecutor(),
+              obj => toJson(obj))
+          case _ =>
+            JsonTextSequences.fromObject(headers, result, trailers, obj => toJson(obj));
         }
 
       case _ =>
