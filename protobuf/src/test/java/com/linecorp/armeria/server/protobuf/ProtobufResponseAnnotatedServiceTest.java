@@ -226,10 +226,10 @@ class ProtobufResponseAnnotatedServiceTest {
 
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(RECORD_SEPARATOR);
-        out.write("{\"message\":\"Hello, Armeria1!\"}".getBytes());
+        out.write("{\n  \"message\": \"Hello, Armeria1!\"\n}".getBytes());
         out.write(LINE_FEED);
         out.write(RECORD_SEPARATOR);
-        out.write("{\"message\":\"Hello, Armeria2!\"}".getBytes());
+        out.write("{\n  \"message\": \"Hello, Armeria2!\"\n}".getBytes());
         out.write(LINE_FEED);
 
         assertThatJson(response.content().array()).isEqualTo(out.toByteArray());
