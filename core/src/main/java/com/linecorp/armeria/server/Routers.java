@@ -288,7 +288,7 @@ public final class Routers {
                                 fallbackValueConfigurator != null ?
                                 fallbackValueConfigurator.apply(route, fallbackValue) : fallbackValue;
                         builder.add(path.substring(0, pathLen - 1),
-                                    newFallbackValue,/* hasHighPrecedence */false);
+                                    newFallbackValue, /* hasHighPrecedence */ false);
                     }
                 }
             }
