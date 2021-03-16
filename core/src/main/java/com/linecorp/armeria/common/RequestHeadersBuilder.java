@@ -112,8 +112,6 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
 
     /**
      * Sets the {@code "cookie"} header.
-     * @param cookie the specified cookie
-     * @return {@code this}
      */
     default RequestHeadersBuilder cookie(Cookie cookie) {
         requireNonNull(cookie, "cookie");

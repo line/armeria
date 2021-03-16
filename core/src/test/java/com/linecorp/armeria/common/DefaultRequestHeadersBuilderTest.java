@@ -263,7 +263,8 @@ class DefaultRequestHeadersBuilderTest {
     @Test
     void testCookieBuilderTest() {
         final Cookie cookie = Cookie.of("cookie", "value");
-        final RequestHeaders headers = RequestHeaders.builder()
+        final RequestHeaders headers = RequestHeaders
+                .builder()
                 .path("/")
                 .method(HttpMethod.GET)
                 .cookie(cookie)

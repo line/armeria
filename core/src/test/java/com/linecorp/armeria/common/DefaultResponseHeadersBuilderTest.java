@@ -104,7 +104,8 @@ class DefaultResponseHeadersBuilderTest {
     @Test
     void testSetCookieBuilder() {
         final Cookie cookie = Cookie.of("cookie", "value");
-        final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
+        final ResponseHeaders headers = ResponseHeaders
+                .builder(HttpStatus.OK)
                 .setCookie(cookie)
                 .build();
         assertThat(headers.get(HttpHeaderNames.SET_COOKIE)).isEqualTo(cookie.toCookieHeader());
@@ -114,7 +115,8 @@ class DefaultResponseHeadersBuilderTest {
     void testSetCookieBuilderWithMultipleCookie() {
         final Cookie cookie1 = Cookie.of("cookie1", "value1");
         final Cookie cookie2 = Cookie.of("cookie2", "value2");
-        final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
+        final ResponseHeaders headers = ResponseHeaders
+                .builder(HttpStatus.OK)
                 .setCookie(cookie1, cookie2)
                 .build();
         assertThat(headers.getAll(HttpHeaderNames.SET_COOKIE)).contains("cookie1=value1", "cookie2=value2");
