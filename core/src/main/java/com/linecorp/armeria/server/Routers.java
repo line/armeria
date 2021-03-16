@@ -78,22 +78,31 @@ public final class Routers {
             }
         };
 
+        final Map<Route, Route> newFallbackRoutes = new HashMap<>();
         final BiFunction<Route, ServiceConfig, ServiceConfig> fallbackValueConfigurator =
                 (originalRoute, fallbackServiceConfig) -> {
                     final Route fallbackRoute = fallbackServiceConfig.route();
+
+                    if (originalRoute.complexity() == fallbackRoute.complexity() &&
+                        originalRoute.methods().containsAll(fallbackRoute.methods())) {
+                        return fallbackServiceConfig;
+                    }
+
                     checkState(fallbackRoute.equals(Route.ofCatchAll()),
                                "Fallback service must catch all requests.");
-                    if (originalRoute.complexity() != fallbackRoute.complexity() ||
-                        !originalRoute.methods().containsAll(fallbackRoute.methods())) {
-                        return fallbackServiceConfig.withRoute(
-                                originalRoute.toBuilder()
-                                             .pathMapping(CatchAllPathMapping.INSTANCE)
-                                             // Do not propagate an exception raised while resolving a route
-                                             // to fallback services.
-                                             .canSetDeferredException(false)
-                                             .build());
+                    final Route newFallbackRoute =
+                            originalRoute.toBuilder()
+                                         .pathMapping(CatchAllPathMapping.INSTANCE)
+                                         // Do not propagate an exception raised while resolving a route
+                                         // to fallback services.
+                                         .canSetDeferredException(false)
+                                         .build();
+                    final Route cachedRoute = newFallbackRoutes.get(newFallbackRoute);
+                    if (cachedRoute != null) {
+                        return fallbackServiceConfig.withRoute(cachedRoute);
                     }
-                    return fallbackServiceConfig;
+                    newFallbackRoutes.put(newFallbackRoute, newFallbackRoute);
+                    return fallbackServiceConfig.withRoute(newFallbackRoute);
                 };
         final Set<Route> ambiguousRoutes =
                 resolveAmbiguousRoutes(StreamSupport.stream(configs.spliterator(), false)

@@ -67,7 +67,8 @@ final class DefaultRoute implements Route {
         this.setDeferredException = setDeferredException;
 
         hashCode = Objects.hash(this.pathMapping, this.methods, this.consumes, this.produces,
-                                this.paramPredicates, this.headerPredicates, this.isFallback);
+                                this.paramPredicates, this.headerPredicates, this.isFallback,
+                                this.setDeferredException);
 
         int complexity = 0;
         if (!consumes.isEmpty()) {
