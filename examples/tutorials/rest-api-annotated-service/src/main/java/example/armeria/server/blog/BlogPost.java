@@ -1,5 +1,6 @@
 package example.armeria.server.blog;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
@@ -10,6 +11,7 @@ final class BlogPost {
     private final long createdAt;
     private final long modifiedAt;
 
+    @JsonCreator
     BlogPost(@JsonProperty("id") int id, @JsonProperty("title") String title,
              @JsonProperty("content") String content) {
         this(id, title, content, System.currentTimeMillis());
