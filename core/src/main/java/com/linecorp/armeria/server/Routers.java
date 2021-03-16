@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.RouteCache.wrapRouteDecoratingServiceRouter;
@@ -76,18 +77,21 @@ public final class Routers {
                             RejectedRouteHandler.class.getSimpleName(), e);
             }
         };
+
         final BiFunction<Route, ServiceConfig, ServiceConfig> fallbackValueConfigurator =
                 (originalRoute, fallbackServiceConfig) -> {
                     final Route fallbackRoute = fallbackServiceConfig.route();
+                    checkState(fallbackRoute.equals(Route.ofCatchAll()),
+                               "Fallback service must catch all requests.");
                     if (originalRoute.complexity() != fallbackRoute.complexity() ||
                         !originalRoute.methods().containsAll(fallbackRoute.methods())) {
                         return fallbackServiceConfig.withRoute(
                                 originalRoute.toBuilder()
-                                     .pathMapping(fallbackRoute.pathMapping())
-                                     // Do not propagate an exception raised while resolving a route
-                                     // to fallback services.
-                                     .setDeferredExceptionToRoutingContext(false)
-                                     .build());
+                                             .pathMapping(CatchAllPathMapping.INSTANCE)
+                                             // Do not propagate an exception raised while resolving a route
+                                             // to fallback services.
+                                             .canSetDeferredException(false)
+                                             .build());
                     }
                     return fallbackServiceConfig;
                 };
@@ -313,17 +317,6 @@ public final class Routers {
     /**
      * Finds the most suitable service from the given {@link ServiceConfig} list.
      */
-    private static <V> Routed<V> findBest(RoutingContext routingCtx, @Nullable List<V> values,
-                                          Function<V, Route> routeResolver) {
-        if (values == null) {
-            return Routed.empty();
-        }
-        return findBest(valuesToRoutedList(routingCtx, values, routeResolver, false));
-    }
-
-    /**
-     * Finds the most suitable service from the given {@link ServiceConfig} list.
-     */
     private static <V> Routed<V> findBest(List<Routed<V>> routes) {
         Routed<V> result = Routed.empty();
         for (Routed<V> route : routes) {
@@ -366,19 +359,24 @@ public final class Routers {
         return result;
     }
 
-    private static <V> List<Routed<V>> valuesToRoutedList(RoutingContext routingCtx, List<V> values,
+    private static <V> List<Routed<V>> getRouteCandidates(RoutingContext routingCtx, List<V> values,
                                                           Function<V, Route> routeResolver,
                                                           boolean isRouteDecorator) {
-        final ImmutableList.Builder<Routed<V>> builder = ImmutableList.builderWithExpectedSize(values.size());
+        ImmutableList.Builder<Routed<V>> builder = null;
+        int remaining = values.size();
 
         for (V value : values) {
             final Route route = routeResolver.apply(value);
             final RoutingResult routingResult = route.apply(routingCtx, isRouteDecorator);
             if (routingResult.isPresent()) {
+                if (builder == null) {
+                    builder = ImmutableList.builderWithExpectedSize(remaining);
+                }
                 builder.add(Routed.of(route, routingResult, value));
             }
+            remaining--;
         }
-        return builder.build();
+        return builder != null ? builder.build() : ImmutableList.of();
     }
 
     private static final class TrieRouter<V> implements Router<V> {
@@ -397,12 +395,15 @@ public final class Routers {
         public Routed<V> find(RoutingContext routingCtx) {
             final ResultCachingNodeProcessor processor = new ResultCachingNodeProcessor(routingCtx);
             trie.find(routingCtx.path(), processor);
-            return findBest(processor.routeCollector.build());
+            if (processor.routeCollector != null) {
+                return findBest(processor.routeCollector.build());
+            }
+            return Routed.empty();
         }
 
         @Override
         public List<Routed<V>> findAll(RoutingContext routingCtx) {
-            return valuesToRoutedList(routingCtx, trie.findAll(routingCtx.path()),
+            return getRouteCandidates(routingCtx, trie.findAll(routingCtx.path()),
                                       routeResolver, isRouteDecorator);
         }
 
@@ -413,7 +414,8 @@ public final class Routers {
 
         private final class ResultCachingNodeProcessor implements NodeProcessor<V> {
             private final RoutingContext routingCtx;
-            private final ImmutableList.Builder<Routed<V>> routeCollector = new Builder<>();
+            @Nullable
+            private ImmutableList.Builder<Routed<V>> routeCollector;
 
             private ResultCachingNodeProcessor(RoutingContext routingCtx) {
                 this.routingCtx = routingCtx;
@@ -423,10 +425,13 @@ public final class Routers {
             @Override
             public Node<V> process(Node<V> node) {
                 final List<Routed<V>> list =
-                        valuesToRoutedList(routingCtx, node.values, routeResolver, isRouteDecorator);
+                        getRouteCandidates(routingCtx, node.values, routeResolver, isRouteDecorator);
                 if (list.isEmpty()) {
                     // Not acceptable node.
                     return null;
+                }
+                if (routeCollector == null) {
+                    routeCollector = new Builder<>();
                 }
                 routeCollector.addAll(list);
                 return node;
@@ -448,12 +453,12 @@ public final class Routers {
 
         @Override
         public Routed<V> find(RoutingContext routingCtx) {
-            return findBest(routingCtx, values, routeResolver);
+            return findBest(getRouteCandidates(routingCtx, values, routeResolver, false));
         }
 
         @Override
         public List<Routed<V>> findAll(RoutingContext routingCtx) {
-            return Routers.valuesToRoutedList(routingCtx, values, routeResolver, isRouteDecorator);
+            return getRouteCandidates(routingCtx, values, routeResolver, isRouteDecorator);
         }
 
         @Override

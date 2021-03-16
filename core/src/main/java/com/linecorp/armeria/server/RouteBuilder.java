@@ -432,7 +432,7 @@ public final class RouteBuilder {
      * Sets whether the {@link Route} would set a deferred exception to a {@link RoutingContext} instance.
      * Currently, it is used only when configuring {@link Route}s to fallback services.
      */
-    RouteBuilder setDeferredExceptionToRoutingContext(boolean setDeferredException) {
+    RouteBuilder canSetDeferredException(boolean setDeferredException) {
         this.setDeferredException = setDeferredException;
         return this;
     }

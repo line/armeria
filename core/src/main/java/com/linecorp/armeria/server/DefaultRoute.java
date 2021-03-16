@@ -204,11 +204,6 @@ final class DefaultRoute implements Route {
     }
 
     @Override
-    public PathMapping pathMapping() {
-        return pathMapping;
-    }
-
-    @Override
     public Set<String> paramNames() {
         return pathMapping.paramNames();
     }
@@ -254,6 +249,18 @@ final class DefaultRoute implements Route {
     }
 
     @Override
+    public RouteBuilder toBuilder() {
+        return Route.builder()
+                    .pathMapping(pathMapping)
+                    .methods(methods)
+                    .consumes(consumes)
+                    .produces(produces)
+                    .matchesParams(paramPredicates)
+                    .matchesHeaders(headerPredicates)
+                    .canSetDeferredException(setDeferredException);
+    }
+
+    @Override
     public int hashCode() {
         return hashCode;
     }
@@ -282,17 +289,5 @@ final class DefaultRoute implements Route {
     @Override
     public String toString() {
         return patternString();
-    }
-
-    @Override
-    public RouteBuilder toBuilder() {
-        return Route.builder()
-                    .pathMapping(pathMapping)
-                    .methods(methods)
-                    .consumes(consumes)
-                    .produces(produces)
-                    .matchesParams(paramPredicates)
-                    .matchesHeaders(headerPredicates)
-                    .setDeferredExceptionToRoutingContext(setDeferredException);
     }
 }

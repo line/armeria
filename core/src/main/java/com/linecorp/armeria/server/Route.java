@@ -96,11 +96,6 @@ public interface Route {
     RoutingResult apply(RoutingContext routingCtx, boolean isRouteDecorator);
 
     /**
-     * Returns the {@link PathMapping} of this {@link Route}.
-     */
-    PathMapping pathMapping();
-
-    /**
      * Returns the names of the path parameters extracted by this mapping.
      */
     Set<String> paramNames();
