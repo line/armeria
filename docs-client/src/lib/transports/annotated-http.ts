@@ -15,7 +15,7 @@
  */
 
 import { Endpoint, Method } from '../specification';
-import prettify from '../json-prettify';
+import jsonPrettify from '../json-prettify';
 
 import Transport from './transport';
 
@@ -112,16 +112,18 @@ export default class AnnotatedHttpTransport extends Transport {
       body: bodyJson,
     });
     const applicationType = httpResponse.headers.get('content-type') || '';
-    const response = await httpResponse.text();
-    if (response.length > 0) {
-      if (applicationType.indexOf('json') > -1) {
-        const prettified = prettify(response);
-        if (prettified.length === 0) {
-          return response;
-        }
+    if (applicationType.indexOf('json') > -1) {
+      const prettified = jsonPrettify(
+        JSON.stringify(await httpResponse.json()),
+      );
+      if (prettified.length > 0) {
         return prettified;
       }
-      return response;
+    }
+
+    const responseText = await httpResponse.text();
+    if (responseText.length > 0) {
+      return responseText;
     }
     return '<zero-length response>';
   }
