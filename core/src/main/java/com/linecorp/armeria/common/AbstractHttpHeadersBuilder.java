@@ -70,6 +70,16 @@ abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> exten
         return getters != null ? getters.isEndOfStream() : false;
     }
 
+    public final Cookies cookie() {
+        final HttpHeadersBase getters = getters();
+        return getters != null ? getters.cookie() : Cookies.of();
+    }
+
+    public final Cookies setCookie() {
+        final HttpHeadersBase getters = getters();
+        return getters != null ? getters.setCookie() : Cookies.of();
+    }
+
     // Setters
 
     public final SELF endOfStream(boolean endOfStream) {

@@ -61,6 +61,8 @@ class StringMultimapDerivedApiConsistencyTest {
                          if ("endOfStream".equals(methodName) ||
                              "isEndOfStream".equals(methodName) ||
                              "contentType".equals(methodName) ||
+                             "cookie".equals(methodName) ||
+                             "setCookie".equals(methodName) ||
                              "contentDisposition".equals(methodName)) {
                              return false;
                          }

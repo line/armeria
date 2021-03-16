@@ -332,6 +332,21 @@ class HttpHeadersBase
         return endOfStream;
     }
 
+    @Override
+    public Cookies cookie() {
+        final String cookieString = get(HttpHeaderNames.COOKIE);
+        if (cookieString == null) {
+            return Cookies.of();
+        }
+        return Cookie.fromCookieHeader(cookieString);
+    }
+
+    @Override
+    public Cookies setCookie() {
+        final List<String> cookieHeaders = getAll(HttpHeaderNames.SET_COOKIE);
+        return Cookie.fromSetCookieHeaders(cookieHeaders);
+    }
+
     // Mutators
 
     final void endOfStream(boolean endOfStream) {

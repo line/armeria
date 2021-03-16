@@ -190,4 +190,13 @@ class DefaultHttpHeadersBuilderTest {
         assertThat(cd.type()).isEqualTo("form-data");
         assertThat(cd.name()).isEqualTo("foo");
     }
+
+    @Test
+    void testCookie() {
+        final HttpHeaders headers = HttpHeaders.builder()
+                                               .set("Cookie", "name=value")
+                                               .build();
+        final Cookies cookie = headers.cookie();
+        assertThat(cookie).isEqualTo(Cookies.of(Cookie.of("name", "value")));
+    }
 }
