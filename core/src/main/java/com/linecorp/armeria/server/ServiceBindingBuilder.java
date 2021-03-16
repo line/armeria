@@ -25,6 +25,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.metric.ServiceNaming;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -186,6 +187,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder defaultServiceName(String defaultServiceName) {
         return (ServiceBindingBuilder) super.defaultServiceName(defaultServiceName);
+    }
+
+    @Override
+    public ServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        return (ServiceBindingBuilder) super.defaultServiceNaming(defaultServiceNaming);
     }
 
     @Override

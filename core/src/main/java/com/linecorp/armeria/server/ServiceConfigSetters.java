@@ -21,6 +21,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.metric.ServiceNaming;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 interface ServiceConfigSetters {
@@ -101,6 +102,14 @@ interface ServiceConfigSetters {
      * @param defaultServiceName the default service name.
      */
     ServiceConfigSetters defaultServiceName(String defaultServiceName);
+
+    /**
+     * Sets the default naming rule for the {@link RequestLog#serviceName()}.
+     * If set, the service name will be converted according to given naming rule.
+     *
+     * @param defaultServiceNaming the default service naming.
+     */
+    ServiceConfigSetters defaultServiceNaming(ServiceNaming defaultServiceNaming);
 
     /**
      * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via

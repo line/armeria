@@ -47,14 +47,13 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.ServiceNaming;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
-import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -1034,11 +1033,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             String newServiceName = null;
             String newName = null;
             ServiceConfig config = null;
+            ServiceRequestContext sctx = null;
 
             // Set the default names from ServiceConfig
             if (ctx instanceof ServiceRequestContext) {
-                config = ((ServiceRequestContext) ctx).config();
-                newServiceName = config.defaultServiceName();
+                sctx = ((ServiceRequestContext) ctx);
+                config = sctx.config();
+                newServiceName = config.defaultServiceNaming().convert(sctx);
                 newName = config.defaultLogName();
             }
 
@@ -1049,7 +1050,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             // Set serviceName from ServiceType or innermost class name
             if (newServiceName == null) {
-                if (rpcReq != null) {
+                if (config != null) {
+                    newServiceName = ServiceNaming.fullTypeName().convert(sctx);
+                } else if (rpcReq != null) {
                     final String serviceType = rpcReq.serviceType().getName();
                     if ("com.linecorp.armeria.internal.common.grpc.GrpcLogUtil".equals(serviceType)) {
                         // Parse gRPC serviceName and methodName
@@ -1062,39 +1065,22 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                     } else {
                         newServiceName = serviceType;
                     }
-                } else if (config != null) {
-                    newServiceName = getInnermostServiceName(config.service());
                 }
             }
 
             if (newName == null) {
                 if (rpcReq != null) {
                     newName = rpcReq.method();
+                    newName = newName.substring(newName.lastIndexOf('/') + 1);
                 } else {
                     newName = ctx.method().name();
                 }
             }
 
-            if (config != null) {
-                serviceName = config.server().config().serviceNaming().convert(newServiceName);
-            } else {
-                serviceName = newServiceName;
-            }
+            serviceName = newServiceName;
             name = newName;
 
             updateFlags(RequestLogProperty.NAME);
-        }
-    }
-
-    private static String getInnermostServiceName(HttpService service) {
-        Unwrappable unwrappable = service;
-        while (true) {
-            final Unwrappable delegate = unwrappable.unwrap();
-            if (delegate != unwrappable) {
-                unwrappable = delegate;
-                continue;
-            }
-            return delegate.getClass().getName();
         }
     }
 

@@ -61,6 +61,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.metric.ServiceNaming;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -112,6 +113,8 @@ public final class VirtualHostBuilder {
 
     @Nullable
     private RejectedRouteHandler rejectedRouteHandler;
+    @Nullable
+    private ServiceNaming defaultServiceNaming;
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -808,6 +811,15 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the default naming rule for the name of services. If not set, the value set via
+     * {@link ServerBuilder#defaultServiceNaming(ServiceNaming)} is used.
+     */
+    public VirtualHostBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        this.defaultServiceNaming = requireNonNull(defaultServiceNaming);
+        return this;
+    }
+
+    /**
      * Sets the timeout of a request in milliseconds. If not set, the value set via
      * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
@@ -903,6 +915,9 @@ public final class VirtualHostBuilder {
         ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
 
         // Retrieve all settings as a local copy. Use default builder's properties if not set.
+        final ServiceNaming defaultServiceNaming =
+                this.defaultServiceNaming != null ?
+                this.defaultServiceNaming : template.defaultServiceNaming;
         final long requestTimeoutMillis =
                 this.requestTimeoutMillis != null ?
                 this.requestTimeoutMillis : template.requestTimeoutMillis;
@@ -956,13 +971,13 @@ public final class VirtualHostBuilder {
                                         cfgSetters.getClass().getSimpleName());
                     }
                 }).map(cfgBuilder -> {
-                    return cfgBuilder.build(requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                            accessLogWriter, shutdownAccessLogWriterOnStop);
+                    return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
+                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
-                        .build(requestTimeoutMillis, maxRequestLength, verboseResponses,
+                        .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, shutdownAccessLogWriterOnStop);
 
         SslContext sslContext = null;
@@ -1029,8 +1044,9 @@ public final class VirtualHostBuilder {
             final VirtualHost virtualHost =
                     new VirtualHost(defaultHostname, hostnamePattern, sslContext,
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
-                                    accessLoggerMapper, requestTimeoutMillis, maxRequestLength,
-                                    verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
+                                    accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
+                                    maxRequestLength, verboseResponses, accessLogWriter,
+                                    shutdownAccessLogWriterOnStop);
 
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);
@@ -1155,6 +1171,7 @@ public final class VirtualHostBuilder {
                           .add("routeDecoratingServices", routeDecoratingServices)
                           .add("accessLoggerMapper", accessLoggerMapper)
                           .add("rejectedRouteHandler", rejectedRouteHandler)
+                          .add("defaultServiceNaming", defaultServiceNaming)
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)

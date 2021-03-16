@@ -26,6 +26,7 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.metric.ServiceNaming;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -98,6 +99,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     @Override
     public AbstractServiceBindingBuilder defaultServiceName(String defaultServiceName) {
         defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        defaultServiceConfigSetters.defaultServiceNaming(defaultServiceNaming);
         return this;
     }
 

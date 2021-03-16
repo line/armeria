@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.metric.ServiceNaming;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class ServiceTest {
@@ -51,8 +52,8 @@ public class ServiceTest {
         assertThat(outer.as(String.class)).isNull();
 
         // Test if FooService.serviceAdded() is invoked.
-        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, /* defaultServiceName */ null,
-                                                    /* defaultLogName */ null, 1, 1, true,
+        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, /* defaultLogName */ null,
+                                                    ServiceNaming.of("FooService"), 1, 1, true,
                                                     AccessLogWriter.disabled(), false);
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);

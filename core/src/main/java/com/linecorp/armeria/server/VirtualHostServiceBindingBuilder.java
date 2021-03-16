@@ -25,6 +25,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.metric.ServiceNaming;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -188,6 +189,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder defaultServiceName(String defaultServiceName) {
         return (VirtualHostServiceBindingBuilder) super.defaultServiceName(defaultServiceName);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        return (VirtualHostServiceBindingBuilder) super.defaultServiceNaming(defaultServiceNaming);
     }
 
     @Override

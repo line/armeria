@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.metric.ServiceNaming;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class RoutersBenchmark {
@@ -43,21 +44,21 @@ public class RoutersBenchmark {
             RequestHeaders.of(HttpMethod.POST, "/grpc.package.Service/Method1");
 
     static {
-        final String defaultServiceName = null;
+        final ServiceNaming defaultServiceNaming = ServiceNaming.of("Service");
         final String defaultLogName = null;
         SERVICES = ImmutableList.of(
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method1").build(),
-                                  SERVICE, defaultServiceName, defaultLogName, 0, 0,
+                                  SERVICE, defaultLogName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false),
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method2").build(),
-                                  SERVICE, defaultServiceName, defaultLogName, 0, 0,
+                                  SERVICE, defaultLogName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false)
         );
-        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultServiceName, defaultLogName, 0,
-                                             0, false, AccessLogWriter.disabled(), false);
+        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultLogName, defaultServiceNaming,
+                                             0, 0, false, AccessLogWriter.disabled(), false);
         HOST = new VirtualHost(
                 "localhost", "localhost", null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
-                unused -> NOPLogger.NOP_LOGGER, 0, 0, false,
+                unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
                 AccessLogWriter.disabled(), false);
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }

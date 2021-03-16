@@ -31,6 +31,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -100,10 +101,12 @@ public class ServiceBindingBuilderTest {
         sb.defaultVirtualHost()
           .maxRequestLength(1024)
           .accessLogWriter(accessLogWriter, false)
-          .requestTimeoutMillis(10000); // This is overwritten.
+          .requestTimeoutMillis(10000) // This is overwritten.
+          .defaultServiceNaming(ctx -> "globalServiceNaming"); // This is overwritten.
 
         sb.route().get("/foo/bar")
           .requestTimeout(Duration.ofMillis(10))
+          .defaultServiceNaming(ctx -> "serviceNaming")
           .build((ctx, req) -> HttpResponse.of(OK));
 
         sb.defaultVirtualHost().maxRequestLength(1024);
@@ -116,6 +119,10 @@ public class ServiceBindingBuilderTest {
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
+        assertThat(serviceConfig.defaultServiceNaming()).isNotNull();
+        final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                                .build();
+        assertThat(serviceConfig.defaultServiceNaming().convert(sctx)).isEqualTo("serviceNaming");
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(1024);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.accessLogWriter()).isSameAs(accessLogWriter);
