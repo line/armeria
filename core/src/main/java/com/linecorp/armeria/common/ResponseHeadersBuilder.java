@@ -47,6 +47,15 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
      * @param cookies the specified cookies.
      * @return {@code this}
      */
+    default ResponseHeadersBuilder setCookie(Iterable<? extends Cookie> cookies) {
+        return add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(cookies));
+    }
+
+    /**
+     * Sets the {@code "set-cookie"} header.
+     * @param cookies the specified cookies.
+     * @return {@code this}
+     */
     default ResponseHeadersBuilder setCookie(Cookie... cookies) {
         return add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(cookies));
     }
