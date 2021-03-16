@@ -77,19 +77,19 @@ public final class Routers {
             }
         };
         final BiFunction<Route, ServiceConfig, ServiceConfig> fallbackValueConfigurator =
-                (route, serviceConfig) -> {
-                    final Route existingRoute = serviceConfig.route();
-                    if (route.complexity() != existingRoute.complexity() ||
-                        !route.methods().containsAll(existingRoute.methods())) {
-                        return serviceConfig.withRoute(
-                                route.toBuilder()
-                                     .pathMapping(existingRoute.pathMapping())
+                (originalRoute, fallbackServiceConfig) -> {
+                    final Route fallbackRoute = fallbackServiceConfig.route();
+                    if (originalRoute.complexity() != fallbackRoute.complexity() ||
+                        !originalRoute.methods().containsAll(fallbackRoute.methods())) {
+                        return fallbackServiceConfig.withRoute(
+                                originalRoute.toBuilder()
+                                     .pathMapping(fallbackRoute.pathMapping())
                                      // Do not propagate an exception raised while resolving a route
                                      // to fallback services.
                                      .setDeferredExceptionToRoutingContext(false)
                                      .build());
                     }
-                    return serviceConfig;
+                    return fallbackServiceConfig;
                 };
         final Set<Route> ambiguousRoutes =
                 resolveAmbiguousRoutes(StreamSupport.stream(configs.spliterator(), false)
