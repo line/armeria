@@ -20,15 +20,15 @@ import com.linecorp.armeria.common.annotation.UnstableApi
 import _root_.scala.concurrent.ExecutionContextExecutor
 
 /**
- * Provides the `ExecutionContext` implementation that could be useful when writing an Armeria application
+ * Provides the `ExecutionContext` implementations that could be useful when writing an Armeria application
  * with Scala.
  */
 @UnstableApi
 object ExecutionContexts {
 
   /**
-   * An `ExecutionContextExecutor` that runs the submitted `Runnable`s immediately on the thread that calls
-   * `execute()` and then yields back control to the caller after the `Runnable` finishes its execution.
+   * An `ExecutionContextExecutor` that runs the submitted `Runnable`s immediately on the thread that called
+   * `execute()` and then yields the control back to the caller after the `Runnable` finishes its execution.
    * If the `Runnable` throws an exception, it is propagated to the caller as-is.
    *
    * This is often useful when you need to avoid unnecessary context switches for the short-running tasks or
