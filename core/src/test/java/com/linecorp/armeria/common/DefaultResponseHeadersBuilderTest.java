@@ -108,7 +108,7 @@ class DefaultResponseHeadersBuilderTest {
                 .builder(HttpStatus.OK)
                 .setCookie(cookie)
                 .build();
-        assertThat(headers.get(HttpHeaderNames.SET_COOKIE)).isEqualTo(cookie.toCookieHeader());
+        assertThat(headers.cookies()).isEqualTo(Cookies.of(cookie));
     }
 
     @Test
@@ -119,7 +119,7 @@ class DefaultResponseHeadersBuilderTest {
                 .builder(HttpStatus.OK)
                 .setCookie(cookies)
                 .build();
-        assertThat(headers.getAll(HttpHeaderNames.SET_COOKIE)).contains("cookie1=value1", "cookie2=value2");
+        assertThat(headers.cookies()).isEqualTo(cookies);
     }
 
     @Test
@@ -130,7 +130,7 @@ class DefaultResponseHeadersBuilderTest {
                 .builder(HttpStatus.OK)
                 .setCookie(cookie1, cookie2)
                 .build();
-        assertThat(headers.getAll(HttpHeaderNames.SET_COOKIE)).contains("cookie1=value1", "cookie2=value2");
+        assertThat(headers.cookies()).isEqualTo(Cookies.of(cookie1, cookie2));
     }
 
     /**

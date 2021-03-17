@@ -112,4 +112,17 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
     default Locale selectLocale(Locale... supportedLocales) {
         return selectLocale(ImmutableList.copyOf(requireNonNull(supportedLocales, "supportedLocales")));
     }
+
+    /**
+     * Returns the parsed {@code "cookie"} header.
+     *
+     * @return a {@link Cookies} or an empty {@link Cookies} if there is no such header.
+     */
+    default Cookies cookies() {
+        final String cookieString = get(HttpHeaderNames.COOKIE);
+        if (cookieString == null) {
+            return Cookies.of();
+        }
+        return Cookie.fromCookieHeader(cookieString);
+    }
 }

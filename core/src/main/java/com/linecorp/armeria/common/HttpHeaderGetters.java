@@ -42,20 +42,6 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     boolean isEndOfStream();
 
     /**
-     * Returns the parsed {@code "cookie"} header.
-     *
-     * @return a {@link Cookies} or an empty {@link Cookies} if there is no such header.
-     */
-    Cookies cookie();
-
-    /**
-     * Returns the parsed {@code "set-cookie"} header.
-     *
-     * @return a {@link Cookies} or an empty {@link Cookies} if there is no such header.
-     */
-    Cookies setCookie();
-
-    /**
      * Returns the parsed {@code "content-type"} header.
      *
      * @return the parsed {@link MediaType} if present and valid, or {@code null} otherwise.
