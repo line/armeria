@@ -49,7 +49,7 @@ You can also convert a Scala `Future` to a Java `CompletionStage` using the `toJ
 
 ```scala
 import java.util.concurrent.CompletionStage
-val javaFuture: CompletionStage[Void] = scalaFuture.toJava
+val javaFuture: CompletionStage[Void] = scalaFuture.toJava // 👈
 ```
 
 You'll also find the extension method `toHttpResponse` added to `Future[HttpResponse]` and
@@ -78,22 +78,25 @@ It is because `armeria-scala` provides richer and more natural conversions, such
 
 </Tip>
 
-## `directExecutionContext`
+## `ExecutionContexts.sameThread`
 
 In an asynchronous system that the entire application logic runs on event loops, it is often useful
 in term of performance to invoke the callbacks attached to a `Future` directly rather than submitting
-the callbacks to another `ExecutionContext`. You can use `directExecutionContext` in such a case:
+the callbacks to another `ExecutionContext`. You can use `ExecutionContexts.sameThread` in such a case:
 
 ```scala
 import com.linecorp.armeria.common.HttpRequest
-import com.linecorp.armeria.scala.directExecutionContext
+import com.linecorp.armeria.scala.ExecutionContexts.sameThread
 import com.linecorp.armeria.scala.implicits._
 import com.linecorp.armeria.server.HttpService
 import com.linecorp.armeria.server.ServiceRequestContext
 
+import scala.concurrent.ExecutionContext
 
 class MyHttpService extends HttpService {
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse = {
+    implicit val ec: ExecutionContext = sameThread // 👈
+
     // Perform some asynchronous operation.
     val future: Future[String] = ...
 
@@ -101,7 +104,7 @@ class MyHttpService extends HttpService {
     future
       .map { value =>
         HttpResponse.of(MediaType.PLAIN_TEXT_UTF_8, value)
-      }(directExecutionContext) // 👈
+      }
       .toHttpResponse
   }
 }
@@ -116,9 +119,10 @@ You can use the `eventLoopExecutionContext` extension method in <type://RequestC
 import com.linecorp.armeria.scala.implicits._
 
 val ctx = ServiceRequestContext.current
+implicit val ec: ExecutionContext = ctx.eventLoopExecutionContext // 👈
 Future {
   // Do some non-blocking job here.
-}(ctx.eventLoopExecutionContext) // 👈
+}
 ```
 
 For long-running tasks running on the server side, you can use `blockingTaskExecutionContext`:
@@ -127,9 +131,10 @@ For long-running tasks running on the server side, you can use `blockingTaskExec
 import com.linecorp.armeria.scala.implicits._
 
 val ctx = ServiceRequestContext.current
+implicit val ec: ExecutionContext = ctx.blockingTaskExecutionContext // 👈
 Future {
   Thread.sleep(1000)
-}(ctx.blockingTaskExecutionContext) // 👈
+}
 ```
 
 ## Collection converters
