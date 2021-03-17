@@ -88,8 +88,11 @@ private void streamingResponse(HttpResponseWriter response, int index) {
         return;
     }
     response.whenConsumed().thenRun(() -> {
-        response.write(produceChunk(index));
-        streamingResponse(response, index + 1);
+        if (response.tryWrite(produceChunk(index))) {
+            streamingResponse(response, index + 1);
+        } else {
+            // The response is completed unexpectedly.
+        }
     });
 }
 ```
