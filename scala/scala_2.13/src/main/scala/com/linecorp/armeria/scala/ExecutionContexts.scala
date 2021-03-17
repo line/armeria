@@ -34,7 +34,8 @@ object ExecutionContexts {
    * This is often useful when you need to avoid unnecessary context switches for the short-running tasks or
    * asynchronous callbacks that are OK to run from an event loop thread.
    *
-   * You must *not* use this for a potentially long-running tasks.
+   * You must *not* use this for a long-running or recursive task that could block an event loop thread or
+   * cause a `StackOverflowError`.
    */
   val sameThread: ExecutionContextExecutor = new ExecutionContextExecutor {
     /**
