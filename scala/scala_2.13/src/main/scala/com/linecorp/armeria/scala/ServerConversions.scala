@@ -40,15 +40,15 @@ trait ServerConversions {
 
   // Convert a Scala function to Consumer[Server]
   // ServerListenerBuilderSuite fails without this.
-  implicit def funcToJavaConsumer(func: Server => Any): JConsumer[Server] = func(_)
+  implicit final def funcToJavaConsumer(func: Server => Any): JConsumer[Server] = func(_)
 
   // Add an extension method that provides an ExecutionContext for a context-aware blocking task executor.
-  implicit final def ServiceRequestContextOps(ctx: ServiceRequestContext): ServiceRequestContextOps =
+  implicit final def serviceRequestContextOps(ctx: ServiceRequestContext): ServiceRequestContextOps =
     new ServiceRequestContextOps(ctx)
 
   // Make {Http,Rpc}Service.decorate(Function) work.
   // ServerBuilderSuite fails without this.
-  implicit final def ServiceOps[T <: Service[_, _]](service: T): ServiceOps[T] = new ServiceOps[T](service)
+  implicit final def serviceOps[T <: Service[_, _]](service: T): ServiceOps[T] = new ServiceOps[T](service)
 }
 
 @UnstableApi

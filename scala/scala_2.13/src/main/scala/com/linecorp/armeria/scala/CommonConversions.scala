@@ -29,38 +29,38 @@ import scala.language.implicitConversions
 trait CommonConversions {
 
   // Add CompletionStage[HttpResponse].toHttpResponse
-  implicit def HttpResponseCompletionStageOps(
+  implicit final def httpResponseCompletionStageOps(
       stage: CompletionStage[HttpResponse]): HttpResponseCompletionStageOps =
     new HttpResponseCompletionStageOps(stage)
 
   // Add CompletionStage[Void].toScala
-  implicit def VoidCompletionStageOps(stage: CompletionStage[Void]): VoidCompletionStageOps =
+  implicit final def voidCompletionStageOps(stage: CompletionStage[Void]): VoidCompletionStageOps =
     new VoidCompletionStageOps(stage)
 
   // Add CompletionStage.toScala
-  implicit def CompletionStageOps[T](stage: CompletionStage[T]): FutureConverters.CompletionStageOps[T] =
+  implicit final def completionStageOps[T](stage: CompletionStage[T]): FutureConverters.CompletionStageOps[T] =
     new FutureConverters.CompletionStageOps[T](stage)
 
   // Add Future[HttpResponse].toHttpResponse
-  implicit def HttpResponseFutureOps(future: Future[HttpResponse]): HttpResponseFutureOps =
+  implicit final def httpResponseFutureOps(future: Future[HttpResponse]): HttpResponseFutureOps =
     new HttpResponseFutureOps(future)
 
   // Add Future[Unit].toJava
-  implicit def UnitFutureOps(future: Future[Unit]): UnitFutureOps =
+  implicit final def unitFutureOps(future: Future[Unit]): UnitFutureOps =
     new UnitFutureOps(future)
 
   // Add Future.toJava
-  implicit def FutureOps[T](f: Future[T]): FutureConverters.FutureOps[T] = new FutureConverters.FutureOps[T](f)
+  implicit final def futureOps[T](f: Future[T]): FutureConverters.FutureOps[T] = new FutureConverters.FutureOps[T](f)
 
   // Add RequestContext.eventLoopExecutionContext
-  implicit def RequestContextOps(ctx: RequestContext): RequestContextOps = new RequestContextOps(ctx)
+  implicit final def requestContextOps(ctx: RequestContext): RequestContextOps = new RequestContextOps(ctx)
 
   // Convert FiniteDuration to java.time.Duration
-  implicit def finiteDurationToJavaDuration(finiteDuration: FiniteDuration): java.time.Duration =
+  implicit final def finiteDurationToJavaDuration(finiteDuration: FiniteDuration): java.time.Duration =
     DurationConverters.toJava(finiteDuration)
 
   // Convert java.time.Duration to FiniteDuration
-  implicit def javaDurationToFiniteDuration(duration: java.time.Duration): FiniteDuration =
+  implicit final def javaDurationToFiniteDuration(duration: java.time.Duration): FiniteDuration =
     DurationConverters.toScala(duration)
 }
 
