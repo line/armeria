@@ -1,0 +1,121 @@
+# Sending streaming responses using backpressure
+
+When you design a service that sends an <type://HttpResponse> whose payload is large, you should consider how
+you load data into memory. Otherwise, you will encounter an `OutOfMemoryError` when the service serves
+multiple requests at the same time.
+
+One of the options to solve the issue is splitting the payload into chunks and loading them one by one
+into memory. Then, the API sends the chunks one by one as a streaming response using backpressure.
+Backpressure basically means that the API sends the streaming response when it's able to send and when
+the client is ready to receive the responses.
+
+<Tip>
+
+See [Let’s Play with Reactive Streams on Armeria - 1](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-1/)
+to understand backpressure and the situation when an `OutOfMemoryError` is raised.
+
+</Tip>
+
+Let's look at how we can create a streaming <type://HttpResponse> before we get to the backpressure.
+You can create an <type://HttpResponseWriter> from <type://HttpResponse#streaming()> and write
+<type://ResponseHeaders> and chunks in order:
+
+```java
+ServerBuilder sb = ...;
+sb.service("/", (ctx, req) -> {
+    HttpResponseWriter response = HttpResponse.streaming();
+    response.write(ResponseHeaders.of(200));
+    response.write(HttpData.ofUtf8("first chunk"));
+    response.write(HttpData.ofUtf8("second chunk"));
+    ... // Write more chunks.
+    // Call close to end the response.
+    response.close();
+    return response;
+});
+```
+
+Then, the chunks are put into [frames](https://tools.ietf.org/html/rfc7540#section-4) and sent to the client
+when HTTP/2 is used. For HTTP/1.1, [Chunked transfer encoding](https://en.wikipedia.org/wiki/Chunked_transfer_encoding)
+is used.
+
+If you send the streaming response like the code above, you will get an `OutOfMemoryError` because you produced
+all chunks before you send them. You need to use <type://StreamWriter#whenConsumed()> to produce and send
+the chunk one by one:
+
+```java
+sb.service("/", (ctx, req) -> {
+    HttpResponseWriter response = HttpResponse.streaming();
+    response.write(ResponseHeaders.of(200));
+    response.whenConsumed().thenRun(() -> {
+        // Produce the first chunk when the ResponseHeaders is
+        // written to the socket.
+        response.write(produceChunk(1));
+        response.whenConsumed().thenRun(() -> {
+            // Produce the second chunk when the first chunk is
+            // written to the socket.
+            response.write(produceChunk(2));
+            ...
+        });
+    });
+    return response;
+});
+```
+
+<type://StreamWriter#whenConsumed()> returns a `CompletableFuture` that is complete when the current chunks in
+the <type://StreamWriter> are written to the socket. So, you can just add a callback (`thenRun()` in the example)
+and produce the chunk in the callback.
+
+<Tip>
+
+See [Let’s Play with Reactive Streams on Armeria - 2](https://engineering.linecorp.com/en/blog/reactive-streams-armeria-2/)
+to understand how the network layer is involved in backpressure.
+
+</Tip>
+
+You can use recursion to simplify the code:
+```java
+sb.service("/", (ctx, req) -> {
+    final HttpResponseWriter response = HttpResponse.streaming();
+    response.write(ResponseHeaders.of(200));
+    streamingResponse(response, 1);
+    return response;
+});
+
+private void streamingResponse(HttpResponseWriter response, int index) {
+    if (index == Integer.MAX_VALUE) {
+        // Close the response when we send all chunks.
+        response.close();
+        return;
+    }
+    response.whenConsumed().thenRun(() -> {
+        response.write(produceChunk(index));
+        streamingResponse(response, index + 1);
+    });
+}
+```
+
+<Tip>
+
+You can find [a funny working example](https://github.com/line/armeria-examples/blob/master/proxy-server/src/main/java/example/armeria/proxy/AnimationService.java)
+that sends the streaming response using backpressure.
+
+</Tip>
+
+You can also send a streaming <type://HttpRequest> in the same manner except specifying a
+<type://RequestHeaders> when you create the <type://HttpRequestWriter>.
+```java
+HttpRequestWriter request = HttpRequest.streaming(
+    RequestHeaders.of(HttpMethod.POST, "/"));
+request.write(HttpData.ofUtf8("first chunk"));
+...
+```
+
+<Tip>
+
+The difference between <type://HttpRequest> and <type://HttpResponse> in Armeria is that you always need to
+specify a <type://RequestHeaders> when you create an <type://HttpRequest>. So you can get the headers via
+<type://HttpRequest#headers()>. On the other hand, a <type://ResponseHeaders> is put into the queue with chunks
+for <type://HttpResponse>, so you cannot get the <type://ResponseHeaders> directly from an
+<type://HttpResponse>.
+
+</Tip>
