@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.rxjava3;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -25,12 +27,28 @@ import io.reactivex.rxjava3.internal.fuseable.QueueSubscription;
 import io.reactivex.rxjava3.internal.subscribers.BasicFuseableSubscriber;
 
 final class RequestContextSubscriber<T> extends BasicFuseableSubscriber<T, T> {
+    @Nullable
+    private SafeCloseable closeable;
 
     private final RequestContext assemblyContext;
 
     RequestContextSubscriber(Subscriber<? super T> downstream, RequestContext assemblyContext) {
         super(downstream);
         this.assemblyContext = assemblyContext;
+    }
+
+    @SuppressWarnings("MustBeClosedChecker")
+    @Override
+    protected boolean beforeDownstream() {
+        closeable = assemblyContext.push();
+        return true;
+    }
+
+    @Override
+    protected void afterDownstream() {
+        if (closeable != null) {
+            closeable.close();
+        }
     }
 
     @Override

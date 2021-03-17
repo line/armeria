@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.rxjava3;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -24,11 +26,28 @@ import io.reactivex.rxjava3.internal.fuseable.QueueDisposable;
 import io.reactivex.rxjava3.internal.observers.BasicFuseableObserver;
 
 final class RequestContextObserver<T> extends BasicFuseableObserver<T, T> {
+    @Nullable
+    private SafeCloseable closeable;
+
     private final RequestContext assemblyContext;
 
     RequestContextObserver(Observer<? super T> downstream, RequestContext assemblyContext) {
         super(downstream);
         this.assemblyContext = assemblyContext;
+    }
+
+    @SuppressWarnings("MustBeClosedChecker")
+    @Override
+    protected boolean beforeDownstream() {
+        closeable = assemblyContext.push();
+        return true;
+    }
+
+    @Override
+    protected void afterDownstream() {
+        if (closeable != null) {
+            closeable.close();
+        }
     }
 
     @Override
