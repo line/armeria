@@ -18,7 +18,7 @@ package com.linecorp.armeria.common.util
 import java.util.concurrent.{CompletableFuture, CompletionStage}
 
 import com.linecorp.armeria.common.HttpResponse
-import com.linecorp.armeria.scala.directExecutionContext
+import com.linecorp.armeria.scala.ExecutionContexts.sameThread
 import com.linecorp.armeria.scala.implicits._
 import munit.FunSuite
 
@@ -26,7 +26,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 class FutureSuite extends FunSuite {
-  implicit val ec: ExecutionContext = directExecutionContext
+  implicit val ec: ExecutionContext = sameThread
 
   test("CompletionStage[Void].toScala should return Future[Unit].") {
     val javaFuture = new CompletableFuture[Void]()
@@ -42,10 +42,7 @@ class FutureSuite extends FunSuite {
   }
 
   test("Future[Unit].toJava should return CompletionStage[Void].") {
-    val scalaFuture: Future[Unit] = Future {
-      ()
-    }
-    val javaFuture: CompletionStage[Void] = scalaFuture.toJava
+    val javaFuture: CompletionStage[Void] = Future.unit.toJava
 
     assert(javaFuture.toCompletableFuture.join() == null)
   }
