@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.common;
 
-import java.util.List;
-
 /**
  * Provides the getter methods to {@link ResponseHeaders} and {@link ResponseHeadersBuilder}.
  *
@@ -36,8 +34,5 @@ interface ResponseHeaderGetters extends HttpHeaderGetters {
      *
      * @return a {@link Cookies} or an empty {@link Cookies} if there is no such header.
      */
-    default Cookies cookies() {
-        final List<String> cookieHeaders = getAll(HttpHeaderNames.SET_COOKIE);
-        return Cookie.fromSetCookieHeaders(cookieHeaders);
-    }
+    Cookies cookies();
 }

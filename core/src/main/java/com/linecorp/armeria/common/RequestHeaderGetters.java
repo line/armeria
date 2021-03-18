@@ -118,11 +118,5 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
      *
      * @return a {@link Cookies} or an empty {@link Cookies} if there is no such header.
      */
-    default Cookies cookies() {
-        final String cookieString = get(HttpHeaderNames.COOKIE);
-        if (cookieString == null) {
-            return Cookies.of();
-        }
-        return Cookie.fromCookieHeader(cookieString);
-    }
+    Cookies cookies();
 }

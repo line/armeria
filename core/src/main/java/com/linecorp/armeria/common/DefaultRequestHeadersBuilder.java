@@ -153,4 +153,11 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
         final HttpHeadersBase getters = getters();
         return getters != null ? getters.selectLocale(supportedLocales) : null;
     }
+
+    @Override
+    public Cookies cookies() {
+        final HttpHeadersBase getters = getters();
+        checkState(getters != null, ":cookie header does not exist.");
+        return getters.cookies();
+    }
 }

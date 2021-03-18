@@ -16,12 +16,15 @@
 package com.linecorp.armeria.common;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 @SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
 final class DefaultResponseHeaders extends DefaultHttpHeaders implements ResponseHeaders {
 
     @Nullable
     private HttpStatus status;
+    @Nullable
+    private Cookies cookies;
 
     DefaultResponseHeaders(HttpHeadersBase headers) {
         super(headers);
@@ -39,6 +42,15 @@ final class DefaultResponseHeaders extends DefaultHttpHeaders implements Respons
         }
 
         return this.status = super.status();
+    }
+
+    @Override
+    public Cookies cookies() {
+        final Cookies cookies = this.cookies;
+        if (cookies != null) {
+            return cookies;
+        }
+        return this.cookies = super.setCookies();
     }
 
     @Override

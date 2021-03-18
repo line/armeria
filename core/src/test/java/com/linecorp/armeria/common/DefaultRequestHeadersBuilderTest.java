@@ -273,6 +273,20 @@ class DefaultRequestHeadersBuilderTest {
     }
 
     @Test
+    void testMultipleCookieHeader() {
+        final Cookie cookie1 = Cookie.of("cookie1", "value1");
+        final Cookie cookie2 = Cookie.of("cookie2", "value2");
+        final RequestHeaders headers = RequestHeaders
+                .builder()
+                .path("/")
+                .method(HttpMethod.GET)
+                .add(HttpHeaderNames.COOKIE, cookie1.toCookieHeader())
+                .add(HttpHeaderNames.COOKIE, cookie2.toCookieHeader())
+                .build();
+        assertThat(headers.cookies()).isEqualTo(Cookies.of(cookie1, cookie2));
+    }
+
+    @Test
     void testCookieBuilderWithIterable() {
         final Cookies cookies = Cookies.of(Cookie.of("cookie1", "value1"),
                                            Cookie.of("cookie2", "value2"));

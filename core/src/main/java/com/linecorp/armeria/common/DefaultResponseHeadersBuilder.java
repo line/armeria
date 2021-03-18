@@ -58,6 +58,13 @@ final class DefaultResponseHeadersBuilder
     }
 
     @Override
+    public Cookies cookies() {
+        final HttpHeadersBase getters = getters();
+        checkState(getters != null, ":set-cookie headers does not exist.");
+        return getters.setCookies();
+    }
+
+    @Override
     public ResponseHeadersBuilder status(int statusCode) {
         setters().status(statusCode);
         return this;

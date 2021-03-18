@@ -31,6 +31,8 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
     private URI uri;
     @Nullable
     private List<LanguageRange> acceptLanguages;
+    @Nullable
+    private Cookies cookies;
 
     DefaultRequestHeaders(HttpHeadersBase headers) {
         super(headers);
@@ -92,6 +94,15 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
     @Override
     public String authority() {
         return super.authority();
+    }
+
+    @Override
+    public Cookies cookies() {
+        final Cookies cookies = this.cookies;
+        if (cookies != null) {
+            return cookies;
+        }
+        return this.cookies = super.cookies();
     }
 
     @Override
