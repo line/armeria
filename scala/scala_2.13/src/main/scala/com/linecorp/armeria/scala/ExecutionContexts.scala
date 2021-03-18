@@ -38,6 +38,7 @@ object ExecutionContexts {
    * cause a `StackOverflowError`.
    */
   val sameThread: ExecutionContextExecutor = new ExecutionContextExecutor {
+
     /**
      * Invokes the `run()` method of the given `Runnable`.
      */

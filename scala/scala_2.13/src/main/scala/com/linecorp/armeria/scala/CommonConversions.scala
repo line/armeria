@@ -50,7 +50,8 @@ trait CommonConversions {
     new UnitFutureOps(future)
 
   // Add Future.toJava
-  implicit final def futureOps[T](f: Future[T]): FutureConverters.FutureOps[T] = new FutureConverters.FutureOps[T](f)
+  implicit final def futureOps[T](f: Future[T]): FutureConverters.FutureOps[T] =
+    new FutureConverters.FutureOps[T](f)
 
   // Add RequestContext.eventLoopExecutionContext
   implicit final def requestContextOps(ctx: RequestContext): RequestContextOps = new RequestContextOps(ctx)
