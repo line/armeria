@@ -23,6 +23,7 @@ application {
 dependencies {
     implementation(project(":core"))
     implementation(project(":grpc"))
+    implementation(project(":kotlin"))
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     compileOnly("javax.annotation:javax.annotation-api")
     runtimeOnly("org.slf4j:slf4j-simple")

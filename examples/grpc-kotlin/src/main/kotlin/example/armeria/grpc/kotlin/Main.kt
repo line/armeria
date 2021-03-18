@@ -2,9 +2,10 @@ package example.armeria.grpc.kotlin
 
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats
 import com.linecorp.armeria.server.Server
-import com.linecorp.armeria.server.docs.DocService
 import com.linecorp.armeria.server.docs.DocServiceFilter
 import com.linecorp.armeria.server.grpc.GrpcService
+import com.linecorp.armeria.server.kotlin.buildServer
+import com.linecorp.armeria.server.kotlin.docs.buildDocService
 import example.armeria.grpc.kotlin.Hello.HelloRequest
 import io.grpc.protobuf.services.ProtoReflectionService
 import io.grpc.reflection.v1alpha.ServerReflectionGrpc
@@ -52,37 +53,36 @@ object Main {
             // methods in the blockingTaskExecutor thread pool.
             .useBlockingTaskExecutor(useBlockingTaskExecutor)
             .build()
-        return Server.builder()
-            .http(httpPort)
-            .https(httpsPort)
-            .tlsSelfSigned()
-            .service(grpcService) // You can access the documentation service at http://127.0.0.1:8080/docs.
-            // See https://armeria.dev/docs/server-docservice for more information.
-            .serviceUnder(
+        return buildServer {
+            http(httpPort)
+            https(httpsPort)
+            tlsSelfSigned()
+            service(grpcService)
+            serviceUnder(
                 "/docs",
-                DocService.builder()
-                    .exampleRequests(
+                buildDocService {
+                    exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
                         "Hello",
                         exampleRequest
                     )
-                    .exampleRequests(
+                    exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
                         "LazyHello",
                         exampleRequest
                     )
-                    .exampleRequests(
+                    exampleRequests(
                         HelloServiceGrpc.SERVICE_NAME,
                         "BlockingHello",
                         exampleRequest
                     )
-                    .exclude(
+                    exclude(
                         DocServiceFilter.ofServiceName(
                             ServerReflectionGrpc.SERVICE_NAME
                         )
                     )
-                    .build()
+                }
             )
-            .build()
+        }
     }
 }

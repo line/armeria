@@ -5,6 +5,8 @@ import com.linecorp.armeria.server.AnnotatedServiceBindingBuilder
 import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.docs.DocService
 import com.linecorp.armeria.server.kotlin.CoroutineContextService
+import com.linecorp.armeria.server.kotlin.annotatedService
+import com.linecorp.armeria.server.kotlin.buildServer
 import com.linecorp.armeria.server.logging.LoggingService
 import kotlinx.coroutines.CoroutineName
 import org.slf4j.LoggerFactory
@@ -26,26 +28,23 @@ fun main() {
 }
 
 fun newServer(port: Int): Server {
-    return Server.builder()
-        .http(port)
-        // ContextAwareService
-        .annotatedService()
-        .pathPrefix("/contextAware")
-        .decorator(
-            CoroutineContextService.newDecorator { ctx ->
-                CoroutineName(ctx.config().defaultServiceName() ?: "name")
-            }
-        )
-        .applyCommonDecorator()
-        .build(ContextAwareService())
-        // DecoratingService
-        .annotatedService()
-        .pathPrefix("/decorating")
-        .applyCommonDecorator()
-        .build(DecoratingService())
-        // DocService
-        .serviceUnder("/docs", DocService())
-        .build()
+    return buildServer {
+        http(port)
+        annotatedService(ContextAwareService()) {
+            pathPrefix("/contextAware")
+            decorator(
+                CoroutineContextService.newDecorator { ctx ->
+                    CoroutineName(ctx.config().defaultServiceName() ?: "name")
+                }
+            )
+            applyCommonDecorator()
+        }
+        annotatedService(DecoratingService()) {
+            pathPrefix("/decorating")
+            applyCommonDecorator()
+        }
+        serviceUnder("/docs", DocService())
+    }
 }
 
 private fun AnnotatedServiceBindingBuilder.applyCommonDecorator(): AnnotatedServiceBindingBuilder {
