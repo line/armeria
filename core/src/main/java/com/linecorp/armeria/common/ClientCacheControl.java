@@ -127,7 +127,7 @@ public final class ClientCacheControl extends CacheControl {
     }
 
     /**
-     * Returns a newly created {@link ClientCacheControlBuilder} with all directived disabled initially.
+     * Returns a newly created {@link ClientCacheControlBuilder} with all directives disabled initially.
      */
     public static ClientCacheControlBuilder builder() {
         return new ClientCacheControlBuilder();
