@@ -31,6 +31,7 @@
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
 *.er
+*.eu.pythonanywhere.com
 *.ex.futurecms.at
 *.ex.ortsinfo.at
 *.firenet.ch
@@ -68,6 +69,7 @@
 *.owo.codes
 *.pg
 *.platformsh.site
+*.pythonanywhere.com
 *.quipelements.com
 *.r.appspot.com
 *.s5y.io
@@ -4692,6 +4694,7 @@ madrid
 madrid.museum
 maebashi.gunma.jp
 magazine.aero
+magnet.page
 maibara.shiga.jp
 maif
 mail.pl

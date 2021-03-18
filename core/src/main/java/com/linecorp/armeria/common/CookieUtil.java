@@ -251,6 +251,18 @@ final class CookieUtil {
     }
 
     // The methods newly added in the fork.
+    static Cookies fromCookieHeaders(ImmutableSet.Builder<Cookie> builder,
+                                        boolean strict, Iterator<String> it) {
+        assert it.hasNext();
+        do {
+            final String v = it.next();
+            requireNonNull(v, "cookieHeaders contains null.");
+            final Cookies cookies = Cookie.fromCookieHeader(strict, v);
+            builder.addAll(cookies);
+        } while (it.hasNext());
+
+        return Cookies.of(builder.build());
+    }
 
     static Cookies fromSetCookieHeaders(ImmutableSet.Builder<Cookie> builder,
                                         boolean strict, Iterator<String> it) {
