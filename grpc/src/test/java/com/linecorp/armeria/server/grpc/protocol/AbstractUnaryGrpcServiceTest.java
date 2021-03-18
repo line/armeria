@@ -41,6 +41,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.ManagedChannel;
@@ -52,7 +53,9 @@ public class AbstractUnaryGrpcServiceTest {
     private static class TestService extends AbstractUnaryGrpcService {
 
         @Override
-        protected CompletableFuture<byte[]> handleMessage(byte[] message) {
+        protected CompletableFuture<byte[]> handleMessage(ServiceRequestContext ctx, byte[] message) {
+            assertThat(ServiceRequestContext.currentOrNull()).isSameAs(ctx);
+
             final SimpleRequest request;
             try {
                 request = SimpleRequest.parseFrom(message);

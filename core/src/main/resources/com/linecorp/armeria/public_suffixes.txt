@@ -31,6 +31,7 @@
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
 *.er
+*.eu.pythonanywhere.com
 *.ex.futurecms.at
 *.ex.ortsinfo.at
 *.firenet.ch
@@ -68,6 +69,7 @@
 *.owo.codes
 *.pg
 *.platformsh.site
+*.pythonanywhere.com
 *.quipelements.com
 *.r.appspot.com
 *.s5y.io
@@ -989,6 +991,7 @@ botany.museum
 bounceme.net
 bounty-full.com
 boutique
+boutir.com
 box
 boxfuse.io
 bozen-sudtirol.it
@@ -1088,6 +1091,7 @@ cab
 cable-modem.org
 cadaques.museum
 cafe
+cafjs.com
 cagliari.it
 cahcesuolo.no
 cal
@@ -4690,6 +4694,7 @@ madrid
 madrid.museum
 maebashi.gunma.jp
 magazine.aero
+magnet.page
 maibara.shiga.jp
 maif
 mail.pl
