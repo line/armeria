@@ -21,8 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.UncheckedIOException;
 import java.util.concurrent.CompletableFuture;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -41,18 +41,21 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
-public class AbstractUnaryGrpcServiceTest {
+class AbstractUnaryGrpcServiceTest {
 
     // This service only depends on protobuf. Users can use a custom decoder / encoder to avoid even that.
     private static class TestService extends AbstractUnaryGrpcService {
 
         @Override
-        protected CompletableFuture<byte[]> handleMessage(byte[] message) {
+        protected CompletableFuture<byte[]> handleMessage(ServiceRequestContext ctx, byte[] message) {
+            assertThat(ServiceRequestContext.currentOrNull()).isSameAs(ctx);
+
             final SimpleRequest request;
             try {
                 request = SimpleRequest.parseFrom(message);
@@ -66,8 +69,8 @@ public class AbstractUnaryGrpcServiceTest {
         }
     }
 
-    @ClassRule
-    public static ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service("/armeria.grpc.testing.TestService/UnaryCall", new TestService());
@@ -75,7 +78,7 @@ public class AbstractUnaryGrpcServiceTest {
     };
 
     @Test
-    public void normal_downstream() {
+    void normal_downstream() {
         final TestServiceBlockingStub stub =
                 Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
                                   TestServiceBlockingStub.class);
@@ -89,7 +92,7 @@ public class AbstractUnaryGrpcServiceTest {
     }
 
     @Test
-    public void normal_upstream() {
+    void normal_upstream() {
         final ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
                                                             .usePlaintext()
                                                             .build();
@@ -110,7 +113,7 @@ public class AbstractUnaryGrpcServiceTest {
     }
 
     @Test
-    public void invalidPayload() {
+    void invalidPayload() {
         final WebClient client = WebClient.of(server.httpUri());
 
         final AggregatedHttpResponse message =
