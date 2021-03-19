@@ -18,9 +18,10 @@ package com.linecorp.armeria.common.rxjava3;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
+
+import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -71,7 +72,6 @@ public final class CtxTestUtil {
 
     static TestSubscriber<Object> newTestSubscriber(ServiceRequestContext ctx) {
         return TestSubscriber.create(new Subscriber<Object>() {
-
             @Override
             public void onSubscribe(Subscription s) {
                 assertSameContext(ctx);
@@ -176,22 +176,16 @@ public final class CtxTestUtil {
      * This Flowable will generate entry by request size.
      */
     static <T> Flowable<T> newBackpressureAwareFlowable(List<T> input, ServiceRequestContext ctx) {
-        return assertCtxInCallbacks(Flowable.<T, Iterator<T>>generate(
+        return assertCtxInCallbacks(Flowable.generate(
                 input::iterator,
-                (iterator, emitter1) -> {
+                (iterator, emitter) -> {
                     assertSameContext(ctx);
                     if (iterator.hasNext()) {
-                        emitter1.onNext(iterator.next());
+                        emitter.onNext(iterator.next());
                     } else {
-                        emitter1.onComplete();
+                        emitter.onComplete();
                     }
-                }), ctx)
-                .flatMap(entry -> assertCtxInCallbacks(Flowable.create(
-                        emitter -> ForkJoinPool.commonPool().execute(
-                                () -> {
-                                    emitter.onNext(entry);
-                                    emitter.onComplete();
-                                }), BackpressureStrategy.BUFFER), ctx));
+                }), ctx);
     }
 
     static <T> Observable<T> newObservable(List<T> input, ServiceRequestContext ctx) {

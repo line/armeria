@@ -91,13 +91,7 @@ public class ContextAwareFlowableTest {
     @MethodSource("flowableProvider")
     public void flowable_request(Flowable<Object> upstream, ServiceRequestContext ctx)
             throws InterruptedException {
-        final Flowable<Object> flowable =
-                upstream.observeOn(Schedulers.computation(), false, 2)
-                        .flatMap(o -> {
-                            assertSameContext(ctx);
-                            return newFlowable(ImmutableList.of(1, 2, 3, 4, 5), ctx);
-                        });
-
+        final Flowable<Object> flowable = upstream.observeOn(Schedulers.computation(), false, 2);
         final TestSubscriber<Object> testObserver = newTestSubscriber(ctx);
         try (SafeCloseable ignored = ctx.push()) {
             flowable.map(o -> {
@@ -105,7 +99,7 @@ public class ContextAwareFlowableTest {
                 return o;
             }).subscribe(testObserver);
         }
-        testObserver.await().assertValueCount(25);
+        testObserver.await().assertValueCount(5);
     }
 
     @Test
