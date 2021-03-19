@@ -48,9 +48,7 @@ class FutureSuite extends FunSuite {
   }
 
   test("Future[HttpResponse].toHttpResponse") {
-    val scalaFuture = Future {
-      HttpResponse.of(200)
-    }
+    val scalaFuture = Future.successful(HttpResponse.of(200))
     assert(scalaFuture.toHttpResponse.isInstanceOf[HttpResponse])
   }
 }
