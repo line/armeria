@@ -46,7 +46,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.server.RoutingTrie.Node;
@@ -78,7 +77,7 @@ public final class Routers {
             }
         };
 
-        final Map<Route, Route> newFallbackRoutes = new HashMap<>();
+        final Map<Route, ServiceConfig> newServiceConfigs = new HashMap<>();
         final BiFunction<Route, ServiceConfig, ServiceConfig> fallbackValueConfigurator =
                 (originalRoute, fallbackServiceConfig) -> {
                     final Route fallbackRoute = fallbackServiceConfig.route();
@@ -90,19 +89,22 @@ public final class Routers {
 
                     checkState(fallbackRoute.equals(Route.ofCatchAll()),
                                "Fallback service must catch all requests.");
-                    final Route newFallbackRoute =
+                    final Route newRoute =
                             originalRoute.toBuilder()
                                          .pathMapping(CatchAllPathMapping.INSTANCE)
                                          // Do not propagate an exception raised while resolving a route
                                          // to fallback services.
-                                         .canSetDeferredException(false)
+                                         .allowDeferredException(false)
                                          .build();
-                    final Route cachedRoute = newFallbackRoutes.get(newFallbackRoute);
-                    if (cachedRoute != null) {
-                        return fallbackServiceConfig.withRoute(cachedRoute);
+                    // We have only one fallback ServiceConfig instance so finding a cached config
+                    // with a Route instance is okay at the moment.
+                    final ServiceConfig cachedConfig = newServiceConfigs.get(newRoute);
+                    if (cachedConfig != null) {
+                        return cachedConfig;
                     }
-                    newFallbackRoutes.put(newFallbackRoute, newFallbackRoute);
-                    return fallbackServiceConfig.withRoute(newFallbackRoute);
+                    final ServiceConfig newConfig = fallbackServiceConfig.withRoute(newRoute);
+                    newServiceConfigs.put(newRoute, newConfig);
+                    return newConfig;
                 };
         final Set<Route> ambiguousRoutes =
                 resolveAmbiguousRoutes(StreamSupport.stream(configs.spliterator(), false)
@@ -440,7 +442,7 @@ public final class Routers {
                     return null;
                 }
                 if (routeCollector == null) {
-                    routeCollector = new Builder<>();
+                    routeCollector = ImmutableList.builder();
                 }
                 routeCollector.addAll(list);
                 return node;

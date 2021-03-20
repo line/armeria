@@ -48,14 +48,14 @@ final class DefaultRoute implements Route {
     private final int hashCode;
     private final int complexity;
 
-    private final boolean setDeferredException;
+    private final boolean allowDeferredException;
 
     DefaultRoute(PathMapping pathMapping, Set<HttpMethod> methods,
                  Set<MediaType> consumes, Set<MediaType> produces,
                  List<RoutingPredicate<QueryParams>> paramPredicates,
                  List<RoutingPredicate<HttpHeaders>> headerPredicates,
                  boolean isFallback,
-                 boolean setDeferredException) {
+                 boolean allowDeferredException) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         checkArgument(!requireNonNull(methods, "methods").isEmpty(), "methods is empty.");
         this.methods = Sets.immutableEnumSet(methods);
@@ -64,11 +64,11 @@ final class DefaultRoute implements Route {
         this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
         this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
         this.isFallback = isFallback;
-        this.setDeferredException = setDeferredException;
+        this.allowDeferredException = allowDeferredException;
 
         hashCode = Objects.hash(this.pathMapping, this.methods, this.consumes, this.produces,
                                 this.paramPredicates, this.headerPredicates, this.isFallback,
-                                this.setDeferredException);
+                                this.allowDeferredException);
 
         int complexity = 0;
         if (!consumes.isEmpty()) {
@@ -99,7 +99,7 @@ final class DefaultRoute implements Route {
             }
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
-            if (setDeferredException) {
+            if (allowDeferredException) {
                 if (routingCtx.deferredStatusException() == null) {
                     routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED));
                 }
@@ -124,7 +124,7 @@ final class DefaultRoute implements Route {
                 if (isRouteDecorator) {
                     return RoutingResult.empty();
                 }
-                if (setDeferredException) {
+                if (allowDeferredException) {
                     routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
                 }
                 return emptyOrCorsPreflightResult(routingCtx, builder);
@@ -168,7 +168,7 @@ final class DefaultRoute implements Route {
                 if (isRouteDecorator) {
                     return RoutingResult.empty();
                 }
-                if (setDeferredException) {
+                if (allowDeferredException) {
                     routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
                 }
                 return emptyOrCorsPreflightResult(routingCtx, builder);
@@ -258,7 +258,7 @@ final class DefaultRoute implements Route {
                     .produces(produces)
                     .matchesParams(paramPredicates)
                     .matchesHeaders(headerPredicates)
-                    .canSetDeferredException(setDeferredException);
+                    .allowDeferredException(allowDeferredException);
     }
 
     @Override
@@ -284,7 +284,7 @@ final class DefaultRoute implements Route {
                headerPredicates.equals(that.headerPredicates) &&
                paramPredicates.equals(that.paramPredicates) &&
                isFallback == that.isFallback &&
-               setDeferredException == that.setDeferredException;
+               allowDeferredException == that.allowDeferredException;
     }
 
     @Override
