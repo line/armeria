@@ -60,10 +60,15 @@ final class FixedDelayHealthChecker extends AbstractListenable<HealthChecker>
         return () -> {
             final CompletionStage<Boolean> future = healthChecker.get();
             future.whenComplete((result, throwable) -> {
+                final boolean isHealthy;
                 if (throwable != null) {
-                    isHealthy.set(false);
+                    isHealthy = false;
                 } else {
-                    isHealthy.set(result);
+                    isHealthy = result;
+                }
+                final boolean oldValue = this.isHealthy.getAndSet(isHealthy);
+                if (oldValue != isHealthy) {
+                    notifyListeners(this);
                 }
                 scheduleFetchTask();
             });

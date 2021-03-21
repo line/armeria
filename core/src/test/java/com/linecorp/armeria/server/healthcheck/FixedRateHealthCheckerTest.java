@@ -51,10 +51,13 @@ class FixedRateHealthCheckerTest {
                     return future;
                 }, Duration.ofSeconds(10), 0.2, new MockExecutor());
         assertThat(checker.isHealthy()).isFalse();
+        final Boolean[] result = new Boolean[1];
+        checker.addListener(healthChecker -> result[0] = healthChecker.isHealthy());
 
         scheduledJobs.peek().run();
         queue.poll().complete(true);
         assertThat(checker.isHealthy()).isTrue();
+        assertThat(result[0]).isTrue();
     }
 
     @Test
@@ -67,34 +70,13 @@ class FixedRateHealthCheckerTest {
                     return future;
                 }, Duration.ofSeconds(10), 0.2, new MockExecutor());
         assertThat(checker.isHealthy()).isFalse();
-
-        scheduledJobs.peek().run();
-        queue.poll().complete(true);
-        assertThat(checker.isHealthy()).isTrue();
-
-        scheduledJobs.peek().run();
-        queue.poll().complete(false);
-        assertThat(checker.isHealthy()).isFalse();
-    }
-
-    @Test
-    void healthy() {
-        final Queue<CompletableFuture<Boolean>> queue = new ArrayDeque<>();
-        final FixedRateHealthChecker checker =
-                new FixedRateHealthChecker(() -> {
-                    final CompletableFuture<Boolean> future = new CompletableFuture<>();
-                    queue.add(future);
-                    return future;
-                }, Duration.ofSeconds(10), 0.2, new MockExecutor());
-        assertThat(checker.isHealthy()).isFalse();
+        final Boolean[] result = new Boolean[1];
+        checker.addListener(healthChecker -> result[0] = healthChecker.isHealthy());
 
         scheduledJobs.peek().run();
         queue.poll().complete(false);
         assertThat(checker.isHealthy()).isFalse();
-
-        scheduledJobs.peek().run();
-        queue.poll().complete(true);
-        assertThat(checker.isHealthy()).isTrue();
+        assertThat(result[0]).isNull();
     }
 
     private static class MockExecutor extends DefaultEventLoop {
