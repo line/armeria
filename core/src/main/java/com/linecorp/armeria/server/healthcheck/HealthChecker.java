@@ -16,7 +16,14 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
+import java.time.Duration;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Supplier;
+
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.server.Server;
+
+import io.netty.channel.EventLoop;
 
 /**
  * Determines whether the {@link Server} is healthy. All registered {@link HealthChecker}s must return
@@ -24,6 +31,35 @@ import com.linecorp.armeria.server.Server;
  */
 @FunctionalInterface
 public interface HealthChecker {
+
+    /**
+     * Create a {@link HealthChecker} which executing supplied health checker {@link Supplier} on a random
+     * {@link EventLoop} from {@link CommonPools#workerGroup()} after constructing and subsequently with the
+     * given interval.
+     *
+     * @param healthChecker the {@link Supplier} of {@link CompletionStage} that provides the result of health
+     * @param interval the interval between successive executions
+     * @param jitter the rate that used to calculate the lower and upper bound of the backoff delay
+     */
+    static HealthChecker ofFixedRate(Supplier<CompletionStage<Boolean>> healthChecker, Duration interval,
+                                     double jitter) {
+        return new FixedRateHealthChecker(healthChecker, interval, jitter, CommonPools.workerGroup().next());
+    }
+
+    /**
+     * Create a {@link HealthChecker} which executing supplied health checker {@link Supplier} on a random
+     * {@link EventLoop} from {@link CommonPools#workerGroup()} after constructing and subsequently with the
+     * given delay between the completion of supplied {@link CompletionStage} and the commencement of the next.
+     *
+     * @param healthChecker the {@link Supplier} of {@link CompletionStage} that provides the result of health
+     * @param delay  fixed delay between attempts
+     * @param jitter the rate that used to calculate the lower and upper bound of the backoff delay
+     */
+    static HealthChecker ofFixedDelay(Supplier<CompletionStage<Boolean>> healthChecker, Duration delay,
+                                      double jitter) {
+        return new FixedDelayHealthChecker(healthChecker, delay, jitter, CommonPools.workerGroup().next());
+    }
+
     /**
      * Returns {@code true} if and only if the {@link Server} is healthy.
      */
