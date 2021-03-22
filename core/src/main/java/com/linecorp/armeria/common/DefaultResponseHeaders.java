@@ -16,7 +16,6 @@
 package com.linecorp.armeria.common;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 @SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
 final class DefaultResponseHeaders extends DefaultHttpHeaders implements ResponseHeaders {
@@ -50,7 +49,7 @@ final class DefaultResponseHeaders extends DefaultHttpHeaders implements Respons
         if (cookies != null) {
             return cookies;
         }
-        return this.cookies = super.setCookies();
+        return this.cookies = super.setCookie();
     }
 
     @Override

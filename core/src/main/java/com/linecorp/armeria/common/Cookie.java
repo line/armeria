@@ -136,7 +136,7 @@ public interface Cookie extends Comparable<Cookie> {
         final ImmutableSet.Builder<Cookie> builder =
                 ImmutableSet.builderWithExpectedSize(cookieHeaders.length);
         for (String v : cookieHeaders) {
-            requireNonNull(v, "setCookieHeaders contains null.");
+            requireNonNull(v, "cookieHeaders contains null.");
             final Cookies cookies = fromCookieHeader(strict, v);
             builder.addAll(cookies);
         }
@@ -153,13 +153,34 @@ public interface Cookie extends Comparable<Cookie> {
      * @return the decoded {@link Cookie}s.
      */
     static Cookies fromCookieHeaders(boolean strict, Iterable<String> cookieHeaders) {
-        requireNonNull(cookieHeaders, "setCookieHeaders");
+        if (cookieHeaders instanceof Collection) {
+            return fromCookieHeaders(strict, (Collection<String>) cookieHeaders);
+        }
+
+        requireNonNull(cookieHeaders, "cookieHeaders");
         final Iterator<String> it = cookieHeaders.iterator();
         if (!it.hasNext()) {
             return Cookies.of();
         }
 
         return CookieUtil.fromCookieHeaders(ImmutableSet.builder(), strict, it);
+    }
+
+    /**
+     * Decodes the specified {@code "Cookie"} header values into {@link Cookie}s.
+     *
+     * @param strict whether to validate the cookie names and values are in the valid scope defined in RFC 6265.
+     * @param cookieHeaders the {@code "Cookie"} header values.
+     * @return the decoded {@link Cookie}s.
+     */
+    static Cookies fromCookieHeaders(boolean strict, Collection<String> cookieHeaders) {
+        requireNonNull(cookieHeaders, "cookieHeaders");
+        if (cookieHeaders.isEmpty()) {
+            return Cookies.of();
+        }
+
+        return CookieUtil.fromCookieHeaders(ImmutableSet.builderWithExpectedSize(cookieHeaders.size()),
+                                            strict, cookieHeaders.iterator());
     }
 
     /**

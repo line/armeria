@@ -252,7 +252,7 @@ final class CookieUtil {
 
     // The methods newly added in the fork.
     static Cookies fromCookieHeaders(ImmutableSet.Builder<Cookie> builder,
-                                        boolean strict, Iterator<String> it) {
+                                     boolean strict, Iterator<String> it) {
         assert it.hasNext();
         do {
             final String v = it.next();

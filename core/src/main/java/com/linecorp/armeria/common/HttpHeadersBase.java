@@ -181,7 +181,7 @@ class HttpHeadersBase
         }
     }
 
-    Cookies cookies() {
+    Cookies cookie() {
         final List<String> cookieStrings = getAll(HttpHeaderNames.COOKIE);
         if (cookieStrings.isEmpty()) {
             return Cookies.of();
@@ -189,7 +189,7 @@ class HttpHeadersBase
         return Cookie.fromCookieHeaders(cookieStrings);
     }
 
-    Cookies setCookies() {
+    Cookies setCookie() {
         final List<String> cookieHeaders = getAll(HttpHeaderNames.SET_COOKIE);
         return Cookie.fromSetCookieHeaders(cookieHeaders);
     }

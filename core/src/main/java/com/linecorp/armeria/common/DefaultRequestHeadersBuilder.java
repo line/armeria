@@ -157,7 +157,9 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     public Cookies cookies() {
         final HttpHeadersBase getters = getters();
-        checkState(getters != null, ":cookie header does not exist.");
-        return getters.cookies();
+        if (getters == null) {
+            return Cookies.of();
+        }
+        return getters.cookie();
     }
 }

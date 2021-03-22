@@ -51,17 +51,19 @@ final class DefaultResponseHeadersBuilder
     }
 
     @Override
+    public Cookies cookies() {
+        final HttpHeadersBase getters = getters();
+        if (getters == null) {
+            return Cookies.of();
+        }
+        return getters.setCookie();
+    }
+
+    @Override
     public HttpStatus status() {
         final HttpHeadersBase getters = getters();
         checkState(getters != null, ":status header does not exist.");
         return getters.status();
-    }
-
-    @Override
-    public Cookies cookies() {
-        final HttpHeadersBase getters = getters();
-        checkState(getters != null, ":set-cookie headers does not exist.");
-        return getters.setCookies();
     }
 
     @Override
