@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc.protocol;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -68,7 +69,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
      * expected that the implementation has the logic to know how to parse the request and serialize a response
      * into {@link ByteBuf}. The returned {@link ByteBuf} will be framed and returned to the client.
      */
-    protected abstract CompletableFuture<ByteBuf> handleMessage(ServiceRequestContext ctx, ByteBuf message);
+    protected abstract CompletionStage<ByteBuf> handleMessage(ServiceRequestContext ctx, ByteBuf message);
 
     @Override
     protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {

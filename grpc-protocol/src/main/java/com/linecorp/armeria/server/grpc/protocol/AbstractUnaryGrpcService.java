@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.grpc.protocol;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -40,10 +40,10 @@ public abstract class AbstractUnaryGrpcService extends AbstractUnsafeUnaryGrpcSe
      * expected that the implementation has the logic to know how to parse the request and serialize a response
      * into {@code byte[]}. The returned {@code byte[]} will be framed and returned to the client.
      */
-    protected abstract CompletableFuture<byte[]> handleMessage(ServiceRequestContext ctx, byte[] message);
+    protected abstract CompletionStage<byte[]> handleMessage(ServiceRequestContext ctx, byte[] message);
 
     @Override
-    protected final CompletableFuture<ByteBuf> handleMessage(ServiceRequestContext ctx, ByteBuf message) {
+    protected final CompletionStage<ByteBuf> handleMessage(ServiceRequestContext ctx, ByteBuf message) {
         final byte[] bytes;
         try {
             bytes = ByteBufUtil.getBytes(message);
