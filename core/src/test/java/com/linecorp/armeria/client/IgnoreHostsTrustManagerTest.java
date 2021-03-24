@@ -278,7 +278,7 @@ class IgnoreHostsTrustManagerTest {
         }
 
         @Override
-        public void checkServerTrusted(X509Certificate[] x509Certificates, String autyType) {
+        public void checkServerTrusted(X509Certificate[] x509Certificates, String authType) {
             throw new UnsupportedOperationException();
         }
 
