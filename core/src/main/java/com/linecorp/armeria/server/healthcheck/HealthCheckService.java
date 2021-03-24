@@ -19,6 +19,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -34,6 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -41,7 +43,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpService;
@@ -55,6 +56,7 @@ import com.linecorp.armeria.server.TransientHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
@@ -130,6 +132,7 @@ public final class HealthCheckService implements TransientHttpService {
 
     private final SettableHealthChecker serverHealth;
     private final Set<HealthChecker> healthCheckers;
+    private final Set<Future<?>> inScheduledFutures;
     private final AggregatedHttpResponse healthyResponse;
     private final AggregatedHttpResponse unhealthyResponse;
     private final AggregatedHttpResponse stoppingResponse;
@@ -198,6 +201,7 @@ public final class HealthCheckService implements TransientHttpService {
             }
         }
 
+        inScheduledFutures = ConcurrentHashMap.newKeySet();
         this.healthyResponse = setCommonHeaders(healthyResponse);
         this.unhealthyResponse = setCommonHeaders(unhealthyResponse);
         stoppingResponse = clearCommonHeaders(unhealthyResponse);
@@ -282,6 +286,12 @@ public final class HealthCheckService implements TransientHttpService {
                 serverStopping = false;
                 if (healthCheckerListener != null) {
                     healthCheckers.stream().map(ListenableHealthChecker.class::cast).forEach(c -> {
+                        if (c instanceof ScheduledHealthChecker) {
+                            ((ScheduledHealthChecker) c).startHealthChecker(future -> {
+                                future.addListener(inScheduledFutures::remove);
+                                inScheduledFutures.add(future);
+                            });
+                        }
                         c.addListener(healthCheckerListener);
                     });
                 }
@@ -304,12 +314,12 @@ public final class HealthCheckService implements TransientHttpService {
             public void serverStopped(Server server) throws Exception {
                 if (healthCheckerListener != null) {
                     healthCheckers.stream().map(ListenableHealthChecker.class::cast).forEach(c -> {
-                        if (c instanceof SafeCloseable) {
-                            ((SafeCloseable) c).close();
-                        }
                         c.removeListener(healthCheckerListener);
                     });
                 }
+                inScheduledFutures.stream().forEach(future -> {
+                    future.cancel(true);
+                });
             }
         });
     }

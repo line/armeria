@@ -17,83 +17,64 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import java.time.Duration;
-import java.util.Set;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import com.google.common.annotations.VisibleForTesting;
-
-import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.util.AbstractListenable;
-import com.linecorp.armeria.common.util.SafeCloseable;
-
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.concurrent.Future;
 
-class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
-        implements ListenableHealthChecker, SafeCloseable {
-    private final AtomicBoolean isHealthy = new AtomicBoolean(false);
-    private final Supplier<? extends CompletionStage<Boolean>> healthChecker;
+final class ScheduledHealthChecker implements ListenableHealthChecker {
+    private final Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker;
+    private final Duration maxTtl;
+    private final SettableHealthChecker settableHealthChecker;
     private final EventExecutor eventExecutor;
-    private final Backoff backoff;
-    private final boolean scheduleAfterCheckerComplete;
-    @VisibleForTesting
-    final Set<Future<?>> inScheduledFutures = ConcurrentHashMap.newKeySet();
 
-    ScheduledHealthChecker(Supplier<? extends CompletionStage<Boolean>> healthChecker, Duration period,
-                           double jitter, boolean scheduleAfterCheckerComplete, EventExecutor eventExecutor) {
+    ScheduledHealthChecker(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
+                           Duration maxTtl, EventExecutor eventExecutor) {
         this.healthChecker = healthChecker;
-        this.scheduleAfterCheckerComplete = scheduleAfterCheckerComplete;
+        this.maxTtl = maxTtl;
+        settableHealthChecker = new SettableHealthChecker(false);
         this.eventExecutor = eventExecutor;
-        backoff = Backoff.fixed(period.toMillis()).withJitter(jitter);
-
-        eventExecutor.execute(createTask());
     }
 
     @Override
     public boolean isHealthy() {
-        return isHealthy.get();
+        return settableHealthChecker.isHealthy();
     }
 
     @Override
-    public void close() {
-        for (Future<?> future : inScheduledFutures) {
-            future.cancel(true);
-        }
+    public void addListener(Consumer<? super HealthChecker> listener) {
+        settableHealthChecker.addListener(listener);
     }
 
-    private Runnable createTask() {
-        return () -> {
-            if (!scheduleAfterCheckerComplete) {
-                scheduleHealthChecker();
+    @Override
+    public void removeListener(Consumer<?> listener) {
+        settableHealthChecker.removeListener(listener);
+    }
+
+    public void startHealthChecker(Consumer<Future<?>> afterSchedule) {
+        eventExecutor.execute(createTask(afterSchedule));
+    }
+
+    private Runnable createTask(Consumer<Future<?>> afterSchedule) {
+        return () -> healthChecker.get().handle((result, throwable) -> {
+            final boolean isHealthy;
+            final long intervalMills;
+            if (throwable != null) {
+                isHealthy = false;
+                intervalMills = maxTtl.toMillis();
+            } else {
+                isHealthy = result.isHealthy();
+                intervalMills = result.getTtlMillis();
             }
-            healthChecker.get().handle((result, throwable) -> {
-                final boolean isHealthy;
-                if (throwable != null) {
-                    isHealthy = false;
-                } else {
-                    isHealthy = result;
-                }
-                final boolean oldValue = this.isHealthy.getAndSet(isHealthy);
-                if (oldValue != isHealthy) {
-                    notifyListeners(this);
-                }
-                if (scheduleAfterCheckerComplete) {
-                    scheduleHealthChecker();
-                }
-                return null;
-            });
-        };
-    }
-
-    private void scheduleHealthChecker() {
-        final ScheduledFuture<?> future = eventExecutor.schedule(createTask(), backoff.nextDelayMillis(1),
-                                                                 TimeUnit.MILLISECONDS);
-        inScheduledFutures.add(future);
-        future.addListener(inScheduledFutures::remove);
+            settableHealthChecker.setHealthy(isHealthy);
+            final Future<?> future = eventExecutor.schedule(() -> createTask(afterSchedule),
+                                                            intervalMills,
+                                                            TimeUnit.MILLISECONDS);
+            afterSchedule.accept(future);
+            return null;
+        });
     }
 }

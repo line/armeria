@@ -16,16 +16,12 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.server.Server;
-
-import io.netty.util.concurrent.EventExecutor;
 
 /**
  * Determines whether the {@link Server} is healthy. All registered {@link HealthChecker}s must return
@@ -34,65 +30,9 @@ import io.netty.util.concurrent.EventExecutor;
 @FunctionalInterface
 public interface HealthChecker {
 
-    /**
-     * Create a {@link HealthChecker} which executing supplied health checker {@link Supplier} on a random
-     * {@link EventExecutor} from {@link CommonPools#workerGroup()} after constructing and subsequently with the
-     * given interval.
-     *
-     * @see #ofFixedRate(Supplier, Duration, double, EventExecutor)
-     */
-    static HealthChecker ofFixedRate(Supplier<? extends CompletionStage<Boolean>> healthChecker,
-                                     Duration period, double jitterRate) {
-        return ofFixedRate(healthChecker, period, jitterRate, CommonPools.workerGroup().next());
-    }
-
-    /**
-     * Create a {@link HealthChecker} which executing supplied health checker {@link Supplier} on
-     * {@link EventExecutor} after constructing and subsequently with the
-     * given interval.
-     *
-     * @param healthChecker the {@link Supplier} of {@link CompletionStage} that provides the result of health
-     * @param period the period between successive executions
-     * @param jitterRate the rate that used to calculate the lower and upper bound of the backoff delay
-     * @param eventExecutor the executor executing supplied health checker
-     */
-    static HealthChecker ofFixedRate(Supplier<? extends CompletionStage<Boolean>> healthChecker,
-                                     Duration period, double jitterRate, EventExecutor eventExecutor) {
-        checkArgument(0.0 <= jitterRate && jitterRate <= 1.0,
-                      "jitterRate: %s (expected: >= 0.0 and <= 1.0)", jitterRate);
-        return new ScheduledHealthChecker(healthChecker, period, jitterRate, false,
-                                          eventExecutor);
-    }
-
-    /**
-     * Create a {@link HealthChecker} which executing supplied health checker {@link Supplier} on a random
-     * {@link EventExecutor} from {@link CommonPools#workerGroup()} after constructing and subsequently with the
-     * given delay between the completion of supplied {@link CompletionStage} and the commencement of the next.
-     *
-     * @see #ofFixedDelay(Supplier, Duration, double, EventExecutor)
-     */
-    static HealthChecker ofFixedDelay(Supplier<? extends CompletionStage<Boolean>> healthChecker,
-                                      Duration delay, double jitterRate) {
-        checkArgument(0.0 <= jitterRate && jitterRate <= 1.0,
-                      "jitterRate: %s (expected: >= 0.0 and <= 1.0)", jitterRate);
-        return new ScheduledHealthChecker(healthChecker, delay, jitterRate, true,
-                                          CommonPools.workerGroup().next());
-    }
-
-    /**
-     * Create a {@link HealthChecker} which executing supplied health checker {@link Supplier} on
-     * {@link EventExecutor} after constructing and subsequently with the
-     * given delay between the completion of supplied {@link CompletionStage} and the commencement of the next.
-     *
-     * @param healthChecker the {@link Supplier} of {@link CompletionStage} that provides the result of health
-     * @param delay  fixed delay between attempts
-     * @param jitterRate the rate that used to calculate the lower and upper bound of the backoff delay
-     * @param eventExecutor the executor executing supplied health checker
-     */
-    static HealthChecker ofFixedDelay(Supplier<? extends CompletionStage<Boolean>> healthChecker,
-                                      Duration delay, double jitterRate, EventExecutor eventExecutor) {
-        return new ScheduledHealthChecker(healthChecker, delay, jitterRate, true,
-                                          eventExecutor);
+    static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
+                            Duration maxTtl) {
+        return new ScheduledHealthChecker(healthChecker, maxTtl, CommonPools.workerGroup().next());
     }
 
     /**

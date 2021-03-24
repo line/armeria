@@ -58,16 +58,12 @@ class HealthCheckServiceTest {
 
     private static final SettableHealthChecker checker = new SettableHealthChecker();
     private static final AtomicReference<Boolean> capturedHealthy = new AtomicReference<>();
-    // Schedule an unfinished health checker.
-    private static final HealthChecker scheduledHealthChecker =
-            HealthChecker.ofFixedRate(CompletableFuture::new, Duration.ofHours(24), 0.0);
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/hc", HealthCheckService.of(checker));
-            sb.service("/hc_scheduled_checker", HealthCheckService.of(scheduledHealthChecker));
             sb.service("/hc_long_polling_disabled", HealthCheckService.builder()
                                                                       .longPolling(0)
                                                                       .build());
@@ -141,9 +137,6 @@ class HealthCheckServiceTest {
 
     @AfterAll
     static void ensureScheduledHealthCheckerCanceled() {
-        assertThat(((ScheduledHealthChecker) scheduledHealthChecker).inScheduledFutures).isNotEmpty();
-        server.stop().join();
-        assertThat(((ScheduledHealthChecker) scheduledHealthChecker).inScheduledFutures).isEmpty();
     }
 
     @Test

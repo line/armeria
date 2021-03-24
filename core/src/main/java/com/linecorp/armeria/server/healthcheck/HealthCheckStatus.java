@@ -16,23 +16,22 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+public final class HealthCheckStatus {
+    // The current healthiness
+    private boolean isHealthy;
+    // When we need to check again
+    private long ttlMillis;
 
-import java.time.Duration;
-import java.util.ArrayDeque;
-import java.util.Queue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+    public HealthCheckStatus(boolean isHealthy, long ttlMillis) {
+        this.isHealthy = isHealthy;
+        this.ttlMillis = ttlMillis;
+    }
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+    public boolean isHealthy() {
+        return isHealthy;
+    }
 
-import io.netty.channel.DefaultEventLoop;
-import io.netty.util.concurrent.ScheduledFuture;
-
-class ScheduledHealthCheckerTest {
+    public long getTtlMillis() {
+        return ttlMillis;
+    }
 }
