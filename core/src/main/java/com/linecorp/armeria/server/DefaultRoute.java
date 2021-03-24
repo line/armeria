@@ -54,8 +54,7 @@ final class DefaultRoute implements Route {
                  Set<MediaType> consumes, Set<MediaType> produces,
                  List<RoutingPredicate<QueryParams>> paramPredicates,
                  List<RoutingPredicate<HttpHeaders>> headerPredicates,
-                 boolean isFallback,
-                 boolean allowDeferredException) {
+                 boolean isFallback, boolean allowDeferredException) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         checkArgument(!requireNonNull(methods, "methods").isEmpty(), "methods is empty.");
         this.methods = Sets.immutableEnumSet(methods);
@@ -251,14 +250,14 @@ final class DefaultRoute implements Route {
 
     @Override
     public RouteBuilder toBuilder() {
-        return Route.builder()
-                    .pathMapping(pathMapping)
-                    .methods(methods)
-                    .consumes(consumes)
-                    .produces(produces)
-                    .matchesParams(paramPredicates)
-                    .matchesHeaders(headerPredicates)
-                    .allowDeferredException(allowDeferredException);
+        return new RouteBuilder(isFallback)
+                .pathMapping(pathMapping)
+                .methods(methods)
+                .consumes(consumes)
+                .produces(produces)
+                .matchesParams(paramPredicates)
+                .matchesHeaders(headerPredicates)
+                .allowDeferredException(allowDeferredException);
     }
 
     @Override
