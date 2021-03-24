@@ -63,6 +63,7 @@ includeWithFlags ':it:grpc:scala',                  'java', 'relocate', 'scala-g
 includeWithFlags ':it:grpc:reactor',                'java', 'relocate', 'reactor-grpc'
 includeWithFlags ':it:kotlin',                      'java', 'relocate'
 includeWithFlags ':it:micrometer1.3',               'java', 'relocate'
+includeWithFlags ':it:multipart',                   'java', 'relocate'
 includeWithFlags ':it:server',                      'java', 'relocate'
 includeWithFlags ':it:spring:boot2-mixed',          'java', 'relocate'
 includeWithFlags ':it:spring:boot2-mixed-tomcat9',  'java', 'relocate'

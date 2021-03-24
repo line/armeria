@@ -22,6 +22,8 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 final class StreamMessageUtil {
@@ -63,6 +65,16 @@ final class StreamMessageUtil {
 
         if (obj instanceof Publisher) {
             ((Publisher<?>) obj).subscribe(AbortingSubscriber.get(cause));
+            return;
+        }
+
+        if (obj instanceof BodyPart) {
+            final StreamMessage<HttpData> content = ((BodyPart) obj).content();
+            if (cause == null) {
+                content.abort();
+            } else {
+                content.abort(cause);
+            }
             return;
         }
 

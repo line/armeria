@@ -31,8 +31,8 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithConsumerTest.TestConfiguration;
 
 /**
- * This test {@link ArmeriaAutoConfiguration} could be disabed.
- * application-disalbed.yml will set armeria.server-enabled to false:
+ * This test {@link ArmeriaAutoConfiguration} could be disabled.
+ * application-disabled.yml will set armeria.server-enabled to false:
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)

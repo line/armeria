@@ -26,9 +26,11 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.common.HttpObjectAggregator;
+
 import io.netty.buffer.ByteBufAllocator;
 
-final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpResponse> {
+final class HttpResponseAggregator extends HttpObjectAggregator<AggregatedHttpResponse> {
 
     @Nullable
     private List<ResponseHeaders> informationals; // needs aggregation as well

@@ -523,6 +523,7 @@ org.reflections:
 
 org.scala-lang:
   scala-library: { version: '2.13.5' }
+
 org.scala-lang.modules:
   scala-collection-compat_2.12: { version: '2.4.2' }
   scala-java8-compat_2.12: { version: &SCALA_JAVA8_COMPAT_VERSION '0.9.1' }

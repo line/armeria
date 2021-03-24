@@ -26,6 +26,7 @@ import com.linecorp.armeria.internal.common.brave.SpanTags;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import brave.Span;
 import brave.Tracer;
@@ -75,6 +76,10 @@ public final class BraveService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (!ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_TRACING)) {
+            return unwrap().serve(ctx, req);
+        }
+
         final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         final Span span = handler.handleReceive(braveReq);
 

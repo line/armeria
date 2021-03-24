@@ -51,6 +51,10 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
         this.env = env;
     }
 
+    protected final TestEnvironment env() {
+        return env;
+    }
+
     @Override
     public abstract StreamMessage<T> createPublisher(long elements);
 
