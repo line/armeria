@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.UncheckedIOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -53,7 +54,7 @@ class AbstractUnaryGrpcServiceTest {
     private static class TestService extends AbstractUnaryGrpcService {
 
         @Override
-        protected CompletableFuture<byte[]> handleMessage(ServiceRequestContext ctx, byte[] message) {
+        protected CompletionStage<byte[]> handleMessage(ServiceRequestContext ctx, byte[] message) {
             assertThat(ServiceRequestContext.currentOrNull()).isSameAs(ctx);
 
             final SimpleRequest request;
