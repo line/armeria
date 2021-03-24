@@ -1,11 +1,18 @@
-plugins {
-    id 'scala'
-    id 'cz.alenkacz.gradle.scalafmt' version '1.14.0'
+buildscript {
+    repositories {
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "cz.alenkacz:gradle-scalafmt:${managedVersions['cz.alenkacz:gradle-scalafmt']}"
+    }
 }
+
+apply plugin: 'scala'
+apply plugin: 'cz.alenkacz.gradle.scalafmt'
 
 dependencies {
     implementation project(':grpc')
-    implementation 'org.scala-lang:scala-library:2.13.4'
+    implementation 'org.scala-lang:scala-library'
 
     // ScalaPB
     api "com.thesamet.scalapb:scalapb-json4s_2.13"
