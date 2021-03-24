@@ -176,6 +176,9 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         private final Subscriber<? super U> delegate;
         private final boolean subscribedWithPooledObjects;
 
+        @Nullable
+        private Subscription upstream;
+
         FilteringSubscriber(Subscriber<? super U> delegate, boolean subscribedWithPooledObjects) {
             this.delegate = requireNonNull(delegate, "delegate");
             this.subscribedWithPooledObjects = subscribedWithPooledObjects;
@@ -183,13 +186,31 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onSubscribe(Subscription s) {
-            beforeSubscribe(delegate, s);
+            upstream = s;
+            try {
+                beforeSubscribe(delegate, s);
+            } catch (Throwable ex) {
+                s.cancel();
+                logger.warn("Unexpected exception from {}#beforeSubscribe()",
+                            FilteredStreamMessage.this.getClass().getName(), ex);
+                return;
+            }
+
             delegate.onSubscribe(s);
         }
 
         @Override
         public void onNext(T o) {
-            U filtered = filter(o);
+            U filtered;
+            try {
+                filtered = filter(o);
+            } catch (Throwable ex) {
+                StreamMessageUtil.closeOrAbort(o);
+                upstream.cancel();
+                onError(ex);
+                return;
+            }
+
             if (!subscribedWithPooledObjects) {
                 filtered = PooledObjects.copyAndClose(filtered);
             }
