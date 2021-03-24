@@ -31,27 +31,27 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 
 class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         implements ListenableHealthChecker, SafeCloseable {
     private final AtomicBoolean isHealthy = new AtomicBoolean(false);
     private final Supplier<? extends CompletionStage<Boolean>> healthChecker;
-    private final EventLoop eventLoop;
+    private final EventExecutor eventExecutor;
     private final Backoff backoff;
     private final boolean scheduleAfterCheckerComplete;
     @VisibleForTesting
     final Set<Future<?>> inScheduledFutures = ConcurrentHashMap.newKeySet();
 
     ScheduledHealthChecker(Supplier<? extends CompletionStage<Boolean>> healthChecker, Duration period,
-                           double jitter, boolean scheduleAfterCheckerComplete, EventLoop eventLoop) {
+                           double jitter, boolean scheduleAfterCheckerComplete, EventExecutor eventExecutor) {
         this.healthChecker = healthChecker;
         this.scheduleAfterCheckerComplete = scheduleAfterCheckerComplete;
-        this.eventLoop = eventLoop;
+        this.eventExecutor = eventExecutor;
         backoff = Backoff.fixed(period.toMillis()).withJitter(jitter);
 
-        eventLoop.execute(createTask());
+        eventExecutor.execute(createTask());
     }
 
     @Override
@@ -90,8 +90,8 @@ class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     }
 
     private void scheduleHealthChecker() {
-        final ScheduledFuture<?> future = eventLoop.schedule(createTask(), backoff.nextDelayMillis(1),
-                                                             TimeUnit.MILLISECONDS);
+        final ScheduledFuture<?> future = eventExecutor.schedule(createTask(), backoff.nextDelayMillis(1),
+                                                                 TimeUnit.MILLISECONDS);
         inScheduledFutures.add(future);
         future.addListener(inScheduledFutures::remove);
     }
