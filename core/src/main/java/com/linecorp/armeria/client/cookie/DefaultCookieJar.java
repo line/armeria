@@ -123,8 +123,8 @@ final class DefaultCookieJar implements CookieJar {
      * Ensures this cookie has domain and path attributes, otherwise sets them to default values. If domain
      * is absent, the default is the request host, with {@code host-only} flag set to {@code true}. If path is
      * absent, the default is computed from the request path. See RFC 6265
-     * <a href="https://tools.ietf.org/html/rfc6265#section-5.3">5.3</a> and
-     * <a href="https://tools.ietf.org/html/rfc6265#section-5.1.4">5.1.4</a>
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-5.3">5.3</a> and
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-5.1.4">5.1.4</a>
      */
     @VisibleForTesting
     Cookie ensureDomainAndPath(Cookie cookie, URI uri) {
