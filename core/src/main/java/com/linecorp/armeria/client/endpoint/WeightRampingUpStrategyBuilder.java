@@ -39,7 +39,7 @@ import io.netty.util.concurrent.EventExecutor;
 public final class WeightRampingUpStrategyBuilder {
 
     static final long DEFAULT_RAMPING_UP_INTERVAL_MILLIS = 2000;
-    static final int DEFAULT_NUMBER_OF_STEPS = 10;
+    static final int DEFAULT_TOTAL_STEPS = 10;
     static final int DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS = 500;
     static final EndpointWeightTransition defaultTransition = EndpointWeightTransition.linear();
 
@@ -49,7 +49,7 @@ public final class WeightRampingUpStrategyBuilder {
     private EventExecutor executor;
 
     private long rampingUpIntervalMillis = DEFAULT_RAMPING_UP_INTERVAL_MILLIS;
-    private int numberSteps = DEFAULT_NUMBER_OF_STEPS;
+    private int totalSteps = DEFAULT_TOTAL_STEPS;
     private long rampingUpTaskWindowMillis = DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS;
 
     /**
@@ -91,12 +91,12 @@ public final class WeightRampingUpStrategyBuilder {
     }
 
     /**
-     * Sets the number of steps to compute weights for a given {@link Endpoint} while ramping up.
-     * {@value DEFAULT_NUMBER_OF_STEPS} is used by default.
+     * Sets the total number of steps to compute weights for a given {@link Endpoint} while ramping up.
+     * {@value DEFAULT_TOTAL_STEPS} is used by default.
      */
-    public WeightRampingUpStrategyBuilder numberSteps(int numberSteps) {
-        checkArgument(numberSteps > 0, "numberSteps: %s (expected: > 0)", numberSteps);
-        this.numberSteps = numberSteps;
+    public WeightRampingUpStrategyBuilder totalSteps(int totalSteps) {
+        checkArgument(totalSteps > 0, "totalSteps: %s (expected: > 0)", totalSteps);
+        this.totalSteps = totalSteps;
         return this;
     }
 
@@ -163,6 +163,6 @@ public final class WeightRampingUpStrategyBuilder {
         }
 
         return new WeightRampingUpStrategy(transition, executorSupplier, rampingUpIntervalMillis,
-                                           numberSteps, rampingUpTaskWindowMillis);
+                                           totalSteps, rampingUpTaskWindowMillis);
     }
 }
