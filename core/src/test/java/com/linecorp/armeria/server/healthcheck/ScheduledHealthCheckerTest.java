@@ -18,12 +18,14 @@ package com.linecorp.armeria.server.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -32,7 +34,7 @@ import org.junit.jupiter.api.Test;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.util.concurrent.ScheduledFuture;
 
-class FixedDelayHealthCheckerTest {
+class ScheduledHealthCheckerTest {
 
     private static final Queue<Runnable> scheduledJobs = new ConcurrentLinkedQueue<>();
 
@@ -44,10 +46,10 @@ class FixedDelayHealthCheckerTest {
     @Test
     void triggerAfterConstruct() {
         final CompletableFuture<Boolean> future = new CompletableFuture<>();
-        final FixedDelayHealthChecker checker =
-                new FixedDelayHealthChecker(() -> future,
-                                            Duration.ofSeconds(10), 0.2,
-                                            new MockExecutor());
+        final ScheduledHealthChecker checker =
+                new ScheduledHealthChecker(() -> future,
+                                           Duration.ofSeconds(10), 0.2, false,
+                                           new MockExecutor());
         final Boolean[] result = new Boolean[1];
         checker.addListener(healthChecker -> result[0] = healthChecker.isHealthy());
         assertThat(checker.isHealthy()).isFalse();
@@ -61,12 +63,12 @@ class FixedDelayHealthCheckerTest {
     @Test
     void unhealthy() {
         final Queue<CompletableFuture<Boolean>> queue = new ArrayDeque<>();
-        final FixedDelayHealthChecker checker =
-                new FixedDelayHealthChecker(() -> {
+        final ScheduledHealthChecker checker =
+                new ScheduledHealthChecker(() -> {
                     final CompletableFuture<Boolean> future = new CompletableFuture<>();
                     queue.add(future);
                     return future;
-                }, Duration.ofSeconds(10), 0.2, new MockExecutor());
+                }, Duration.ofSeconds(10), 0.2, false, new MockExecutor());
         final Boolean[] result = new Boolean[1];
         checker.addListener(healthChecker -> result[0] = healthChecker.isHealthy());
         assertThat(checker.isHealthy()).isFalse();
@@ -77,6 +79,26 @@ class FixedDelayHealthCheckerTest {
         queue.poll().complete(false);
         assertThat(checker.isHealthy()).isFalse();
         assertThat(result[0]).isFalse();
+    }
+
+    @Test
+    void close() {
+        final Queue<CompletableFuture<Boolean>> queue = new ArrayDeque<>();
+        final ScheduledHealthChecker checker =
+                new ScheduledHealthChecker(() -> {
+                    final CompletableFuture<Boolean> future = new CompletableFuture<>();
+                    queue.add(future);
+                    return future;
+                }, Duration.ofSeconds(10), 0.2, false, new MockExecutor());
+
+        scheduledJobs.poll().run();
+        scheduledJobs.poll().run();
+
+        assertThat(checker.inScheduledFutures).hasSize(3);
+        checker.close();
+        for (Future<?> future : checker.inScheduledFutures) {
+            verify(future).cancel(true);
+        }
     }
 
     private static class MockExecutor extends DefaultEventLoop {

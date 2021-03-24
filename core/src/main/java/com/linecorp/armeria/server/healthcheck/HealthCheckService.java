@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpService;
@@ -303,6 +304,9 @@ public final class HealthCheckService implements TransientHttpService {
             public void serverStopped(Server server) throws Exception {
                 if (healthCheckerListener != null) {
                     healthCheckers.stream().map(ListenableHealthChecker.class::cast).forEach(c -> {
+                        if (c instanceof SafeCloseable) {
+                            ((SafeCloseable) c).close();
+                        }
                         c.removeListener(healthCheckerListener);
                     });
                 }

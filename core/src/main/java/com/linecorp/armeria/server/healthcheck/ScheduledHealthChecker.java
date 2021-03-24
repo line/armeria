@@ -17,32 +17,39 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import java.time.Duration;
+import java.util.Set;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.util.AbstractListenable;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.ScheduledFuture;
 
-/**
- * Trigger supplied health checker after constructing and subsequently with the given delay between the
- * termination of one execution and the commencement of the next.
- */
-final class FixedDelayHealthChecker extends AbstractListenable<HealthChecker>
-        implements ListenableHealthChecker {
+class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
+        implements ListenableHealthChecker, SafeCloseable {
     private final AtomicBoolean isHealthy = new AtomicBoolean(false);
-    private final Supplier<CompletionStage<Boolean>> healthChecker;
+    private final Supplier<? extends CompletionStage<Boolean>> healthChecker;
     private final EventLoop eventLoop;
     private final Backoff backoff;
+    private final boolean scheduleAfterCheckerComplete;
+    @VisibleForTesting
+    final Set<Future<?>> inScheduledFutures = ConcurrentHashMap.newKeySet();
 
-    FixedDelayHealthChecker(Supplier<CompletionStage<Boolean>> healthChecker, Duration delay, double jitter,
-                            EventLoop eventLoop) {
+    ScheduledHealthChecker(Supplier<? extends CompletionStage<Boolean>> healthChecker, Duration period,
+                           double jitter, boolean scheduleAfterCheckerComplete, EventLoop eventLoop) {
         this.healthChecker = healthChecker;
+        this.scheduleAfterCheckerComplete = scheduleAfterCheckerComplete;
         this.eventLoop = eventLoop;
-        backoff = Backoff.fixed(delay.toMillis()).withJitter(jitter);
+        backoff = Backoff.fixed(period.toMillis()).withJitter(jitter);
 
         eventLoop.execute(createTask());
     }
@@ -52,14 +59,19 @@ final class FixedDelayHealthChecker extends AbstractListenable<HealthChecker>
         return isHealthy.get();
     }
 
-    private void scheduleFetchTask() {
-        eventLoop.schedule(createTask(), backoff.nextDelayMillis(1), TimeUnit.MILLISECONDS);
+    @Override
+    public void close() {
+        for (Future<?> future : inScheduledFutures) {
+            future.cancel(true);
+        }
     }
 
     private Runnable createTask() {
         return () -> {
-            final CompletionStage<Boolean> future = healthChecker.get();
-            future.whenComplete((result, throwable) -> {
+            if (!scheduleAfterCheckerComplete) {
+                scheduleHealthChecker();
+            }
+            healthChecker.get().whenComplete((result, throwable) -> {
                 final boolean isHealthy;
                 if (throwable != null) {
                     isHealthy = false;
@@ -70,8 +82,17 @@ final class FixedDelayHealthChecker extends AbstractListenable<HealthChecker>
                 if (oldValue != isHealthy) {
                     notifyListeners(this);
                 }
-                scheduleFetchTask();
+                if (scheduleAfterCheckerComplete) {
+                    scheduleHealthChecker();
+                }
             });
         };
+    }
+
+    private void scheduleHealthChecker() {
+        final ScheduledFuture<?> future = eventLoop.schedule(createTask(), backoff.nextDelayMillis(1),
+                                                             TimeUnit.MILLISECONDS);
+        inScheduledFutures.add(future);
+        future.addListener(inScheduledFutures::remove);
     }
 }

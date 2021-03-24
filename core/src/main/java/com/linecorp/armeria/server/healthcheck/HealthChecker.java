@@ -38,12 +38,13 @@ public interface HealthChecker {
      * given interval.
      *
      * @param healthChecker the {@link Supplier} of {@link CompletionStage} that provides the result of health
-     * @param interval the interval between successive executions
+     * @param period the period between successive executions
      * @param jitter the rate that used to calculate the lower and upper bound of the backoff delay
      */
-    static HealthChecker ofFixedRate(Supplier<CompletionStage<Boolean>> healthChecker, Duration interval,
-                                     double jitter) {
-        return new FixedRateHealthChecker(healthChecker, interval, jitter, CommonPools.workerGroup().next());
+    static HealthChecker ofFixedRate(Supplier<? extends CompletionStage<Boolean>> healthChecker,
+                                     Duration period, double jitter) {
+        return new ScheduledHealthChecker(healthChecker, period, jitter, false,
+                                          CommonPools.workerGroup().next());
     }
 
     /**
@@ -55,9 +56,10 @@ public interface HealthChecker {
      * @param delay  fixed delay between attempts
      * @param jitter the rate that used to calculate the lower and upper bound of the backoff delay
      */
-    static HealthChecker ofFixedDelay(Supplier<CompletionStage<Boolean>> healthChecker, Duration delay,
-                                      double jitter) {
-        return new FixedDelayHealthChecker(healthChecker, delay, jitter, CommonPools.workerGroup().next());
+    static HealthChecker ofFixedDelay(Supplier<? extends CompletionStage<Boolean>> healthChecker,
+                                      Duration delay, double jitter) {
+        return new ScheduledHealthChecker(healthChecker, delay, jitter, true,
+                                          CommonPools.workerGroup().next());
     }
 
     /**
