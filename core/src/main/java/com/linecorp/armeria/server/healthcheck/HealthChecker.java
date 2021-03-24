@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
@@ -39,11 +41,13 @@ public interface HealthChecker {
      *
      * @param healthChecker the {@link Supplier} of {@link CompletionStage} that provides the result of health
      * @param period the period between successive executions
-     * @param jitter the rate that used to calculate the lower and upper bound of the backoff delay
+     * @param jitterRate the rate that used to calculate the lower and upper bound of the backoff delay
      */
     static HealthChecker ofFixedRate(Supplier<? extends CompletionStage<Boolean>> healthChecker,
-                                     Duration period, double jitter) {
-        return new ScheduledHealthChecker(healthChecker, period, jitter, false,
+                                     Duration period, double jitterRate) {
+        checkArgument(0.0 <= jitterRate && jitterRate <= 1.0,
+                      "jitterRate: %s (expected: >= 0.0 and <= 1.0)", jitterRate);
+        return new ScheduledHealthChecker(healthChecker, period, jitterRate, false,
                                           CommonPools.workerGroup().next());
     }
 
@@ -54,11 +58,13 @@ public interface HealthChecker {
      *
      * @param healthChecker the {@link Supplier} of {@link CompletionStage} that provides the result of health
      * @param delay  fixed delay between attempts
-     * @param jitter the rate that used to calculate the lower and upper bound of the backoff delay
+     * @param jitterRate the rate that used to calculate the lower and upper bound of the backoff delay
      */
     static HealthChecker ofFixedDelay(Supplier<? extends CompletionStage<Boolean>> healthChecker,
-                                      Duration delay, double jitter) {
-        return new ScheduledHealthChecker(healthChecker, delay, jitter, true,
+                                      Duration delay, double jitterRate) {
+        checkArgument(0.0 <= jitterRate && jitterRate <= 1.0,
+                      "jitterRate: %s (expected: >= 0.0 and <= 1.0)", jitterRate);
+        return new ScheduledHealthChecker(healthChecker, delay, jitterRate, true,
                                           CommonPools.workerGroup().next());
     }
 
