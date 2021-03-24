@@ -22,6 +22,7 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -51,7 +52,8 @@ public final class RequestMetricSupport {
      * Sets up request metrics.
      */
     public static void setup(RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
-                             MeterIdPrefixFunction meterIdPrefixFunction, boolean server) {
+                             MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
+                             Function<? super RequestLog, Boolean> isSuccess) {
         final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
 
         if (Boolean.TRUE.equals(isRequestMetricsSet)) {
@@ -64,10 +66,11 @@ public final class RequestMetricSupport {
                           RequestLogProperty.REQUEST_HEADERS,
                           RequestLogProperty.NAME,
                           RequestLogProperty.SESSION)
-           .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server));
+           .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server, isSuccess));
     }
 
-    private static void onRequest(RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server) {
+    private static void onRequest(RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
+                                  Function<? super RequestLog, Boolean> isSuccess) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix activeRequestsId =
@@ -80,13 +83,13 @@ public final class RequestMetricSupport {
                                   new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
         activeRequestMetrics.increment();
         ctx.log().whenComplete().thenAccept(requestLog -> {
-            onResponse(requestLog, meterIdPrefixFunction, server);
+            onResponse(requestLog, meterIdPrefixFunction, server, isSuccess);
             activeRequestMetrics.decrement();
         });
     }
 
     private static void onResponse(RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction,
-                                   boolean server) {
+                                   boolean server, Function<? super RequestLog, Boolean> isSuccess) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
@@ -95,7 +98,7 @@ public final class RequestMetricSupport {
             final ServiceRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
                                                                           ServiceRequestMetrics.class,
                                                                           DefaultServiceRequestMetrics::new);
-            updateMetrics(log, metrics);
+            updateMetrics(log, metrics, isSuccess);
             if (log.responseCause() instanceof RequestTimeoutException) {
                 metrics.requestTimeouts().increment();
             }
@@ -105,7 +108,7 @@ public final class RequestMetricSupport {
         final ClientRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
                                                                      ClientRequestMetrics.class,
                                                                      DefaultClientRequestMetrics::new);
-        updateMetrics(log, metrics);
+        updateMetrics(log, metrics, isSuccess);
         final ClientConnectionTimings timings = log.connectionTimings();
         if (timings != null) {
             metrics.connectionAcquisitionDuration().record(timings.connectionAcquisitionDurationNanos(),
@@ -141,7 +144,8 @@ public final class RequestMetricSupport {
         }
     }
 
-    private static void updateMetrics(RequestLog log, RequestMetrics metrics) {
+    private static void updateMetrics(RequestLog log, RequestMetrics metrics,
+                                      Function<? super RequestLog, Boolean> isSuccess) {
         if (log.requestCause() != null) {
             metrics.failure().increment();
             return;
@@ -153,7 +157,7 @@ public final class RequestMetricSupport {
         metrics.responseLength().record(log.responseLength());
         metrics.totalDuration().record(log.totalDurationNanos(), TimeUnit.NANOSECONDS);
 
-        if (isSuccess(log)) {
+        if (isSuccess(log) || isSuccess.apply(log)) {
             metrics.success().increment();
         } else {
             metrics.failure().increment();

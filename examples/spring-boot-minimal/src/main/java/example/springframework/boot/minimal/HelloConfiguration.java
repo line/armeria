@@ -3,10 +3,12 @@ package example.springframework.boot.minimal;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
 /**
@@ -33,6 +35,16 @@ public class HelloConfiguration {
 
             // Add an Armeria annotated HTTP service.
             builder.annotatedService(service);
+
+            // Add an example MetricCollectingService decorator
+            builder.decorator(MetricCollectingService
+                                      .builder()
+                                      .meterIdPrefix(MeterIdPrefixFunction.ofDefault("hello"))
+                                      .isSuccess(log -> {
+                                          final int statusCode = log.responseHeaders().status().code();
+                                          return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
+                                      })
+                                      .newDecorator());
 
             // You can also bind asynchronous RPC services such as Thrift and gRPC:
             // builder.service(THttpService.of(...));

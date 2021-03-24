@@ -227,7 +227,7 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, log -> false);
         return ctx;
     }
 
@@ -258,7 +258,7 @@ class RequestMetricSupportTest {
         final String serviceTag = "service=" + ctx.config().service().getClass().getName();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true, log -> false);
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
@@ -295,7 +295,7 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, log -> false);
 
         ctx.logBuilder().name("BarService", "baz");
 
@@ -312,7 +312,8 @@ class RequestMetricSupportTest {
                                      .build();
         final String serviceTag = "service=" + sctx.config().service().getClass().getName();
 
-        RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET, MeterIdPrefixFunction.ofDefault("foo"), true);
+        RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET, MeterIdPrefixFunction.ofDefault("foo"), true,
+                                   log -> false);
         sctx.logBuilder().endRequest();
         try (SafeCloseable ignored = sctx.push()) {
             final ClientRequestContext cctx =
@@ -321,7 +322,7 @@ class RequestMetricSupportTest {
                                         .endpoint(Endpoint.of("example.com", 8080))
                                         .build();
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
-                                       MeterIdPrefixFunction.ofDefault("bar"), false);
+                                       MeterIdPrefixFunction.ofDefault("bar"), false, log -> false);
             cctx.logBuilder().endRequest();
             cctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
             cctx.logBuilder().endResponse();

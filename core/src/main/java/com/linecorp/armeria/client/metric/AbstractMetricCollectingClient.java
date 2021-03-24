@@ -47,7 +47,7 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, log -> false);
         return unwrap().execute(ctx, req);
     }
 }

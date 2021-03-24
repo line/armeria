@@ -21,6 +21,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
 import com.linecorp.armeria.server.HttpService;
@@ -60,20 +61,31 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
             MeterIdPrefixFunction meterIdPrefixFunction) {
 
         requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
-        return delegate -> new MetricCollectingService(delegate, meterIdPrefixFunction);
+        return builder().newDecorator(meterIdPrefixFunction);
+    }
+
+    /**
+     * Returns a newly created {@link MetricCollectingServiceBuilder}.
+     */
+    public static MetricCollectingServiceBuilder builder() {
+        return new MetricCollectingServiceBuilder();
     }
 
     private final MeterIdPrefixFunction meterIdPrefixFunction;
+    private final Function<? super RequestLog, Boolean> isSuccess;
 
-    MetricCollectingService(HttpService delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
+    MetricCollectingService(HttpService delegate,
+                            MeterIdPrefixFunction meterIdPrefixFunction,
+                            Function<? super RequestLog, Boolean> isSuccess) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
+        this.isSuccess = requireNonNull(isSuccess, "isSuccess");
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
-            RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
+            RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true, isSuccess);
         }
         return unwrap().serve(ctx, req);
     }
