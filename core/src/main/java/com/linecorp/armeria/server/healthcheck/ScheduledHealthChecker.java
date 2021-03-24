@@ -71,7 +71,7 @@ class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
             if (!scheduleAfterCheckerComplete) {
                 scheduleHealthChecker();
             }
-            healthChecker.get().whenComplete((result, throwable) -> {
+            healthChecker.get().handle((result, throwable) -> {
                 final boolean isHealthy;
                 if (throwable != null) {
                     isHealthy = false;
@@ -85,6 +85,7 @@ class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
                 if (scheduleAfterCheckerComplete) {
                     scheduleHealthChecker();
                 }
+                return null;
             });
         };
     }
