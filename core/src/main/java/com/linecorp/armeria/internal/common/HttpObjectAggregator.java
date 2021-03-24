@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,10 +25,15 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.AggregatedHttpObject;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements Subscriber<HttpObject> {
+public abstract class HttpObjectAggregator<T extends AggregatedHttpObject> implements Subscriber<HttpObject> {
 
     private final CompletableFuture<T> future;
     private final List<HttpData> contentList = new ArrayList<>();
@@ -39,8 +44,8 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements
     @Nullable
     private Subscription subscription;
 
-    HttpMessageAggregator(CompletableFuture<T> future,
-                          @Nullable ByteBufAllocator alloc) {
+    protected HttpObjectAggregator(CompletableFuture<T> future,
+                                   @Nullable ByteBufAllocator alloc) {
         this.future = future;
         this.alloc = alloc;
     }

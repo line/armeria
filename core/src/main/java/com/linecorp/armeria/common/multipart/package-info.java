@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,17 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
-
 /**
- * A complete HTTP message whose content is readily available as a single {@link HttpData}. It can be an
- * HTTP request or an HTTP response depending on what header values it contains. For example, having a
- * {@link HttpHeaderNames#STATUS} header could mean it is an HTTP response.
+ * <a href="https://datatracker.ietf.org/doc/html/rfc1341#page-28">Multiple part messages</a> support.
  */
-interface AggregatedHttpMessage extends AggregatedHttpObject {
+@NonNullByDefault
+package com.linecorp.armeria.common.multipart;
 
-    /**
-     * Returns the HTTP trailers.
-     */
-    HttpHeaders trailers();
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
