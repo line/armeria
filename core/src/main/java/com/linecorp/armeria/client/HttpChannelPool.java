@@ -400,16 +400,21 @@ final class HttpChannelPool implements AsyncCloseable {
                 return;
             }
 
-            final Channel channel = registerFuture.channel();
-            configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
-            channel.connect(remoteAddress).addListener((ChannelFuture connectFuture) -> {
-                if (connectFuture.isSuccess()) {
-                    initSession(desiredProtocol, poolKey, connectFuture, sessionPromise);
-                } else {
-                    invokeProxyConnectFailed(desiredProtocol, poolKey, connectFuture.cause());
-                    sessionPromise.tryFailure(connectFuture.cause());
-                }
-            });
+            try {
+                final Channel channel = registerFuture.channel();
+                configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
+                channel.connect(remoteAddress).addListener((ChannelFuture connectFuture) -> {
+                    if (connectFuture.isSuccess()) {
+                        initSession(desiredProtocol, poolKey, connectFuture, sessionPromise);
+                    } else {
+                        invokeProxyConnectFailed(desiredProtocol, poolKey, connectFuture.cause());
+                        sessionPromise.tryFailure(connectFuture.cause());
+                    }
+                });
+            } catch (Throwable cause) {
+                invokeProxyConnectFailed(desiredProtocol, poolKey, cause);
+                sessionPromise.tryFailure(cause);
+            }
         });
     }
 
@@ -510,7 +515,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     // Clean up old unhealthy channels by iterating from the beginning of the queue.
                     final Deque<PooledChannel> queue = getPool(protocol, key);
                     if (queue != null) {
-                        for (;;) {
+                        for (; ; ) {
                             final PooledChannel pooledChannel = queue.peekFirst();
                             if (pooledChannel == null || isHealthy(pooledChannel)) {
                                 break;
