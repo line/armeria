@@ -158,7 +158,7 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
     }
 
     @Override
-    protected void onCancellation() {
+    protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
         closeEncoder();
     }
 
