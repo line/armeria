@@ -79,7 +79,7 @@ retrieving the information collected during request life cycle in a machine-frie
 | `responseContentPreview`              | the preview of the response content                                  |
 +---------------------------------------+----------------------------------------------------------------------+
 
-The duration of `totalDurationNanos` is different in the client-side and the server-side.
+The `totalDurationNanos` value is calculated differently between the client-side and the server-side.
 
 For the server-side, `totalDurationNanos` starts when the server receives the <type://RequestHeaders> and
 ends when the server sends the response fully:
@@ -118,7 +118,9 @@ the <type://ResponseHeaders> is sent before the service receives the <type://Htt
 ```
 
 On the other hand, `totalDurationNanos` of the client-side contains
-[connectionAcquisitionDuration](/docs/advanced-structured-logging#client-connection-timing-properties):
+[connectionAcquisitionDuration](/docs/advanced-structured-logging#client-connection-timing-properties),
+because a client may have to establish a new connection or acquire an existing connection from
+the connection pool before sending a request:
 
 ```bob-svg
 
