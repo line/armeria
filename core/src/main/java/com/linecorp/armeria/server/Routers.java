@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.server.RouteBuilder.FALLBACK_ROUTE;
 import static com.linecorp.armeria.server.RouteCache.wrapRouteDecoratingServiceRouter;
 import static com.linecorp.armeria.server.RouteCache.wrapVirtualHostRouter;
 import static java.util.Objects.requireNonNull;
@@ -87,7 +88,7 @@ public final class Routers {
                         return fallbackServiceConfig;
                     }
 
-                    checkState(fallbackRoute.equals(Route.ofCatchAll()),
+                    checkState(fallbackRoute.equals(FALLBACK_ROUTE),
                                "Fallback service must catch all requests.");
                     final Route newRoute =
                             originalRoute.toBuilder()
