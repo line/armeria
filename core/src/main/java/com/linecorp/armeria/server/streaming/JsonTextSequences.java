@@ -153,15 +153,18 @@ public final class JsonTextSequences {
 
     /**
      * Creates a new JSON Text Sequences from the specified {@link Publisher}.
+     * Note that: This method is intentionally hidden from the public API for use only with
+     * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      * @param trailers the HTTP trailers
      * @param contentConverter the function which converts the content object into a UTF-8 JSON string.
      */
-    public static <T> HttpResponse fromPublisher(ResponseHeaders headers, Publisher<T> contentPublisher,
-                                                 HttpHeaders trailers,
-                                                 Function<? super T, String> contentConverter) {
+    @SuppressWarnings("unused")
+    static <T> HttpResponse fromPublisher(ResponseHeaders headers, Publisher<T> contentPublisher,
+                                          HttpHeaders trailers,
+                                          Function<? super T, String> contentConverter) {
         requireNonNull(contentConverter, "contentConverter");
         return streamingFrom(contentPublisher, sanitizeHeaders(headers), trailers,
                              o -> toHttpData(contentConverter, o));
@@ -232,6 +235,8 @@ public final class JsonTextSequences {
 
     /**
      * Creates a new JSON Text Sequences from the specified {@link Stream}.
+     * Note that: This method is intentionally hidden from the public API for use only with
+     * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -239,9 +244,10 @@ public final class JsonTextSequences {
      * @param executor the executor which iterates the stream
      * @param contentConverter the function which converts the content object into a UTF-8 JSON string
      */
-    public static <T> HttpResponse fromStream(ResponseHeaders headers, Stream<T> contentStream,
-                                              HttpHeaders trailers, Executor executor,
-                                              Function<? super T, String> contentConverter) {
+    @SuppressWarnings("unused")
+    static <T> HttpResponse fromStream(ResponseHeaders headers, Stream<T> contentStream,
+                                       HttpHeaders trailers, Executor executor,
+                                       Function<? super T, String> contentConverter) {
         requireNonNull(contentConverter, "contentConverter");
         return streamingFrom(contentStream, sanitizeHeaders(headers), trailers,
                              o -> toHttpData(contentConverter, o), executor);

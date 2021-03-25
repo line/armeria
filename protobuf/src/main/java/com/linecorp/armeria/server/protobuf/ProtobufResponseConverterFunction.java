@@ -22,9 +22,14 @@ import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunct
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.isProtobuf;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -73,6 +78,38 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  */
 @UnstableApi
 public final class ProtobufResponseConverterFunction implements ResponseConverterFunction {
+
+    private static final MethodHandle fromPublisherMH;
+    private static final MethodHandle fromStreamMH;
+
+    static {
+        MethodHandle fromPublisher;
+        try {
+            final Method method = JsonTextSequences.class.getDeclaredMethod(
+                    "fromPublisher", ResponseHeaders.class, Publisher.class,
+                    HttpHeaders.class, Function.class);
+            method.setAccessible(true);
+            fromPublisher = MethodHandles.lookup().unreflect(method);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            // Should never reach here.
+            fromPublisher = null;
+        }
+        fromPublisherMH = fromPublisher;
+
+        MethodHandle fromStream;
+        try {
+            final Method method = JsonTextSequences.class.getDeclaredMethod(
+                    "fromStream", ResponseHeaders.class, Stream.class,
+                    HttpHeaders.class, Executor.class, Function.class);
+            method.setAccessible(true);
+            fromStream = MethodHandles.lookup().unreflect(method);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            // Should never reach here.
+            fromStream = null;
+        }
+        fromStreamMH = fromStream;
+    }
+
 
     static final MediaType X_PROTOBUF = MediaType.create("application", "x-protobuf");
     // TODO(ikhoon): Add .omittingInsignificantWhitespace() for the sensible default when 2.0 is released?
@@ -138,14 +175,25 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
                 if (result instanceof Publisher) {
                     @SuppressWarnings("unchecked")
                     final Publisher<Object> publisher = (Publisher<Object>) result;
-                    return JsonTextSequences.fromPublisher(headers, publisher, trailers, this::toJson);
+                    final Function<Object, String> toJson = this::toJson;
+                    try {
+                        return (HttpResponse) fromPublisherMH.invoke(headers, publisher, trailers, toJson);
+                    } catch (Throwable ex) {
+                        throw new IllegalStateException(
+                                "Failed to call JsonTextSequences.fromPublisher() through reflection", ex);
+                    }
                 }
                 if (result instanceof Stream) {
                     @SuppressWarnings("unchecked")
                     final Stream<Object> stream = (Stream<Object>) result;
-                    return JsonTextSequences
-                            .fromStream(headers, stream, trailers, ctx.blockingTaskExecutor(),
-                                        this::toJson);
+                    final Function<Object, String> toJson = this::toJson;
+                    try {
+                        return (HttpResponse) fromStreamMH
+                                .invoke(headers, stream, trailers, ctx.blockingTaskExecutor(), toJson);
+                    } catch (Throwable ex) {
+                        throw new IllegalStateException(
+                                "Failed to call JsonTextSequences.fromStream() through reflection", ex);
+                    }
                 }
                 return JsonTextSequences.fromObject(headers, result, trailers, this::toJson);
             }

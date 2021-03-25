@@ -16,18 +16,22 @@
 
 package com.linecorp.armeria.server.scalapb
 
-import _root_.scalapb.GeneratedMessage
 import _root_.scalapb.json4s.Printer
+import _root_.scalapb.{GeneratedMessage, GeneratedSealedOneof}
 import com.google.common.base.Preconditions.checkArgument
 import com.google.common.collect.Iterables
-import com.linecorp.armeria.common.{HttpData, HttpHeaders, HttpResponse, MediaType, ResponseHeaders}
 import com.linecorp.armeria.common.annotation.UnstableApi
+import com.linecorp.armeria.common.{HttpData, HttpHeaders, HttpResponse, MediaType, ResponseHeaders}
 import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{defaultJsonPrinter, isJson, isProtobuf}
+import com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction.{fromPublisherMH, fromStreamMH}
 import com.linecorp.armeria.server.streaming.JsonTextSequences
+import java.lang.invoke.{MethodHandle, MethodHandles}
+import java.lang.reflect.Method
 import java.nio.charset.{Charset, StandardCharsets}
+import java.util.concurrent.Executor
 import java.util.stream.Stream
 import javax.annotation.Nullable
 import org.reactivestreams.Publisher
@@ -72,6 +76,8 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
     val isJsonType: Boolean = contentType != null && isJson(contentType)
 
     result match {
+      case msg: GeneratedSealedOneof =>
+        convertMessage(headers, msg.asMessage, trailers, contentType, isJsonType)
       case message: GeneratedMessage =>
         convertMessage(headers, message, trailers, contentType, isJsonType)
 
@@ -90,13 +96,13 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
       case _ if contentType != null && MediaType.JSON_SEQ.is(contentType) =>
         result match {
           case publisher: Publisher[_] =>
-            JsonTextSequences.fromPublisher(
+            fromPublisherMH.invoke(
               headers,
               publisher.asInstanceOf[Publisher[Any]],
               trailers,
               obj => toJson(obj))
           case stream: Stream[_] =>
-            JsonTextSequences.fromStream(
+            fromStreamMH.invoke(
               headers,
               stream.asInstanceOf[Stream[Any]],
               trailers,
@@ -154,10 +160,39 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
       case iter: Iterable[_] =>
         iter.map(this.toJson).mkString("[", ",", "]")
 
-      case message: GeneratedMessage => jsonPrinter.print(message)
+      case message: GeneratedSealedOneof => jsonPrinter.print(message.asMessage)
+      case message: GeneratedMessage     => jsonPrinter.print(message)
       case _ =>
         throw new IllegalStateException(
           s"Unexpected message type : ${message.getClass} " +
             s"(expected: a subtype of ${classOf[GeneratedMessage].getName})")
     }
+}
+
+private object ScalaPbResponseConverterFunction {
+
+  private val fromPublisherMH: MethodHandle = {
+    val method: Method = classOf[JsonTextSequences].getDeclaredMethod(
+      "fromPublisher",
+      classOf[ResponseHeaders],
+      classOf[Publisher[_]],
+      classOf[HttpHeaders],
+      classOf[java.util.function.Function[_, _]])
+    method.setAccessible(true)
+
+    MethodHandles.lookup.unreflect(method)
+  }
+
+  private val fromStreamMH: MethodHandle = {
+    val method: Method = classOf[JsonTextSequences].getDeclaredMethod(
+      "fromStream",
+      classOf[ResponseHeaders],
+      classOf[Stream[_]],
+      classOf[HttpHeaders],
+      classOf[Executor],
+      classOf[java.util.function.Function[_, _]])
+    method.setAccessible(true)
+
+    MethodHandles.lookup.unreflect(method)
+  }
 }
