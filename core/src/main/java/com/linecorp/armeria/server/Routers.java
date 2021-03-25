@@ -92,9 +92,8 @@ public final class Routers {
                     final Route newRoute =
                             originalRoute.toBuilder()
                                          .pathMapping(CatchAllPathMapping.INSTANCE)
-                                         // Do not propagate an exception raised while resolving a route
-                                         // to fallback services.
-                                         .allowDeferredException(false)
+                                         // Set this route as a fallback.
+                                         .fallback(true)
                                          .build();
                     // We have only one fallback ServiceConfig instance so finding a cached config
                     // with a Route instance is okay at the moment.
