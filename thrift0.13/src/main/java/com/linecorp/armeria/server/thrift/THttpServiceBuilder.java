@@ -151,7 +151,7 @@ public final class THttpServiceBuilder {
     }
 
     /**
-     * Adds the {@link BiFunction} that returns an {@link RpcResponse} using the given {@link Throwable}
+     * Sets the {@link BiFunction} that returns an {@link RpcResponse} using the given {@link Throwable}
      * and {@link ServiceRequestContext}.
      */
     public THttpServiceBuilder exceptionHandler(
@@ -192,18 +192,18 @@ public final class THttpServiceBuilder {
         return build0(tcs);
     }
 
+    /**
+     * Returns a newly-created {@link THttpService} decorator with the properties of this builder.
+     */
+    public Function<? super RpcService, THttpService> newDecorator() {
+        return this::build0;
+    }
+
     private THttpService build0(RpcService tcs) {
         final ImmutableSet.Builder<SerializationFormat> builder = ImmutableSet.builder();
         builder.add(defaultSerializationFormat);
         builder.addAll(otherSerializationFormats);
 
         return new THttpService(decorate(tcs), defaultSerializationFormat, builder.build(), exceptionHandler);
-    }
-
-    /**
-     * Returns a newly-created {@link THttpService} decorator with the properties of this builder.
-     */
-    public Function<? super RpcService, THttpService> newDecorator() {
-        return this::build0;
     }
 }
