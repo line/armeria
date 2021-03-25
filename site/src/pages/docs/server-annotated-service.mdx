@@ -769,6 +769,9 @@ public class MyAnnotatedService {
 
     @Get("/hello")
     public HttpResponse hello(ServiceRequestContext ctx) {
+        // The current thread is an event loop.
+        assert ctx.eventLoop().inEventLoop();
+
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         // Delegate a blocking call to the blocking task executor.
         ctx.blockingTaskExecutor().submit(() -> {
@@ -791,6 +794,8 @@ public class MyAnnotatedService {
     @Get("/hello")
     public HttpResponse hello() {
         // A blocking task executor executes this method.
+        assert !ctx.eventLoop().inEventLoop();
+
         Statement stmt = ...;
         // Make a blocking call.
         ResultSet resultSet = stmt.executeQuery(...);
