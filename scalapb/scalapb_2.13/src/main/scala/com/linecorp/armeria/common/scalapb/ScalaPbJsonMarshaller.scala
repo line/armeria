@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.scalapb
 
+import com.google.common.collect.MapMaker
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller.{
   jsonDefaultParser,
@@ -94,9 +95,10 @@ final class ScalaPbJsonMarshaller private (
 object ScalaPbJsonMarshaller {
 
   private val messageCompanionCache: ConcurrentMap[Marshaller[_], GeneratedMessageCompanion[GeneratedMessage]] =
+    new MapMaker().weakKeys().makeMap()
 
   private val typeMapperMethodCache: ConcurrentMap[Marshaller[_], MethodHandle] =
-      new MapMaker().weakKeys().makeMap()
+    new MapMaker().weakKeys().makeMap()
 
   private val jsonDefaultPrinter: Printer = new Printer().includingDefaultValueFields
   private val jsonDefaultParser: Parser = new Parser()

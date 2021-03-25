@@ -110,7 +110,6 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
         fromStreamMH = fromStream;
     }
 
-
     static final MediaType X_PROTOBUF = MediaType.create("application", "x-protobuf");
     // TODO(ikhoon): Add .omittingInsignificantWhitespace() for the sensible default when 2.0 is released?
     private static final Printer defaultJsonPrinter = JsonFormat.printer();
