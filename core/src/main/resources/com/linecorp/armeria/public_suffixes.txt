@@ -67,6 +67,7 @@
 *.on-rio.io
 *.otap.co
 *.owo.codes
+*.paywhirl.com
 *.pg
 *.platformsh.site
 *.pythonanywhere.com
@@ -2497,6 +2498,7 @@ force.museum
 ford
 forde.no
 forex
+forgeblocks.com
 forgot.her.name
 forgot.his.name
 forli-cesena.it
@@ -3407,6 +3409,7 @@ hoyanger.no
 hoylandet.no
 hr
 hr.eu.org
+hra.health
 hs.kr
 hs.run
 hs.zone
@@ -4694,6 +4697,7 @@ madrid
 madrid.museum
 maebashi.gunma.jp
 magazine.aero
+magnet.page
 maibara.shiga.jp
 maif
 mail.pl
@@ -5170,6 +5174,8 @@ muika.niigata.jp
 mukawa.hokkaido.jp
 muko.kyoto.jp
 mulhouse.museum
+multibaas.app
+multibaas.com
 munakata.fukuoka.jp
 muncie.museum
 muni.il
@@ -6697,6 +6703,7 @@ rhcloud.com
 ri.it
 ri.us
 ribeirao.br
+ric.jelastic.vps-host.net
 rich
 richardli
 ricoh
@@ -7152,6 +7159,8 @@ shibukawa.gunma.jp
 shibuya.tokyo.jp
 shichikashuku.miyagi.jp
 shichinohe.aomori.jp
+shiftcrypto.dev
+shiftcrypto.io
 shiftedit.io
 shiga.jp
 shiiba.miyazaki.jp
@@ -8333,6 +8342,7 @@ voto
 voyage
 vpndns.net
 vpnplus.to
+vps-host.net
 vps.mcdir.ru
 vr.it
 vs.it
