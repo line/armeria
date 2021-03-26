@@ -17,11 +17,16 @@ package com.linecorp.armeria.client.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.Predicate;
+
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
 
@@ -39,15 +44,19 @@ abstract class AbstractMetricCollectingClient<I extends Request, O extends Respo
             AttributeKey.valueOf(AbstractMetricCollectingClient.class, "REQUEST_METRICS_SET");
 
     private final MeterIdPrefixFunction meterIdPrefixFunction;
+    @Nullable
+    private final Predicate<? super RequestLog> successFunction;
 
-    AbstractMetricCollectingClient(Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
+    AbstractMetricCollectingClient(Client<I, O> delegate, MeterIdPrefixFunction meterIdPrefixFunction,
+                                   @Nullable Predicate<? super RequestLog> successFunction) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
+        this.successFunction = successFunction;
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, log -> false);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction);
         return unwrap().execute(ctx, req);
     }
 }

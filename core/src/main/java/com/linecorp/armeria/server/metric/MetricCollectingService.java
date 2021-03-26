@@ -18,6 +18,9 @@ package com.linecorp.armeria.server.metric;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
+import java.util.function.Predicate;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -72,20 +75,21 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
     }
 
     private final MeterIdPrefixFunction meterIdPrefixFunction;
-    private final Function<? super RequestLog, Boolean> isSuccess;
+    @Nullable
+    private final Predicate<? super RequestLog> successFunction;
 
     MetricCollectingService(HttpService delegate,
                             MeterIdPrefixFunction meterIdPrefixFunction,
-                            Function<? super RequestLog, Boolean> isSuccess) {
+                            @Nullable Predicate<? super RequestLog> successFunction) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
-        this.isSuccess = requireNonNull(isSuccess, "isSuccess");
+        this.successFunction = successFunction;
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
-            RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true, isSuccess);
+            RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true, successFunction);
         }
         return unwrap().serve(ctx, req);
     }

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.metric;
+package com.linecorp.armeria.client.metric;
 
 import static java.util.Objects.requireNonNull;
 
@@ -22,19 +22,19 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.server.HttpService;
 
 /**
- * Builds a {@link MetricCollectingService} instance.
+ * Builds a {@link MetricCollectingRpcClient} instance.
  */
-public final class MetricCollectingServiceBuilder {
+public final class MetricCollectingRpcClientBuilder {
 
     @Nullable
     private Predicate<? super RequestLog> successFunction;
 
-    MetricCollectingServiceBuilder() {}
+    MetricCollectingRpcClientBuilder() {}
 
     /**
      * Defines a custom {@link Predicate} to allow custom definition of successful responses.
@@ -42,7 +42,7 @@ public final class MetricCollectingServiceBuilder {
      *
      * <p>Example:
      * <pre>{@code
-     *  MetricCollectingService
+     *  MetricCollectingRpcClient
      *    .builder()
      *    .successFunction(log -> {
      *      final int statusCode = log.responseHeaders().status().code();
@@ -52,25 +52,25 @@ public final class MetricCollectingServiceBuilder {
      * }
      * </pre>
      */
-    public MetricCollectingServiceBuilder successFunction(Predicate<? super RequestLog> successFunction) {
+    public MetricCollectingRpcClientBuilder successFunction(Predicate<? super RequestLog> successFunction) {
         this.successFunction = successFunction;
         return this;
     }
 
     /**
-     * Returns a newly-created {@link MetricCollectingService} decorating {@link HttpService} based
+     * Returns a newly-created {@link MetricCollectingRpcClient} decorating {@link RpcClient} based
      * on the properties of this builder.
      */
-    public MetricCollectingService build(HttpService delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
+    public MetricCollectingRpcClient build(RpcClient delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
         requireNonNull(delegate, "delegate");
-        return new MetricCollectingService(delegate, meterIdPrefixFunction, successFunction);
+        return new MetricCollectingRpcClient(delegate, meterIdPrefixFunction, successFunction);
     }
 
     /**
-     * Returns a newly-created {@link MetricCollectingService} decorator based
+     * Returns a newly-created {@link MetricCollectingRpcClient} decorator based
      * on the properties of this builder and applies {@link MeterIdPrefixFunction}.
      */
-    public Function<? super HttpService, MetricCollectingService> newDecorator(
+    public Function<? super RpcClient, MetricCollectingRpcClient> newDecorator(
             MeterIdPrefixFunction meterIdPrefixFunction) {
         return delegate -> build(delegate, meterIdPrefixFunction);
     }
