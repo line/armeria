@@ -194,7 +194,7 @@ class HttpDecodedResponseTest {
         when(streamDecoder.decode(any())).thenReturn(data);
 
         final HttpResponse decoded = new HttpDecodedResponse(response, ImmutableMap.of("foo", factory),
-                                                             ByteBufAllocator.DEFAULT);
+                                                             ByteBufAllocator.DEFAULT, true);
         decoded.subscribe(new CancelSubscriber());
 
         await().untilAsserted(() -> verify(streamDecoder, times(1)).finish());
