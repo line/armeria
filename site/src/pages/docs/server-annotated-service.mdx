@@ -760,7 +760,7 @@ so you must not make a blocking call within the `EventLoop`. If you want to make
 you should delegate the call to another thread. You can use your own thread or a blocking task executor that
 Armeria provides.
 
-If you specify the <type://Blocking> annotation to the method, the method will be executed by
+If you specify the <type://@Blocking> annotation to the method, the method will be executed by
 the blocking task executor that is returned by <type://ServiceRequestContext#blockingTaskExecutor()>:
 
 ```java
@@ -772,17 +772,20 @@ public class MyAnnotatedService {
         // ctx.blockingTaskExecutor() executes this method.
         assert !ctx.eventLoop().inEventLoop();
 
-        Statement stmt = ...;
-        // Make a blocking call.
-        ResultSet resultSet = stmt.executeQuery(...);
-        HttpResponse res = responseFrom(resultSet);
-        return res;
+        try {
+            Statement stmt = ...;
+            // Make a blocking call.
+            ResultSet resultSet = stmt.executeQuery(...);
+            return responseFrom(resultSet);
+        } catch (Throwable t) {
+            return HttpResponse.of(500);
+        }
     }
 ```
 
 <Tip>
 
-You can apply the <type://Blocking> annotation to the class level so all methods are executed by the
+You can apply the <type://@Blocking> annotation at the class level so all methods are executed by the
 blocking task executor:
 
 ```java
@@ -803,8 +806,8 @@ public class MyBlockingAnnotatedService {
 
 </Tip>
 
-Or, you can directly use the executor returned by <type://ServiceRequestContext#blockingTaskExecutor()>
-in the method:
+You can also submit a task to the <type://ServiceRequestContext#blockingTaskExecutor()> or any `Executor`
+instead of using the `<type://@Blocking>` annotation:
 
 ```java
 public class MyAnnotatedService {
@@ -816,12 +819,16 @@ public class MyAnnotatedService {
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         // Delegate a blocking call to the blocking task executor.
-        ctx.blockingTaskExecutor().submit(() -> { // 👈
-            Statement stmt = ...;
-            // Make a blocking call.
-            ResultSet resultSet = stmt.executeQuery(...);
-            HttpResponse res = responseFrom(resultSet);
-            future.complete(res);
+        ctx.blockingTaskExecutor().execute(() -> { // 👈
+            try {
+                Statement stmt = ...;
+                // Make a blocking call.
+                ResultSet resultSet = stmt.executeQuery(...);
+                HttpResponse res = responseFrom(resultSet);
+                future.complete(res);
+            } catch (Throwable t) {
+                future.completeExceptionally(t);
+            }
         });
         return HttpResponse.from(future);
     }
