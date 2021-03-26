@@ -113,7 +113,7 @@ export default class AnnotatedHttpTransport extends Transport {
       body: bodyJson,
     });
     const applicationType = httpResponse.headers.get('content-type') || '';
-    if (applicationType.indexOf('json') > -1) {
+    if (applicationType.indexOf('json') >= 0) {
       const json = JSONbig.parse(await httpResponse.text());
       const prettified = jsonPrettify(JSONbig.stringify(json));
       if (prettified.length > 0) {
