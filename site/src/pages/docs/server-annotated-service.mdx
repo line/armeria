@@ -760,7 +760,8 @@ so you must not make a blocking call within the `EventLoop`. If you want to make
 you should delegate the call to another thread. You can use your own thread or a blocking task executor that
 Armeria provides.
 
-In order to use the blocking task executor, you need to specify the <type://Blocking> annotation:
+If you specify the <type://Blocking> annotation to the method, the method will be executed by
+the blocking task executor that is returned by <type://ServiceRequestContext#blockingTaskExecutor()>:
 
 ```java
 public class MyAnnotatedService {
@@ -768,7 +769,7 @@ public class MyAnnotatedService {
     @Blocking // 👈
     @Get("/hello")
     public HttpResponse hello(ServiceRequestContext ctx) {
-        // A blocking task executor executes this method.
+        // ctx.blockingTaskExecutor() executes this method.
         assert !ctx.eventLoop().inEventLoop();
 
         Statement stmt = ...;
@@ -789,12 +790,12 @@ blocking task executor:
 public class MyBlockingAnnotatedService {
     @Get("/hello")
     public HttpResponse hello(ServiceRequestContext ctx) {
-        assert !ctx.eventLoop().inEventLoop();
+        // ctx.blockingTaskExecutor() executes this method.
         ...
     }
     @Get("/hello2")
     public HttpResponse hello2(ServiceRequestContext ctx) {
-        assert !ctx.eventLoop().inEventLoop();
+        // ctx.blockingTaskExecutor() executes this method.
         ...
     }
 }
@@ -802,7 +803,7 @@ public class MyBlockingAnnotatedService {
 
 </Tip>
 
-Or, you can use the executor returned by <type://ServiceRequestContext#blockingTaskExecutor()>:
+Or, you can directly use the executor returned by <type://ServiceRequestContext#blockingTaskExecutor()>:
 
 ```java
 public class MyAnnotatedService {
