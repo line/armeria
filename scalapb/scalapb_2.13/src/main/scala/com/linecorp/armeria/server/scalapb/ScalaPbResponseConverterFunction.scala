@@ -36,6 +36,7 @@ import java.util.stream.Stream
 import javax.annotation.Nullable
 import org.reactivestreams.Publisher
 import scala.collection.mutable.ArrayBuffer
+import java.util.function.{Function => JFunction}
 
 /**
  * A [[com.linecorp.armeria.server.annotation.ResponseConverterFunction]] which creates an
@@ -96,18 +97,16 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
       case _ if contentType != null && MediaType.JSON_SEQ.is(contentType) =>
         result match {
           case publisher: Publisher[_] =>
-            fromPublisherMH.invoke(
-              headers,
-              publisher.asInstanceOf[Publisher[Any]],
-              trailers,
-              obj => toJson(obj))
+            val jfunction: JFunction[Object, String] = obj => toJson(obj)
+            fromPublisherMH.invoke(headers, publisher.asInstanceOf[Publisher[Any]], trailers, jfunction)
           case stream: Stream[_] =>
+            val jfunction: JFunction[Object, String] = obj => toJson(obj)
             fromStreamMH.invoke(
               headers,
               stream.asInstanceOf[Stream[Any]],
               trailers,
               ctx.blockingTaskExecutor(),
-              obj => toJson(obj))
+              jfunction)
           case _ =>
             JsonTextSequences.fromObject(headers, result, trailers, obj => toJson(obj));
         }
