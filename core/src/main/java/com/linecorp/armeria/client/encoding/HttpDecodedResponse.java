@@ -117,18 +117,26 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
         }
         if (!lastData.isEmpty()) {
             subscriber.onNext(lastData);
+        } else {
+            lastData.close();
         }
     }
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        closeResponseDecoder();
+        final HttpData lastData = closeResponseDecoder();
+        if (lastData != null) {
+            lastData.close();
+        }
         return cause;
     }
 
     @Override
     protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
-        closeResponseDecoder();
+        final HttpData lastData = closeResponseDecoder();
+        if (lastData != null) {
+            lastData.close();
+        }
     }
 
     @Nullable
