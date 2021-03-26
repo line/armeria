@@ -144,6 +144,12 @@ class ProtobufResponseAnnotatedServiceTest {
                              SimpleResponse.newBuilder().setMessage("Hello, Armeria2!").build());
         }
 
+        @Get("/protobuf+json-seq/unary")
+        @ProducesJsonSequences
+        public SimpleResponse protobufJsonSeqUnary() {
+            return SimpleResponse.newBuilder().setMessage("Hello, Armeria1!").build();
+        }
+
         @Get("/protobuf+json/list")
         @Produces("application/protobuf+json")
         public List<SimpleResponse> protobufJsonList() {
@@ -217,7 +223,7 @@ class ProtobufResponseAnnotatedServiceTest {
         assertThatJson(response.contentUtf8()).isEqualTo(expected);
     }
 
-    @CsvSource({ "/protobuf+json-seq/stream", "/protobuf+json-seq/publisher" })
+    @CsvSource({ "/protobuf+json-seq/stream", "/protobuf+json-seq/publisher", "/protobuf+json-seq/unary" })
     @ParameterizedTest
     void protobufJsonSeqResponse(String path) throws IOException {
         final AggregatedHttpResponse response = client.get(path).aggregate().join();
@@ -228,9 +234,12 @@ class ProtobufResponseAnnotatedServiceTest {
         out.write(RECORD_SEPARATOR);
         out.write("{\n  \"message\": \"Hello, Armeria1!\"\n}".getBytes());
         out.write(LINE_FEED);
-        out.write(RECORD_SEPARATOR);
-        out.write("{\n  \"message\": \"Hello, Armeria2!\"\n}".getBytes());
-        out.write(LINE_FEED);
+
+        if (!"/protobuf+json-seq/unary".equals(path)) {
+            out.write(RECORD_SEPARATOR);
+            out.write("{\n  \"message\": \"Hello, Armeria2!\"\n}".getBytes());
+            out.write(LINE_FEED);
+        }
 
         assertThatJson(response.content().array()).isEqualTo(out.toByteArray());
     }

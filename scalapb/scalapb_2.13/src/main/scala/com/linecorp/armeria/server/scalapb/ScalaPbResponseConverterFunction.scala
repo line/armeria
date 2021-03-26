@@ -26,7 +26,11 @@ import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{defaultJsonPrinter, isJson, isProtobuf}
-import com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction.{fromPublisherMH, fromStreamMH}
+import com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction.{
+  fromObjectMH,
+  fromPublisherMH,
+  fromStreamMH
+}
 import com.linecorp.armeria.server.streaming.JsonTextSequences
 import java.lang.invoke.{MethodHandle, MethodHandles}
 import java.lang.reflect.Method
@@ -73,10 +77,27 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
       headers: ResponseHeaders,
       @Nullable result: Any,
       trailers: HttpHeaders): HttpResponse = {
-    val contentType: MediaType = headers.contentType
-    val isJsonType: Boolean = contentType != null && isJson(contentType)
+    val contentType = headers.contentType
+    val isJsonType = contentType != null && isJson(contentType)
+    val isJsonSeq = contentType != null && MediaType.JSON_SEQ.is(contentType)
 
     result match {
+      case _ if isJsonSeq =>
+        val jfunction: JFunction[Object, String] = obj => toJson(obj)
+        result match {
+          case publisher: Publisher[_] =>
+            fromPublisherMH.invoke(headers, publisher.asInstanceOf[Publisher[Any]], trailers, jfunction)
+          case stream: Stream[_] =>
+            fromStreamMH.invoke(
+              headers,
+              stream.asInstanceOf[Stream[Any]],
+              trailers,
+              ctx.blockingTaskExecutor(),
+              jfunction)
+          case _ =>
+            fromObjectMH.invoke(headers, result, trailers, jfunction);
+        }
+
       case msg: GeneratedSealedOneof =>
         convertMessage(headers, msg.asMessage, trailers, contentType, isJsonType)
       case message: GeneratedMessage =>
@@ -93,22 +114,6 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
             aggregateFrom(stream, headers, trailers, toJsonHttpData(_, charset), ctx.blockingTaskExecutor)
           case _ =>
             HttpResponse.of(headers, toJsonHttpData(result, charset), trailers)
-        }
-      case _ if contentType != null && MediaType.JSON_SEQ.is(contentType) =>
-        result match {
-          case publisher: Publisher[_] =>
-            val jfunction: JFunction[Object, String] = obj => toJson(obj)
-            fromPublisherMH.invoke(headers, publisher.asInstanceOf[Publisher[Any]], trailers, jfunction)
-          case stream: Stream[_] =>
-            val jfunction: JFunction[Object, String] = obj => toJson(obj)
-            fromStreamMH.invoke(
-              headers,
-              stream.asInstanceOf[Stream[Any]],
-              trailers,
-              ctx.blockingTaskExecutor(),
-              jfunction)
-          case _ =>
-            JsonTextSequences.fromObject(headers, result, trailers, obj => toJson(obj));
         }
 
       case _ =>
@@ -189,6 +194,18 @@ private object ScalaPbResponseConverterFunction {
       classOf[Stream[_]],
       classOf[HttpHeaders],
       classOf[Executor],
+      classOf[java.util.function.Function[_, _]])
+    method.setAccessible(true)
+
+    MethodHandles.lookup.unreflect(method)
+  }
+
+  private val fromObjectMH: MethodHandle = {
+    val method: Method = classOf[JsonTextSequences].getDeclaredMethod(
+      "fromObject",
+      classOf[ResponseHeaders],
+      classOf[Object],
+      classOf[HttpHeaders],
       classOf[java.util.function.Function[_, _]])
     method.setAccessible(true)
 

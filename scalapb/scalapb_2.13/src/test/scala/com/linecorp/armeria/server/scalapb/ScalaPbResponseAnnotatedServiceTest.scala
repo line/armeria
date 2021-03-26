@@ -202,19 +202,24 @@ class ScalaPbResponseAnnotatedServiceTest {
     assertThatJson(res.contentUtf8()).isEqualTo(jsonArray)
   }
 
-  @CsvSource(Array("/protobuf+json-seq/stream", "/protobuf+json-seq/publisher"))
+  @CsvSource(Array("/protobuf+json-seq/stream", "/protobuf+json-seq/publisher", "/protobuf+json-seq/unary"))
   @ParameterizedTest
   def protobufJsonSeqResponse(path: String): Unit = {
     val response = client.get(path).aggregate.join
     val mediaType = response.headers.contentType
     assertThat(mediaType.is(MediaType.JSON_SEQ)).isTrue
+
     val out = new ByteArrayOutputStream
     out.write(RECORD_SEPARATOR)
     out.write("""{"message":"Hello, Armeria1!","status":0}""".getBytes)
     out.write(LINE_FEED)
-    out.write(RECORD_SEPARATOR)
-    out.write("""{"message":"Hello, Armeria2!","status":0}""".getBytes)
-    out.write(LINE_FEED)
+
+    if (path != "/protobuf+json-seq/unary") {
+      out.write(RECORD_SEPARATOR)
+      out.write("""{"message":"Hello, Armeria2!","status":0}""".getBytes)
+      out.write(LINE_FEED)
+    }
+
     assertThat(response.content.array).isEqualTo(out.toByteArray)
   }
 }
@@ -315,8 +320,13 @@ object ScalaPbResponseAnnotatedServiceTest {
       Flux.just(SimpleResponse("Hello, Armeria1!"), SimpleResponse("Hello, Armeria2!"))
 
     @Get("/protobuf+json-seq/stream")
-    @ProducesJsonSequences def protobufJsonSeqStream: Stream[SimpleResponse] =
+    @ProducesJsonSequences
+    def protobufJsonSeqStream: Stream[SimpleResponse] =
       Stream.of(SimpleResponse("Hello, Armeria1!"), SimpleResponse("Hello, Armeria2!"))
+
+    @Get("/protobuf+json-seq/unary")
+    @ProducesJsonSequences
+    def protobufJsonSeqUnary: SimpleResponse = SimpleResponse("Hello, Armeria1!")
 
     @Get("/protobuf/stream")
     @Produces(MediaTypeNames.PROTOBUF)

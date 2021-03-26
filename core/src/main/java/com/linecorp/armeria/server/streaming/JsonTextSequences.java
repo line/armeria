@@ -153,8 +153,11 @@ public final class JsonTextSequences {
 
     /**
      * Creates a new JSON Text Sequences from the specified {@link Publisher}.
-     * Note that: This method is intentionally hidden from the public API for use only with
+     *
+     * <p>Note that this method is intentionally hidden from the public API for use only with
      * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
+     * Because the {@code contentConverter} can easily produce a malformed string which violates the
+     * <a href="https://datatracker.ietf.org/doc/rfc8259/">JSON format</a>.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
@@ -235,8 +238,11 @@ public final class JsonTextSequences {
 
     /**
      * Creates a new JSON Text Sequences from the specified {@link Stream}.
-     * Note that: This method is intentionally hidden from the public API for use only with
+     *
+     * <p>Note that this method is intentionally hidden from the public API for use only with
      * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
+     * Because the {@code contentConverter} can easily produce a malformed string which violates the
+     * <a href="https://datatracker.ietf.org/doc/rfc8259/">JSON format</a>.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -303,14 +309,20 @@ public final class JsonTextSequences {
     /**
      * Creates a new JSON Text Sequences of the specified {@code content}.
      *
+     * <p>Note that this method is intentionally hidden from the public API for use only with
+     * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
+     * Because the {@code contentConverter} can easily produce a malformed string which violates the
+     * <a href="https://datatracker.ietf.org/doc/rfc8259/">JSON format</a>.
+     *
      * @param headers the HTTP headers supposed to send
      * @param content the object supposed to send as contents
      * @param trailers the HTTP trailers
      * @param contentConverter the function which converts the content object into a UTF-8 JSON string.
      */
-    public static <T> HttpResponse fromObject(ResponseHeaders headers, @Nullable T content,
-                                              HttpHeaders trailers,
-                                              Function<? super T, String> contentConverter) {
+    @SuppressWarnings("unused")
+    static <T> HttpResponse fromObject(ResponseHeaders headers, @Nullable T content,
+                                       HttpHeaders trailers,
+                                       Function<? super T, String> contentConverter) {
         requireNonNull(headers, "headers");
         requireNonNull(trailers, "trailers");
         requireNonNull(contentConverter, "contentConverter");

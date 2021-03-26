@@ -81,6 +81,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
 
     private static final MethodHandle fromPublisherMH;
     private static final MethodHandle fromStreamMH;
+    private static final MethodHandle fromObjectMH;
 
     static {
         MethodHandle fromPublisher;
@@ -108,6 +109,18 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             fromStream = null;
         }
         fromStreamMH = fromStream;
+
+        MethodHandle fromObject;
+        try {
+            final Method method = JsonTextSequences.class.getDeclaredMethod(
+                    "fromObject", ResponseHeaders.class, Object.class, HttpHeaders.class, Function.class);
+            method.setAccessible(true);
+            fromObject = MethodHandles.lookup().unreflect(method);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            // Should never reach here.
+            fromObject = null;
+        }
+        fromObjectMH = fromObject;
     }
 
     static final MediaType X_PROTOBUF = MediaType.create("application", "x-protobuf");
@@ -135,6 +148,38 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
                                         @Nullable Object result, HttpHeaders trailers) throws Exception {
         final MediaType contentType = headers.contentType();
         final boolean isJson = isJson(contentType);
+
+        if (isJsonSeq(contentType)) {
+            checkArgument(result != null, "a null value is not allowed for %s", contentType);
+            final Function<Object, String> toJson = this::toJson;
+            if (result instanceof Publisher) {
+                @SuppressWarnings("unchecked")
+                final Publisher<Object> publisher = (Publisher<Object>) result;
+                try {
+                    return (HttpResponse) fromPublisherMH.invoke(headers, publisher, trailers, toJson);
+                } catch (Throwable ex) {
+                    throw new IllegalStateException(
+                            "Failed to call JsonTextSequences.fromPublisher() through reflection", ex);
+                }
+            }
+            if (result instanceof Stream) {
+                @SuppressWarnings("unchecked")
+                final Stream<Object> stream = (Stream<Object>) result;
+                try {
+                    return (HttpResponse) fromStreamMH
+                            .invoke(headers, stream, trailers, ctx.blockingTaskExecutor(), toJson);
+                } catch (Throwable ex) {
+                    throw new IllegalStateException(
+                            "Failed to call JsonTextSequences.fromStream() through reflection", ex);
+                }
+            }
+            try {
+                return (HttpResponse) fromObjectMH.invoke(headers, result, trailers, toJson);
+            } catch (Throwable ex) {
+                throw new IllegalStateException(
+                        "Failed to call JsonTextSequences.fromObject() through reflection", ex);
+            }
+        }
 
         if (result instanceof Message) {
             if (isJson) {
@@ -169,34 +214,6 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             }
             return HttpResponse.of(headers, toJsonHttpData(result, charset), trailers);
         } else {
-            if (isJsonSeq(contentType)) {
-                checkArgument(result != null, "a null value is not allowed for %s", contentType);
-                if (result instanceof Publisher) {
-                    @SuppressWarnings("unchecked")
-                    final Publisher<Object> publisher = (Publisher<Object>) result;
-                    final Function<Object, String> toJson = this::toJson;
-                    try {
-                        return (HttpResponse) fromPublisherMH.invoke(headers, publisher, trailers, toJson);
-                    } catch (Throwable ex) {
-                        throw new IllegalStateException(
-                                "Failed to call JsonTextSequences.fromPublisher() through reflection", ex);
-                    }
-                }
-                if (result instanceof Stream) {
-                    @SuppressWarnings("unchecked")
-                    final Stream<Object> stream = (Stream<Object>) result;
-                    final Function<Object, String> toJson = this::toJson;
-                    try {
-                        return (HttpResponse) fromStreamMH
-                                .invoke(headers, stream, trailers, ctx.blockingTaskExecutor(), toJson);
-                    } catch (Throwable ex) {
-                        throw new IllegalStateException(
-                                "Failed to call JsonTextSequences.fromStream() through reflection", ex);
-                    }
-                }
-                return JsonTextSequences.fromObject(headers, result, trailers, this::toJson);
-            }
-
             throw new IllegalArgumentException(
                     "Cannot convert a " + result + " to Protocol Buffers wire format");
         }
