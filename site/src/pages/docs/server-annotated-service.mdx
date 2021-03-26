@@ -827,7 +827,7 @@ public class MyAnnotatedService {
                 HttpResponse res = responseFrom(resultSet);
                 future.complete(res);
             } catch (Throwable t) {
-                future.completeExceptionally(t);
+                future.complete(HttpResponse.of(500);
             }
         });
         return HttpResponse.from(future);
