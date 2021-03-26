@@ -760,32 +760,7 @@ so you must not make a blocking call within the `EventLoop`. If you want to make
 you should delegate the call to another thread. You can use your own thread or a blocking task executor that
 Armeria provides.
 
-In order to use the blocking task executor, you can
-[inject](/docs/server-annotated-service#other-classes-automatically-injected) the
-<type://ServiceRequestContext> and call <type://ServiceRequestContext#blockingTaskExecutor()>:
-
-```java
-public class MyAnnotatedService {
-
-    @Get("/hello")
-    public HttpResponse hello(ServiceRequestContext ctx) {
-        // The current thread is an event loop.
-        assert ctx.eventLoop().inEventLoop();
-
-        CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        // Delegate a blocking call to the blocking task executor.
-        ctx.blockingTaskExecutor().submit(() -> { // 👈
-            Statement stmt = ...;
-            // Make a blocking call.
-            ResultSet resultSet = stmt.executeQuery(...);
-            HttpResponse res = responseFrom(resultSet);
-            future.complete(res);
-        });
-        return HttpResponse.from(future);
-    }
-```
-
-Or, you can just use the <type://Blocking> annotation:
+In order to use the blocking task executor, you need to specify the <type://Blocking> annotation:
 
 ```java
 public class MyAnnotatedService {
@@ -826,6 +801,29 @@ public class MyBlockingAnnotatedService {
 ```
 
 </Tip>
+
+Or, you can use the executor returned by <type://ServiceRequestContext#blockingTaskExecutor()>:
+
+```java
+public class MyAnnotatedService {
+
+    @Get("/hello")
+    public HttpResponse hello(ServiceRequestContext ctx) {
+        // The current thread is an event loop.
+        assert ctx.eventLoop().inEventLoop();
+
+        CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+        // Delegate a blocking call to the blocking task executor.
+        ctx.blockingTaskExecutor().submit(() -> { // 👈
+            Statement stmt = ...;
+            // Make a blocking call.
+            ResultSet resultSet = stmt.executeQuery(...);
+            HttpResponse res = responseFrom(resultSet);
+            future.complete(res);
+        });
+        return HttpResponse.from(future);
+    }
+```
 
 ## Using `ServerBuilder` to configure converters and exception handlers
 
