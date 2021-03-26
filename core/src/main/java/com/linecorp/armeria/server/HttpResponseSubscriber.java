@@ -77,6 +77,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     private State state = State.NEEDS_HEADERS;
     private boolean isComplete;
 
+    private boolean isSubscriptionCompleted;
+
     private boolean loggedResponseHeadersFirstBytesTransferred;
 
     @Nullable
@@ -106,7 +108,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         assert this.subscription == null;
         this.subscription = subscription;
         if (state == State.DONE) {
-            subscription.cancel();
+            if (!isSubscriptionCompleted) {
+                isSubscriptionCompleted = true;
+                subscription.cancel();
+            }
             return;
         }
 
@@ -200,7 +205,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                                 " (service: " + service() + ')'));
                         return;
                     }
-                    setDone(true);
+                    setDone(false);
+
                     final HttpHeaders merged = mergeTrailers(trailers, reqCtx.additionalResponseTrailers());
                     logBuilder().responseTrailers(merged);
                     responseEncoder.writeTrailers(req.id(), req.streamId(), merged)
@@ -210,7 +216,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     final boolean wroteEmptyData = data.isEmpty();
                     logBuilder().increaseResponseLength(data);
                     if (endOfStream) {
-                        setDone(true);
+                        setDone(false);
                     }
 
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
@@ -228,6 +234,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 break;
             }
             case DONE:
+                isSubscriptionCompleted = true;
+                subscription.cancel();
                 PooledObjects.close(o);
                 return;
         }
@@ -254,7 +262,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     }
 
     private State setDone(boolean cancel) {
-        if (cancel && subscription != null) {
+        if (cancel && subscription != null && !isSubscriptionCompleted) {
+            isSubscriptionCompleted = true;
             subscription.cancel();
         }
         reqCtx.requestCancellationScheduler().clearTimeout(false);
@@ -265,6 +274,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
     @Override
     public void onError(Throwable cause) {
+        isSubscriptionCompleted = true;
         if (cause instanceof HttpResponseException) {
             // Timeout may occur when the aggregation of the error response takes long.
             // If timeout occurs, respond with 503 Service Unavailable.
@@ -296,6 +306,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
     @Override
     public void onComplete() {
+        isSubscriptionCompleted = true;
         if (reqCtx.requestCancellationScheduler().isFinished()) {
             // We have already returned a failed response due to a timeout.
             return;
@@ -509,8 +520,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                         reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
                     }
                 }
-            } else {
+            }
+
+            if (!isSubscriptionCompleted) {
                 assert subscription != null;
+                // Even though an 'endOfStream' is received, we still need to send a request signal to the
+                // upstream for completing or canceling this 'HttpResponseSubscriber'
                 subscription.request(1);
             }
             return;

@@ -27,3 +27,20 @@ message SimpleResponse {
   string message = 1;
   int32 status = 2;
 }
+
+// Copied from https://scalapb.github.io/docs/sealed-oneofs/
+message Expr {
+  oneof sealed_value {
+    Literal lit = 1;
+    Add add = 2;
+  }
+}
+
+message Literal {
+  int32 value = 1;
+}
+
+message Add {
+  Expr left = 1;
+  Expr right = 2;
+}

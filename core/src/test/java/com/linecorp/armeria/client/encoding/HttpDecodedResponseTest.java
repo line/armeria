@@ -78,7 +78,8 @@ class HttpDecodedResponseTest {
     void unpooledPayload_unpooledDrain() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT);
+        final HttpResponse decoded =
+                new HttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT, false);
         final HttpData decodedPayload = responseData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -89,7 +90,8 @@ class HttpDecodedResponseTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT);
+        final HttpResponse decoded =
+                new HttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT, false);
         final HttpData decodedPayload = responseData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -100,7 +102,8 @@ class HttpDecodedResponseTest {
     void unpooledPayload_pooledDrain() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT);
+        final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT,
+                                                             false);
         final HttpData decodedPayload = responseData(decoded, true);
 
         assertThat(decodedPayload.isPooled()).isTrue();
@@ -113,7 +116,8 @@ class HttpDecodedResponseTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT);
+        final HttpResponse decoded =
+                new HttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT, false);
         final HttpData decodedPayload = responseData(decoded, true);
         final ByteBuf decodedPayloadBuf = decodedPayload.byteBuf();
 
@@ -127,7 +131,8 @@ class HttpDecodedResponseTest {
     void unpooledPayload_unpooledDrain_withOldDecoder() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        final HttpResponse decoded = new HttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT);
+        final HttpResponse decoded =
+                new HttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT, false);
         final HttpData decodedPayload = responseData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -138,7 +143,8 @@ class HttpDecodedResponseTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        final HttpResponse decoded = new HttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT);
+        final HttpResponse decoded =
+                new HttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT, false);
         final HttpData decodedPayload = responseData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -149,7 +155,8 @@ class HttpDecodedResponseTest {
     void unpooledPayload_pooledDrain_withOldDecoder() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        final HttpResponse decoded = new HttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT);
+        final HttpResponse decoded =
+                new HttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT, false);
         final HttpData decodedPayload = responseData(decoded, true);
 
         assertThat(decodedPayload.isPooled()).isTrue();
@@ -162,7 +169,8 @@ class HttpDecodedResponseTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        final HttpResponse decoded = new HttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT);
+        final HttpResponse decoded =
+                new HttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT, false);
         final HttpData decodedPayload = responseData(decoded, true);
         final ByteBuf decodedPayloadBuf = decodedPayload.byteBuf();
 

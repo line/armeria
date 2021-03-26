@@ -123,7 +123,7 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
      * specified string.
      *
      * @param acceptHeaders the values of the {@code "accept"} header, as defined in
-     *        <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html">the section 14.1, RFC2616</a>
+     *        <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.1">the section 14.1, RFC2616</a>
      * @return the most preferred {@link MediaType} that matches one of the specified media ranges.
      *         {@code null} if there are no matches or {@code acceptHeaders} does not contain any valid ranges.
      */
@@ -143,7 +143,7 @@ public final class MediaTypeSet extends AbstractSet<MediaType> {
      * specified string.
      *
      * @param acceptHeaders the values of the {@code "accept"} header, as defined in
-     *        <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html">the section 14.1, RFC2616</a>
+     *        <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.1">the section 14.1, RFC2616</a>
      * @return the most preferred {@link MediaType} that matches one of the specified media ranges.
      *         {@code null} if there are no matches or {@code acceptHeaders} does not contain any valid ranges.
      */

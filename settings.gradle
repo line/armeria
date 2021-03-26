@@ -23,7 +23,7 @@ includeWithFlags ':reactor3',                            'java', 'publish', 'rel
 includeWithFlags ':retrofit2',                           'java', 'publish', 'relocate'
 includeWithFlags ':rxjava2',                             'java', 'publish', 'relocate'
 includeWithFlags ':rxjava3',                             'java', 'publish', 'relocate'
-includeWithFlags ':scalapb_2.12',                        'java', 'publish', 'relocate', 'scala-grpc_2.13'
+includeWithFlags ':scalapb_2.12',                        'java', 'publish', 'relocate', 'no_aggregation'
 project(':scalapb_2.12').projectDir = file('scalapb/scalapb_2.12')
 includeWithFlags ':scalapb_2.13',                        'java', 'publish', 'relocate', 'scala-grpc_2.13'
 project(':scalapb_2.13').projectDir = file('scalapb/scalapb_2.13')
@@ -59,6 +59,7 @@ includeWithFlags ':it:grpc:scala',                  'java', 'relocate', 'scala-g
 includeWithFlags ':it:grpc:reactor',                'java', 'relocate', 'reactor-grpc'
 includeWithFlags ':it:kotlin',                      'java', 'relocate'
 includeWithFlags ':it:micrometer1.3',               'java', 'relocate'
+includeWithFlags ':it:multipart',                   'java', 'relocate'
 includeWithFlags ':it:server',                      'java', 'relocate'
 includeWithFlags ':it:spring:boot2-mixed',          'java', 'relocate'
 includeWithFlags ':it:spring:boot2-mixed-tomcat9',  'java', 'relocate'

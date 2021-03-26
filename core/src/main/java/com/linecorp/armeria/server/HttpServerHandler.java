@@ -601,7 +601,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             headers.set(HttpHeaderNames.CONNECTION, "keep-alive");
         } else {
             // Do not add the 'connection' header for HTTP/2 responses.
-            // See https://tools.ietf.org/html/rfc7540#section-8.1.2.2
+            // See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2
         }
     }
 
@@ -610,7 +610,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
      */
     private static void setContentLength(HttpRequest req, ResponseHeadersBuilder headers,
                                          int contentLength) {
-        // https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
+        // https://datatracker.ietf.org/doc/html/rfc2616#section-4.4
         // prohibits to send message body for below cases.
         // and in those cases, content should be empty.
         if (req.method() == HttpMethod.HEAD || headers.status().isContentAlwaysEmpty()) {

@@ -20,7 +20,7 @@ import com.linecorp.armeria.common.Flags;
 
 /**
  * A {@link RuntimeException} raised when a server sent an
- * <a href="https://httpwg.org/specs/rfc7540.html#GOAWAY">HTTP/2 GOAWAY frame</a> with
+ * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.8">HTTP/2 GOAWAY frame</a> with
  * the {@code lastStreamId} less then the stream ID of the request.
  */
 public final class GoAwayReceivedException extends RuntimeException {

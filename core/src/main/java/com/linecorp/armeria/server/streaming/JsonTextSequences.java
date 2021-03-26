@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
- * A utility class which helps to create a <a href="https://tools.ietf.org/html/rfc7464">JavaScript Object
+ * A utility class which helps to create a <a href="https://datatracker.ietf.org/doc/rfc7464/">JavaScript Object
  * Notation (JSON) Text Sequences</a> from a content {@link Publisher} or {@link Stream}.
  *
  * <p>A user simply creates a streaming {@link HttpResponse} which emits JSON Text Sequences, e.g.
@@ -277,7 +277,7 @@ public final class JsonTextSequences {
                     "Overwriting the HTTP status code from '{}' to '{}' for JSON Text Sequences. " +
                     "Do not set an HTTP status code on the HttpHeaders when calling factory methods in '{}', " +
                     "or set '{}' if you want to specify its status code. " +
-                    "Please refer to https://tools.ietf.org/html/rfc7464 for more information.",
+                    "Please refer to https://datatracker.ietf.org/doc/rfc7464/ for more information.",
                     status, HttpStatus.OK, JsonTextSequences.class.getSimpleName(), HttpStatus.OK);
             warnedStatusCode = true;
         }
@@ -300,7 +300,7 @@ public final class JsonTextSequences {
             logger.warn("Overwriting content-type from '{}' to '{}' for JSON Text Sequences. " +
                         "Do not set a content-type on the HttpHeaders when calling factory methods in '{}', " +
                         "or set '{}' if you want to specify its content-type. " +
-                        "Please refer to https://tools.ietf.org/html/rfc7464 for more information.",
+                        "Please refer to https://datatracker.ietf.org/doc/rfc7464/ for more information.",
                         contentType, MediaType.JSON_SEQ,
                         JsonTextSequences.class.getSimpleName(), MediaType.JSON_SEQ);
             warnedContentType = true;

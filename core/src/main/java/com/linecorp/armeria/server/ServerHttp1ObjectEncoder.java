@@ -91,7 +91,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
                 if (statusCode == 304) {
                     // 304 response can have the "content-length" header when it is a response to a conditional
-                    // GET request. See https://tools.ietf.org/html/rfc7230#section-3.3.2
+                    // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
                 } else {
                     outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
                 }

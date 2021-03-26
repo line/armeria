@@ -56,7 +56,7 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
  * for more information.
  * However, [[scala.Iterable]] types such as `List[scalapb.GeneratedMessage]` and
  * `Set[scalapb.GeneratedMessage]` are supported only when converted from
- * [[https://tools.ietf.org/html/rfc7159#section-5 JSON array]].
+ * [[https://datatracker.ietf.org/doc/html/rfc7159#section-5 JSON array]].
  *
  * Note that this [[com.linecorp.armeria.server.annotation.RequestConverterFunction]] is applied to
  * an annotated service by default, so you don't have to specify this converter explicitly unless you want to
