@@ -36,9 +36,11 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -359,7 +361,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             final ServiceRequestContext reqCtx =
                     newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
                                                      proxiedAddresses, clientAddress, routingCtx);
-            respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
+            respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, HttpData.empty(), cause);
             return;
         }
 
@@ -382,21 +384,22 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             try {
                 req.init(reqCtx);
                 serviceResponse = service.serve(reqCtx, req);
+            } catch (HttpStatusException cause) {
+                // Do not log HttpStatusException and HttpResponseException as a cause.
+                respond(ctx, reqCtx, cause.httpStatus(), HttpData.empty(), null);
+                return;
             } catch (HttpResponseException cause) {
                 serviceResponse = cause.httpResponse();
             } catch (Throwable cause) {
-                final HttpStatus status;
-                final Throwable newCause;
-                if (cause instanceof HttpStatusException) {
-                    status = ((HttpStatusException) cause).httpStatus();
-                    // We don't want to log HttpStatusException and HttpResponseException as the cause.
-                    newCause = null;
+                final AggregatedHttpResponse convertedResponse =
+                        config.exceptionHandler().apply(reqCtx, cause);
+                if (convertedResponse == null) {
+                    logger.warn("{} exceptionHandler.apply() returned null.", reqCtx, cause);
+                    respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, HttpData.empty(), cause);
                 } else {
-                    logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
-                    status = HttpStatus.INTERNAL_SERVER_ERROR;
-                    newCause = cause;
+                    respond(ctx, reqCtx, convertedResponse.headers().toBuilder(),
+                            convertedResponse.content(), convertedResponse.trailers(), cause);
                 }
-                respond(ctx, reqCtx, status, null, newCause);
                 return;
             }
             final HttpResponse res = serviceResponse;
@@ -482,7 +485,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         respond(ctx, reqCtx,
                 ResponseHeaders.builder(HttpStatus.OK)
                                .add(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING),
-                null, null);
+                HttpData.empty(), HttpHeaders.of(), null);
     }
 
     private void rejectInvalidPath(ChannelHandlerContext ctx, ServiceRequestContext reqCtx) {
@@ -504,36 +507,31 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private void respond(ChannelHandlerContext ctx, ServiceRequestContext reqCtx,
-                         HttpStatus status,
-                         @Nullable HttpData resContent,
-                         @Nullable Throwable cause) {
-
+                         HttpStatus status, HttpData resContent, @Nullable Throwable cause) {
         if (status.code() < 400) {
-            respond(ctx, reqCtx, ResponseHeaders.builder(status), null, cause);
+            respond(ctx, reqCtx, ResponseHeaders.builder(status), HttpData.empty(), HttpHeaders.of(), cause);
             return;
         }
 
         if (reqCtx.method() == HttpMethod.HEAD || status.isContentAlwaysEmpty()) {
-            resContent = null;
-        } else if (resContent == null) {
+            resContent = HttpData.empty();
+        } else if (resContent.isEmpty()) {
             resContent = status.toHttpData();
-        } else {
-            assert !resContent.isEmpty();
         }
 
         respond(ctx, reqCtx,
                 ResponseHeaders.builder(status)
                                .addObject(HttpHeaderNames.CONTENT_TYPE, ERROR_CONTENT_TYPE),
-                resContent, cause);
+                resContent, HttpHeaders.of(), cause);
     }
 
     private void respond(ChannelHandlerContext ctx, ServiceRequestContext reqCtx,
-                         ResponseHeadersBuilder resHeaders, @Nullable HttpData resContent,
-                         @Nullable Throwable cause) {
+                         ResponseHeadersBuilder resHeaders, HttpData resContent,
+                         HttpHeaders trailers, @Nullable Throwable cause) {
         if (!handledLastRequest) {
-            respond(reqCtx, true, resHeaders, resContent, cause).addListener(CLOSE_ON_FAILURE);
+            respond(reqCtx, true, resHeaders, resContent, trailers, cause).addListener(CLOSE_ON_FAILURE);
         } else {
-            respond(reqCtx, false, resHeaders, resContent, cause).addListener(CLOSE);
+            respond(reqCtx, false, resHeaders, resContent, trailers, cause).addListener(CLOSE);
         }
 
         if (!isReading) {
@@ -542,11 +540,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private ChannelFuture respond(ServiceRequestContext reqCtx, boolean addKeepAlive,
-                                  ResponseHeadersBuilder resHeaders, @Nullable HttpData resContent,
-                                  @Nullable Throwable cause) {
-
-        assert resContent == null || !resContent.isEmpty() : resContent;
-
+                                  ResponseHeadersBuilder resHeaders, HttpData resContent,
+                                  HttpHeaders trailers, @Nullable Throwable cause) {
         // No need to consume further since the response is ready.
         final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
         req.close();
@@ -557,7 +552,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             logBuilder.endRequest(cause);
         }
 
-        final boolean hasContent = resContent != null;
+        final boolean hasContent = !resContent.isEmpty();
 
         logBuilder.startResponse();
         assert responseEncoder != null;
@@ -570,12 +565,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         setContentLength(req, resHeaders, hasContent ? resContent.length() : 0);
 
         final ResponseHeaders immutableResHeaders = resHeaders.build();
+        final boolean trailersEmpty = trailers.isEmpty();
         ChannelFuture future = responseEncoder.writeHeaders(
-                req.id(), req.streamId(), immutableResHeaders, !hasContent);
+                req.id(), req.streamId(), immutableResHeaders, !hasContent && trailersEmpty, trailersEmpty);
         logBuilder.responseHeaders(immutableResHeaders);
         if (hasContent) {
             logBuilder.increaseResponseLength(resContent);
-            future = responseEncoder.writeData(req.id(), req.streamId(), resContent, true);
+            future = responseEncoder.writeData(req.id(), req.streamId(), resContent, trailersEmpty);
+        }
+        if (!trailersEmpty) {
+            logBuilder.responseTrailers(trailers);
+            future = responseEncoder.writeTrailers(req.id(), req.streamId(), trailers);
         }
 
         future.addListener(f -> {

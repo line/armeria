@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
+import static com.linecorp.armeria.server.ExceptionHandlerUtil.internalServerErrorResponse;
+import static com.linecorp.armeria.server.ExceptionHandlerUtil.serviceUnavailableResponse;
 
 import java.nio.channels.ClosedChannelException;
 
@@ -54,11 +56,6 @@ import io.netty.handler.codec.http2.Http2Error;
 final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
-
-    private static final AggregatedHttpResponse internalServerErrorResponse =
-            AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-    private static final AggregatedHttpResponse serviceUnavailableResponse =
-            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
 
     enum State {
         NEEDS_HEADERS,
@@ -277,13 +274,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         isSubscriptionCompleted = true;
         if (cause instanceof HttpResponseException) {
             // Timeout may occur when the aggregation of the error response takes long.
-            // If timeout occurs, respond with 503 Service Unavailable.
+            // If timeout occurs, the response is sent by newCancellationTask().
             ((HttpResponseException) cause).httpResponse()
                                            .aggregate(ctx.executor())
                                            .handleAsync((res, throwable) -> {
                                                if (throwable != null) {
                                                    failAndRespond(throwable,
-                                                                  internalServerErrorResponse,
+                                                                  convertException(throwable,
+                                                                                   internalServerErrorResponse),
                                                                   Http2Error.CANCEL, false);
                                                } else {
                                                    failAndRespond(cause, res, Http2Error.CANCEL, false);
@@ -300,7 +298,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
             logger.warn("{} Unexpected exception from a service or a response publisher: {}",
                         ctx.channel(), service(), cause);
 
-            failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR, false);
+            failAndRespond(cause, convertException(cause, internalServerErrorResponse),
+                           Http2Error.INTERNAL_ERROR, false);
         }
     }
 
@@ -356,7 +355,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     }
 
     private void failAndRespond(Throwable cause) {
-        failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR, true);
+        failAndRespond(cause, convertException(cause, internalServerErrorResponse),
+                       Http2Error.INTERNAL_ERROR, true);
     }
 
     private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error, boolean cancel) {
@@ -364,20 +364,23 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         final int id = req.id();
         final int streamId = req.streamId();
 
-        final ChannelFuture future;
+        ChannelFuture future;
         final boolean isReset;
         if (oldState == State.NEEDS_HEADERS) { // ResponseHeaders is not sent yet, so we can send the response.
             final ResponseHeaders headers = res.headers();
             logBuilder().responseHeaders(headers);
 
             final HttpData content = res.content();
-            // Did not write anything yet; we can send an error response instead of resetting the stream.
-            if (content.isEmpty()) {
-                future = responseEncoder.writeHeaders(id, streamId, headers, true);
-            } else {
-                responseEncoder.writeHeaders(id, streamId, headers, false);
+            final HttpHeaders trailers = res.trailers();
+            final boolean trailersEmpty = trailers.isEmpty();
+            future = responseEncoder.writeHeaders(id, streamId, headers,
+                                                  content.isEmpty() && trailersEmpty, trailersEmpty);
+            if (!content.isEmpty()) {
                 logBuilder().increaseResponseLength(content);
-                future = responseEncoder.writeData(id, streamId, content, true);
+                future = responseEncoder.writeData(id, streamId, content, trailersEmpty);
+            }
+            if (!trailersEmpty) {
+                future = responseEncoder.writeTrailers(id, streamId, trailers);
             }
             isReset = false;
         } else {
@@ -432,9 +435,20 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 // This method will be invoked only when `canSchedule()` returns true.
                 assert state != State.DONE;
 
-                failAndRespond(cause, serviceUnavailableResponse, Http2Error.INTERNAL_ERROR, true);
+                failAndRespond(cause, convertException(cause, serviceUnavailableResponse),
+                               Http2Error.INTERNAL_ERROR, true);
             }
         };
+    }
+
+    private AggregatedHttpResponse convertException(Throwable cause, AggregatedHttpResponse defaultResponse) {
+        final AggregatedHttpResponse convertedResponse =
+                reqCtx.config().server().config().exceptionHandler().apply(reqCtx, cause);
+        if (convertedResponse == null) {
+            logger.warn("{} exceptionHandler.apply() returned null.", reqCtx, cause);
+            return defaultResponse;
+        }
+        return convertedResponse;
     }
 
     private WriteHeadersFutureListener writeHeadersFutureListener(boolean endOfStream) {
