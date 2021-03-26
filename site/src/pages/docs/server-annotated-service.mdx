@@ -778,7 +778,7 @@ public class MyAnnotatedService {
             ResultSet resultSet = stmt.executeQuery(...);
             return responseFrom(resultSet);
         } catch (Throwable t) {
-            return HttpResponse.of(500);
+            return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 ```
@@ -827,7 +827,7 @@ public class MyAnnotatedService {
                 HttpResponse res = responseFrom(resultSet);
                 future.complete(res);
             } catch (Throwable t) {
-                future.complete(HttpResponse.of(500);
+                future.complete(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
             }
         });
         return HttpResponse.from(future);
