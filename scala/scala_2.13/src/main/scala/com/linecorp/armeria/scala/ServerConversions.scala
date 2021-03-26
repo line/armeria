@@ -70,7 +70,7 @@ final class ServiceRequestContextOps(private val ctx: ServiceRequestContext) ext
   /**
    * Returns the `ExecutionContext` that could be used for executing a potentially long-running task.
    * The returned `ExecutionContext` sets this `RequestContext` as the current context before executing
-   * any submitted tasks,
+   * any submitted tasks.
    */
   def blockingTaskExecutionContext: ExecutionContext =
     ExecutionContext.fromExecutorService(ctx.blockingTaskExecutor)
