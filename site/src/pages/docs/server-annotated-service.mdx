@@ -774,7 +774,7 @@ public class MyAnnotatedService {
 
         CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         // Delegate a blocking call to the blocking task executor.
-        ctx.blockingTaskExecutor().submit(() -> {
+        ctx.blockingTaskExecutor().submit(() -> { // 👈
             Statement stmt = ...;
             // Make a blocking call.
             ResultSet resultSet = stmt.executeQuery(...);
@@ -790,9 +790,9 @@ Or, you can just use the <type://Blocking> annotation:
 ```java
 public class MyAnnotatedService {
 
-    @Blocking
+    @Blocking // 👈
     @Get("/hello")
-    public HttpResponse hello() {
+    public HttpResponse hello(ServiceRequestContext ctx) {
         // A blocking task executor executes this method.
         assert !ctx.eventLoop().inEventLoop();
 
@@ -803,6 +803,29 @@ public class MyAnnotatedService {
         return res;
     }
 ```
+
+<Tip>
+
+You can apply the <type://Blocking> annotation to the class level so all methods are executed by the
+blocking task executor:
+
+```java
+@Blocking // 👈
+public class MyBlockingAnnotatedService {
+    @Get("/hello")
+    public HttpResponse hello(ServiceRequestContext ctx) {
+        assert !ctx.eventLoop().inEventLoop();
+        ...
+    }
+    @Get("/hello2")
+    public HttpResponse hello2(ServiceRequestContext ctx) {
+        assert !ctx.eventLoop().inEventLoop();
+        ...
+    }
+}
+```
+
+</Tip>
 
 ## Using `ServerBuilder` to configure converters and exception handlers
 
