@@ -81,7 +81,7 @@ It is because `armeria-scala` provides richer and more natural conversions, such
 ## `ExecutionContexts.sameThread`
 
 In an asynchronous system that the entire application logic runs on event loops, it is often useful
-in term of performance to invoke the callbacks attached to a `Future` directly rather than submitting
+in terms of performance to invoke the callbacks attached to a `Future` directly rather than submitting
 the callbacks to another `ExecutionContext`. You can use `ExecutionContexts.sameThread` in such a case:
 
 ```scala
