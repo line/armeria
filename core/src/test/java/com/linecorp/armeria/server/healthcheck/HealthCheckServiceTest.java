@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -133,10 +132,6 @@ class HealthCheckServiceTest {
                 });
             }
         });
-    }
-
-    @AfterAll
-    static void ensureScheduledHealthCheckerCanceled() {
     }
 
     @Test
