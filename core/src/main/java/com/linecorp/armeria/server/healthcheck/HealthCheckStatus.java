@@ -16,21 +16,34 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
+/**
+ * The result of health check with interval for next check.
+ */
 public final class HealthCheckStatus {
-    // The current healthiness
-    private boolean isHealthy;
-    // When we need to check again
-    private long ttlMillis;
+    private final boolean isHealthy;
+    private final long ttlMillis;
 
+    /**
+     * Create the result of the health check.
+     *
+     * @param isHealthy health check result
+     * @param ttlMillis interval for scheduling the next check
+     */
     public HealthCheckStatus(boolean isHealthy, long ttlMillis) {
         this.isHealthy = isHealthy;
         this.ttlMillis = ttlMillis;
     }
 
+    /**
+     * Return the result of health check.
+     */
     public boolean isHealthy() {
         return isHealthy;
     }
 
+    /**
+     * Return the interval for scheduling the next check.
+     */
     public long getTtlMillis() {
         return ttlMillis;
     }

@@ -23,6 +23,8 @@ import java.util.function.Supplier;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.server.Server;
 
+import io.netty.util.concurrent.EventExecutor;
+
 /**
  * Determines whether the {@link Server} is healthy. All registered {@link HealthChecker}s must return
  * {@code true} for the {@link Server} to be considered healthy.
@@ -30,9 +32,31 @@ import com.linecorp.armeria.server.Server;
 @FunctionalInterface
 public interface HealthChecker {
 
+    /**
+     * Create a {@link HealthChecker} which executing supplied health checker {@link Supplier} on a random
+     * {@link EventExecutor} from {@link CommonPools#workerGroup()} after constructing and subsequently with the
+     * given delay between the completion of supplied {@link CompletionStage} and the commencement of the next.
+     *
+     * @see #of(Supplier, Duration, EventExecutor)
+     */
     static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
                             Duration maxTtl) {
         return new ScheduledHealthChecker(healthChecker, maxTtl, CommonPools.workerGroup().next());
+    }
+
+    /**
+     * Create a {@link HealthChecker} which executing supplied health checker {@link Supplier} on the
+     * {@link EventExecutor} after constructing and subsequently with the given delay between the completion of
+     * supplied {@link CompletionStage} and the commencement of the next.
+     *
+     * @param healthChecker the {@link Supplier} of {@link CompletionStage} that provides the result of health
+     *                      and interval for next checking
+     * @param maxTtl used when healthChecker throws exception or returned a failed {@link CompletionStage}
+     * @param eventExecutor the executor executing supplied health checker
+     */
+    static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
+                            Duration maxTtl, EventExecutor eventExecutor) {
+        return new ScheduledHealthChecker(healthChecker, maxTtl, eventExecutor);
     }
 
     /**

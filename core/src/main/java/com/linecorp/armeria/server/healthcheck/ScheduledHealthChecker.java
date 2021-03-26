@@ -25,6 +25,9 @@ import java.util.function.Supplier;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 
+/**
+ * A simple {@link ListenableHealthChecker} whose state can be set by the result of supplied CompletionStage.
+ */
 final class ScheduledHealthChecker implements ListenableHealthChecker {
     private final Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker;
     private final Duration maxTtl;
@@ -54,27 +57,37 @@ final class ScheduledHealthChecker implements ListenableHealthChecker {
         settableHealthChecker.removeListener(listener);
     }
 
-    public void startHealthChecker(Consumer<Future<?>> afterSchedule) {
-        eventExecutor.execute(createTask(afterSchedule));
+    void startHealthChecker(Consumer<Future<?>> scheduledListener) {
+        eventExecutor.execute(createTask(scheduledListener));
     }
 
-    private Runnable createTask(Consumer<Future<?>> afterSchedule) {
-        return () -> healthChecker.get().handle((result, throwable) -> {
-            final boolean isHealthy;
-            final long intervalMills;
-            if (throwable != null) {
-                isHealthy = false;
-                intervalMills = maxTtl.toMillis();
-            } else {
-                isHealthy = result.isHealthy();
-                intervalMills = result.getTtlMillis();
+    private Runnable createTask(Consumer<Future<?>> scheduledListener) {
+        return () -> {
+            try {
+                healthChecker.get().handle((result, throwable) -> {
+                    final boolean isHealthy;
+                    final long intervalMills;
+                    if (throwable != null) {
+                        isHealthy = false;
+                        intervalMills = maxTtl.toMillis();
+                    } else {
+                        isHealthy = result.isHealthy();
+                        intervalMills = result.getTtlMillis();
+                    }
+                    settableHealthChecker.setHealthy(isHealthy);
+                    final Future<?> scheduledFuture = eventExecutor.schedule(createTask(scheduledListener),
+                                                                             intervalMills,
+                                                                             TimeUnit.MILLISECONDS);
+                    scheduledListener.accept(scheduledFuture);
+                    return null;
+                });
+            } catch (Throwable throwable) {
+                settableHealthChecker.setHealthy(false);
+                final Future<?> scheduledFuture = eventExecutor.schedule(createTask(scheduledListener),
+                                                                         maxTtl.toMillis(),
+                                                                         TimeUnit.MILLISECONDS);
+                scheduledListener.accept(scheduledFuture);
             }
-            settableHealthChecker.setHealthy(isHealthy);
-            final Future<?> future = eventExecutor.schedule(() -> createTask(afterSchedule),
-                                                            intervalMills,
-                                                            TimeUnit.MILLISECONDS);
-            afterSchedule.accept(future);
-            return null;
-        });
+        };
     }
 }
