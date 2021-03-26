@@ -14,6 +14,7 @@
  * under the License.
  */
 
+import JSONbig from 'json-bigint';
 import { Endpoint, Method } from '../specification';
 import jsonPrettify from '../json-prettify';
 
@@ -113,9 +114,8 @@ export default class AnnotatedHttpTransport extends Transport {
     });
     const applicationType = httpResponse.headers.get('content-type') || '';
     if (applicationType.indexOf('json') > -1) {
-      const prettified = jsonPrettify(
-        JSON.stringify(await httpResponse.json()),
-      );
+      const json = JSONbig.parse(await httpResponse.text());
+      const prettified = jsonPrettify(JSONbig.stringify(json));
       if (prettified.length > 0) {
         return prettified;
       }
