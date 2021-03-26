@@ -44,7 +44,15 @@ public final class HealthCheckStatus {
     /**
      * Return the interval for scheduling the next check.
      */
-    public long getTtlMillis() {
+    public long ttlMillis() {
         return ttlMillis;
+    }
+
+    @Override
+    public String toString() {
+        return "HealthCheckStatus{" +
+               "isHealthy=" + isHealthy +
+               ", ttlMillis=" + ttlMillis +
+               '}';
     }
 }

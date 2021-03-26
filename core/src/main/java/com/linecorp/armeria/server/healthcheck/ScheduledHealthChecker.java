@@ -72,7 +72,7 @@ final class ScheduledHealthChecker implements ListenableHealthChecker {
                         intervalMills = maxTtl.toMillis();
                     } else {
                         isHealthy = result.isHealthy();
-                        intervalMills = result.getTtlMillis();
+                        intervalMills = result.ttlMillis();
                     }
                     settableHealthChecker.setHealthy(isHealthy);
                     final Future<?> scheduledFuture = eventExecutor.schedule(createTask(scheduledListener),
