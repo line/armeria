@@ -2498,6 +2498,7 @@ force.museum
 ford
 forde.no
 forex
+forgeblocks.com
 forgot.her.name
 forgot.his.name
 forli-cesena.it
@@ -6702,6 +6703,7 @@ rhcloud.com
 ri.it
 ri.us
 ribeirao.br
+ric.jelastic.vps-host.net
 rich
 richardli
 ricoh
@@ -8340,6 +8342,7 @@ voto
 voyage
 vpndns.net
 vpnplus.to
+vps-host.net
 vps.mcdir.ru
 vr.it
 vs.it
