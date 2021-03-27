@@ -113,18 +113,17 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     /**
      * Sets the {@code "cookie"} header.
      */
-    default RequestHeadersBuilder cookie(Iterable<? extends Cookie> cookies) {
-        requireNonNull(cookies, "cookie");
-        return add(HttpHeaderNames.COOKIE, Cookie.toCookieHeader(cookies));
-    }
+    RequestHeadersBuilder cookie(Cookie cookie);
 
     /**
      * Sets the {@code "cookie"} header.
      */
-    default RequestHeadersBuilder cookie(Cookie... cookies) {
-        requireNonNull(cookies, "cookie");
-        return add(HttpHeaderNames.COOKIE, Cookie.toCookieHeader(cookies));
-    }
+    RequestHeadersBuilder cookies(Iterable<? extends Cookie> cookies);
+
+    /**
+     * Sets the {@code "cookie"} header.
+     */
+    RequestHeadersBuilder cookies(Cookie... cookies);
 
     // Override the return type of the chaining methods in the superclass.
 

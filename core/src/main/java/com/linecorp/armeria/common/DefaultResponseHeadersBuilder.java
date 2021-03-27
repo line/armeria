@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 final class DefaultResponseHeadersBuilder
         extends AbstractHttpHeadersBuilder<ResponseHeadersBuilder>
@@ -57,6 +58,27 @@ final class DefaultResponseHeadersBuilder
             return Cookies.of();
         }
         return getters.setCookie();
+    }
+
+    @Override
+    public ResponseHeadersBuilder cookie(Cookie cookie) {
+        requireNonNull(cookie, "cookie");
+        add(HttpHeaderNames.SET_COOKIE, cookie.toCookieHeader());
+        return this;
+    }
+
+    @Override
+    public ResponseHeadersBuilder cookies(Iterable<? extends Cookie> cookies) {
+        requireNonNull(cookies, "cookie");
+        add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(cookies));
+        return this;
+    }
+
+    @Override
+    public ResponseHeadersBuilder cookies(Cookie... cookies) {
+        requireNonNull(cookies, "cookie");
+        add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(cookies));
+        return this;
     }
 
     @Override

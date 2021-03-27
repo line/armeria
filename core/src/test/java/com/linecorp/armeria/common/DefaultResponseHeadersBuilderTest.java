@@ -106,7 +106,7 @@ class DefaultResponseHeadersBuilderTest {
         final Cookie cookie = Cookie.of("cookie", "value");
         final ResponseHeaders headers = ResponseHeaders
                 .builder(HttpStatus.OK)
-                .setCookie(cookie)
+                .cookie(cookie)
                 .build();
         assertThat(headers.cookies()).isEqualTo(Cookies.of(cookie));
     }
@@ -117,7 +117,7 @@ class DefaultResponseHeadersBuilderTest {
                                            Cookie.of("cookie2", "value2"));
         final ResponseHeaders headers = ResponseHeaders
                 .builder(HttpStatus.OK)
-                .setCookie(cookies)
+                .cookies(cookies)
                 .build();
         assertThat(headers.cookies()).isEqualTo(cookies);
     }
@@ -128,7 +128,7 @@ class DefaultResponseHeadersBuilderTest {
         final Cookie cookie2 = Cookie.of("cookie2", "value2");
         final ResponseHeaders headers = ResponseHeaders
                 .builder(HttpStatus.OK)
-                .setCookie(cookie1, cookie2)
+                .cookies(cookie1, cookie2)
                 .build();
         assertThat(headers.cookies()).isEqualTo(Cookies.of(cookie1, cookie2));
     }

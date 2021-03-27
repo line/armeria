@@ -294,7 +294,7 @@ class DefaultRequestHeadersBuilderTest {
                 .builder()
                 .path("/")
                 .method(HttpMethod.GET)
-                .cookie(cookies)
+                .cookies(cookies)
                 .build();
         assertThat(headers.cookies()).isEqualTo(Cookies.of(cookies));
     }
