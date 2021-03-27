@@ -187,7 +187,7 @@ final class DefaultRoute implements Route {
             // For example, assume that a route '/a/b/c/' supports HTTP GET method only.
             // Its fallback route would be added as a path of '/a/b/c' with supporting HTTP GET method as well.
             // In this case, '404 not found' would make sense rather than '405 method not allowed'
-            // if a 'DELETE /a/b/c' request is received, because the fallback route radically does not exist.
+            // if a 'DELETE /a/b/c' request is received, because the fallback route wasn't specified by a user.
             return;
         }
         routingCtx.deferStatusException(HttpStatusException.of(httpStatus));

@@ -77,7 +77,7 @@ final class RoutingTrie<V> {
      * Returns the list of values which is mapped to the given {@code path}.
      */
     List<V> find(String path) {
-        return find(path, node -> node);
+        return find(path, NodeProcessor.noop());
     }
 
     /**
@@ -105,7 +105,7 @@ final class RoutingTrie<V> {
     @Nullable
     @VisibleForTesting
     Node<V> findNode(String path) {
-        return findNode(path, false, node -> node);
+        return findNode(path, false, NodeProcessor.noop());
     }
 
     /**
@@ -318,10 +318,18 @@ final class RoutingTrie<V> {
 
     @FunctionalInterface
     interface NodeProcessor<V> {
+        static <V> NodeProcessor<V> noop() {
+            return node -> node;
+        }
+
         /**
          * Looks into the node before picking it as a candidate for handling the current request.
-         * Returns it as it is, mutates it if necessary or returns {@code null} if the node is not
-         * a suitable one to handle the current request.
+         * Implement this method to return one of the following:
+         * <ul>
+         *     <li>the given {@code node} as it is;</li>
+         *     <li>a new {@link Node} that will replace the given one; or</li>
+         *     <li>{@code null} to exclude the given {@code node} from the candidate list.</li>
+         * </ul>
          */
         @Nullable
         Node<V> process(Node<V> node);

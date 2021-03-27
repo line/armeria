@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.RouteBuilder.FALLBACK_ROUTE;
@@ -88,8 +87,8 @@ public final class Routers {
                         return fallbackServiceConfig;
                     }
 
-                    checkState(fallbackRoute.equals(FALLBACK_ROUTE),
-                               "Fallback service must catch all requests.");
+                    assert fallbackRoute.equals(FALLBACK_ROUTE)
+                            : "Fallback service must catch all requests, but its route is: " + fallbackRoute;
                     final Route newRoute =
                             originalRoute.toBuilder()
                                          .pathMapping(CatchAllPathMapping.INSTANCE)
@@ -404,12 +403,10 @@ public final class Routers {
 
         @Override
         public Routed<V> find(RoutingContext routingCtx) {
-            final ResultCachingNodeProcessor processor = new ResultCachingNodeProcessor(routingCtx);
+            final RouteCandidateCollectingNodeProcessor processor =
+                    new RouteCandidateCollectingNodeProcessor(routingCtx);
             trie.find(routingCtx.path(), processor);
-            if (processor.routeCollector != null) {
-                return findBest(processor.routeCollector.build());
-            }
-            return Routed.empty();
+            return findBest(processor.collectRouteCandidates());
         }
 
         @Override
@@ -423,12 +420,12 @@ public final class Routers {
             trie.dump(output);
         }
 
-        private final class ResultCachingNodeProcessor implements NodeProcessor<V> {
+        private final class RouteCandidateCollectingNodeProcessor implements NodeProcessor<V> {
             private final RoutingContext routingCtx;
             @Nullable
             private ImmutableList.Builder<Routed<V>> routeCollector;
 
-            private ResultCachingNodeProcessor(RoutingContext routingCtx) {
+            private RouteCandidateCollectingNodeProcessor(RoutingContext routingCtx) {
                 this.routingCtx = routingCtx;
             }
 
@@ -446,6 +443,10 @@ public final class Routers {
                 }
                 routeCollector.addAll(list);
                 return node;
+            }
+
+            List<Routed<V>> collectRouteCandidates() {
+                return routeCollector != null ? routeCollector.build() : ImmutableList.of();
             }
         }
     }
