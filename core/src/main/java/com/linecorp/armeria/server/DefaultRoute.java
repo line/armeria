@@ -43,6 +43,7 @@ final class DefaultRoute implements Route {
     private final Set<MediaType> produces;
     private final List<RoutingPredicate<QueryParams>> paramPredicates;
     private final List<RoutingPredicate<HttpHeaders>> headerPredicates;
+    private final List<PathMapping> excludePathMappings;
     private final boolean isFallback;
 
     private final int hashCode;
@@ -52,6 +53,7 @@ final class DefaultRoute implements Route {
                  Set<MediaType> consumes, Set<MediaType> produces,
                  List<RoutingPredicate<QueryParams>> paramPredicates,
                  List<RoutingPredicate<HttpHeaders>> headerPredicates,
+                 List<PathMapping> excludePathMappings,
                  boolean isFallback) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         checkArgument(!requireNonNull(methods, "methods").isEmpty(), "methods is empty.");
@@ -60,10 +62,13 @@ final class DefaultRoute implements Route {
         this.produces = ImmutableSet.copyOf(requireNonNull(produces, "produces"));
         this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
         this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
+        this.excludePathMappings =
+                ImmutableList.copyOf(requireNonNull(excludePathMappings, "excludePathMappings"));
         this.isFallback = isFallback;
 
         hashCode = Objects.hash(this.pathMapping, this.methods, this.consumes, this.produces,
-                                this.paramPredicates, this.headerPredicates, this.isFallback);
+                                this.paramPredicates, this.headerPredicates, this.excludePathMappings,
+                                this.isFallback);
 
         int complexity = 0;
         if (!consumes.isEmpty()) {
@@ -78,6 +83,9 @@ final class DefaultRoute implements Route {
         if (!headerPredicates.isEmpty()) {
             complexity += 1 << 3;
         }
+        if (!excludePathMappings.isEmpty()) {
+            complexity += 1 << 4;
+        }
         this.complexity = complexity;
     }
 
@@ -85,6 +93,10 @@ final class DefaultRoute implements Route {
     public RoutingResult apply(RoutingContext routingCtx, boolean isRouteDecorator) {
         final RoutingResultBuilder builder = pathMapping.apply(requireNonNull(routingCtx, "routingCtx"));
         if (builder == null) {
+            return RoutingResult.empty();
+        }
+
+        if (excludePathMappings.stream().anyMatch(exclude -> exclude.apply(routingCtx) != null)) {
             return RoutingResult.empty();
         }
 
@@ -261,6 +273,7 @@ final class DefaultRoute implements Route {
                produces.equals(that.produces) &&
                headerPredicates.equals(that.headerPredicates) &&
                paramPredicates.equals(that.paramPredicates) &&
+               excludePathMappings.equals(that.excludePathMappings) &&
                isFallback == that.isFallback;
     }
 

@@ -71,6 +71,8 @@ public final class RouteBuilder {
 
     private final List<RoutingPredicate<HttpHeaders>> headerPredicates = new ArrayList<>();
 
+    private final List<PathMapping> excludes = new ArrayList<>();
+
     /**
      * See {@link Route#isFallback()}.
      */
@@ -238,6 +240,15 @@ public final class RouteBuilder {
      */
     public RouteBuilder regex(Pattern regex) {
         return pathMapping(new RegexPathMapping(regex));
+    }
+
+    public RouteBuilder excludePathPrefix(String prefix) {
+        return addExcludePathMapping(prefixPathMapping(requireNonNull(prefix, "prefix"), false));
+    }
+
+    RouteBuilder addExcludePathMapping(PathMapping exclude) {
+        excludes.add(exclude);
+        return this;
     }
 
     /**
@@ -437,12 +448,13 @@ public final class RouteBuilder {
         }
         final Set<HttpMethod> pathMethods = methods.isEmpty() ? HttpMethod.knownMethods() : methods;
         return new DefaultRoute(pathMapping, pathMethods, consumes, produces,
-                                paramPredicates, headerPredicates, isFallback);
+                                paramPredicates, headerPredicates, excludes, isFallback);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(pathMapping, methods, consumes, produces);
+        return Objects.hash(pathMapping, methods, consumes, produces,
+                            paramPredicates, headerPredicates, excludes, isFallback);
     }
 
     @Override
@@ -461,7 +473,9 @@ public final class RouteBuilder {
                consumes.equals(that.consumes) &&
                produces.equals(that.produces) &&
                paramPredicates.equals(that.paramPredicates) &&
-               headerPredicates.equals(that.headerPredicates);
+               headerPredicates.equals(that.headerPredicates) &&
+               excludes.equals(that.excludes) &&
+               isFallback == that.isFallback;
     }
 
     @Override
@@ -473,6 +487,8 @@ public final class RouteBuilder {
                           .add("produces", produces)
                           .add("paramPredicates", paramPredicates)
                           .add("headerPredicates", headerPredicates)
+                          .add("excludes", excludes)
+                          .add("isFallback", isFallback)
                           .toString();
     }
 
