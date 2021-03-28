@@ -43,7 +43,7 @@ class ScheduledHealthCheckerTest {
                       .build();
         server.start().join();
         assertThat(alwaysHealth.isActive()).isTrue();
-        assertThat(alwaysHealth.getCounter()).isEqualTo(1);
+        assertThat(alwaysHealth.getRequestCount()).isEqualTo(1);
 
         final Server server2 =
                 Server.builder()
@@ -51,15 +51,15 @@ class ScheduledHealthCheckerTest {
                       .build();
         server2.start().join();
         assertThat(alwaysHealth.isActive()).isTrue();
-        assertThat(alwaysHealth.getCounter()).isEqualTo(2);
+        assertThat(alwaysHealth.getRequestCount()).isEqualTo(2);
 
         server.stop().join();
         assertThat(alwaysHealth.isActive()).isTrue();
-        assertThat(alwaysHealth.getCounter()).isEqualTo(1);
+        assertThat(alwaysHealth.getRequestCount()).isEqualTo(1);
 
         server2.stop().join();
         assertThat(alwaysHealth.isActive()).isFalse();
-        assertThat(alwaysHealth.getCounter()).isEqualTo(0);
+        assertThat(alwaysHealth.getRequestCount()).isEqualTo(0);
     }
 
     @Test
@@ -75,7 +75,7 @@ class ScheduledHealthCheckerTest {
         server.start().join();
         server.stop().join();
         assertThat(alwaysHealth.isActive()).isFalse();
-        assertThat(alwaysHealth.getCounter()).isEqualTo(0);
+        assertThat(alwaysHealth.getRequestCount()).isEqualTo(0);
 
         final Server server2 =
                 Server.builder()
@@ -83,11 +83,11 @@ class ScheduledHealthCheckerTest {
                       .build();
         server2.start().join();
         assertThat(alwaysHealth.isActive()).isTrue();
-        assertThat(alwaysHealth.getCounter()).isEqualTo(1);
+        assertThat(alwaysHealth.getRequestCount()).isEqualTo(1);
 
         server2.stop().join();
         assertThat(alwaysHealth.isActive()).isFalse();
-        assertThat(alwaysHealth.getCounter()).isEqualTo(0);
+        assertThat(alwaysHealth.getRequestCount()).isEqualTo(0);
     }
 
     @Test
@@ -103,11 +103,11 @@ class ScheduledHealthCheckerTest {
                       .build();
         server.start().join();
         assertThat(alwaysHealth.isActive()).isTrue();
-        assertThat(alwaysHealth.getCounter()).isEqualTo(2);
+        assertThat(alwaysHealth.getRequestCount()).isEqualTo(2);
 
         server.stop().join();
         assertThat(alwaysHealth.isActive()).isFalse();
-        assertThat(alwaysHealth.getCounter()).isEqualTo(0);
+        assertThat(alwaysHealth.getRequestCount()).isEqualTo(0);
     }
 
     @Test

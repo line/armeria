@@ -45,7 +45,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     private final EventExecutor eventExecutor;
     private final Consumer<HealthChecker> onHealthCheckerUpdate;
     private final AtomicBoolean isHealthy;
-    private int counter;
+    private int requestCount;
     @Nullable
     private ScheduledHealthCheckerImpl impl;
 
@@ -68,8 +68,8 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     }
 
     synchronized void startHealthChecker() {
-        counter++;
-        if (counter != 1) {
+        requestCount++;
+        if (requestCount != 1) {
             return;
         }
         impl = new ScheduledHealthCheckerImpl(healthChecker, maxTtl, eventExecutor);
@@ -78,11 +78,11 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     }
 
     synchronized void stopHealthChecker() {
-        if (counter == 0) {
+        if (requestCount == 0) {
             return;
         }
-        counter--;
-        if (counter != 0) {
+        requestCount--;
+        if (requestCount != 0) {
             return;
         }
         assert impl != null;
@@ -90,11 +90,17 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         impl.removeListener(onHealthCheckerUpdate);
     }
 
+    /**
+     * Used for test verification.
+     */
     @VisibleForTesting
-    synchronized int getCounter() {
-        return counter;
+    synchronized int getRequestCount() {
+        return requestCount;
     }
 
+    /**
+     * Used for test verification.
+     */
     @VisibleForTesting
     synchronized boolean isActive() {
         if (impl == null || !impl.isActive()) {
