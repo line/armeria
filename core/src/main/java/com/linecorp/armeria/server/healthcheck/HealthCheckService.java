@@ -19,7 +19,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -55,7 +54,6 @@ import com.linecorp.armeria.server.TransientHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.netty.util.AsciiString;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
@@ -131,7 +129,6 @@ public final class HealthCheckService implements TransientHttpService {
 
     private final SettableHealthChecker serverHealth;
     private final Set<HealthChecker> healthCheckers;
-    private final Set<Future<?>> inScheduledHealthCheckerFutures;
     private final AggregatedHttpResponse healthyResponse;
     private final AggregatedHttpResponse unhealthyResponse;
     private final AggregatedHttpResponse stoppingResponse;
@@ -200,7 +197,6 @@ public final class HealthCheckService implements TransientHttpService {
             }
         }
 
-        inScheduledHealthCheckerFutures = ConcurrentHashMap.newKeySet();
         this.healthyResponse = setCommonHeaders(healthyResponse);
         this.unhealthyResponse = setCommonHeaders(unhealthyResponse);
         stoppingResponse = clearCommonHeaders(unhealthyResponse);
@@ -291,10 +287,7 @@ public final class HealthCheckService implements TransientHttpService {
                 healthCheckers.stream()
                               .filter(ScheduledHealthChecker.class::isInstance)
                               .map(ScheduledHealthChecker.class::cast)
-                              .forEach(c -> c.startHealthChecker(future -> {
-                                  future.addListener(inScheduledHealthCheckerFutures::remove);
-                                  inScheduledHealthCheckerFutures.add(future);
-                              }));
+                              .forEach(ScheduledHealthChecker::startHealthChecker);
             }
 
             @Override
@@ -317,7 +310,10 @@ public final class HealthCheckService implements TransientHttpService {
                         c.removeListener(healthCheckerListener);
                     });
                 }
-                inScheduledHealthCheckerFutures.forEach(future -> future.cancel(true));
+                healthCheckers.stream()
+                              .filter(ScheduledHealthChecker.class::isInstance)
+                              .map(ScheduledHealthChecker.class::cast)
+                              .forEach(ScheduledHealthChecker::stopHealthChecker);
             }
         });
     }

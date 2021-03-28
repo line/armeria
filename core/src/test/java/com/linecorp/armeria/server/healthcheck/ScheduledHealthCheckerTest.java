@@ -17,85 +17,120 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
-import java.util.ArrayDeque;
-import java.util.HashSet;
-import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import io.netty.channel.DefaultEventLoop;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ScheduledFuture;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.server.Server;
 
 class ScheduledHealthCheckerTest {
-    private static final Queue<Runnable> scheduledJobs = new ConcurrentLinkedQueue<>();
 
-    @BeforeEach
-    void setUp() {
-        scheduledJobs.clear();
+    @Test
+    void usedByMultipleServers() {
+        final ScheduledHealthChecker alwaysHealth =
+                (ScheduledHealthChecker) HealthChecker.of(
+                        () -> CompletableFuture.completedFuture(new HealthCheckStatus(true, 100)),
+                        Duration.ofDays(10));
+        final Server server =
+                Server.builder()
+                      .service("/hc", HealthCheckService.of(alwaysHealth))
+                      .build();
+        server.start().join();
+        assertThat(alwaysHealth.isActive()).isTrue();
+        assertThat(alwaysHealth.getCounter()).isEqualTo(1);
+
+        final Server server2 =
+                Server.builder()
+                      .service("/hc", HealthCheckService.of(alwaysHealth))
+                      .build();
+        server2.start().join();
+        assertThat(alwaysHealth.isActive()).isTrue();
+        assertThat(alwaysHealth.getCounter()).isEqualTo(2);
+
+        server.stop().join();
+        assertThat(alwaysHealth.isActive()).isTrue();
+        assertThat(alwaysHealth.getCounter()).isEqualTo(1);
+
+        server2.stop().join();
+        assertThat(alwaysHealth.isActive()).isFalse();
+        assertThat(alwaysHealth.getCounter()).isEqualTo(0);
     }
 
     @Test
-    void triggerAfterConstruct() {
-        final CompletableFuture<HealthCheckStatus> future = new CompletableFuture<>();
-        final ScheduledHealthChecker checker =
-                new ScheduledHealthChecker(() -> future, Duration.ofSeconds(10), new MockExecutor());
+    void usedByMultipleServers_scheduleAgain() {
+        final ScheduledHealthChecker alwaysHealth =
+                (ScheduledHealthChecker) HealthChecker.of(
+                        () -> CompletableFuture.completedFuture(new HealthCheckStatus(true, 100)),
+                        Duration.ofDays(10));
+        final Server server =
+                Server.builder()
+                      .service("/hc", HealthCheckService.of(alwaysHealth))
+                      .build();
+        server.start().join();
+        server.stop().join();
+        assertThat(alwaysHealth.isActive()).isFalse();
+        assertThat(alwaysHealth.getCounter()).isEqualTo(0);
 
-        final Set<Future<?>> scheduledFuture = new HashSet<>();
-        final Boolean[] result = new Boolean[1];
-        checker.addListener(healthChecker -> result[0] = healthChecker.isHealthy());
-        checker.startHealthChecker(scheduledFuture::add);
-        assertThat(checker.isHealthy()).isFalse();
-        assertThat(result[0]).isNull();
-        assertThat(scheduledFuture).isEmpty();
+        final Server server2 =
+                Server.builder()
+                      .service("/hc", HealthCheckService.of(alwaysHealth))
+                      .build();
+        server2.start().join();
+        assertThat(alwaysHealth.isActive()).isTrue();
+        assertThat(alwaysHealth.getCounter()).isEqualTo(1);
 
-        future.complete(new HealthCheckStatus(true, 5000));
-        assertThat(checker.isHealthy()).isTrue();
-        assertThat(result[0]).isTrue();
-        assertThat(scheduledFuture).hasSize(1);
+        server2.stop().join();
+        assertThat(alwaysHealth.isActive()).isFalse();
+        assertThat(alwaysHealth.getCounter()).isEqualTo(0);
     }
 
     @Test
-    void unhealthy() {
-        final Queue<CompletableFuture<HealthCheckStatus>> queue = new ArrayDeque<>();
-        final ScheduledHealthChecker checker =
-                new ScheduledHealthChecker(() -> {
-                    final CompletableFuture<HealthCheckStatus> future = new CompletableFuture<>();
-                    queue.add(future);
-                    return future;
-                }, Duration.ofSeconds(10), new MockExecutor());
-        final Set<Future<?>> scheduledFuture = new HashSet<>();
-        final Boolean[] result = new Boolean[1];
-        checker.addListener(healthChecker -> result[0] = healthChecker.isHealthy());
-        checker.startHealthChecker(scheduledFuture::add);
+    void usedByMultipleService() {
+        final ScheduledHealthChecker alwaysHealth =
+                (ScheduledHealthChecker) HealthChecker.of(
+                        () -> CompletableFuture.completedFuture(new HealthCheckStatus(true, 100)),
+                        Duration.ofDays(10));
+        final Server server =
+                Server.builder()
+                      .service("/hc1", HealthCheckService.of(alwaysHealth))
+                      .service("/hc2", HealthCheckService.of(alwaysHealth))
+                      .build();
+        server.start().join();
+        assertThat(alwaysHealth.isActive()).isTrue();
+        assertThat(alwaysHealth.getCounter()).isEqualTo(2);
 
-        queue.poll().complete(new HealthCheckStatus(true, 5000));
-
-        scheduledJobs.poll().run();
-        queue.poll().complete(new HealthCheckStatus(false, 5000));
-        assertThat(checker.isHealthy()).isFalse();
-        assertThat(result[0]).isFalse();
-        assertThat(scheduledFuture).hasSize(2);
+        server.stop().join();
+        assertThat(alwaysHealth.isActive()).isFalse();
+        assertThat(alwaysHealth.getCounter()).isEqualTo(0);
     }
 
-    private static class MockExecutor extends DefaultEventLoop {
-        @Override
-        public void execute(Runnable command) {
-            command.run();
-        }
+    @Test
+    void awareUnhealthy() {
+        final AtomicBoolean health = new AtomicBoolean(true);
+        final ScheduledHealthChecker healthChecker =
+                (ScheduledHealthChecker) HealthChecker.of(
+                        () -> CompletableFuture.completedFuture(new HealthCheckStatus(health.get(), 100)),
+                        Duration.ofDays(10));
+        final Server server =
+                Server.builder()
+                      .service("/hc", HealthCheckService.of(healthChecker))
+                      .build();
+        server.start().join();
 
-        @Override
-        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-            scheduledJobs.add(command);
-            return mock(ScheduledFuture.class);
-        }
+        final String uri = "http://localhost:" + server.activeLocalPort();
+        assertThat(WebClient.of(uri).get("/hc").aggregate().join().status()).isSameAs(HttpStatus.OK);
+
+        health.set(false);
+        await().atMost(Duration.ofSeconds(1))
+               .untilAsserted(
+                       () -> assertThat(WebClient.of(uri).get("/hc").aggregate().join().status())
+                               .isSameAs(HttpStatus.SERVICE_UNAVAILABLE));
+        server.stop();
     }
 }
