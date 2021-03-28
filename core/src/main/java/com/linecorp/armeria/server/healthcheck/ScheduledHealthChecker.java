@@ -88,6 +88,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         assert impl != null;
         impl.stopHealthChecker();
         impl.removeListener(onHealthCheckerUpdate);
+        isHealthy.set(false);
     }
 
     /**
