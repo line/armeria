@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -1323,9 +1324,10 @@ public final class ServerBuilder {
     /**
      * Sets the {@link ExceptionHandler} that converts a {@link Throwable} to an {@link AggregatedHttpResponse}.
      *
-     * <p>Note that {@link HttpStatusException} and {@link HttpResponseException} are not handled by the
-     * {@link ExceptionHandler}, but they are sent as-is.
+     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ExceptionHandler}
+     * but it's sent as-is.
      */
+    @UnstableApi
     public ServerBuilder exceptionHandler(ExceptionHandler exceptionHandler) {
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
         return this;

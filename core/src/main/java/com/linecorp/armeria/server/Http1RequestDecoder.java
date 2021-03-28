@@ -41,7 +41,7 @@ import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -219,7 +219,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 }
             }
 
-            if (req != null && msg instanceof HttpContent) {
+            // req is not null.
+            if (msg instanceof HttpContent) {
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
@@ -300,6 +301,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         discarding = true;
         req = null;
 
+        writer.closeWhenCurrentStreamEnds();
+
         final HttpData data = content != null ? content : HttpData.ofUtf8(status.toString());
         final ResponseHeaders headers =
                 ResponseHeaders.builder()
@@ -308,8 +311,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
                                .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
                                .build();
-        writer.writeHeaders(id, 1, headers, false);
-        writer.writeData(id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
+        final ChannelFuture channelFuture = writer.writeHeaders(id, 1, headers, false);
+        channelFuture.addListener(future -> {
+            if (future.isSuccess()) {
+                writer.writeData(id, 1, data, true);
+            } else {
+                // Failed to write the headers which means another response is already sent.
+                // So let it handle this request and release the data.
+                data.close();
+            }
+        });
     }
 
     @Override

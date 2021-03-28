@@ -88,10 +88,15 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
      * The map which maps a request ID to its related pending response.
      */
     private final IntObjectMap<PendingWrites> pendingWritesMap = new IntObjectHashMap<>();
+    private boolean closeWhenCurrentStreamEnds;
 
     protected Http1ObjectEncoder(Channel ch, SessionProtocol protocol) {
         this.ch = requireNonNull(ch, "ch");
         this.protocol = requireNonNull(protocol, "protocol");
+    }
+
+    public void closeWhenCurrentStreamEnds() {
+        closeWhenCurrentStreamEnds = true;
     }
 
     @Override
@@ -213,22 +218,26 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 keepAliveHandler().onReadOrWrite();
             }
             if (endStream) {
-                currentId++;
-
-                // The next PendingWrites might be complete already.
-                for (;;) {
-                    final PendingWrites nextPendingWrites = pendingWritesMap.get(currentId);
-                    if (nextPendingWrites == null) {
-                        break;
-                    }
-
-                    flushPendingWrites(nextPendingWrites);
-                    if (!nextPendingWrites.isEndOfStream()) {
-                        break;
-                    }
-
-                    pendingWritesMap.remove(currentId);
+                if (closeWhenCurrentStreamEnds) {
+                    future.addListener(ChannelFutureListener.CLOSE);
+                } else {
                     currentId++;
+
+                    // The next PendingWrites might be complete already.
+                    for (;;) {
+                        final PendingWrites nextPendingWrites = pendingWritesMap.get(currentId);
+                        if (nextPendingWrites == null) {
+                            break;
+                        }
+
+                        flushPendingWrites(nextPendingWrites);
+                        if (!nextPendingWrites.isEndOfStream()) {
+                            break;
+                        }
+
+                        pendingWritesMap.remove(currentId);
+                        currentId++;
+                    }
                 }
             }
 

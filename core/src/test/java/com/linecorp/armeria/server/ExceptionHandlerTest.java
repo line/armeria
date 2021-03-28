@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -27,9 +29,12 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ExceptionHandlerTest {
@@ -67,7 +72,7 @@ class ExceptionHandlerTest {
                                                      HttpData.ofUtf8(cause.getMessage()),
                                                      HttpHeaders.of("trailer-exists", true));
                 }
-                return ExceptionHandler.ofDefault().apply(ctx, cause);
+                return null;
             });
         }
     };
@@ -89,5 +94,25 @@ class ExceptionHandlerTest {
         assertThat(response.headers().status()).isSameAs(HttpStatus.NOT_IMPLEMENTED);
         assertThat(response.contentUtf8()).isEqualTo("Unsupported!");
         assertThat(response.trailers().get("trailer-exists")).isEqualTo("true");
+    }
+
+    @Test
+    void exceptionHandlerOrElse() {
+        final ExceptionHandler handler = new ExceptionHandler() {
+            @Nullable
+            @Override
+            public AggregatedHttpResponse convert(ServiceRequestContext context, Throwable cause) {
+                if (cause instanceof AnticipatedException) {
+                    return AggregatedHttpResponse.of(200);
+                }
+                return null;
+            }
+        };
+
+        final ExceptionHandler orElse = handler.orElse((ctx, cause) -> AggregatedHttpResponse.of(400));
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertThat(orElse.convert(ctx, new AnticipatedException()).status()).isSameAs(HttpStatus.OK);
+        assertThat(orElse.convert(ctx, new IllegalStateException()).status()).isSameAs(HttpStatus.BAD_REQUEST);
     }
 }
