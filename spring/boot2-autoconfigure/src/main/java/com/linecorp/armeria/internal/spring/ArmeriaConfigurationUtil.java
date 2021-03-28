@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.spring;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -52,12 +54,16 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
+import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 import com.linecorp.armeria.spring.Ssl;
 
@@ -87,6 +93,9 @@ public final class ArmeriaConfigurationUtil {
     public static void configureServerWithArmeriaSettings(
             ServerBuilder server,
             ArmeriaSettings settings,
+            List<ArmeriaServerConfigurator> armeriaServerConfigurators,
+            List<Consumer<ServerBuilder>> armeriaServerBuilderConsumers,
+            List<DocServiceConfigurator> docServiceConfigurators,
             MeterRegistry meterRegistry,
             List<HealthChecker> healthCheckers,
             List<HealthCheckServiceConfigurator> healthCheckServiceConfigurators,
@@ -94,9 +103,16 @@ public final class ArmeriaConfigurationUtil {
 
         requireNonNull(server, "server");
         requireNonNull(settings, "settings");
+        requireNonNull(armeriaServerConfigurators, "armeriaServerConfigurators");
+        requireNonNull(armeriaServerBuilderConsumers, "armeriaServerBuilderConsumers");
+        requireNonNull(docServiceConfigurators, "docServiceConfigurators");
         requireNonNull(meterRegistry, "meterRegistry");
         requireNonNull(healthCheckers, "healthCheckers");
         requireNonNull(healthCheckServiceConfigurators, "healthCheckServiceConfigurators");
+
+        configurePorts(server, settings.getPorts());
+        armeriaServerConfigurators.forEach(configurator -> configurator.configure(server));
+        armeriaServerBuilderConsumers.forEach(consumer -> consumer.accept(server));
 
         if (settings.getGracefulShutdownQuietPeriodMillis() >= 0 &&
             settings.getGracefulShutdownTimeoutMillis() >= 0) {
@@ -151,6 +167,13 @@ public final class ArmeriaConfigurationUtil {
 
         if (settings.getSsl() != null) {
             configureTls(server, settings.getSsl());
+        }
+
+        final String docsPath = settings.getDocsPath();
+        if (!Strings.isNullOrEmpty(docsPath)) {
+            final DocServiceBuilder docServiceBuilder = DocService.builder();
+            docServiceConfigurators.forEach(configurator -> configurator.configure(docServiceBuilder));
+            server.serviceUnder(docsPath, docServiceBuilder.build());
         }
 
         final ArmeriaSettings.Compression compression = settings.getCompression();

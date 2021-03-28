@@ -24,6 +24,8 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+
 public class PublisherBasedStreamMessageVerification extends StreamMessageVerification<Long> {
 
     @Override
@@ -43,7 +45,7 @@ public class PublisherBasedStreamMessageVerification extends StreamMessageVerifi
     public StreamMessage<Long> createAbortedPublisher(long elements) {
         if (elements == 0) {
             final PublisherBasedStreamMessage<Long> stream =
-                    new PublisherBasedStreamMessage<>(s -> { /* noop */ });
+                    new PublisherBasedStreamMessage<>(s -> s.onSubscribe(NoopSubscription.get()));
             stream.abort();
             return stream;
         }

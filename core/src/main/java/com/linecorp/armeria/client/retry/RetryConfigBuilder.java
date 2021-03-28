@@ -31,8 +31,8 @@ import com.linecorp.armeria.common.Response;
 
 /**
  * Builds a {@link RetryConfig}.
- * A {@link RetryConfig} instance encapsulates the used {@link RetryRule}, maxTotalAttempts,
- * and responseTimeoutMillisForEachAttempt.
+ * A {@link RetryConfig} instance encapsulates the used {@link RetryRule}, {@code maxTotalAttempts},
+ * and {@code responseTimeoutMillisForEachAttempt}.
  */
 public final class RetryConfigBuilder<T extends Response> {
     private int maxTotalAttempts = Flags.defaultMaxTotalAttempts();
@@ -41,12 +41,11 @@ public final class RetryConfigBuilder<T extends Response> {
 
     @Nullable
     private final RetryRule retryRule;
-
     @Nullable
     private final RetryRuleWithContent<T> retryRuleWithContent;
 
     /**
-     * Returns a {@link RetryConfigBuilder} with this {@link RetryRule}.
+     * Creates a {@link RetryConfigBuilder} with this {@link RetryRule}.
      */
     RetryConfigBuilder(RetryRule retryRule) {
         this.retryRule = requireNonNull(retryRule, "retryRule");
@@ -55,7 +54,7 @@ public final class RetryConfigBuilder<T extends Response> {
     }
 
     /**
-     * Returns a {@link RetryConfigBuilder} with this {@link RetryRuleWithContent}.
+     * Creates a {@link RetryConfigBuilder} with this {@link RetryRuleWithContent}.
      */
     RetryConfigBuilder(RetryRuleWithContent<T> retryRuleWithContent) {
         retryRule = null;
@@ -64,7 +63,7 @@ public final class RetryConfigBuilder<T extends Response> {
     }
 
     /**
-     * Sets the maxContentLength to be used with a {@link RetryRuleWithContent}.
+     * Sets the specified {@code maxContentLength} to be used with a {@link RetryRuleWithContent}.
      */
     public RetryConfigBuilder<T> maxContentLength(int maxContentLength) {
         requireNonNull(retryRuleWithContent, "retryRuleWithContent");
@@ -75,7 +74,7 @@ public final class RetryConfigBuilder<T extends Response> {
     }
 
     /**
-     * Sets maxTotalAttempts.
+     * Sets the specified {@code maxTotalAttempts}.
      */
     public RetryConfigBuilder<T> maxTotalAttempts(int maxTotalAttempts) {
         checkArgument(
@@ -87,7 +86,7 @@ public final class RetryConfigBuilder<T extends Response> {
     }
 
     /**
-     * Sets responseTimeoutMillisForEachAttempt.
+     * Sets the specified {@code responseTimeoutMillisForEachAttempt}.
      */
     public RetryConfigBuilder<T> responseTimeoutMillisForEachAttempt(long responseTimeoutMillisForEachAttempt) {
         checkArgument(
@@ -99,7 +98,7 @@ public final class RetryConfigBuilder<T extends Response> {
     }
 
     /**
-     * Sets responseTimeoutMillisForEachAttempt by converting responseTimeoutForEachAttempt to millis.
+     * Sets the specified {@link Duration} by converting responseTimeoutForEachAttempt to millis.
      */
     public RetryConfigBuilder<T> responseTimeoutForEachAttempt(Duration responseTimeoutMillisForEachAttempt) {
         final long millis =
@@ -114,7 +113,7 @@ public final class RetryConfigBuilder<T extends Response> {
     }
 
     /**
-     * Builds a {@link RetryConfig} from this builder's values and returns it.
+     * Returns a newly-created {@link RetryConfig} from this {@link RetryConfigBuilder}'s values.
      */
     public RetryConfig<T> build() {
         if (retryRule != null) {

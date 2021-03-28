@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
@@ -73,10 +74,10 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     private Subscription upstreamSubscription;
 
     @Nullable
-    @SuppressWarnings("unused") // Updated only via subscriptionUpdater
+    @SuppressWarnings("unused") // Updated only via downstreamSubscriptionUpdater
     private volatile SubscriptionImpl downstreamSubscription;
 
-    @SuppressWarnings("unused") // Updated only via subscribedToDelegateUpdater
+    @SuppressWarnings("unused") // Updated only via subscribedToUpstreamUpdater
     private volatile int subscribedToUpstream;
 
     // Only accessed from subscription's executor.
@@ -166,7 +167,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    final long demand() {
+    public final long demand() {
         return pendingDemand;
     }
 
@@ -296,7 +297,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
+                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
         downstreamSubscriptionUpdater.compareAndSet(this, null, newSubscription);
 
         final StreamMessage<T> upstream = this.upstream;

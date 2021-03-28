@@ -17,7 +17,7 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
-import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
+import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -28,6 +28,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -54,7 +55,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -62,7 +63,7 @@ import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
-import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframerHandler;
+import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
@@ -80,6 +81,7 @@ import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 
 /**
  * Encapsulates the state of a single client call, writing messages from the client and reading responses
@@ -96,17 +98,20 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private static final AtomicIntegerFieldUpdater<ArmeriaClientCall> pendingMessagesUpdater =
             AtomicIntegerFieldUpdater.newUpdater(ArmeriaClientCall.class, "pendingMessages");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<ArmeriaClientCall, Runnable>
+            pendingTaskUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            ArmeriaClientCall.class, Runnable.class, "pendingTask");
+
     private final DefaultClientRequestContext ctx;
     private final EndpointGroup endpointGroup;
     private final HttpClient httpClient;
     private final HttpRequestWriter req;
     private final MethodDescriptor<I, O> method;
     private final CallOptions callOptions;
-    private final ArmeriaMessageFramer messageFramer;
+    private final ArmeriaMessageFramer requestFramer;
     private final GrpcMessageMarshaller<I, O> marshaller;
     private final CompressorRegistry compressorRegistry;
-    @Nullable
-    private HttpDeframer<DeframedMessage> responseReader;
     private final SerializationFormat serializationFormat;
     private final boolean unsafeWrapResponseBuffers;
     @Nullable
@@ -115,6 +120,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final DecompressorRegistry decompressorRegistry;
     private final int maxInboundMessageSizeBytes;
     private final boolean grpcWebText;
+
+    private final boolean endpointInitialized;
+    @Nullable
+    private volatile Runnable pendingTask;
 
     // Effectively final, only set once during start()
     @Nullable
@@ -157,8 +166,15 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
+        endpointInitialized = endpointGroup.whenReady().isDone();
+        if (!endpointInitialized) {
+            ctx.whenInitialized().handle((unused1, unused2) -> {
+                runPendingTask();
+                return null;
+            });
+        }
 
-        messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
+        requestFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapResponseBuffers);
         executor = callOptions.getExecutor();
@@ -190,7 +206,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         } else {
             compressor = Identity.NONE;
         }
-        messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
+        requestFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
         listener = responseListener;
 
         final long remainingNanos;
@@ -217,26 +233,37 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
-        final HttpStreamDeframerHandler handler =
-                new HttpStreamDeframerHandler(decompressorRegistry, this, maxInboundMessageSizeBytes);
-        responseReader = newHttpDeframer(handler, ctx.alloc(), grpcWebText);
-        handler.setDeframer(responseReader);
-        responseReader.subscribe(this, ctx.eventLoop());
+        final HttpStreamDeframer deframer =
+                new HttpStreamDeframer(decompressorRegistry, this, null, maxInboundMessageSizeBytes);
+        final ByteBufAllocator alloc = ctx.alloc();
+        final StreamMessage<DeframedMessage> deframed =
+                res.decode(deframer, alloc, byteBufConverter(alloc, grpcWebText));
+        deframer.setDeframedStreamMessage(deframed);
 
-        res.subscribe(responseReader, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+        if (endpointInitialized) {
+            deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+        } else {
+            addPendingTask(() -> {
+                deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+            });
+        }
         responseListener.onReady();
     }
 
     @Override
     public void request(int numMessages) {
-        if (ctx.eventLoop().inEventLoop()) {
+        if (needsDirectInvocation()) {
             doRequest(numMessages);
         } else {
-            ctx.eventLoop().execute(() -> doRequest(numMessages));
+            execute(() -> doRequest(numMessages));
         }
     }
 
     private void doRequest(int numMessages) {
+        if (method.getType().serverSendsOneMessage() && numMessages == 1) {
+            // At least 2 requests are required for receiving trailers.
+            numMessages = 2;
+        }
         if (upstream == null) {
             pendingRequests += numMessages;
         } else {
@@ -246,10 +273,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void cancel(@Nullable String message, @Nullable Throwable cause) {
-        if (ctx.eventLoop().inEventLoop()) {
+        if (needsDirectInvocation()) {
             doCancel(message, cause);
         } else {
-            ctx.eventLoop().execute(() -> doCancel(message, cause));
+            execute(() -> doCancel(message, cause));
         }
     }
 
@@ -279,20 +306,20 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void halfClose() {
-        if (ctx.eventLoop().inEventLoop()) {
+        if (needsDirectInvocation()) {
             req.close();
         } else {
-            ctx.eventLoop().execute(req::close);
+            execute(req::close);
         }
     }
 
     @Override
     public void sendMessage(I message) {
         pendingMessagesUpdater.incrementAndGet(this);
-        if (ctx.eventLoop().inEventLoop()) {
+        if (needsDirectInvocation()) {
             doSendMessage(message);
         } else {
-            ctx.eventLoop().execute(() -> doSendMessage(message));
+            execute(() -> doSendMessage(message));
         }
     }
 
@@ -313,7 +340,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, message), null);
             }
             final ByteBuf serialized = marshaller.serializeRequest(message);
-            req.write(messageFramer.writePayload(serialized));
+            req.write(requestFramer.writePayload(serialized));
             req.whenConsumed().thenRun(() -> {
                 if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
                     try (SafeCloseable ignored = ctx.push()) {
@@ -331,7 +358,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public synchronized void setMessageCompression(boolean enabled) {
-        messageFramer.setMessageCompression(enabled);
+        requestFramer.setMessageCompression(enabled);
     }
 
     @Override
@@ -365,7 +392,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                           new Metadata());
                 } else {
                     GrpcWebTrailers.set(ctx, trailers);
-                    GrpcStatus.reportStatus(trailers, responseReader, this);
+                    GrpcStatus.reportStatus(trailers, this);
                 }
             } finally {
                 buf.release();
@@ -390,8 +417,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 listener.onMessage(msg);
             }
         } catch (Throwable t) {
-            req.close(GrpcStatus.fromThrowable(t).asException());
-            throw t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t);
+            final Status status = GrpcStatus.fromThrowable(t);
+            req.close(status.asException());
+            close(status, new Metadata());
         }
 
         notifyExecutor();
@@ -438,8 +466,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private void close(Status status, Metadata metadata) {
         final Deadline deadline = callOptions.getDeadline();
         if (status.getCode() == Code.CANCELLED && deadline != null && deadline.isExpired()) {
-            status = Status.DEADLINE_EXCEEDED.augmentDescription(
-                    "ClientCall was cancelled at or after deadline.");
+            status = Status.DEADLINE_EXCEEDED;
             // Replace trailers to prevent mixing sources of status and trailers.
             metadata = new Metadata();
         }
@@ -455,8 +482,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         } else {
             req.abort(status.asRuntimeException(metadata));
         }
-        if (responseReader != null) {
-            responseReader.close();
+        if (upstream != null) {
+            upstream.cancel();
         }
 
         try (SafeCloseable ignored = ctx.push()) {
@@ -477,6 +504,58 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private void notifyExecutor() {
         if (executor != null) {
             executor.execute(NO_OP);
+        }
+    }
+
+    private boolean needsDirectInvocation() {
+        return (endpointInitialized || ctx.whenInitialized().isDone()) && ctx.eventLoop().inEventLoop();
+    }
+
+    private void execute(Runnable task) {
+        if (endpointInitialized || ctx.whenInitialized().isDone()) {
+            ctx.eventLoop().execute(task);
+        } else {
+            addPendingTask(task);
+        }
+    }
+
+    private void runPendingTask() {
+        for (;;) {
+            final Runnable pendingTask = this.pendingTask;
+            if (pendingTaskUpdater.compareAndSet(this, pendingTask, NO_OP)) {
+                if (pendingTask != null) {
+                    if (ctx.eventLoop().inEventLoop()) {
+                        pendingTask.run();
+                    } else {
+                        ctx.eventLoop().execute(pendingTask);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    private void addPendingTask(Runnable pendingTask) {
+        if (!pendingTaskUpdater.compareAndSet(this, null, pendingTask)) {
+            for (;;) {
+                final Runnable oldPendingTask = this.pendingTask;
+                assert oldPendingTask != null;
+                if (oldPendingTask == NO_OP) {
+                    if (ctx.eventLoop().inEventLoop()) {
+                        pendingTask.run();
+                    } else {
+                        ctx.eventLoop().execute(pendingTask);
+                    }
+                    break;
+                }
+                final Runnable newPendingTask = () -> {
+                    oldPendingTask.run();
+                    pendingTask.run();
+                };
+                if (pendingTaskUpdater.compareAndSet(this, oldPendingTask, newPendingTask)) {
+                    break;
+                }
+            }
         }
     }
 }

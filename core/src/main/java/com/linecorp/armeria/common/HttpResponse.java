@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -40,20 +41,23 @@ import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A streamed HTTP/2 {@link Response}.
  */
-public interface HttpResponse extends Response, StreamMessage<HttpObject> {
+public interface HttpResponse extends Response, HttpMessage {
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
     //       AggregatedHttpResponse for consistency.
@@ -393,6 +397,16 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new HTTP response with the specified headers whose stream is produced from an existing
+     * {@link Publisher}.
+     */
+    static HttpResponse of(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        return PublisherBasedHttpResponse.from(headers, publisher);
+    }
+
+    /**
      * Creates a new HTTP response of the redirect to specific location.
      */
     static HttpResponse ofRedirect(HttpStatus redirectStatus, String location) {
@@ -493,59 +507,22 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         return future;
     }
 
-    /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
-     * more {@link HttpResponse}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
-     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
-     * {@link HttpResponseDuplicator}.
-     */
     @Override
     default HttpResponseDuplicator toDuplicator() {
         return toDuplicator(Flags.defaultMaxResponseLength());
     }
 
-    /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
-     * more {@link HttpResponse}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
-     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
-     * {@link HttpResponseDuplicator}.
-     *
-     * @param executor the executor to duplicate
-     */
     @Override
     default HttpResponseDuplicator toDuplicator(EventExecutor executor) {
         return toDuplicator(executor, Flags.defaultMaxResponseLength());
     }
 
-    /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
-     * more {@link HttpResponse}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
-     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
-     * {@link HttpResponseDuplicator}.
-     *
-     * @param maxResponseLength the maximum response length that the duplicator can hold in its buffer.
-     *                         {@link ContentTooLargeException} is raised if the length of the buffered
-     *                         {@link HttpData} is greater than this value.
-     */
+    @Override
     default HttpResponseDuplicator toDuplicator(long maxResponseLength) {
         return toDuplicator(defaultSubscriberExecutor(), maxResponseLength);
     }
 
-    /**
-     * Returns a new {@link HttpResponseDuplicator} that duplicates this {@link HttpResponse} into one or
-     * more {@link HttpResponse}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpResponse} anymore after you call this method.
-     * To subscribe, call {@link HttpResponseDuplicator#duplicate()} from the returned
-     * {@link HttpResponseDuplicator}.
-     *
-     * @param executor the executor to duplicate
-     * @param maxResponseLength the maximum response length that the duplicator can hold in its buffer.
-     *                         {@link ContentTooLargeException} is raised if the length of the buffered
-     *                         {@link HttpData} is greater than this value.
-     */
+    @Override
     default HttpResponseDuplicator toDuplicator(EventExecutor executor, long maxResponseLength) {
         requireNonNull(executor, "executor");
         return new DefaultHttpResponseDuplicator(this, executor, maxResponseLength);
@@ -574,5 +551,11 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     @CheckReturnValue
     default SplitHttpResponse split(EventExecutor executor) {
         return new DefaultSplitHttpResponse(this, executor);
+    }
+
+    @Override
+    default <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
+                                        Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
+        return new DecodedHttpStreamMessage<>(this, decoder, alloc, byteBufConverter);
     }
 }

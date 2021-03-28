@@ -55,12 +55,13 @@ final class DefaultCookie implements Cookie {
     private final long maxAge;
     private final boolean secure;
     private final boolean httpOnly;
+    private final boolean hostOnly;
     @Nullable
     private final String sameSite;
 
-    DefaultCookie(String name, String value, boolean valueQuoted,
-                  @Nullable String domain, @Nullable String path,
-                  long maxAge, boolean secure, boolean httpOnly, @Nullable String sameSite) {
+    DefaultCookie(String name, String value, boolean valueQuoted, @Nullable String domain,
+                  @Nullable String path, long maxAge, boolean secure, boolean httpOnly, boolean hostOnly,
+                  @Nullable String sameSite) {
         this.name = name;
         this.value = value;
         this.valueQuoted = valueQuoted;
@@ -69,6 +70,7 @@ final class DefaultCookie implements Cookie {
         this.maxAge = maxAge;
         this.secure = secure;
         this.httpOnly = httpOnly;
+        this.hostOnly = hostOnly;
         this.sameSite = sameSite;
     }
 
@@ -115,6 +117,11 @@ final class DefaultCookie implements Cookie {
     @Override
     public String sameSite() {
         return sameSite;
+    }
+
+    @Override
+    public boolean isHostOnly() {
+        return hostOnly;
     }
 
     @Override

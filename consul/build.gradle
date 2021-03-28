@@ -1,0 +1,8 @@
+dependencies {
+    // Embedded Consul
+    testImplementation 'com.pszymczyk.consul:embedded-consul'
+
+    // Embedded Consul removed Groovy from transitive dependencies
+    // https://github.com/pszymczyk/embedded-consul/pull/102
+    testImplementation 'org.codehaus.groovy:groovy-xml'
+}

@@ -31,19 +31,20 @@ import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Publisher;
+
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * Builds a new {@link HttpRequest}.
  */
 public abstract class AbstractHttpRequestBuilder {
-
-    // TODO(tumile): Add content(Publisher).
 
     private final RequestHeadersBuilder requestHeadersBuilder = RequestHeaders.builder();
     @Nullable
@@ -56,6 +57,8 @@ public abstract class AbstractHttpRequestBuilder {
     private List<Cookie> cookies;
     @Nullable
     private HttpData content;
+    @Nullable
+    private Publisher<? extends HttpData> publisher;
     @Nullable
     private String path;
     private boolean disablePathParams;
@@ -186,7 +189,19 @@ public abstract class AbstractHttpRequestBuilder {
     }
 
     /**
-     * Sets a header for this request. For example:
+     * Sets the {@link Publisher} for this request.
+     */
+    public AbstractHttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
+        requireNonNull(contentType, "contentType");
+        requireNonNull(publisher, "publisher");
+        checkState(content == null, "content has been set already");
+        requestHeadersBuilder.contentType(contentType);
+        this.publisher = publisher;
+        return this;
+    }
+
+    /**
+     * Adds a header for this request. For example:
      * <pre>{@code
      * HttpRequest.builder()
      *            .get("/")
@@ -200,7 +215,7 @@ public abstract class AbstractHttpRequestBuilder {
     }
 
     /**
-     * Sets multiple headers for this request. For example:
+     * Adds multiple headers for this request. For example:
      * <pre>{@code
      * HttpRequest.builder()
      *            .get("/")
@@ -358,6 +373,14 @@ public abstract class AbstractHttpRequestBuilder {
      */
     protected final HttpRequest buildRequest() {
         final RequestHeaders requestHeaders = requestHeaders();
+        if (publisher != null) {
+            if (httpTrailers == null) {
+                return HttpRequest.of(requestHeaders, publisher);
+            } else {
+                return HttpRequest.of(requestHeaders,
+                                      StreamMessage.concat(publisher, StreamMessage.of(httpTrailers.build())));
+            }
+        }
         if (content == null || content.isEmpty()) {
             if (content != null) {
                 content.close();

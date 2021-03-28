@@ -16,32 +16,28 @@
 
 package com.linecorp.armeria.spring;
 
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
 
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 
-import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.server.docs.DocService;
-import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
@@ -65,7 +61,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Create a started {@link Server} bean.
      */
     @Bean
-    @Nullable
+    @ConditionalOnMissingBean(Server.class)
     public Server armeriaServer(
             ArmeriaSettings armeriaSettings,
             Optional<MeterRegistry> meterRegistry,
@@ -78,43 +74,28 @@ public abstract class AbstractArmeriaAutoConfiguration {
 
         if (!armeriaServerConfigurators.isPresent() &&
             !armeriaServerBuilderConsumers.isPresent()) {
-            // No services to register, no need to start up armeria server.
-            return null;
+            throw new IllegalStateException(
+                    "No services to register, " +
+                    "use ArmeriaServerConfigurator or Consumer<ServerBuilder> to configure an Armeria server.");
         }
 
         final ServerBuilder serverBuilder = Server.builder();
 
         final List<Port> ports = armeriaSettings.getPorts();
         if (ports.isEmpty()) {
+            assert DEFAULT_PORT.getProtocols() != null;
             serverBuilder.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocols()));
-        } else {
-            configurePorts(serverBuilder, ports);
         }
 
-        final DocServiceBuilder docServiceBuilder = DocService.builder();
-        docServiceConfigurators.ifPresent(
-                configurators -> configurators.forEach(
-                        configurator -> configurator.configure(docServiceBuilder)));
-
-        armeriaServerConfigurators.ifPresent(
-                configurators -> configurators.forEach(
-                        configurator -> configurator.configure(serverBuilder)));
-
-        armeriaServerBuilderConsumers.ifPresent(
-                consumers -> consumers.forEach(
-                        consumer -> consumer.accept(serverBuilder)));
-
-        final String docsPath = armeriaSettings.getDocsPath();
         configureServerWithArmeriaSettings(serverBuilder, armeriaSettings,
+                                           armeriaServerConfigurators.orElse(ImmutableList.of()),
+                                           armeriaServerBuilderConsumers.orElse(ImmutableList.of()),
+                                           docServiceConfigurators.orElse(ImmutableList.of()),
                                            meterRegistry.orElse(Metrics.globalRegistry),
-                                           healthCheckers.orElseGet(Collections::emptyList),
-                                           healthCheckServiceConfigurators.orElseGet(Collections::emptyList),
+                                           healthCheckers.orElse(ImmutableList.of()),
+                                           healthCheckServiceConfigurators.orElse(ImmutableList.of()),
                                            meterIdPrefixFunction.orElse(
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")));
-
-        if (!Strings.isNullOrEmpty(docsPath)) {
-            serverBuilder.serviceUnder(docsPath, docServiceBuilder.build());
-        }
 
         final Server server = serverBuilder.build();
 
@@ -126,6 +107,14 @@ public abstract class AbstractArmeriaAutoConfiguration {
         }).join();
         logger.info("Armeria server started at ports: {}", server.activePorts());
         return server;
+    }
+
+    /**
+     * Wrap {@link Server} with {@link SmartLifecycle}.
+     */
+    @Bean
+    public SmartLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
+        return new ArmeriaServerGracefulShutdownLifecycle(server);
     }
 
     /**

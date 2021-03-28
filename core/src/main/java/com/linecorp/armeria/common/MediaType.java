@@ -69,13 +69,13 @@ import com.google.common.collect.Multimaps;
 /**
  * Represents an <a href="https://en.wikipedia.org/wiki/Internet_media_type">Internet Media Type</a>
  * (also known as a MIME Type or Content Type). This class also supports the concept of media ranges
- * <a href="https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.1">defined by HTTP/1.1</a>.
+ * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.1">defined by HTTP/1.1</a>.
  * As such, the {@code *} character is treated as a wildcard and is used to represent any acceptable
  * type or subtype value. A media type may not have wildcard type with a declared subtype. The
  * {@code *} character has no special meaning as part of a parameter. All values for type, subtype,
  * parameter attributes or parameter values must be valid according to RFCs
- * <a href="https://www.ietf.org/rfc/rfc2045.txt">2045</a> and
- * <a href="https://www.ietf.org/rfc/rfc2046.txt">2046</a>.
+ * <a href="https://datatracker.ietf.org/doc/rfc2045/">2045</a> and
+ * <a href="https://datatracker.ietf.org/doc/rfc2046/">2046</a>.
  *
  * <p>All portions of the media type that are case-insensitive (type, subtype, parameter attributes)
  * are normalized to lowercase. The value of the {@code charset} parameter is normalized to
@@ -172,13 +172,19 @@ public final class MediaType {
     public static final MediaType PLAIN_TEXT_UTF_8 = createConstantUtf8(TEXT_TYPE, "plain");
 
     /**
+     * The <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7.1.2">text/plain</a> content type is
+     * the generic subtype for plain text.
+     */
+    public static final MediaType PLAIN_TEXT = createConstant(TEXT_TYPE, "plain");
+
+    /**
      * As described in <a href="https://www.w3.org/TR/eventsource/">Server-Sent Events</a>, this constant
      * ({@code text/event-stream}) is used when sending notifications in the form of DOM events from a server.
      */
     public static final MediaType EVENT_STREAM = createConstant(TEXT_TYPE, "event-stream");
 
     /**
-     * <a href="http://www.rfc-editor.org/rfc/rfc4329.txt">RFC 4329</a> declares {@link
+     * <a href="https://datatracker.ietf.org/doc/rfc4329/">RFC 4329</a> declares {@link
      * #JAVASCRIPT_UTF_8 application/javascript} to be the correct media type for JavaScript, but this
      * may be necessary in certain situations for compatibility.
      */
@@ -198,7 +204,7 @@ public final class MediaType {
     public static final MediaType WML_UTF_8 = createConstantUtf8(TEXT_TYPE, "vnd.wap.wml");
 
     /**
-     * As described in <a href="http://www.ietf.org/rfc/rfc3023.txt">RFC 3023</a>, this constant
+     * As described in <a href="https://datatracker.ietf.org/doc/rfc3023/">RFC 3023</a>, this constant
      * ({@code text/xml}) is used for XML documents that are "readable by casual users." {@link
      * #APPLICATION_XML_UTF_8} is provided for documents that are intended for applications.
      */
@@ -243,7 +249,7 @@ public final class MediaType {
      * files with extension "PSB" are in a distinct but related format).
      *
      * <p>This is a more recent replacement for the older, experimental type {@code x-photoshop}: <a
-     * href="http://tools.ietf.org/html/rfc2046#section-6">RFC-2046.6</a>.
+     * href="https://datatracker.ietf.org/doc/html/rfc2046#section-6">RFC-2046.6</a>.
      */
     public static final MediaType PSD = createConstant(IMAGE_TYPE, "vnd.adobe.photoshop");
 
@@ -262,17 +268,17 @@ public final class MediaType {
     public static final MediaType WEBM_AUDIO = createConstant(AUDIO_TYPE, "webm");
 
     /**
-     * L16 audio, as defined by <a href="https://tools.ietf.org/html/rfc2586">RFC 2586</a>.
+     * L16 audio, as defined by <a href="https://datatracker.ietf.org/doc/rfc2586/">RFC 2586</a>.
      */
     public static final MediaType L16_AUDIO = createConstant(AUDIO_TYPE, "l16");
 
     /**
-     * L24 audio, as defined by <a href="https://tools.ietf.org/html/rfc3190">RFC 3190</a>.
+     * L24 audio, as defined by <a href="https://datatracker.ietf.org/doc/rfc3190/">RFC 3190</a>.
      */
     public static final MediaType L24_AUDIO = createConstant(AUDIO_TYPE, "l24");
 
     /**
-     * Basic Audio, as defined by <a href="http://tools.ietf.org/html/rfc2046#section-4.3">RFC
+     * Basic Audio, as defined by <a href="https://datatracker.ietf.org/doc/html/rfc2046#section-4.3">RFC
      * 2046</a>.
      */
     public static final MediaType BASIC_AUDIO = createConstant(AUDIO_TYPE, "basic");
@@ -284,7 +290,7 @@ public final class MediaType {
     public static final MediaType AAC_AUDIO = createConstant(AUDIO_TYPE, "aac");
 
     /**
-     * Vorbis Audio, as defined by <a href="http://tools.ietf.org/html/rfc5215">RFC 5215</a>.
+     * Vorbis Audio, as defined by <a href="https://datatracker.ietf.org/doc/rfc5215/">RFC 5215</a>.
      */
     public static final MediaType VORBIS_AUDIO = createConstant(AUDIO_TYPE, "vorbis");
 
@@ -309,7 +315,7 @@ public final class MediaType {
     public static final MediaType VND_REAL_AUDIO = createConstant(AUDIO_TYPE, "vnd.rn-realaudio");
 
     /**
-     * WAVE format, as defined by <a href="https://tools.ietf.org/html/rfc2361">RFC 2361</a>.
+     * WAVE format, as defined by <a href="https://datatracker.ietf.org/doc/rfc2361/">RFC 2361</a>.
      */
     public static final MediaType VND_WAVE_AUDIO = createConstant(AUDIO_TYPE, "vnd.wave");
 
@@ -344,7 +350,7 @@ public final class MediaType {
 
     /* application types */
     /**
-     * As described in <a href="http://www.ietf.org/rfc/rfc3023.txt">RFC 3023</a>, this constant
+     * As described in <a href="https://datatracker.ietf.org/doc/rfc3023/">RFC 3023</a>, this constant
      * ({@code application/xml}) is used for XML documents that are "unreadable by casual users."
      * {@link #XML_UTF_8} is provided for documents that may be read by users.
      */
@@ -384,6 +390,11 @@ public final class MediaType {
             createConstant(APPLICATION_TYPE, "x-www-form-urlencoded");
 
     /**
+     * A {@link MediaType} constant representing {@code multipart/form-data} media type.
+     */
+    public static final MediaType MULTIPART_FORM_DATA = createConstant("multipart", "form-data");
+
+    /**
      * As described in <a href="https://www.rsa.com/rsalabs/node.asp?id=2138">PKCS #12: Personal
      * Information Exchange Syntax Standard</a>, PKCS #12 defines an archive file format for storing
      * many cryptography objects as a single file.
@@ -401,7 +412,7 @@ public final class MediaType {
     public static final MediaType APPLICATION_BINARY = createConstant(APPLICATION_TYPE, "binary");
 
     /**
-     * <a href="https://tools.ietf.org/html/rfc7946">GeoJSON Format</a>, a geospatial data interchange format
+     * <a href="https://datatracker.ietf.org/doc/rfc7946/">GeoJSON Format</a>, a geospatial data interchange format
      * based on JSON.
      */
     public static final MediaType GEO_JSON = createConstant(APPLICATION_TYPE, "geo+json");
@@ -409,13 +420,13 @@ public final class MediaType {
     public static final MediaType GZIP = createConstant(APPLICATION_TYPE, "x-gzip");
 
     /**
-     * <a href="https://tools.ietf.org/html/draft-kelly-json-hal-08#section-3">JSON Hypertext
+     * <a href="https://datatracker.ietf.org/doc/html/draft-kelly-json-hal-08#section-3">JSON Hypertext
      * Application Language (HAL) documents</a>.
      */
     public static final MediaType HAL_JSON = createConstant(APPLICATION_TYPE, "hal+json");
 
     /**
-     * <a href="http://www.rfc-editor.org/rfc/rfc4329.txt">RFC 4329</a> declares this to be the
+     * <a href="https://datatracker.ietf.org/doc/rfc4329/">RFC 4329</a> declares this to be the
      * correct media type for JavaScript, but {@link #TEXT_JAVASCRIPT_UTF_8 text/javascript} may be
      * necessary in certain situations for compatibility.
      */
@@ -423,13 +434,13 @@ public final class MediaType {
             createConstantUtf8(APPLICATION_TYPE, "javascript");
 
     /**
-     * For <a href="https://tools.ietf.org/html/rfc7515">JWS or JWE objects using the Compact
+     * For <a href="https://datatracker.ietf.org/doc/rfc7515/">JWS or JWE objects using the Compact
      * Serialization</a>.
      */
     public static final MediaType JOSE = createConstant(APPLICATION_TYPE, "jose");
 
     /**
-     * For <a href="https://tools.ietf.org/html/rfc7515">JWS or JWE objects using the JSON
+     * For <a href="https://datatracker.ietf.org/doc/rfc7515/">JWS or JWE objects using the JSON
      * Serialization</a>.
      */
     public static final MediaType JOSE_JSON = createConstant(APPLICATION_TYPE, "jose+json");
@@ -438,14 +449,14 @@ public final class MediaType {
     public static final MediaType JSON = createConstant(APPLICATION_TYPE, "json");
 
     /**
-     * As described in <a href="https://www.ietf.org/rfc/rfc6902.txt">RFC 6902</a>, this constant
+     * As described in <a href="https://datatracker.ietf.org/doc/rfc6902/">RFC 6902</a>, this constant
      * ({@code application/json-patch+json}) is used for expressing a sequence of operations to apply
      * to a JavaScript Object Notation(JSON) document.
      */
     public static final MediaType JSON_PATCH = createConstant(APPLICATION_TYPE, "json-patch+json");
 
     /**
-     * As described in <a href="https://tools.ietf.org/html/rfc7464">RFC 7464</a>, this constant
+     * As described in <a href="https://datatracker.ietf.org/doc/rfc7464/">RFC 7464</a>, this constant
      * ({@code application/json-seq}) is used for expressing JSON text sequences.
      */
     public static final MediaType JSON_SEQ = createConstant(APPLICATION_TYPE, "json-seq");
@@ -468,7 +479,7 @@ public final class MediaType {
     public static final MediaType KMZ = createConstant(APPLICATION_TYPE, "vnd.google-earth.kmz");
 
     /**
-     * The <a href="https://tools.ietf.org/html/rfc4155">mbox database format</a>.
+     * The <a href="https://datatracker.ietf.org/doc/rfc4155/">mbox database format</a>.
      */
     public static final MediaType MBOX = createConstant(APPLICATION_TYPE, "mbox");
 
@@ -537,7 +548,7 @@ public final class MediaType {
     public static final MediaType PDF = createConstant(APPLICATION_TYPE, "pdf");
     public static final MediaType POSTSCRIPT = createConstant(APPLICATION_TYPE, "postscript");
     /**
-     * <a href="http://tools.ietf.org/html/draft-rfernando-protocol-buffers-00">Protocol buffers</a>.
+     * <a href="https://developers.google.com/protocol-buffers">Protocol buffers</a>.
      */
     public static final MediaType PROTOBUF = createConstant(APPLICATION_TYPE, "protobuf");
 
@@ -567,7 +578,7 @@ public final class MediaType {
      */
     public static final MediaType SKETCHUP = createConstant(APPLICATION_TYPE, "vnd.sketchup.skp");
     /**
-     * As described in <a href="http://www.ietf.org/rfc/rfc3902.txt">RFC 3902</a>, this constant
+     * As described in <a href="https://datatracker.ietf.org/doc/rfc3902/">RFC 3902</a>, this constant
      * ({@code application/soap+xml}) is used to identify SOAP 1.2 message envelopes that have been
      * serialized with XML 1.0.
      *
@@ -818,7 +829,7 @@ public final class MediaType {
 
     /**
      * Returns {@code true} if this instance falls within the range (as defined by <a
-     * href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html">the HTTP Accept header</a>) given
+     * href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.1">the HTTP Accept header</a>) given
      * by the argument according to three criteria:
      *
      * <ol>
@@ -1109,7 +1120,7 @@ public final class MediaType {
 
     /**
      * Returns the string representation of this media type in the format described in <a
-     * href="http://www.ietf.org/rfc/rfc2045.txt">RFC 2045</a>.
+     * href="https://datatracker.ietf.org/doc/rfc2045/">RFC 2045</a>.
      */
     @Override
     public String toString() {

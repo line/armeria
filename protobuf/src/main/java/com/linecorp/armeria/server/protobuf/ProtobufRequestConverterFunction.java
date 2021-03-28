@@ -33,7 +33,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.Nullable;
 
@@ -43,7 +42,6 @@ import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.MapMaker;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
@@ -72,7 +70,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
  * <a href="https://developers.google.com/protocol-buffers/docs/techniques#streaming">Streaming Multiple Messages</a>
  * for more information.
  * However, {@link Collection} types such as {@code List<Message>} and {@code Set<Message>} are supported
- * when converted from <a href="https://tools.ietf.org/html/rfc7159#section-5">JSON array</a>.
+ * when converted from <a href="https://datatracker.ietf.org/doc/html/rfc7159#section-5">JSON array</a>.
  *
  * <p>Note that this {@link RequestConverterFunction} is applied to an annotated service by default,
  * so you don't have to specify this converter explicitly unless you want to use your own {@link Parser} and
@@ -81,8 +79,19 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 @UnstableApi
 public final class ProtobufRequestConverterFunction implements RequestConverterFunction {
 
-    private static final ConcurrentMap<Class<?>, MethodHandle> methodCache =
-            new MapMaker().weakKeys().makeMap();
+    private static final ClassValue<MethodHandle> methodCache = new ClassValue<MethodHandle>() {
+        @Override
+        protected MethodHandle computeValue(Class<?> type) {
+            try {
+                final Class<?> builderClass = Class.forName(type.getName() + "$Builder");
+                final Lookup publicLookup = MethodHandles.publicLookup();
+                return publicLookup.findStatic(type, "newBuilder", methodType(builderClass));
+            } catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException ignored) {
+                return unknownMethodHandle;
+            }
+        }
+    };
+
     private static final Parser defaultJsonParser = JsonFormat.parser().ignoringUnknownFields();
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -225,15 +234,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
     }
 
     private static Message.Builder getMessageBuilder(Class<?> clazz) {
-        final MethodHandle methodHandle = methodCache.computeIfAbsent(clazz, key -> {
-            try {
-                final Class<?> builderClass = Class.forName(key.getName() + "$Builder");
-                final Lookup publicLookup = MethodHandles.publicLookup();
-                return publicLookup.findStatic(key, "newBuilder", methodType(builderClass));
-            } catch (NoSuchMethodException | IllegalAccessException | ClassNotFoundException ignored) {
-                return unknownMethodHandle;
-            }
-        });
+        final MethodHandle methodHandle = methodCache.get(clazz);
         if (methodHandle == unknownMethodHandle) {
             throw new IllegalStateException("Failed to find a static newBuilder() method from " + clazz);
         }

@@ -17,7 +17,10 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Locale.LanguageRange;
 import java.util.Map.Entry;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
@@ -90,6 +93,23 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
         return authority(endpoint.authority());
     }
 
+    /**
+     * Sets the {@code "accept-language"} header.
+     * @param acceptedLanguages the accepted languages.
+     * @return {@code this}
+     */
+    RequestHeadersBuilder acceptLanguages(Iterable<LanguageRange> acceptedLanguages);
+
+    /**
+     * Sets the {@code "accept-language"} header.
+     * @param acceptedLanguages the accepted languages.
+     * @return {@code this}
+     */
+    default RequestHeadersBuilder acceptLanguages(LanguageRange... acceptedLanguages) {
+        return acceptLanguages(ImmutableList.copyOf(
+                requireNonNull(acceptedLanguages, "acceptedLanguages")));
+    }
+
     // Override the return type of the chaining methods in the superclass.
 
     @Override
@@ -100,6 +120,9 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
 
     @Override
     RequestHeadersBuilder contentType(MediaType contentType);
+
+    @Override
+    RequestHeadersBuilder contentDisposition(ContentDisposition contentDisposition);
 
     @Override
     RequestHeadersBuilder add(CharSequence name, String value);

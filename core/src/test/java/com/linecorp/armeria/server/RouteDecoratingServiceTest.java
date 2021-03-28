@@ -21,13 +21,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class RouteDecoratingServiceTest {
@@ -64,24 +61,5 @@ class RouteDecoratingServiceTest {
 
         final HttpResponse response2 = webClient.execute(HttpRequest.of(HttpMethod.TRACE, "/not_exist"));
         assertThat(response2.aggregate().get().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @Test
-    void preflight() {
-        final WebClient webClient = WebClient.of(server.httpUri());
-        final AggregatedHttpResponse res1 = webClient.execute(preflightHeaders("/")).aggregate().join();
-        assertThat(res1.headers().status()).isSameAs(HttpStatus.OK);
-
-        final AggregatedHttpResponse res2 = webClient.execute(preflightHeaders("/not_exist"))
-                                                     .aggregate()
-                                                     .join();
-        assertThat(res2.headers().status()).isSameAs(HttpStatus.FORBIDDEN);
-    }
-
-    private static RequestHeaders preflightHeaders(String path) {
-        return RequestHeaders.of(HttpMethod.OPTIONS, path,
-                                 HttpHeaderNames.ACCEPT, "utf-8",
-                                 HttpHeaderNames.ORIGIN, "http://example.com",
-                                 HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "GET");
     }
 }

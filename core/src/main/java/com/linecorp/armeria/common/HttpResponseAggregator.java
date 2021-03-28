@@ -26,9 +26,11 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.common.HttpObjectAggregator;
+
 import io.netty.buffer.ByteBufAllocator;
 
-final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpResponse> {
+final class HttpResponseAggregator extends HttpObjectAggregator<AggregatedHttpResponse> {
 
     @Nullable
     private List<ResponseHeaders> informationals; // needs aggregation as well
@@ -52,7 +54,7 @@ final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpR
             trailers = headers;
         } else {
             // Optionally, only one trailers can be present.
-            // See https://tools.ietf.org/html/rfc7540#section-8.1
+            // See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1
         }
     }
 
@@ -61,7 +63,7 @@ final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpR
         if (!trailers.isEmpty()) {
             data.close();
             // Data can't come after trailers.
-            // See https://tools.ietf.org/html/rfc7540#section-8.1
+            // See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1
             return;
         }
         super.onData(data);

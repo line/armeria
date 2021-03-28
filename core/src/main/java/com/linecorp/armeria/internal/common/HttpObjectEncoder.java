@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
@@ -41,7 +39,6 @@ public interface HttpObjectEncoder {
         return channel().eventLoop();
     }
 
-    @Nullable
     KeepAliveHandler keepAliveHandler();
 
     /**

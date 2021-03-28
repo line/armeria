@@ -123,6 +123,11 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
     }
 
     @Override
+    public long demand() {
+        return response.demand();
+    }
+
+    @Override
     public CompletableFuture<Void> whenComplete() {
         return response.whenComplete();
     }

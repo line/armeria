@@ -17,7 +17,7 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.messageBuf;
 import static com.linecorp.armeria.internal.client.grpc.InternalGrpcWebUtil.parseGrpcWebTrailers;
-import static com.linecorp.armeria.internal.common.grpc.protocol.HttpDeframerUtil.newHttpDeframer;
+import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,13 +39,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcWebTrailers;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
-import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 
 import io.grpc.ClientInterceptor;
 import io.grpc.Decompressor;
@@ -75,12 +76,12 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
         final HttpResponse response = delegate.execute(ctx, req);
         final ByteBufAllocator alloc = ctx.alloc();
 
-        final ArmeriaMessageDeframerHandler handler = new ArmeriaMessageDeframerHandler(maxMessageSizeBytes);
-        final HttpDeframer<DeframedMessage> deframer = newHttpDeframer(handler, alloc, grpcWebText);
-
+        final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(maxMessageSizeBytes);
         final DefaultStreamMessage<HttpData> publisher = new DefaultStreamMessage<>();
-        publisher.subscribe(deframer, ctx.eventLoop());
-        deframer.subscribe(new TrailersSubscriber(ctx), ctx.eventLoop());
+        final StreamMessage<DeframedMessage> deframed = new DecodedHttpStreamMessage<>(
+                publisher, deframer, alloc, byteBufConverter(alloc, grpcWebText));
+        deframed.subscribe(new TrailersSubscriber(ctx), ctx.eventLoop());
+
         final FilteredHttpResponse filteredHttpResponse = new FilteredHttpResponse(response, true) {
             @Override
             protected HttpObject filter(HttpObject obj) {
@@ -116,7 +117,7 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                             publisher.close();
                             return obj;
                         }
-                        handler.decompressor(ForwardingDecompressor.forGrpc(decompressor));
+                        deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
                     }
                     return obj;
                 }
@@ -129,20 +130,8 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                 }
                 return obj;
             }
-
-            @Override
-            protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-                publisher.close();
-            }
-
-            @Override
-            protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-                publisher.close();
-                return cause;
-            }
         };
         filteredHttpResponse.whenComplete().handle((unused, unused2) -> {
-            // To make sure the deframer is closed even when the response is cancelled.
             publisher.close();
             return null;
         });

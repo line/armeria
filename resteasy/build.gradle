@@ -1,0 +1,11 @@
+dependencies {
+    // RESTEasy - JAX-RS implementation framework
+    implementation 'org.jboss.resteasy:resteasy-core-spi'
+    implementation 'org.jboss.resteasy:resteasy-core'
+    implementation 'org.jboss.resteasy:resteasy-client'
+    // JBoss Logging - required by RESTEasy SPI
+    implementation 'org.jboss.logging:jboss-logging'
+    implementation 'org.jboss.logging:jboss-logging-annotations'
+
+    testRuntimeOnly 'org.jboss.resteasy:resteasy-jackson2-provider'
+}

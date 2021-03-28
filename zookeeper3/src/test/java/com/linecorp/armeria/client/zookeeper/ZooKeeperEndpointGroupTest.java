@@ -21,6 +21,9 @@ import static org.awaitility.Awaitility.await;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceType;
 import org.apache.zookeeper.CreateMode;
@@ -97,6 +100,11 @@ class ZooKeeperEndpointGroupTest {
                                      .build();
     }
 
+    private static ZooKeeperEndpointGroup endpointGroup(CuratorFramework client, ZooKeeperDiscoverySpec spec) {
+        return ZooKeeperEndpointGroup.builder(client, Z_NODE, spec)
+                                     .build();
+    }
+
     private static void disconnectZk(ZooKeeperEndpointGroup endpointGroup) {
         endpointGroup.close();
         // Clear the ZooKeeper nodes.
@@ -159,5 +167,24 @@ class ZooKeeperEndpointGroupTest {
     private static ServiceInstance<?> serviceInstance(Endpoint endpoint, int index) {
         return new ServiceInstance<>(CURATOR_X_SERVICE_NAME, String.valueOf(index), endpoint.host(),
                                      endpoint.port(), null, null, 0, ServiceType.DYNAMIC, null);
+    }
+
+    @Test
+    void curatorDiscoverySpecWithExternalClient() throws Throwable {
+        final CuratorFramework client =
+                CuratorFrameworkFactory.builder()
+                                       .connectString(zkInstance.connectString())
+                                       .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+                                       .build();
+        client.start();
+
+        final List<Endpoint> sampleEndpoints = ZooKeeperTestUtil.sampleEndpoints(3);
+        setCuratorXNodeChildren(sampleEndpoints, 0);
+        final ZooKeeperDiscoverySpec spec = ZooKeeperDiscoverySpec.builderForCurator(CURATOR_X_SERVICE_NAME)
+                                                                  .build();
+        final ZooKeeperEndpointGroup endpointGroup = endpointGroup(client, spec);
+        await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameElementsAs(sampleEndpoints));
+
+        disconnectZk(endpointGroup);
     }
 }

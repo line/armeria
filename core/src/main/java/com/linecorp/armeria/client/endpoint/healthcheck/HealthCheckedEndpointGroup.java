@@ -19,6 +19,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -172,27 +173,35 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         isRefreshingContexts.set(Boolean.TRUE);
         try {
             synchronized (contexts) {
-                final List<Endpoint> newSelectedEndpoints = healthCheckStrategy.getSelectedEndpoints();
+                final Set<Endpoint> newSelectedEndpoints =
+                        new HashSet<>(healthCheckStrategy.getSelectedEndpoints());
 
+                boolean removed = false;
                 // Stop the health checkers whose endpoints disappeared and destroy their contexts.
                 for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i =
                      contexts.entrySet().iterator(); i.hasNext();) {
                     final Map.Entry<Endpoint, DefaultHealthCheckerContext> e = i.next();
-                    if (newSelectedEndpoints.contains(e.getKey())) {
+                    if (newSelectedEndpoints.remove(e.getKey())) {
                         // Not a removed endpoint.
                         continue;
                     }
 
+                    removed = true;
                     i.remove();
                     e.getValue().destroy();
                 }
 
-                // Start the health checkers with new contexts for newly appeared endpoints.
-                for (Endpoint e : newSelectedEndpoints) {
-                    if (contexts.containsKey(e)) {
-                        // Not a new endpoint.
-                        continue;
+                if (newSelectedEndpoints.isEmpty()) {
+                    if (!removed) {
+                        // The weight of an endpoint is changed. So we just refresh.
+                        refreshEndpoints();
                     }
+                    return;
+                }
+
+                // At this time newSelectedEndpoints only contains newly appeared endpoints.
+                // Start the health checkers with new contexts.
+                for (Endpoint e : newSelectedEndpoints) {
                     final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
                     ctx.init(checkerFactory.apply(ctx));
                     contexts.put(e, ctx);

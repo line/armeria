@@ -208,4 +208,46 @@ class ClientFactoryBuilderTest {
             }
         }
     }
+
+    @CsvSource({
+            "9999,  0",
+            "9999,  10000",
+            "10000, 10000",
+            "10000, 10001",
+            "0,     10001",
+    })
+    @ParameterizedTest
+    void clampedIdleTimeout(long idleTimeoutMillis, long maxConnectionAgeMillis) {
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .idleTimeoutMillis(idleTimeoutMillis)
+                                                  .maxConnectionAgeMillis(maxConnectionAgeMillis)
+                                                  .build()) {
+            assertThat(factory.options().maxConnectionAgeMillis()).isEqualTo(maxConnectionAgeMillis);
+
+            if (maxConnectionAgeMillis == 0) {
+                // Preserve the specified idleTimeoutMillis
+                assertThat(factory.options().idleTimeoutMillis()).isEqualTo(idleTimeoutMillis);
+            } else if (maxConnectionAgeMillis > 0) {
+                assertThat(factory.options().idleTimeoutMillis())
+                        .isEqualTo(Math.min(idleTimeoutMillis, maxConnectionAgeMillis));
+            }
+        }
+    }
+
+    @Test
+    void clampedIdleTimeoutShouldAdjustPingTimeout() {
+        final int idleTimeoutMillis = 3000;
+        final int maxConnectionAgeMillis = 1000;
+        final int pingIntervalMillis = 2000;
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .idleTimeoutMillis(idleTimeoutMillis)
+                                                  .maxConnectionAgeMillis(maxConnectionAgeMillis)
+                                                  .pingIntervalMillis(pingIntervalMillis)
+                                                  .build()) {
+            // idleTimeout should not be greater than maxConnectionAge.
+            assertThat(factory.options().idleTimeoutMillis()).isEqualTo(maxConnectionAgeMillis);
+            // pingInterval should be disabled because idleTimeout will work first.
+            assertThat(factory.options().pingIntervalMillis()).isEqualTo(0);
+        }
+    }
 }

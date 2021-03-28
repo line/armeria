@@ -1,0 +1,4 @@
+com.linecorp.armeria.internal.client.grpc.JavaGrpcClientStubFactory
+com.linecorp.armeria.internal.client.grpc.KotlinGrpcClientStubFactory
+com.linecorp.armeria.internal.client.grpc.ReactorGrpcClientStubFactory
+com.linecorp.armeria.internal.client.grpc.ScalaPbGrpcClientStubFactory

@@ -24,12 +24,15 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -47,6 +50,8 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.TransientHttpService;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import brave.Span.Kind;
 import brave.Tracing;
@@ -150,6 +155,51 @@ class BraveServiceTest {
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
         // check the service invocation had the current span in scope.
         assertThat(scopeDecoratorCallingCounter.get()).isOne();
+    }
+
+    @Test
+    void transientService() throws Exception {
+        final SpanCollector collector = new SpanCollector();
+        final Tracing tracing = Tracing.newBuilder()
+                                       .localServiceName(TEST_SERVICE)
+                                       .addSpanHandler(collector)
+                                       .currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
+                                       .sampler(Sampler.ALWAYS_SAMPLE)
+                                       .build();
+
+        final HttpService transientService = new TransientHttpService() {
+            @Override
+            public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                return HttpResponse.of(HttpStatus.OK);
+            }
+
+            @Override
+            public Set<TransientServiceOption> transientServiceOptions() {
+                return Collections.emptySet();
+            }
+        };
+
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/internal/healthcheck",
+                                                                 HttpHeaderNames.SCHEME, "http",
+                                                                 HttpHeaderNames.AUTHORITY, "foo.com"));
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(req)
+                                                               .service(transientService)
+                                                               .build();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.endRequest();
+
+        try (SafeCloseable ignored = ctx.push()) {
+            final BraveService service = BraveService.newDecorator(tracing).apply(transientService);
+
+            // do invoke
+            final AggregatedHttpResponse res = service.serve(ctx, req).aggregate().join();
+            logBuilder.responseHeaders(res.headers());
+            logBuilder.responseFirstBytesTransferred();
+            logBuilder.endResponse();
+        }
+
+        // don't submit any spans
+        assertThat(collector.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
     private static RequestLog testServiceInvocation(SpanHandler spanHandler,

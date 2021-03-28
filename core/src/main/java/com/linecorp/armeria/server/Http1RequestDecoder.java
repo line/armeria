@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -141,9 +142,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
 
         final KeepAliveHandler keepAliveHandler = writer.keepAliveHandler();
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onReadOrWrite();
-        }
+        keepAliveHandler.onReadOrWrite();
         // this.req can be set to null by fail(), so we keep it in a local variable.
         DecodedHttpRequest req = this.req;
         final int id = req != null ? req.id() : ++receivedRequests;
@@ -154,6 +153,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
             if (req == null) {
                 if (msg instanceof HttpRequest) {
+                    keepAliveHandler.increaseNumRequests();
                     final HttpRequest nettyReq = (HttpRequest) msg;
                     if (!nettyReq.decoderResult().isSuccess()) {
                         fail(id, HttpResponseStatus.BAD_REQUEST, DATA_DECODER_FAILURE);
@@ -344,15 +344,13 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         final KeepAliveHandler keepAliveHandler = writer.keepAliveHandler();
-        if (keepAliveHandler != null && ctx.channel().isActive() && ctx.channel().isRegistered()) {
+        if (keepAliveHandler != NoopKeepAliveHandler.INSTANCE &&
+            ctx.channel().isActive() && ctx.channel().isRegistered()) {
             keepAliveHandler.initialize(ctx);
         }
     }
 
     private void destroyKeepAliveHandler() {
-        final KeepAliveHandler keepAliveHandler = writer.keepAliveHandler();
-        if (keepAliveHandler != null) {
-            keepAliveHandler.destroy();
-        }
+        writer.keepAliveHandler().destroy();
     }
 }

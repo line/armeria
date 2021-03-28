@@ -31,13 +31,16 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.TransportType;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.BiDnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
@@ -95,6 +98,8 @@ public final class DnsResolverGroupBuilder {
     private Boolean decodeIdn;
     @Nullable
     private String cacheSpec;
+    @Nullable
+    private MeterRegistry meterRegistry;
 
     DnsResolverGroupBuilder() {}
 
@@ -288,12 +293,20 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets if the domain and host names should be decoded to unicode when received.
-     * See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>. This flag is enabled by default.
+     * See <a href="https://datatracker.ietf.org/doc/rfc3492/">rfc3492</a>. This flag is enabled by default.
      *
      * @see DnsNameResolverBuilder#decodeIdn(boolean)
      */
     public DnsResolverGroupBuilder decodeIdn(boolean decodeIdn) {
         this.decodeIdn = decodeIdn;
+        return this;
+    }
+
+    /**
+     * Sets {@link MeterRegistry} to collect the DNS query metrics.
+     */
+    DnsResolverGroupBuilder meterRegistry(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
         return this;
     }
 
@@ -343,8 +356,17 @@ public final class DnsResolverGroupBuilder {
             if (dnsServerAddressStreamProvider != null) {
                 builder.nameServerProvider(dnsServerAddressStreamProvider);
             }
-            if (dnsQueryLifecycleObserverFactory != null) {
-                builder.dnsQueryLifecycleObserverFactory(dnsQueryLifecycleObserverFactory);
+            assert meterRegistry != null;
+            final DnsQueryLifecycleObserverFactory observerFactory =
+                    new DefaultDnsQueryLifecycleObserverFactory(
+                            meterRegistry,
+                            new MeterIdPrefix("armeria.client.dns.queries"));
+            if (dnsQueryLifecycleObserverFactory == null) {
+                builder.dnsQueryLifecycleObserverFactory(observerFactory);
+            } else {
+                builder.dnsQueryLifecycleObserverFactory(
+                        new BiDnsQueryLifecycleObserverFactory(observerFactory,
+                                                               dnsQueryLifecycleObserverFactory));
             }
             if (searchDomains != null) {
                 builder.searchDomains(searchDomains);

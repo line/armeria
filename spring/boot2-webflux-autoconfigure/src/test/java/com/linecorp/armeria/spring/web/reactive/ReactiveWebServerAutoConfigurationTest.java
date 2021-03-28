@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Map;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -52,11 +53,13 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -108,6 +111,11 @@ class ReactiveWebServerAutoConfigurationTest {
                                                .body(BodyInserters.fromValue("[\"route\"]")));
             }
         }
+
+        @Bean
+        public HealthCheckServiceConfigurator healthCheckServiceConfigurator() {
+            return builder -> builder.updatable(true);
+        }
     }
 
     private static final ClientFactory clientFactory =
@@ -122,19 +130,21 @@ class ReactiveWebServerAutoConfigurationTest {
     @ParameterizedTest
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetHelloFromRestController(String scheme) throws Exception {
-        final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
-                                          .factory(clientFactory)
-                                          .build();
+        final WebClient client = webClient(scheme);
         final AggregatedHttpResponse response = client.get("/hello").aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("hello");
+    }
+
+    private WebClient webClient(String scheme) {
+        return WebClient.builder(scheme + "://example.com:" + port)
+                        .factory(clientFactory)
+                        .build();
     }
 
     @ParameterizedTest
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetHelloFromRouter(String scheme) throws Exception {
-        final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
-                                          .factory(clientFactory)
-                                          .build();
+        final WebClient client = webClient(scheme);
 
         final AggregatedHttpResponse res = client.get("/route").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("route");
@@ -151,9 +161,7 @@ class ReactiveWebServerAutoConfigurationTest {
     @ParameterizedTest
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetNotFound(String scheme) {
-        final WebClient client = WebClient.builder(scheme + "://example.com:" + port)
-                                          .factory(clientFactory)
-                                          .build();
+        final WebClient client = webClient(scheme);
         assertThat(client.get("/route2").aggregate().join().status()).isEqualTo(HttpStatus.NOT_FOUND);
 
         assertThat(client.execute(
@@ -161,6 +169,21 @@ class ReactiveWebServerAutoConfigurationTest {
                                   HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8),
                 HttpData.wrap("text".getBytes())).aggregate().join().status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void testHealthCheckService() throws Exception {
+        final WebClient client = webClient("h2");
+
+        HttpResponse response = client.get("/internal/healthcheck");
+        AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+        response = client.post("/internal/healthcheck", "{\"healthy\":false}");
+        res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        // Make the server healthy again.
+        client.post("/internal/healthcheck", "{\"healthy\":true}").aggregate().join();
     }
 
     private static class SchemesProvider implements ArgumentsProvider {

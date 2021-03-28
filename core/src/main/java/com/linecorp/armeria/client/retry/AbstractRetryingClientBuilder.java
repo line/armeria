@@ -89,8 +89,8 @@ public abstract class AbstractRetryingClientBuilder<O extends Response> {
     public AbstractRetryingClientBuilder<O> maxTotalAttempts(int maxTotalAttempts) {
         checkState(retryConfigBuilder != null,
                    "You are using a RetryConfigMapping. You cannot set maxTotalAttempts.");
-        checkArgument(maxTotalAttempts > 0,
-                      "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
+        checkArgument(maxTotalAttempts > 0, "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
+
         retryConfigBuilder.maxTotalAttempts(maxTotalAttempts);
         return this;
     }

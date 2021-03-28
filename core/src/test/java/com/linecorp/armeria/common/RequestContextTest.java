@@ -56,6 +56,29 @@ import io.netty.util.concurrent.Promise;
 class RequestContextTest {
 
     @Test
+    void runWithRunnable() {
+        final RequestContext ctx = createContext();
+        final AtomicBoolean finished = new AtomicBoolean(false);
+        ctx.run(() -> {
+            assertCurrentContext(ctx);
+            finished.set(true);
+        });
+        assertCurrentContext(null);
+        await().untilTrue(finished);
+    }
+
+    @Test
+    void runWithCallable() throws Exception {
+        final RequestContext ctx = createContext();
+        final String result = ctx.run(() -> {
+            assertCurrentContext(ctx);
+            return "success";
+        });
+        assertCurrentContext(null);
+        assertThat(result).isEqualTo("success");
+    }
+
+    @Test
     void contextAwareEventExecutor() throws Exception {
         final RequestContext context = createContext();
         final Set<Integer> callbacksCalled = Collections.newSetFromMap(new ConcurrentHashMap<>());

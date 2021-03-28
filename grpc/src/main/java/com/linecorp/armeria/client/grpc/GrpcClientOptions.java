@@ -31,8 +31,9 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframerHandler;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.client.grpc.NullGrpcClientStubFactory;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.ServiceDescriptor;
@@ -44,12 +45,12 @@ public final class GrpcClientOptions {
 
     /**
      * The maximum size, in bytes, of messages coming in a response.
-     * The default value is {@value ArmeriaMessageDeframerHandler#NO_MAX_INBOUND_MESSAGE_SIZE},
+     * The default value is {@value ArmeriaMessageDeframer#NO_MAX_INBOUND_MESSAGE_SIZE},
      * which means 'use {@link ClientOptions#MAX_RESPONSE_LENGTH}'.
      */
     public static final ClientOption<Integer> MAX_INBOUND_MESSAGE_SIZE_BYTES =
             ClientOption.define("GRPC_MAX_INBOUND_MESSAGE_SIZE_BYTES",
-                                ArmeriaMessageDeframerHandler.NO_MAX_INBOUND_MESSAGE_SIZE);
+                                ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE);
 
     /**
      * The maximum size, in bytes, of messages sent in a request.
@@ -113,6 +114,20 @@ public final class GrpcClientOptions {
     public static final ClientOption<Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller>>
             GRPC_JSON_MARSHALLER_FACTORY = ClientOption.define("GRPC_JSON_MARSHALLER_FACTORY",
                                                                GrpcJsonMarshaller::of);
+
+    /**
+     * Sets the {@link GrpcClientStubFactory} that creates a gRPC client stub.
+     * If not specified, Armeria provides built-in factories for the following gRPC client stubs:
+     * <ul>
+     *   <li><a href="https://github.com/grpc/grpc-java">gRPC-Java</a></li>
+     *   <li><a href="https://github.com/salesforce/reactive-grpc">Reactive-gRPC</a></li>
+     *   <li><a href="https://github.com/grpc/grpc-kotlin">gRPC-Kotlin</a></li>
+     *   <li><a href="https://scalapb.github.io/">ScalaPB</a></li>
+     * </ul>
+     */
+    public static final ClientOption<GrpcClientStubFactory>
+            GRPC_CLIENT_STUB_FACTORY = ClientOption.define("GRPC_CLIENT_STUB_FACTORY",
+                                                           NullGrpcClientStubFactory.INSTANCE);
 
     private GrpcClientOptions() {}
 }

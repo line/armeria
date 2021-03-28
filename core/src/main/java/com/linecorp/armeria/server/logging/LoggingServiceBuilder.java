@@ -95,6 +95,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     @Override
+    public LoggingServiceBuilder logger(String loggerName) {
+        return (LoggingServiceBuilder) super.logger(loggerName);
+    }
+
+    @Override
     public LoggingServiceBuilder requestLogLevel(LogLevel requestLogLevel) {
         return (LoggingServiceBuilder) super.requestLogLevel(requestLogLevel);
     }

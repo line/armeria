@@ -55,11 +55,17 @@ public enum TransientServiceOption {
      * Enables {@link AccessLogWriter} to produce the access logs of the requests to the
      * {@link TransientService}.
      */
-    WITH_ACCESS_LOGGING;
+    WITH_ACCESS_LOGGING,
+
+    /**
+     * Enables to trace the requests to the {@link TransientService}.
+     */
+    WITH_TRACING;
 
     private static final Set<TransientServiceOption> allOf = Sets.immutableEnumSet(WITH_METRIC_COLLECTION,
                                                                                    WITH_SERVICE_LOGGING,
-                                                                                   WITH_ACCESS_LOGGING);
+                                                                                   WITH_ACCESS_LOGGING,
+                                                                                   WITH_TRACING);
 
     /**
      * Returns all {@link TransientServiceOption}s.

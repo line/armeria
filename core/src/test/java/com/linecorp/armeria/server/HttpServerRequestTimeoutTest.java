@@ -23,6 +23,8 @@ import static org.awaitility.Awaitility.await;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 
@@ -32,12 +34,15 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.google.common.util.concurrent.Uninterruptibles;
+
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
@@ -47,6 +52,7 @@ import reactor.core.publisher.Flux;
 
 class HttpServerRequestTimeoutTest {
 
+    private static final AtomicReference<RequestLog> accessLog = new AtomicReference<>();
     @Nullable
     private static CompletableFuture<Throwable> timeoutFuture;
 
@@ -55,6 +61,7 @@ class HttpServerRequestTimeoutTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.requestTimeoutMillis(400)
+              .accessLogWriter(accessLog::set, false)
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
@@ -83,6 +90,14 @@ class HttpServerRequestTimeoutTest {
               .service("/streaming", (ctx, req) -> {
                   timeoutFuture = ctx.whenRequestCancelled();
                   return HttpResponse.streaming();
+              })
+              .service("/response-sent-later", (ctx, req) -> {
+                  final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+                  ctx.blockingTaskExecutor().execute(() -> {
+                      Uninterruptibles.sleepUninterruptibly(Duration.ofSeconds(20));
+                      future.complete(HttpResponse.of(200));
+                  });
+                  return HttpResponse.from(future);
               })
               .serviceUnder("/timeout-by-decorator", (ctx, req) ->
                       HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1)))
@@ -230,6 +245,16 @@ class HttpServerRequestTimeoutTest {
             assertThat(timeoutFuture).isCompletedWithValueMatching(
                     throwable -> throwable instanceof TimeoutException);
             assertThat(timeoutFuture).isDone();
+        });
+    }
+
+    @Test
+    void accessLogIsWrittenRightAwayAfterResponseIsSent() {
+        final AggregatedHttpResponse response = client.get("/response-sent-later").aggregate().join();
+        assertThat(response.status().code()).isEqualTo(503);
+        await().atMost(2, TimeUnit.SECONDS).untilAsserted(() -> {
+            final RequestLog requestLog = accessLog.get();
+            assertThat(requestLog).isNotNull();
         });
     }
 }

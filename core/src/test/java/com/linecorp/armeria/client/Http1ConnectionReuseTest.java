@@ -89,6 +89,11 @@ class Http1ConnectionReuseTest {
             }
 
             @Override
+            public long demand() {
+                return 0;
+            }
+
+            @Override
             public CompletableFuture<Void> whenComplete() {
                 return future;
             }

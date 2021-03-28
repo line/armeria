@@ -20,12 +20,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 class DefaultCookieTest {
+
     @Test
     void toBuilder() {
         final Cookie cookie = Cookie.builder("a", "b")
                                     .domain("c")
                                     .path("/d")
-                                    .maxAge(1)
                                     .httpOnly(true)
                                     .secure(true)
                                     .sameSite("Strict")
@@ -38,5 +38,14 @@ class DefaultCookieTest {
     void mutation() {
         final Cookie cookie = Cookie.of("a", "b").withMutations(mutator -> mutator.name("c").value("d"));
         assertThat(cookie).isEqualTo(Cookie.of("c", "d"));
+    }
+
+    @Test
+    void trimDomainDot() {
+        Cookie cookie = Cookie.builder("a", "b").domain("foo.com.").build();
+        assertThat(cookie.domain()).isNull();
+
+        cookie = Cookie.builder("a", "b").domain(".foo.com").build();
+        assertThat(cookie.domain()).isEqualTo("foo.com");
     }
 }

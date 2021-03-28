@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_MD5;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
@@ -23,8 +24,12 @@ import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletionException;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -79,5 +84,28 @@ class DefaultAggregatedHttpRequestTest {
         assertThatThrownBy(() -> req.aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void shouldHaveAllGettersInHttpRequest() {
+        final List<String> httpRequestMethods = noParameterMethods(HttpRequest.class);
+        final List<String> aggregateHttpRequestMethods = noParameterMethods(AggregatedHttpRequest.class,
+                                                                            AggregatedHttpMessage.class,
+                                                                            AggregatedHttpObject.class);
+        for (String httpRequestMethod : httpRequestMethods) {
+            if (httpRequestMethod.startsWith("builder") || httpRequestMethod.startsWith("aggregate") ||
+                httpRequestMethod.startsWith("toDuplicator")) {
+                // Not a getter.
+                continue;
+            }
+            assertThat(aggregateHttpRequestMethods).contains(httpRequestMethod);
+        }
+    }
+
+    static List<String> noParameterMethods(Class<?>... classes) {
+        return Arrays.stream(classes).flatMap(aClass -> Stream.of(aClass.getDeclaredMethods()))
+                     .filter(method -> method.getParameterCount() == 0)
+                     .map(Method::getName)
+                     .collect(toImmutableList());
     }
 }

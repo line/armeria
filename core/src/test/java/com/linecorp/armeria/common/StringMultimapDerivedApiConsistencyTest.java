@@ -60,7 +60,8 @@ class StringMultimapDerivedApiConsistencyTest {
                          // Ignore the methods only available in HttpHeaderGetters or HttpHeadersBuilder.
                          if ("endOfStream".equals(methodName) ||
                              "isEndOfStream".equals(methodName) ||
-                             "contentType".equals(methodName)) {
+                             "contentType".equals(methodName) ||
+                             "contentDisposition".equals(methodName)) {
                              return false;
                          }
 

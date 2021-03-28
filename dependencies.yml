@@ -3,14 +3,14 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.11.3
-  - io.dropwizard.metrics:metrics-bom:4.1.15
-  - io.grpc:grpc-bom:1.33.1
-  - io.micrometer:micrometer-bom:1.6.1
+  - com.fasterxml.jackson:jackson-bom:2.12.0
+  - io.dropwizard.metrics:metrics-bom:4.1.17
+  - io.grpc:grpc-bom:1.35.0
+  - io.micrometer:micrometer-bom:1.6.3
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
-  - io.netty:netty-bom:4.1.54.Final
-  - io.zipkin.brave:brave-bom:5.13.1
-  - org.eclipse.jetty:jetty-bom:9.4.35.v20201120
+  - io.netty:netty-bom:4.1.58.Final
+  - io.zipkin.brave:brave-bom:5.13.3
+  - org.eclipse.jetty:jetty-bom:9.4.36.v20210114
   - org.junit:junit-bom:5.7.0
 
 cglib:
@@ -28,28 +28,28 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.11.0'
+    version: '3.12.1'
     javadocs:
-    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.11.0/
+    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.12.1/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
     javadocs:
-    - https://fasterxml.github.io/jackson-annotations/javadoc/2.11/
+    - https://fasterxml.github.io/jackson-annotations/javadoc/2.12/
   jackson-core:
     javadocs:
-    - https://fasterxml.github.io/jackson-core/javadoc/2.11/
+    - https://fasterxml.github.io/jackson-core/javadoc/2.12/
   jackson-databind:
     javadocs:
-    - https://fasterxml.github.io/jackson-databind/javadoc/2.11/
+    - https://fasterxml.github.io/jackson-databind/javadoc/2.12/
 
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.8.6'
+    version: '2.8.8'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.8.6/
+    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.8.8/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
@@ -68,17 +68,17 @@ com.google.code.findbugs:
 
 # This is only used for examples/context-propagation/dagger
 com.google.dagger:
-  dagger: { version: &DAGGER_VERSION '2.30.1' }
+  dagger: { version: &DAGGER_VERSION '2.31.2' }
   dagger-compiler: { version: *DAGGER_VERSION }
   dagger-producers: { version: *DAGGER_VERSION }
 
 com.google.errorprone:
-  error_prone_core: { version: &ERRORPRONE_VERSION '2.4.0' }
+  error_prone_core: { version: &ERRORPRONE_VERSION '2.5.1' }
   error_prone_annotations: { version: *ERRORPRONE_VERSION }
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '30.0-jre'
+    version: &GUAVA_VERSION '30.1-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -126,11 +126,14 @@ com.lightbend.akka.grpc:
 
 # Eureka is used only for testing in eureka module.
 com.netflix.eureka:
-  eureka-client: { version: &EUREKA_VERSION '1.10.10' }
+  eureka-client: { version: &EUREKA_VERSION '1.10.11' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
+com.pszymczyk.consul:
+  embedded-consul: { version: '2.2.0' }
+
 com.puppycrawl.tools:
-  checkstyle: { version: '8.37' }
+  checkstyle: { version: '8.39' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.1' }
@@ -152,16 +155,16 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 com.thesamet.scalapb:
-  scalapb-runtime_2.12: { version: &SCALAPB_VERSION '0.10.8' }
+  scalapb-runtime_2.12: { version: &SCALAPB_VERSION '0.10.10' }
   scalapb-runtime_2.13: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.12: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.13: { version: *SCALAPB_VERSION }
-  scalapb-json4s_2.12: { version: &SCALAPB_JSON4S_VERSION '0.10.1' }
+  scalapb-json4s_2.12: { version: &SCALAPB_JSON4S_VERSION '0.10.3' }
   scalapb-json4s_2.13: { version: *SCALAPB_JSON4S_VERSION }
 
 # Akka is used only for testing in it:grpcweb module.
 com.typesafe.akka:
-  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.10' }
+  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.11' }
   akka-discovery_2.13: { version: *TYPESAFE_AKKA_VERSION }
   akka-stream_2.13: { version: *TYPESAFE_AKKA_VERSION }
 
@@ -170,12 +173,15 @@ com.twitter:
   finagle-serversets_2.13:
     version: '20.10.0'
 
+cz.alenkacz:
+  gradle-scalafmt: { version: '1.14.0' }
+
 gradle.plugin.net.davidecavestro:
   gradle-jxr-plugin: { version: '0.2.1' }
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '2.0.15'
+    version: &DROPWIZARD_VERSION '2.0.18'
     javadocs:
     - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.13/
   dropwizard-jackson: { version: *DROPWIZARD_VERSION }
@@ -213,7 +219,7 @@ io.grpc:
     - io.netty:netty-handler-proxy
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
-  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '0.2.1' }
+  grpc-kotlin-stub: { version: &GRPC_KOTLIN_VERSION '1.0.0' }
   protoc-gen-grpc-kotlin: { version: *GRPC_KOTLIN_VERSION }
 
 io.micrometer:
@@ -240,24 +246,24 @@ io.netty:
     javadocs:
     - https://netty.io/4.1/api/
   # TODO: get netty-bom to claim this version!
-  netty-tcnative-boringssl-static: { version: '2.0.34.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.36.Final' }
 
 io.netty.incubator:
-  netty-incubator-transport-native-io_uring: { version: '0.0.1.Final' }
+  netty-incubator-transport-native-io_uring: { version: '0.0.3.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.4.0'
+    version: &REACTOR_VERSION '3.4.2'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
 
 io.projectreactor.kotlin:
-  reactor-kotlin-extensions: { version: '1.1.0' }
+  reactor-kotlin-extensions: { version: '1.1.2' }
 
 io.prometheus:
   simpleclient_common:
-    version: '0.9.0'
+    version: '0.10.0'
     javadocs:
     - https://prometheus.github.io/client_java/
 
@@ -269,7 +275,7 @@ io.reactivex.rxjava2:
 
 io.reactivex.rxjava3:
   rxjava:
-    version: '3.0.7'
+    version: '3.0.9'
     javadocs:
       - http://reactivex.io/RxJava/3.x/javadoc/
 
@@ -282,7 +288,7 @@ io.zipkin.brave:
 
 it.unimi.dsi:
   fastutil:
-    version: '8.4.3'
+    version: '8.4.4'
     relocations:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
@@ -327,7 +333,7 @@ net.javacrumbs.future-converter:
   future-converter-rxjava2-java8: { version: 1.2.0 }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.21.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.23.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 com.guardsquare:
@@ -369,7 +375,7 @@ org.apache.httpcomponents:
 
 org.apache.kafka:
   kafka-clients:
-    version: '2.6.0'
+    version: '2.7.0'
     javadocs:
     - https://kafka.apache.org/26/javadoc/
 
@@ -385,7 +391,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.40'
+    version: &TOMCAT_VERSION '9.0.41'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -400,14 +406,14 @@ org.apache.zookeeper:
     - org.slf4j:slf4j-log4j12
 
 org.assertj:
-  assertj-core: { version: '3.16.1' }
+  assertj-core: { version: '3.17.1' }
 
 org.awaitility:
   awaitility: { version: '4.0.3' }
 
 org.bouncycastle:
   bcprov-jdk15on:
-    version: '1.67'
+    version: '1.68'
     relocations:
     - from: org.bouncycastle
       to: com.linecorp.armeria.internal.shaded.bouncycastle
@@ -417,7 +423,7 @@ org.checkerframework:
 
 org.curioswitch.curiostack:
   protobuf-jackson:
-    version: '1.1.0'
+    version: '1.2.0'
     exclusions:
     - javax.annotation:javax.annotation-api
     javadocs:
@@ -433,21 +439,26 @@ org.eclipse.jetty:
     - org.ow2.asm:asm-commons
   jetty-server:
     javadocs:
-    - https://www.eclipse.org/jetty/javadoc/current/
+    - https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.36.v20210114/
 
 org.eclipse.jetty.alpn:
   alpn-api: { version: '1.1.3.v20160715' }
+
+# Groovy is only used for testing consul
+# The version is aligned with the Groovy version of Gradle to avoid additional downloads
+org.codehaus.groovy:
+  groovy-xml: { version: '2.5.12' }
 
 org.hamcrest:
   hamcrest: { version: &HAMCREST_VERSION '2.2' }
   hamcrest-library: { version: *HAMCREST_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.1.6.Final' }
+  hibernate-validator: { version: '6.2.0.Final' }
 
 org.jctools:
   jctools-core:
-    version: '3.1.0'
+    version: '3.2.0'
     relocations:
     - from: org.jctools
       to: com.linecorp.armeria.internal.shaded.jctools
@@ -455,10 +466,10 @@ org.jctools:
 # If you want to change `org.jetbrains.kotlin:kotlin-allopen` version,
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: &KOTLIN_VERSION '1.4.20' }
+  kotlin-allopen: { version: '1.4.21-2' }
 
 org.jetbrains.kotlinx:
-  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.4.1' }
+  kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.4.2' }
   kotlinx-coroutines-jdk8: { version: *KOTLIN_COROUTINE_VERSION }
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
@@ -472,7 +483,7 @@ org.jsoup:
   jsoup: { version: '1.13.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.6.0' }
+  mockito-core: { version: &MOCKITO_VERSION '3.7.7' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -510,6 +521,18 @@ org.reflections:
     - from: org.reflections
       to: com.linecorp.armeria.internal.shaded.reflections
 
+org.scala-lang:
+  scala-library: { version: '2.13.5' }
+
+org.scala-lang.modules:
+  scala-collection-compat_2.12: { version: '2.4.2' }
+  scala-java8-compat_2.12: { version: &SCALA_JAVA8_COMPAT_VERSION '0.9.1' }
+  scala-java8-compat_2.13: { version: *SCALA_JAVA8_COMPAT_VERSION }
+
+org.scalameta:
+  munit_2.12: { version: &MUNIT_VERSION '0.7.22' }
+  munit_2.13: { version: *MUNIT_VERSION }
+
 org.slf4j:
   jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.30' }
   jul-to-slf4j: { version: *SLF4J_VERSION }
@@ -521,11 +544,11 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.3.1.RELEASE' }
+  spring-web: { version: '5.3.3' }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.4.0'
+    version: &SPRING_BOOT_VERSION '2.4.2'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
@@ -555,3 +578,23 @@ com.github.vladimir-bukhtoyarov:
     version: '4.10.0'
     javadocs:
     - https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/4.10.0/
+
+org.jboss.resteasy:
+  resteasy-core-spi:
+    version: &RESTEASY_VERSION '4.5.8.Final'
+    javadocs:
+    - https://docs.jboss.org/resteasy/docs/4.5.8.Final/javadocs/
+  resteasy-core: { version: *RESTEASY_VERSION }
+  resteasy-client: { version: *RESTEASY_VERSION }
+  resteasy-jackson2-provider: { version: *RESTEASY_VERSION }
+
+# "provided" dependency required by RESTEasy 'resteasy-core-spi'
+org.jboss.logging:
+  jboss-logging:
+    version: '3.4.1.Final'
+    javadocs:
+    - https://javadoc.io/doc/org.jboss.logging/jboss-logging/3.4.1.Final/
+  jboss-logging-annotations:
+    version: '2.2.1.Final'
+    javadocs:
+    - https://javadoc.io/doc/org.jboss.logging/jboss-logging-annotations/2.2.1.Final/

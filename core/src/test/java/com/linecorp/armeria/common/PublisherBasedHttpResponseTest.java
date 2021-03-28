@@ -27,6 +27,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 class PublisherBasedHttpResponseTest {
 
@@ -35,22 +36,45 @@ class PublisherBasedHttpResponseTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/", (ctx, req) -> {
+        protected void configure(ServerBuilder sb) {
+            sb.service("/single-publisher", (ctx, req) -> {
                 final Flux<HttpObject> publisher = Flux.just(ResponseHeaders.of(200), HttpData.ofUtf8("hello"));
                 final HttpResponse response = HttpResponse.of(publisher);
-                response.whenComplete().whenComplete((unused, cause) -> {
-                    exceptionIsRaised.set(cause != null);
-                });
+                response.whenComplete()
+                        .whenComplete((unused, cause) -> exceptionIsRaised.set(cause != null));
                 return response;
             });
+            sb.service("/content-publisher", (ctx, req) -> {
+                final Flux<HttpData> publisher = Flux.just(HttpData.ofUtf8("Armeria"),
+                                                           HttpData.ofUtf8(" is awesome"));
+                return HttpResponse.of(ResponseHeaders.of(200), publisher);
+            });
+            sb.service("/empty-content", (ctx, req) -> HttpResponse.of(ResponseHeaders.of(200), Mono.empty()));
         }
     };
 
     @Test
-    void shouldCompleteWithNoException() {
-        final WebClient client = WebClient.of(server.httpUri());
-        assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+    void headersAndContentPublisher() {
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .get("/single-publisher").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("hello");
         assertThat(exceptionIsRaised.get()).isFalse();
+    }
+
+    @Test
+    void contentPublisher() {
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .get("/content-publisher").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("Armeria is awesome");
+    }
+
+    @Test
+    void emptyContentPublisher() {
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .get("/empty-content").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.content()).isEqualTo(HttpData.empty());
     }
 }

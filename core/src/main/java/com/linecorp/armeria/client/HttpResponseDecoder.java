@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -39,6 +40,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
@@ -53,6 +55,7 @@ abstract class HttpResponseDecoder {
     private final IntObjectMap<HttpResponseWrapper> responses = new IntObjectHashMap<>();
     private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
+
     private int unfinishedResponses;
     private boolean disconnectWhenFinished;
 
@@ -76,6 +79,8 @@ abstract class HttpResponseDecoder {
         final HttpResponseWrapper newRes =
                 new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
+
+        keepAliveHandler().increaseNumRequests();
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
                                 oldRes;
@@ -117,26 +122,28 @@ abstract class HttpResponseDecoder {
     }
 
     final void failUnfinishedResponses(Throwable cause) {
-        try {
-            for (HttpResponseWrapper res : responses.values()) {
-                res.close(cause);
-            }
-        } finally {
-            unfinishedResponses -= responses.size();
-            responses.clear();
+        for (final Iterator<HttpResponseWrapper> iterator = responses.values().iterator();
+             iterator.hasNext();) {
+            final HttpResponseWrapper res = iterator.next();
+            // To avoid calling removeResponse by res.close(cause), remove before closing.
+            iterator.remove();
+            unfinishedResponses--;
+            res.close(cause);
         }
     }
+
+    abstract KeepAliveHandler keepAliveHandler();
 
     final void disconnectWhenFinished() {
         disconnectWhenFinished = true;
     }
 
     final boolean needsToDisconnectNow() {
-        return disconnectWhenFinished && !hasUnfinishedResponses();
+        return needsToDisconnectWhenFinished() && !hasUnfinishedResponses();
     }
 
     final boolean needsToDisconnectWhenFinished() {
-        return disconnectWhenFinished;
+        return disconnectWhenFinished || keepAliveHandler().needToCloseConnection();
     }
 
     static final class HttpResponseWrapper implements StreamWriter<HttpObject> {

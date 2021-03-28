@@ -331,7 +331,7 @@ public interface RequestContext {
 
     /**
      * Returns the absolute path part of the current {@link Request} URI, excluding the query part,
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     String path();
 
@@ -343,7 +343,7 @@ public interface RequestContext {
 
     /**
      * Returns the query part of the current {@link Request} URI, without the leading {@code '?'},
-     * as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     @Nullable
     String query();
@@ -434,6 +434,26 @@ public interface RequestContext {
      */
     @MustBeClosed
     SafeCloseable push();
+
+    /**
+     * Immediately run a given {@link Runnable} with this context.
+     */
+    default void run(Runnable runnable) {
+        requireNonNull(runnable, "runnable");
+        try (SafeCloseable ignored = push()) {
+            runnable.run();
+        }
+    }
+
+    /**
+     * Immediately call a given {@link Callable} with this context.
+     */
+    default <T> T run(Callable<T> callable) throws Exception {
+        requireNonNull(callable, "callable");
+        try (SafeCloseable ignored = push()) {
+            return callable.call();
+        }
+    }
 
     /**
      * Replaces the current {@link RequestContext} in the thread-local with this context without any validation.

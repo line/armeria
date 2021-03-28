@@ -1,0 +1,301 @@
+---
+date: 2020-11-30
+---
+
+## 🌟 New features
+
+- You can now use [io_uring](https://unixism.net/loti/what_is_io_uring.html) for efficient I/O
+  processing in Linux. #3182
+  - Specify the `-Dcom.linecorp.armeria.transportType=io_uring` JVM option to enable it.
+  - Netty's `io_uring` transport is currently experimental, so you should be careful using the feature.
+- The metrics of requests to a <type://TransientService> are not collected anymore by default. #3061 #3081
+  - Access logs and service logs are not recorded as well.
+  - You should use <type://TransientServiceOption> to enable them.
+    ```java
+    HealthCheckService.builder()
+                      .transientServiceOptions(TransientServiceOption.WITH_METRIC_COLLECTION,
+                                               TransientServiceOption.WITH_SERVICE_LOGGING,
+                                               TransientServiceOption.WITH_ACCESS_LOGGING)
+                      .build();
+    ```
+  - Currently, <type://HealthCheckService> and <type://PrometheusExpositionService> are
+    <typeplural://TransientService>.
+- You can now use Protobuf's `Message` and [ScalaPB's](https://github.com/scalapb/ScalaPB)
+  `GeneratedMessage` as a request/response object in an annotated service. #3088 #3124 #3192
+  - Use `armeria-protobuf`, `armeria-scalapb_2.12` or `armeria-scalapb_2.13` dependencies.
+  - See [Supporting ScalaPB in annotated services](/docs/advanced-scalapb#supporting-scalapb-in-annotated-services)
+    for more information.
+- You can now use Scala `Future` in an annotated service. #3189
+  ```scala
+  @Get("/items/{id}")
+  def items(@Param id: Int)(implicit ec: ExecutionContext): Future[String] = {
+    Future {
+      // Perform asynchronous task using Armeria's event loop.
+      ...
+    }
+  }
+  ```
+- You can now use <type://HttpDeframer> to conveniently decode a stream of <typeplural://HttpObject>
+  to N objects. #2981
+  ```java
+  HttpDeframerHandler<String> decoder = ...
+  HttpDeframer<String> deframer = HttpDeframer.of(decoder, ByteBufAllocator.DEFAULT);
+  HttpRequest request = ...;
+  request.subscribe(deframer);
+  ```
+  - See <type://HttpDeframer> for more information.
+- You can now apply <type://CircuitBreaker> per request path. #3134, #3135
+  ```java
+  CircuitBreakerFactory factory = ...
+  // CircuitBreaker is applied per the combination of host and path.
+  CircuitBreakerMapping mapping = CircuitBreakerMapping.builder()
+                                                       .perPath()
+                                                       .perHost()
+                                                       .build(factory);
+  CircuitBreakerRule rule = ...
+  CircuitBreakerClient.newDecorator(mapping, rule);
+  ```
+- You can now apply the different `maxTotalAttempts` and `responseTimeout` for <type://RetryingClient>
+  using <type://RetryConfig>. #3145
+  ```java
+  BiFunction<ClientRequestContext, Request, String> keyFactory =
+      (ctx, req) -> ctx.endpoint().host();
+  BiFunction<ClientRequestContext, Request, RetryConfig<HttpResponse>> configFactory = (ctx, req) -> {
+      String host = ctx.endpoint().host();
+      RetryConfigBuilder builder = RetryConfig.<HttpResponse>builder(RetryRule.onException());
+      if (host.equals("host1")) {
+          builder.maxTotalAttempts(2);
+      } else if (host.equals("host2")) {
+          builder.maxTotalAttempts(4);
+      } else {
+          builder.maxTotalAttempts(1);
+      }
+      return builder.build();
+  };
+  RetryConfigMapping mapping = RetryConfigMapping.of(keyFactory, configFactory);
+  RetryingClient.newDecoratorWithMapping(mapping);
+  ```
+- You can now split the <type://ResponseHeaders> and bodies using <type://HttpResponse#split()>. #3038
+  ```java
+  HttpResponse response = ...
+  SplitHttpResponse splitHttpResponse = response.split();
+  CompletableFuture<ResponseHeaders> headersFuture = splitHttpResponse.headers();
+  StreamMessage<HttpData> bodyStream = splitHttpResponse.body();
+
+  headersFuture.thenApply(headers -> {
+      if (headers.contentType() == MediaType.JSON_SEQ) {
+          // Subscribe to a stream of HttpData.
+          Flux.from(bodyStream)
+              .map(httpData -> {
+                  // Convert HttpData to your domain object
+              });
+              ...
+      }
+  });
+  ```
+- You can now customize for mapping an exception to a gRPC status. #3197
+  ```java
+  GrpcService.builder()
+             .addExceptionMapping(AccessDeniedException.class, Status.UNAUTHENTICATED);
+  // Or, use GrpcStatusFunction.
+  GrpcService.builder()
+             .exceptionMapping(cause -> {
+                 if (cause instanceof AccessDeniedException) {
+                     return Status.UNAUTHENTICATED;
+                 }
+                 if (cause instanceof FileNotFoundException) {
+                     return Status.NOT_FOUND;
+                 }
+                 return null; // Return null to use Armeria's default exception mapping.
+             });
+  ```
+- You can now specify the Caffeine spec for the DNS resolver cache. #2970 #3007
+- You can now specify a prefix for MDC keys using the `<prefix>` element. #3086 #3112
+  ```xml
+  <configuration>
+    ...
+    <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+      ...
+      <!-- set the prefix of exports which is not wrapped with the <exportGroup> element -->
+      <prefix>armeria.</prefix>
+      <export>remote.id</export>
+      <export>req.headers.user-agent</export>
+      ...
+      <exportGroup>
+        <!-- set the prefix of exports in this <exportGroup> -->
+        <prefix>some_prefix.</prefix>
+        <export>some_value=attr:com.example.AttrKeys#SOME_KEY</export>
+        ...
+      </exportGroup>
+      <exportGroup>
+        <!-- if <prefix> is not defined, no prefix is added to exports -->
+        <export>tracking_id=attr:com.example.AttrKeys#TRACKING_ID_KEY</export>
+        ...
+      </exportGroup>
+    </appender>
+    ...
+  </configuration>
+  ```
+- You can now use the unsafe TLS cipher using <type://ClientFactoryBuilder#tlsAllowUnsafeCiphers(boolean)>.
+  #3157 #3172
+- You can now specify an arbitrary type for <type://@Header> and <type://@Param> if the
+  type has one of following static methods or the constructor. #2574 #3143 #3164
+  - `public static T of(String) { ... }`
+  - `public static T valueOf(String) { ... }`
+  - `public static T fromString(String) { ... }`
+  - `public T(String) { ... } // constructor`
+  ```java
+  public class UserService {
+
+      @Get("/api")
+      public HttpResponse get(@Param User user) {
+          ...
+      }
+
+      private static class User {
+          User(String userId) { ... } // This constructor is used to create User.
+          ...
+      }
+  }
+  ```
+- You can now build and execute an <type://HttpRequest> fluently. #3110
+  ```java
+  // Creates a POST HttpRequest whose URI is "/foo?q=bar"
+  // with headers "cookie: name=value" and "authorization: value" and a JSON body.
+  HttpRequest.builder()
+             .post("/{resource}")
+             .pathParam("resource", "foo")
+             .queryParam("q", "bar")
+             .cookie(Cookie.of("name", "value"))
+             .header("authorization", "value")
+             .content(MediaType.JSON, "{\"foo\":\"bar\"}"));
+  // You can also use WebClient.prepare().
+  WebClient client = ...
+  client.prepare()
+        .post("/{resource}")
+        .pathParam("resource", "foo")
+        .queryParam("q", "bar")
+        .cookie(Cookie.of("name", "value"))
+        .header("authorization", "value")
+        .content(MediaType.JSON, "{\"foo\":\"bar\"}")
+        .execute();
+  ```
+- You can now easily handle cookies by applying <type://CookieClient#newDecorator()>. #2637 #3118
+  ```java
+  WebClient client = WebClient.builder()
+                              .factory(factory)
+                              .decorator(CookieClient.newDecorator())
+                              .build();
+  client.get(...); // The cookies that are received from the origin server
+                   // are added to the request headers.
+  ```
+- You can now use the custom Thrift protocol by using <type://ThriftProtocolFactoryProvider> and SPI. #3183
+  ```java
+  public class TTupleFactoryProvider extends ThriftProtocolFactoryProvider {
+      @Override
+      public Set<ThriftProtocolFactoryProvider.Entry> entries() {
+          return ImmutableSet.of(new ThriftProtocolFactoryProvider.Entry(
+                  SerializationFormat.of("ttuple"), new TTupleProtocol.Factory()));
+      }
+  }
+  ```
+- You can now collect more detailed DNS metrics. #1887 #2935
+  - `armeria.client.dns.queries#count{...,result=success}`
+  - `armeria.client.dns.queries#count{...,result=failure}`
+  - `armeria.client.dns.queries.written#count{...}`
+  - `armeria.client.dns.queries.cancelled#count{...}`
+  - `armeria.client.dns.queries.redirected#count{...}`
+  - `armeria.client.dns.queries.cnamed#count{...}`
+  - `armeria.client.dns.queries.noanswer#count{...}`
+- You can now customize the <type://HealthCheckService> when using Spring integration. #3144
+  ```java
+  @Bean
+  public HealthCheckServiceConfigurator healthCheckServiceConfigurator() {
+      return builder -> builder.updatable(true);
+  }
+  ```
+- You can now use <type://RequestHeaders#acceptLanguage()> to choose language. #3177 #3179
+
+## 📈 Improvements
+
+- Various improvements for <type://DocService>. #3149 #3150 #3167 #3188
+
+## 🛠️ Bug fixes
+
+- <type://HealthCheckedEndpointGroup#endpoints()> now returns healthy endpoints properly even when
+  <type://EndpointGroup#orElse(EndpointGroup)> is used. #3181
+- `ServletRequest.getProtocol()` now returns the proper value when using <type://TomcatService> and
+  <type://JettyService>. #3194
+- The route decorators are now evaluated in the reverse order they applied. #3160 #3166
+- You now get the FORBIDDEN status if your service does not handle preflight requests regardless of
+  route decorators. #3152
+- A gRPC `ServerCall` is now closed exactly only once. #3153
+- You no longer see `AnnotatedConnectException` when the <type://Endpoint> is created with an
+  IPv6 scope ID. #3158 #3178
+- Armeria server does not reject the request path whose first segment includes a colon anymore. #3154
+
+## 🏚️ Deprecations
+
+- <type://CircuitBreakerClient#newPerHostAndMethodDecorator(BiFunction,CircuitBreakerRule)> is now deprecated.
+  #3135
+  - Use <type://CircuitBreakerClient#newDecorator(CircuitBreakerMapping,CircuitBreakerRule)> with the customized
+    <type://CircuitBreakerMapping> using <type://CircuitBreakerMapping#builder()>.
+- The response timeout and max total attempts setters in <type://RetryingClientBuilder> are now deprecated.
+  #3128 #3145
+  - The static factory methods that take those parameters in <type://RetryingClient> are now deprecated as well.
+  - Use <type://RetryConfigMapping> and <type://RetryConfig>.
+- <type://Route#apply(RoutingContext)?full> is deprecated. #3152
+  - Use <type://Route#apply(RoutingContext,boolean)?full>.
+- The constructor of <type://PrometheusExpositionService> is now deprecated. #3081
+  - Use <type://PrometheusExpositionService#of(CollectorRegistry)>.
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- Dropwizard 2.0.13 → 2.0.16
+- Fastutil 8.4.2 → 8.4.3
+- gRPC 1.33.0 → 1.33.1
+- grpc-kotlin-stub 0.2.0 → 0.2.1
+- Dropwizard Metrics 4.1.13 → 4.1.15
+- Jackson 2.11.2 → 2.12.0
+- JCTools 3.1.0 → 3.2.0
+- javax.annotation-api 1.3.2
+  - jakarta-annotation-api 2.0 has been released with a breaking change so we use javax.annotation-api instead.
+- Micrometer 1.5.5 → 1.6.1
+- Netty 4.1.53.Final → 4.1.54.Final
+- BouncyCastle 1.66 → 1.67
+- Reactor 3.3.10.RELEASE → 3.4.0
+- Spring Boot 2.3.4.RELEASE → 2.4.0
+- Spring 5.2.9.RELEASE → 5.3.1
+- Tomcat 9.0.39 → 9.0.40
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'adriancole',
+    'anuraaga',
+    'ghkim3221',
+    'haithamgabr',
+    'heowc',
+    'ikhoon',
+    'jrhee17',
+    'KarboniteKream',
+    'kojilin',
+    'masonshin',
+    'minwoox',
+    'okue',
+    'perlun',
+    'rolandblain',
+    'techno',
+    'tobias-',
+    'trustin',
+    'tumile',
+    'Ubehebe',
+    'wickedev',
+    'windmeup'
+  ]}
+/>

@@ -32,7 +32,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.Nullable;
 
@@ -45,11 +44,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.server.annotation.RequestConverter;
+
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
  * A singleton class which manages factories for creating a bean. {@link #register(Class, Set, List)} should
@@ -58,9 +58,14 @@ import com.linecorp.armeria.server.annotation.RequestConverter;
 final class AnnotatedBeanFactoryRegistry {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedBeanFactoryRegistry.class);
 
-    // FIXME(trustin): Fix class loader leak. Should use Class as a weak key.
-    private static final ConcurrentMap<BeanFactoryId, AnnotatedBeanFactory<?>> factories =
-            new MapMaker().makeMap();
+    private static final ClassValue<AnnotatedBeanFactories> factories =
+            new ClassValue<AnnotatedBeanFactories>() {
+                @Override
+                protected AnnotatedBeanFactories computeValue(Class<?> type) {
+                    return new AnnotatedBeanFactories();
+                }
+            };
+
     private static final AnnotatedBeanFactory<?> unsupportedBeanFactory;
 
     static {
@@ -79,13 +84,14 @@ final class AnnotatedBeanFactoryRegistry {
     static synchronized BeanFactoryId register(Class<?> clazz, Set<String> pathParams,
                                                List<RequestObjectResolver> objectResolvers) {
         final BeanFactoryId beanFactoryId = new BeanFactoryId(clazz, pathParams);
-        if (!factories.containsKey(beanFactoryId)) {
-            final AnnotatedBeanFactory<Object> factory = createFactory(beanFactoryId, objectResolvers);
+        final AnnotatedBeanFactories annotatedBeanFactories = factories.get(clazz);
+        if (!annotatedBeanFactories.containsKey(beanFactoryId.pathParams)) {
+            final AnnotatedBeanFactory<?> factory = createFactory(beanFactoryId, objectResolvers);
             if (factory != null) {
-                factories.put(beanFactoryId, factory);
+                annotatedBeanFactories.put(beanFactoryId.pathParams, factory);
                 logger.debug("Registered a bean factory: {}", beanFactoryId);
             } else {
-                factories.put(beanFactoryId, unsupportedBeanFactory);
+                annotatedBeanFactories.put(beanFactoryId.pathParams, unsupportedBeanFactory);
             }
         }
         return beanFactoryId;
@@ -99,7 +105,8 @@ final class AnnotatedBeanFactoryRegistry {
         if (beanFactoryId == null) {
             return null;
         }
-        final AnnotatedBeanFactory<?> factory = factories.get(beanFactoryId);
+        final AnnotatedBeanFactories annotatedBeanFactories = factories.get(beanFactoryId.type);
+        final AnnotatedBeanFactory<?> factory = annotatedBeanFactories.get(beanFactoryId.pathParams);
         return factory != null && factory != unsupportedBeanFactory ? factory : null;
     }
 
@@ -107,8 +114,7 @@ final class AnnotatedBeanFactoryRegistry {
         return new TreeSet<>((o1, o2) -> {
             final String o1Name = o1.httpElementName();
             final String o2Name = o2.httpElementName();
-            if (o1Name != null && o2Name != null && o1Name.equals(o2Name) &&
-                o1.annotationType() == o2.annotationType()) {
+            if (o1Name != null && o1Name.equals(o2Name) && o1.annotationType() == o2.annotationType()) {
                 return 0;
             }
             // We are not ordering, but just finding duplicate elements.
@@ -326,6 +332,24 @@ final class AnnotatedBeanFactoryRegistry {
                               .add("type", type.getName())
                               .add("pathParams", pathParams)
                               .toString();
+        }
+    }
+
+    private static class AnnotatedBeanFactories {
+
+        private final Map<Set<String>, AnnotatedBeanFactory<?>> factories = new Object2ObjectOpenHashMap<>();
+
+        boolean containsKey(Set<String> pathParams) {
+            return factories.containsKey(pathParams);
+        }
+
+        void put(Set<String> pathParams, AnnotatedBeanFactory<?> factory) {
+            factories.put(pathParams, factory);
+        }
+
+        @Nullable
+        AnnotatedBeanFactory<?> get(Set<String> pathParams) {
+            return factories.get(pathParams);
         }
     }
 }

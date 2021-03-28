@@ -57,7 +57,7 @@ public final class PercentEncoder {
 
     static {
         // Unreserved characters with '*' because most browsers such as Chrome and Firefox do not encode '*'.
-        // See https://tools.ietf.org/html/rfc3986#section-2.3
+        // See https://datatracker.ietf.org/doc/html/rfc3986#section-2.3
         final String safeOctetStr = "-_.~*abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         for (int i = 0; i < safeOctetStr.length(); i++) {
             SAFE_OCTETS[safeOctetStr.charAt(i)] = -1;
@@ -66,7 +66,7 @@ public final class PercentEncoder {
 
     /**
      * Encodes the specified string using
-     * <a href="https://tools.ietf.org/html/rfc3986#section-2.1">Percent-Encoding</a> and appends it to the
+     * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-2.1">Percent-Encoding</a> and appends it to the
      * specified {@link StringBuilder}.
      */
     public static void encodeComponent(StringBuilder buf, String s) {

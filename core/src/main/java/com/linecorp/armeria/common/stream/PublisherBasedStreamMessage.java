@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
@@ -63,6 +64,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     @Nullable // Updated only via subscriberUpdater.
     private volatile AbortableSubscriber subscriber;
     private volatile boolean publishedAny;
+    private volatile long demand;
 
     /**
      * Creates a new instance with the specified delegate {@link Publisher}.
@@ -86,6 +88,11 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     @Override
     public final boolean isEmpty() {
         return !isOpen() && !publishedAny;
+    }
+
+    @Override
+    public final long demand() {
+        return demand;
     }
 
     @Override
@@ -168,7 +175,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         abortable.abort(cause);
-        abortable.onSubscribe(NoopSubscription.get());
+        publisher.subscribe(abortable);
     }
 
     @Override
@@ -200,7 +207,17 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         public void request(long n) {
             final Subscription subscription = this.subscription;
             assert subscription != null;
+
+            if (executor.inEventLoop()) {
+                increaseDemand(n);
+            } else {
+                executor.execute(() -> increaseDemand(n));
+            }
             subscription.request(n);
+        }
+
+        private void increaseDemand(long n)  {
+            parent.demand = LongMath.saturatedAdd(parent.demand, n);
         }
 
         @Override
@@ -263,6 +280,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onSubscribe(Subscription subscription) {
+            requireNonNull(subscription, "subscription");
             if (executor.inEventLoop()) {
                 onSubscribe0(subscription);
             } else {
@@ -287,6 +305,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onNext(Object obj) {
+            requireNonNull(obj, "obj");
             parent.publishedAny = true;
             if (executor.inEventLoop()) {
                 onNext0(obj);
@@ -296,6 +315,9 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         private void onNext0(Object obj) {
+            if (parent.demand != Long.MAX_VALUE) {
+                parent.demand--;
+            }
             try {
                 subscriber.onNext(obj);
             } catch (Throwable t) {
@@ -308,6 +330,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onError(Throwable cause) {
+            requireNonNull(cause, "cause");
             if (executor.inEventLoop()) {
                 onError0(cause);
             } else {

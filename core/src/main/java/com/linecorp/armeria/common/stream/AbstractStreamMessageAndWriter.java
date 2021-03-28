@@ -23,8 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.unsafe.PooledObjects;
-
 abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T>
         implements StreamMessageAndWriter<T> {
 
@@ -57,7 +55,7 @@ abstract class AbstractStreamMessageAndWriter<T> extends AbstractStreamMessage<T
         requireNonNull(obj, "obj");
 
         if (!isOpen()) {
-            PooledObjects.close(obj);
+            StreamMessageUtil.closeOrAbort(obj);
             return false;
         }
 

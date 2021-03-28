@@ -23,6 +23,7 @@
     "client-http",
     "client-thrift",
     "client-grpc",
+    "client-factory",
     "client-decorator",
     "client-retrofit",
     "client-custom-http-headers",
@@ -36,11 +37,14 @@
     "advanced-structured-logging",
     "advanced-custom-attributes",
     "advanced-structured-logging-kafka",
+    "advanced-metrics",
     "advanced-unit-testing",
     "advanced-production-checklist",
     "advanced-zipkin",
     "advanced-saml",
     "advanced-spring-webflux-integration",
-    "advanced-dropwizard-integration"
+    "advanced-dropwizard-integration",
+    "advanced-scala",
+    "advanced-scalapb"
   ]
 }

@@ -38,6 +38,8 @@ import java.net.HttpURLConnection;
 import java.nio.channels.ClosedChannelException;
 import java.util.Base64;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +52,7 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
@@ -58,7 +61,7 @@ import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.stream.HttpDeframer;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -79,7 +82,30 @@ public final class GrpcStatus {
      */
     public static Status fromThrowable(Throwable t) {
         t = unwrap(requireNonNull(t, "t"));
+        return statusFromThrowable(t);
+    }
 
+    /**
+     * Converts the {@link Throwable} to a {@link Status}.
+     * If the specified {@code statusFunction} returns {@code null},
+     * the built-in exception mapping rule, which takes into account exceptions specific to Armeria as well
+     * and the protocol package, is used by default.
+     */
+    public static Status fromThrowable(@Nullable GrpcStatusFunction statusFunction, Throwable t,
+                                       Metadata metadata) {
+        t = unwrap(requireNonNull(t, "t"));
+
+        if (statusFunction != null) {
+            final Status status = statusFunction.apply(t, metadata);
+            if (status != null) {
+                return status;
+            }
+        }
+
+        return statusFromThrowable(t);
+    }
+
+    private static Status statusFromThrowable(Throwable t) {
         final Status s = Status.fromThrowable(t);
         if (s.getCode() != Code.UNKNOWN) {
             return s;
@@ -111,6 +137,28 @@ public final class GrpcStatus {
             return Status.RESOURCE_EXHAUSTED.withCause(t);
         }
         return s;
+    }
+
+    /**
+     * Converts the specified {@link Status} to a new user-specified {@link Status}
+     * using the specified {@link GrpcStatusFunction}.
+     * Returns the given {@link Status} as is if the {@link GrpcStatusFunction} returns {@code null}.
+     */
+    public static Status fromStatusFunction(@Nullable GrpcStatusFunction statusFunction,
+                                            Status status, Metadata metadata) {
+        requireNonNull(status, "status");
+
+        if (statusFunction != null) {
+            final Throwable cause = status.getCause();
+            if (cause != null) {
+                final Throwable unwrapped = unwrap(cause);
+                final Status newStatus = statusFunction.apply(unwrapped, metadata);
+                if (newStatus != null) {
+                    return newStatus;
+                }
+            }
+        }
+        return status;
     }
 
     private static Throwable unwrap(Throwable t) {
@@ -171,7 +219,8 @@ public final class GrpcStatus {
      * http-grpc-status-mapping.md</a>. Never returns a status for which {@code status.isOk()} is
      * {@code true}.
      *
-     * <p>Copied from <a href="https://github.com/grpc/grpc-java/blob/master/core/src/main/java/io/grpc/internal/GrpcUtil.java">
+     * <p>Copied from
+     * <a href="https://github.com/grpc/grpc-java/blob/master/core/src/main/java/io/grpc/internal/GrpcUtil.java">
      * GrpcUtil.java</a>
      */
     public static Status httpStatusToGrpcStatus(int httpStatusCode) {
@@ -235,18 +284,25 @@ public final class GrpcStatus {
     }
 
     /**
-     * Extracts the gRPC status from the {@link HttpHeaders}, closing the {@link HttpStreamDeframerHandler}
-     * for a successful response, then delivering the status to the {@link TransportStatusListener}.
+     * Extracts the gRPC status from the {@link HttpHeaders} and delivers the status
+     * to the {@link TransportStatusListener} when the response is completed.
      */
-    public static void reportStatus(HttpHeaders headers,
-                                    HttpDeframer<DeframedMessage> reader,
-                                    TransportStatusListener transportStatusListener) {
+    public static void reportStatusLater(HttpHeaders headers,
+                                         StreamMessage<DeframedMessage> deframedStreamMessage,
+                                         TransportStatusListener transportStatusListener) {
+        deframedStreamMessage.whenComplete().handle((unused1, unused2) -> {
+            reportStatus(headers, transportStatusListener);
+            return null;
+        });
+    }
+
+    /**
+     * Extracts the gRPC status from the {@link HttpHeaders} and delivers the status
+     * to the {@link TransportStatusListener} immediately.
+     */
+    public static void reportStatus(HttpHeaders headers, TransportStatusListener transportStatusListener) {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
-        if (status.getCode() == Status.OK.getCode()) {
-            // Successful response, finish delivering messages before returning the status.
-            reader.close();
-        }
         final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
         if (grpcMessage != null) {
             status = status.withDescription(StatusMessageEscaper.unescape(grpcMessage));
@@ -257,7 +313,6 @@ public final class GrpcStatus {
         }
 
         final Metadata metadata = MetadataUtil.copyFromHeaders(headers);
-
         transportStatusListener.transportReportStatus(status, metadata);
     }
 

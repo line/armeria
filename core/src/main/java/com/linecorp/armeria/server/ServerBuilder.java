@@ -40,7 +40,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
@@ -56,7 +55,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.CommonPools;
@@ -67,6 +65,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -77,7 +76,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
@@ -141,14 +139,6 @@ public final class ServerBuilder {
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
 
-    // Prohibit deprecated options
-    @SuppressWarnings("deprecation")
-    private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
-            ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
-            ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
-            ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
-            EpollChannelOption.EPOLL_MODE);
-
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
@@ -173,6 +163,7 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
+    private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -206,6 +197,7 @@ public final class ServerBuilder {
         virtualHostTemplate.accessLogger(
                 host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
+        virtualHostTemplate.tlsAllowUnsafeCiphers(false);
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
     }
@@ -378,7 +370,7 @@ public final class ServerBuilder {
      */
     public <T> ServerBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
-        checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
+        checkArgument(!ChannelUtil.prohibitedOptions().contains(option),
                       "prohibited socket option: %s", option);
 
         option.validate(value);
@@ -398,7 +390,7 @@ public final class ServerBuilder {
      */
     public <T> ServerBuilder childChannelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
-        checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
+        checkArgument(!ChannelUtil.prohibitedOptions().contains(option),
                       "prohibited socket option: %s", option);
 
         option.validate(value);
@@ -464,7 +456,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> interval.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -484,7 +476,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> interval.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -503,6 +495,7 @@ public final class ServerBuilder {
     /**
      * Sets the maximum allowed age of a connection in millis for keep-alive. A connection is disconnected
      * after the specified {@code maxConnectionAgeMillis} since the connection was established.
+     * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
@@ -519,6 +512,7 @@ public final class ServerBuilder {
     /**
      * Sets the maximum allowed age of a connection for keep-alive. A connection is disconnected
      * after the specified {@code maxConnectionAge} since the connection was established.
+     * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
      * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
@@ -526,6 +520,19 @@ public final class ServerBuilder {
      */
     public ServerBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
+    }
+
+    /**
+     * Sets the maximum allowed number of requests that can be served through one connection.
+     * This option is disabled by default, which means unlimited.
+     *
+     * @param maxNumRequestsPerConnection the maximum number of requests per connection.
+     *                                    {@code 0} disables the limit.
+     */
+    public ServerBuilder maxNumRequestsPerConnection(int maxNumRequestsPerConnection) {
+        this.maxNumRequestsPerConnection =
+                validateNonNegative(maxNumRequestsPerConnection, "maxNumRequestsPerConnection");
+        return this;
     }
 
     /**
@@ -582,7 +589,7 @@ public final class ServerBuilder {
     public ServerBuilder http2MaxFrameSize(int http2MaxFrameSize) {
         checkArgument(http2MaxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND &&
                       http2MaxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND,
-                      "http2MaxFramSize: %s (expected: >= %s and <= %s)",
+                      "http2MaxFrameSize: %s (expected: >= %s and <= %s)",
                       http2MaxFrameSize, MAX_FRAME_SIZE_LOWER_BOUND, MAX_FRAME_SIZE_UPPER_BOUND);
         this.http2MaxFrameSize = http2MaxFrameSize;
         return this;
@@ -850,6 +857,46 @@ public final class ServerBuilder {
      */
     public ServerBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         virtualHostTemplate.tlsCustomizer(tlsCustomizer);
+        return this;
+    }
+
+    /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
+     */
+    @Deprecated
+    public ServerBuilder tlsAllowUnsafeCiphers() {
+        virtualHostTemplate.tlsAllowUnsafeCiphers();
+        return this;
+    }
+
+    /**
+     * Allows the bad cipher suites listed in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     *
+     * <p>Note that enabling this option increases the security risk of your connection.
+     * Use it only when you must communicate with a legacy system that does not support
+     * secure cipher suites.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * more information. This option is disabled by default.
+     *
+     * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
+     */
+    @Deprecated
+    public ServerBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
+        virtualHostTemplate.tlsAllowUnsafeCiphers(tlsAllowUnsafeCiphers);
         return this;
     }
 
@@ -1531,7 +1578,7 @@ public final class ServerBuilder {
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                 http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,

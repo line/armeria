@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
@@ -51,7 +52,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private int requested;
 
-    abstract void cleanupObjects();
+    abstract void cleanupObjects(@Nullable Throwable cause);
 
     abstract void doRequest(SubscriptionImpl subscription, long n);
 
@@ -94,7 +95,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    final long demand() {
+    public final long demand() {
         return requested;
     }
 
@@ -138,7 +139,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
             event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
-            cleanupObjects();
+            cleanupObjects(event.cause);
         }
     }
 
@@ -166,7 +167,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
+                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
         subscriptionUpdater.compareAndSet(this, null, newSubscription);
         cancelOrAbort(cause);
     }

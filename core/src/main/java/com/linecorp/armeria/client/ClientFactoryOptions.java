@@ -16,33 +16,34 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.client.ClientFactoryBuilder.MIN_MAX_CONNECTION_AGE_MILLIS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.util.AbstractOptions;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.util.AsciiString;
 
 /**
  * A set of {@link ClientFactoryOption}s and their respective values.
@@ -80,14 +81,18 @@ public final class ClientFactoryOptions
 
     /**
      * Whether to allow the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information.
+     *
+     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
+     *             communicate with an insecure peer than this.
      */
+    @Deprecated
     public static final ClientFactoryOption<Boolean> TLS_ALLOW_UNSAFE_CIPHERS =
             ClientFactoryOption.define("tlsAllowUnsafeCiphers", Flags.tlsAllowUnsafeCiphers());
 
@@ -101,7 +106,7 @@ public final class ClientFactoryOptions
                                        eventLoopGroup -> new DnsResolverGroupBuilder().build(eventLoopGroup));
 
     /**
-     * The HTTP/2 <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection flow-control
+     * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
      * window size</a>.
      */
     public static final ClientFactoryOption<Integer> HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
@@ -109,7 +114,7 @@ public final class ClientFactoryOptions
                                        Flags.defaultHttp2InitialConnectionWindowSize());
 
     /**
-     * The <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+     * The <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
      * for HTTP/2 stream-level flow control.
      */
     public static final ClientFactoryOption<Integer> HTTP2_INITIAL_STREAM_WINDOW_SIZE =
@@ -117,14 +122,14 @@ public final class ClientFactoryOptions
                                        Flags.defaultHttp2InitialStreamWindowSize());
 
     /**
-     * The <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+     * The <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public static final ClientFactoryOption<Integer> HTTP2_MAX_FRAME_SIZE =
             ClientFactoryOption.define("HTTP2_MAX_FRAME_SIZE", Flags.defaultHttp2MaxFrameSize());
 
     /**
-     * The HTTP/2 <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      * that indicates the maximum size of header list that the client is prepared to accept, in octets.
      */
     public static final ClientFactoryOption<Long> HTTP2_MAX_HEADER_LIST_SIZE =
@@ -158,12 +163,37 @@ public final class ClientFactoryOptions
     /**
      * The PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
-     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
-     * is sent for HTTP/1.
+     * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
+     * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * an asterisk ("*") is sent for HTTP/1.
      */
     public static final ClientFactoryOption<Long> PING_INTERVAL_MILLIS =
             ClientFactoryOption.define("PING_INTERVAL_MILLIS", Flags.defaultPingIntervalMillis());
+
+    /**
+     * The client-side max age of a connection for keep-alive in milliseconds.
+     * If the value is greater than {@code 0}, a connection is disconnected after the specified
+     * amount of time since the connection was established.
+     * This option is disabled by default, which means unlimited.
+     */
+    public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS =
+            ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
+
+    private static long clampedDefaultMaxClientConnectionAge() {
+        final long connectionAgeMillis = Flags.defaultMaxClientConnectionAgeMillis();
+        if (connectionAgeMillis > 0 && connectionAgeMillis < MIN_MAX_CONNECTION_AGE_MILLIS) {
+            return MIN_MAX_CONNECTION_AGE_MILLIS;
+        }
+        return connectionAgeMillis;
+    }
+
+    /**
+     * The client-side maximum allowed number of requests that can be sent through one connection.
+     * This option is disabled by default, which means unlimited.
+     */
+    public static final ClientFactoryOption<Integer> MAX_NUM_REQUESTS_PER_CONNECTION =
+            ClientFactoryOption.define("MAX_NUM_REQUESTS_PER_CONNECTION",
+                                       Flags.defaultMaxClientNumRequestsPerConnection());
 
     /**
      * Whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
@@ -197,20 +227,19 @@ public final class ClientFactoryOptions
     public static final ClientFactoryOption<ProxyConfigSelector> PROXY_CONFIG_SELECTOR =
             ClientFactoryOption.define("PROXY_CONFIG_SELECTOR", ProxyConfigSelector.of(ProxyConfig.direct()));
 
-    // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
-    @SuppressWarnings("deprecation")
-    private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
-            ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
-            ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
-            ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
-            EpollChannelOption.EPOLL_MODE);
+    /**
+     * The {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+     * another HTTP/1 header name.
+     */
+    public static final ClientFactoryOption<Http1HeaderNaming> HTTP1_HEADER_NAMING =
+            ClientFactoryOption.define("HTTP1_HEADER_NAMING", AsciiString::toString);
 
     /**
      * The {@link ChannelOption}s of the sockets created by the {@link ClientFactory}.
      */
     public static final ClientFactoryOption<Map<ChannelOption<?>, Object>> CHANNEL_OPTIONS =
             ClientFactoryOption.define("CHANNEL_OPTIONS", ImmutableMap.of(), newOptions -> {
-                for (ChannelOption<?> channelOption : PROHIBITED_SOCKET_OPTIONS) {
+                for (ChannelOption<?> channelOption : ChannelUtil.prohibitedOptions()) {
                     checkArgument(!newOptions.containsKey(channelOption),
                                   "prohibited channel option: %s", channelOption);
                 }
@@ -352,7 +381,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the HTTP/2 <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection
+     * Returns the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection
      * flow-control window size</a>.
      */
     public int http2InitialConnectionWindowSize() {
@@ -360,7 +389,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+     * Returns the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
      * for HTTP/2 stream-level flow control.
      */
     public int http2InitialStreamWindowSize() {
@@ -368,7 +397,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+     * Returns the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public int http2MaxFrameSize() {
@@ -376,7 +405,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the HTTP/2 <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">
+     * Returns the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">
      * SETTINGS_MAX_HEADER_LIST_SIZE</a> that indicates the maximum size of header list
      * that the client is prepared to accept, in octets.
      */
@@ -415,12 +444,28 @@ public final class ClientFactoryOptions
     /**
      * Returns the PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
-     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
-     * is sent for HTTP/1.
+     * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
+     * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * an asterisk ("*") is sent for HTTP/1.
      */
     public long pingIntervalMillis() {
         return get(PING_INTERVAL_MILLIS);
+    }
+
+    /**
+     * Returns the client-side max age of a connection for keep-alive in milliseconds.
+     * If the value is greater than {@code 0}, a connection is disconnected after the specified
+     * amount of the time since the connection was established.
+     */
+    public long maxConnectionAgeMillis() {
+        return get(MAX_CONNECTION_AGE_MILLIS);
+    }
+
+    /**
+     * Returns the client-side maximum allowed number of requests that can be sent through one connection.
+     */
+    public int maxNumRequestsPerConnection() {
+        return get(MAX_NUM_REQUESTS_PER_CONNECTION);
     }
 
     /**
@@ -461,13 +506,22 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * Returns the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+     * another header name. This is useful when communicating with a legacy system that only supports
+     * case sensitive HTTP/1 headers.
+     */
+    public Http1HeaderNaming http1HeaderNaming() {
+        return get(HTTP1_HEADER_NAMING);
+    }
+
+    /**
      * Returns whether to allow the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information.
      */
     public boolean tlsAllowUnsafeCiphers() {

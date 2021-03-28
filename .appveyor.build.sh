@@ -1,8 +1,8 @@
 #!/bin/bash
 set -eo pipefail
 
-JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jre_x64_linux_hotspot_8u242b08.tar.gz'
-JRE8_VERSION='AdoptOpenJDK-8u242b08'
+JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u282-b08/OpenJDK8U-jre_x64_linux_hotspot_8u282b08.tar.gz'
+JRE8_VERSION='AdoptOpenJDK-8u282b08'
 JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.6%2B10/OpenJDK11U-jre_x64_linux_hotspot_11.0.6_10.tar.gz'
 JRE11_VERSION='AdoptOpenJDK-11.0.6_10'
 JDK14_URL='https://github.com/AdoptOpenJDK/openjdk14-binaries/releases/download/jdk-14%2B36/OpenJDK14U-jdk_x64_linux_hotspot_14_36.tar.gz'
@@ -58,6 +58,9 @@ export TEST_JAVA_VERSION
 export JAVA_HOME="$HOME/jdk/build-$BUILD_JDK_VERSION"
 export JAVA_TEST_HOME="$HOME/jdk/test-$TEST_JAVA_VERSION-$TEST_JRE_VERSION"
 export PATH="$JAVA_HOME/bin:$PATH"
+
+msg "User home directory: $HOME"
+msg "Current working directory: $PWD"
 
 # Restore the home directory from the cache if necessary.
 if [[ -d /var/cache/appveyor ]] && \
@@ -133,6 +136,10 @@ if [[ ! -x "$JAVA_TEST_HOME/bin/java" ]]; then
   echo_and_run mv "$JAVA_TEST_HOME.tmp" "$JAVA_TEST_HOME"
 fi
 
+# Create a cache directory for a embedded Consul
+export CONSUL_DOWNLOAD_PATH="$HOME/.cache/embedded_consul"
+echo_and_run mkdir -p "$CONSUL_DOWNLOAD_PATH"
+
 # Print the version information.
 msg "Version information:"
 echo_and_run "$JAVA_HOME/bin/java" -version
@@ -147,7 +154,7 @@ fi
 msg "Building .."
 case "$PROFILE" in
 site)
-  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 :site:lint :site:site
+  echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 :site:siteLint :site:site
   ;;
 leak)
   echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 -Pleak -PnoLint test

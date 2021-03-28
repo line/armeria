@@ -15,9 +15,16 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
+import java.util.List;
+import java.util.Locale;
+import java.util.Locale.LanguageRange;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * Provides the getter methods to {@link RequestHeaders} and {@link RequestHeadersBuilder}.
@@ -62,4 +69,47 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
      */
     @Nullable
     String authority();
+
+    /**
+     * Returns a list of {@link LanguageRange}s that are specified in {@link HttpHeaderNames#ACCEPT_LANGUAGE}
+     * in the order of client preferences.
+     * @return All {@link LanguageRange}s of all matching headers or {@code null} if there is a parsing error
+     *         or if there is no header.
+     */
+    @Nullable
+    List<LanguageRange> acceptLanguages();
+
+    /**
+     * Matches the {@link Locale}s supported by the server to
+     * the {@link HttpHeaderNames#ACCEPT_LANGUAGE} and returns the best match
+     * according to client preference. It does this via <s>Basic Filter</s>ing each
+     * {@link LanguageRange} and picking the first match. This is the "classic"
+     * algorithm described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
+     * and also referenced in <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     * <p/>
+     * See also {@link Locale#lookup} for another algorithm.
+     * @param supportedLocales a {@link Iterable} of {@link Locale}s supported by the server.
+     * @return The best matching {@link Locale} or {@code null} if no locale matches.
+     */
+    @Nullable
+    Locale selectLocale(Iterable<Locale> supportedLocales);
+
+    /**
+     * Matches the {@link Locale}s supported by the server to
+     * the {@link HttpHeaderNames#ACCEPT_LANGUAGE} and returns the best match
+     * according to client preference. It does this via <s>Basic Filter</s>ing each
+     * {@link LanguageRange} and picking the first match. This is the "classic"
+     * algorithm described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
+     * and also referenced in <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     * <p/>
+     * See also {@link Locale#lookup} for another algorithm.
+     * @param supportedLocales {@link Locale}s supported by the server.
+     * @return The best matching {@link Locale} or {@code null} if no locale matches.
+     */
+    @Nullable
+    default Locale selectLocale(Locale... supportedLocales) {
+        return selectLocale(ImmutableList.copyOf(requireNonNull(supportedLocales, "supportedLocales")));
+    }
 }

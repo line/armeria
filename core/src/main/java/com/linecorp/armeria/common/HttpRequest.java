@@ -22,14 +22,18 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Formatter;
+import java.util.List;
 import java.util.Locale;
+import java.util.Locale.LanguageRange;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
@@ -38,12 +42,15 @@ import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -53,7 +60,7 @@ import io.netty.util.concurrent.EventExecutor;
  * <p>Note: The initial {@link RequestHeaders} is not signaled to {@link Subscriber}s. It is readily available
  * via {@link #headers()}.
  */
-public interface HttpRequest extends Request, StreamMessage<HttpObject> {
+public interface HttpRequest extends Request, HttpMessage {
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
     //       AggregatedHttpRequest for consistency.
@@ -326,6 +333,50 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
+     * Returns a list of {@link LanguageRange}s that are specified in {@link HttpHeaderNames#ACCEPT_LANGUAGE}
+     * in the order of client-side preferences. If the client does not send the header, this will contain only a
+     * wild card {@link LanguageRange}.
+     */
+    @Nullable
+    default List<LanguageRange> acceptLanguages() {
+        return headers().acceptLanguages();
+    }
+
+    /**
+     * Matches the {@link Locale}s supported by the server to
+     * the {@link HttpHeaderNames#ACCEPT_LANGUAGE} and returning the best match
+     * according to client preference. It does this via <s>Basic Filter</s>ing each
+     * {@link LanguageRange} and picking the first match. This is the "classic"
+     * algorithm described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
+     * and also referenced in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     * @param supportedLocales an {@link Iterable} of {@link Locale}s supported by the server.
+     * @return The best matching {@link Locale} or {@code null} if no {@link Locale} matches.
+     */
+    @Nullable
+    default Locale selectLocale(Iterable<Locale> supportedLocales) {
+        return headers().selectLocale(supportedLocales);
+    }
+
+    /**
+     * Matches the {@link Locale}s supported by the server to
+     * the {@link HttpHeaderNames#ACCEPT_LANGUAGE} and returning the best match
+     * according to client preference. It does this via <s>Basic Filter</s>ing each
+     * {@link LanguageRange} and picking the first match. This is the "classic"
+     * algorithm described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
+     * and also referenced in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     * @param supportedLocales {@link Locale}s supported by the server.
+     * @return The best matching {@link Locale} or {@code null} if no {@link Locale} matches.
+     */
+    @Nullable
+    default Locale selectLocale(Locale... supportedLocales) {
+        return selectLocale(ImmutableList.copyOf(requireNonNull(supportedLocales, "supportedLocales")));
+    }
+
+    /**
      * Returns a new {@link HttpRequest} derived from this {@link HttpRequest} by replacing its
      * {@link RequestHeaders} with the specified {@code newHeaders}. Note that the content stream and trailers
      * of this {@link HttpRequest} is not duplicated, which means you can subscribe to only one of the two
@@ -442,61 +493,30 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         return future;
     }
 
-    /**
-     * Returns a new {@link HttpRequestDuplicator} that duplicates this {@link HttpRequest} into one or
-     * more {@link HttpRequest}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
-     * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
-     * {@link HttpRequestDuplicator}.
-     */
     @Override
     default HttpRequestDuplicator toDuplicator() {
         return toDuplicator(Flags.defaultMaxRequestLength());
     }
 
-    /**
-     * Returns a new {@link HttpRequestDuplicator} that duplicates this {@link HttpRequest} into one or
-     * more {@link HttpRequest}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
-     * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
-     * {@link HttpRequestDuplicator}.
-     *
-     * @param executor the executor to duplicate
-     */
     @Override
     default HttpRequestDuplicator toDuplicator(EventExecutor executor) {
         return toDuplicator(executor, Flags.defaultMaxRequestLength());
     }
 
-    /**
-     * Returns a new {@link HttpRequestDuplicator} that duplicates this {@link HttpRequest} into one or
-     * more {@link HttpRequest}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
-     * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
-     * {@link HttpRequestDuplicator}.
-     *
-     * @param maxRequestLength the maximum request length that the duplicator can hold in its buffer.
-     *                         {@link ContentTooLargeException} is raised if the length of the buffered
-     *                         {@link HttpData} is greater than this value.
-     */
+    @Override
     default HttpRequestDuplicator toDuplicator(long maxRequestLength) {
         return toDuplicator(defaultSubscriberExecutor(), maxRequestLength);
     }
 
-    /**
-     * Returns a new {@link HttpRequestDuplicator} that duplicates this {@link HttpRequest} into one or
-     * more {@link HttpRequest}s, which publish the same elements.
-     * Note that you cannot subscribe to this {@link HttpRequest} anymore after you call this method.
-     * To subscribe, call {@link HttpRequestDuplicator#duplicate()} from the returned
-     * {@link HttpRequestDuplicator}.
-     *
-     * @param executor the executor to duplicate
-     * @param maxRequestLength the maximum request length that the duplicator can hold in its buffer.
-     *                         {@link ContentTooLargeException} is raised if the length of the buffered
-     *                         {@link HttpData} is greater than this value.
-     */
+    @Override
     default HttpRequestDuplicator toDuplicator(EventExecutor executor, long maxRequestLength) {
         requireNonNull(executor, "executor");
         return new DefaultHttpRequestDuplicator(this, executor, maxRequestLength);
+    }
+
+    @Override
+    default <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
+                                        Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
+        return new DecodedHttpStreamMessage<>(this, decoder, alloc, byteBufConverter);
     }
 }

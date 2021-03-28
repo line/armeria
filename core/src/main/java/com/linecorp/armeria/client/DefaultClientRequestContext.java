@@ -81,6 +81,12 @@ public final class DefaultClientRequestContext
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
+
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, CompletableFuture>
+            whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            DefaultClientRequestContext.class, CompletableFuture.class, "whenInitialized");
+
     private static final short STR_CHANNEL_AVAILABILITY = 1;
     private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
 
@@ -102,8 +108,6 @@ public final class DefaultClientRequestContext
     private final RequestLogBuilder log;
     private final CancellationScheduler responseCancellationScheduler;
     private long writeTimeoutMillis;
-    @Nullable
-    private Runnable responseTimeoutHandler;
     private long maxResponseLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
@@ -117,6 +121,9 @@ public final class DefaultClientRequestContext
     // because it is more common to have no customizers than to have any.
     @Nullable
     private volatile List<Consumer<? super ClientRequestContext>> customizers;
+
+    @Nullable
+    private volatile CompletableFuture<Boolean> whenInitialized;
 
     /**
      * Creates a new instance. Note that {@link #init(EndpointGroup)} method must be invoked to finish
@@ -224,16 +231,16 @@ public final class DefaultClientRequestContext
         } catch (Throwable t) {
             acquireEventLoop(endpointGroup);
             failEarly(t);
-            return UnmodifiableFuture.completedFuture(false);
+            return initFuture(false, null);
         }
     }
 
-    private UnmodifiableFuture<Boolean> initEndpoint(Endpoint endpoint) {
+    private CompletableFuture<Boolean> initEndpoint(Endpoint endpoint) {
         endpointGroup = null;
         updateEndpoint(endpoint);
         runThreadLocalContextCustomizers();
         acquireEventLoop(endpoint);
-        return UnmodifiableFuture.completedFuture(true);
+        return initFuture(true, null);
     }
 
     private CompletableFuture<Boolean> initEndpointGroup(EndpointGroup endpointGroup) {
@@ -246,7 +253,7 @@ public final class DefaultClientRequestContext
         if (endpoint != null) {
             updateEndpoint(endpoint);
             acquireEventLoop(endpointGroup);
-            return UnmodifiableFuture.completedFuture(true);
+            return initFuture(true, null);
         }
 
         // Use an arbitrary event loop for asynchronous Endpoint selection.
@@ -266,12 +273,60 @@ public final class DefaultClientRequestContext
             final EventLoop acquiredEventLoop = eventLoop();
             if (acquiredEventLoop == temporaryEventLoop) {
                 // We were lucky. No need to hand over to other EventLoop.
-                return UnmodifiableFuture.completedFuture(success);
+                return initFuture(success, null);
             } else {
                 // We need to hand over to the acquired EventLoop.
-                return CompletableFuture.supplyAsync(() -> success, acquiredEventLoop);
+                return initFuture(success, acquiredEventLoop);
             }
         }).thenCompose(Function.identity());
+    }
+
+    private CompletableFuture<Boolean> initFuture(boolean success, @Nullable EventLoop acquiredEventLoop) {
+        CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
+        if (whenInitialized == null) {
+            final CompletableFuture<Boolean> future;
+            if (acquiredEventLoop == null) {
+                future = UnmodifiableFuture.completedFuture(success);
+            } else {
+                future = CompletableFuture.supplyAsync(() -> success, acquiredEventLoop);
+            }
+            if (whenInitializedUpdater.compareAndSet(this, null, future)) {
+                return future;
+            }
+            whenInitialized = this.whenInitialized;
+        }
+
+        final CompletableFuture<Boolean> finalWhenInitialized = whenInitialized;
+        if (finalWhenInitialized.isDone()) {
+            return finalWhenInitialized;
+        }
+
+        if (acquiredEventLoop == null) {
+            finalWhenInitialized.complete(success);
+        } else {
+            acquiredEventLoop.execute(() -> finalWhenInitialized.complete(success));
+        }
+        return finalWhenInitialized;
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} that will be completed
+     * if this {@link ClientRequestContext} is initialized with an {@link EndpointGroup}.
+     *
+     * @see #init(EndpointGroup)
+     */
+    public CompletableFuture<Boolean> whenInitialized() {
+        CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
+        if (whenInitialized != null) {
+            return whenInitialized;
+        } else {
+            whenInitialized = new CompletableFuture<>();
+            if (whenInitializedUpdater.compareAndSet(this, null, whenInitialized)) {
+                return whenInitialized;
+            } else {
+                return this.whenInitialized;
+            }
+        }
     }
 
     private void updateEndpoint(@Nullable Endpoint endpoint) {
@@ -357,9 +412,10 @@ public final class DefaultClientRequestContext
         if (ctx.request() != null) {
             requireNonNull(req, "req");
         }
-        if (ctx.rpcRequest() != null) {
-            requireNonNull(rpcReq, "rpcReq");
-        }
+        // The rpcReq can be null when ctx.rpcRequest() is not null because there's a chance that
+        // the rpcRequest is set between the time we call ctx.rpcRequest() to create this context and now.
+        // So we don't check the nullness of rpcRequest unlike request.
+        // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
         eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();

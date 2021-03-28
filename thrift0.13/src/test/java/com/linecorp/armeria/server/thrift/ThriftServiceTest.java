@@ -50,7 +50,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.thrift.text.ChildRpcDebugService;
 import com.linecorp.armeria.common.thrift.text.Response;
@@ -710,11 +709,11 @@ class ThriftServiceTest {
     }
 
     private TProtocol inProto(SerializationFormat defaultSerializationFormat) {
-        return ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(in);
+        return ThriftSerializationFormats.protocolFactory(defaultSerializationFormat).getProtocol(in);
     }
 
     private TProtocol outProto(SerializationFormat defaultSerializationFormat) {
-        return ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(out);
+        return ThriftSerializationFormats.protocolFactory(defaultSerializationFormat).getProtocol(out);
     }
 
     private static class SerializationFormatProvider implements ArgumentsProvider {

@@ -71,6 +71,7 @@ import com.linecorp.armeria.server.annotation.ProducesOctetStream;
 import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.StatusCode;
+import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import reactor.core.publisher.Flux;
@@ -84,6 +85,7 @@ public class AnnotatedServiceResponseConverterTest {
     private static final byte[] BYTEARRAY = STRING.getBytes(StandardCharsets.UTF_8);
     private static final HttpData HTTPDATA = HttpData.wrap(BYTEARRAY);
     private static final JsonNode JSONNODE;
+    private static final HttpFile HTTPFILE = HttpFile.of(HTTPDATA);
 
     static {
         try {
@@ -103,19 +105,24 @@ public class AnnotatedServiceResponseConverterTest {
                     return STRING;
                 }
 
-                @Get("/byteArray")
+                @Get("/byte-array")
                 public byte[] byteArray() {
                     return BYTEARRAY;
                 }
 
-                @Get("/httpData")
+                @Get("/http-data")
                 public HttpData httpData() {
                     return HTTPDATA;
                 }
 
-                @Get("/jsonNode")
+                @Get("/json-node")
                 public JsonNode jsonNode() throws IOException {
                     return JSONNODE;
+                }
+
+                @Get("/http-file")
+                public HttpFile httpFile() {
+                    return HTTPFILE;
                 }
             });
 
@@ -126,22 +133,27 @@ public class AnnotatedServiceResponseConverterTest {
                     return Mono.just(STRING);
                 }
 
-                @Get("/byteArray")
+                @Get("/byte-array")
                 @ProducesOctetStream
                 public Publisher<byte[]> byteArray() {
                     return new ObjectPublisher<>(BYTEARRAY);
                 }
 
-                @Get("/httpData")
+                @Get("/http-data")
                 @ProducesOctetStream
                 public Publisher<HttpData> httpData() {
                     return new ObjectPublisher<>(HTTPDATA);
                 }
 
-                @Get("/jsonNode")
+                @Get("/json-node")
                 @ProducesJson   // Can omit this annotation, but it's not recommended.
                 public Publisher<JsonNode> jsonNode() throws IOException {
                     return Mono.just(JSONNODE);
+                }
+
+                @Get("/http-file")
+                public Publisher<HttpFile> httpFile() {
+                    return Mono.just(HTTPFILE);
                 }
             });
 
@@ -152,7 +164,7 @@ public class AnnotatedServiceResponseConverterTest {
                     return new ObjectPublisher<>("a", "b", "c");
                 }
 
-                @Get("/jsonNode")
+                @Get("/json-node")
                 @ProducesJson
                 public Publisher<JsonNode> jsonNode() throws IOException {
                     return new ObjectPublisher<>(mapper.readTree("{\"a\":\"1\"}"),
@@ -175,12 +187,12 @@ public class AnnotatedServiceResponseConverterTest {
             });
 
             sb.annotatedService("/publish/http-result", new Object() {
-                @Get("/mono/jsonNode")
+                @Get("/mono/json-node")
                 public HttpResult<Publisher<JsonNode>> monoJsonNode() throws IOException {
                     return HttpResult.of(Mono.just(JSONNODE));
                 }
 
-                @Get("/jsonNode")
+                @Get("/json-node")
                 @ProducesJson
                 public HttpResult<Publisher<JsonNode>> jsonNode() throws IOException {
                     return HttpResult.of(new ObjectPublisher<>(JSONNODE));
@@ -199,43 +211,43 @@ public class AnnotatedServiceResponseConverterTest {
                     return 100;
                 }
 
-                @Get("/byteArray")
+                @Get("/byte-array")
                 @UserProduceBinary
                 public byte[] byteArray() {
                     return BYTEARRAY;
                 }
 
-                @Get("/httpData")
+                @Get("/http-data")
                 @Produces("application/octet-stream")
                 public HttpData httpData() {
                     return HTTPDATA;
                 }
 
-                @Get("/byteArrayGif")
+                @Get("/byte-array-gif")
                 @Produces("image/gif")
                 public byte[] byteArrayGif() {
                     return BYTEARRAY;
                 }
 
-                @Get("/httpDataPng")
+                @Get("/http-data-png")
                 @Produces("image/png")
                 public HttpData httpDataPng() {
                     return HTTPDATA;
                 }
 
-                @Get("/byteArrayTxt")
+                @Get("/byte-array-txt")
                 @ProducesText
                 public byte[] byteArrayTxt() {
                     return BYTEARRAY;
                 }
 
-                @Get("/httpDataTxt")
+                @Get("/http-data-txt")
                 @ProducesText
                 public HttpData httpDataTxt() {
                     return HTTPDATA;
                 }
 
-                @Get("/jsonNode")
+                @Get("/json-node")
                 @ProducesJson
                 public Map<String, String> jsonNode() throws IOException {
                     return ImmutableMap.of("a", STRING);
@@ -364,6 +376,33 @@ public class AnnotatedServiceResponseConverterTest {
                     return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK,
                                                               HttpHeaderNames.of("header_name_1"),
                                                               "header_value_unchanged"));
+                }
+            });
+
+            sb.annotatedService("/http-file", new Object() {
+                @Get("/expect-custom-header")
+                @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
+                public HttpResult<HttpFile> httpFileExpectCustomHeader() {
+                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
+                                         HTTPFILE);
+                }
+
+                @Get("/expect-custom-trailers")
+                @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
+                public HttpResult<HttpFile> httpFileExpectCustomTrailers() {
+                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
+                                         HTTPFILE,
+                                         HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
+                }
+
+                @Get("/expect-http-file-service-headers-not-overwritten")
+                @StatusCode(400)
+                @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
+                public HttpResult<HttpFile> httpFileExpectHeadersNotOverwritten() {
+                    return HttpResult.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED,
+                                                            HttpHeaderNames.of("x-custom-header"), "value"),
+                                         HTTPFILE,
+                                         HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
                 }
             });
 
@@ -546,17 +585,21 @@ public class AnnotatedServiceResponseConverterTest {
         assertThat(res.contentUtf8()).isEqualTo(STRING);
         assertThat(res.contentAscii()).isNotEqualTo(STRING);
 
-        res = aggregated(client.get("/byteArray"));
+        res = aggregated(client.get("/byte-array"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/httpData"));
+        res = aggregated(client.get("/http-data"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/jsonNode"));
+        res = aggregated(client.get("/json-node"));
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(JSONNODE));
+
+        res = aggregated(client.get("/http-file"));
+        assertThat(res.contentType()).isNull();
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
     }
 
     @Test
@@ -571,7 +614,7 @@ public class AnnotatedServiceResponseConverterTest {
                 .isArray().ofLength(3)
                 .thatContains("a").thatContains("b").thatContains("c");
 
-        res = aggregated(client.get("/jsonNode"));
+        res = aggregated(client.get("/json-node"));
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(res.contentUtf8())
                 .isEqualTo("[{\"a\":\"1\"},{\"b\":\"2\"},{\"c\":\"3\"}]");
@@ -600,31 +643,31 @@ public class AnnotatedServiceResponseConverterTest {
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.content().array()).isEqualTo("100".getBytes());
 
-        res = aggregated(client.get("/byteArray"));
+        res = aggregated(client.get("/byte-array"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/httpData"));
+        res = aggregated(client.get("/http-data"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/byteArrayGif"));
+        res = aggregated(client.get("/byte-array-gif"));
         assertThat(res.contentType()).isEqualTo(MediaType.GIF);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/httpDataPng"));
+        res = aggregated(client.get("/http-data-png"));
         assertThat(res.contentType()).isEqualTo(MediaType.PNG);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/byteArrayTxt"));
+        res = aggregated(client.get("/byte-array-txt"));
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/httpDataTxt"));
+        res = aggregated(client.get("/http-data-txt"));
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
-        res = aggregated(client.get("/jsonNode"));
+        res = aggregated(client.get("/json-node"));
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(JSONNODE));
     }
@@ -702,18 +745,48 @@ public class AnnotatedServiceResponseConverterTest {
 
         AggregatedHttpResponse res;
 
-        res = aggregated(client.get("/mono/jsonNode"));
+        res = aggregated(client.get("/mono/json-node"));
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(res.contentUtf8()).isEqualTo(ImmutableMap.of("a", STRING));
 
-        res = aggregated(client.get("/jsonNode"));
+        res = aggregated(client.get("/json-node"));
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(res.contentUtf8()).isEqualTo(ImmutableList.of(ImmutableMap.of("a", STRING)));
 
         res = aggregated(client.get("/defer"));
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    public void httpFileResponseConverter() {
+        final WebClient client = WebClient.of(rule.httpUri() + "/http-file");
+
+        AggregatedHttpResponse res;
+
+        res = aggregated(client.get("/expect-custom-header"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
+                "annotated-value");
+
+        res = aggregated(client.get("/expect-custom-trailers"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-trailers"))).isEqualTo("value");
+        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-annotated-trailers"))).isEqualTo(
+                "annotated-value");
+
+        res = aggregated(client.get("/expect-http-file-service-headers-not-overwritten"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+        assertThat(res.trailers().get(HttpHeaderNames.of("x-custom-trailers"))).isEqualTo("value");
+        assertThat(res.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
+                "annotated-value");
     }
 
     private static AggregatedHttpResponse aggregated(HttpResponse response) {

@@ -1,3 +1,7 @@
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.util.concurrent.TimeUnit
+
 String releaseFlagFromVersion(String src) {
     // Java 9+ are 9, 10, etc, before was 1.8, 1.7, etc.
     if (src.contains('.')) {
@@ -109,11 +113,12 @@ dependencies {
     [ 'netty-transport', 'netty-codec-http2', 'netty-codec-haproxy', 'netty-resolver-dns' ].each {
         api "io.netty:$it"
     }
+    implementation "io.netty:netty-resolver-dns-native-macos:${managedVersions['io.netty:netty-resolver-dns-native-macos']}:osx-x86_64"
     implementation "io.netty:netty-transport-native-unix-common:${managedVersions['io.netty:netty-transport-native-unix-common']}:linux-x86_64"
     implementation "io.netty:netty-transport-native-epoll:${managedVersions['io.netty:netty-transport-native-epoll']}:linux-x86_64"
     implementation 'io.netty:netty-tcnative-boringssl-static'
     implementation 'io.netty:netty-handler-proxy'
-    implementation "io.netty.incubator:netty-incubator-transport-native-io_uring:${managedVersions['io.netty.incubator:netty-incubator-transport-native-io_uring']}:linux-x86_64"
+    optionalImplementation "io.netty.incubator:netty-incubator-transport-native-io_uring:${managedVersions['io.netty.incubator:netty-incubator-transport-native-io_uring']}:linux-x86_64"
 
     // TestNG
     testImplementation 'org.testng:testng'
@@ -125,7 +130,7 @@ dependencies {
     // Do not upgrade to Scala 2.13.x that causes 'java.lang.ClassNotFoundException: scala.Serializable'
     // See https://github.com/scala/bug/issues/11832#issuecomment-568185023
     // If needed, you should consider to add 'armeria-scala' module.
-    optionalImplementation 'org.scala-lang:scala-library:2.12.12'
+    optionalImplementation 'org.scala-lang:scala-library:2.12.13'
 
     // Bouncy Castle
     implementation 'org.bouncycastle:bcprov-jdk15on'
@@ -197,3 +202,42 @@ if (tasks.findByName('trimShadedJar')) {
         dontnote
     }
 }
+
+class PublicSuffixesTask extends DefaultTask {
+    // Rebuild up to once in 7 days, unless cleaned.
+    @Input
+    final def days = (System.currentTimeMillis() / TimeUnit.DAYS.toMillis(7)).intValue()
+    @OutputFile
+    final def publicSuffixesFile = project.file("${project.projectDir}/src/main/resources/com/linecorp/armeria/public_suffixes.txt")
+
+    @TaskAction
+    def run() {
+        try {
+            def tempFile = File.createTempFile("public_suffixes", null)
+            def req = (HttpURLConnection) new URL('https://publicsuffix.org/list/public_suffix_list.dat').openConnection()
+            def res = req.getInputStream()
+            if (req.getResponseCode() != 200) {
+                println "received a non-200 response from publicsuffix.org: ${req.getResponseCode()}"
+                return
+            }
+            def sortedSet = new TreeSet<String>()
+            res.eachLine('UTF-8') {
+                if (!it.isEmpty() && !it.startsWith("//")) {
+                    sortedSet.add(IDN.toASCII(it))
+                }
+            }
+            sortedSet.each {
+                tempFile.append(it)
+                tempFile.append("\n")
+            }
+            Files.move(tempFile.toPath(), publicSuffixesFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            println "public suffixes file is updated"
+        } catch (Exception e) {
+            println "an exception was thrown: ${e}"
+        }
+    }
+}
+
+task publicSuffixes(type: PublicSuffixesTask)
+tasks.processResources.dependsOn publicSuffixes
+tasks.classes.dependsOn publicSuffixes
