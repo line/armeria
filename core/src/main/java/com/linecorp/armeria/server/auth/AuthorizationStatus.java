@@ -28,11 +28,13 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public interface AuthorizationStatus {
 
     /**
-     * Creates {@link AuthorizationStatus} based on the boolean status, with neither {@link AuthFailureHandler}
-     * nor {@link AuthSuccessHandler} defined.
+     * Creates {@link AuthorizationStatus} based on the given boolean status, with neither
+     * {@link AuthFailureHandler} nor {@link AuthSuccessHandler} defined.
+     *
+     * @param isAuthorized Whether the request was authorized or not.
      */
-    static AuthorizationStatus of(boolean status) {
-        return status ? AuthorizationStatusImpl.SUCCESS : AuthorizationStatusImpl.FAILURE;
+    static AuthorizationStatus of(boolean isAuthorized) {
+        return isAuthorized ? AuthorizationStatusImpl.SUCCESS : AuthorizationStatusImpl.FAILURE;
     }
 
     /**
@@ -60,7 +62,7 @@ public interface AuthorizationStatus {
      * A status of the request authorization operation.
      * @return {@code true} if the request is authorized, or {@code false} otherwise.
      */
-    boolean status();
+    boolean isAuthorized();
 
     /**
      * Returns the {@link AuthSuccessHandler} to handle successfully authorized requests.

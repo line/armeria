@@ -78,7 +78,7 @@ class AuthorizerTest {
 
         final AuthorizationStatus result2 = a.authorizeAndSupplyHandlers(serviceCtx, "data")
                                              .toCompletableFuture().join();
-        assertThat(result2.status()).isTrue();
+        assertThat(result2.isAuthorized()).isTrue();
         assertThat(result2.successHandler()).isNull();
         assertThat(result2.failureHandler()).isNull();
     }
@@ -93,7 +93,7 @@ class AuthorizerTest {
 
         final AuthorizationStatus result2 = a.authorizeAndSupplyHandlers(serviceCtx, "data")
                                              .toCompletableFuture().join();
-        assertThat(result2.status()).isFalse();
+        assertThat(result2.isAuthorized()).isFalse();
         assertThat(result2.successHandler()).isNull();
         assertThat(result2.failureHandler()).isNull();
     }
@@ -132,7 +132,7 @@ class AuthorizerTest {
 
         final AuthorizationStatus result2 = a.authorizeAndSupplyHandlers(serviceCtx, "data")
                                              .toCompletableFuture().join();
-        assertThat(result2.status()).isTrue();
+        assertThat(result2.isAuthorized()).isTrue();
         assertThat(result2.successHandler()).isNotNull();
         assertThat(result2.failureHandler()).isNull();
     }
@@ -147,7 +147,7 @@ class AuthorizerTest {
 
         final AuthorizationStatus result2 = a.authorizeAndSupplyHandlers(serviceCtx, "data")
                                              .toCompletableFuture().join();
-        assertThat(result2.status()).isFalse();
+        assertThat(result2.isAuthorized()).isFalse();
         assertThat(result2.successHandler()).isNull();
         assertThat(result2.failureHandler()).isNotNull();
     }
@@ -262,7 +262,7 @@ class AuthorizerTest {
         final AuthorizationStatus result = authorizer.authorizeAndSupplyHandlers(serviceCtx, "data")
                                                      .toCompletableFuture().join();
         assertThat(result).isNotNull();
-        assertThat(result.status()).isEqualTo(expectedStatus);
+        assertThat(result.isAuthorized()).isEqualTo(expectedStatus);
         final AuthSuccessHandler successHandler = result.successHandler();
         final AuthFailureHandler failureHandler = result.failureHandler();
         if (expectedSuccessHandler >= 0) {

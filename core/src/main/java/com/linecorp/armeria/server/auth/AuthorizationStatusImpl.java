@@ -53,7 +53,7 @@ class AuthorizationStatusImpl implements AuthorizationStatus {
     }
 
     @Override
-    public boolean status() {
+    public boolean isAuthorized() {
         return status;
     }
 

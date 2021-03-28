@@ -22,6 +22,7 @@ import java.util.concurrent.CompletionStage;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthorizerChain.AuthorizerSelectionStrategy;
 
@@ -52,6 +53,7 @@ public interface Authorizer<T> {
      * @return a {@link CompletionStage} that will resolve to {@link AuthorizationStatus}. If the future
      *     resolves exceptionally, the request will not be authorized.
      */
+    @UnstableApi
     @SuppressWarnings("ReturnOfNull")
     default CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
                                                                             @Nullable T data) {

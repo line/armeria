@@ -111,7 +111,7 @@ final class AuthorizerChain<T> extends AbstractAuthorizerWithHandlers<T> {
             if (result == null) {
                 throw AuthorizerUtil.newNullResultException(nextAuthorizer);
             } else {
-                if (result.status()) {
+                if (result.isAuthorized()) {
                     // always return associated successHandler on success!
                     // this could be NULL
                     return CompletableFuture.completedFuture(

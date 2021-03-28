@@ -93,9 +93,10 @@ public final class AuthService extends SimpleDecoratingHttpService {
                 final HttpService delegate = (HttpService) unwrap();
                 if (cause == null) {
                     if (result != null) {
-                        return result.status() ? handleSuccess(delegate, result.successHandler(), ctx, req)
-                                               : handleFailure(delegate, result.failureHandler(), ctx, req,
-                                                               null);
+                        if (!result.isAuthorized()) {
+                            return handleFailure(delegate, result.failureHandler(), ctx, req, null);
+                        }
+                        return handleSuccess(delegate, result.successHandler(), ctx, req);
                     }
                     cause = AuthorizerUtil.newNullResultException(authorizer);
                 }
