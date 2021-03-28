@@ -27,6 +27,7 @@
 *.customer-oci.com
 *.dapps.earth
 *.dev.adobeaemcloud.com
+*.devcdnaccesso.com
 *.dweb.link
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
@@ -2650,7 +2651,6 @@ fujisawa.iwate.jp
 fujisawa.kanagawa.jp
 fujishiro.ibaraki.jp
 fujitsu
-fujixerox
 fujiyoshida.yamanashi.jp
 fukagawa.hokkaido.jp
 fukaya.saitama.jp
