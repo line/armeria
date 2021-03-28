@@ -34,7 +34,7 @@ import com.linecorp.armeria.internal.common.auth.oauth2.CaseUtil;
 
 /**
  * Provides client authorization for the OAuth 2.0 requests,
- * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+ * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
  * For example:
  * <pre>{@code
  * Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
@@ -64,7 +64,7 @@ public final class ClientAuthorization {
     /**
      * Provides client authorization for the OAuth 2.0 requests based on encoded authorization token and
      * authorization type,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param authorizationSupplier A supplier of encoded client authorization token.
      * @param authorizationType One of the registered HTTP authentication schemes as per
@@ -80,7 +80,7 @@ public final class ClientAuthorization {
     /**
      * Provides client authorization for the OAuth 2.0 requests based on encoded authorization token and
      * {@code Basic} authorization type,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param authorizationSupplier A supplier of encoded client authorization token.
      */
@@ -93,7 +93,7 @@ public final class ClientAuthorization {
     /**
      * Provides client authorization for the OAuth 2.0 requests based on client credentials and
      * authorization type,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param credentialsSupplier A supplier of client credentials.
      * @param authorizationType One of the registered HTTP authentication schemes as per
@@ -110,7 +110,7 @@ public final class ClientAuthorization {
     /**
      * Provides client authorization for the OAuth 2.0 requests based on client credentials and
      * {@code Basic} authorization type,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param credentialsSupplier A supplier of client credentials.
      */
@@ -150,7 +150,7 @@ public final class ClientAuthorization {
     /**
      * Fetches client authorization token or client credentials from the supplier and composes client
      * {@code Authorization} header value,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
      * <pre>{@code
      * Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
      * }</pre>.
@@ -164,7 +164,7 @@ public final class ClientAuthorization {
 
     /**
      * Fetches client credentials from the supplier and composes required body parameters,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
      * <pre>{@code
      * client_id=s6BhdRkqt3&client_secret=7Fjfp0ZBr1KtDRbnfVdmIw
      * }</pre>.
@@ -182,7 +182,7 @@ public final class ClientAuthorization {
 
     /**
      * Fetches client credentials from the supplier and composes required body parameters,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>:
      * <pre>{@code
      * client_id=s6BhdRkqt3&client_secret=7Fjfp0ZBr1KtDRbnfVdmIw
      * }</pre>.

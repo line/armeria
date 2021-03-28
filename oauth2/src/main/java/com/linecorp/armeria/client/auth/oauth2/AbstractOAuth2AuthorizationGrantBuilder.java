@@ -59,7 +59,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
-     * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/rfc6749/">[RFC6749]</a>.
      *
      * @param accessTokenEndpoint A {@link WebClient} to facilitate an Access Token request. Must correspond to
      *                            the Access Token endpoint of the OAuth 2 system.
@@ -74,7 +74,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     /**
      * Provides client authorization for the OAuth 2.0 requests based on encoded authorization token and
      * authorization type,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param clientAuthorization A supplier of encoded client authorization token.
      * @param authorizationType One of the registered HTTP authentication schemes as per
@@ -95,7 +95,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     /**
      * Provides client authorization for the OAuth 2.0 requests based on encoded authorization token and
      * {@code Basic} authorization type,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param clientAuthorization A supplier of encoded client authorization token.
      * @throws IllegalStateException if clientAuthorization already set
@@ -112,7 +112,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     /**
      * Provides client authorization for the OAuth 2.0 requests based on client credentials and
      * authorization type,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param clientCredentials A supplier of client credentials.
      * @param authorizationType One of the registered HTTP authentication schemes as per
@@ -133,7 +133,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     /**
      * Provides client authorization for the OAuth 2.0 requests based on client credentials and
      * {@code Basic} authorization type,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param clientCredentials A supplier of client credentials.
      * @throws IllegalStateException if clientCredentials already set

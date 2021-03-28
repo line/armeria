@@ -211,7 +211,7 @@ public final class OAuth2TokenDescriptorBuilder {
     /**
      * {@code token_type} Token Introspection Response field,
      * OPTIONAL. Type of the token as defined at
-     * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
      */
     public OAuth2TokenDescriptorBuilder tokenType(String tokenType) {
         this.tokenType = requireNonNull(tokenType, "tokenType");
@@ -221,7 +221,7 @@ public final class OAuth2TokenDescriptorBuilder {
     /**
      * {@code exp} Token Introspection Response field,
      * OPTIONAL. {@link Instant} timestamp, indicating when this token will expire, as defined at
-     * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
+     * <a href="https://datatracker.ietf.org/doc/rfc7519/">[RFC7519]</a>.
      */
     public OAuth2TokenDescriptorBuilder expiresAt(Instant expiresAt) {
         this.expiresAt = requireNonNull(expiresAt, "expiresAt");
@@ -231,7 +231,7 @@ public final class OAuth2TokenDescriptorBuilder {
     /**
      * {@code iat} Token Introspection Response field,
      * OPTIONAL. {@link Instant} timestamp, indicating when this token was originally issued, as defined at
-     * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
+     * <a href="https://datatracker.ietf.org/doc/rfc7519/">[RFC7519]</a>.
      */
     public OAuth2TokenDescriptorBuilder issuedAt(Instant issuedAt) {
         this.issuedAt = requireNonNull(issuedAt, "issuedAt");
@@ -241,7 +241,7 @@ public final class OAuth2TokenDescriptorBuilder {
     /**
      * {@code nbf} Token Introspection Response field,
      * OPTIONAL. {@link Instant} timestamp, indicating when this token is not to be used before, as defined at
-     * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
+     * <a href="https://datatracker.ietf.org/doc/rfc7519/">[RFC7519]</a>.
      */
     public OAuth2TokenDescriptorBuilder notBefore(Instant notBefore) {
         this.notBefore = requireNonNull(notBefore, "notBefore");
@@ -252,7 +252,7 @@ public final class OAuth2TokenDescriptorBuilder {
      * {@code sub} Token Introspection Response field,
      * OPTIONAL. Subject of the token. Usually a machine-readable
      * identifier of the resource owner who authorized this token. As defined at
-     * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
+     * <a href="https://datatracker.ietf.org/doc/rfc7519/">[RFC7519]</a>.
      */
     public OAuth2TokenDescriptorBuilder subject(String subject) {
         this.subject = requireNonNull(subject, "subject");
@@ -263,7 +263,7 @@ public final class OAuth2TokenDescriptorBuilder {
      * {@code aud} Token Introspection Response field,
      * OPTIONAL. Service-specific string identifier or list of string identifiers representing the
      * intended audience for this token, as defined at
-     * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
+     * <a href="https://datatracker.ietf.org/doc/rfc7519/">[RFC7519]</a>.
      */
     public OAuth2TokenDescriptorBuilder audience(String audience) {
         this.audience = requireNonNull(audience, "audience");
@@ -273,7 +273,7 @@ public final class OAuth2TokenDescriptorBuilder {
     /**
      * {@code iss} Token Introspection Response field,
      * OPTIONAL. String representing the issuer of this token, as defined at
-     * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
+     * <a href="https://datatracker.ietf.org/doc/rfc7519/">[RFC7519]</a>.
      */
     public OAuth2TokenDescriptorBuilder issuer(String issuer) {
         this.issuer = requireNonNull(issuer, "issuer");
@@ -283,7 +283,7 @@ public final class OAuth2TokenDescriptorBuilder {
     /**
      * {@code jti} Token Introspection Response field,
      * OPTIONAL. String identifier for the token - JWT ID, as defined at
-     * <a href="https://tools.ietf.org/html/rfc7519">[RFC7519]</a>.
+     * <a href="https://datatracker.ietf.org/doc/rfc7519/">[RFC7519]</a>.
      */
     public OAuth2TokenDescriptorBuilder jwtId(String jwtId) {
         this.jwtId = requireNonNull(jwtId, "jwtId");

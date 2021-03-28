@@ -105,7 +105,7 @@ class OAuth2AuthorizationFailureHandler implements AuthFailureHandler {
      * @param realm optional security realm of an application or a service
      * @param scope optional JSON string containing a space-separated list of scopes associated with this token,
      *     in the format described at
-     *     <a href="http://tools.ietf.org/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
+     *     <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
      *
      */
     OAuth2AuthorizationFailureHandler(@Nullable String accessTokenType,
@@ -124,7 +124,7 @@ class OAuth2AuthorizationFailureHandler implements AuthFailureHandler {
      *    <li>invalid_token - 401 Unauthorized</li>
      *    <li>insufficient_scope - 403 Forbidden</li>
      * </ul>
-     * as per <a href="https://tools.ietf.org/id/draft-ietf-oauth-v2-bearer-20.html#rfc.section.3.1">
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6750#rfc.section.3.1">
      *     The OAuth 2.0 Authorization Framework: Bearer Token Usage</a>
      */
     @Override

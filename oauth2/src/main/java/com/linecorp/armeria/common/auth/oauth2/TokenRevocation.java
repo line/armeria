@@ -29,7 +29,7 @@ import com.linecorp.armeria.internal.common.auth.oauth2.TokenRevocationRequest;
 
 /**
  * Implements Token Revocation request/response flow,
- * as per <a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>.
+ * as per <a href="https://datatracker.ietf.org/doc/rfc7009/">[RFC7009]</a>.
  */
 @UnstableApi
 public final class TokenRevocation {
@@ -50,7 +50,7 @@ public final class TokenRevocation {
 
     /**
      * Implements Token Revocation request/response flow,
-     * as per <a href="https://tools.ietf.org/html/rfc7009#section-2">[RFC7009], Section 2</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc7009#section-2">[RFC7009], Section 2</a>.
      */
     public CompletableFuture<Boolean> revokeRefreshToken(String refreshToken) {
         return request.make(refreshToken, REFRESH_TOKEN);
@@ -58,7 +58,7 @@ public final class TokenRevocation {
 
     /**
      * Implements Token Revocation request/response flow,
-     * as per <a href="https://tools.ietf.org/html/rfc7009#section-2">[RFC7009], Section 2</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc7009#section-2">[RFC7009], Section 2</a>.
      */
     public CompletableFuture<Boolean> revokeAccessToken(String accessToken) {
         return request.make(accessToken, ACCESS_TOKEN);

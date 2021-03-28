@@ -127,7 +127,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
     /**
      * {@value OAuth2Constants#TOKEN_TYPE} Access Token response field,
      * REQUIRED. The type of the token issued as described at
-     * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
      * Value is case insensitive.
      */
     public GrantedOAuth2AccessTokenBuilder tokenType(String tokenType) {
@@ -161,7 +161,7 @@ public final class GrantedOAuth2AccessTokenBuilder {
      * {@value OAuth2Constants#REFRESH_TOKEN} Access Token response field,
      * OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
      * authorization grant as described at
-     * <a href="http://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-6">[RFC6749], Section 6</a>.
      */
     public GrantedOAuth2AccessTokenBuilder refreshToken(String refreshToken) {
         this.refreshToken = requireNonNull(refreshToken, "refreshToken");

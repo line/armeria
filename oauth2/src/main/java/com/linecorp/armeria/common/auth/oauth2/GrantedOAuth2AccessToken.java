@@ -49,7 +49,7 @@ import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants;
 
 /**
  * Defines a structure of the Access Token Response, as per
- * <a href="https://tools.ietf.org/html/rfc6749#section-5.1">[RFC6749], Section 5.1</a>.
+ * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-5.1">[RFC6749], Section 5.1</a>.
  */
 @UnstableApi
 public class GrantedOAuth2AccessToken implements Serializable {
@@ -102,7 +102,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     /**
      * {@value OAuth2Constants#TOKEN_TYPE} Access Token response field,
      * REQUIRED. The type of the token issued as described at
-     * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>, e.g. "bearer".
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>, e.g. "bearer".
      * Value is case insensitive.
      */
     @Nullable
@@ -122,7 +122,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
      * {@value OAuth2Constants#REFRESH_TOKEN} Access Token response field,
      * OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
      * authorization grant as described at
-     * <a href="http://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-6">[RFC6749], Section 6</a>.
      */
     @Nullable
     private final String refreshToken;
@@ -131,7 +131,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
      * {@value OAuth2Constants#SCOPE} Access Token response field,
      * OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The scope of
      * the access token as described at
-     * <a href="http://tools.ietf.org/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
      * A list of space-delimited, case-sensitive scope strings. The strings are defined by the authorization
      * server.
      * The authorization server MAY fully or partially ignore the scope requested by the client, based
@@ -200,7 +200,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
     /**
      * {@value OAuth2Constants#TOKEN_TYPE}  Access Token response field,
      * REQUIRED. The type of the token issued as described at
-     * <a href="http://tools.ietf.org/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
      * Value is case insensitive.
      */
     @Nullable
@@ -263,7 +263,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
      * {@value OAuth2Constants#REFRESH_TOKEN} Access Token response field,
      * OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
      * authorization grant as described at
-     * <a href="http://tools.ietf.org/html/rfc6749#section-6">[RFC6749], Section 6</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-6">[RFC6749], Section 6</a>.
      */
     @Nullable
     public String refreshToken() {
@@ -274,7 +274,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
      * {@value OAuth2Constants#SCOPE} Access Token response field,
      * OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The scope of
      * the access token as described at
-     * <a href="http://tools.ietf.org/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
      * A list of space-delimited, case-sensitive scope strings. The strings are defined by the authorization
      * server.
      * The authorization server MAY fully or partially ignore the scope requested by the client, based
@@ -294,7 +294,7 @@ public class GrantedOAuth2AccessToken implements Serializable {
      * {@value OAuth2Constants#SCOPE} Access Token response field,
      * OPTIONAL, if identical to the scope requested by the client; otherwise, REQUIRED. The scope of
      * the access token as described at
-     * <a href="http://tools.ietf.org/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
      * A {@link Set} of case-sensitive scope strings. The strings are defined by the authorization
      * server.
      * The authorization server MAY fully or partially ignore the scope requested by the client, based

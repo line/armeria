@@ -37,8 +37,8 @@ import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 /**
  * A common abstraction for the requests implementing various Token operations request/response flows,
  * such as Token Introspection flow
- * (<a href="https://tools.ietf.org/html/rfc7662#section-2">[RFC7662], Section 2</a>),
- * and Token Revocation flow (<a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>).
+ * (<a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2">[RFC7662], Section 2</a>),
+ * and Token Revocation flow (<a href="https://datatracker.ietf.org/doc/rfc7009/">[RFC7009]</a>).
  * @param <T> the type of the authorization result.
  */
 @UnstableApi
@@ -47,15 +47,15 @@ public abstract class AbstractTokenOperationRequest<T> extends AbstractOAuth2Req
     /**
      * A common abstraction for the requests implementing various Token operations request/response flows,
      * such as Token Introspection flow
-     * (<a href="https://tools.ietf.org/html/rfc7662#section-2">[RFC7662], Section 2</a>),
-     * and Token Revocation flow (<a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>).
+     * (<a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2">[RFC7662], Section 2</a>),
+     * and Token Revocation flow (<a href="https://datatracker.ietf.org/doc/rfc7009/">[RFC7009]</a>).
      *
      * @param operationsEndpoint A {@link WebClient} to facilitate the Token Operations requests. Must
      *                           correspond to the required Token Operations endpoint of the OAuth 2 system.
      * @param operationsEndpointPath A URI path that corresponds to the token Operations endpoint of the
      *                               OAuth 2 system.
      * @param clientAuthorization Provides client authorization for the OAuth requests,
-     *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *                            as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
     protected AbstractTokenOperationRequest(WebClient operationsEndpoint, String operationsEndpointPath,
                                             @Nullable ClientAuthorization clientAuthorization) {
@@ -68,7 +68,7 @@ public abstract class AbstractTokenOperationRequest<T> extends AbstractOAuth2Req
      * @param token A token this operation request applies to.
      * @param tokenType A hint about the type of the token submitted for (Introspection/Revocation) operation.
      *                  Either {@code access_token} or {@code refresh_token} as per
-     *                  <a href="https://tools.ietf.org/html/rfc7009#section-2.1">[RFC7009], Section 2.1</a>.
+     *                  <a href="https://datatracker.ietf.org/doc/html/rfc7009#section-2.1">[RFC7009], Section 2.1</a>.
      * @return A {@link CompletableFuture} carrying the target result.
      * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
      *                               response payload contains the details of the error.

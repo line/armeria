@@ -34,7 +34,7 @@ import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenReques
 
 /**
  * An implementation of OAuth 2.0 Client Credentials Grant flow to obtain Access Token,
- * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
+ * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
  * Implements Access Token loading, storing, obtaining and refreshing.
  */
 @UnstableApi

@@ -28,21 +28,21 @@ import com.linecorp.armeria.internal.common.auth.oauth2.AbstractTokenOperationRe
 
 /**
  * Implements Token Introspection request/response flow,
- * as per <a href="https://tools.ietf.org/html/rfc7662#section-2">[RFC7662], Section 2</a>.
+ * as per <a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2">[RFC7662], Section 2</a>.
  */
 @UnstableApi
 public final class TokenIntrospectionRequest extends AbstractTokenOperationRequest<OAuth2TokenDescriptor> {
 
     /**
      * Implements Token Introspection request/response flow,
-     * as per<a href="https://tools.ietf.org/html/rfc7662#section-2">[RFC7662], Section 2</a>.
+     * as per<a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2">[RFC7662], Section 2</a>.
      *
      * @param introspectionEndpoint A {@link WebClient} to facilitate the Token Introspection request. Must
      *                              correspond to the Token Introspection endpoint of the OAuth 2 system.
      * @param introspectionEndpointPath A URI path that corresponds to the Token Introspection endpoint of
      *                                  the OAuth 2 system.
      * @param clientAuthorization Provides client authorization for the OAuth requests,
-     *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *                            as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
     public TokenIntrospectionRequest(WebClient introspectionEndpoint, String introspectionEndpointPath,
                                      @Nullable ClientAuthorization clientAuthorization) {

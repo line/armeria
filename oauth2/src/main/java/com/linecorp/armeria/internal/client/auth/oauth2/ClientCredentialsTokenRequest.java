@@ -37,21 +37,21 @@ import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 
 /**
  * Implements Client Credentials Grant request/response flow,
- * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
+ * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
  */
 @UnstableApi
 public final class ClientCredentialsTokenRequest extends AbstractAccessTokenRequest {
 
     /**
      * Implements Client Credentials Grant request/response flow,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
      *
      * @param accessTokenEndpoint A {@link WebClient} to facilitate an Access Token request. Must correspond to
      *                            the Access Token endpoint of the OAuth 2 system.
      * @param accessTokenEndpointPath A URI path that corresponds to the Access Token endpoint of the
      *                                OAuth 2 system.
      * @param clientAuthorization Provides client authorization for the OAuth requests,
-     *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *                            as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
     public ClientCredentialsTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
                                          ClientAuthorization clientAuthorization) {

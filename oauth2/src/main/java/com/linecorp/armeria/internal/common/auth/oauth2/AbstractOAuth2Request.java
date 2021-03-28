@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.auth.oauth2.UnsupportedResponseException;
 
 /**
  * A common abstraction for the requests implementing various OAuth 2.0 request/response flows,
- * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a> and other relevant specifications.
+ * as per <a href="https://datatracker.ietf.org/doc/rfc6749/">[RFC6749]</a> and other relevant specifications.
  * @param <T> the type of the authorization result.
  */
 @UnstableApi
@@ -57,14 +57,14 @@ public abstract class AbstractOAuth2Request<T> {
 
     /**
      * A common abstraction for the requests implementing various Authorization request/response flows,
-     * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a> and other relevant specifications.
+     * as per <a href="https://datatracker.ietf.org/doc/rfc6749/">[RFC6749]</a> and other relevant specifications.
      *
      * @param endpoint A {@link WebClient} to facilitate the Authorization requests. Must
      *                 correspond to the required Authorization endpoint of the OAuth 2 system.
      * @param endpointPath A URI path that corresponds to the Authorization endpoint of the
      *                     OAuth 2 system.
      * @param clientAuthorization Provides client authorization for the OAuth requests,
-     *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *                            as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
     protected AbstractOAuth2Request(WebClient endpoint, String endpointPath,
                                     @Nullable ClientAuthorization clientAuthorization) {
@@ -110,7 +110,7 @@ public abstract class AbstractOAuth2Request<T> {
 
     /**
      * Sets client credentials as form data parameters,
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
     protected final void addCredentialsAsBodyParameters(QueryParamsBuilder formBuilder) {
         if (clientAuthorization != null) {
@@ -180,7 +180,7 @@ public abstract class AbstractOAuth2Request<T> {
 
     /**
      * Composes {@link TokenRequestException} upon 400 Bad Request response
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-5.2">[RFC6749], Section 5.2</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-5.2">[RFC6749], Section 5.2</a>.
      * @param errorResponse response received from the server
      * @return an instance of {@link TokenRequestException}
      */
@@ -190,7 +190,7 @@ public abstract class AbstractOAuth2Request<T> {
 
     /**
      * Composes {@link InvalidClientException} upon 401 Unauthorized response
-     * as per <a href="https://tools.ietf.org/html/rfc6749#section-5.2">[RFC6749], Section 5.2</a> (invalid_client).
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-5.2">[RFC6749], Section 5.2</a> (invalid_client).
      * @param errorResponse response received from the server
      * @return an instance of {@link InvalidClientException}
      */

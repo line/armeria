@@ -26,21 +26,21 @@ import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 
 /**
  * Implements Token Revocation request/response flow,
- * as per <a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>.
+ * as per <a href="https://datatracker.ietf.org/doc/rfc7009/">[RFC7009]</a>.
  */
 @UnstableApi
 public final class TokenRevocationRequest extends AbstractTokenOperationRequest<Boolean> {
 
     /**
      * Implements Token Revocation request/response flow,
-     * as per <a href="https://tools.ietf.org/html/rfc7009">[RFC7009]</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/rfc7009/">[RFC7009]</a>.
      *
      * @param revocationEndpoint A {@link WebClient} to facilitate the Token Revocation request. Must correspond
      *                           to the Token Revocation endpoint of the OAuth 2 system.
      * @param revocationEndpointPath A URI path that corresponds to the Token Revocation endpoint of the
      *                               OAuth 2 system.
      * @param clientAuthorization Provides client authorization for the OAuth requests,
-     *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *                            as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
     public TokenRevocationRequest(WebClient revocationEndpoint, String revocationEndpointPath,
                                   @Nullable ClientAuthorization clientAuthorization) {

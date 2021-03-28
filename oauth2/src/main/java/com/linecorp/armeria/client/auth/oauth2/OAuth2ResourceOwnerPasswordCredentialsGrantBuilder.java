@@ -42,7 +42,7 @@ public final class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
-     * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/rfc6749/">[RFC6749]</a>.
      * @param accessTokenEndpoint A {@link WebClient} to facilitate an Access Token request. Must correspond to
      *                            the Access Token endpoint of the OAuth 2 system.
      * @param accessTokenEndpointPath A URI path that corresponds to the Access Token endpoint of the

@@ -30,21 +30,21 @@ import com.linecorp.armeria.internal.common.auth.oauth2.AbstractOAuth2Request;
 
 /**
  * A common abstraction for the requests implementing various Access Token request/response flows,
- * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a>.
+ * as per <a href="https://datatracker.ietf.org/doc/rfc6749/">[RFC6749]</a>.
  */
 @UnstableApi
 public abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<GrantedOAuth2AccessToken> {
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
-     * as per <a href="https://tools.ietf.org/html/rfc6749">[RFC6749]</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/rfc6749/">[RFC6749]</a>.
      *
      * @param accessTokenEndpoint A {@link WebClient} to facilitate an Access Token request. Must correspond to
      *                            the Access Token endpoint of the OAuth 2 system.
      * @param accessTokenEndpointPath A URI path that corresponds to the Access Token endpoint of the
      *                                OAuth 2 system.
      * @param clientAuthorization Provides client authorization for the OAuth requests,
-     *                            as per <a href="https://tools.ietf.org/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *                            as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      */
     protected AbstractAccessTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
                                          @Nullable ClientAuthorization clientAuthorization) {
