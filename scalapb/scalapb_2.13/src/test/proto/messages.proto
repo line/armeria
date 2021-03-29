@@ -29,7 +29,7 @@ message SimpleResponse {
 }
 
 // Copied from https://scalapb.github.io/docs/sealed-oneofs/
-message Expr {
+message SimpleOneof {
   oneof sealed_value {
     Literal lit = 1;
     Add add = 2;
@@ -41,6 +41,6 @@ message Literal {
 }
 
 message Add {
-  Expr left = 1;
-  Expr right = 2;
+  SimpleOneof left = 1;
+  SimpleOneof right = 2;
 }

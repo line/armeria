@@ -39,8 +39,13 @@ task npmClean(type: NpmTask) {
     dependsOn tasks.npmInstall
     args = ['run', 'clean']
 }
-tasks.clean.dependsOn tasks.npmClean
+
+// Note that we didn't make `clean` depend on `npmClean`,
+// because otherwise `clean` will trigger `npmInstall`.
+tasks.clean.delete(project.file("${project.projectDir}/.cache"))
 tasks.clean.delete(project.file("${project.projectDir}/gen-src"))
+tasks.clean.delete(project.file("${project.projectDir}/public"))
+tasks.clean.delete(project.file("${project.projectDir}/node_modules/.cache"))
 
 task versionIndex(type: VersionIndexTask)
 task apiIndex(type: ApiIndexTask) {

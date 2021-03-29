@@ -18,11 +18,17 @@ includeWithFlags ':junit5',                              'java', 'publish', 'rel
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate'
+includeWithFlags ':oauth2',                              'java', 'publish', 'relocate'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate'
+includeWithFlags ':resteasy',                            'java', 'publish', 'relocate'
 includeWithFlags ':retrofit2',                           'java', 'publish', 'relocate'
 includeWithFlags ':rxjava2',                             'java', 'publish', 'relocate'
 includeWithFlags ':rxjava3',                             'java', 'publish', 'relocate'
+includeWithFlags ':scala_2.12',                          'java', 'publish', 'relocate', 'no_aggregation'
+project(':scala_2.12').projectDir = file('scala/scala_2.12')
+includeWithFlags ':scala_2.13',                          'java', 'publish', 'relocate'
+project(':scala_2.13').projectDir = file('scala/scala_2.13')
 includeWithFlags ':scalapb_2.12',                        'java', 'publish', 'relocate', 'no_aggregation'
 project(':scalapb_2.12').projectDir = file('scalapb/scalapb_2.12')
 includeWithFlags ':scalapb_2.13',                        'java', 'publish', 'relocate', 'scala-grpc_2.13'

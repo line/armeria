@@ -130,20 +130,8 @@ public final class GrpcWebTrailersExtractor implements DecoratingHttpClientFunct
                 }
                 return obj;
             }
-
-            @Override
-            protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-                publisher.close();
-            }
-
-            @Override
-            protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-                publisher.close();
-                return cause;
-            }
         };
         filteredHttpResponse.whenComplete().handle((unused, unused2) -> {
-            // To make sure the deframer is closed even when the response is cancelled.
             publisher.close();
             return null;
         });

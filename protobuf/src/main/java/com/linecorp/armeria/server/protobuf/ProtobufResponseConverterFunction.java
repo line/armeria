@@ -22,9 +22,14 @@ import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunct
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.isProtobuf;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,6 +52,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.streaming.JsonTextSequences;
 
 /**
  * A {@link ResponseConverterFunction} which creates an {@link HttpResponse} with
@@ -63,14 +69,62 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * for more information.
  * However, {@link Publisher}, {@link Stream} and {@link Iterable} are supported when converting to
  * <a href="https://datatracker.ietf.org/doc/html/rfc7159#section-5">JSON array</a>.
+ * <a href="https://datatracker.ietf.org/doc/rfc7464/">JavaScript Object Notation (JSON) Text Sequences</a>
+ * is also supported for {@link Publisher}, {@link Stream}.
  *
  * <p>Note that this {@link ResponseConverterFunction} is applied to an annotated service by default,
  * so you don't have to specify this converter explicitly unless you want to use your own {@link Printer}.
+ * The {@link JsonFormat#printer()} is used by default to format the response content.
  */
 @UnstableApi
 public final class ProtobufResponseConverterFunction implements ResponseConverterFunction {
 
+    private static final MethodHandle fromPublisherMH;
+    private static final MethodHandle fromStreamMH;
+    private static final MethodHandle fromObjectMH;
+
+    static {
+        MethodHandle fromPublisher;
+        try {
+            final Method method = JsonTextSequences.class.getDeclaredMethod(
+                    "fromPublisher", ResponseHeaders.class, Publisher.class,
+                    HttpHeaders.class, Function.class);
+            method.setAccessible(true);
+            fromPublisher = MethodHandles.lookup().unreflect(method);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            // Should never reach here.
+            fromPublisher = null;
+        }
+        fromPublisherMH = fromPublisher;
+
+        MethodHandle fromStream;
+        try {
+            final Method method = JsonTextSequences.class.getDeclaredMethod(
+                    "fromStream", ResponseHeaders.class, Stream.class,
+                    HttpHeaders.class, Executor.class, Function.class);
+            method.setAccessible(true);
+            fromStream = MethodHandles.lookup().unreflect(method);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            // Should never reach here.
+            fromStream = null;
+        }
+        fromStreamMH = fromStream;
+
+        MethodHandle fromObject;
+        try {
+            final Method method = JsonTextSequences.class.getDeclaredMethod(
+                    "fromObject", ResponseHeaders.class, Object.class, HttpHeaders.class, Function.class);
+            method.setAccessible(true);
+            fromObject = MethodHandles.lookup().unreflect(method);
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            // Should never reach here.
+            fromObject = null;
+        }
+        fromObjectMH = fromObject;
+    }
+
     static final MediaType X_PROTOBUF = MediaType.create("application", "x-protobuf");
+    // TODO(ikhoon): Add .omittingInsignificantWhitespace() for the sensible default when 2.0 is released?
     private static final Printer defaultJsonPrinter = JsonFormat.printer();
 
     private final Printer jsonPrinter;
@@ -94,6 +148,38 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
                                         @Nullable Object result, HttpHeaders trailers) throws Exception {
         final MediaType contentType = headers.contentType();
         final boolean isJson = isJson(contentType);
+
+        if (isJsonSeq(contentType)) {
+            checkArgument(result != null, "a null value is not allowed for %s", contentType);
+            final Function<Object, String> toJson = this::toJson;
+            if (result instanceof Publisher) {
+                @SuppressWarnings("unchecked")
+                final Publisher<Object> publisher = (Publisher<Object>) result;
+                try {
+                    return (HttpResponse) fromPublisherMH.invoke(headers, publisher, trailers, toJson);
+                } catch (Throwable ex) {
+                    throw new IllegalStateException(
+                            "Failed to call JsonTextSequences.fromPublisher() through reflection", ex);
+                }
+            }
+            if (result instanceof Stream) {
+                @SuppressWarnings("unchecked")
+                final Stream<Object> stream = (Stream<Object>) result;
+                try {
+                    return (HttpResponse) fromStreamMH
+                            .invoke(headers, stream, trailers, ctx.blockingTaskExecutor(), toJson);
+                } catch (Throwable ex) {
+                    throw new IllegalStateException(
+                            "Failed to call JsonTextSequences.fromStream() through reflection", ex);
+                }
+            }
+            try {
+                return (HttpResponse) fromObjectMH.invoke(headers, result, trailers, toJson);
+            } catch (Throwable ex) {
+                throw new IllegalStateException(
+                        "Failed to call JsonTextSequences.fromObject() through reflection", ex);
+            }
+        }
 
         if (result instanceof Message) {
             if (isJson) {
@@ -179,5 +265,9 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
         } catch (Exception e) {
             return Exceptions.throwUnsafely(e);
         }
+    }
+
+    private static boolean isJsonSeq(@Nullable MediaType mediaType) {
+        return mediaType != null && mediaType.is(MediaType.JSON_SEQ);
     }
 }

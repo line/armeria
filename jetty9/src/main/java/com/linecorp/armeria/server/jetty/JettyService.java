@@ -34,6 +34,7 @@ import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpURI;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.http.MetaData;
+import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.server.HttpChannel;
 import org.eclipse.jetty.server.HttpInput.Content;
 import org.eclipse.jetty.server.HttpTransport;
@@ -48,6 +49,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -358,7 +360,7 @@ public final class JettyService implements HttpService {
             try {
                 if (info != null) {
                     this.info = info;
-                    res.write(toResponseHeaders(info));
+                    write(toResponseHeaders(info));
                 }
 
                 final int length = content != null ? content.remaining() : 0;
@@ -377,19 +379,19 @@ public final class JettyService implements HttpService {
                     if (lastContent) {
                         final HttpHeaders trailers = toResponseTrailers(info);
                         if (trailers != null) {
-                            res.write(data);
-                            res.write(trailers);
+                            write(data);
+                            write(trailers);
                         } else {
-                            res.write(data.withEndOfStream());
+                            write(data.withEndOfStream());
                         }
                         res.close();
                     } else {
-                        res.write(data);
+                        write(data);
                     }
                 } else if (lastContent) {
                     final HttpHeaders trailers = toResponseTrailers(info);
                     if (trailers != null) {
-                        res.write(trailers);
+                        write(trailers);
                     }
                     res.close();
                 }
@@ -397,6 +399,12 @@ public final class JettyService implements HttpService {
                 callback.succeeded();
             } catch (Throwable cause) {
                 callback.failed(cause);
+            }
+        }
+
+        private void write(HttpObject o) throws EofException {
+            if (!res.tryWrite(o)) {
+                throw new EofException("Closed");
             }
         }
 
