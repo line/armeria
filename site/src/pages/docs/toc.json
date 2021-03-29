@@ -44,6 +44,7 @@
     "advanced-saml",
     "advanced-spring-webflux-integration",
     "advanced-dropwizard-integration",
+    "advanced-scala",
     "advanced-scalapb"
   ]
 }

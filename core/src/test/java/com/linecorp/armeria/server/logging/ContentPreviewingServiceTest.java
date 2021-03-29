@@ -17,6 +17,9 @@
 package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -29,6 +32,8 @@ import java.util.zip.GZIPInputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.io.ByteStreams;
 
@@ -39,16 +44,24 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.logging.ContentPreviewingUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -152,5 +165,84 @@ class ContentPreviewingServiceTest {
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
         assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+    }
+
+    @Test
+    void produceIsCalledWhenRequestCanceled() throws Exception {
+        final HttpRequestWriter request = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET, "/"));
+        request.write(HttpData.ofUtf8("foo"));
+        final ContentPreviewer contentPreviewer = contentPreviewer();
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
+        final HttpRequest filteredRequest = ContentPreviewingUtil.setUpRequestContentPreviewer(
+                ctx, request, contentPreviewer);
+        filteredRequest.subscribe(new CancelSubscriber());
+
+        assertThat(ctx.log()
+                      .whenAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW)
+                      .join()
+                      .requestContentPreview()).isEqualTo("foo");
+    }
+
+    @Test
+    void produceIsCalledWhenResponseCanceled() throws Exception {
+        final HttpResponseWriter response = HttpResponse.streaming();
+        response.write(ResponseHeaders.of(200));
+        response.write(HttpData.ofUtf8("foo"));
+
+        final ContentPreviewer contentPreviewer = contentPreviewer();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+        final ContentPreviewerFactory factory = mock(ContentPreviewerFactory.class);
+        when(factory.responseContentPreviewer(any(), any())).thenReturn(contentPreviewer);
+        final HttpResponse filteredResponse = ContentPreviewingUtil.setUpResponseContentPreviewer(
+                factory, ctx, response);
+        filteredResponse.subscribe(new CancelSubscriber());
+
+        assertThat(ctx.log()
+                      .whenAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)
+                      .join()
+                      .responseContentPreview()).isEqualTo("foo");
+    }
+
+    private static ContentPreviewer contentPreviewer() {
+        return new ContentPreviewer() {
+
+            private HttpData data;
+
+            @Override
+            public void onData(HttpData data) {
+                this.data = data;
+            }
+
+            @Override
+            public String produce() {
+                return data.toStringUtf8();
+            }
+        };
+    }
+
+    private static class CancelSubscriber implements Subscriber<HttpObject> {
+
+        private Subscription subscription;
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            subscription = s;
+            s.request(Long.MAX_VALUE);
+        }
+
+        @Override
+        public void onNext(HttpObject httpObject) {
+            if (httpObject instanceof HttpData) {
+                subscription.cancel();
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {}
+
+        @Override
+        public void onComplete() {}
     }
 }
