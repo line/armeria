@@ -80,6 +80,7 @@ module.exports = {
             'layouts',
             'release-notes.tsx',
           ),
+          tutorials: path.resolve(__dirname, 'src', 'layouts', 'tutorials.tsx'),
         },
         remarkPlugins: [remarkGithubPlugin, remarkGridTablesPlugin],
         gatsbyRemarkPlugins: [
