@@ -1,5 +1,9 @@
 {
-  "root": ["index", "setup"],
+  "root": {
+    "User manual": "index",
+    "Setting up a project": "Setting up a project",
+    "Tutorial": "/tutorials"
+  },
   "References": {
     "Community articles": "/community/articles",
     "API documentation": "https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/index.html",
