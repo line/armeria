@@ -406,7 +406,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
 
                 // No need to consume further since the response is ready.
-                req.close();
+                if (raisedException != null) {
+                    req.close(raisedException);
+                } else {
+                    req.close();
+                }
             }
             final HttpResponse res = serviceResponse;
             final Throwable primaryCause = raisedException;
@@ -432,9 +436,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             req.whenComplete().handle((ret, cause) -> {
                 try {
-                    if (primaryCause != null) {
-                        logBuilder.endRequest(primaryCause);
-                    } else if (cause == null) {
+                    if (cause == null) {
                         logBuilder.endRequest();
                     } else {
                         logBuilder.endRequest(cause);

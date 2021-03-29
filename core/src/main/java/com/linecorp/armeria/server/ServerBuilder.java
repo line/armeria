@@ -1325,7 +1325,7 @@ public final class ServerBuilder {
      * Sets the {@link ExceptionHandler} that converts a {@link Throwable} to an {@link AggregatedHttpResponse}.
      *
      * <p>Note that the {@link HttpResponseException} is not handled by the {@link ExceptionHandler}
-     * but it's sent as-is.
+     * but the {@link HttpResponseException#httpResponse()} is sent as-is.
      */
     @UnstableApi
     public ServerBuilder exceptionHandler(ExceptionHandler exceptionHandler) {
