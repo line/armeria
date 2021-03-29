@@ -105,11 +105,4 @@ abstract class AbstractTByteBufTransport extends TTransport {
     public void consumeBuffer(int len) {
         buf.skipBytes(len);
     }
-
-    /**
-     * Returns the number of readable bytes of this {@link TTransport}.
-     */
-    protected final int readableBytes() {
-        return buf.readableBytes();
-    }
 }
