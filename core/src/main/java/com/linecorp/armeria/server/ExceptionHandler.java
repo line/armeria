@@ -75,7 +75,10 @@ public interface ExceptionHandler {
     }
 
     /**
-     * Converts the given {@link Throwable} to an {@link AggregatedHttpResponse}.
+     * Converts the given {@link Throwable} to an {@link AggregatedHttpResponse}. When {@code null} is returned,
+     * {@link ExceptionHandler#ofDefault()} converts the {@link Throwable}.
+     *
+     * @see #orElse(ExceptionHandler)
      */
     @Nullable
     AggregatedHttpResponse convert(ServiceRequestContext context, Throwable cause);
