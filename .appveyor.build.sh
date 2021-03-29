@@ -136,10 +136,6 @@ if [[ ! -x "$JAVA_TEST_HOME/bin/java" ]]; then
   echo_and_run mv "$JAVA_TEST_HOME.tmp" "$JAVA_TEST_HOME"
 fi
 
-# Create a cache directory for a embedded Consul
-export CONSUL_DOWNLOAD_PATH="$HOME/.cache/embedded_consul"
-echo_and_run mkdir -p "$CONSUL_DOWNLOAD_PATH"
-
 # Print the version information.
 msg "Version information:"
 echo_and_run "$JAVA_HOME/bin/java" -version

@@ -33,6 +33,8 @@ import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
@@ -50,6 +52,12 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 public abstract class ConsulTestBase {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConsulTestBase.class);
+
+    private static final String ENV_CONSUL_VERSION = "CONSUL_VERSION";
+    private static final String ENV_CONSUL_BINARY_DOWNLOAD_DIR = "CONSUL_BINARY_DOWNLOAD_DIR";
+    private static final String FALLBACK_CONSUL_VERSION = "1.9.3";
 
     protected static final String CONSUL_TOKEN = UUID.randomUUID().toString();
     protected static final String serviceName = "testService";
@@ -77,14 +85,25 @@ public abstract class ConsulTestBase {
         // This EmbeddedConsul tested with Consul version above 1.4.0
         final ConsulStarterBuilder builder =
                 ConsulStarterBuilder.consulStarter()
-                                    .withConsulVersion("1.9.3")
                                     .withWaitTimeout(120)
                                     .withCustomConfig(aclConfiguration(CONSUL_TOKEN))
                                     .withToken(CONSUL_TOKEN);
 
-        final String downloadPath = System.getenv("CONSUL_DOWNLOAD_PATH");
-        if (!Strings.isNullOrEmpty(downloadPath)) {
-            builder.withConsulBinaryDownloadDirectory(Paths.get(downloadPath));
+        final String version = System.getenv(ENV_CONSUL_VERSION);
+        if (!Strings.isNullOrEmpty(version)) {
+            builder.withConsulVersion(version);
+            logger.info("{}={}", ENV_CONSUL_VERSION, version);
+        } else {
+            builder.withConsulVersion(FALLBACK_CONSUL_VERSION);
+            logger.warn("{}={} (fallback)", ENV_CONSUL_VERSION, FALLBACK_CONSUL_VERSION);
+        }
+
+        final String downloadDir = System.getenv(ENV_CONSUL_BINARY_DOWNLOAD_DIR);
+        if (!Strings.isNullOrEmpty(downloadDir)) {
+            builder.withConsulBinaryDownloadDirectory(Paths.get(downloadDir));
+            logger.info("{}={}", ENV_CONSUL_BINARY_DOWNLOAD_DIR, downloadDir);
+        } else {
+            logger.warn("{}=<unspecified>", ENV_CONSUL_BINARY_DOWNLOAD_DIR);
         }
 
         // A workaround for 'Cannot run program "**/embedded_consul/consul" error=26, Text file busy'
@@ -94,6 +113,7 @@ public abstract class ConsulTestBase {
                        consul = builder.build().start();
                    }).doesNotThrowAnyException();
                });
+
         // Initialize Consul client
         consulClient = ConsulClient.builder(URI.create("http://127.0.0.1:" + consul.getHttpPort()))
                                    .consulToken(CONSUL_TOKEN)
