@@ -17,8 +17,11 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
@@ -26,20 +29,31 @@ import com.linecorp.armeria.server.HttpService;
 /**
  * Builds a {@link MetricCollectingService} instance.
  */
-public final class MetricCollectingServiceBuilder
-        extends AbstractMetricCollectingBuilder<MetricCollectingService, HttpService> {
+public final class MetricCollectingServiceBuilder extends AbstractMetricCollectingBuilder {
 
     MetricCollectingServiceBuilder(MeterIdPrefixFunction meterIdPrefixFunction) {
         super(meterIdPrefixFunction);
     }
 
     @Override
-    public MetricCollectingService build(HttpService delegate) {
-        requireNonNull(delegate, "delegate");
-        return new MetricCollectingService(delegate, getMeterIdPrefixFunction(), getSuccessFunction());
+    public MetricCollectingServiceBuilder successFunction(
+            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+        return (MetricCollectingServiceBuilder) super.successFunction(successFunction);
     }
 
-    @Override
+    /**
+     * Returns a newly-created {@link MetricCollectingService} decorating {@link HttpService} based
+     * on the properties of this builder.
+     */
+    public MetricCollectingService build(HttpService delegate) {
+        requireNonNull(delegate, "delegate");
+        return new MetricCollectingService(delegate, meterIdPrefixFunction(), successFunction());
+    }
+
+    /**
+     * Returns a newly-created {@link MetricCollectingService} decorator based
+     * on the properties of this builder and applies {@link MeterIdPrefixFunction}.
+     */
     public Function<? super HttpService, MetricCollectingService> newDecorator() {
         return this::build;
     }

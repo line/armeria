@@ -22,7 +22,7 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
@@ -51,9 +51,10 @@ public final class RequestMetricSupport {
     /**
      * Sets up request metrics.
      */
-    public static void setup(RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
-                             MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-                             @Nullable Predicate<? super RequestLog> successFunction) {
+    public static void setup(
+            RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
+            MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
         final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
 
         if (Boolean.TRUE.equals(isRequestMetricsSet)) {
@@ -69,8 +70,9 @@ public final class RequestMetricSupport {
            .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server, successFunction));
     }
 
-    private static void onRequest(RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-                                  @Nullable Predicate<? super RequestLog> successFunction) {
+    private static void onRequest(
+            RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix activeRequestsId =
@@ -88,8 +90,9 @@ public final class RequestMetricSupport {
         });
     }
 
-    private static void onResponse(RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction,
-                                   boolean server, @Nullable Predicate<? super RequestLog> successFunction) {
+    private static void onResponse(
+            RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
@@ -98,7 +101,7 @@ public final class RequestMetricSupport {
             final ServiceRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
                                                                           ServiceRequestMetrics.class,
                                                                           DefaultServiceRequestMetrics::new);
-            updateMetrics(log, metrics, successFunction);
+            updateMetrics(ctx, log, metrics, successFunction);
             if (log.responseCause() instanceof RequestTimeoutException) {
                 metrics.requestTimeouts().increment();
             }
@@ -108,7 +111,7 @@ public final class RequestMetricSupport {
         final ClientRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
                                                                      ClientRequestMetrics.class,
                                                                      DefaultClientRequestMetrics::new);
-        updateMetrics(log, metrics, successFunction);
+        updateMetrics(ctx, log, metrics, successFunction);
         final ClientConnectionTimings timings = log.connectionTimings();
         if (timings != null) {
             metrics.connectionAcquisitionDuration().record(timings.connectionAcquisitionDurationNanos(),
@@ -144,8 +147,9 @@ public final class RequestMetricSupport {
         }
     }
 
-    private static void updateMetrics(RequestLog log, RequestMetrics metrics,
-                                      @Nullable Predicate<? super RequestLog> successFunction) {
+    private static void updateMetrics(
+            RequestContext ctx, RequestLog log, RequestMetrics metrics,
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
         if (log.requestCause() != null) {
             metrics.failure().increment();
             return;
@@ -159,7 +163,7 @@ public final class RequestMetricSupport {
 
         final boolean success;
         if (successFunction != null) {
-            success = successFunction.test(log);
+            success = successFunction.test(ctx, log);
         } else {
             success = isSuccess(log);
         }

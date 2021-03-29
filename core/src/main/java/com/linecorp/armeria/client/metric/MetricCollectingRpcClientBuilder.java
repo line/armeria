@@ -17,29 +17,43 @@ package com.linecorp.armeria.client.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 /**
  * Builds a {@link MetricCollectingRpcClient} instance.
  */
-public final class MetricCollectingRpcClientBuilder
-        extends AbstractMetricCollectingBuilder<MetricCollectingRpcClient, RpcClient> {
+public final class MetricCollectingRpcClientBuilder extends AbstractMetricCollectingBuilder {
 
     MetricCollectingRpcClientBuilder(MeterIdPrefixFunction meterIdPrefixFunction) {
         super(meterIdPrefixFunction);
     }
 
     @Override
-    public MetricCollectingRpcClient build(RpcClient delegate) {
-        requireNonNull(delegate, "delegate");
-        return new MetricCollectingRpcClient(delegate, getMeterIdPrefixFunction(), getSuccessFunction());
+    public MetricCollectingRpcClientBuilder successFunction(
+            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+        return (MetricCollectingRpcClientBuilder) super.successFunction(successFunction);
     }
 
-    @Override
+    /**
+     * Returns a newly-created {@link MetricCollectingRpcClient} decorating {@link RpcClient} based
+     * on the properties of this builder.
+     */
+    public MetricCollectingRpcClient build(RpcClient delegate) {
+        requireNonNull(delegate, "delegate");
+        return new MetricCollectingRpcClient(delegate, meterIdPrefixFunction(), successFunction());
+    }
+
+    /**
+     * Returns a newly-created {@link MetricCollectingRpcClient} decorator based
+     * on the properties of this builder and applies {@link MeterIdPrefixFunction}.
+     */
     public Function<? super RpcClient, MetricCollectingRpcClient> newDecorator() {
         return this::build;
     }

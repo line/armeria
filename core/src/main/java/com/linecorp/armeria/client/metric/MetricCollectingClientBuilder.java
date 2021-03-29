@@ -17,29 +17,43 @@ package com.linecorp.armeria.client.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 /**
  * Builds a {@link MetricCollectingClient} instance.
  */
-public final class MetricCollectingClientBuilder
-        extends AbstractMetricCollectingBuilder<MetricCollectingClient, HttpClient> {
+public final class MetricCollectingClientBuilder extends AbstractMetricCollectingBuilder {
 
     MetricCollectingClientBuilder(MeterIdPrefixFunction meterIdPrefixFunction) {
         super(meterIdPrefixFunction);
     }
 
     @Override
-    public MetricCollectingClient build(HttpClient delegate) {
-        requireNonNull(delegate, "delegate");
-        return new MetricCollectingClient(delegate, getMeterIdPrefixFunction(), getSuccessFunction());
+    public MetricCollectingClientBuilder successFunction(
+            BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+        return (MetricCollectingClientBuilder) super.successFunction(successFunction);
     }
 
-    @Override
+    /**
+     * Returns a newly-created {@link MetricCollectingClient} decorating {@link HttpClient} based
+     * on the properties of this builder.
+     */
+    public MetricCollectingClient build(HttpClient delegate) {
+        requireNonNull(delegate, "delegate");
+        return new MetricCollectingClient(delegate, meterIdPrefixFunction(), successFunction());
+    }
+
+    /**
+     * Returns a newly-created {@link MetricCollectingClient} decorator based
+     * on the properties of this builder and applies {@link MeterIdPrefixFunction}.
+     */
     public Function<? super HttpClient, MetricCollectingClient> newDecorator() {
         return this::build;
     }

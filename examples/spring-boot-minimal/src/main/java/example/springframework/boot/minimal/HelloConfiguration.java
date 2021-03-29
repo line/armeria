@@ -39,7 +39,7 @@ public class HelloConfiguration {
             // Add an example MetricCollectingService decorator
             builder.decorator(MetricCollectingService
                                       .builder(MeterIdPrefixFunction.ofDefault("hello"))
-                                      .successFunction(log -> {
+                                      .successFunction((context, log) -> {
                                           final int statusCode = log.responseHeaders().status().code();
                                           return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
                                       })

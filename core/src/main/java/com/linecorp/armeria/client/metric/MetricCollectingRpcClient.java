@@ -17,12 +17,13 @@ package com.linecorp.armeria.client.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -63,8 +64,9 @@ public final class MetricCollectingRpcClient extends AbstractMetricCollectingCli
         return new MetricCollectingRpcClientBuilder(meterIdPrefixFunction);
     }
 
-    MetricCollectingRpcClient(RpcClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
-                              @Nullable Predicate<? super RequestLog> successFunction) {
+    MetricCollectingRpcClient(
+            RpcClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
+            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
         super(delegate, meterIdPrefixFunction, successFunction);
     }
 }
