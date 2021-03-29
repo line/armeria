@@ -22,7 +22,7 @@ dependencies {
 //     will confuse IDEs such as IntelliJ IDEA.
 def thrift013ProjectDir = "${rootProject.projectDir}/thrift0.13"
 
-// Copy common files from thrift0.14 module to gen-src directory in order to use them as a source set.
+// Copy common files from thrift0.13 module to gen-src directory in order to use them as a source set.
 task generateSources(type: Copy) {
     from "${thrift013ProjectDir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
@@ -54,9 +54,4 @@ tasks.shadedJar.doLast {
                     includes: 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*')
         }
     }
-}
-
-// Disable checkstyle because it's checked by ':thrift0.13'.
-tasks.withType(Checkstyle) {
-    onlyIf { false }
 }
