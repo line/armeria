@@ -36,7 +36,7 @@ public final class MetricCollectingClientBuilder
     @Override
     public MetricCollectingClient build(HttpClient delegate) {
         requireNonNull(delegate, "delegate");
-        return new MetricCollectingClient(delegate, meterIdPrefixFunction, successFunction);
+        return new MetricCollectingClient(delegate, getMeterIdPrefixFunction(), getSuccessFunction());
     }
 
     @Override

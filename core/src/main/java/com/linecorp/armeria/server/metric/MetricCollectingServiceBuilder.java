@@ -36,7 +36,7 @@ public final class MetricCollectingServiceBuilder
     @Override
     public MetricCollectingService build(HttpService delegate) {
         requireNonNull(delegate, "delegate");
-        return new MetricCollectingService(delegate, meterIdPrefixFunction, successFunction);
+        return new MetricCollectingService(delegate, getMeterIdPrefixFunction(), getSuccessFunction());
     }
 
     @Override

@@ -41,10 +41,10 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
  */
 public abstract class AbstractMetricCollectingBuilder<R, T> {
 
-    protected final MeterIdPrefixFunction meterIdPrefixFunction;
+    private final MeterIdPrefixFunction meterIdPrefixFunction;
 
     @Nullable
-    protected Predicate<? super RequestLog> successFunction;
+    private Predicate<? super RequestLog> successFunction;
 
     protected AbstractMetricCollectingBuilder(MeterIdPrefixFunction meterIdPrefixFunction) {
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
@@ -69,6 +69,21 @@ public abstract class AbstractMetricCollectingBuilder<R, T> {
             Predicate<? super RequestLog> successFunction) {
         this.successFunction = successFunction;
         return this;
+    }
+
+    /**
+     * Getter for {@link meterIdPrefixFunction}.
+     */
+    public MeterIdPrefixFunction getMeterIdPrefixFunction() {
+        return meterIdPrefixFunction;
+    }
+
+    /**
+     * Getter for {@link successFunction}.
+     */
+    @Nullable
+    public Predicate<? super RequestLog> getSuccessFunction() {
+        return successFunction;
     }
 
     /**

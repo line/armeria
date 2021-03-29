@@ -36,7 +36,7 @@ public final class MetricCollectingRpcClientBuilder
     @Override
     public MetricCollectingRpcClient build(RpcClient delegate) {
         requireNonNull(delegate, "delegate");
-        return new MetricCollectingRpcClient(delegate, meterIdPrefixFunction, successFunction);
+        return new MetricCollectingRpcClient(delegate, getMeterIdPrefixFunction(), getSuccessFunction());
     }
 
     @Override
