@@ -1,6 +1,5 @@
-import org.gradle.util.GradleVersion
-
 import java.util.concurrent.ConcurrentHashMap
+import org.gradle.util.GradleVersion;
 
 import static java.util.Objects.requireNonNull
 

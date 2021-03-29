@@ -1,5 +1,4 @@
-import static org.gradle.internal.os.OperatingSystem.WINDOWS
-import static org.gradle.internal.os.OperatingSystem.current
+import static org.gradle.internal.os.OperatingSystem.*
 
 rootProject.ext {
     // The path to the 'git' command
