@@ -64,14 +64,14 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
             MeterIdPrefixFunction meterIdPrefixFunction) {
 
         requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
-        return builder().newDecorator(meterIdPrefixFunction);
+        return builder(meterIdPrefixFunction).newDecorator();
     }
 
     /**
      * Returns a newly created {@link MetricCollectingServiceBuilder}.
      */
-    public static MetricCollectingServiceBuilder builder() {
-        return new MetricCollectingServiceBuilder();
+    public static MetricCollectingServiceBuilder builder(MeterIdPrefixFunction meterIdPrefixFunction) {
+        return new MetricCollectingServiceBuilder(meterIdPrefixFunction);
     }
 
     private final MeterIdPrefixFunction meterIdPrefixFunction;

@@ -31,10 +31,14 @@ import com.linecorp.armeria.server.HttpService;
  */
 public final class MetricCollectingServiceBuilder {
 
+    private final MeterIdPrefixFunction meterIdPrefixFunction;
+
     @Nullable
     private Predicate<? super RequestLog> successFunction;
 
-    MetricCollectingServiceBuilder() {}
+    MetricCollectingServiceBuilder(MeterIdPrefixFunction meterIdPrefixFunction) {
+        this.meterIdPrefixFunction = meterIdPrefixFunction;
+    }
 
     /**
      * Defines a custom {@link Predicate} to allow custom definition of successful responses.
@@ -61,7 +65,7 @@ public final class MetricCollectingServiceBuilder {
      * Returns a newly-created {@link MetricCollectingService} decorating {@link HttpService} based
      * on the properties of this builder.
      */
-    public MetricCollectingService build(HttpService delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
+    public MetricCollectingService build(HttpService delegate) {
         requireNonNull(delegate, "delegate");
         return new MetricCollectingService(delegate, meterIdPrefixFunction, successFunction);
     }
@@ -70,8 +74,7 @@ public final class MetricCollectingServiceBuilder {
      * Returns a newly-created {@link MetricCollectingService} decorator based
      * on the properties of this builder and applies {@link MeterIdPrefixFunction}.
      */
-    public Function<? super HttpService, MetricCollectingService> newDecorator(
-            MeterIdPrefixFunction meterIdPrefixFunction) {
-        return delegate -> build(delegate, meterIdPrefixFunction);
+    public Function<? super HttpService, MetricCollectingService> newDecorator() {
+        return this::build;
     }
 }

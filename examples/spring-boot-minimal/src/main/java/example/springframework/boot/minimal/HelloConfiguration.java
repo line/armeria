@@ -38,12 +38,12 @@ public class HelloConfiguration {
 
             // Add an example MetricCollectingService decorator
             builder.decorator(MetricCollectingService
-                                      .builder()
+                                      .builder(MeterIdPrefixFunction.ofDefault("hello"))
                                       .successFunction(log -> {
                                           final int statusCode = log.responseHeaders().status().code();
                                           return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
                                       })
-                                      .newDecorator(MeterIdPrefixFunction.ofDefault("hello")));
+                                      .newDecorator());
 
             // You can also bind asynchronous RPC services such as Thrift and gRPC:
             // builder.service(THttpService.of(...));

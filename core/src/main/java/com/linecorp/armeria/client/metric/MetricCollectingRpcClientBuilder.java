@@ -31,10 +31,14 @@ import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
  */
 public final class MetricCollectingRpcClientBuilder {
 
+    private final MeterIdPrefixFunction meterIdPrefixFunction;
+
     @Nullable
     private Predicate<? super RequestLog> successFunction;
 
-    MetricCollectingRpcClientBuilder() {}
+    MetricCollectingRpcClientBuilder(MeterIdPrefixFunction meterIdPrefixFunction) {
+        this.meterIdPrefixFunction = meterIdPrefixFunction;
+    }
 
     /**
      * Defines a custom {@link Predicate} to allow custom definition of successful responses.
@@ -61,7 +65,7 @@ public final class MetricCollectingRpcClientBuilder {
      * Returns a newly-created {@link MetricCollectingRpcClient} decorating {@link RpcClient} based
      * on the properties of this builder.
      */
-    public MetricCollectingRpcClient build(RpcClient delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
+    public MetricCollectingRpcClient build(RpcClient delegate) {
         requireNonNull(delegate, "delegate");
         return new MetricCollectingRpcClient(delegate, meterIdPrefixFunction, successFunction);
     }
@@ -70,8 +74,7 @@ public final class MetricCollectingRpcClientBuilder {
      * Returns a newly-created {@link MetricCollectingRpcClient} decorator based
      * on the properties of this builder and applies {@link MeterIdPrefixFunction}.
      */
-    public Function<? super RpcClient, MetricCollectingRpcClient> newDecorator(
-            MeterIdPrefixFunction meterIdPrefixFunction) {
-        return delegate -> build(delegate, meterIdPrefixFunction);
+    public Function<? super RpcClient, MetricCollectingRpcClient> newDecorator() {
+        return this::build;
     }
 }

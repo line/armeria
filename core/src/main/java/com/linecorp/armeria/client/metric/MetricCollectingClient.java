@@ -54,14 +54,14 @@ public final class MetricCollectingClient extends AbstractMetricCollectingClient
     public static Function<? super HttpClient, MetricCollectingClient> newDecorator(
             MeterIdPrefixFunction meterIdPrefixFunction) {
         requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
-        return builder().newDecorator(meterIdPrefixFunction);
+        return builder(meterIdPrefixFunction).newDecorator();
     }
 
     /**
      * Returns a new {@link MetricCollectingClientBuilder} instance.
      */
-    public static MetricCollectingClientBuilder builder() {
-        return new MetricCollectingClientBuilder();
+    public static MetricCollectingClientBuilder builder(MeterIdPrefixFunction meterIdPrefixFunction) {
+        return new MetricCollectingClientBuilder(meterIdPrefixFunction);
     }
 
     MetricCollectingClient(HttpClient delegate, MeterIdPrefixFunction meterIdPrefixFunction,
