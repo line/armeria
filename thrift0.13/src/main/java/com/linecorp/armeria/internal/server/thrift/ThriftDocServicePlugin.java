@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -517,9 +516,10 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         }
 
         final TBase<?, ?> exampleTBase = (TBase<?, ?>) exampleRequest;
-        final TSerializer serializer = new TSerializer(ThriftProtocolFactories.TEXT);
         try {
-            return serializer.toString(exampleTBase, StandardCharsets.UTF_8.name());
+            final TSerializer serializer = new TSerializer(ThriftProtocolFactories.TEXT);
+            // TSerializer.toString(TBase, charset) was removed in Thrift 0.14.0
+            return serializer.toString(exampleTBase);
         } catch (TException e) {
             throw new Error("should never reach here", e);
         }

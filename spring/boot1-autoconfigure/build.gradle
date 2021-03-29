@@ -3,7 +3,7 @@ final def MICROMETER_VERSION = '1.3.14'
 
 dependencies {
     // To let a user choose between thrift and thrift0.9.
-    compileOnly project(':thrift0.13')
+    compileOnly project(':thrift0.14')
     implementation project(':logback')
 
     [ 'micrometer-core', 'micrometer-spring-legacy' ].each {
@@ -40,7 +40,7 @@ dependencies {
     }
 
     testImplementation project(':grpc')
-    testImplementation project(':thrift0.13')
+    testImplementation project(':thrift0.14')
     [ 'spring-boot-starter', 'spring-boot-starter-test' ].each {
         testImplementation("org.springframework.boot:$it") {
             version {
