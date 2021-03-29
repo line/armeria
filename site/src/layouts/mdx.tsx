@@ -87,7 +87,10 @@ const mdxComponents: any = {
     const language =
       props.children.props.className?.replace(/language-/, '') || 'none';
     return (
-      <CodeBlock language={language}>{props.children.props.children}</CodeBlock>
+      <CodeBlock language={language}
+        filename={props.children.props.filename}>
+        {props.children.props.children}
+      </CodeBlock>
     );
   },
   h1: (props: any) => <Title level={1} {...props} />,
