@@ -592,11 +592,27 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTooLargeContentToNonExistentService(WebClient client) throws Exception {
+    void testTooLargeContentToNonExistentService(WebClient client) {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
-        final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
+        if (client.scheme().sessionProtocol().uriText().startsWith("h1")) {
+            // Unlike HTTP/2, ClosedSessionException is raised because Http1RequestDecoder closes
+            // the connection before the content of "404 Not Found" is sent.
+            //
+            // When the Http1RequestDecoder notices that the request entity is too large, the only thing it
+            // can do is that just closing the connection if the response headers (e.g 404 in this case)
+            // is already sent.
+            // If we wait for the response to be sent fully and close the connection, then the subsequent
+            // following request that uses the same connection will encounter ClosedSessionException which
+            // is undesirable.
+            // However, HTTP/2 can wait for the response to be sent, because the following request uses the
+            // next stream.
+            assertThatThrownBy(() -> client.post("/non-existent", content).aggregate().join())
+                    .hasCauseInstanceOf(ClosedSessionException.class);
+        } else {
+            final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().join();
+            assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
+        }
     }
 
     @ParameterizedTest

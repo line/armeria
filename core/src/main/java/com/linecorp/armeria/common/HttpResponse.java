@@ -371,7 +371,7 @@ public interface HttpResponse extends Response, HttpMessage {
         // `content` is not empty from now on.
 
         if (trailers.isEmpty()) {
-            return new TwoElementFixedHttpResponse(newHeaders, content.withEndOfStream());
+            return new TwoElementFixedHttpResponse(newHeaders, content);
         } else {
             return new RegularFixedHttpResponse(newHeaders, content, trailers);
         }
