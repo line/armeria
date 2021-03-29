@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
@@ -346,12 +347,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     }
 
     private void endLogRequestAndResponse(Throwable cause) {
-        final Throwable cause0;
-        if (primaryCause != null) {
-            cause0 = primaryCause;
-        } else {
-            cause0 = cause;
-        }
+        final Throwable cause0 = firstNonNull(primaryCause, cause);
         logBuilder().endRequest(cause0);
         logBuilder().endResponse(cause0);
     }
