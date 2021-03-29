@@ -57,6 +57,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;
@@ -219,11 +220,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 }
             }
 
-            if (req != null && msg instanceof HttpContent) {
+            // req is not null.
+            if (msg instanceof HttpContent) {
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
-                    fail(id, HttpResponseStatus.BAD_REQUEST, DATA_DECODER_FAILURE);
+                    fail(id, HttpResponseStatus.BAD_REQUEST, DATA_DECODER_FAILURE, Http2Error.PROTOCOL_ERROR);
                     req.close(new ProtocolViolationException(decoderResult.cause()));
                     return;
                 }
@@ -234,7 +236,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     req.increaseTransferredBytes(dataLength);
                     final long maxContentLength = req.maxRequestLength();
                     if (maxContentLength > 0 && req.transferredBytes() > maxContentLength) {
-                        fail(id, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, null);
+                        fail(id, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, null,
+                             Http2Error.CANCEL);
                         req.close(ContentTooLargeException.get());
                         return;
                     }
@@ -255,12 +258,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 }
             }
         } catch (URISyntaxException e) {
-            fail(id, HttpResponseStatus.BAD_REQUEST, DATA_INVALID_REQUEST_PATH);
+            fail(id, HttpResponseStatus.BAD_REQUEST, DATA_INVALID_REQUEST_PATH, Http2Error.CANCEL);
             if (req != null) {
                 req.close(e);
             }
         } catch (Throwable t) {
-            fail(id, HttpResponseStatus.INTERNAL_SERVER_ERROR, null);
+            fail(id, HttpResponseStatus.INTERNAL_SERVER_ERROR, null, Http2Error.INTERNAL_ERROR);
             if (req != null) {
                 req.close(t);
             } else {
@@ -294,6 +297,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         nettyHeaders.remove(HttpHeaderNames.EXPECT);
         return true;
+    }
+
+    private void fail(int id, HttpResponseStatus status, @Nullable HttpData content, Http2Error error) {
+        if (writer.isResponseHeadersSent(id, 1)) {
+            // The response is sent or being sent by HttpResponseSubscriber so we cannot send
+            // the error response.
+            writer.writeReset(id, 1, error);
+        } else {
+            fail(id, status, content);
+        }
     }
 
     private void fail(int id, HttpResponseStatus status, @Nullable HttpData content) {

@@ -53,4 +53,9 @@ interface ServerHttpObjectEncoder extends HttpObjectEncoder {
      */
     ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
                                  boolean isTrailersEmpty);
+
+    /**
+     * Tells whether the {@link ResponseHeaders} is sent.
+     */
+    boolean isResponseHeadersSent(int id, int streamId);
 }
