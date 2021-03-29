@@ -161,6 +161,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                     }
                     merged = headers;
                 } else {
+                    if (responseEncoder.isResponseHeadersSent(req.id(), req.streamId())) {
+                        // The response is sent by the HttpRequestDecoder so we just cancel the stream message.
+                        isComplete = true;
+                        setDone(true);
+                        return;
+                    }
+
                     if (req.method() == HttpMethod.HEAD) {
                         endOfStream = true;
                     } else if (status.isContentAlwaysEmpty()) {

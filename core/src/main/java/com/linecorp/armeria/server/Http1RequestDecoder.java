@@ -300,16 +300,22 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         discarding = true;
         req = null;
 
-        final HttpData data = content != null ? content : HttpData.ofUtf8(status.toString());
-        final ResponseHeaders headers =
-                ResponseHeaders.builder()
-                               .status(status.code())
-                               .set(HttpHeaderNames.CONNECTION, "close")
-                               .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
-                               .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
-                               .build();
-        writer.writeHeaders(id, 1, headers, false);
-        writer.writeData(id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
+        if (writer.isResponseHeadersSent(id, 1)) {
+            // The response is sent or being sent by HttpResponseSubscriber so we just close the channel
+            // forcefully.
+            writer.channel().close();
+        } else {
+            final HttpData data = content != null ? content : HttpData.ofUtf8(status.toString());
+            final ResponseHeaders headers =
+                    ResponseHeaders.builder()
+                                   .status(status.code())
+                                   .set(HttpHeaderNames.CONNECTION, "close")
+                                   .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
+                                   .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
+                                   .build();
+            writer.writeHeaders(id, 1, headers, false);
+            writer.writeData(id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
+        }
     }
 
     @Override
