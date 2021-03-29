@@ -93,13 +93,43 @@ const newPrismTheme = Object.entries(prismTheme).reduce(
   {},
 );
 
+const lineHighlights = {
+    backgroundColor: '#616161',
+    display: "block",
+    marginRight: "-1em",
+    marginLeft: "-1em",
+    paddingRight: "1em",
+    paddingLeft: "0.75em",
+    borderLeft: "0.1em solid #d23669",
+    width:"760px"
+}
+
+function getTargetLines(lines: string){
+  const range = (start, end, length = end-start+1 ) => 
+    Array.from({ length }, (_, i) => start + i);
+
+  let targetLines = lines.split(',').reduce((acc, cur) => {
+      if (!cur.includes('-')) {
+        acc.push(parseInt(cur));
+        return acc;
+      }
+      const [start, end] = cur.split('-');
+      acc.push(...range(parseInt(start),parseInt(end)));
+      return acc;
+    }, []);
+
+ return targetLines;
+}
+
 interface CodeBlockProps extends SyntaxHighlighterProps {
   filename?: string;
+  highlight?: string;
 }
 
 const CodeBlock: React.FC<CodeBlockProps> = (props) => {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef(null);
+  const targetLines = props.highlight ? getTargetLines(props.highlight): [];
 
   const onCopyCallback = useCallback(() => {
     setCopied(true);
@@ -113,6 +143,13 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
   if (code.length === 0) {
     return null;
   }
+  const applyHighlightStyle = (lineNumber) => {
+    if(lineNumber!=0 && targetLines.includes(lineNumber)){
+      return { style: lineHighlights }
+    }
+    else
+      return { };
+  };
 
   return (
     <div
@@ -137,6 +174,8 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
         {...props}
         style={newPrismTheme}
         language={filterLanguage(props.language)}
+        showLineNumbers={targetLines.length ? true : false}
+        lineProps={lineNumber => targetLines.length? applyHighlightStyle(lineNumber): {}}
       >
         {code}
       </Prism>
