@@ -18,62 +18,28 @@ package com.linecorp.armeria.client.metric;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
-import java.util.function.Predicate;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 /**
  * Builds a {@link MetricCollectingClient} instance.
  */
-public final class MetricCollectingClientBuilder {
-
-    private final MeterIdPrefixFunction meterIdPrefixFunction;
-
-    @Nullable
-    private Predicate<? super RequestLog> successFunction;
+public final class MetricCollectingClientBuilder
+        extends AbstractMetricCollectingBuilder<MetricCollectingClient, HttpClient> {
 
     MetricCollectingClientBuilder(MeterIdPrefixFunction meterIdPrefixFunction) {
-        this.meterIdPrefixFunction = meterIdPrefixFunction;
+        super(meterIdPrefixFunction);
     }
 
-    /**
-     * Defines a custom {@link Predicate} to allow custom definition of successful responses.
-     * In other words, specify which responses should increment metrics.success() and which - metrics.failure()
-     *
-     * <p>Example:
-     * <pre>{@code
-     *  MetricCollectingClient
-     *    .builder()
-     *    .successFunction(log -> {
-     *      final int statusCode = log.responseHeaders().status().code();
-     *      return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
-     *     })
-     *    .newDecorator(MeterIdPrefixFunction.ofDefault("hello")));
-     * }
-     * </pre>
-     */
-    public MetricCollectingClientBuilder successFunction(Predicate<? super RequestLog> successFunction) {
-        this.successFunction = successFunction;
-        return this;
-    }
-
-    /**
-     * Returns a newly-created {@link MetricCollectingClient} decorating {@link HttpClient} based
-     * on the properties of this builder.
-     */
+    @Override
     public MetricCollectingClient build(HttpClient delegate) {
         requireNonNull(delegate, "delegate");
         return new MetricCollectingClient(delegate, meterIdPrefixFunction, successFunction);
     }
 
-    /**
-     * Returns a newly-created {@link MetricCollectingClient} decorator based
-     * on the properties of this builder and applies {@link MeterIdPrefixFunction}.
-     */
+    @Override
     public Function<? super HttpClient, MetricCollectingClient> newDecorator() {
         return this::build;
     }

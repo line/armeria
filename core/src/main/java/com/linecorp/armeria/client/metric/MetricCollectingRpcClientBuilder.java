@@ -18,62 +18,28 @@ package com.linecorp.armeria.client.metric;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
-import java.util.function.Predicate;
-
-import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
 /**
  * Builds a {@link MetricCollectingRpcClient} instance.
  */
-public final class MetricCollectingRpcClientBuilder {
-
-    private final MeterIdPrefixFunction meterIdPrefixFunction;
-
-    @Nullable
-    private Predicate<? super RequestLog> successFunction;
+public final class MetricCollectingRpcClientBuilder
+        extends AbstractMetricCollectingBuilder<MetricCollectingRpcClient, RpcClient> {
 
     MetricCollectingRpcClientBuilder(MeterIdPrefixFunction meterIdPrefixFunction) {
-        this.meterIdPrefixFunction = meterIdPrefixFunction;
+        super(meterIdPrefixFunction);
     }
 
-    /**
-     * Defines a custom {@link Predicate} to allow custom definition of successful responses.
-     * In other words, specify which responses should increment metrics.success() and which - metrics.failure()
-     *
-     * <p>Example:
-     * <pre>{@code
-     *  MetricCollectingRpcClient
-     *    .builder()
-     *    .successFunction(log -> {
-     *      final int statusCode = log.responseHeaders().status().code();
-     *      return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
-     *     })
-     *    .newDecorator(MeterIdPrefixFunction.ofDefault("hello")));
-     * }
-     * </pre>
-     */
-    public MetricCollectingRpcClientBuilder successFunction(Predicate<? super RequestLog> successFunction) {
-        this.successFunction = successFunction;
-        return this;
-    }
-
-    /**
-     * Returns a newly-created {@link MetricCollectingRpcClient} decorating {@link RpcClient} based
-     * on the properties of this builder.
-     */
+    @Override
     public MetricCollectingRpcClient build(RpcClient delegate) {
         requireNonNull(delegate, "delegate");
         return new MetricCollectingRpcClient(delegate, meterIdPrefixFunction, successFunction);
     }
 
-    /**
-     * Returns a newly-created {@link MetricCollectingRpcClient} decorator based
-     * on the properties of this builder and applies {@link MeterIdPrefixFunction}.
-     */
+    @Override
     public Function<? super RpcClient, MetricCollectingRpcClient> newDecorator() {
         return this::build;
     }
