@@ -1,0 +1,86 @@
+---
+type: tutorial
+tags:
+  - rest
+  - request
+  - request-converter
+  - exceptions
+  - exception-handling
+  - blocking
+level: basic
+---
+
+# Step 1. Create a server
+
+In this step, we will create a server instance and run a dummy service to check that the server and service are launched.
+
+Start by creating a `Main` class in the  `/root/main/java/example/armeria/server/blog/Main.java` file, and name the package as below.
+
+```java
+package example.armeria.server.blog;
+```
+
+## 1. Import packages
+
+Import the following packages in the Main.java file.
+
+```java
+import org.slf4j.Logger;            // for logger.info() calls
+import org.slf4j.LoggerFactory;     // for logger.info() calls
+
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+```
+
+## 2. Create a server instance
+
+To create a server instance, use  [Armeria's ServerBuilder](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/server/ServerBuilder.html) as shown below. Server instances require at least one service to run with. At this stage, add a dummy service returning `"Hello, Armeria!"`.
+
+```java
+static Server newServer(int port) {
+  final ServerBuilder sb = Server.builder();
+  final DocService docService = DocService.builder()
+                                          .build();
+  return sb.http(port)
+            .service("/",(ctx, req) ->
+                HttpResponse.of("Hello, Armeria!"))
+            .build();
+}
+```
+
+Later on, when we [build our blog service](#), we will come back to this part of code to add an actual service.
+
+## 3. Start the server
+
+In the `main()` method of the `Main` class, call the `newServer()` method implemented in step 2. Let's set the port to `8080` as follows.
+
+```java
+  public static void main(String[] args) throws Exception {
+      final Server server = newServer(8080);
+
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+          server.stop().join();
+          logger.info("Server has been stopped.");
+      }));
+
+      server.start().join();
+
+      logger.info("Server has been started. Serving dummy service at http://127.0.0.1:{}",
+                  server.activeLocalPort());
+  }
+```
+
+## 4. Run the service
+
+Run the server from your IDE or using the `gradle run` command. The server and service are launched successfully if you see the following message.
+
+```bash
+ Server has been started. Serving dummy service at http://127.0.0.1:8080
+```
+
+Open the link `http://127.0.0.1:8080` in a web browser and check the message `Hello, Armeria!` is displayed.
+
+## Next step
+
+Next, define a blog post object to use in requests and responses. (TW: 다음 페이지 표시를 어케 할까나..)

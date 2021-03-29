@@ -1,0 +1,118 @@
+---
+type: tutorial
+tags:
+  - rest
+  - request
+  - request-converter
+  - exceptions
+  - exception-handling
+  - blocking
+level: basic
+---
+
+# Step 5. Implement PUT operation
+
+In this step, we will write a method for deleting a blog post. The HTTP method we map with this method is GET.
+
+// TODO: TW 아래 내용은 다른 형식으로 제공할 수 있음. 고민 중임.
+<Tip>
+
+View the sample service code [here](#).
+
+</Tip>
+
+// TODO: TW 이 부분은 별도 섹션이 아닌 adomination으로 변경될 가능성 있음 고민 중임.
+// TODO: List update 예정
+
+After completing this step, you will have learnt to use the following Armeria features:
+
+  - HTTP method mapping (<type://@Get>)
+  - Parameter injection (<type://@Param>)
+  - TBU <type://@Default>
+
+## Prerequisites
+
+You need to have the following files prepared from previous steps.
+
+- BlogPost.java
+- BlogPostRequestConverter.java //TODO: TW check @RequestObject를 위해 필요한 것 맞는지 확인 필요
+- BlogService.java
+
+## 1. Map HTTP method
+
+Map the PUT method for updating a blog post:
+
+1. Declare a service method, `updateBlogPost()` in the class `BlogService`.
+2. Map the service method with the HTTP PUT method by adding the <type://@Put> annotation as follows.
+
+```java filename=BlogService.java highlight=1
+@Put("/blogs")
+public HttpResponse updateBlogPost(int id, BlogPost blogPost)
+        throws JsonProcessingException {
+  // Implementation
+}
+```
+
+## 2. Handle request parameters
+
+For updating a blog post, we need two types of information:
+
+- Identifier: Blog post ID (`id`)
+- New blog post information to update: `BlogPost` object.
+
+Our service will take these two pieces information as parameters. Let's take and handled these parameters:
+
+1. Add `/:id` to the <type://@Put> annotation's parameter to get the ID as the path parameter.
+2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method by annotating the paramter with <type://@Param>.
+3. Annotate the `blogPost` parameter with <type://@RequestObject>. This turns the information contained in the request into a Java object (`BlogPost`).
+
+```java filename=BlogService.java
+@Put("/blogs/:id")
+public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost)
+            throws JsonProcessingException { }
+```
+
+## 3. Implement service code
+
+In this step, we will write the code to update the information contained in the `blogPosts` map. In real, you will be retrieving and updating the blog post information from and to a database.
+
+The following code checks if the given blog post exists. If it exists, then the code creates and saves a `BlogPost` object with the new information.
+
+```java filename=BlogService.java
+final BlogPost oldBlogPost = blogPosts.get(id);
+if (oldBlogPost == null) {
+    // shall return a Not Found error. See next section for instructions
+}
+final BlogPost newBlogPost = new BlogPost(id, blogPost.title(), blogPost.content(),
+                                          oldBlogPost.createdAt(), blogPost.createdAt());
+blogPosts.put(id, newBlogPost);
+...
+```
+
+## 4. Return response
+
+We will return two types of information. If the blog post to update exists, we can respond to the client that the update has been succesful. The other response is infomring the client that the blog post does not exist.
+
+### Return Not found error
+
+Inside the condition block of the `getBlogPost()` method which we added in the previous step, return a response using Armeria's <type://HTTPResponse>, with the content of the response as `HttpStatus.NOT_FOUND`.
+
+```java filename=BlogService.java highlight=3
+...
+if (oldBlogPost == null) {
+  return HttpResponse.of(HttpStatus.NOT_FOUND);
+}
+```
+
+### Return for success
+
+If the blog post exists, a new blog post object is created and inserted in the blog post map. After the code for updating the `blogPosts` map, add the following code to return a success:
+
+```java filename=BlogService.java
+final byte[] bytes = mapper.writeValueAsBytes(newBlogPost);
+return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, bytes);
+```
+
+## Next step
+
+In this step, we have written a method for put operation. We have used Armeria's annotations; <type://@Put>, <type://@Param>, and <type://@RequestObject>. Next, let's finally implement a delete operation.

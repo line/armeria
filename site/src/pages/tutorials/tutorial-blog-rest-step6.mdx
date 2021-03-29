@@ -1,0 +1,160 @@
+---
+type: tutorial
+tags:
+  - rest
+  - request
+  - request-converter
+  - exceptions
+  - exception-handling
+  - blocking
+level: basic
+---
+
+# Step 6. Implement DELETE operation
+
+In this step, we will write a method for updating blog posts. Two new things we will try in this section. One is blocking and the other is exception handling. 
+
+// TODO: TW 아래 내용은 다른 형식으로 제공할 수 있음. 고민 중임.
+
+<Tip>
+
+View the sample service code [here](#).
+
+</Tip>
+
+// TODO: TW 이 부분은 별도 섹션이 아닌 adomination으로 변경될 가능성 있음. 고민 중임.
+// TODO: List update 예정
+
+After completing this step, you will have learnt to use the following Armeria features:
+
+  - HTTP method mapping (<type://@Delete>)
+  - Parameter injection (<type://@Param>)
+  - Exception handler (TBU)
+  - Blocking task executor (<type://@Blocking)
+
+## Prerequisites
+
+You need to have the following two files prepared from previous steps.
+
+- BlogService.java
+- BlogPost.java
+
+## 1. Map HTTP method
+
+Map the DELETE method for deleting a blog post:
+
+1. Declare a service method, `deleteBlogPost()` in the class `BlogService`.
+2. Map the service method with the HTTP DELETE method by adding the <type://@Delete> annotation as follows.
+
+```java filename=BlogService.java highlight=1
+@Delete("/blogs")
+public HttpResponse deleteBlogPost(int id) {
+  // Implementation
+}
+```
+
+## 2. Handle request parameters
+
+For deleting a blog post, we will take the blog post ID as the identifier. Let's take the ID as the path parameter.
+
+
+1. Add `/:id` to the <type://@Put> annotation's parameter to get the ID as the path parameter.
+2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method by annotating the paramter with <type://@Param>.
+
+```java filename=BlogService.java
+@Delete("/blogs/:id")
+public HttpResponse deleteBlogPost(@Param int id) {
+  // Implementation
+}
+```
+
+## 3. Implement service code
+
+In this step, we will write the code to delete a blog post, handle an exception, and block the operation.
+
+//TODO: TW elaborate more on the description, if possible
+
+### Delete a blog post
+
+The basic task to perform in this unit is deleting a given blog post. In this tutorial, we remove a blog post from a map, `blogPosts`, but in real you would be performing this action on a database.
+
+Add the following line of code in the `deleteBlogPost()` to remove a given blog post.
+
+```java filename=BlogService.Java
+public HttpResponse deleteBlogPost(@Param int id) {
+  final BlogPost removed = blogPosts.remove(id);
+...
+```
+
+### Handle exception
+
+What if there is no such blog to delete? We can check if the blog exists before attempting to remove the blog post, but here, let's handle it after the attempt.
+
+1. Add the following condition block in the `deleteBlogPost()` method.
+  ```java filename=BlogService.java
+  if (removed == null) {
+    throw new IllegalArgumentException("The blog post does not exist. id: " + id);
+  }
+  ``` 
+2. Create an exception handler just for our service.
+  1. Create a file, BadRequestExceptionHandler.java
+  2. In the file, declare a custom exception handler implementing Armeria's <type://ExceptionHandlerFunction> interface.
+  ```java filename=BadRequestExceptionHandler.java
+  public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
+    private static final ObjectMapper mapper = new ObjectMapper();
+    ...
+  }
+  ```
+3. Override the default `handleException()` method, handling the exception, `IllegalArgumentException` we threw in step 1. For our tutorial, we will return a BAD REQUEST as the response.
+  ```java filename=BadRequesExceptionHandler.java highlight=3,9,10,12,14
+  @Override
+  public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
+    if (cause instanceof IllegalArgumentException) {
+        final String message = cause.getMessage();
+        final ObjectNode objectNode = mapper.createObjectNode();
+        objectNode.put("error", message);
+        try {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                    MediaType.JSON_UTF_8, mapper.writeValueAsString(objectNode));
+        } catch (JsonProcessingException e) {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST);
+        }
+    }
+    return ExceptionHandlerFunction.fallthrough();
+  }
+  ```
+4. Annotate the `deleteBlogPost()` method with the `<type://ExceptionHandler> with the exception handler we just created.
+  ```java filename=BlogService.java highlight=1
+  @Delete("/blogs/:id")
+  @ExceptionHandler(BadRequestExceptionHandler.class)
+  public HttpResponse deleteBlogPost(@Param int id) { 
+    ...
+  ```
+
+### Add blocking
+
+In real situation, accessing and operating on a database takes time. To prevent the service to wait on our task, we want to inform the task executor to handle other tasks until we are done with database operation.
+
+To enable this, you can use Armeria's <type://ServiceRequestContext#blockingTaskExecutor()> or annotate the method with the <type://@Blocking>. In this tutorial, we will take the annotation option as shown below.
+
+```java filename=BlogService.java highlight=1
+@Blocking
+@Delete("/blogs/:id")
+@ExceptionHandler(BadRequestExceptionHandler.class)
+public HttpResponse deleteBlogPost(@Param int id) {
+```
+
+## 4. Return response
+
+We have already handled returning the not found error in the exception handling session. Here, we will return a response for successful deletion.
+
+```java filename=BlogService.java
+public HttpResponse deleteBlogPost(@Param int id) {
+  ...
+  return HttpResponse.of(HttpStatus.NO_CONTENT);
+}
+```
+
+## Next step
+
+In this step, we have written a method for delete operation. We have used Armeria's annotations; <type://@Delete>, <type://@Param>, <type://@ExceptionHandler> and <type://@Blocking>. Next, let's go back to the main method and add the blog service to our server.

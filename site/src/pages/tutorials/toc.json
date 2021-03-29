@@ -1,0 +1,23 @@
+{
+  "root": ["index"],
+  "REST service": [
+    "tutorial-blog-rest-intro",
+    "tutorial-blog-rest-step1",
+    "tutorial-blog-rest-step2",
+    "tutorial-blog-rest-step3",
+    "tutorial-blog-rest-step4",
+    "tutorial-blog-rest-step5",
+    "tutorial-blog-rest-step6",
+    "tutorial-blog-rest-step7",
+    "tutorial-summary"
+  ],
+  "gRPC service":{
+    "Coming soon": "index"
+  },
+  "Thrift service":{
+    "Coming soon": "index"
+  },
+  "See also": {
+    "Armeria documentation": "/docs"
+  }
+}

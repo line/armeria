@@ -1,0 +1,60 @@
+---
+type: tutorial
+tags:
+  - rest
+  - request
+  - request-converter
+level: basic
+---
+
+# Step 2. Create a service class and prepare blog post data
+
+Before we get into writing a blog service, let's define a blog post object, to be used in service requests as well as responses.
+
+<Tip>
+
+See the [code sample](#) for the whole file and packages to import.
+
+</Tip>
+
+
+## 1. Define post data
+
+The `BlogPost` class defines blog post entries. For our tutorial, define the following five members in the `BlogPost` class.
+
+```java
+final class BlogPost {
+    private final int id;           // The post ID
+    private final String title;     // The post title
+    private final String content;   // The post content
+    private final long createdAt;   // The time post is created at
+    private final long modifiedAt;  // The time post is modified at
+}
+```
+
+## 2. Write constructors
+
+### Constructor for creating blog posts
+
+TBU
+
+// TW Q: @RequestConverter(BlogPostRequestConverter.class)를 지금 추가해 주는 것이 좋은가?
+
+```java
+BlogPost(@JsonProperty("id") int id, @JsonProperty("title") String title,
+             @JsonProperty("content") String content) {
+        this(id, title, content, System.currentTimeMillis());
+    }
+```
+
+// TW Q: 이 이해가 맞는가?
+The `@JsonProperty` annotations specify the keys in an HTTP request body (JSON object) to map with the member variables of the `BlogPost` object.
+
+
+### Additional constructors
+
+
+
+
+## 3. 뭐여야 할까나
+

@@ -1,0 +1,134 @@
+---
+type: tutorial
+tags:
+  - rest
+  - request
+  - request-converter
+level: basic
+---
+
+# Step 3. Implement CREATE operation
+
+In this step, we will write a method for creating a blog post. The HTTP method we will map with this method is POST.
+
+// TW: 이 부분은 다른 형식으로 제공할 수 있음. 고민 중
+<Tip>
+
+View the sample service code [here](#).
+
+</Tip>
+
+// TW: 이 부분은 별도 섹션이 아닌 adomination으로 변경될 가능성 있음
+Armeria features used in this step
+Annotations:
+
+  - HTTP method mapping (<type://@Post>)
+  - <type://@RequestConverter>
+
+## Prerequisites
+
+You need to have the following two files, created from [Step 2](#).
+
+- BlogService.java
+- BlogPost.java
+
+## 1. Map HTTP method
+
+Start by writing a service method, `createBlogPost()`, in the class `BlogService`, which we declared in the [previous step](#).
+Now, map this service method with the HTTP POST method by adding the <type://@Post> annotation as follows.
+The endpoint to map is `/blogs`.
+
+```java filename=BlogService.java highlight=1
+@Post("/blogs")
+public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingException {}
+```
+
+## 2. Handle request parameters
+
+// TODO: TW 이 과정에서 할일 소개
+
+- [Assign a request converter](#assign-a-request-converter)
+- [Write a request converter](#write-a-request-converter)
+- [Store post information](#store-post-information)
+
+### Assign a request converter
+
+In this step, assign a request converter to the service method and then implement the converter function in the next step.
+Armeria's [request converter](../docs/server-annotated-service#converting-an-http-request-to-a-java-object) converts a client's request body into a Java object for you.
+
+Add the annotation <type://@RequestConverter> to the service method and specify the RequestConverterFunction class as BlogPostRequestConverter.class which we will implement in the next step.
+
+```java filename=BlogService.java highlight=1
+@Post("/blogs")
+@RequestConverter(BlogPostRequestConverter.class)
+public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingException {
+  
+}
+```
+
+### Write a request converter
+
+We can use Armeria's request converter as is, but here let's customize a request converter for our blog post requests.
+We want to convert blog post details into a Java object.
+Create a BlogPostRequestConvert.java file and write the following class in the file.
+
+1. Declare a class implementing the <type://RequestConverterFunction> interface. We use impromptu IDs in this tutorial.
+    ```java filename=BlogRequestConvert.java
+    final class BlogPostRequestConverter implements RequestConverterFunction {
+      private static final ObjectMapper mapper = new ObjectMapper();
+      private final AtomicInteger idGenerator = new AtomicInteger();
+    }
+    ```
+2. Write a method in the class to retrieve a value of a given key from a JSON object.
+
+  <CodeBlock language="java" filename="BlogRequestConverter.java" highlight="4">{`
+  static String stringValue(JsonNode jsonNode, String field) {
+    final JsonNode value = jsonNode.get(field);
+    if (value == null) {
+        throw new IllegalArgumentException(field + " is missing!");
+    }
+    return value.textValue();
+  }
+  `}</CodeBlock>
+3. Override the default `convertRequest()` method as follows.
+    - Map the `title` and `content` properties of the request body to a `BlogPost` object, using the `stringValue()` method we wrote in the previous step.
+    - Throw a <type://FallthroughException> at last, to try to convert other requests by the next converter.
+    - Feel free to add more mapping blocks in this request converter for other requests for your service.
+
+  <CodeBlock language="java" filename="BlogRequestConverter.java" highlight="9,10,13">{`
+  @Override
+  public Object convertRequest(ServiceRequestContext ctx,     
+    AggregatedHttpRequest request, Class<?> expectedResultType,
+    @Nullable ParameterizedType expectedParameterizedResultType)
+      throws Exception {
+    if (expectedResultType == BlogPost.class) {
+      final JsonNode jsonNode = mapper.readTree(request.contentUtf8());
+      final int id = idGenerator.getAndIncrement();
+      final String title = stringValue(jsonNode, "title");
+      final String content = stringValue(jsonNode, "content");
+      return new BlogPost(id, title, content);
+    }
+    return RequestConverterFunction.fallthrough();
+  }
+  `}</CodeBlock>
+
+## 3. Implement service code
+
+For the sake of simplicity, save the blog post information in a `Map`, instead of DB, inside the `createBlogPost()` method.
+
+```java filename=BlogService.java
+blogPosts.put(blogPost.id(), blogPost);
+```
+
+## 4. Return response
+
+Now, it's time to return a response to our client. Create an HTTP response using Armeria's <type://HTTPResponse> and include the information of the post created, as shown below, in the `createBlogPost()` method.
+
+```java filename=BlogService.java
+return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, mapper.writeValueAsBytes(blogPost));
+
+```
+
+## Next step
+
+In this step, we have written a method to implement create operation. We have used Armeria's <type://@Post> annotation and <type://RequestConverter>. Next, let's implement a read operation.
