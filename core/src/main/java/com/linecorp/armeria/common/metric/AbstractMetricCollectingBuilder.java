@@ -22,12 +22,22 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.metric.MetricCollectingClient;
+import com.linecorp.armeria.client.metric.MetricCollectingRpcClient;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 
 /**
- * Builds a {@link MetricCollectingService} instance.
+ * Builds an implementing class of {@link AbstractMetricCollectingBuilder} instance.
+ * Currently the generic types match:
+ * <ul>
+ *     <li>R = {@link MetricCollectingClient} and T = {@link HttpClient}</li>
+ *     <li>R = {@link MetricCollectingRpcClient} and T = {@link RpcClient}</li>
+ *     <li>R = {@link MetricCollectingService} and T = {@link HttpService}</li>
+ * </ul>
  */
 public abstract class AbstractMetricCollectingBuilder<R, T> {
 
@@ -62,14 +72,15 @@ public abstract class AbstractMetricCollectingBuilder<R, T> {
     }
 
     /**
-     * Returns a newly-created {@link MetricCollectingService} decorating {@link HttpService} based
-     * on the properties of this builder.
+     * Returns a newly-created {@link R} decorating {@link T} based on the properties of this builder.
+     * @see AbstractMetricCollectingBuilder for supported types.
      */
     public abstract R build(T delegate);
 
     /**
-     * Returns a newly-created {@link MetricCollectingService} decorator based
-     * on the properties of this builder and applies {@link MeterIdPrefixFunction}.
+     * Returns a newly-created {@link R} decorating {@link T} based on the properties of this builder,
+     * and applies {@link MeterIdPrefixFunction}.
+     * @see AbstractMetricCollectingBuilder for supported types.
      */
     public abstract Function<? super T, R> newDecorator();
 }
