@@ -41,6 +41,7 @@
 *.gateway.dev
 *.hosting.myjino.ru
 *.hosting.ovh.net
+*.id.forgerock.io
 *.in.futurecms.at
 *.jm
 *.kawasaki.jp
@@ -3464,6 +3465,7 @@ id.au
 id.ir
 id.lv
 id.ly
+id.repl.co
 id.us
 ide.kyoto.jp
 idf.il
@@ -4781,6 +4783,7 @@ matta-varjjat.no
 mattel
 mayfirst.info
 mayfirst.org
+mazeplay.com
 mazowsze.pl
 mazury.pl
 mb.ca
@@ -6627,6 +6630,7 @@ ravendb.community
 ravendb.me
 ravendb.run
 ravenna.it
+ravpage.co.il
 rawa-maz.pl
 rc.it
 rdv.to
@@ -7675,6 +7679,7 @@ tawaramoto.nara.jp
 tax
 taxi
 taxi.br
+tbits.me
 tc
 tc.br
 tci
