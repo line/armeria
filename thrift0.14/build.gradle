@@ -35,6 +35,10 @@ task generateTestSources(type: Copy) {
     exclude '**/THttp2Client.java'
 }
 
+ext {
+    testThriftSrcDirs = ["$thrift013ProjectDir/src/test/thrift"]
+}
+
 tasks.generateSources.dependsOn(generateTestSources)
 tasks.compileJava.dependsOn(generateSources)
 tasks.compileTestJava.dependsOn(generateSources)

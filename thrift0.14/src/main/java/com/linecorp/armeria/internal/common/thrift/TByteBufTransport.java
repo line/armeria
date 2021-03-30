@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.internal.common.thrift;
 
+import javax.annotation.Nullable;
+
 import org.apache.thrift.TConfiguration;
 import org.apache.thrift.transport.TTransportException;
 
@@ -26,9 +28,10 @@ public final class TByteBufTransport extends AbstractTByteBufTransport {
         super(buf);
     }
 
+    @Nullable
     @Override
     public TConfiguration getConfiguration() {
-        return TConfiguration.DEFAULT;
+        return null;
     }
 
     @Override
