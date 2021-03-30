@@ -39,7 +39,7 @@ public abstract class AbstractMetricCollectingBuilder {
     }
 
     /**
-     * Returns the {@code meterIdPrefixFunction}.
+     * Returns the {@link MeterIdPrefixFunction}.
      */
     protected MeterIdPrefixFunction meterIdPrefixFunction() {
         return meterIdPrefixFunction;
@@ -49,13 +49,14 @@ public abstract class AbstractMetricCollectingBuilder {
      * Returns the {@code successFunction}.
      */
     @Nullable
-    protected BiPredicate<? super RequestContext, ? super RequestLog> successFunction() {
+    protected final BiPredicate<? super RequestContext, ? super RequestLog> successFunction() {
         return successFunction;
     }
 
     /**
      * Defines a custom {@link BiPredicate} to allow custom definition of successful responses.
-     * In other words, specify which responses should increment metrics.success() and which - metrics.failure()
+     * In other words, specify which responses should increment {@code metrics.success()}
+     * and which - {@code metrics.failure()}.
      *
      * <p>Example:
      * <pre>{@code
