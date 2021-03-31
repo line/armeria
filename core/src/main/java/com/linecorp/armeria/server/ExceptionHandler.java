@@ -37,8 +37,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *     }
  *
  *     // You can return a different response using the path.
- *     if ("/foo".equals(ctx.path())) {
- *         return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "Foo exception");
+ *     if ("/outage".equals(ctx.path())) {
+ *         return AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
+ *                                          MediaType.PLAIN_TEXT, "Oops, something went wrong.");
  *     }
  *
  *     // Return null to let ExceptionHandler.ofDefault() convert the exception.
