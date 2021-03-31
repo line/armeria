@@ -49,7 +49,7 @@ final class DefaultResponseHeaders extends DefaultHttpHeaders implements Respons
         if (cookies != null) {
             return cookies;
         }
-        return this.cookies = super.setCookie();
+        return this.cookies = setCookie();
     }
 
     @Override

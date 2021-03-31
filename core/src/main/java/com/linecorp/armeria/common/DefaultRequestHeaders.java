@@ -102,7 +102,7 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
         if (cookies != null) {
             return cookies;
         }
-        return this.cookies = super.cookie();
+        return this.cookies = cookie();
     }
 
     @Override
