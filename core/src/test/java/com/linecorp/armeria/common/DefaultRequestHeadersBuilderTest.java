@@ -262,14 +262,16 @@ class DefaultRequestHeadersBuilderTest {
 
     @Test
     void testCookieBuilder() {
-        final Cookie cookie = Cookie.of("cookie", "value");
+        final Cookie cookie1 = Cookie.of("cookie1", "value1");
+        final Cookie cookie2 = Cookie.of("cookie2", "value2");
         final RequestHeaders headers = RequestHeaders
                 .builder()
                 .path("/")
                 .method(HttpMethod.GET)
-                .cookie(cookie)
+                .cookie(cookie1)
+                .cookie(cookie2)
                 .build();
-        assertThat(headers.cookies()).isEqualTo(Cookies.of(cookie));
+        assertThat(headers.cookies()).isEqualTo(Cookies.of(cookie1, cookie2));
     }
 
     @Test
@@ -296,7 +298,7 @@ class DefaultRequestHeadersBuilderTest {
                 .method(HttpMethod.GET)
                 .cookies(cookies)
                 .build();
-        assertThat(headers.cookies()).isEqualTo(Cookies.of(cookies));
+        assertThat(headers.cookies()).isEqualTo(cookies);
     }
 
     /**
