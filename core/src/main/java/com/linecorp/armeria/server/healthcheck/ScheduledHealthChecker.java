@@ -21,6 +21,9 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -45,9 +48,8 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     private final EventExecutor eventExecutor;
     private final Consumer<HealthChecker> onHealthCheckerUpdate;
     private final AtomicBoolean isHealthy;
-    private int requestCount;
-    @Nullable
-    private ScheduledHealthCheckerImpl impl;
+    private final AtomicInteger requestCount;
+    private final AtomicReference<ScheduledHealthCheckerImpl> impl;
 
     ScheduledHealthChecker(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
                            Duration facllbackTtl, EventExecutor eventExecutor) {
@@ -56,6 +58,8 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         this.eventExecutor = eventExecutor;
 
         isHealthy = new AtomicBoolean(false);
+        requestCount = new AtomicInteger(0);
+        impl = new AtomicReference<>();
         onHealthCheckerUpdate = latestValue -> {
             isHealthy.set(latestValue.isHealthy());
             notifyListeners(latestValue);
@@ -67,47 +71,59 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         return isHealthy.get();
     }
 
-    synchronized void startHealthChecker() {
-        requestCount++;
-        if (requestCount != 1) {
+    void startHealthChecker() {
+        if (requestCount.incrementAndGet() != 1) {
             return;
         }
-        impl = new ScheduledHealthCheckerImpl(healthChecker, fallbackTtl, eventExecutor);
-        impl.addListener(onHealthCheckerUpdate);
-        impl.startHealthChecker();
+        final ScheduledHealthCheckerImpl newlyScheduled =
+                new ScheduledHealthCheckerImpl(healthChecker, fallbackTtl, eventExecutor);
+        for (;;) {
+            if (impl.compareAndSet(null, newlyScheduled)) {
+                newlyScheduled.addListener(onHealthCheckerUpdate);
+                newlyScheduled.startHealthChecker();
+                break;
+            }
+        }
     }
 
-    synchronized void stopHealthChecker() {
-        if (requestCount == 0) {
+    void stopHealthChecker() {
+        final int previousCount = requestCount.getAndUpdate(count -> {
+            if (count > 0) {
+                return count - 1;
+            }
+            return 0;
+        });
+        if (previousCount != 1) {
             return;
         }
-        requestCount--;
-        if (requestCount != 0) {
-            return;
+
+        for (;;) {
+            final ScheduledHealthCheckerImpl current = impl.get();
+            if(current == null){
+                continue;
+            }
+            if (impl.compareAndSet( current, null)) {
+                current.stopHealthChecker();
+                current.removeListener(onHealthCheckerUpdate);
+                break;
+            }
         }
-        assert impl != null;
-        impl.stopHealthChecker();
-        impl.removeListener(onHealthCheckerUpdate);
-        isHealthy.set(false);
     }
 
     /**
      * Used for test verification.
      */
     @VisibleForTesting
-    synchronized int getRequestCount() {
-        return requestCount;
+    int getRequestCount() {
+        return requestCount.get();
     }
 
     /**
      * Used for test verification.
      */
     @VisibleForTesting
-    synchronized boolean isActive() {
-        if (impl == null || !impl.isActive()) {
-            return false;
-        }
-        return true;
+    boolean isActive() {
+        return impl.get() != null;
     }
 
     /**
@@ -163,10 +179,6 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
             }
             state = State.FINISHED;
             scheduledFuture.cancel(true);
-        }
-
-        private boolean isActive() {
-            return state == State.SCHEDULED;
         }
 
         private void runHealthCheck() {
