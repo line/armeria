@@ -41,7 +41,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         implements ListenableHealthChecker {
 
     private final Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker;
-    private final Duration maxTtl;
+    private final Duration fallbackTtl;
     private final EventExecutor eventExecutor;
     private final Consumer<HealthChecker> onHealthCheckerUpdate;
     private final AtomicBoolean isHealthy;
@@ -50,9 +50,9 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     private ScheduledHealthCheckerImpl impl;
 
     ScheduledHealthChecker(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
-                           Duration maxTtl, EventExecutor eventExecutor) {
+                           Duration facllbackTtl, EventExecutor eventExecutor) {
         this.healthChecker = healthChecker;
-        this.maxTtl = maxTtl;
+        this.fallbackTtl = facllbackTtl;
         this.eventExecutor = eventExecutor;
 
         isHealthy = new AtomicBoolean(false);
@@ -72,7 +72,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         if (requestCount != 1) {
             return;
         }
-        impl = new ScheduledHealthCheckerImpl(healthChecker, maxTtl, eventExecutor);
+        impl = new ScheduledHealthCheckerImpl(healthChecker, fallbackTtl, eventExecutor);
         impl.addListener(onHealthCheckerUpdate);
         impl.startHealthChecker();
     }
@@ -116,7 +116,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     private static class ScheduledHealthCheckerImpl implements ListenableHealthChecker {
 
         private final Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker;
-        private final Duration maxTtl;
+        private final Duration fallbackTtl;
         private final SettableHealthChecker settableHealthChecker;
         private final EventExecutor eventExecutor;
 
@@ -124,9 +124,9 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         private volatile Future<?> scheduledFuture;
 
         ScheduledHealthCheckerImpl(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
-                                   Duration maxTtl, EventExecutor eventExecutor) {
+                                   Duration fallbackTtl, EventExecutor eventExecutor) {
             this.healthChecker = healthChecker;
-            this.maxTtl = maxTtl;
+            this.fallbackTtl = fallbackTtl;
             this.eventExecutor = eventExecutor;
             settableHealthChecker = new SettableHealthChecker(false);
 
@@ -179,7 +179,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
                     final long intervalMills;
                     if (throwable != null) {
                         isHealthy = false;
-                        intervalMills = maxTtl.toMillis();
+                        intervalMills = fallbackTtl.toMillis();
                     } else {
                         isHealthy = result.isHealthy();
                         intervalMills = result.ttlMillis();
@@ -191,7 +191,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
                 });
             } catch (Throwable throwable) {
                 settableHealthChecker.setHealthy(false);
-                scheduledFuture = eventExecutor.schedule(this::runHealthCheck, maxTtl.toMillis(),
+                scheduledFuture = eventExecutor.schedule(this::runHealthCheck, fallbackTtl.toMillis(),
                                                          TimeUnit.MILLISECONDS);
             }
         }

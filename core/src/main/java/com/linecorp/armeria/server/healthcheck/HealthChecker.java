@@ -40,8 +40,8 @@ public interface HealthChecker {
      * @see #of(Supplier, Duration, EventExecutor)
      */
     static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
-                            Duration maxTtl) {
-        return new ScheduledHealthChecker(healthChecker, maxTtl, CommonPools.workerGroup().next());
+                            Duration fallbackTtl) {
+        return new ScheduledHealthChecker(healthChecker, fallbackTtl, CommonPools.workerGroup().next());
     }
 
     /**
@@ -51,12 +51,12 @@ public interface HealthChecker {
      *
      * @param healthChecker the {@link Supplier} of {@link CompletionStage} that provides the result of health
      *                      and interval for next checking
-     * @param maxTtl used when healthChecker throws exception or returned a failed {@link CompletionStage}
+     * @param fallbackTtl used when healthChecker throws exception or returned a failed {@link CompletionStage}
      * @param eventExecutor the executor executing supplied health checker
      */
     static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
-                            Duration maxTtl, EventExecutor eventExecutor) {
-        return new ScheduledHealthChecker(healthChecker, maxTtl, eventExecutor);
+                            Duration fallbackTtl, EventExecutor eventExecutor) {
+        return new ScheduledHealthChecker(healthChecker, fallbackTtl, eventExecutor);
     }
 
     /**
