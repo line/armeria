@@ -52,19 +52,19 @@ final class DefaultResponseHeadersBuilder
     }
 
     @Override
+    public ResponseHeadersBuilder cookie(Cookie cookie) {
+        requireNonNull(cookie, "cookie");
+        add(HttpHeaderNames.SET_COOKIE, cookie.toCookieHeader());
+        return this;
+    }
+
+    @Override
     public Cookies cookies() {
         final HttpHeadersBase getters = getters();
         if (getters == null) {
             return Cookies.of();
         }
         return getters.setCookie();
-    }
-
-    @Override
-    public ResponseHeadersBuilder cookie(Cookie cookie) {
-        requireNonNull(cookie, "cookie");
-        add(HttpHeaderNames.SET_COOKIE, cookie.toCookieHeader());
-        return this;
     }
 
     @Override

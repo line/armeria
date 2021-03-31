@@ -157,18 +157,18 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     }
 
     @Override
+    public RequestHeadersBuilder cookie(Cookie cookie) {
+        requireNonNull(cookie, "cookie");
+        return cookies(Collections.singleton(cookie));
+    }
+
+    @Override
     public Cookies cookies() {
         final HttpHeadersBase getters = getters();
         if (getters == null) {
             return Cookies.of();
         }
         return getters.cookie();
-    }
-
-    @Override
-    public RequestHeadersBuilder cookie(Cookie cookie) {
-        requireNonNull(cookie, "cookie");
-        return cookies(Collections.singleton(cookie));
     }
 
     @Override
