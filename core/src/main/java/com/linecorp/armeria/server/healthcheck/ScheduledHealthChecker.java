@@ -23,11 +23,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Futures;
@@ -99,10 +96,10 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
 
         for (;;) {
             final ScheduledHealthCheckerImpl current = impl.get();
-            if(current == null){
+            if (current == null) {
                 continue;
             }
-            if (impl.compareAndSet( current, null)) {
+            if (impl.compareAndSet(current, null)) {
                 current.stopHealthChecker();
                 current.removeListener(onHealthCheckerUpdate);
                 break;
