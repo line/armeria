@@ -61,7 +61,7 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  * <a href="https://developers.google.com/protocol-buffers/docs/encoding">Protocol Buffers</a> or
  * <a href="https://developers.google.com/protocol-buffers/docs/proto3#json">JSON</a> format.
  *
- * <h3>Conversion of multiple Protobuf messages</h3>
+ * <h2>Conversion of multiple Protobuf messages</h2>
  * A sequence of Protocol Buffer messages can not be handled by this {@link ResponseConverterFunction},
  * because Protocol Buffers wire format is not self-delimiting.
  * See

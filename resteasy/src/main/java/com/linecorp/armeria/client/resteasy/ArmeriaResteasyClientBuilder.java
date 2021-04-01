@@ -66,12 +66,12 @@ import com.linecorp.armeria.common.SessionProtocol;
  * {@link ResteasyClient} could still be constructed using ArmeriaJaxrsClientEngine directly by setting it
  * to {@link ResteasyClientBuilder} via {@link ResteasyClientBuilder#httpEngine(ClientHttpEngine)} method
  * as below.
+ * </p>
  * <pre>{@code
  *     final Client jaxrsClient = ((ResteasyClientBuilder) ClientBuilder.newBuilder())
  *             .httpEngine(new ArmeriaJaxrsClientEngine(armeriaWebClient))
  *             .build();
  * }</pre>
- * </p>
  */
 public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
 
