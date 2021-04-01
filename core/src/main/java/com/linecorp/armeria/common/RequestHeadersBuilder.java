@@ -111,17 +111,17 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     }
 
     /**
-     * Sets the {@code "cookie"} header.
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
      */
     RequestHeadersBuilder cookie(Cookie cookie);
 
     /**
-     * Sets the {@code "cookie"} header.
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
      */
     RequestHeadersBuilder cookies(Iterable<? extends Cookie> cookies);
 
     /**
-     * Sets the {@code "cookie"} header.
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
      */
     RequestHeadersBuilder cookies(Cookie... cookies);
 

@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
@@ -159,7 +158,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     public RequestHeadersBuilder cookie(Cookie cookie) {
         requireNonNull(cookie, "cookie");
-        return cookies(Collections.singleton(cookie));
+        return cookies(ImmutableList.of(cookie));
     }
 
     @Override

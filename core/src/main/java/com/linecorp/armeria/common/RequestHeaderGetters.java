@@ -114,7 +114,7 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
     }
 
     /**
-     * Returns the parsed {@code "cookie"} header.
+     * Returns the parsed <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
      *
      * @return a {@link Cookies} or an empty {@link Cookies} if there is no such header.
      */
