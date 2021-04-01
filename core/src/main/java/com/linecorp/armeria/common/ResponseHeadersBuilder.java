@@ -43,17 +43,17 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeadersBuilder status(HttpStatus status);
 
     /**
-     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.1">set-cookie</a> header.\
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.1">set-cookie</a> header.
      */
     ResponseHeadersBuilder cookie(Cookie cookie);
 
     /**
-     * Sets the {<a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.1">set-cookie</a> header.\
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.1">set-cookie</a> header.
      */
     ResponseHeadersBuilder cookies(Iterable<? extends Cookie> cookies);
 
     /**
-     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.1">set-cookie</a> header.\
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.1">set-cookie</a> header.
      */
     ResponseHeadersBuilder cookies(Cookie... cookies);
 
