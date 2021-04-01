@@ -130,7 +130,7 @@ dependencies {
     // Do not upgrade to Scala 2.13.x that causes 'java.lang.ClassNotFoundException: scala.Serializable'
     // See https://github.com/scala/bug/issues/11832#issuecomment-568185023
     // If needed, you should consider to add 'armeria-scala' module.
-    optionalImplementation 'org.scala-lang:scala-library:2.12.12'
+    optionalImplementation 'org.scala-lang:scala-library:2.12.13'
 
     // Bouncy Castle
     implementation 'org.bouncycastle:bcprov-jdk15on'

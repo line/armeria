@@ -181,6 +181,26 @@ class ByteBufDecoderInputTest {
     }
 
     @Test
+    void skipBytes() {
+        // fast
+        input.skipBytes(2);
+        assertThat(input.readByte()).isEqualTo((byte) 3);
+
+        // slow
+        input.skipBytes(5);
+        assertThat(input.readByte()).isEqualTo((byte) 9);
+    }
+
+    @Test
+    void getByte() {
+        // fast
+        assertThat(input.getByte(1)).isEqualTo((byte) 2);
+
+        // slow
+        assertThat(input.getByte(8)).isEqualTo((byte) 9);
+    }
+
+    @Test
     void addAfterClosing() {
         assertThat(input.readableBytes()).isEqualTo(9);
         input.close();

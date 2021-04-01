@@ -24,7 +24,7 @@ import org.reactivestreams.Publisher
 import scala.concurrent.Future
 import scalapb.descriptors.{Descriptor, FieldDescriptor, PValue, Reads}
 import scalapb.json4s.Printer
-import scalapb.{GeneratedEnumCompanion, GeneratedMessage, GeneratedMessageCompanion}
+import scalapb.{GeneratedEnumCompanion, GeneratedMessage, GeneratedMessageCompanion, GeneratedSealedOneof}
 
 private[scalapb] object ScalaPbConverterUtil {
 
@@ -98,7 +98,7 @@ private[scalapb] object ScalaPbConverterUtil {
     }
 
   private[scalapb] def isProtobufMessage(clazz: Class[_]): Boolean =
-    classOf[GeneratedMessage].isAssignableFrom(clazz)
+    classOf[GeneratedMessage].isAssignableFrom(clazz) || classOf[GeneratedSealedOneof].isAssignableFrom(clazz)
 
   private[scalapb] val unknownGeneratedMessageCompanion: GeneratedMessageCompanion[GeneratedMessage] =
     new GeneratedMessageCompanion[GeneratedMessage] {

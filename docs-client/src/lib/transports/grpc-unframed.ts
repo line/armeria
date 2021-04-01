@@ -14,6 +14,7 @@
  * under the License.
  */
 
+import JSONbig from 'json-bigint';
 import jsonPrettify from '../json-prettify';
 import { Method } from '../specification';
 
@@ -54,7 +55,8 @@ export default class GrpcUnframedTransport extends Transport {
       body: bodyJson,
     });
     const contentType = httpResponse.headers.get('content-type');
-    const text = await httpResponse.text();
+    const json = JSONbig.parse(await httpResponse.text());
+    const text = JSONbig.stringify(json);
     if (contentType && contentType.startsWith('application/json')) {
       return jsonPrettify(text);
     }

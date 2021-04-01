@@ -168,7 +168,7 @@ abstract class DnsEndpointGroupBuilder {
     }
 
     /**
-     * Sets the {@link EndpointSelectionStrategy} that deteremines the enumeration order of {@link Endpoint}s.
+     * Sets the {@link EndpointSelectionStrategy} that determines the enumeration order of {@link Endpoint}s.
      */
     public DnsEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
