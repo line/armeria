@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.net.URI;
-import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +49,7 @@ class DefaultCookieJarTest {
 
         // domain and path are unchanged if already set
         assertThat(cookieJar.ensureDomainAndPath(builder.domain("foo.com").path("/a").build(),
-                                                 URI.create(("http://bar.foo.com/a/b/"))))
+                                                 URI.create("http://bar.foo.com/a/b/")))
                 .isEqualTo(builder.domain("foo.com").path("/a").build());
 
         assertThat(cookieJar.ensureDomainAndPath(cookie, URI.create("http://foo.com")).isHostOnly()).isTrue();
@@ -160,8 +159,7 @@ class DefaultCookieJarTest {
         final CookieJar cookieJar = new DefaultCookieJar();
 
         cookieJar.set(foo, Cookies.of(Cookie.builder("name", "value").maxAge(1).build()));
-        await().pollDelay(Duration.ofSeconds(1)).until(() -> true);
-        assertThat(cookieJar.get(foo)).isEmpty();
+        await().untilAsserted(() -> assertThat(cookieJar.get(foo)).isEmpty());
 
         cookieJar.set(foo, Cookies.of(Cookie.builder("name", "value").build()));
         assertThat(cookieJar.get(foo)).hasSize(1);

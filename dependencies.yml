@@ -337,7 +337,7 @@ net.javacrumbs.json-unit:
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 com.guardsquare:
-  proguard-gradle: { version: '7.0.1' }
+  proguard-gradle: { version: '7.1.0-beta1' }
 
 net.shibboleth.utilities:
   java-support: { version: '7.5.1' }
@@ -474,7 +474,7 @@ org.jetbrains.kotlinx:
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
 org.jlleitschuh.gradle:
-  ktlint-gradle: { version: '9.4.1' }
+  ktlint-gradle: { version: '10.0.0' }
 
 org.jooq:
   joor: { version: '0.9.13' }

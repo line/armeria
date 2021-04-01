@@ -87,8 +87,8 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
      * algorithm described in
      * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
      * and also referenced in <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
-     * <p/>
      * See also {@link Locale#lookup} for another algorithm.
+     *
      * @param supportedLocales a {@link Iterable} of {@link Locale}s supported by the server.
      * @return The best matching {@link Locale} or {@code null} if no locale matches.
      */
@@ -103,8 +103,8 @@ interface RequestHeaderGetters extends HttpHeaderGetters {
      * algorithm described in
      * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
      * and also referenced in <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
-     * <p/>
      * See also {@link Locale#lookup} for another algorithm.
+     *
      * @param supportedLocales {@link Locale}s supported by the server.
      * @return The best matching {@link Locale} or {@code null} if no locale matches.
      */
