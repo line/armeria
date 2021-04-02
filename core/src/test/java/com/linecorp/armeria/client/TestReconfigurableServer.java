@@ -18,8 +18,6 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -33,7 +31,7 @@ class TestReconfigurableServer {
     @Test
     public void test_reconfiguration_of_server() throws Exception {
         final ServerBuilder sb = Server.builder();
-        sb.http(8080);
+        sb.http(9009);
 
         sb.service("/test1", (ctx, req) -> HttpResponse.of("Hello, world!"));
 
@@ -44,83 +42,83 @@ class TestReconfigurableServer {
 
         final Server server = sb.build();
 
-        final CompletableFuture<Void> future = server.start();
-        Thread.sleep(1000);
+        server.start().join();
 
-        try (ClientFactory factory =
-                     ClientFactory.builder().build()) {
-            final WebClient client = WebClient.builder()
-                    .factory(factory)
-                    .build();
-            final AggregatedHttpResponse response = client.get("http://localhost:8080/test1").aggregate().get();
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.contentUtf8()).isEqualTo("Hello, world!");
-        }
+        WebClient client = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final AggregatedHttpResponse response = client.get("/test1").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("Hello, world!");
 
-        Thread.sleep(1000);
+        final AggregatedHttpResponse response11 = client.get("/test11/world").aggregate().join();
+        assertThat(response11.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response11.contentUtf8()).isEqualTo("Hello, WORLD");
+
+        Thread.sleep(1000); // Some time goes by now want to reconfigure new server
         System.out.println("Configuring new server");
         server.reconfigure(serverBuilder  -> {
             // Replace the entire routes with the following two services.
             serverBuilder.service("/test2", (ctx, req) -> HttpResponse.of("Hello, world!"));
 
             serverBuilder.service("/test2/{name}",
-                                 (ctx, req) ->
-                                 HttpResponse.of("Hello, " + ctx.pathParam("name").toUpperCase()));
+                    (ctx, req) ->
+                            HttpResponse.of("Hello, " + ctx.pathParam("name").toUpperCase()));
         });
 
-        try (ClientFactory factory =
-                     ClientFactory.builder().build()) {
-            final WebClient client = WebClient.builder()
-                    .factory(factory)
-                    .build();
-            final AggregatedHttpResponse response = client.get("http://localhost:8080/test2")
-                                                    .aggregate()
-                                                    .get();
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.contentUtf8()).isEqualTo("Hello, world!");
+        final AggregatedHttpResponse response1 = client.get("/test11/world").aggregate().join();
+        assertThat(response1.status()).isEqualTo(HttpStatus.NOT_FOUND);
 
-            final AggregatedHttpResponse response1 = client.get("http://localhost:8080/test2/world")
-                                                     .aggregate()
-                                                     .get();
+        //Open new connection to check if the newly reconfigured server is now operational
+        // and old service endpoints are no longer visible.
+        WebClient client2= WebClient.of("http://localhost:" + server.activeLocalPort());
+        final AggregatedHttpResponse response2 = client2.get("/test2/world")
+                .aggregate()
+                .get();
 
-            assertThat(response1.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response1.contentUtf8()).isEqualTo("Hello, WORLD");
+        assertThat(response2.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response2.contentUtf8()).isEqualTo("Hello, WORLD");
 
-            // Tests that original service configurations are no longer active.
-            final AggregatedHttpResponse response3 = client.get("http://localhost:8080/test1")
-                                                     .aggregate()
-                                                     .get();
-            assertThat(response3.status()).isEqualTo(HttpStatus.NOT_FOUND);
 
-            final AggregatedHttpResponse response4 = client.get("http://localhost:8080/test1/world")
-                                                     .aggregate()
-                                                     .get();
+        final AggregatedHttpResponse response22 = client2.get("/test2")
+                .aggregate()
+                .get();
 
-            assertThat(response4.status()).isEqualTo(HttpStatus.NOT_FOUND);
-        }
-        future.join();
+        assertThat(response22.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response22.contentUtf8()).isEqualTo("Hello, world!");
+
+        final AggregatedHttpResponse failedResponse = client2.get("/test1").aggregate().get();
+        assertThat(failedResponse.status()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        // Tests that original service configurations are no longer active.
+        WebClient client3 = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final AggregatedHttpResponse response3 = client3.get("/test1")
+                .aggregate()
+                .get();
+        assertThat(response3.status()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        final AggregatedHttpResponse response4 = client3.get("/test1/world")
+                .aggregate()
+                .get();
+
+        assertThat(response4.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        server.stop().join();
     }
 
     @Test
     public void test_we_dont_reconfigure_empty_serviceconfig() throws Exception {
         final ServerBuilder sb = Server.builder();
-        sb.http(8081);
+        sb.http(9010);
         sb.service("/test1", (ctx, req) -> HttpResponse.of("Hello, world!"));
 
         final Server server = sb.build();
 
-        final CompletableFuture<Void> future = server.start();
-        Thread.sleep(100);
-        try (ClientFactory factory =
-                     ClientFactory.builder().build()) {
-            final WebClient client = WebClient.builder()
-                    .factory(factory)
-                    .build();
+        server.start().join();
 
-            final AggregatedHttpResponse res = client.get("http://localhost:8081/test1").aggregate().get();
-            assertThat(res.status()).isEqualTo(HttpStatus.OK);
-            assertThat(res.contentUtf8()).isEqualTo("Hello, world!");
-        }
+        WebClient client3 = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final AggregatedHttpResponse res = client3.get("/test1")
+                .aggregate()
+                .get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("Hello, world!");
 
         assertThatThrownBy(() -> server.reconfigure(serverBuilder  -> {
             // This should not work since we do not allow empty service configuration.

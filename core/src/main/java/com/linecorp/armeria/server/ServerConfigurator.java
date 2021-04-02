@@ -15,11 +15,14 @@
  */
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A Server that allows ability to reconfigure its service endpoints without having to restart the server.
  */
+@UnstableApi
 @FunctionalInterface
-public interface ReconfigurableServer {
+public interface ServerConfigurator {
     /**
      * Reconfigures the server using the specified {@link ServerBuilder}.
      */

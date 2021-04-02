@@ -1499,7 +1499,7 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        final Server server = new Server(buildServerConfig(this.ports));
+        final Server server = new Server(buildServerConfig(ports));
         serverListeners.forEach(server::addListener);
         return server;
     }
@@ -1565,7 +1565,7 @@ public final class ServerBuilder {
         return buildServerConfig(existingConfig.ports());
     }
 
-    private ServerConfig buildServerConfig(List<ServerPort> listOfPorts) {
+    private ServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1589,8 +1589,8 @@ public final class ServerBuilder {
 
         if (defaultSslContext == null) {
             sslContexts = null;
-            if (!listOfPorts.isEmpty()) {
-                ports = resolveDistinctPorts(listOfPorts);
+            if (!serverPorts.isEmpty()) {
+                ports = resolveDistinctPorts(serverPorts);
                 for (final ServerPort p : ports) {
                     if (p.hasTls()) {
                         throw new IllegalArgumentException("TLS not configured; cannot serve HTTPS");
@@ -1610,8 +1610,8 @@ public final class ServerBuilder {
                         "at https://www.eclipse.org/jetty/documentation/9.4.x/alpn-chapter.html");
             }
 
-            if (!listOfPorts.isEmpty()) {
-                ports = resolveDistinctPorts(listOfPorts);
+            if (!serverPorts.isEmpty()) {
+                ports = resolveDistinctPorts(serverPorts);
             } else {
                 ports = ImmutableList.of(new ServerPort(0, HTTPS));
             }

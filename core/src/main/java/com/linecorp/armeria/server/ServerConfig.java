@@ -130,7 +130,7 @@ public final class ServerConfig {
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
             Supplier<? extends RequestId> requestIdGenerator,
-            Mapping<String, SslContext> sslContexts) {
+            @Nullable Mapping<String, SslContext> sslContexts) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -607,9 +607,9 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns a map of SslContexts.
-     * @return Map of domain name to {@link SslContext}
+     * Returns a map of SslContexts {@link SslContext}.
      */
+    @Nullable
     public Mapping<String, SslContext> getSslContexts() {
         return sslContexts;
     }

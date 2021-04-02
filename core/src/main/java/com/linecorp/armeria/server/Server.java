@@ -102,6 +102,7 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     private ServerConfig config;
+    @Nullable
     private HttpServerPipelineConfigurator pipelineConfigurator;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -400,9 +401,10 @@ public final class Server implements ListenableAsyncCloseable {
 
     /**
      * Reconfigure Server configuration.
-     * @param rs ReconfigurableServer.
      */
-    public void reconfigure(ReconfigurableServer rs) {
+    public void reconfigure(ServerConfigurator rs) {
+        requireNonNull(rs, "serverconfigurator");
+        requireNonNull(pipelineConfigurator, "pipelineConfigurator");
         final ServerBuilder sb = builder();
         rs.reconfigure(sb);
         config = sb.buildServerConfig(config());
@@ -486,6 +488,7 @@ public final class Server implements ListenableAsyncCloseable {
                                        config,
                                        port, sslContexts,
                                        gracefulShutdownSupport);
+
             b.childHandler(pipelineConfigurator);
             return b.bind(port.localAddress());
         }

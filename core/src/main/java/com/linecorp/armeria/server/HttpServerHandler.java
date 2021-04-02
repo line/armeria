@@ -153,7 +153,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private final ServerConfig config;
+    private ServerConfig config;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
@@ -682,6 +682,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return RequestId.random();
         } else {
             return id;
+        }
+    }
+
+    protected void performConfigCheck(ServerConfig config) {
+        // This is temporary hack to switch original config with new config for older HttpServerHandlers.
+        // TODO - Figure out a way to close the open channel so these handlers get garbage collected and
+        // not serve any traffic.
+        if (this.config != config) {
+            this.config = config;
         }
     }
 }
