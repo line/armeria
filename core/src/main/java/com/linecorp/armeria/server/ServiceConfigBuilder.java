@@ -25,7 +25,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.metric.ServiceNaming;
+import com.linecorp.armeria.common.ServiceNaming;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters {

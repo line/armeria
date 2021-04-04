@@ -46,13 +46,14 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.ServiceNaming;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.metric.ServiceNaming;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -1053,18 +1054,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 if (config != null) {
                     newServiceName = ServiceNaming.fullTypeName().convert(sctx);
                 } else if (rpcReq != null) {
-                    final String serviceType = rpcReq.serviceType().getName();
-                    if ("com.linecorp.armeria.internal.common.grpc.GrpcLogUtil".equals(serviceType)) {
-                        // Parse gRPC serviceName and methodName
-                        final String fullMethodName = rpcReq.method();
-                        final int methodIndex = fullMethodName.lastIndexOf('/');
-                        newServiceName = fullMethodName.substring(0, methodIndex);
-                        if (newName == null) {
-                            newName = fullMethodName.substring(methodIndex + 1);
-                        }
-                    } else {
-                        newServiceName = serviceType;
-                    }
+                    newServiceName = ServiceNamingUtil.fullTypeRpcServiceName(rpcReq);
                 }
             }
 

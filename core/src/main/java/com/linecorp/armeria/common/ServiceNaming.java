@@ -13,15 +13,14 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  */
-package com.linecorp.armeria.common.metric;
+package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
-import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -58,26 +57,9 @@ public interface ServiceNaming {
         return ctx -> {
             final RpcRequest rpcReq = ctx.rpcRequest();
             if (rpcReq != null) {
-                final String serviceType = rpcReq.serviceType().getName();
-                if ("com.linecorp.armeria.internal.common.grpc.GrpcLogUtil".equals(serviceType)) {
-                    // Parse gRPC serviceName and methodName
-                    final String fullMethodName = rpcReq.method();
-                    final int methodIndex = fullMethodName.lastIndexOf('/');
-                    return fullMethodName.substring(0, methodIndex);
-                } else {
-                    return serviceType;
-                }
+                return ServiceNamingUtil.fullTypeRpcServiceName(rpcReq);
             }
-
-            Unwrappable unwrappable = ctx.config().service();
-            for (;;) {
-                final Unwrappable delegate = unwrappable.unwrap();
-                if (delegate != unwrappable) {
-                    unwrappable = delegate;
-                    continue;
-                }
-                return delegate.getClass().getName();
-            }
+            return ServiceNamingUtil.fullTypeHttpServiceName(ctx.config().service());
         };
     }
 

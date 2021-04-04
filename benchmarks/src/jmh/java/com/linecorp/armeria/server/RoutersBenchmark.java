@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.metric.ServiceNaming;
+import com.linecorp.armeria.common.ServiceNaming;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class RoutersBenchmark {
