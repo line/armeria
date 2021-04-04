@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -172,7 +173,6 @@ public final class RequestContextUtil {
      * Returns the current {@link RequestContext} in the {@link RequestContextStorage}.
      */
     @Nullable
-    @SuppressWarnings("unchecked")
     public static <T extends RequestContext> T get() {
         return requestContextStorage.currentOrNull();
     }
@@ -182,7 +182,6 @@ public final class RequestContextUtil {
      * returns the old {@link RequestContext}.
      */
     @Nullable
-    @SuppressWarnings("unchecked")
     public static <T extends RequestContext> T getAndSet(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
         return requestContextStorage.push(ctx);
@@ -215,6 +214,47 @@ public final class RequestContextUtil {
     public static void pop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
         requestContextStorage.pop(current, toRestore);
+    }
+
+    /**
+     * Invokes {@link RequestContext#hook()} and returns {@link SafeCloseable} which
+     * pops the current {@link RequestContext} in the storage and pushes back the specified {@code toRestore}.
+     */
+    public static SafeCloseable invokeHookAndPop(RequestContext current, @Nullable RequestContext toRestore) {
+        requireNonNull(current, "current");
+
+        final SafeCloseable closeable = invokeHook(current);
+        if (closeable == null) {
+            return () -> requestContextStorage.pop(current, toRestore);
+        } else {
+            return () -> {
+                closeable.close();
+                requestContextStorage.pop(current, toRestore);
+            };
+        }
+    }
+
+    @Nullable
+    private static SafeCloseable invokeHook(RequestContext ctx) {
+        final Supplier<? extends SafeCloseable> hook = ctx.hook();
+        if (hook == null) {
+            return null;
+        }
+
+        final SafeCloseable closeable;
+        try {
+            closeable = hook.get();
+        } catch (Throwable t) {
+            logger.warn("Unexpected exception while executing RequestContext.hook().get(). ctx: {}", ctx, t);
+            return null;
+        }
+
+        if (closeable == null) {
+            logger.warn("RequestContext.hook().get() returned null. ctx: {}", ctx);
+            return null;
+        }
+
+        return closeable;
     }
 
     private RequestContextUtil() {}

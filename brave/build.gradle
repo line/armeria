@@ -3,5 +3,6 @@ dependencies {
     api 'io.zipkin.brave:brave-instrumentation-http'
 
     testImplementation project(':thrift0.13')
+    testImplementation 'io.zipkin.brave:brave-context-slf4j'
     testImplementation 'io.zipkin.brave:brave-instrumentation-http-tests'
 }

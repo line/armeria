@@ -32,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -52,6 +53,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
@@ -78,6 +80,11 @@ public final class DefaultServiceRequestContext
             additionalResponseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, Supplier>
+            contextHookUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            DefaultServiceRequestContext.class, Supplier.class, "contextHook");
+
     private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
 
     private final Channel ch;
@@ -98,14 +105,14 @@ public final class DefaultServiceRequestContext
     private ContextAwareEventLoop contextAwareEventLoop;
     @Nullable
     private ContextAwareScheduledExecutorService blockingTaskExecutor;
-    @Nullable
-    private Runnable requestTimeoutHandler;
     private long maxRequestLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseHeadersUpdater`
     private volatile HttpHeaders additionalResponseHeaders;
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseTrailersUpdater`
     private volatile HttpHeaders additionalResponseTrailers;
+    @Nullable // Updated via `contextHookUpdater`
+    private volatile Supplier<? extends SafeCloseable> contextHook;
 
     @Nullable
     private String strVal;
@@ -273,6 +280,37 @@ public final class DefaultServiceRequestContext
     @Override
     public ByteBufAllocator alloc() {
         return ch.alloc();
+    }
+
+    @Override
+    public void hook(Supplier<? extends SafeCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        for (;;) {
+            final Supplier<? extends SafeCloseable> oldContextHook = this.contextHook;
+
+            final Supplier<? extends SafeCloseable> newContextHook;
+            if (oldContextHook == null) {
+                newContextHook = contextHook;
+            } else {
+                newContextHook = () -> {
+                    final SafeCloseable closeable1 = oldContextHook.get();
+                    final SafeCloseable closeable2 = contextHook.get();
+                    return () -> {
+                        closeable1.close();
+                        closeable2.close();
+                    };
+                };
+            }
+
+            if (contextHookUpdater.compareAndSet(this, oldContextHook, newContextHook)) {
+                break;
+            }
+        }
+    }
+
+    @Override
+    public Supplier<? extends SafeCloseable> hook() {
+        return contextHook;
     }
 
     @Nullable

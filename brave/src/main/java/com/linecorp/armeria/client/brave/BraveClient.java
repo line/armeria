@@ -110,6 +110,9 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
 
+        // Make the span the "current span" when the ctx is pushed
+        ctx.hook(() -> tracer.withSpanInScope(span)::close);
+
         // For no-op spans, we only need to inject into headers and don't set any other attributes.
         if (span.isNoop()) {
             try (SpanInScope ignored = tracer.withSpanInScope(span)) {

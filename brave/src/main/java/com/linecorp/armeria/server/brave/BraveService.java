@@ -83,6 +83,9 @@ public final class BraveService extends SimpleDecoratingHttpService {
         final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         final Span span = handler.handleReceive(braveReq);
 
+        // Make the span the "current span" when the ctx is pushed
+        ctx.hook(() -> tracer.withSpanInScope(span)::close);
+
         // For no-op spans, nothing special to do.
         if (span.isNoop()) {
             try (SpanInScope ignored = tracer.withSpanInScope(span)) {

@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -29,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
 /**
@@ -143,6 +145,17 @@ public class ClientRequestContextWrapper
     @Override
     public boolean isTimedOut() {
         return delegate().isTimedOut();
+    }
+
+    @Override
+    public void hook(Supplier<? extends SafeCloseable> onPush) {
+        delegate().hook(onPush);
+    }
+
+    @Nullable
+    @Override
+    public Supplier<? extends SafeCloseable> hook() {
+        return delegate().hook();
     }
 
     @Override
