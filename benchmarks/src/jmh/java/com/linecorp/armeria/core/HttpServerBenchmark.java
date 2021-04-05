@@ -99,6 +99,7 @@ public class HttpServerBenchmark {
                                  counters.incrementNumSuccesses();
                              }
                              return null;
-                         }));
+                         })
+                         .get());
     }
 }
