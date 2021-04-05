@@ -110,7 +110,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathBar.verboseResponses()).isTrue();
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .build();
-        assertThat(pathBar.defaultServiceNaming().convert(sctx)).isEqualTo(defaultServiceName);
+        assertThat(pathBar.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(pathBar.defaultLogName()).isEqualTo(defaultLogName);
         final ServiceConfig pathFoo = virtualHost.serviceConfigs().get(1);
         assertThat(pathFoo.route().paths()).allMatch("/path/foo"::equals);
@@ -119,7 +119,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathFoo.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(pathFoo.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(pathFoo.verboseResponses()).isTrue();
-        assertThat(pathFoo.defaultServiceNaming().convert(sctx)).isEqualTo(defaultServiceName);
+        assertThat(pathFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(pathFoo.defaultLogName()).isEqualTo(defaultLogName);
     }
 

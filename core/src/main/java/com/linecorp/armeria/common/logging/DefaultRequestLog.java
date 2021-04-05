@@ -46,7 +46,6 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.ServiceNaming;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -56,6 +55,7 @@ import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceNaming;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
@@ -1040,7 +1040,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             if (ctx instanceof ServiceRequestContext) {
                 sctx = ((ServiceRequestContext) ctx);
                 config = sctx.config();
-                newServiceName = config.defaultServiceNaming().convert(sctx);
+                newServiceName = config.defaultServiceNaming().serviceName(sctx);
                 newName = config.defaultLogName();
             }
 
@@ -1052,7 +1052,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             // Set serviceName from ServiceType or innermost class name
             if (newServiceName == null) {
                 if (config != null) {
-                    newServiceName = ServiceNaming.fullTypeName().convert(sctx);
+                    newServiceName = ServiceNaming.fullTypeName().serviceName(sctx);
                 } else if (rpcReq != null) {
                     newServiceName = ServiceNamingUtil.fullTypeRpcServiceName(rpcReq);
                 }

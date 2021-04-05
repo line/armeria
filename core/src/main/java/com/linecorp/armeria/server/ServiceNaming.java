@@ -13,20 +13,15 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.RpcService;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceBindingBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Generates the default name of a {@link Service} from its {@link ServiceRequestContext}.
@@ -71,7 +66,7 @@ public interface ServiceNaming {
      */
     static ServiceNaming simpleTypeName() {
         return ctx -> {
-            final String fullTypeName = fullTypeName().convert(ctx);
+            final String fullTypeName = fullTypeName().serviceName(ctx);
             return fullTypeName.substring(fullTypeName.lastIndexOf('.') + 1);
         };
     }
@@ -120,5 +115,5 @@ public interface ServiceNaming {
      * }</pre>
      */
     @Nullable
-    String convert(ServiceRequestContext ctx);
+    String serviceName(ServiceRequestContext ctx);
 }

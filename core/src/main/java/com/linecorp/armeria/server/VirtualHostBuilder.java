@@ -61,7 +61,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.ServiceNaming;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;

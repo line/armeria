@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.ServiceNaming;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class ServiceTest {

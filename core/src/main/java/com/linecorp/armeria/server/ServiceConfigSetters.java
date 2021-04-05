@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import java.time.Duration;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.ServiceNaming;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.logging.AccessLogWriter;

@@ -26,7 +26,6 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.ServiceNaming;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**

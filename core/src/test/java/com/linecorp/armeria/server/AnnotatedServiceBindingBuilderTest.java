@@ -136,7 +136,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.verboseResponses()).isTrue();
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .build();
-        assertThat(homeFoo.defaultServiceNaming().convert(sctx)).isEqualTo(defaultServiceName);
+        assertThat(homeFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(homeFoo.defaultLogName()).isEqualTo(defaultLogName);
         final ServiceConfig homeBar = server.config().serviceConfigs().get(1);
         assertThat(homeBar.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
@@ -144,7 +144,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeBar.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeBar.verboseResponses()).isTrue();
-        assertThat(homeBar.defaultServiceNaming().convert(sctx)).isEqualTo(defaultServiceName);
+        assertThat(homeBar.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(homeBar.defaultLogName()).isEqualTo(defaultLogName);
     }
 

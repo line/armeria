@@ -122,7 +122,7 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfig.defaultServiceNaming()).isNotNull();
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .build();
-        assertThat(serviceConfig.defaultServiceNaming().convert(sctx)).isEqualTo("serviceNaming");
+        assertThat(serviceConfig.defaultServiceNaming().serviceName(sctx)).isEqualTo("serviceNaming");
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(1024);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.accessLogWriter()).isSameAs(accessLogWriter);
