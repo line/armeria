@@ -117,11 +117,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
         this.defaultServiceName = defaultServiceName;
-        return defaultServiceNaming(ServiceNaming.of(defaultServiceName));
+        this.defaultServiceNaming = ServiceNaming.of(defaultServiceName);
+        return this;
     }
 
     @Override
     public ServiceConfigBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        this.defaultServiceName = null;
         this.defaultServiceNaming = requireNonNull(defaultServiceNaming, "defaultServiceNaming");
         return this;
     }
