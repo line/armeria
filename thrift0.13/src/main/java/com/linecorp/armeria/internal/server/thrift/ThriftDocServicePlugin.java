@@ -543,8 +543,8 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                     return (String) legacyTSerializerToString.invoke(serializer, exampleTBase,
                                                                      StandardCharsets.UTF_8.name());
                 } catch (Throwable ex) {
-                    throw new IllegalStateException("Unexpected exception while serializing " + exampleTBase,
-                                                    ex);
+                    throw new IllegalStateException(
+                            "Unexpected exception while serializing " + exampleTBase, ex);
                 }
             } else {
                 // TSerializer.toString(TBase, charset) was removed in Thrift 0.14.0
