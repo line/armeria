@@ -74,6 +74,15 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         }
         final ScheduledHealthCheckerImpl newlyScheduled =
                 new ScheduledHealthCheckerImpl(healthChecker, fallbackTtl, eventExecutor);
+        // This spin avoid the impl is not null when this instance is shared by multiple servers.
+        // e.g. Server A start -> Server A stop(just finish decrementAndGet and get 0) ->
+        // Server B start(just finis getAndIncrement and get 0). And there is a window that impl is not set to
+        // null by Server A's stopHealthChecker. So Server B's startHealthChecker need to spin until Server
+        // A's stopHealthChecker complete.
+
+        // And this method only allow the first request can start the schedule by requestCount#getAndIncrement,
+        // if caller calling startHealthChecker/stopHealthChecker correctly(each pair should be called
+        // sequentially). So there should be no spin longer than expected.
         for (;;) {
             if (impl.compareAndSet(null, newlyScheduled)) {
                 newlyScheduled.addListener(onHealthCheckerUpdate);
@@ -85,21 +94,19 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
 
     void stopHealthChecker() {
         final int currentCount = requestCount.decrementAndGet();
+        // Must be called after startHealthChecker, so it's always greater than or equal to 0.
+        assert currentCount >= 0;
         if (currentCount != 0) {
             return;
         }
 
-        for (;;) {
-            final ScheduledHealthCheckerImpl current = impl.get();
-            if (current == null) {
-                continue;
-            }
-            if (impl.compareAndSet(current, null)) {
-                current.stopHealthChecker();
-                current.removeListener(onHealthCheckerUpdate);
-                break;
-            }
-        }
+        final ScheduledHealthCheckerImpl current = impl.get();
+        // Must be called after startHealthChecker, so it's always non null.
+        assert current != null;
+
+        impl.compareAndSet(current, null);
+        current.stopHealthChecker();
+        current.removeListener(onHealthCheckerUpdate);
     }
 
     /**
