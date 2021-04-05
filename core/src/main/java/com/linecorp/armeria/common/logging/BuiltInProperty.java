@@ -156,6 +156,13 @@ public enum BuiltInProperty {
      */
     REQ_ID("req.id", log -> log.context().id().text()),
     /**
+     * {@code "req.root_id"} - the ID of the root service request.
+     */
+    REQ_ROOT_ID("req.root_id", log -> {
+        final ServiceRequestContext rootCtx = log.context().root();
+        return rootCtx != null ? rootCtx.id().text() : null;
+    }),
+    /**
      * {@code "req.path"} - the path of the request.
      */
     REQ_PATH("req.path", log -> log.context().path()),
