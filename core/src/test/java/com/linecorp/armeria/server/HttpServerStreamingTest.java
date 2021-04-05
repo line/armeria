@@ -45,6 +45,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -60,6 +62,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -177,11 +180,18 @@ class HttpServerStreamingTest {
             // is undesirable.
             // However, HTTP/2 can wait for the response to be sent, because the following request uses the
             // next stream.
-            assertThatThrownBy(() -> client.post("/non-existent", content).aggregate().join())
-                    .hasCauseInstanceOf(ClosedSessionException.class);
+            try(ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                assertThatThrownBy(() -> client.post("/non-existent", content).aggregate().join())
+                        .hasCauseInstanceOf(ClosedSessionException.class);
+                final ResponseHeaders responseHeaders =
+                        captor.get().log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS)
+                              .responseHeaders();
+                // Even though the request is failed, the client got the 404 response headers.
+                assertThat(responseHeaders.status()).isSameAs(HttpStatus.NOT_FOUND);
+            }
         } else {
             final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
-            assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
             assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
         }
     }
