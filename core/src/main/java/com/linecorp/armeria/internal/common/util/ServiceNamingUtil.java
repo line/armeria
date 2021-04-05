@@ -21,7 +21,7 @@ import com.linecorp.armeria.server.HttpService;
 
 public final class ServiceNamingUtil {
 
-    private static final String GRPC_SERVICE_NAME = "com.linecorp.armeria.internal.common.grpc.GrpcLogUtil";
+    public static final String GRPC_SERVICE_NAME = "com.linecorp.armeria.internal.common.grpc.GrpcLogUtil";
 
     public static String fullTypeRpcServiceName(RpcRequest rpcReq) {
         final String serviceType = rpcReq.serviceType().getName();
