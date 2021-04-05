@@ -63,7 +63,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
  * The {@link Parser} for JSON is applied only when the {@code content-type} of
  * the {@link RequestHeaders} is either {@link MediaType#JSON} or ends with {@code +json}.
  *
- * <h3>Conversion of multiple Protobuf messages</h3>
+ * <h2>Conversion of multiple Protobuf messages</h2>
  * A sequence of Protocol Buffer messages can not be handled by this {@link RequestConverterFunction},
  * because Protocol Buffers wire format is not self-delimiting.
  * See

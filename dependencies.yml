@@ -337,7 +337,7 @@ net.javacrumbs.json-unit:
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 com.guardsquare:
-  proguard-gradle: { version: '7.0.1' }
+  proguard-gradle: { version: '7.1.0-beta1' }
 
 net.shibboleth.utilities:
   java-support: { version: '7.5.1' }
@@ -474,7 +474,7 @@ org.jetbrains.kotlinx:
   kotlinx-coroutines-rx2: { version: *KOTLIN_COROUTINE_VERSION }
 
 org.jlleitschuh.gradle:
-  ktlint-gradle: { version: '9.4.1' }
+  ktlint-gradle: { version: '10.0.0' }
 
 org.jooq:
   joor: { version: '0.9.13' }
@@ -578,3 +578,23 @@ com.github.vladimir-bukhtoyarov:
     version: '4.10.0'
     javadocs:
     - https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/4.10.0/
+
+org.jboss.resteasy:
+  resteasy-core-spi:
+    version: &RESTEASY_VERSION '4.5.8.Final'
+    javadocs:
+    - https://docs.jboss.org/resteasy/docs/4.5.8.Final/javadocs/
+  resteasy-core: { version: *RESTEASY_VERSION }
+  resteasy-client: { version: *RESTEASY_VERSION }
+  resteasy-jackson2-provider: { version: *RESTEASY_VERSION }
+
+# "provided" dependency required by RESTEasy 'resteasy-core-spi'
+org.jboss.logging:
+  jboss-logging:
+    version: '3.4.1.Final'
+    javadocs:
+    - https://javadoc.io/doc/org.jboss.logging/jboss-logging/3.4.1.Final/
+  jboss-logging-annotations:
+    version: '2.2.1.Final'
+    javadocs:
+    - https://javadoc.io/doc/org.jboss.logging/jboss-logging-annotations/2.2.1.Final/

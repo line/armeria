@@ -85,10 +85,11 @@ allprojects {
 
 task checkJavaVersion {
     doLast {
-        if (JavaVersion.current().majorVersion.toInteger() < 12) {
-            throw new GradleException("The Java version used (${JavaVersion.current()}) is too old to " +
-                    "build Armeria. Please use at least JDK 12. You can download a compatible JDK from " +
-                    "https://adoptopenjdk.net/")
+        if (JavaVersion.current().majorVersion.toInteger() < 11) {
+            throw new GradleException(
+                    "Your JDK (version ${JavaVersion.current()}) is too old to build Armeria. " +
+                    "Please check the build requirements at " +
+                    "https://armeria.dev/community/developer-guide/")
         }
     }
 }
@@ -207,9 +208,9 @@ allprojects {
     }
 }
 
-// Require to use JDK 14 when releasing.
+// Require to use JDK 15 when releasing.
 tasks.release.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_14) {
-        throw new IllegalStateException("You must release using JDK 14.");
+    if (JavaVersion.current() != JavaVersion.VERSION_15) {
+        throw new IllegalStateException("You must release using JDK 15.");
     }
 }
