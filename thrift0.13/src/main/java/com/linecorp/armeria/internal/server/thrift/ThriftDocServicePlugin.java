@@ -21,7 +21,11 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -91,6 +95,22 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     private static final TypeSignature DOUBLE = TypeSignature.ofBase("double");
     private static final TypeSignature STRING = TypeSignature.ofBase("string");
     private static final TypeSignature BINARY = TypeSignature.ofBase("binary");
+
+    @Nullable
+    private static final MethodHandle legacyTSerializerToString;
+
+    static {
+        MethodHandle methodHandle = null;
+        try {
+            methodHandle =
+                    MethodHandles.publicLookup()
+                                 .findVirtual(TSerializer.class, "toString",
+                                              MethodType.methodType(String.class, TBase.class, String.class));
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            // Use TSerializer.toString(TBase) instead.
+        }
+        legacyTSerializerToString = methodHandle;
+    }
 
     private final ThriftDocStringExtractor docstringExtractor = new ThriftDocStringExtractor();
 
@@ -518,8 +538,18 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         final TBase<?, ?> exampleTBase = (TBase<?, ?>) exampleRequest;
         try {
             final TSerializer serializer = new TSerializer(ThriftProtocolFactories.TEXT);
-            // TSerializer.toString(TBase, charset) was removed in Thrift 0.14.0
-            return serializer.toString(exampleTBase);
+            if (legacyTSerializerToString != null) {
+                try {
+                    return (String) legacyTSerializerToString.invoke(serializer, exampleTBase,
+                                                                     StandardCharsets.UTF_8.name());
+                } catch (Throwable ex) {
+                    throw new IllegalStateException("Unexpected exception while serializing " + exampleTBase,
+                                                    ex);
+                }
+            } else {
+                // TSerializer.toString(TBase, charset) was removed in Thrift 0.14.0
+                return serializer.toString(exampleTBase);
+            }
         } catch (TException e) {
             throw new Error("should never reach here", e);
         }
