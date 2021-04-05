@@ -13,9 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-import JSONbig from 'json-bigint';
-import jsonPrettify from '../json-prettify';
 import { Method } from '../specification';
 
 import Transport from './transport';
@@ -37,7 +34,7 @@ export default class GrpcUnframedTransport extends Transport {
     headers: { [name: string]: string },
     bodyJson?: string,
     endpointPath?: string,
-  ): Promise<string> {
+  ): Promise<Response> {
     if (!bodyJson) {
       throw new Error('A gRPC request must have body.');
     }
@@ -49,17 +46,10 @@ export default class GrpcUnframedTransport extends Transport {
       hdrs.set(name, value);
     }
 
-    const httpResponse = await fetch(endpoint.pathMapping, {
+    return fetch(endpoint.pathMapping, {
       headers: hdrs,
       method: 'POST',
       body: bodyJson,
     });
-    const contentType = httpResponse.headers.get('content-type');
-    const json = JSONbig.parse(await httpResponse.text());
-    const text = JSONbig.stringify(json);
-    if (contentType && contentType.startsWith('application/json')) {
-      return jsonPrettify(text);
-    }
-    return text;
   }
 }

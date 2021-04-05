@@ -16,6 +16,11 @@
 
 package com.linecorp.armeria.server.scalapb
 
+import java.lang.invoke.{MethodHandle, MethodHandles, MethodType}
+import java.lang.reflect.{ParameterizedType, Type}
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.ConcurrentMap
+
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet, MapMaker}
 import com.google.protobuf.CodedInputStream
@@ -26,10 +31,6 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.ResultType._
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil._
 import com.linecorp.armeria.server.scalapb.ScalaPbRequestConverterFunction._
-import java.lang.invoke.{MethodHandle, MethodHandles, MethodType}
-import java.lang.reflect.{ParameterizedType, Type}
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.ConcurrentMap
 import javax.annotation.Nullable
 import scalapb.json4s.Parser
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion, GeneratedSealedOneof}
@@ -64,9 +65,6 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion, GeneratedSealedOneo
  */
 @UnstableApi
 object ScalaPbRequestConverterFunction {
-
-  private val methodCache: ConcurrentMap[Class[_], MethodHandle] =
-    new MapMaker().weakKeys.makeMap()
 
   private val toOneofMethodCache: ConcurrentMap[Class[_], MethodHandle] =
     new MapMaker().weakKeys.makeMap()
@@ -110,29 +108,6 @@ object ScalaPbRequestConverterFunction {
     if (defaultInstance == unknownGeneratedMessage)
       throw new IllegalStateException(s"Failed to find a static defaultInstance() method from $clazz")
     defaultInstance
-  }
-
-  /**
-   * Returns a [[java.lang.invoke.MethodHandle]] for [[scalapb.GeneratedMessageCompanion.merge()]].
-   */
-  private def getMergeMethod(clazz: Class[_]): MethodHandle = {
-    val methodHandle: MethodHandle = methodCache.computeIfAbsent(
-      clazz,
-      key =>
-        try {
-          val genClass = extractGeneratedMessageType(key)
-          val lookup = MethodHandles.publicLookup()
-          val mt = MethodType.methodType(genClass, genClass, classOf[CodedInputStream])
-          lookup.findStatic(genClass, "merge", mt)
-        } catch {
-          case _: NoSuchFieldException | _: ClassNotFoundException =>
-            unknownMethodHandle
-        }
-    )
-
-    if (methodHandle eq unknownMethodHandle)
-      throw new IllegalStateException(s"Failed to find a static merge method from $clazz")
-    methodHandle
   }
 
   /**
@@ -231,12 +206,12 @@ final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultT
 
     if (resultType == ResultType.PROTOBUF ||
       (resultType == ResultType.UNKNOWN && isProtobufMessage(expectedResultType))) {
-      val mergeMH = getMergeMethod(expectedResultType)
       if (contentType == null || isProtobuf(contentType)) {
         val is = request.content.toInputStream
         try {
-          val message = mergeMH
-            .invoke(getDefaultInstance(expectedResultType), CodedInputStream.newInstance(is))
+          val message = getDefaultInstance(expectedResultType).companion
+            .asInstanceOf[GeneratedMessageCompanion[GeneratedMessage]]
+            .merge(getDefaultInstance(expectedResultType), CodedInputStream.newInstance(is))
             .asInstanceOf[GeneratedMessage]
           return toGenerateMessageOrOneof(expectedResultType, message).asInstanceOf[Object]
         } finally if (is != null)
