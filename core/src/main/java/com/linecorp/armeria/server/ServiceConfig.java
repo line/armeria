@@ -189,7 +189,7 @@ public final class ServiceConfig {
      *   <li>{@link HttpService} and annotated service - an innermost class name</li>
      * </ul>
      *
-     * @deprecated Use {@link #defaultServiceNaming} instead.
+     * @deprecated Use {@link #defaultServiceNaming()} instead.
      */
     @Nullable
     @Deprecated
