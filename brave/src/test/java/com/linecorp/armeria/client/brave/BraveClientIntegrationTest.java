@@ -31,13 +31,9 @@ import org.junit.runners.Parameterized.Parameters;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextCaptor;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -154,20 +150,14 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     @Override
     protected void get(WebClient client, String path, BiConsumer<Integer, Throwable> callback) {
-        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
-            final HttpResponse res = client.get(path);
-            final ClientRequestContext ctx = ctxCaptor.get();
-            res.aggregate().handle((response, cause) -> {
-                try (SafeCloseable ignored = ctx.push()) {
-                    if (cause == null) {
-                        callback.accept(response.status().code(), null);
-                    } else {
-                        callback.accept(null, cause);
-                    }
-                }
-                return null;
-            });
-        }
+        client.get(path).aggregate().handle((response, cause) -> {
+            if (cause == null) {
+                callback.accept(response.status().code(), null);
+            } else {
+                callback.accept(null, cause);
+            }
+            return null;
+        });
     }
 
     @Override
