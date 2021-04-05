@@ -135,9 +135,9 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         ctx.updateRequest(req);
 
         if (currentTraceContext != null) {
-            // Run the scope decorators when the ctx is push to the thread local.
-            ctx.hook(() -> currentTraceContext.decorateScope(
-                    span.context(), CLIENT_REQUEST_DECORATING_SCOPE)::close);
+            // Run the scope decorators when the ctx is pushed to the thread local.
+            ctx.hook(() -> currentTraceContext.decorateScope(span.context(),
+                                                             CLIENT_REQUEST_DECORATING_SCOPE)::close);
         }
 
         // For no-op spans, we only need to inject into headers and don't set any other attributes.
