@@ -170,6 +170,11 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
     }
 
+    @Override
+    public Scope decorateScope(TraceContext context, Scope scope) {
+        return super.decorateScope(context, scope);
+    }
+
     private Scope createScopeForRequestThread(RequestContext ctx, @Nullable TraceContext currentSpan) {
         final TraceContext previous = traceContext(ctx);
         setTraceContext(ctx, currentSpan);

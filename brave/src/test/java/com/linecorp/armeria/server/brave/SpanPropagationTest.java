@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.brave.BraveClient;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -77,6 +78,7 @@ class SpanPropagationTest {
     void mdcScopeDecorator() throws InterruptedException {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(BraveClient.newDecorator(tracing))
+                                          .decorator(LoggingClient.newDecorator())
                                           .build();
 
         final AtomicReference<Map<String, String>> clientMdcContextRef = new AtomicReference<>();
