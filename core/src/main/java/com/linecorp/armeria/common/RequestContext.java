@@ -460,7 +460,7 @@ public interface RequestContext {
      * {@link RequestContext} is popped from the thread-local stack.
      */
     @Nullable
-    Supplier<? extends SafeCloseable> hook();
+    Supplier<SafeCloseable> hook();
 
     /**
      * Immediately run a given {@link Runnable} with this context.

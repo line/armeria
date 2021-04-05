@@ -121,7 +121,7 @@ public final class DefaultClientRequestContext
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
     private volatile HttpHeaders additionalRequestHeaders;
     @Nullable // Updated via `contextHookUpdater`
-    private volatile Supplier<? extends SafeCloseable> contextHook;
+    private volatile Supplier<SafeCloseable> contextHook;
 
     @Nullable
     private String strVal;
@@ -539,7 +539,7 @@ public final class DefaultClientRequestContext
     }
 
     @Override
-    public Supplier<? extends SafeCloseable> hook() {
+    public Supplier<SafeCloseable> hook() {
         return contextHook;
     }
 
