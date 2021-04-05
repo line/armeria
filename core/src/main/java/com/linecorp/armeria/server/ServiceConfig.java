@@ -136,6 +136,13 @@ public final class ServiceConfig {
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
     }
 
+    ServiceConfig withRoute(Route route) {
+        requireNonNull(route, "route");
+        return new ServiceConfig(virtualHost, route, service, defaultServiceName, defaultLogName,
+                                 requestTimeoutMillis, maxRequestLength, verboseResponses,
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
+    }
+
     /**
      * Returns the {@link VirtualHost} the {@link #service()} belongs to.
      */

@@ -95,9 +95,8 @@ final class DefaultRoute implements Route {
             // '415 Unsupported Media Type' and '406 Not Acceptable' is more specific than
             // '405 Method Not Allowed'. So 405 would be set if there is no status code set before.
             if (routingCtx.deferredStatusException() == null) {
-                routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED));
+                deferStatusException(routingCtx, HttpStatus.METHOD_NOT_ALLOWED);
             }
-
             return emptyOrCorsPreflightResult(routingCtx, builder);
         }
 
@@ -118,7 +117,7 @@ final class DefaultRoute implements Route {
                 if (isRouteDecorator) {
                     return RoutingResult.empty();
                 }
-                routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
+                deferStatusException(routingCtx, HttpStatus.UNSUPPORTED_MEDIA_TYPE);
                 return emptyOrCorsPreflightResult(routingCtx, builder);
             }
         }
@@ -160,7 +159,7 @@ final class DefaultRoute implements Route {
                 if (isRouteDecorator) {
                     return RoutingResult.empty();
                 }
-                routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
+                deferStatusException(routingCtx, HttpStatus.NOT_ACCEPTABLE);
                 return emptyOrCorsPreflightResult(routingCtx, builder);
             }
         }
@@ -178,6 +177,20 @@ final class DefaultRoute implements Route {
             }
         }
         return builder.build();
+    }
+
+    private void deferStatusException(RoutingContext routingCtx, HttpStatus httpStatus) {
+        if (isFallback) {
+            // Do not defer an exception if this route is a fallback route, which is matched
+            // only when no configured route was matched.
+            //
+            // For example, assume that a route '/a/b/c/' supports HTTP GET method only.
+            // Its fallback route would be added as a path of '/a/b/c' with supporting HTTP GET method as well.
+            // In this case, '404 not found' would make sense rather than '405 method not allowed'
+            // if a 'DELETE /a/b/c' request is received, because the fallback route wasn't specified by a user.
+            return;
+        }
+        routingCtx.deferStatusException(HttpStatusException.of(httpStatus));
     }
 
     private static RoutingResult emptyOrCorsPreflightResult(RoutingContext routingCtx,
@@ -237,6 +250,18 @@ final class DefaultRoute implements Route {
     @Override
     public boolean isFallback() {
         return isFallback;
+    }
+
+    @Override
+    public RouteBuilder toBuilder() {
+        return new RouteBuilder()
+                .pathMapping(pathMapping)
+                .methods(methods)
+                .consumes(consumes)
+                .produces(produces)
+                .matchesParams(paramPredicates)
+                .matchesHeaders(headerPredicates)
+                .fallback(isFallback);
     }
 
     @Override

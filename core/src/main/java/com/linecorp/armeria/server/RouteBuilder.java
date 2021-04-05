@@ -56,7 +56,7 @@ public final class RouteBuilder {
 
     static final Route CATCH_ALL_ROUTE = new RouteBuilder().catchAll().build();
 
-    static final Route FALLBACK_ROUTE = new RouteBuilder(true).catchAll().build();
+    static final Route FALLBACK_ROUTE = new RouteBuilder().fallback(true).catchAll().build();
 
     @Nullable
     private PathMapping pathMapping;
@@ -74,15 +74,9 @@ public final class RouteBuilder {
     /**
      * See {@link Route#isFallback()}.
      */
-    private final boolean isFallback;
+    private boolean isFallback;
 
-    RouteBuilder() {
-        this(false);
-    }
-
-    RouteBuilder(boolean isFallback) {
-        this.isFallback = isFallback;
-    }
+    RouteBuilder() {}
 
     /**
      * Sets the {@link Route} to match the specified {@code pathPattern}. e.g.
@@ -427,6 +421,15 @@ public final class RouteBuilder {
     }
 
     /**
+     * Sets whether this {@link Route} is a fallback, which is matched only when no configured {@link Route}
+     * was matched.
+     */
+    RouteBuilder fallback(boolean isFallback) {
+        this.isFallback = isFallback;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Route} based on the properties of this builder.
      */
     public Route build() {
@@ -442,7 +445,8 @@ public final class RouteBuilder {
 
     @Override
     public int hashCode() {
-        return Objects.hash(pathMapping, methods, consumes, produces);
+        return Objects.hash(pathMapping, methods, consumes, produces,
+                            paramPredicates, headerPredicates, isFallback);
     }
 
     @Override
@@ -461,7 +465,8 @@ public final class RouteBuilder {
                consumes.equals(that.consumes) &&
                produces.equals(that.produces) &&
                paramPredicates.equals(that.paramPredicates) &&
-               headerPredicates.equals(that.headerPredicates);
+               headerPredicates.equals(that.headerPredicates) &&
+               isFallback == that.isFallback;
     }
 
     @Override
@@ -473,6 +478,7 @@ public final class RouteBuilder {
                           .add("produces", produces)
                           .add("paramPredicates", paramPredicates)
                           .add("headerPredicates", headerPredicates)
+                          .add("isFallback", isFallback)
                           .toString();
     }
 
