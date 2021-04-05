@@ -21,6 +21,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Server;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -39,6 +40,7 @@ public interface HealthChecker {
      *
      * @see #of(Supplier, Duration, EventExecutor)
      */
+    @UnstableApi
     static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
                             Duration fallbackTtl) {
         return new ScheduledHealthChecker(healthChecker, fallbackTtl, CommonPools.workerGroup().next());
@@ -54,6 +56,7 @@ public interface HealthChecker {
      * @param fallbackTtl used when healthChecker throws exception or returned a failed {@link CompletionStage}
      * @param eventExecutor the executor executing supplied health checker
      */
+    @UnstableApi
     static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
                             Duration fallbackTtl, EventExecutor eventExecutor) {
         return new ScheduledHealthChecker(healthChecker, fallbackTtl, eventExecutor);

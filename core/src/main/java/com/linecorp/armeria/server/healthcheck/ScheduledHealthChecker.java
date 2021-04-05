@@ -54,8 +54,8 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         this.fallbackTtl = facllbackTtl;
         this.eventExecutor = eventExecutor;
 
-        isHealthy = new AtomicBoolean(false);
-        requestCount = new AtomicInteger(0);
+        isHealthy = new AtomicBoolean();
+        requestCount = new AtomicInteger();
         impl = new AtomicReference<>();
         onHealthCheckerUpdate = latestValue -> {
             isHealthy.set(latestValue.isHealthy());
@@ -69,7 +69,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     }
 
     void startHealthChecker() {
-        if (requestCount.incrementAndGet() != 1) {
+        if (requestCount.getAndIncrement() != 0) {
             return;
         }
         final ScheduledHealthCheckerImpl newlyScheduled =
@@ -84,13 +84,8 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     }
 
     void stopHealthChecker() {
-        final int previousCount = requestCount.getAndUpdate(count -> {
-            if (count > 0) {
-                return count - 1;
-            }
-            return 0;
-        });
-        if (previousCount != 1) {
+        final int currentCount = requestCount.decrementAndGet();
+        if (currentCount != 0) {
             return;
         }
 

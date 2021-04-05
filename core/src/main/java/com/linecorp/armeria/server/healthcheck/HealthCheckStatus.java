@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * The result of health check with interval for next check.
  */
+@UnstableApi
 public final class HealthCheckStatus {
     private final boolean isHealthy;
     private final long ttlMillis;
