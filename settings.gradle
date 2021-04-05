@@ -45,6 +45,7 @@ includeWithFlags ':dropwizard1',                         'java', 'publish', 'rel
 includeWithFlags ':dropwizard2',                         'java', 'publish', 'relocate'
 includeWithFlags ':thrift0.9',                           'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':thrift0.13',                          'java', 'publish', 'relocate'
+includeWithFlags ':thrift0.14',                          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate'

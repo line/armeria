@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,8 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal.common.thrift;
+
+import javax.annotation.Nullable;
+
+import org.apache.thrift.TConfiguration;
+import org.apache.thrift.transport.TTransportException;
 
 import io.netty.buffer.ByteBuf;
 
@@ -22,5 +26,21 @@ public final class TByteBufTransport extends AbstractTByteBufTransport {
 
     public TByteBufTransport(ByteBuf buf) {
         super(buf);
+    }
+
+    @Nullable
+    @Override
+    public TConfiguration getConfiguration() {
+        return null;
+    }
+
+    @Override
+    public void updateKnownMessageSize(long size) throws TTransportException {
+        // This method is not called by the 'TProtocol's provided by Armeria
+    }
+
+    @Override
+    public void checkReadBytesAvailable(long numBytes) throws TTransportException {
+        // The size of readable bytes is already checked by the underlying ByteBuf.
     }
 }
