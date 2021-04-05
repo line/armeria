@@ -609,7 +609,7 @@ class HttpServerTest {
             // is undesirable.
             // However, HTTP/2 can wait for the response to be sent, because the following request uses the
             // next stream.
-            try(ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 assertThatThrownBy(() -> client.post("/non-existent", content).aggregate().join())
                         .hasCauseInstanceOf(ClosedSessionException.class);
                 final ResponseHeaders responseHeaders =
@@ -955,7 +955,7 @@ class HttpServerTest {
                                      (delegate, ctx, req) -> {
                                          ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
                                          if (clientResponseTimeoutMillis == 0) {
-                                            ctx.clearResponseTimeout();
+                                             ctx.clearResponseTimeout();
                                          } else {
                                              ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW,
                                                                           clientResponseTimeoutMillis);
