@@ -299,7 +299,7 @@ allprojects {
             }
 
             project.ext.javadocLinks.each {
-                addOfflineLink("${it['groupId']}/${it['artifactId']}/${it['version']}", it['url'])
+                addOfflineLink("${it['groupId']}/${it['artifactId']}", it['url'])
             }
         }
     }
