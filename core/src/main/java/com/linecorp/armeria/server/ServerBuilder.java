@@ -65,6 +65,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -194,6 +195,7 @@ public final class ServerBuilder {
         // Set the default host-level properties.
         virtualHostTemplate.accessLogWriter(AccessLogWriter.disabled(), true);
         virtualHostTemplate.rejectedRouteHandler(RejectedRouteHandler.WARN);
+        virtualHostTemplate.defaultServiceNaming(ServiceNaming.fullTypeName());
         virtualHostTemplate.requestTimeoutMillis(Flags.defaultRequestTimeoutMillis());
         virtualHostTemplate.maxRequestLength(Flags.defaultMaxRequestLength());
         virtualHostTemplate.verboseResponses(Flags.verboseResponses());
@@ -694,6 +696,18 @@ public final class ServerBuilder {
      */
     public ServerBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return this;
+    }
+
+    /**
+     * Sets a global naming rule for the name of services. This property can be overridden via
+     * {@link VirtualHostBuilder#defaultServiceNaming(ServiceNaming)}. The overriding is also possible if
+     * service-level naming rule is set via {@link ServiceBindingBuilder#defaultServiceNaming(ServiceNaming)}.
+     *
+     * @see RequestOnlyLog#serviceName()
+     */
+    public ServerBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        virtualHostTemplate.defaultServiceNaming(defaultServiceNaming);
         return this;
     }
 
