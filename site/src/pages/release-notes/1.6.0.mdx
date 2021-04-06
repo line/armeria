@@ -1,0 +1,315 @@
+---
+date: 2021-04-06
+---
+
+## 🌟 New features
+
+- You can now send and handle the multipart request. #253 #3327
+  ```java
+  // Send a multipart message.
+  WebClient client = WebClient.of("http://example.com/");
+  BodyPart part1 = BodyPart.of(ContentDisposition.of("form-data", "username"), "Armeria");
+  BodyPart part2 = BodyPart.of(ContentDisposition.of("form-data", "password"), "mypassword");
+  Multipart multipart = Multipart.of(part1, part2);
+  client.execute(multipart.toHttpRequest("/login"));
+
+  // Handle a multipart message.
+  Server.builder()
+        .service("/simple", (ctx, req) -> {
+            Multipart multipart = Multipart.from(req);
+            multipart.aggregate().thenApply(aggregated -> {
+                assert aggregated.field("username").contentUtf8().equals("Armeria");
+                assert aggregated.field("password").contentUtf8().equals("mypassword");
+                ...
+            }));
+       });
+  ```
+- Armeria now provides various useful extension and conversions for Scala. #3395
+  - See [Scala integration](/docs/advanced-scala) for the full features.
+- You can now create a <type://StreamMessage> from a `Path` or a `File`. #3344
+  ```java
+  Path path = Paths.get("...");
+  StreamMessage<HttpData> publisher = StreamMessage.of(path);
+  ```
+- You can now filter or transform values of a <type://StreamMessage> using
+  <type://StreamMessage#filter(Predicate)> or <type://StreamMessage#map(Function)>. #3351
+  ```java
+  // Filter.
+  StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
+  StreamMessage<Integer> even = source.filter(x -> x % 2 == 0);
+
+  // Transform.
+  StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
+  StreamMessage<Boolean> isEven = source.map(x -> x % 2 == 0);
+  ```
+- You can now send a different response depending on the exception. #3209 #3413
+  ```java
+  ExceptionHandler handler = (ctx, cause) -> {
+      if (cause instanceof RequestTimeoutException) {
+          // The request timed out!
+          return AggregatedHttpResponse.of(...);
+      }
+
+      if (cause instanceof IllegalArgumentException) {
+          return AggregatedHttpResponse.of(HttpStatus.BAD_REQUEST);
+      }
+
+      // Return null to let ExceptionHandler.ofDefault() convert the exception.
+      return null;
+  }
+
+  Server.builder().exceptionHandler(handler)...
+  ```
+- You can now convert an exception into an <type://RpcResponse> in <type://THttpService>. #3349 #3383
+  ```java
+  THttpService.builder()
+              .addService("hello", helloService)
+              .exceptionHandler((ctx, cause) -> {
+                  if (cause instanceof IllegalArgumentException) {
+                      return RpcResponse.of(CustomizedException("Bad Request!"));
+                  }
+                  ...
+              })
+  ```
+- You can now set a response timeout and attributes using <type://WebClientRequestPreparation>. #3347 #3357
+  ```java
+  WebClient client = ...;
+  client.prepare()
+        .get("/my-service")
+        .responseTimeout(Duration.ofSeconds(3))
+        .attr(USER_ID, userId)
+        .attr(USER_SECRET, secret)
+        .execute();
+  ```
+- You can now add additional error details to the response when an exception is raised in gRPC service.
+  #3307 #3329
+  ```java
+  GrpcService.builder()
+             .exceptionMapping((cause, metadata) -> {
+                 if (throwable instanceof AuthError) {
+                     metadata.put(KEY, toMetadata(cause))
+                     return Status.UNAUTHENTICATED.withCause(cause);
+                 }
+                 ...
+             })
+  ```
+- You can now customize the success condition of a metric. #3404 #3410
+  ```java
+  MetricCollectingService.builder(...)
+                         .successFunction((context, log) -> {
+                              final int statusCode = log.responseHeaders().status().code();
+                              return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
+                          });
+  ```
+- You can now fluently build a <type://DecodingClient> using the <type://DecodingClientBuilder>. #3348 #3372
+  ```java
+  DecodingClient.builder()
+                .autoFillAcceptEncoding(false)
+                .strictContentEncoding(true)
+                .newDecorator();
+  ```
+- You can now fluently build an <type://HttpRequest> with a `Publisher<HttpData>`. #3343
+  ```java
+  Publisher<HttpData> publisher = StreamMessage.of(...);
+  HttpRequest.builder()
+             .method(HttpMethod.GET)
+             .path("/")
+             .content(MediaType.PLAIN_TEXT_UTF_8, publisher)
+             .build();
+  ```
+- You can now convert a stream of Protobuf Messages into
+  [JSON Text sequences](https://datatracker.ietf.org/doc/rfc7464/) using an annotated service. #3394
+  ```java
+  @Get("/items")
+  @ProducesJsonSequences
+  public Publisher<MyProtobufMessage> protobufJsonSeqPublisher() {
+      return StreamMessage.of(MyProtobufMessage.newBuilder()...build(),
+                              MyProtobufMessage.newBuilder()...build());
+  }
+
+  @Get("/items")
+  @ProducesJsonSequences
+  public Stream<MyProtobufMessage> protobufJsonSeqPublisher() {
+      return Stream.of(MyProtobufMessage.newBuilder()...build(),
+                       MyProtobufMessage.newBuilder()...build());
+  }
+  ```
+- You can now customize the default service name of a <type://RequestLog>. #3232 #3366
+  ```java
+  Server.builder()
+        .defaultServiceNaming(ctx -> {
+            final ServiceConfig config = ctx.config();
+            return config.route().patternString();
+       });
+  // For a specific service.
+  Server.builder()
+        .route().path("/")
+        .defaultServiceNaming(...)
+        ...
+  ```
+- You can now check if the current request is matched by any routes or not. #3365 #3378
+  ```java
+  ServerBuilder sb = ...
+  sb.decorator((delegate, ctx, req) -> {
+      if (ctx.config().route().isFallback()) {
+          // This request is not matched any routes.
+      }
+      return delegate.serve(ctx, req);
+  });
+  ```
+- The <type://BraveService> does not trace requests to the <type://TransientService> such as
+  <type://HealthCheckService> anymore. #3382
+  - You should specify <type://TransientServiceOption#WITH_TRACING> if you want to trace them.
+  ```java
+  HealthCheckService.builder()
+                    .transientServiceOptions(WITH_TRACING)
+                    ...
+                    .build();
+  ```
+- You can now clean up resources by overriding <type://FilteredStreamMessage#onCancellation(Subscriber)>
+  when `Subscription.cancel()` is called. #3375
+  ```java
+  new MyFilteredHttpResponse(res) {
+      ...
+      @Override
+      protected void onCancellation(Subscriber<? super U> subscriber) {
+          // Clean up resources.
+      }
+  }
+  ```
+- You can now easily set 'cookie' or 'set-cookie' headers. #3391
+  ```java
+  Cookie cookie = Cookie.of("cookie", "value");
+  RequestHeaders headers = RequestHeaders.builder(HttpMethod.GET, "/")
+                                         .cookie(cookie)
+                                         .build();
+
+  Cookie setCookie1 = ...
+  Cookie setCookie2 = ...
+  ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
+                                           .cookies(setCookie1, setCookie2)
+                                           .build();
+  ```
+- You can now use `req.root_id` <type://BuiltInProperty> to log the id of <type://RequestContext#root()>.
+  #3429 #3433
+- You can now use Thrift 0.14.0. #3470 #3422
+- You can now use OAuth 2.0 related features. #2268 #2840
+  - [OAuth 2.0 server-side token authorization](https://datatracker.ietf.org/doc/rfc7662/) using
+    <type://OAuth2TokenIntrospectionAuthorizer>
+  - [Client credential grants](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4) using
+    <type://OAuth2ClientCredentialsGrant>
+  - [Resource Owner Password Credentials Grant](https://datatracker.ietf.org/doc/html/rfc6749#section-4.3)
+    using <type://OAuth2ResourceOwnerPasswordCredentialsGrant>
+  - [OAuth 2.0 Token Revocation](https://datatracker.ietf.org/doc/rfc7009/) using <type://TokenRevocation>
+
+  <Tip>
+
+    OAuth 2.0 features are currently experimental, so you should be careful using the feature.
+
+  </Tip>
+
+- You can now use [Jakarta RESTful Web Services](https://jakarta.ee/specifications/restful-ws/)
+  on top of Armeria with the `armeria-resteasy` module. #3285 #3296
+
+  <Tip>
+
+    `armeria-resteasy` is currently experimental, so you should be careful using the feature.
+
+  </Tip>
+
+## 📈 Improvements
+
+- Various improvements for documentation. #3237 #3289 #3361 #3390 #3401 #3427
+
+## 🛠️ Bug fixes
+
+- You no longer see `NullPointerException` in <type://HttpResponseDecoder>. #3036 #3407
+- You no longer see 405 when the exact and param path are defined with different HTTP methods. #3330 #3340
+- You no longer see `Address family not supported by protocol` or `Connection refused` error anymore. #3425
+- You no longer see escaped Unicode from a JSON response in <type://DocService>. #3396
+- You no longer see the wrong response body when the payload violates the protocol or is too large. #3419
+- You can now use the Thrift client and service that is generated by `java:fullcamel` Thrift generator.
+  #3269 #3360 #3369
+- `SmartLifecycle` for Armeria server graceful shutdown is only created when the Armeria server is created
+  by Spring integration. #3300
+- You can now use [Sealed oneofs](https://scalapb.github.io/docs/sealed-oneofs/) message from ScalaPB
+  using JSON. #3342
+- You no longer see `CancellationException` when an <type://HttpResponse> is fully consumed on server-side.
+  #3387
+- You no longer see <type://ClosedSteamException> in Jetty service when it fails to write to an
+  <type://HttpResponse>. `EofException` is raised instead. #3412
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- <type://ServiceRequestContext> is added to the parameter of `handleMessage` in
+  <type://AbstractUnaryGrpcService>. #3403
+  - The return type is also changed to `CompletionStage`. #3409
+  ```java
+  protected abstract CompletionStage<byte[]> handleMessage(
+          ServiceRequestContext ctx, byte[] message);
+
+  protected final CompletionStage<ByteBuf> handleMessage(
+          ServiceRequestContext ctx, ByteBuf message) {...}
+  ```
+- <type://GrpcStatusFunction> now extends `BiFunction<Throwable, Metadata, Status>`. #3329
+- The `numberSteps` method in <type://WeightRampingUpStrategyBuilder> is now changed to `totalSteps`. #3377
+
+## ⛓ Dependencies
+
+- Bucket4J 4.10.0 → 6.2.0
+- Curator 4.3.0 → 5.1.0
+  - ZooKeeper 3.5.8 → 3.6.2
+- Dropwizard 2.0.18 → 2.0.20
+- Dropwizard Metrics 4.1.17 → 4.1.18
+- gRPC 1.35.0 → 1.36.1
+- Jackson 2.12.0 → 2.12.2
+- java-jwt 3.12.1 → 3.14.0
+- Jetty 9.4.36 → 9.4.39
+- Micrometer 1.6.3 → 1.6.5
+- Netty 4.1.58 → 4.1.63
+  - Netty TCNative BoringSSL 2.0.36 → 2.0.38
+  - Netty io_uring transport 0.0.3 → 0.0.5
+- OpenSAML 3.4.5 → 3.4.6
+  - Shibboleth java-support 7.5.1 → 7.5.2
+- Reactor 3.4.2 → 3.4.4
+  - Reactor Kotlin extensions 1.1.2 → 1.1.3
+- RxJava 3.0.9 → 3.0.11, 2.2.20 → 2.2.21
+- ScalaPb 0.10.10 → 0.11.0
+- Spring Boot 2.4.2 → 2.4.4
+- Tomcat 9.0.41 → 9.0.44, 8.5.61 → 8.5.64
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'andrey-tpt',
+    'andrew-teirney',
+    'anuraaga',
+    'eisig',
+    'eugene70',
+    'ghkim3221',
+    'hyangtack',
+    'heka1024',
+    'heowc',
+    'hexoul',
+    'ikhoon',
+    'JunoJunho',
+    'kojilin',
+    'ks-kim',
+    'mauhiz',
+    'max904-github',
+    'minwoox',
+    'nirvanarsc',
+    'okue',
+    'policeman-kh',
+    'richieyan',
+    'selectAll',
+    'szeiger',
+    'trustin',
+    'Waynefn'
+  ]}
+/>
