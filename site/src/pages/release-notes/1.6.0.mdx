@@ -4,7 +4,7 @@ date: 2021-04-06
 
 ## 🌟 New features
 
-- You can now send and handle the multipart request. #253 #3327
+- You can now send and handle multipart requests and responses. #253 #3327
   ```java
   // Send a multipart message.
   WebClient client = WebClient.of("http://example.com/");
@@ -15,7 +15,7 @@ date: 2021-04-06
 
   // Handle a multipart message.
   Server.builder()
-        .service("/simple", (ctx, req) -> {
+        .service("/login", (ctx, req) -> {
             Multipart multipart = Multipart.from(req);
             multipart.aggregate().thenApply(aggregated -> {
                 assert aggregated.field("username").contentUtf8().equals("Armeria");
@@ -24,7 +24,7 @@ date: 2021-04-06
             }));
        });
   ```
-- Armeria now provides various useful extension and conversions for Scala. #3395
+- Armeria now provides various useful extensions and conversions for Scala. #3395
   - See [Scala integration](/docs/advanced-scala) for the full features.
 - You can now create a <type://StreamMessage> from a `Path` or a `File`. #3344
   ```java
@@ -44,21 +44,15 @@ date: 2021-04-06
   ```
 - You can now send a different response depending on the exception. #3209 #3413
   ```java
-  ExceptionHandler handler = (ctx, cause) -> {
+  Server.builder().exceptionHandler((ctx, cause) -> {
       if (cause instanceof RequestTimeoutException) {
           // The request timed out!
           return AggregatedHttpResponse.of(...);
       }
 
-      if (cause instanceof IllegalArgumentException) {
-          return AggregatedHttpResponse.of(HttpStatus.BAD_REQUEST);
-      }
-
       // Return null to let ExceptionHandler.ofDefault() convert the exception.
       return null;
-  }
-
-  Server.builder().exceptionHandler(handler)...
+  })...
   ```
 - You can now convert an exception into an <type://RpcResponse> in <type://THttpService>. #3349 #3383
   ```java
@@ -66,7 +60,7 @@ date: 2021-04-06
               .addService("hello", helloService)
               .exceptionHandler((ctx, cause) -> {
                   if (cause instanceof IllegalArgumentException) {
-                      return RpcResponse.of(CustomizedException("Bad Request!"));
+                      return RpcResponse.of(new CustomizedException("Bad Request!"));
                   }
                   ...
               })
@@ -81,7 +75,7 @@ date: 2021-04-06
         .attr(USER_SECRET, secret)
         .execute();
   ```
-- You can now add additional error details to the response when an exception is raised in gRPC service.
+- You can now specify additional error details to a gRPC response when an exception is raised in a gRPC service.
   #3307 #3329
   ```java
   GrpcService.builder()
@@ -110,7 +104,7 @@ date: 2021-04-06
   ```
 - You can now fluently build an <type://HttpRequest> with a `Publisher<HttpData>`. #3343
   ```java
-  Publisher<HttpData> publisher = StreamMessage.of(...);
+  StreamMessage<HttpData> publisher = StreamMessage.of(...);
   HttpRequest.builder()
              .method(HttpMethod.GET)
              .path("/")
@@ -157,7 +151,7 @@ date: 2021-04-06
       return delegate.serve(ctx, req);
   });
   ```
-- The <type://BraveService> does not trace requests to the <type://TransientService> such as
+- <type://BraveService> does not trace requests for <type://TransientService> such as
   <type://HealthCheckService> anymore. #3382
   - You should specify <type://TransientServiceOption#WITH_TRACING> if you want to trace them.
   ```java
@@ -177,23 +171,25 @@ date: 2021-04-06
       }
   }
   ```
-- You can now easily set 'cookie' or 'set-cookie' headers. #3391
+- You can now easily set 'cookie' or 'set-cookie' headers. #3388 #3391
   ```java
   Cookie cookie = Cookie.of("cookie", "value");
   RequestHeaders headers = RequestHeaders.builder(HttpMethod.GET, "/")
                                          .cookie(cookie)
                                          .build();
+  assert headers.cookies().equals(Cookies.of(cookie));
 
   Cookie setCookie1 = ...
   Cookie setCookie2 = ...
   ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
                                            .cookies(setCookie1, setCookie2)
                                            .build();
+  assert headers.cookies().equals(Cookies.of(setCookie1, setCookie2));
   ```
-- You can now use `req.root_id` <type://BuiltInProperty> to log the id of <type://RequestContext#root()>.
+- You can now use `req.root_id` <type://BuiltInProperty> to log the ID of <type://RequestContext#root()>.
   #3429 #3433
-- You can now use Thrift 0.14.0. #3470 #3422
-- You can now use OAuth 2.0 related features. #2268 #2840
+- You can now use Thrift 0.14.0 with the new `armeria-thrift0.14` module. #3470 #3422
+- You can now use OAuth 2.0 related features with the new `armeria-oauth2` module. #2268 #2840
   - [OAuth 2.0 server-side token authorization](https://datatracker.ietf.org/doc/rfc7662/) using
     <type://OAuth2TokenIntrospectionAuthorizer>
   - [Client credential grants](https://datatracker.ietf.org/doc/html/rfc6749#section-4.4) using
@@ -224,16 +220,20 @@ date: 2021-04-06
 ## 🛠️ Bug fixes
 
 - You no longer see `NullPointerException` in <type://HttpResponseDecoder>. #3036 #3407
-- You no longer see 405 when the exact and param path are defined with different HTTP methods. #3330 #3340
-- You no longer see `Address family not supported by protocol` or `Connection refused` error anymore. #3425
-- You no longer see escaped Unicode from a JSON response in <type://DocService>. #3396
+- You no longer see `405 Method Not Allowd` when the exact and param path are defined with
+  different HTTP methods. #3330 #3340
+- You no longer see `Address family not supported by protocol` or `Connection refused` error anymore
+  on certain machines with IPv6 enabled. #3425
+- The Unicode characters like emojis in a JSON response are now rendered correctly
+  in <type://DocService>. #3396
 - You no longer see the wrong response body when the payload violates the protocol or is too large. #3419
-- You can now use the Thrift client and service that is generated by `java:fullcamel` Thrift generator.
+- You can now use the Thrift client and service that is generated by
+  [`java:fullcamel`](https://issues.apache.org/jira/browse/THRIFT-2469) option of Thrift compiler.
   #3269 #3360 #3369
 - `SmartLifecycle` for Armeria server graceful shutdown is only created when the Armeria server is created
   by Spring integration. #3300
 - You can now use [Sealed oneofs](https://scalapb.github.io/docs/sealed-oneofs/) message from ScalaPB
-  using JSON. #3342
+  with JSON for gRPC and annotated services. #3342 #3394
 - You no longer see `CancellationException` when an <type://HttpResponse> is fully consumed on server-side.
   #3387
 - You no longer see <type://ClosedSteamException> in Jetty service when it fails to write to an
