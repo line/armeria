@@ -22,6 +22,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.ContextHolder;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
@@ -29,6 +31,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
+import reactor.core.Fuseable;
 import reactor.core.Scannable;
 import reactor.core.Scannable.Attr;
 import reactor.core.publisher.ConnectableFlux;
@@ -73,7 +76,7 @@ public final class RequestContextHooks {
             return;
         }
         Hooks.onEachOperator(ON_EACH_OPERATOR_HOOK_KEY, source -> {
-            if (source instanceof ContextHolder) {
+            if (source instanceof ContextHolder || source instanceof Fuseable.ScalarCallable) {
                 return source;
             }
 
@@ -88,7 +91,7 @@ public final class RequestContextHooks {
         });
 
         Hooks.onLastOperator(ON_LAST_OPERATOR_HOOK_KEY, source -> {
-            if (source instanceof ContextHolder) {
+            if (source instanceof ContextHolder || source instanceof Fuseable.ScalarCallable) {
                 return source;
             }
 
@@ -140,7 +143,8 @@ public final class RequestContextHooks {
 
     private RequestContextHooks() {}
 
-    private static final class ContextAwareMono extends Mono<Object> implements ContextHolder {
+    @VisibleForTesting
+    static final class ContextAwareMono extends Mono<Object> implements ContextHolder {
 
         private final Mono<Object> source;
         private final RequestContext ctx;
@@ -167,7 +171,8 @@ public final class RequestContextHooks {
         }
     }
 
-    private static final class ContextAwareFlux extends Flux<Object> implements ContextHolder {
+    @VisibleForTesting
+    static final class ContextAwareFlux extends Flux<Object> implements ContextHolder {
 
         private final Flux<Object> source;
         private final RequestContext ctx;

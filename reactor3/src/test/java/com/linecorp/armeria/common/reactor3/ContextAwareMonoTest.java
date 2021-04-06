@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.reactor3.RequestContextHooks.ContextAwareMono;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
@@ -52,15 +53,10 @@ class ContextAwareMonoTest {
 
     @Test
     void monoJust() {
-        final ClientRequestContext ctx = newContext();
-        final Mono<String> mono;
-        try (SafeCloseable ignored = ctx.push()) {
-            mono = addCallbacks(Mono.just("foo").publishOn(Schedulers.single()), ctx);
-        }
-        StepVerifier.create(mono)
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
-                    .verifyComplete();
+        // MonoJust is a scalar type and could be subscribed by multiple requests.
+        // Therefore, Mono.just(...) should not return a ContextAwareMono.
+        final Mono<String> mono = Mono.just("foo");
+        assertThat(mono).isNotExactlyInstanceOf(ContextAwareMono.class);
     }
 
     @Test
