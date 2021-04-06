@@ -30,6 +30,8 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Ascii;
+
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.TransportType;
 
@@ -58,8 +60,15 @@ public final class TransportTypeProvider {
     static {
         final Map<String, Version> nettyVersions =
                 Version.identify(TransportTypeProvider.class.getClassLoader());
-        final Set<String> distinctNettyVersions =
-                nettyVersions.values().stream().map(Version::artifactVersion).collect(toImmutableSet());
+
+        final Set<String> distinctNettyVersions = nettyVersions.values().stream().filter(v -> {
+            final String artifactId = v.artifactId();
+            return artifactId != null &&
+                   artifactId.startsWith("netty") &&
+                   !artifactId.startsWith("netty-incubator") &&
+                   !artifactId.startsWith("netty-tcnative");
+        }).map(Version::artifactVersion).collect(toImmutableSet());
+
         switch (distinctNettyVersions.size()) {
             case 0:
                 logger.warn("Using Netty with unknown version");
@@ -98,6 +107,14 @@ public final class TransportTypeProvider {
             String name, String entryPointTypeName,
             String serverSocketChannelTypeName, String socketChannelTypeName, String datagramChannelTypeName,
             String eventLoopGroupTypeName, String eventLoopTypeName) {
+
+        // TODO(trustin): Do not try to load io_uring unless explicitly specified so JVM doesn't crash.
+        //                https://github.com/netty/netty-incubator-transport-io_uring/issues/92
+        if ("IO_URING".equals(name) && !"io_uring".equals(Ascii.toLowerCase(
+                System.getProperty("com.linecorp.armeria.transportType", "")))) {
+            return new TransportTypeProvider(name, null, null, null, null, null, null,
+                                             new IllegalStateException("io_uring not enabled explicitly"));
+        }
 
         try {
             // Make sure the native libraries were loaded.
