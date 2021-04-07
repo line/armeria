@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.reactor3.RequestContextHooks.ContextAwareMono
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
@@ -54,9 +55,13 @@ class ContextAwareMonoTest {
     @Test
     void monoJust() {
         // MonoJust is a scalar type and could be subscribed by multiple requests.
-        // Therefore, Mono.just(...) should not return a ContextAwareMono.
+        // Therefore, Mono.just(...), Mono.empty() and Mono.error(ex) should not return a ContextAwareMono.
         final Mono<String> mono = Mono.just("foo");
+        final Mono<String> empty = Mono.empty();
+        final Mono<String> error = Mono.error(new IllegalStateException("boom"));
         assertThat(mono).isNotExactlyInstanceOf(ContextAwareMono.class);
+        assertThat(empty).isNotExactlyInstanceOf(ContextAwareMono.class);
+        assertThat(error).isNotExactlyInstanceOf(ContextAwareMono.class);
     }
 
     @Test

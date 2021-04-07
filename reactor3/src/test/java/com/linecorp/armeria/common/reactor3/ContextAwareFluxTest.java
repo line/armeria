@@ -56,11 +56,13 @@ class ContextAwareFluxTest {
     @Test
     void fluxJust() {
         // FluxJust and FluxEmpty are a scalar type and could be subscribed by multiple requests.
-        // Therefore, Flux.just(...) and Flux.empty() should not return a ContextAwareFlux.
+        // Therefore, Flux.just(...), Flux.empty() and Flux.error(ex) should not return a ContextAwareFlux.
         final Flux<String> just = Flux.just("foo");
         final Flux<String> empty = Flux.empty();
+        final Flux<String> error = Flux.error(new IllegalStateException("boom"));
         assertThat(just).isNotExactlyInstanceOf(ContextAwareMono.class);
         assertThat(empty).isNotExactlyInstanceOf(ContextAwareMono.class);
+        assertThat(error).isNotExactlyInstanceOf(ContextAwareMono.class);
     }
 
     @Test

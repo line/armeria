@@ -80,7 +80,7 @@ public final class RequestContextHooks {
             return;
         }
         Hooks.onEachOperator(ON_EACH_OPERATOR_HOOK_KEY, source -> {
-            if (source instanceof ContextHolder || source instanceof Fuseable.ScalarCallable) {
+            if (source instanceof ContextHolder || isReproducibleScalarType(source)) {
                 return source;
             }
 
@@ -95,7 +95,7 @@ public final class RequestContextHooks {
         });
 
         Hooks.onLastOperator(ON_LAST_OPERATOR_HOOK_KEY, source -> {
-            if (source instanceof ContextHolder || source instanceof Fuseable.ScalarCallable) {
+            if (source instanceof ContextHolder || isReproducibleScalarType(source)) {
                 return source;
             }
 
@@ -123,7 +123,12 @@ public final class RequestContextHooks {
         enabled = false;
     }
 
-    private static boolean isReusableScalarType(Publisher<Object> publisher) {
+    /**
+     * Returns whether the specified {@link Publisher} is reproducible {@link Fuseable.ScalarCallable} such as
+     * {@link Flux#empty()}, {@link Flux#just(Object)}, {@link Flux#error(Throwable)},
+     * {@link Mono#empty()}, {@link Mono#just(Object)} and {@link Mono#error(Throwable)}.
+     */
+    private static boolean isReproducibleScalarType(Publisher<Object> publisher) {
         if (publisher instanceof ScalarCallable) {
             final String className = publisher.getClass().getName();
             if (className.equals(FLUX_ERROR_SUPPLIED) || className.equals(MONO_ERROR_SUPPLIED)) {
@@ -132,6 +137,7 @@ public final class RequestContextHooks {
                 return true;
             }
         }
+        return false;
     }
 
     private static Publisher<Object> makeContextAware(Publisher<Object> source, RequestContext ctx) {
