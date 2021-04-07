@@ -560,6 +560,7 @@ org.springframework.boot:
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
   spring-boot-autoconfigure: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
+  spring-boot-starter-security: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-webflux:
