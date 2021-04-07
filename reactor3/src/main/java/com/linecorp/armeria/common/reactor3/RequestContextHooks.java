@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
 import reactor.core.Fuseable;
+import reactor.core.Fuseable.ScalarCallable;
 import reactor.core.Scannable;
 import reactor.core.Scannable.Attr;
 import reactor.core.publisher.ConnectableFlux;
@@ -58,6 +59,9 @@ public final class RequestContextHooks {
     private static boolean warnedParallelFluxUnsupported;
 
     private static boolean enabled;
+
+    private static final String FLUX_ERROR_SUPPLIED = "reactor.core.publisher.FluxErrorSupplied";
+    private static final String MONO_ERROR_SUPPLIED = "reactor.core.publisher.MonoErrorSupplied";
 
     /**
      * Enables {@link RequestContext} during Reactor operations.
@@ -117,6 +121,17 @@ public final class RequestContextHooks {
         Hooks.resetOnEachOperator(ON_EACH_OPERATOR_HOOK_KEY);
         Hooks.resetOnLastOperator(ON_LAST_OPERATOR_HOOK_KEY);
         enabled = false;
+    }
+
+    private static boolean isReusableScalarType(Publisher<Object> publisher) {
+        if (publisher instanceof ScalarCallable) {
+            final String className = publisher.getClass().getName();
+            if (className.equals(FLUX_ERROR_SUPPLIED) || className.equals(MONO_ERROR_SUPPLIED)) {
+                return false;
+            } else {
+                return true;
+            }
+        }
     }
 
     private static Publisher<Object> makeContextAware(Publisher<Object> source, RequestContext ctx) {
