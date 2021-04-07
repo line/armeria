@@ -2060,6 +2060,7 @@ edeka
 edgeapp.net
 edgecompute.app
 edgestack.me
+editorx.io
 edogawa.tokyo.jp
 edu
 edu.ac
@@ -8474,6 +8475,7 @@ with.marketing
 withgoogle.com
 withyoutube.com
 wiw.gov.pl
+wixsite.com
 wlocl.pl
 wloclawek.pl
 wmcloud.org
