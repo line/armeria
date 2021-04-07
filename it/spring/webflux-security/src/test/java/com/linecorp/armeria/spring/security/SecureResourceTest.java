@@ -40,7 +40,6 @@ class SecureResourceTest {
     @BeforeEach
     void setUp() {
         client = WebClient.builder("http://127.0.0.1:" + port)
-                          .responseTimeoutMillis(0)
                           .decorator(LoggingClient.newDecorator())
                           .decorator(CookieClient.newDecorator())
                           .build();
