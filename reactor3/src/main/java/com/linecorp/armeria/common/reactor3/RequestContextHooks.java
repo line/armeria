@@ -131,11 +131,7 @@ public final class RequestContextHooks {
     private static boolean isReproducibleScalarType(Publisher<Object> publisher) {
         if (publisher instanceof ScalarCallable) {
             final String className = publisher.getClass().getName();
-            if (className.equals(FLUX_ERROR_SUPPLIED) || className.equals(MONO_ERROR_SUPPLIED)) {
-                return false;
-            } else {
-                return true;
-            }
+            return !className.equals(FLUX_ERROR_SUPPLIED) && !className.equals(MONO_ERROR_SUPPLIED);
         }
         return false;
     }
