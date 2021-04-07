@@ -109,6 +109,8 @@ public class HttpServerBenchmark {
     }
 
     /**
+     * A benchmark for a test designed to demonstrate the capacity about {@code MediaType.PLAIN_TEXT_UTF_8}.
+     *
      * @see <a href="https://github.com/TechEmpower/FrameworkBenchmarks/wiki/Project-Information-Framework-Tests-Overview#plaintext">Plaintext test</a>
      * @see <a href="https://github.com/TechEmpower/FrameworkBenchmarks/blob/master/frameworks/Java/armeria/src/main/java/hello/services/HelloService.java">Reference</a>
      */
