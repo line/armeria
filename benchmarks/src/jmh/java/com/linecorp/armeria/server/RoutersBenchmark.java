@@ -43,21 +43,23 @@ public class RoutersBenchmark {
             RequestHeaders.of(HttpMethod.POST, "/grpc.package.Service/Method1");
 
     static {
-        final String defaultServiceName = null;
         final String defaultLogName = null;
+        final String defaultServiceName = null;
+        final ServiceNaming defaultServiceNaming = ServiceNaming.of("Service");
         SERVICES = ImmutableList.of(
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method1").build(),
-                                  SERVICE, defaultServiceName, defaultLogName, 0, 0,
+                                  SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false),
                 new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method2").build(),
-                                  SERVICE, defaultServiceName, defaultLogName, 0, 0,
+                                  SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), false)
         );
-        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultServiceName, defaultLogName, 0,
-                                             0, false, AccessLogWriter.disabled(), false);
+        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultLogName, defaultServiceName,
+                                             defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
+                                             false);
         HOST = new VirtualHost(
                 "localhost", "localhost", null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
-                unused -> NOPLogger.NOP_LOGGER, 0, 0, false,
+                unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
                 AccessLogWriter.disabled(), false);
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }

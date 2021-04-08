@@ -159,7 +159,9 @@ class ZooKeeperRegistrationTest {
                 discoverySpec.decode(zk.getData(Z_NODE + '/' + CURATOR_X_SERVICE_NAME + '/' + i).get());
                 final ServiceInstance<?> actual = instanceCaptor.join();
                 final ServiceInstance<Object> expected = expectedInstance(servers, i);
-                assertThat(actual).isEqualToIgnoringGivenFields(expected, "registrationTimeUTC");
+                assertThat(actual).usingRecursiveComparison()
+                                  .ignoringFields("registrationTimeUTC")
+                                  .isEqualTo(expected);
             }
             validateOneNodeRemoved(servers, zk, false);
         }

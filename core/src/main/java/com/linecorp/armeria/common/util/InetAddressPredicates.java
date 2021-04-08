@@ -93,7 +93,7 @@ public final class InetAddressPredicates {
 
     /**
      * Returns a {@link Predicate} which returns {@code true} if the given {@link InetAddress} is in the
-     * range of a <a href="https://tools.ietf.org/html/rfc4632">Classless Inter-domain Routing (CIDR)</a> block.
+     * range of a <a href="https://datatracker.ietf.org/doc/rfc4632/">Classless Inter-domain Routing (CIDR)</a> block.
      *
      * @param baseAddress the base {@link InetAddress} of a CIDR notation
      * @param maskBits the number of significant bits which describes its network portion
@@ -106,7 +106,7 @@ public final class InetAddressPredicates {
 
     /**
      * Returns a {@link Predicate} which returns {@code true} if the given {@link InetAddress} is in the
-     * range of a <a href="https://tools.ietf.org/html/rfc4632">Classless Inter-domain Routing (CIDR)</a> block.
+     * range of a <a href="https://datatracker.ietf.org/doc/rfc4632/">Classless Inter-domain Routing (CIDR)</a> block.
      *
      * @param baseAddress the base {@link InetAddress} of a CIDR notation
      * @param subnetMask the subnet mask, e.g. {@code 255.255.255.0}
@@ -122,7 +122,7 @@ public final class InetAddressPredicates {
 
     /**
      * Returns a {@link Predicate} which returns {@code true} if the given {@link InetAddress} is in the
-     * range of a <a href="https://tools.ietf.org/html/rfc4632">Classless Inter-domain Routing (CIDR)</a> block.
+     * range of a <a href="https://datatracker.ietf.org/doc/rfc4632/">Classless Inter-domain Routing (CIDR)</a> block.
      *
      * @param cidr the CIDR notation of an address block, e.g. {@code 10.0.0.0/8}, {@code 192.168.1.0/24},
      *             {@code 1080:0:0:0:8:800:200C:4100/120}. If it's an exact IP address such as

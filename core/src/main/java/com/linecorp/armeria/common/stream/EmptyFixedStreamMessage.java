@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -41,7 +43,7 @@ public class EmptyFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    final void cleanupObjects() {
+    final void cleanupObjects(@Nullable Throwable cause) {
         // Empty streams have no objects to clean.
     }
 }

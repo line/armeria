@@ -18,6 +18,14 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
+import org.reactivestreams.Publisher;
+
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.multipart.BodyPart;
+import com.linecorp.armeria.unsafe.PooledObjects;
+
 final class StreamMessageUtil {
 
     public static final SubscriptionOption[] EMPTY_OPTIONS = {};
@@ -42,6 +50,39 @@ final class StreamMessageUtil {
         }
 
         return false;
+    }
+
+    static void closeOrAbort(Object obj, @Nullable Throwable cause) {
+        if (obj instanceof StreamMessage) {
+            final StreamMessage<?> streamMessage = (StreamMessage<?>) obj;
+            if (cause == null) {
+                streamMessage.abort();
+            } else {
+                streamMessage.abort(cause);
+            }
+            return;
+        }
+
+        if (obj instanceof Publisher) {
+            ((Publisher<?>) obj).subscribe(AbortingSubscriber.get(cause));
+            return;
+        }
+
+        if (obj instanceof BodyPart) {
+            final StreamMessage<HttpData> content = ((BodyPart) obj).content();
+            if (cause == null) {
+                content.abort();
+            } else {
+                content.abort(cause);
+            }
+            return;
+        }
+
+        PooledObjects.close(obj);
+    }
+
+    static void closeOrAbort(Object obj) {
+        closeOrAbort(obj, null);
     }
 
     private StreamMessageUtil() {}

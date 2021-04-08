@@ -293,7 +293,7 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets if the domain and host names should be decoded to unicode when received.
-     * See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>. This flag is enabled by default.
+     * See <a href="https://datatracker.ietf.org/doc/rfc3492/">rfc3492</a>. This flag is enabled by default.
      *
      * @see DnsNameResolverBuilder#decodeIdn(boolean)
      */

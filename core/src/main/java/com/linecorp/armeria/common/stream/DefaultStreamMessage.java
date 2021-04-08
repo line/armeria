@@ -33,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -83,6 +82,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, State.class, "state");
 
     private final Queue<Object> queue;
+
+    @Nullable
+    private Throwable cleanupCause;
 
     @Nullable
     @SuppressWarnings("unused")
@@ -283,6 +285,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         } finally {
             subscription.clearSubscriber();
             Throwable cause = event.cause;
+            if (state == State.CLEANUP) {
+                cleanupCause = cause;
+            }
             for (;;) {
                 final Object e = queue.poll();
                 if (e == null) {
@@ -307,7 +312,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                     final T obj = (T) e;
                     onRemoval(obj);
                 } finally {
-                    PooledObjects.close(e);
+                    StreamMessageUtil.closeOrAbort(e, cause);
                 }
             }
         }
@@ -505,7 +510,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 final T obj = (T) e;
                 onRemoval(obj);
             } finally {
-                PooledObjects.close(e);
+                StreamMessageUtil.closeOrAbort(e, cleanupCause);
             }
         }
     }

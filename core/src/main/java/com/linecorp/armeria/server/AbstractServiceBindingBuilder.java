@@ -102,6 +102,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
+    public AbstractServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        defaultServiceConfigSetters.defaultServiceNaming(defaultServiceNaming);
+        return this;
+    }
+
+    @Override
     public AbstractServiceBindingBuilder defaultLogName(String defaultLogName) {
         defaultServiceConfigSetters.defaultLogName(defaultLogName);
         return this;

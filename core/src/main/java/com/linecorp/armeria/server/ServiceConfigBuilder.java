@@ -35,6 +35,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private String defaultServiceName;
     @Nullable
+    private ServiceNaming defaultServiceNaming;
+    @Nullable
     private String defaultLogName;
     @Nullable
     private Long requestTimeoutMillis;
@@ -106,24 +108,35 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
-        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
-        return this;
-    }
-
-    @Override
     public ServiceConfigBuilder defaultLogName(String defaultLogName) {
         this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
         return this;
     }
 
-    ServiceConfig build(long defaultRequestTimeoutMillis,
+    @Override
+    public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
+        requireNonNull(defaultServiceName, "defaultServiceName");
+        this.defaultServiceName = defaultServiceName;
+        this.defaultServiceNaming = ServiceNaming.of(defaultServiceName);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        this.defaultServiceName = null;
+        this.defaultServiceNaming = requireNonNull(defaultServiceNaming, "defaultServiceNaming");
+        return this;
+    }
+
+    ServiceConfig build(ServiceNaming defaultServiceNaming,
+                        long defaultRequestTimeoutMillis,
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
                         AccessLogWriter defaultAccessLogWriter,
                         boolean defaultShutdownAccessLogWriterOnStop) {
         return new ServiceConfig(
-                route, service, defaultServiceName, defaultLogName,
+                route, service, defaultLogName, defaultServiceName,
+                this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis != null ? requestTimeoutMillis : defaultRequestTimeoutMillis,
                 maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,
@@ -136,6 +149,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("route", route)
                           .add("service", service)
+                          .add("defaultServiceNaming", defaultServiceNaming)
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)

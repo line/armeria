@@ -28,6 +28,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -97,6 +98,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private static final AtomicIntegerFieldUpdater<ArmeriaClientCall> pendingMessagesUpdater =
             AtomicIntegerFieldUpdater.newUpdater(ArmeriaClientCall.class, "pendingMessages");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<ArmeriaClientCall, Runnable>
+            pendingTaskUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            ArmeriaClientCall.class, Runnable.class, "pendingTask");
+
     private final DefaultClientRequestContext ctx;
     private final EndpointGroup endpointGroup;
     private final HttpClient httpClient;
@@ -114,6 +120,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final DecompressorRegistry decompressorRegistry;
     private final int maxInboundMessageSizeBytes;
     private final boolean grpcWebText;
+
+    private final boolean endpointInitialized;
+    @Nullable
+    private volatile Runnable pendingTask;
 
     // Effectively final, only set once during start()
     @Nullable
@@ -156,6 +166,13 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
+        endpointInitialized = endpointGroup.whenReady().isDone();
+        if (!endpointInitialized) {
+            ctx.whenInitialized().handle((unused1, unused2) -> {
+                runPendingTask();
+                return null;
+            });
+        }
 
         requestFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
@@ -222,20 +239,31 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         final StreamMessage<DeframedMessage> deframed =
                 res.decode(deframer, alloc, byteBufConverter(alloc, grpcWebText));
         deframer.setDeframedStreamMessage(deframed);
-        deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+
+        if (endpointInitialized) {
+            deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+        } else {
+            addPendingTask(() -> {
+                deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+            });
+        }
         responseListener.onReady();
     }
 
     @Override
     public void request(int numMessages) {
-        if (ctx.eventLoop().inEventLoop()) {
+        if (needsDirectInvocation()) {
             doRequest(numMessages);
         } else {
-            ctx.eventLoop().execute(() -> doRequest(numMessages));
+            execute(() -> doRequest(numMessages));
         }
     }
 
     private void doRequest(int numMessages) {
+        if (method.getType().serverSendsOneMessage() && numMessages == 1) {
+            // At least 2 requests are required for receiving trailers.
+            numMessages = 2;
+        }
         if (upstream == null) {
             pendingRequests += numMessages;
         } else {
@@ -245,10 +273,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void cancel(@Nullable String message, @Nullable Throwable cause) {
-        if (ctx.eventLoop().inEventLoop()) {
+        if (needsDirectInvocation()) {
             doCancel(message, cause);
         } else {
-            ctx.eventLoop().execute(() -> doCancel(message, cause));
+            execute(() -> doCancel(message, cause));
         }
     }
 
@@ -278,20 +306,20 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Override
     public void halfClose() {
-        if (ctx.eventLoop().inEventLoop()) {
+        if (needsDirectInvocation()) {
             req.close();
         } else {
-            ctx.eventLoop().execute(req::close);
+            execute(req::close);
         }
     }
 
     @Override
     public void sendMessage(I message) {
         pendingMessagesUpdater.incrementAndGet(this);
-        if (ctx.eventLoop().inEventLoop()) {
+        if (needsDirectInvocation()) {
             doSendMessage(message);
         } else {
-            ctx.eventLoop().execute(() -> doSendMessage(message));
+            execute(() -> doSendMessage(message));
         }
     }
 
@@ -476,6 +504,58 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private void notifyExecutor() {
         if (executor != null) {
             executor.execute(NO_OP);
+        }
+    }
+
+    private boolean needsDirectInvocation() {
+        return (endpointInitialized || ctx.whenInitialized().isDone()) && ctx.eventLoop().inEventLoop();
+    }
+
+    private void execute(Runnable task) {
+        if (endpointInitialized || ctx.whenInitialized().isDone()) {
+            ctx.eventLoop().execute(task);
+        } else {
+            addPendingTask(task);
+        }
+    }
+
+    private void runPendingTask() {
+        for (;;) {
+            final Runnable pendingTask = this.pendingTask;
+            if (pendingTaskUpdater.compareAndSet(this, pendingTask, NO_OP)) {
+                if (pendingTask != null) {
+                    if (ctx.eventLoop().inEventLoop()) {
+                        pendingTask.run();
+                    } else {
+                        ctx.eventLoop().execute(pendingTask);
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    private void addPendingTask(Runnable pendingTask) {
+        if (!pendingTaskUpdater.compareAndSet(this, null, pendingTask)) {
+            for (;;) {
+                final Runnable oldPendingTask = this.pendingTask;
+                assert oldPendingTask != null;
+                if (oldPendingTask == NO_OP) {
+                    if (ctx.eventLoop().inEventLoop()) {
+                        pendingTask.run();
+                    } else {
+                        ctx.eventLoop().execute(pendingTask);
+                    }
+                    break;
+                }
+                final Runnable newPendingTask = () -> {
+                    oldPendingTask.run();
+                    pendingTask.run();
+                };
+                if (pendingTaskUpdater.compareAndSet(this, oldPendingTask, newPendingTask)) {
+                    break;
+                }
+            }
         }
     }
 }

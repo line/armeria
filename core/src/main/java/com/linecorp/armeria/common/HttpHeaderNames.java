@@ -198,7 +198,7 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString COOKIE = create("Cookie");
     /**
-     * The HTTP <a href="https://tools.ietf.org/html/rfc8470">{@code "Early-Data"}</a> header field
+     * The HTTP <a href="https://datatracker.ietf.org/doc/rfc8470/">{@code "Early-Data"}</a> header field
      * name.
      */
     public static final AsciiString EARLY_DATA = create("Early-Data");
@@ -211,7 +211,7 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString FROM = create("From");
     /**
-     * The HTTP <a href="https://tools.ietf.org/html/rfc7239">{@code "Forwarded"}</a> header field name.
+     * The HTTP <a href="https://datatracker.ietf.org/doc/rfc7239/">{@code "Forwarded"}</a> header field name.
      */
     public static final AsciiString FORWARDED = create("Forwarded");
     /**
@@ -224,7 +224,7 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString HOST = create("Host");
     /**
-     * The HTTP <a href="https://tools.ietf.org/html/rfc7540#section-3.2.1">{@code "HTTP2-Settings"}
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3.2.1">{@code "HTTP2-Settings"}
      * </a> header field name.
      */
     public static final AsciiString HTTP2_SETTINGS = create("HTTP2-Settings");
@@ -456,7 +456,7 @@ public final class HttpHeaderNames {
     public static final AsciiString SOURCE_MAP = create("SourceMap");
 
     /**
-     * The HTTP <a href="https://tools.ietf.org/html/rfc6797#section-6.1">{@code
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc6797#section-6.1">{@code
      * Strict-Transport-Security}</a> header field name.
      */
     public static final AsciiString STRICT_TRANSPORT_SECURITY = create("Strict-Transport-Security");
@@ -521,12 +521,12 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString X_POWERED_BY = create("X-Powered-By");
     /**
-     * The HTTP <a href="https://tools.ietf.org/html/rfc7469">{@code
+     * The HTTP <a href="https://datatracker.ietf.org/doc/rfc7469/">{@code
      * Public-Key-Pins}</a> header field name.
      */
     public static final AsciiString PUBLIC_KEY_PINS = create("Public-Key-Pins");
     /**
-     * The HTTP <a href="https://tools.ietf.org/html/rfc7469">{@code
+     * The HTTP <a href="https://datatracker.ietf.org/doc/rfc7469/">{@code
      * Public-Key-Pins-Report-Only}</a> header field name.
      */
     public static final AsciiString PUBLIC_KEY_PINS_REPORT_ONLY = create("Public-Key-Pins-Report-Only");
@@ -568,17 +568,17 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString PING_TO = create("Ping-To");
     /**
-     * The HTTP <a href="https://tools.ietf.org/html/rfc8473">{@code
+     * The HTTP <a href="https://datatracker.ietf.org/doc/rfc8473/">{@code
      * Sec-Token-Binding}</a> header field name.
      */
     public static final AsciiString SEC_TOKEN_BINDING = create("Sec-Token-Binding");
     /**
-     * The HTTP <a href="https://tools.ietf.org/html/draft-ietf-tokbind-ttrp">{@code
+     * The HTTP <a href="https://datatracker.ietf.org/doc/draft-ietf-tokbind-ttrp/">{@code
      * Sec-Provided-Token-Binding-ID}</a> header field name.
      */
     public static final AsciiString SEC_PROVIDED_TOKEN_BINDING_ID = create("Sec-Provided-Token-Binding-ID");
     /**
-     * The HTTP <a href="https://tools.ietf.org/html/draft-ietf-tokbind-ttrp">{@code
+     * The HTTP <a href="https://datatracker.ietf.org/doc/draft-ietf-tokbind-ttrp/">{@code
      * Sec-Referred-Token-Binding-ID}</a> header field name.
      */
     public static final AsciiString SEC_REFERRED_TOKEN_BINDING_ID = create("Sec-Referred-Token-Binding-ID");

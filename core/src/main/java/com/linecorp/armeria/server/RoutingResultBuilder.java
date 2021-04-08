@@ -69,7 +69,7 @@ public final class RoutingResultBuilder {
     }
 
     /**
-     * Sets the mapped path, encoded as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
+     * Sets the mapped path, encoded as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
     public RoutingResultBuilder path(String path) {
         this.path = requireNonNull(path, "path");

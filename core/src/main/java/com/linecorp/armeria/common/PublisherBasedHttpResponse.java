@@ -19,8 +19,13 @@ package com.linecorp.armeria.common;
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.PrependingPublisher;
 
 final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpObject> implements HttpResponse {
+
+    static PublisherBasedHttpResponse from(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
+        return new PublisherBasedHttpResponse(new PrependingPublisher<>(headers, publisher));
+    }
 
     PublisherBasedHttpResponse(Publisher<? extends HttpObject> publisher) {
         super(publisher);

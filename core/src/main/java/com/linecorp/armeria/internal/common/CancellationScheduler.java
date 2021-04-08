@@ -460,12 +460,6 @@ public final class CancellationScheduler {
         ((CancellationFuture) whenCancelled()).doComplete(cause);
     }
 
-    @Nullable
-    @VisibleForTesting
-    ScheduledFuture<?> scheduledFuture() {
-        return scheduledFuture;
-    }
-
     @VisibleForTesting
     State state() {
         return state;

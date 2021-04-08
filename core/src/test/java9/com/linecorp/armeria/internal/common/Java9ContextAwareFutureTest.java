@@ -60,7 +60,7 @@ import ch.qos.logback.core.Appender;
 
 class Java9ContextAwareFutureTest {
 
-    // TODO(minwoox) Make an extesion which a user can easily check the logs.
+    // TODO(minwoox) Make an extension which a user can easily check the logs.
     @Mock
     private Appender<ILoggingEvent> appender;
     @Captor

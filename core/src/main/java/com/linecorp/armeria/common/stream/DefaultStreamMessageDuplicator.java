@@ -155,6 +155,8 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         private long requestedDemand;
         @Nullable
         private Subscription upstreamSubscription;
+        @Nullable
+        private Throwable abortCause;
 
         private boolean cancelUpstream;
 
@@ -233,7 +235,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         private void doPushSignal(Object obj) {
             if (state == State.ABORTED) {
-                PooledObjects.close(obj);
+                StreamMessageUtil.closeOrAbort(obj, abortCause);
                 return;
             }
             if (!(obj instanceof CloseEvent)) {
@@ -356,7 +358,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 // anymore and are guaranteed that the last unsubscribed downstream will run this cleanup logic.
                 state = State.ABORTED;
                 doCancelUpstreamSubscription();
-                signals.clear();
+                signals.clear(null);
             }
         }
 
@@ -411,7 +413,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 if (duplicator.unsubscribed == 0 && downstreamSubscriptions.isEmpty()) {
                     state = State.ABORTED;
                     doCancelUpstreamSubscription();
-                    signals.clear();
+                    signals.clear(null);
                 } else {
                     state = State.CLOSED;
                 }
@@ -429,6 +431,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         void doAbort(Throwable cause) {
             if (state != State.ABORTED) {
                 state = State.ABORTED;
+                abortCause = cause;
                 doCancelUpstreamSubscription();
                 // Do not call 'upstream.abort();', but 'upstream.cancel()' because this is not aborting
                 // the upstream StreamMessage, but aborting duplicator.
@@ -447,7 +450,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             downstreamSubscriptions.clear();
             CompletableFutures.successfulAsList(completionFutures, unused -> null)
                               .handle((unused1, unused2) -> {
-                                  signals.clear();
+                                  signals.clear(cause);
                                   return null;
                               });
         }
@@ -805,7 +808,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     return false;
                 }
 
-                if (processor.isClosed()) {
+                if (processor.isClosed() && processor.duplicator.unsubscribed == 0) {
                     if (++processor.downstreamSignaledCounter >= REQUEST_REMOVAL_THRESHOLD) {
                         // don't need to use AtomicBoolean cause it's used for rough counting
                         processor.downstreamSignaledCounter = 0;
@@ -1019,7 +1022,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         // Removes references to all objects.
-        void clear() {
+        void clear(@Nullable Throwable cause) {
             final Object[] oldElements = elements;
             if (oldElements == null) {
                 return; // Already cleared.
@@ -1027,7 +1030,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             elements = null;
             final int t = tail;
             for (int i = head; i < t; i++) {
-                PooledObjects.close(oldElements[i]);
+                StreamMessageUtil.closeOrAbort(oldElements[i], cause);
             }
         }
 

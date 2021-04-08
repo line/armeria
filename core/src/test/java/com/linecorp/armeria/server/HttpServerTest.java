@@ -61,6 +61,8 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -80,6 +82,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -592,11 +595,34 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
-    void testTooLargeContentToNonExistentService(WebClient client) throws Exception {
+    void testTooLargeContentToNonExistentService(WebClient client) {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
-        final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
+        if (client.scheme().sessionProtocol().uriText().startsWith("h1")) {
+            // Unlike HTTP/2, ClosedSessionException is raised because Http1RequestDecoder closes
+            // the connection before the content of "404 Not Found" is sent.
+            //
+            // When the Http1RequestDecoder notices that the request entity is too large, the only thing it
+            // can do is that just closing the connection if the response headers (e.g 404 in this case)
+            // is already sent.
+            // If we wait for the response to be sent fully and close the connection, then the subsequent
+            // following request that uses the same connection will encounter ClosedSessionException which
+            // is undesirable.
+            // However, HTTP/2 can wait for the response to be sent, because the following request uses the
+            // next stream.
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                assertThatThrownBy(() -> client.post("/non-existent", content).aggregate().join())
+                        .hasCauseInstanceOf(ClosedSessionException.class);
+                final ResponseHeaders responseHeaders =
+                        captor.get().log().ensureAvailable(RequestLogProperty.RESPONSE_HEADERS)
+                              .responseHeaders();
+                // Even though the request is failed, the client got the 404 response headers.
+                assertThat(responseHeaders.status()).isSameAs(HttpStatus.NOT_FOUND);
+            }
+        } else {
+            final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().join();
+            assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
+            assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
+        }
     }
 
     @ParameterizedTest
@@ -929,7 +955,7 @@ class HttpServerTest {
                                      (delegate, ctx, req) -> {
                                          ctx.setWriteTimeoutMillis(clientWriteTimeoutMillis);
                                          if (clientResponseTimeoutMillis == 0) {
-                                            ctx.clearResponseTimeout();
+                                             ctx.clearResponseTimeout();
                                          } else {
                                              ctx.setResponseTimeoutMillis(TimeoutMode.SET_FROM_NOW,
                                                                           clientResponseTimeoutMillis);

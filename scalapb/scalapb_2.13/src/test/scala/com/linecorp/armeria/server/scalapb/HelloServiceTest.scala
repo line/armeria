@@ -1,16 +1,18 @@
 package com.linecorp.armeria.server.scalapb
 
-import armeria.scalapb.hello.{HelloReply, HelloRequest, HelloServiceGrpc}
 import armeria.scalapb.hello.HelloServiceGrpc.{HelloServiceBlockingStub, HelloServiceStub}
+import armeria.scalapb.hello.{Add, HelloReply, HelloRequest, HelloServiceGrpc, Literal}
 import com.google.common.base.Stopwatch
 import com.linecorp.armeria.client.Clients
 import com.linecorp.armeria.client.grpc.GrpcClientOptions
+import com.linecorp.armeria.client.logging.{ContentPreviewingClient, LoggingClient}
 import com.linecorp.armeria.common.SerializationFormat
 import com.linecorp.armeria.common.grpc.{GrpcJsonMarshaller, GrpcSerializationFormats}
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
+import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.grpc.GrpcService
+import com.linecorp.armeria.server.logging.{ContentPreviewingService, LoggingService}
 import com.linecorp.armeria.server.scalapb.HelloServiceImpl.toMessage
-import com.linecorp.armeria.server.{Server, ServerBuilder}
 import com.linecorp.armeria.server.scalapb.HelloServiceTest.{GrpcSerializationProvider, newClient}
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import io.grpc.ServiceDescriptor
@@ -24,8 +26,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.{Arguments, ArgumentsProvider, ArgumentsSource}
-import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext}
 import scala.reflect.ClassTag
 
 class HelloServiceTest {
@@ -146,6 +148,16 @@ class HelloServiceTest {
     request.onCompleted()
 
     await().untilAsserted(() => assertThat(completed).isTrue())
+  }
+
+  @ArgumentsSource(classOf[GrpcSerializationProvider])
+  @ParameterizedTest
+  def oneof(serializationFormat: SerializationFormat): Unit = {
+    val oneof: Add = Add(Literal(1), Literal(2))
+    val helloService = newClient[HelloServiceStub](serializationFormat)
+    val actual = helloService.oneof(oneof)
+    val res = Await.result(actual, Duration.Inf)
+    assertThat(res).isEqualTo(oneof)
   }
 }
 

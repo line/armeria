@@ -1,14 +1,14 @@
 #!/bin/bash
 set -eo pipefail
 
-JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jre_x64_linux_hotspot_8u242b08.tar.gz'
-JRE8_VERSION='AdoptOpenJDK-8u242b08'
-JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.6%2B10/OpenJDK11U-jre_x64_linux_hotspot_11.0.6_10.tar.gz'
-JRE11_VERSION='AdoptOpenJDK-11.0.6_10'
-JDK14_URL='https://github.com/AdoptOpenJDK/openjdk14-binaries/releases/download/jdk-14%2B36/OpenJDK14U-jdk_x64_linux_hotspot_14_36.tar.gz'
-JDK14_VERSION='AdoptOpenJDK-14_36'
-BUILD_JDK_URL="$JDK14_URL"
-BUILD_JDK_VERSION="$JDK14_VERSION"
+JRE8_URL='https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u282-b08/OpenJDK8U-jre_x64_linux_hotspot_8u282b08.tar.gz'
+JRE8_VERSION='AdoptOpenJDK-8u282b08'
+JRE11_URL='https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.10%2B9/OpenJDK11U-jre_x64_linux_hotspot_11.0.10_9.tar.gz'
+JRE11_VERSION='AdoptOpenJDK-11.0.10_9'
+JDK15_URL='https://github.com/AdoptOpenJDK/openjdk15-binaries/releases/download/jdk-15.0.2%2B7/OpenJDK15U-jdk_x64_linux_hotspot_15.0.2_7.tar.gz'
+JDK15_VERSION='AdoptOpenJDK-15.0.2_7'
+BUILD_JDK_URL="$JDK15_URL"
+BUILD_JDK_VERSION="$JDK15_VERSION"
 
 function msg() {
   echo -ne "\033[1;32m"
@@ -43,10 +43,10 @@ java11)
   TEST_JAVA_VERSION='11'
   COVERAGE=1
   ;;
-java14|site|leak)
-  TEST_JRE_URL="$JDK14_URL"
-  TEST_JRE_VERSION="$JDK14_VERSION"
-  TEST_JAVA_VERSION='14'
+java15|site|leak)
+  TEST_JRE_URL="$JDK15_URL"
+  TEST_JRE_VERSION="$JDK15_VERSION"
+  TEST_JAVA_VERSION='15'
   ;;
 *)
   echo "Unknown profile: $PROFILE" >&2
@@ -135,10 +135,6 @@ if [[ ! -x "$JAVA_TEST_HOME/bin/java" ]]; then
   echo_and_run tar xf "$HOME/jdk/downloads/test-$TEST_JAVA_VERSION.tgz" --strip-components=1 -C "$JAVA_TEST_HOME.tmp"
   echo_and_run mv "$JAVA_TEST_HOME.tmp" "$JAVA_TEST_HOME"
 fi
-
-# Create a cache directory for a embedded Consul
-export CONSUL_DOWNLOAD_PATH="$HOME/.cache/embedded_consul"
-echo_and_run mkdir -p "$CONSUL_DOWNLOAD_PATH"
 
 # Print the version information.
 msg "Version information:"

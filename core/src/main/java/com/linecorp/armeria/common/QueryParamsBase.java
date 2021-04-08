@@ -57,7 +57,7 @@ class QueryParamsBase
 
     @Override
     final boolean nameEquals(String a, String b) {
-        // Keys in URL parameters are case-sensitive - https://tools.ietf.org/html/rfc3986#page-39
+        // Keys in URL parameters are case-sensitive - https://datatracker.ietf.org/doc/html/rfc3986#page-39
         return a.equals(b);
     }
 

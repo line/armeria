@@ -58,7 +58,7 @@ public class ProxyConfigTest {
     }
 
     @Test
-    void testNullProxyAddresss() {
+    void testNullProxyAddress() {
         assertThatThrownBy(() -> ProxyConfig.socks4(null)).isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> ProxyConfig.socks5(null)).isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> ProxyConfig.connect(null)).isInstanceOf(NullPointerException.class);

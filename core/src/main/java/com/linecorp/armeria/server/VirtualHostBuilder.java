@@ -49,6 +49,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -71,6 +72,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 
@@ -110,6 +112,8 @@ public final class VirtualHostBuilder {
 
     @Nullable
     private RejectedRouteHandler rejectedRouteHandler;
+    @Nullable
+    private ServiceNaming defaultServiceNaming;
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -338,12 +342,12 @@ public final class VirtualHostBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
@@ -356,12 +360,12 @@ public final class VirtualHostBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
@@ -806,6 +810,15 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the default naming rule for the name of services. If not set, the value set via
+     * {@link ServerBuilder#defaultServiceNaming(ServiceNaming)} is used.
+     */
+    public VirtualHostBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        this.defaultServiceNaming = requireNonNull(defaultServiceNaming);
+        return this;
+    }
+
+    /**
      * Sets the timeout of a request in milliseconds. If not set, the value set via
      * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
@@ -901,6 +914,9 @@ public final class VirtualHostBuilder {
         ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
 
         // Retrieve all settings as a local copy. Use default builder's properties if not set.
+        final ServiceNaming defaultServiceNaming =
+                this.defaultServiceNaming != null ?
+                this.defaultServiceNaming : template.defaultServiceNaming;
         final long requestTimeoutMillis =
                 this.requestTimeoutMillis != null ?
                 this.requestTimeoutMillis : template.requestTimeoutMillis;
@@ -954,13 +970,13 @@ public final class VirtualHostBuilder {
                                         cfgSetters.getClass().getSimpleName());
                     }
                 }).map(cfgBuilder -> {
-                    return cfgBuilder.build(requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                            accessLogWriter, shutdownAccessLogWriterOnStop);
+                    return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
+                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
-                new ServiceConfigBuilder(Route.ofCatchAll(), FallbackService.INSTANCE)
-                        .build(requestTimeoutMillis, maxRequestLength, verboseResponses,
+                new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
+                        .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, shutdownAccessLogWriterOnStop);
 
         SslContext sslContext = null;
@@ -1020,15 +1036,16 @@ public final class VirtualHostBuilder {
 
             // Validate the built `SslContext`.
             if (sslContext != null) {
-                validateSslContext(sslContext, tlsAllowUnsafeCiphers);
+                validateSslContext(sslContext);
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
             }
 
             final VirtualHost virtualHost =
                     new VirtualHost(defaultHostname, hostnamePattern, sslContext,
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
-                                    accessLoggerMapper, requestTimeoutMillis, maxRequestLength,
-                                    verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
+                                    accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
+                                    maxRequestLength, verboseResponses, accessLogWriter,
+                                    shutdownAccessLogWriterOnStop);
 
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);
@@ -1064,7 +1081,7 @@ public final class VirtualHostBuilder {
      * key store password is not given to key store when {@link SslContext} was created using
      * {@link KeyManagerFactory}, the validation will fail and an {@link IllegalStateException} will be raised.
      */
-    private static SslContext validateSslContext(SslContext sslContext, boolean tlsAllowUnsafeCiphers) {
+    private static SslContext validateSslContext(SslContext sslContext) {
         if (!sslContext.isServer()) {
             throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
         }
@@ -1077,18 +1094,28 @@ public final class VirtualHostBuilder {
             serverEngine.setUseClientMode(false);
             serverEngine.setNeedClientAuth(false);
 
+            // Create a client-side engine with very permissive settings.
             final SslContext sslContextClient =
-                    buildSslContext(SslContextBuilder::forClient, tlsAllowUnsafeCiphers, ImmutableList.of());
+                    buildSslContext(() -> SslContextBuilder.forClient()
+                                                           .trustManager(InsecureTrustManagerFactory.INSTANCE),
+                                    true, ImmutableList.of());
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
+            clientEngine.setEnabledProtocols(clientEngine.getSupportedProtocols());
+            clientEngine.setEnabledCipherSuites(clientEngine.getSupportedCipherSuites());
 
-            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
             final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
 
-            clientEngine.wrap(appBuf, packetBuf);
-            appBuf.clear();
+            // Wrap an empty app buffer to initiate handshake.
+            wrap(clientEngine, packetBuf);
+
+            // Feed the handshake packet to the server engine.
             packetBuf.flip();
-            serverEngine.unwrap(packetBuf, appBuf);
+            unwrap(serverEngine, packetBuf);
+
+            // See if the server has something to say.
+            packetBuf.clear();
+            wrap(serverEngine, packetBuf);
         } catch (SSLException e) {
             throw new IllegalStateException("failed to validate SSL/TLS configuration: " + e.getMessage(), e);
         } finally {
@@ -1097,6 +1124,41 @@ public final class VirtualHostBuilder {
         }
 
         return sslContext;
+    }
+
+    private static void unwrap(SSLEngine engine, ByteBuffer packetBuf) throws SSLException {
+        final ByteBuffer appBuf = ByteBuffer.allocate(engine.getSession().getApplicationBufferSize());
+        // Limit the number of unwrap() calls to 8 times, to prevent a potential infinite loop.
+        // 8 is an arbitrary number, it can be any number greater than 2.
+        for (int i = 0; i < 8; i++) {
+            appBuf.clear();
+            final SSLEngineResult result = engine.unwrap(packetBuf, appBuf);
+            switch (result.getHandshakeStatus()) {
+                case NEED_UNWRAP:
+                    continue;
+                case NEED_TASK:
+                    engine.getDelegatedTask().run();
+                    continue;
+            }
+            break;
+        }
+    }
+
+    private static void wrap(SSLEngine sslEngine, ByteBuffer packetBuf) throws SSLException {
+        final ByteBuffer appBuf = ByteBuffer.allocate(0);
+        // Limit the number of wrap() calls to 8 times, to prevent a potential infinite loop.
+        // 8 is an arbitrary number, it can be any number greater than 2.
+        for (int i = 0; i < 8; i++) {
+            final SSLEngineResult result = sslEngine.wrap(appBuf, packetBuf);
+            switch (result.getHandshakeStatus()) {
+                case NEED_WRAP:
+                    continue;
+                case NEED_TASK:
+                    sslEngine.getDelegatedTask().run();
+                    continue;
+            }
+            break;
+        }
     }
 
     @Override
@@ -1108,6 +1170,7 @@ public final class VirtualHostBuilder {
                           .add("routeDecoratingServices", routeDecoratingServices)
                           .add("accessLoggerMapper", accessLoggerMapper)
                           .add("rejectedRouteHandler", rejectedRouteHandler)
+                          .add("defaultServiceNaming", defaultServiceNaming)
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)

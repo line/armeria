@@ -24,7 +24,7 @@ TARBALL="$TARBALL_BASENAME.tar"
 
 msg 'Collecting the test reports ..'
 echo_and_run rm -f "$TARBALL"
-echo_and_run find . -path '*/build/reports/tests' -type d \
+echo_and_run find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' \
   -exec tar rf "$TARBALL" \
     --xform="s:./:$TARBALL_BASENAME/:" \
     --xform='s:/build/reports/tests::' \

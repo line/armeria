@@ -51,6 +51,10 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
         this.env = env;
     }
 
+    protected final TestEnvironment env() {
+        return env;
+    }
+
     @Override
     public abstract StreamMessage<T> createPublisher(long elements);
 
@@ -66,16 +70,20 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
 
-            if (!(stream instanceof PublisherBasedStreamMessage || stream instanceof SplitHttpResponse)) {
+            if (stream instanceof PublisherBasedStreamMessage ||
+                stream instanceof SplitHttpResponse ||
+                stream instanceof PathStreamMessage) {
                 // It's impossible for PublisherBasedStreamMessage to tell if the stream is
                 // closed or empty yet because Publisher doesn't have enough information.
+            } else {
                 assertThat(stream.isOpen()).isFalse();
                 assertThat(stream.isEmpty()).isTrue();
             }
 
-            if (!(stream instanceof SplitHttpResponse)) {
-                // SplitHttpResponse could complete early to read HTTP headers from HttpResponse before
-                // publishing body
+            if (!(stream instanceof SplitHttpResponse || stream instanceof PathStreamMessage)) {
+                // - SplitHttpResponse could complete early to read HTTP headers from HttpResponse before
+                //   publishing body
+                // - PathStreamMessage immediately completes if a Path size is zero
                 assertThat(stream.whenComplete()).isNotDone();
             }
             sub.requestEndOfStream();
@@ -136,10 +144,10 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             notVerified();
         }
         assumeAbortedPublisherAvailable(pub);
-        assertThat(pub.isOpen()).isFalse();
         assertThatThrownBy(() -> pub.whenComplete().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(AbortedStreamException.class);
+        assertThat(pub.isOpen()).isFalse();
 
         final AtomicReference<Throwable> capturedCause = new AtomicReference<>();
         final Latch onErrorLatch = new Latch(env);
@@ -233,19 +241,22 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
 
     @Override
     @SuppressWarnings("checkstyle:LineLength")
-    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingOneByOne() throws Throwable {
+    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingOneByOne()
+            throws Throwable {
         multiSubscribeUnsupported();
     }
 
     @Override
     @SuppressWarnings("checkstyle:LineLength")
-    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfront() throws Throwable {
+    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfront()
+            throws Throwable {
         multiSubscribeUnsupported();
     }
 
     @Override
     @SuppressWarnings("checkstyle:LineLength")
-    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfrontAndCompleteAsExpected() throws Throwable {
+    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfrontAndCompleteAsExpected()
+            throws Throwable {
         multiSubscribeUnsupported();
     }
 

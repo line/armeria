@@ -77,7 +77,15 @@ final class RoutingTrie<V> {
      * Returns the list of values which is mapped to the given {@code path}.
      */
     List<V> find(String path) {
-        final Node<V> node = findNode(path, false);
+        return find(path, NodeProcessor.noop());
+    }
+
+    /**
+     * Returns the list of values which is mapped to the given {@code path}.
+     * Each node matched with the given {@code path} would be passed into the given {@link NodeProcessor}.
+     */
+    List<V> find(String path, NodeProcessor<V> processor) {
+        final Node<V> node = findNode(path, false, processor);
         return node == null ? ImmutableList.of() : node.values;
     }
 
@@ -97,7 +105,7 @@ final class RoutingTrie<V> {
     @Nullable
     @VisibleForTesting
     Node<V> findNode(String path) {
-        return findNode(path, false);
+        return findNode(path, false, NodeProcessor.noop());
     }
 
     /**
@@ -106,9 +114,10 @@ final class RoutingTrie<V> {
      */
     @Nullable
     @VisibleForTesting
-    Node<V> findNode(String path, boolean exact) {
+    Node<V> findNode(String path, boolean exact, NodeProcessor<V> processor) {
         requireNonNull(path, "path");
-        return findFirstNode(root, path, 0, exact, new IntHolder());
+        requireNonNull(processor, "processor");
+        return findFirstNode(root, path, 0, exact, new IntHolder(), processor);
     }
 
     /**
@@ -116,10 +125,14 @@ final class RoutingTrie<V> {
      * to visit the children of the given node. Returns {@code null} if there is no {@link Node} to find.
      */
     @Nullable
-    private Node<V> findFirstNode(Node<V> node, String path, int begin, boolean exact, IntHolder nextHolder) {
+    private Node<V> findFirstNode(Node<V> node, String path, int begin, boolean exact, IntHolder nextHolder,
+                                  NodeProcessor<V> processor) {
         final Node<V> checked = checkNode(node, path, begin, exact, nextHolder);
         if (checked != continueWalking()) {
-            return checked;
+            if (checked != null) {
+                return processor.process(checked);
+            }
+            return null;
         }
 
         // The path is not matched to this node, but it is possible to be matched on my children
@@ -131,19 +144,22 @@ final class RoutingTrie<V> {
         final int next = nextHolder.value;
         Node<V> child = node.children.get(path.charAt(next));
         if (child != null) {
-            final Node<V> found = findFirstNode(child, path, next, exact, nextHolder);
+            final Node<V> found = findFirstNode(child, path, next, exact, nextHolder, processor);
             if (found != null) {
                 return found;
             }
         }
         child = node.parameterChild;
         if (child != null) {
-            final Node<V> found = findFirstNode(child, path, next, exact, nextHolder);
+            final Node<V> found = findFirstNode(child, path, next, exact, nextHolder, processor);
             if (found != null) {
                 return found;
             }
         }
-        return node.catchAllChild;
+        if (node.catchAllChild != null) {
+            return processor.process(node.catchAllChild);
+        }
+        return null;
     }
 
     private List<Node<V>> findAllNodes(String path, boolean exact) {
@@ -153,8 +169,7 @@ final class RoutingTrie<V> {
     }
 
     private void findAllNodes(Node<V> node, String path, int begin, boolean exact,
-                              ImmutableList.Builder<Node<V>> accumulator,
-                              IntHolder nextHolder) {
+                              ImmutableList.Builder<Node<V>> accumulator, IntHolder nextHolder) {
         final Node<V> checked = checkNode(node, path, begin, exact, nextHolder);
         if (checked != continueWalking()) {
             if (checked != null) {
@@ -299,5 +314,24 @@ final class RoutingTrie<V> {
 
     private static class IntHolder {
         int value;
+    }
+
+    @FunctionalInterface
+    interface NodeProcessor<V> {
+        static <V> NodeProcessor<V> noop() {
+            return node -> node;
+        }
+
+        /**
+         * Looks into the node before picking it as a candidate for handling the current request.
+         * Implement this method to return one of the following:
+         * <ul>
+         *     <li>the given {@code node} as it is;</li>
+         *     <li>a new {@link Node} that will replace the given one; or</li>
+         *     <li>{@code null} to exclude the given {@code node} from the candidate list.</li>
+         * </ul>
+         */
+        @Nullable
+        Node<V> process(Node<V> node);
     }
 }

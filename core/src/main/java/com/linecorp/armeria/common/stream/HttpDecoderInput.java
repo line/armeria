@@ -56,4 +56,18 @@ public interface HttpDecoderInput extends SafeCloseable {
      * @throws IllegalStateException if the specified {@code length} is greater than {@link #readableBytes()}
      */
     ByteBuf readBytes(int length);
+
+    /**
+     * Returns a byte at the specified absolute {@code index} in this {@link HttpDecoderInput}.
+     *
+     * @throws IllegalStateException if the specified {@code index} is greater than {@link #readableBytes()}
+     */
+    byte getByte(int index);
+
+    /**
+     * Skips bytes of the specified {@code length} in this {@link HttpDecoderInput}.
+     *
+     * @throws IllegalStateException if the specified {@code length} is greater than {@link #readableBytes()}
+     */
+    void skipBytes(int length);
 }

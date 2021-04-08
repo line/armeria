@@ -95,7 +95,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
     private HttpService service = fakeService;
     @Nullable
-    private String defaultServiceName;
+    private ServiceNaming defaultServiceNaming;
     @Nullable
     private String defaultLogName;
     @Nullable
@@ -125,7 +125,18 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      * @param defaultServiceName the default log name.
      */
     public ServiceRequestContextBuilder defaultServiceName(String defaultServiceName) {
-        this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
+        requireNonNull(defaultServiceName, "defaultServiceName");
+        return defaultServiceNaming(ServiceNaming.of(defaultServiceName));
+    }
+
+    /**
+     * Sets the default naming rule for the {@link RequestLog#serviceName()}.
+     * If set, the service name will be converted according to given naming rule.
+     *
+     * @param defaultServiceNaming the default service naming.
+     */
+    public ServiceRequestContextBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        this.defaultServiceNaming = requireNonNull(defaultServiceNaming, "defaultServiceNaming");
         return this;
     }
 
@@ -200,8 +211,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             serviceBindingBuilder = serverBuilder.route().path(path());
         }
 
-        if (defaultServiceName != null) {
-            serviceBindingBuilder.defaultServiceName(defaultServiceName);
+        if (defaultServiceNaming != null) {
+            serviceBindingBuilder.defaultServiceNaming(defaultServiceNaming);
         }
         if (defaultLogName != null) {
             serviceBindingBuilder.defaultLogName(defaultLogName);

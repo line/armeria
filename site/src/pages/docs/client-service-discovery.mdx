@@ -333,3 +333,46 @@ For more information, please refer to the API documentation of the
 See [Eureka service registration](/docs/server-service-registration#eureka-based-service-registration-with-eurekaupdatinglistener).
 
 </Tip>
+
+## [Consul](https://www.consul.io)-based service discovery with `ConsulEndpointGroup`
+
+First, You need the `armeria-consul` dependency:
+
+<RequiredDependencies
+boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+dependencies={[
+{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-consul' },
+]}
+/>
+
+Then, use <type://ConsulEndpointGroup> to retrieve the information of servers:
+
+```java
+import com.linecorp.armeria.client.consul.ConsulEndpointGroup;
+
+ConsulEndpointGroup consulEndpointGroup =
+        ConsulEndpointGroup.of("http://my-consul.com:8500", "my-service");
+```
+
+If you want to get the information of certain [datacenter](https://www.consul.io/api-docs/catalog#dc-2) or
+[filter](https://www.consul.io/api-docs/features/filtering) endpoints, use <type://ConsulEndpointGroupBuilder>:
+
+```java
+import com.linecorp.armeria.client.consul.ConsulEndpointGroupBuilder;
+
+ConsulEndpointGroupBuilder builder =
+        ConsulEndpointGroup.builder("http://my-consul.com:8500", "my-service");
+                           .datacenter("ds1")
+                           .filter("ServicePort == 8080")
+                           .build();
+ConsulEndpointGroup consulEndpointGroup = builder.build();
+```
+
+For more information, please refer to the API documentation of the
+[com.linecorp.armeria.client.consul](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/client/consul/package-summary.html) package.
+
+<Tip>
+
+See [Consul service registration](/docs/server-service-registration#consul-based-service-registration-with-consulupdatinglistener).
+
+</Tip>

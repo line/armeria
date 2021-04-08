@@ -1,6 +1,6 @@
 dependencies {
     // Thrift
-    implementation project(':thrift0.13')
+    implementation project(':thrift0.14')
 }
 
 ext {

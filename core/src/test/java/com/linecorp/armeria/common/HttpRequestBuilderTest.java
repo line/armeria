@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.util.AsciiString;
 import reactor.test.StepVerifier;
@@ -237,5 +238,32 @@ class HttpRequestBuilderTest {
         final HttpRequestBuilder requestBuilder = HttpRequest.builder();
         assertThatThrownBy(requestBuilder::build).isInstanceOf(IllegalStateException.class)
                                                  .hasMessageContaining("path must be set");
+    }
+
+    @Test
+    void buildWithPublisher() {
+        final HttpRequest request =
+                HttpRequest.builder()
+                           .method(HttpMethod.GET)
+                           .path("/")
+                           .content(MediaType.PLAIN_TEXT_UTF_8, StreamMessage.of(HttpData.ofUtf8("hello")))
+                           .build();
+
+        StepVerifier.create(request)
+                    .expectNext(HttpData.ofUtf8("hello"))
+                    .verifyComplete();
+
+        final HttpRequest requestWithTrailers =
+                HttpRequest.builder()
+                           .method(HttpMethod.GET)
+                           .path("/")
+                           .content(MediaType.PLAIN_TEXT_UTF_8, StreamMessage.of(HttpData.ofUtf8("hello")))
+                           .trailers(HttpHeaders.of("foo", "bar"))
+                           .build();
+
+        StepVerifier.create(requestWithTrailers)
+                    .expectNext(HttpData.ofUtf8("hello"))
+                    .expectNext(HttpHeaders.of("foo", "bar"))
+                    .verifyComplete();
     }
 }

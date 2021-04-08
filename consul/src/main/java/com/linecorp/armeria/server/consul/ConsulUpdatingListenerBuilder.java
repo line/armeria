@@ -35,7 +35,7 @@ import com.linecorp.armeria.server.Server;
 
 /**
  * Builds a new {@link ConsulUpdatingListener}, which registers the server to Consul cluster.
- * <h3>Examples</h3>
+ * <h2>Examples</h2>
  * <pre>{@code
  * ConsulUpdatingListener listener = ConsulUpdatingListener.builder(consulUri, "myService")
  *                                                         .build();

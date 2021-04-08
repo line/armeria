@@ -57,12 +57,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -178,6 +181,7 @@ public final class ServerBuilder {
     private ScheduledExecutorService blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
+    private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -191,6 +195,7 @@ public final class ServerBuilder {
         // Set the default host-level properties.
         virtualHostTemplate.accessLogWriter(AccessLogWriter.disabled(), true);
         virtualHostTemplate.rejectedRouteHandler(RejectedRouteHandler.WARN);
+        virtualHostTemplate.defaultServiceNaming(ServiceNaming.fullTypeName());
         virtualHostTemplate.requestTimeoutMillis(Flags.defaultRequestTimeoutMillis());
         virtualHostTemplate.maxRequestLength(Flags.defaultMaxRequestLength());
         virtualHostTemplate.verboseResponses(Flags.verboseResponses());
@@ -456,7 +461,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> interval.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -476,7 +481,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> interval.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -589,7 +594,7 @@ public final class ServerBuilder {
     public ServerBuilder http2MaxFrameSize(int http2MaxFrameSize) {
         checkArgument(http2MaxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND &&
                       http2MaxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND,
-                      "http2MaxFramSize: %s (expected: >= %s and <= %s)",
+                      "http2MaxFrameSize: %s (expected: >= %s and <= %s)",
                       http2MaxFrameSize, MAX_FRAME_SIZE_LOWER_BOUND, MAX_FRAME_SIZE_UPPER_BOUND);
         this.http2MaxFrameSize = http2MaxFrameSize;
         return this;
@@ -691,6 +696,18 @@ public final class ServerBuilder {
      */
     public ServerBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return this;
+    }
+
+    /**
+     * Sets a global naming rule for the name of services. This property can be overridden via
+     * {@link VirtualHostBuilder#defaultServiceNaming(ServiceNaming)}. The overriding is also possible if
+     * service-level naming rule is set via {@link ServiceBindingBuilder#defaultServiceNaming(ServiceNaming)}.
+     *
+     * @see RequestOnlyLog#serviceName()
+     */
+    public ServerBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        virtualHostTemplate.defaultServiceNaming(defaultServiceNaming);
         return this;
     }
 
@@ -862,12 +879,12 @@ public final class ServerBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
@@ -881,12 +898,12 @@ public final class ServerBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
@@ -1319,6 +1336,18 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link ExceptionHandler} that converts a {@link Throwable} to an {@link AggregatedHttpResponse}.
+     *
+     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ExceptionHandler}
+     * but the {@link HttpResponseException#httpResponse()} is sent as-is.
+     */
+    @UnstableApi
+    public ServerBuilder exceptionHandler(ExceptionHandler exceptionHandler) {
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+        return this;
+    }
+
+    /**
      * Sets a list of {@link ClientAddressSource}s which are used to determine where to look for the
      * client address, in the order of preference. {@code Forwarded} header, {@code X-Forwarded-For} header
      * and the source address of a PROXY protocol header will be used by default.
@@ -1504,63 +1533,6 @@ public final class ServerBuilder {
         return server;
     }
 
-    /**
-     * Returns a list of {@link ServerPort}s which consists of distinct port numbers except for the port
-     * {@code 0}. If there are the same port numbers with different {@link SessionProtocol}s,
-     * their {@link SessionProtocol}s will be merged into a single {@link ServerPort} instance.
-     * The returned list is sorted as the same order of the specified {@code ports}.
-     */
-    private static List<ServerPort> resolveDistinctPorts(List<ServerPort> ports) {
-        final List<ServerPort> distinctPorts = new ArrayList<>();
-        for (final ServerPort p : ports) {
-            boolean found = false;
-            // Do not check the port number 0 because a user may want his or her server to be bound
-            // on multiple arbitrary ports.
-            if (p.localAddress().getPort() > 0) {
-                for (int i = 0; i < distinctPorts.size(); i++) {
-                    final ServerPort port = distinctPorts.get(i);
-                    if (port.localAddress().equals(p.localAddress())) {
-                        final ServerPort merged =
-                                new ServerPort(port.localAddress(),
-                                               Sets.union(port.protocols(), p.protocols()));
-                        distinctPorts.set(i, merged);
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            if (!found) {
-                distinctPorts.add(p);
-            }
-        }
-        return Collections.unmodifiableList(distinctPorts);
-    }
-
-    private static VirtualHost setSslContextIfAbsent(VirtualHost h,
-                                                     @Nullable SslContext defaultSslContext) {
-        if (h.sslContext() != null || defaultSslContext == null) {
-            return h;
-        }
-        return h.withNewSslContext(defaultSslContext);
-    }
-
-    @Nullable
-    private static SslContext findDefaultSslContext(VirtualHost defaultVirtualHost,
-                                                    List<VirtualHost> virtualHosts) {
-        final SslContext defaultSslContext = defaultVirtualHost.sslContext();
-        if (defaultSslContext != null) {
-            return defaultSslContext;
-        }
-
-        for (int i = virtualHosts.size() - 1; i >= 0; i--) {
-            final SslContext sslContext = virtualHosts.get(i).sslContext();
-            if (sslContext != null) {
-                return sslContext;
-            }
-        }
-        return null;
-    }
-
     ServerConfig buildServerConfig(ServerConfig existingConfig) {
         return buildServerConfig(existingConfig.ports());
     }
@@ -1652,7 +1624,64 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, sslContexts);
+    }
+
+    /**
+     * Returns a list of {@link ServerPort}s which consists of distinct port numbers except for the port
+     * {@code 0}. If there are the same port numbers with different {@link SessionProtocol}s,
+     * their {@link SessionProtocol}s will be merged into a single {@link ServerPort} instance.
+     * The returned list is sorted as the same order of the specified {@code ports}.
+     */
+    private static List<ServerPort> resolveDistinctPorts(List<ServerPort> ports) {
+        final List<ServerPort> distinctPorts = new ArrayList<>();
+        for (final ServerPort p : ports) {
+            boolean found = false;
+            // Do not check the port number 0 because a user may want his or her server to be bound
+            // on multiple arbitrary ports.
+            if (p.localAddress().getPort() > 0) {
+                for (int i = 0; i < distinctPorts.size(); i++) {
+                    final ServerPort port = distinctPorts.get(i);
+                    if (port.localAddress().equals(p.localAddress())) {
+                        final ServerPort merged =
+                                new ServerPort(port.localAddress(),
+                                               Sets.union(port.protocols(), p.protocols()));
+                        distinctPorts.set(i, merged);
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
+                distinctPorts.add(p);
+            }
+        }
+        return Collections.unmodifiableList(distinctPorts);
+    }
+
+    private static VirtualHost setSslContextIfAbsent(VirtualHost h,
+                                                     @Nullable SslContext defaultSslContext) {
+        if (h.sslContext() != null || defaultSslContext == null) {
+            return h;
+        }
+        return h.withNewSslContext(defaultSslContext);
+    }
+
+    @Nullable
+    private static SslContext findDefaultSslContext(VirtualHost defaultVirtualHost,
+                                                    List<VirtualHost> virtualHosts) {
+        final SslContext defaultSslContext = defaultVirtualHost.sslContext();
+        if (defaultSslContext != null) {
+            return defaultSslContext;
+        }
+
+        for (int i = virtualHosts.size() - 1; i >= 0; i--) {
+            final SslContext sslContext = virtualHosts.get(i).sslContext();
+            if (sslContext != null) {
+                return sslContext;
+            }
+        }
+        return null;
     }
 
     @Override

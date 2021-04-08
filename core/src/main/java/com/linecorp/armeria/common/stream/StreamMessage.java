@@ -16,11 +16,18 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.common.stream.PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE;
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -33,6 +40,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -144,6 +152,80 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link File}.
+     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * create a buffer used to read data from the {@link File}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
+     */
+    static StreamMessage<HttpData> of(File file) {
+        requireNonNull(file, "file");
+        return of(file.toPath());
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
+     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * create a buffer used to read data from the {@link Path}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
+     */
+    static StreamMessage<HttpData> of(Path path) {
+        requireNonNull(path, "path");
+        return of(path, DEFAULT_FILE_BUFFER_SIZE);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
+     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@code bufferSize}.
+     *
+     * @param path the path of the file
+     * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     */
+    static StreamMessage<HttpData> of(Path path, int bufferSize) {
+        return of(path, ByteBufAllocator.DEFAULT, bufferSize);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
+     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@code bufferSize}.
+     *
+     * @param path the path of the file
+     * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
+     * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     */
+    static StreamMessage<HttpData> of(Path path, ByteBufAllocator alloc, int bufferSize) {
+        requireNonNull(path, "path");
+        requireNonNull(alloc, "alloc");
+        checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
+        return new PathStreamMessage(path, alloc, null, bufferSize);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
+     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@code bufferSize}.
+     *
+     * @param path the path of the file
+     * @param executor the {@link ExecutorService} which performs blocking IO read
+     * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
+     * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     */
+    static StreamMessage<HttpData> of(Path path, ExecutorService executor, ByteBufAllocator alloc,
+                                      int bufferSize) {
+        requireNonNull(path, "path");
+        requireNonNull(executor, "executor");
+        requireNonNull(alloc, "alloc");
+        checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
+        return new PathStreamMessage(path, alloc, executor, bufferSize);
+    }
+
+    /**
      * Returns a concatenated {@link StreamMessage} which relays items of the specified array of
      * {@link Publisher}s in order, non-overlappingly, one after the other finishes.
      */
@@ -168,6 +250,15 @@ public interface StreamMessage<T> extends Publisher<T> {
                                                                              .map(StreamMessage::of)
                                                                              .collect(toImmutableList());
         return new ConcatArrayStreamMessage<>(streamMessages);
+    }
+
+    /**
+     * Returns a concatenated {@link StreamMessage} which relays items of the specified {@link Publisher} of
+     * {@link Publisher}s in order, non-overlappingly, one after the other finishes.
+     */
+    static <T> StreamMessage<T> concat(Publisher<? extends Publisher<? extends T>> publishers) {
+        requireNonNull(publishers, "publishers");
+        return new ConcatPublisherStreamMessage<>(of(publishers));
     }
 
     /**
@@ -342,4 +433,32 @@ public interface StreamMessage<T> extends Publisher<T> {
      * on a closed or aborted stream has no effect.
      */
     void abort(Throwable cause);
+
+    /**
+     * Filters values emitted by this {@link StreamMessage}.
+     * If the {@link Predicate} test succeeds, the value is emitted.
+     * If the {@link Predicate} test fails, the value is ignored and a request of {@code 1} is made to upstream.
+     */
+    default StreamMessage<T> filter(Predicate<? super T> predicate) {
+        requireNonNull(predicate, "predicate");
+        return FuseableStreamMessage.of(this, predicate);
+    }
+
+    /**
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified {@link Function}.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value.
+     */
+    default <U> StreamMessage<U> map(Function<? super T, ? extends U> function) {
+        requireNonNull(function, "function");
+        if (function == Function.identity()) {
+            @SuppressWarnings("unchecked")
+            final StreamMessage<U> cast = (StreamMessage<U>) this;
+            return cast;
+        }
+
+        return FuseableStreamMessage.of(this, function);
+    }
 }
