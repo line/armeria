@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 
 /**
- * Provides a builder that is useful for creating an BlockingTaskExecutor.
+ * Provides a builder that is useful for creating an {@link ScheduledExecutorService}.
  *
  * @see CommonPools#blockingTaskExecutor()
  */
@@ -96,7 +96,7 @@ public final class BlockingTaskExecutors {
     }
 
     /**
-     * Returns the builder {@link BlockingTaskExecutors}
+     * Returns the builder {@link BlockingTaskExecutors}.
      *
      * @param daemon the flag of daemon for new threads.
      */
@@ -106,7 +106,7 @@ public final class BlockingTaskExecutors {
     }
 
     /**
-     * Returns the builder {@link BlockingTaskExecutors}
+     * Returns the builder {@link BlockingTaskExecutors}.
      *
      * @param priority the priority for new threads.
      */
@@ -120,7 +120,7 @@ public final class BlockingTaskExecutors {
     }
 
     /**
-     * Returns the builder {@link BlockingTaskExecutors}
+     * Returns the builder {@link BlockingTaskExecutors}.
      *
      * Use this method to set additional work before or after the Runnable is run. For example:
      * <pre>{@code
