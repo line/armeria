@@ -1,5 +1,5 @@
 # Stage 1 for Build
-FROM openjdk:8-jdk-alpine as buildimage
+FROM openjdk:dk8u282-b08 as buildimage
 
 # SSH key as a build argument, if passed
 ARG SSH_PRIVATE_KEY
@@ -26,7 +26,7 @@ RUN cd /opt/armeria/spring-boot-minimal && \
 
 
 # Stage 2 for Docker Image
-FROM openjdk:8-jdk-alpine
+FROM adoptopenjdk/openjdk8:jre8u282-b08
 RUN apk --no-cache add ca-certificates git openssh && \
   mkdir -p /opt/armeria
 RUN addgroup -S armeria && adduser -S armeria -G armeria
