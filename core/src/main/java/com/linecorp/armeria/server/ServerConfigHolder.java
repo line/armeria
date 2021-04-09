@@ -27,6 +27,10 @@ public final class ServerConfigHolder extends AbstractListenable<ServerConfig> {
 
     void replace(ServerConfig config) {
         this.config = config;
+    }
+
+    void replaceAndNotify(ServerConfig config) {
+        this.config = config;
         notifyListeners(config);
     }
 

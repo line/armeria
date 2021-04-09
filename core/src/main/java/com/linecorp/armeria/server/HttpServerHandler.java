@@ -28,6 +28,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -91,6 +92,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static final String MSG_INVALID_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nInvalid request path";
 
     private static final HttpData DATA_INVALID_REQUEST_PATH = HttpData.ofUtf8(MSG_INVALID_REQUEST_PATH);
+    private final Consumer<ServerConfig> configUpdateListener = this::swapServerConfig;
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -154,7 +156,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ServerConfig config;
+    private volatile ServerConfigHolder configHolder;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
@@ -171,7 +173,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private boolean isReading;
     private boolean handledLastRequest;
 
-    HttpServerHandler(ServerConfig config,
+    HttpServerHandler(ServerConfigHolder configHolder,
                       GracefulShutdownSupport gracefulShutdownSupport,
                       @Nullable ServerHttpObjectEncoder responseEncoder,
                       SessionProtocol protocol,
@@ -179,13 +181,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         assert protocol == H1 || protocol == H1C || protocol == H2;
 
-        this.config = requireNonNull(config, "config");
+        this.configHolder = requireNonNull(configHolder, "configHolder");
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
 
         this.protocol = requireNonNull(protocol, "protocol");
         this.responseEncoder = responseEncoder;
         this.proxiedAddresses = proxiedAddresses;
-
         unfinishedRequests = new IdentityHashMap<>();
     }
 
@@ -223,6 +224,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // endOfStream set.
                 cleanup();
         }
+        //Cleanup the listener from ServerConfigHolder once the channel becomes inactive.
+        configHolder.removeListener(configUpdateListener);
     }
 
     private void cleanup() {
@@ -274,7 +277,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         // Update the connection-level flow-control window size.
-        final int initialWindow = config.http2InitialConnectionWindowSize();
+        final int initialWindow = configHolder.getConfig().http2InitialConnectionWindowSize();
         if (initialWindow > DEFAULT_WINDOW_SIZE) {
             incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
         }
@@ -283,8 +286,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private ServerHttp2ObjectEncoder newServerHttp2ObjectEncoder(ChannelHandlerContext ctx,
                                                                  Http2ServerConnectionHandler handler) {
         return new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
-                                            config.isDateHeaderEnabled(),
-                                            config.isServerHeaderEnabled()
+                                            configHolder.getConfig().isDateHeaderEnabled(),
+                                            configHolder.getConfig().isServerHeaderEnabled()
         );
     }
 
@@ -313,9 +316,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Channel channel = ctx.channel();
         final RequestHeaders headers = req.headers();
         final String hostname = hostname(headers);
-        final VirtualHost virtualHost = config.findVirtualHost(hostname);
+        final VirtualHost virtualHost = configHolder.getConfig().findVirtualHost(hostname);
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
-        final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
+        final InetAddress clientAddress = configHolder
+                                         .getConfig()
+                                         .clientAddressMapper().apply(proxiedAddresses).getAddress();
 
         // Handle max connection age for HTTP/1.
         if (!protocol.isMultiplex() &&
@@ -372,7 +377,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final HttpService service = serviceCfg.service();
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, config.meterRegistry(), protocol,
+                serviceCfg, channel, configHolder.getConfig().meterRegistry(), protocol,
                 nextRequestId(), routingCtx, routingResult,
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
@@ -389,7 +394,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     serviceResponse = ((HttpResponseException) cause).httpResponse();
                 } else {
                     final AggregatedHttpResponse convertedResponse =
-                            config.exceptionHandler().convert(reqCtx, cause);
+                            configHolder.getConfig().exceptionHandler().convert(reqCtx, cause);
                     if (convertedResponse != null) {
                         serviceResponse = convertedResponse.toHttpResponse();
                     } else {
@@ -484,10 +489,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private ProxiedAddresses determineProxiedAddresses(Channel channel, RequestHeaders headers) {
         final InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
-        if (config.clientAddressTrustedProxyFilter().test(remoteAddress.getAddress())) {
+        if (configHolder.getConfig().clientAddressTrustedProxyFilter().test(remoteAddress.getAddress())) {
             return HttpHeaderUtil.determineProxiedAddresses(
-                    headers, config.clientAddressSources(), proxiedAddresses,
-                    remoteAddress, config.clientAddressFilter());
+                    headers, configHolder.getConfig().clientAddressSources(), proxiedAddresses,
+                    remoteAddress, configHolder.getConfig().clientAddressFilter());
         } else {
             return proxiedAddresses != null ? proxiedAddresses : ProxiedAddresses.of(remoteAddress);
         }
@@ -680,7 +685,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private RequestId nextRequestId() {
-        final RequestId id = config.requestIdGenerator().get();
+        final RequestId id = configHolder.getConfig().requestIdGenerator().get();
         if (id == null) {
             if (!warnedNullRequestId) {
                 warnedNullRequestId = true;
@@ -692,12 +697,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    protected void performConfigCheck(ServerConfig config) {
-        // This is temporary hack to switch original config with new config for older HttpServerHandlers.
-        // TODO - Figure out a way to close the open channel so these handlers get garbage collected and
-        // not serve any traffic.
-        if (this.config != config) {
-            this.config = config;
+    void swapServerConfig(ServerConfig config) {
+        if (configHolder.getConfig() != config) {
+            configHolder.replace(config);
         }
+    }
+
+    Consumer<ServerConfig> configUpdateListener() {
+        return configUpdateListener;
     }
 }

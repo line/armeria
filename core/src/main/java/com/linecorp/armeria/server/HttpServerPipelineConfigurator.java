@@ -194,14 +194,12 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
-        final HttpServerHandler httpServerHandler = new HttpServerHandler(configHolder.getConfig(),
+        final HttpServerHandler httpServerHandler = new HttpServerHandler(configHolder,
                                                                           gracefulShutdownSupport,
                                                                           responseEncoder,
                                                                           H1C, proxiedAddresses);
         p.addLast(httpServerHandler);
-        configHolder.addListener(c -> {
-            httpServerHandler.performConfigCheck(c);
-        });
+        configHolder.addListener(httpServerHandler.configUpdateListener());
     }
 
     private Timer newKeepAliveTimer(SessionProtocol protocol) {
@@ -249,7 +247,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     void updateConfig(ServerConfig config) {
         final ServerConfig cfg = requireNonNull(config, "config");
-        configHolder.replace(cfg);
+        configHolder.replaceAndNotify(cfg);
     }
 
     private final class ProtocolDetectionHandler extends ByteToMessageDecoder {
@@ -442,7 +440,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            p.addLast(new HttpServerHandler(configHolder.getConfig(),
+            p.addLast(new HttpServerHandler(configHolder,
                                             gracefulShutdownSupport, null, H2, proxiedAddresses));
         }
 
@@ -473,7 +471,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     configHolder.getConfig().http1MaxHeaderSize(),
                     configHolder.getConfig().http1MaxChunkSize()));
             p.addLast(new Http1RequestDecoder(configHolder.getConfig(), ch, SCHEME_HTTPS, writer));
-            p.addLast(new HttpServerHandler(configHolder.getConfig(),
+            p.addLast(new HttpServerHandler(configHolder,
                                             gracefulShutdownSupport,
                                             writer, H1, proxiedAddresses));
         }

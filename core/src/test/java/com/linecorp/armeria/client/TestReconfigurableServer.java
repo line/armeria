@@ -44,12 +44,12 @@ class TestReconfigurableServer {
 
         server.start().join();
 
-        WebClient client = WebClient.of("http://localhost:" + server.activeLocalPort());
-        final AggregatedHttpResponse response = client.get("/test1").aggregate().join();
+        WebClient originalClient = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final AggregatedHttpResponse response = originalClient.get("/test1").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("Hello, world!");
 
-        final AggregatedHttpResponse response11 = client.get("/test11/world").aggregate().join();
+        final AggregatedHttpResponse response11 = originalClient.get("/test11/world").aggregate().join();
         assertThat(response11.status()).isEqualTo(HttpStatus.OK);
         assertThat(response11.contentUtf8()).isEqualTo("Hello, WORLD");
 
@@ -64,8 +64,13 @@ class TestReconfigurableServer {
                             HttpResponse.of("Hello, " + ctx.pathParam("name").toUpperCase()));
         });
 
-        final AggregatedHttpResponse response1 = client.get("/test11/world").aggregate().join();
+        // retry calling the original service. Should return 404.
+        final AggregatedHttpResponse response1 = originalClient.get("/test11/world").aggregate().join();
         assertThat(response1.status()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        final AggregatedHttpResponse res = originalClient.get("/test2").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("Hello, world!");
 
         //Open new connection to check if the newly reconfigured server is now operational
         // and old service endpoints are no longer visible.
@@ -88,7 +93,8 @@ class TestReconfigurableServer {
         final AggregatedHttpResponse failedResponse = client2.get("/test1").aggregate().get();
         assertThat(failedResponse.status()).isEqualTo(HttpStatus.NOT_FOUND);
 
-        // Tests that original service configurations are no longer active.
+        // Tests that original service configurations are no longer active when you open a new connection
+        // with the server.
         WebClient client3 = WebClient.of("http://localhost:" + server.activeLocalPort());
         final AggregatedHttpResponse response3 = client3.get("/test1")
                 .aggregate()
