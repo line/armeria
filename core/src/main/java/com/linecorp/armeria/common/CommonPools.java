@@ -16,11 +16,8 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.ScheduledExecutorService;
-
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.common.util.BlockingTaskExecutors;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
 

@@ -30,5 +30,4 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
         return (BlockingTaskExecutor) BlockingTaskExecutors.of()
                                                            .build();
     }
-
 }

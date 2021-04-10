@@ -121,7 +121,6 @@ public final class BlockingTaskExecutors {
 
     /**
      * Returns the builder {@link BlockingTaskExecutors}.
-     *
      * Use this method to set additional work before or after the Runnable is run. For example:
      * <pre>{@code
      * ThreadFactories.builder("thread-prefix")
