@@ -51,7 +51,8 @@ public final class ShortenedServiceNameProvider implements ServiceNaming {
     }
 
     private ShortenedServiceNameProvider(int shortenedServiceNameLength) {
-        checkArgument(shortenedServiceNameLength > 0, "shortenedServiceNameLength should be bigger than zero");
+        checkArgument(shortenedServiceNameLength >= 0,
+                      "shortenedServiceNameLength should be equal or bigger than zero");
         this.abbreviator = new TargetLengthBasedClassNameAbbreviator(shortenedServiceNameLength);
     }
 }
