@@ -368,6 +368,24 @@ class DefaultRequestLogTest {
     }
 
     @Test
+    void logServiceNameWithServiceNaming_shorten() {
+        final ServiceRequestContext sctx = mock(ServiceRequestContext.class);
+        when(sctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
+        final Server server = Server.builder().route().path("/")
+                                    .defaultServiceNaming(ServiceNaming.shorten(10))
+                                    .build((ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                    .build();
+        when(sctx.config()).thenReturn(server.serviceConfigs().get(0));
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith("c.l.a.c.l.DefaultRequestLogTest");
+    }
+
+    @Test
     void logServiceNameWithServiceNaming_custom() {
         final ServiceRequestContext sctx = mock(ServiceRequestContext.class);
         when(sctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);

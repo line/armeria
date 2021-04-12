@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
+import com.linecorp.armeria.internal.common.util.ShortenedServiceNameProvider;
 
 /**
  * Generates the default name of a {@link Service} from its {@link ServiceRequestContext}.
@@ -70,6 +71,16 @@ public interface ServiceNaming {
             final String fullTypeName = fullTypeName().serviceName(ctx);
             return fullTypeName.substring(fullTypeName.lastIndexOf('.') + 1);
         };
+    }
+
+    /**
+     * Returns the {@link ServiceNaming} that returns the shortened service name from the full name of an RPC
+     * stub class or the innermost class from the given service. It follows Logback's abbreviation algorithm.
+     *
+     * @see ShortenedServiceNameProvider
+     */
+    static ServiceNaming shorten(int targetLength) {
+        return ShortenedServiceNameProvider.of(targetLength);
     }
 
     /**
