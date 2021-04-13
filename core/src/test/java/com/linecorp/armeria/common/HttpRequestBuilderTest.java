@@ -125,7 +125,6 @@ class HttpRequestBuilderTest {
                              .pathParam(":", 6)
                              .build();
         assertThat(request.path()).isEqualTo("/1/2/3/:/5/6/a{");
-
     }
 
     @Test
