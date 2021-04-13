@@ -423,7 +423,7 @@ public abstract class AbstractHttpRequestBuilder {
         final int pathLength = path.length();
         boolean hasScheme = false;
         boolean hasQueryString = false;
-        for (int i = 0; i < pathLength; ) {
+        for (int i = 0; i < pathLength;) {
             final char current = path.charAt(i);
             if (pathStart == -1 && current == ':') {
                 if (pathLength > i + 2 && path.charAt(i + 1) == '/' && path.charAt(i + 2) == '/') {
