@@ -138,9 +138,6 @@ dependencies {
 
     // Jetty, for testing interoperability with other servers.
     testImplementation 'org.eclipse.jetty:jetty-webapp'
-
-    // Logback
-    implementation 'ch.qos.logback:logback-classic'
 }
 
 if (!rootProject.hasProperty('noWeb')) {

@@ -23,16 +23,13 @@ import java.util.concurrent.ConcurrentMap;
 import com.linecorp.armeria.server.ServiceNaming;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import ch.qos.logback.classic.pattern.Abbreviator;
-import ch.qos.logback.classic.pattern.TargetLengthBasedClassNameAbbreviator;
-
 public final class ShortenedServiceNameProvider implements ServiceNaming {
 
     public static ShortenedServiceNameProvider of(int shortenedServiceNameLength) {
         return new ShortenedServiceNameProvider(shortenedServiceNameLength);
     }
 
-    private final Abbreviator abbreviator;
+    private final TargetLengthBasedClassNameAbbreviator abbreviator;
     private final ConcurrentMap<String, String> cache = new ConcurrentHashMap<>();
 
     @Override
