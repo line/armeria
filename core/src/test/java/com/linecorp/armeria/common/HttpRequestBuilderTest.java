@@ -121,15 +121,20 @@ class HttpRequestBuilderTest {
                 .isInstanceOf(IllegalStateException.class);
 
         request = HttpRequest.builder().get("/{foo}/{bar}/:id/:/{/foo/}/::/a{")
-                             .pathParams(ImmutableMap.of("id", 3, "bar", 2, "foo", 1, "", 4, "/foo/", 5))
+                             .pathParams(ImmutableMap.of("id", 3, "bar", 2, "foo", 1, "/foo/", 5))
                              .pathParam(":", 6)
                              .build();
-        assertThat(request.path()).isEqualTo("/1/2/3/4/5/6/a{");
+        assertThat(request.path()).isEqualTo("/1/2/3/:/5/6/a{");
 
-        request = HttpRequest.builder().get("/{}/:")
-                             .pathParams(ImmutableMap.of("", "foo"))
-                             .build();
-        assertThat(request.path()).isEqualTo("/foo/foo");
+    }
+
+    @Test
+    void ignoreEmptyPathParams() {
+        // Should not template empty path params
+        final HttpRequest request = HttpRequest.builder().get("/{}/:")
+                                               .pathParams(ImmutableMap.of("", "foo"))
+                                               .build();
+        assertThat(request.path()).isEqualTo("/{}/:");
     }
 
     @Test

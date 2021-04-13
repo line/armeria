@@ -19,6 +19,8 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class AbstractHttpRequestBuilderTest {
 
@@ -41,6 +43,16 @@ class AbstractHttpRequestBuilderTest {
     }
 
     @Test
+    void pathBuilder_noHeadingSlash_withPathParam() {
+        final AbstractHttpRequestBuilder builder = new AbstractHttpRequestBuilder() {};
+        final String path = ":foo/bar";
+        final HttpRequest httpRequest = builder.get(path)
+                                               .pathParam("foo", "quz")
+                                               .buildRequest();
+        assertThat(httpRequest.path()).isEqualTo("quz/bar");
+    }
+
+    @Test
     void pathBuilder_acceptColon() {
         final AbstractHttpRequestBuilder builder = new AbstractHttpRequestBuilder() {};
         final String path = "/foo/:/bar";
@@ -60,11 +72,21 @@ class AbstractHttpRequestBuilderTest {
     }
 
     @Test
+    void pathBuilder_relativePath_withPathParamAndFragment() {
+        final AbstractHttpRequestBuilder builder = new AbstractHttpRequestBuilder() {};
+        final String path = "/foo/bar#foo=:bar";
+        final HttpRequest httpRequest = builder.get(path)
+                                               .pathParam("bar", "quz")
+                                               .buildRequest();
+        assertThat(httpRequest.path()).isEqualTo("/foo/bar#foo=:bar");
+    }
+
+    @Test
     void pathBuilder_absolutePath() {
         final AbstractHttpRequestBuilder builder = new AbstractHttpRequestBuilder() {};
         final String path = "https://armeria.dev";
         final HttpRequest httpRequest = builder.get(path).buildRequest();
-        assertThat(httpRequest.path()).isEqualTo(path + '/');
+        assertThat(httpRequest.path()).isEqualTo(path);
     }
 
     @Test

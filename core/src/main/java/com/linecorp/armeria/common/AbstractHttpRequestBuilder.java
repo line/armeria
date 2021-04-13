@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static java.util.Objects.requireNonNull;
 
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +33,6 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 
-import com.google.common.base.Strings;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
@@ -417,14 +415,66 @@ public abstract class AbstractHttpRequestBuilder {
             return path;
         }
 
-        // The path may contain a scheme, authority or query strings.
-        final URI uri = URI.create(path);
-        String relativePath = uri.getRawPath();
-        if (Strings.isNullOrEmpty(relativePath)) {
-            relativePath = "/";
+        // As the path could contain path params such as '{foo-}' or ':123' which could violate a URI syntax
+        // defined by RFC2396, we can not use 'URI.create()' here.
+        int pathStart = -1;
+        int pathEnd = -1;
+        int fragmentStart = -1;
+        final int pathLength = path.length();
+        boolean hasScheme = false;
+        boolean hasQueryString = false;
+        for (int i = 0; i < pathLength; ) {
+            final char current = path.charAt(i);
+            if (pathStart == -1 && current == ':') {
+                if (pathLength > i + 2 && path.charAt(i + 1) == '/' && path.charAt(i + 2) == '/') {
+                    // a scheme component
+                    i += 3;
+                    hasScheme = true;
+                    continue;
+                }
+
+                if (hasScheme) {
+                    // a port component
+                    i++;
+                    continue;
+                }
+            }
+            if (pathStart == -1 && current == '/') {
+                // start a path component
+                pathStart = i;
+            }
+
+            if (!hasQueryString && current == '?') {
+                hasQueryString = true;
+                if (pathEnd == -1) {
+                    pathEnd = i;
+                }
+            }
+
+            if (fragmentStart == -1 && current == '#') {
+                fragmentStart = i;
+                if (pathEnd == -1) {
+                    pathEnd = i;
+                }
+            }
+            i++;
         }
 
-        final StringBuilder pathBuilder = new StringBuilder(relativePath);
+        if (!hasScheme) {
+            // path only. e.g, /foo/bar?abc
+            pathStart = 0;
+        } else {
+            if (pathStart == -1) {
+                // no path. e.g, https://armeria.dev
+                pathStart = pathLength;
+            }
+        }
+
+        if (pathEnd == -1) {
+            pathEnd = pathLength;
+        }
+
+        final StringBuilder pathBuilder = new StringBuilder(path.substring(pathStart, pathEnd));
         if (!disablePathParams) {
             int i = 0;
             while (i < pathBuilder.length()) {
@@ -436,19 +486,23 @@ public abstract class AbstractHttpRequestBuilder {
                     if (j == pathBuilder.length()) {
                         break;
                     }
-                    final String name = pathBuilder.substring(i + 1, j);
-                    checkState(pathParams != null && pathParams.containsKey(name),
-                               "param " + name + " does not have a value.");
-                    final String value = pathParams.get(name).toString();
-                    pathBuilder.replace(i, j + 1, value);
-                    i += value.length() - 1;
+                    if (i + 1 == j) {
+                        // skip an empty braces '{}'
+                    } else {
+                        final String name = pathBuilder.substring(i + 1, j);
+                        checkState(pathParams != null && pathParams.containsKey(name),
+                                   "param " + name + " does not have a value.");
+                        final String value = pathParams.get(name).toString();
+                        pathBuilder.replace(i, j + 1, value);
+                        i += value.length() - 1;
+                    }
                 } else if (pathBuilder.charAt(i) == ':') {
                     int j = i + 1;
                     while (j < pathBuilder.length() && pathBuilder.charAt(j) != '/') {
                         j++;
                     }
                     if (i + 1 == j) {
-                        // skip a ':' along with '/' . e.g, "/foo/:/"
+                        // skip a ':' along with '/' . e.g, "http://", "/foo/:/"
                     } else {
                         final String name = pathBuilder.substring(i + 1, j);
                         checkState(pathParams != null && pathParams.containsKey(name),
@@ -462,47 +516,36 @@ public abstract class AbstractHttpRequestBuilder {
             }
         }
 
-        // Rebuilds a new path using the templated path and queryParams
-        // Syntax: [scheme:][//authority][path][?query][#fragment]
-        final StringBuilder uriBuilder = new StringBuilder(path.length());
-        final String scheme = uri.getScheme();
-        if (scheme != null) {
-            uriBuilder.append(scheme);
-            uriBuilder.append(':');
+        final StringBuilder newPathBuilder;
+        if (pathStart == 0) {
+            newPathBuilder = new StringBuilder();
+        } else {
+            newPathBuilder = new StringBuilder(path.substring(0, pathStart));
         }
+        newPathBuilder.append(pathBuilder);
 
-        final String authority = uri.getRawAuthority();
-        if (authority != null) {
-            uriBuilder.append("//");
-            uriBuilder.append(authority);
-        }
-
-        relativePath = pathBuilder.toString();
-        if (relativePath.charAt(0) != '/') {
-            uriBuilder.append('/');
-        }
-        uriBuilder.append(relativePath);
-
-        final String query = uri.getRawQuery();
-        if (query != null) {
-            uriBuilder.append('?');
-            uriBuilder.append(query);
-        }
-        if (queryParams != null) {
-            if (query == null) {
-                uriBuilder.append('?');
+        if (pathEnd < pathLength) {
+            if (fragmentStart == -1) {
+                newPathBuilder.append(path, pathEnd, pathLength);
             } else {
-                uriBuilder.append('&');
+                // Remove fragment from the rest
+                newPathBuilder.append(path, pathEnd, fragmentStart);
             }
-            uriBuilder.append(queryParams.toQueryString());
         }
 
-        final String fragment = uri.getRawFragment();
-        if (fragment != null) {
-            uriBuilder.append('#');
-            uriBuilder.append(fragment);
+        if (queryParams != null) {
+            if (hasQueryString) {
+                newPathBuilder.append('&');
+            } else {
+                newPathBuilder.append('?');
+            }
+            newPathBuilder.append(queryParams.toQueryString());
         }
 
-        return uriBuilder.toString();
+        if (fragmentStart > -1) {
+            newPathBuilder.append(path, fragmentStart, pathLength);
+        }
+
+        return newPathBuilder.toString();
     }
 }
