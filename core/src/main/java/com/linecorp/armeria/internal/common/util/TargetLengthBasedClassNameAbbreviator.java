@@ -56,22 +56,22 @@ public final class TargetLengthBasedClassNameAbbreviator {
     }
 
     public String abbreviate(String fqClassName) {
-        StringBuilder buf = new StringBuilder(targetLength);
+        final StringBuilder buf = new StringBuilder(targetLength);
         if (fqClassName == null) {
             throw new IllegalArgumentException("Class name may not be null");
         }
 
-        int inLen = fqClassName.length();
+        final int inLen = fqClassName.length();
         if (inLen < targetLength) {
             return fqClassName;
         }
 
-        int[] dotIndexesArray = new int[MAX_DOTS];
+        final int[] dotIndexesArray = new int[MAX_DOTS];
         // a.b.c contains 2 dots but 2+1 parts.
         // see also http://jira.qos.ch/browse/LBCLASSIC-110
-        int[] lengthArray = new int[MAX_DOTS + 1];
+        final int[] lengthArray = new int[MAX_DOTS + 1];
 
-        int dotCount = computeDotIndexes(fqClassName, dotIndexesArray);
+        final int dotCount = computeDotIndexes(fqClassName, dotIndexesArray);
 
         // if there are not dots than abbreviation is not possible
         if (dotCount == 0) {
@@ -80,9 +80,9 @@ public final class TargetLengthBasedClassNameAbbreviator {
         computeLengthArray(fqClassName, dotIndexesArray, lengthArray, dotCount);
         for (int i = 0; i <= dotCount; i++) {
             if (i == 0) {
-                buf.append(fqClassName.substring(0, lengthArray[i] - 1));
+                buf.append(fqClassName, 0, lengthArray[i] - 1);
             } else {
-                buf.append(fqClassName.substring(dotIndexesArray[i - 1], dotIndexesArray[i - 1] + lengthArray[i]));
+                buf.append(fqClassName, dotIndexesArray[i - 1], dotIndexesArray[i - 1] + lengthArray[i]);
             }
         }
 
@@ -97,7 +97,7 @@ public final class TargetLengthBasedClassNameAbbreviator {
             if (i > 0) {
                 previousDotPosition = dotArray[i - 1];
             }
-            int available = dotArray[i] - previousDotPosition - 1;
+            final int available = dotArray[i] - previousDotPosition - 1;
 
             len = (available < 1) ? available : 1;
             if (toTrim > 0) {
@@ -109,7 +109,7 @@ public final class TargetLengthBasedClassNameAbbreviator {
             lengthArray[i] = len + 1;
         }
 
-        int lastDotIndex = dotCount - 1;
+        final int lastDotIndex = dotCount - 1;
         lengthArray[dotCount] = className.length() - dotArray[lastDotIndex];
     }
 }
