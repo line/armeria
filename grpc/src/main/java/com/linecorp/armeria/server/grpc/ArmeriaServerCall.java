@@ -86,6 +86,7 @@ import io.grpc.Status;
 import io.grpc.StatusException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.EventLoop;
 
 /**
  * Encapsulates the state of a single server call, reading messages from the client, passing to business logic
@@ -192,16 +193,27 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                            MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
         this.statusFunction = statusFunction;
 
-        res.whenComplete().handleAsync((unused, t) -> {
-            if (!closeCalled) {
-                // Closed by client, not by server.
-                cancelled = true;
-                try (SafeCloseable ignore = ctx.push()) {
-                    close(Status.CANCELLED, new Metadata());
-                }
+        res.whenComplete().handle((unused, t) -> {
+            final EventLoop eventLoop = ctx.eventLoop();
+            if (eventLoop.inEventLoop()) {
+                maybeCancel();
+            } else {
+                eventLoop.execute(this::maybeCancel);
             }
             return null;
-        }, ctx.eventLoop());
+        });
+    }
+
+    /**
+     * Cancels a call when the call was closed by a client, not by server.
+     */
+    private void maybeCancel() {
+        if (!closeCalled) {
+            cancelled = true;
+            try (SafeCloseable ignore = ctx.push()) {
+                close(Status.CANCELLED, new Metadata());
+            }
+        }
     }
 
     @Override
@@ -258,7 +270,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         sendHeadersCalled = true;
-        res.write(headers);
+        if (!res.tryWrite(headers)) {
+            maybeCancel();
+        }
     }
 
     @Override
@@ -284,16 +298,19 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         try {
-            res.write(responseFramer.writePayload(marshaller.serializeResponse(message)));
-            res.whenConsumed().thenRun(() -> {
-                if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                    if (blockingExecutor != null) {
-                        blockingExecutor.execute(this::invokeOnReady);
-                    } else {
-                        invokeOnReady();
+            if (res.tryWrite(responseFramer.writePayload(marshaller.serializeResponse(message)))) {
+                res.whenConsumed().thenRun(() -> {
+                    if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
+                        if (blockingExecutor != null) {
+                            blockingExecutor.execute(this::invokeOnReady);
+                        } else {
+                            invokeOnReady();
+                        }
                     }
-                }
-            });
+                });
+            } else {
+                maybeCancel();
+            }
         } catch (RuntimeException e) {
             close(e, new Metadata());
             throw e;
