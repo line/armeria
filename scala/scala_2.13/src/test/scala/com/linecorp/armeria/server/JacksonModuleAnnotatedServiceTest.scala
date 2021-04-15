@@ -16,16 +16,9 @@
 
 package com.linecorp.armeria.server
 
-import com.fasterxml.jackson.databind.json.JsonMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.MediaType
-import com.linecorp.armeria.server.annotation.{
-  JacksonRequestConverterFunction,
-  JacksonResponseConverterFunction,
-  Post,
-  ProducesJson
-}
+import com.linecorp.armeria.server.annotation.{Post, ProducesJson}
 import munit.FunSuite
 
 class JacksonModuleAnnotatedServiceTest extends FunSuite with ServerSuite {
