@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.internal.server.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
@@ -54,7 +55,7 @@ import io.netty.util.AsciiString;
  */
 public final class JacksonRequestConverterFunction implements RequestConverterFunction {
 
-    private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
+    private static final ObjectMapper defaultObjectMapper = JacksonUtil.defaultObjectMapper();
     private static final Map<Class<?>, Boolean> skippableTypes;
 
     static {
