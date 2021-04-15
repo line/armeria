@@ -254,7 +254,7 @@ public final class JettyService implements HttpService {
 
             boolean success = false;
             try {
-                final ArmeriaHttpTransport transport = new ArmeriaHttpTransport(res);
+                final ArmeriaHttpTransport transport = new ArmeriaHttpTransport(ctx, res);
                 final HttpChannel httpChannel = new HttpChannel(
                         connector,
                         connector.getHttpConfiguration(),
@@ -346,17 +346,25 @@ public final class JettyService implements HttpService {
 
     private static final class ArmeriaHttpTransport implements HttpTransport {
 
-        final HttpResponseWriter res;
+        private final ServiceRequestContext ctx;
+        private final HttpResponseWriter res;
         @Nullable
         MetaData.Response info;
 
-        ArmeriaHttpTransport(HttpResponseWriter res) {
+        ArmeriaHttpTransport(ServiceRequestContext ctx, HttpResponseWriter res) {
+            this.ctx = ctx;
             this.res = res;
         }
 
         @Override
         public void send(@Nullable MetaData.Response info, boolean head,
                          @Nullable ByteBuffer content, boolean lastContent, Callback callback) {
+            if (ctx.isTimedOut()) {
+                // Silently discard the write request in case of timeout to match the behavior of Jetty.
+                callback.succeeded();
+                return;
+            }
+
             try {
                 if (info != null) {
                     this.info = info;
@@ -404,7 +412,11 @@ public final class JettyService implements HttpService {
 
         private void write(HttpObject o) throws EofException {
             if (!res.tryWrite(o)) {
-                throw new EofException("Closed");
+                if (!ctx.isTimedOut()) {
+                    throw new EofException("Closed");
+                } else {
+                    // Silently discard the write request in case of timeout to match the behavior of Jetty.
+                }
             }
         }
 
