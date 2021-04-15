@@ -28,7 +28,6 @@ import com.linecorp.armeria.server.docs.DocService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.RegisterExtension
 
 class DataClassDocServiceTest {
