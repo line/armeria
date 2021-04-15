@@ -870,7 +870,7 @@ class GrpcServiceServerTest {
         final RequestLog log = requestLogQueue.take();
         assertThat(log.isComplete()).isTrue();
         assertThat(log.requestContent()).isNotNull();
-//        assertThat(log.responseContent()).isNull();
+        assertThat(log.responseContent()).isNull();
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
         assertThat(rpcReq.method()).isEqualTo(
                 "armeria.grpc.testing.UnitTestService/StreamClientCancelsBeforeResponseClosedCancels");

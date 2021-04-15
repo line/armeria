@@ -28,7 +28,6 @@ configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
 
 dependencies {
     implementation(project(":core"))
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     // kotlin
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
