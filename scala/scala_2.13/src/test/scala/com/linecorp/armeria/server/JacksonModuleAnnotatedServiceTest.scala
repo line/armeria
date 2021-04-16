@@ -24,7 +24,7 @@ import munit.FunSuite
 class JacksonModuleAnnotatedServiceTest extends FunSuite with ServerSuite {
 
   override protected def configureServer: ServerBuilder => Unit = {
-    _.annotatedService(new ServiceWithCaseClass)
+    _.annotatedService(new ServiceWithCaseClass, Array.emptyObjectArray: _*)
   }
 
   test("should encode and decode case class from and to JSON") {
