@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -304,8 +305,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         } else if (Exceptions.isStreamCancelling(cause)) {
             failAndReset(cause);
         } else {
-            logger.warn("{} Unexpected exception from a service or a response publisher: {}",
-                        ctx.channel(), service(), cause);
+            if (!(cause instanceof CancellationException)) {
+                logger.warn("{} Unexpected exception from a service or a response publisher: {}",
+                            ctx.channel(), service(), cause);
+            } else {
+                // Ignore CancellationException and its subtypes, which can be triggered when the request
+                // was cancelled or timed out even before the subscription attempt is made.
+            }
 
             failAndRespond(cause, convertException(cause), Http2Error.INTERNAL_ERROR, false);
         }
