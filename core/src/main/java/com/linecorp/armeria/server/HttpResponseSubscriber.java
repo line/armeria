@@ -116,8 +116,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         }
 
         // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
-        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(), 0,
-                                                   RequestTimeoutException.get());
+        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(),
+                                                   0, /* server */ true);
 
         // Start consuming.
         subscription.request(1);
