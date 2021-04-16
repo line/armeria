@@ -19,9 +19,9 @@ package com.linecorp.armeria.internal.server;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 
 public final class JacksonUtil {
