@@ -28,6 +28,25 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
 
+/**
+ * A utility class which helps to create a <a href="https://jsonlines.org/">JavaScript Object
+ * Notation (JSON) Lines text</a> from a content {@link Publisher} or {@link Stream}.
+ *
+ * <p>A user simply creates a streaming {@link HttpResponse} which emits JSON Lines text, e.g.
+ * <pre>{@code
+ * ObjectMapper mapper = new ObjectMapper().disable(SerializationFeature.INDENT_OUTPUT);
+ * Server server =
+ *     Server.builder()
+ *           // Emit JSON Lines Text with a default ObjectMapper.
+ *           .service("/seq1",
+ *                    (ctx, req) -> JsonLines.fromPublisher(Flux.just("foo", "bar")))
+ *           // Emit JSON Lines Text with the ObjectMapper
+ *           // configured to use the default pretty printer.
+ *           .service("/seq2",
+ *                    (ctx, req) -> JsonLines.fromPublisher(Flux.just("foo", "bar"), mapper))
+ *           .build();
+ * }</pre>
+ */
 public final class JsonLines {
     private static final Logger logger = LoggerFactory.getLogger(JsonLines.class);
 
@@ -346,9 +365,14 @@ public final class JsonLines {
     private static HttpData toHttpData(ObjectMapper mapper, @Nullable Object value) {
         try {
             final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            mapper.disable(SerializationFeature.INDENT_OUTPUT);
-            JsonNode root = mapper.valueToTree(value);
-            mapper.writeValue(out, root);
+            // If the mapper is same don't need disable indentation.
+            if (mapper == defaultMapper) {
+                mapper.writeValue(out, value);
+            } else {
+                mapper.disable(SerializationFeature.INDENT_OUTPUT);
+                JsonNode root = mapper.valueToTree(value);
+                mapper.writeValue(out, root);
+            }
             out.write(LINE_FEED);
             return HttpData.wrap(out.toByteArray());
         } catch (Exception e) {

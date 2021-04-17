@@ -2,12 +2,14 @@ package com.linecorp.armeria.server.streaming;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
@@ -29,6 +31,20 @@ import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 public class JsonLinesTest {
+    private static class Pojo {
+        @JsonProperty("name")
+        private final String name;
+        @JsonProperty("age")
+        private final int age;
+        @JsonProperty("cars")
+        private List<String> cars;
+        public Pojo(String n, int a, List<String> c) {
+            name = n;
+            age = a;
+            cars = c;
+        }
+
+    }
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @ClassRule
@@ -42,7 +58,8 @@ public class JsonLinesTest {
                                     Stream.of("foo", "bar", "baz", "qux"), MoreExecutors.directExecutor()))
                     .service("/seq/custom-mapper",
                             (ctx, req) -> JsonLines.fromPublisher(
-                                    Flux.just("foo", "bar", "baz", "qux"),
+                                    Flux.just(new Pojo("Jon D", 21, Arrays.asList("Bmw", "Audi")),
+                                              new Pojo("Sarah D", 22, Arrays.asList("Tesla", "Honda"))),
                                     new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)))
                     .service("/seq/single",
                             (ctx, req) -> JsonLines.fromObject("foo"));
@@ -52,17 +69,35 @@ public class JsonLinesTest {
     };
 
     @Test
-    public void fromPublisherOrStream() {
+    public void fromPublisherOrStreamMultiLineJson() {
         final WebClient client = WebClient.of(rule.httpUri() + "/seq");
-        for (final String path : ImmutableList.of("/publisher", "/stream", "/custom-mapper")) {
+        for (final String path : ImmutableList.of("/custom-mapper")) {
             final HttpResponse response = client.get(path);
             StepVerifier.create(response)
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                             HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES))
-                    .assertNext(o -> ensureExpectedHttpData(o, "foo"))
-                    .assertNext(o -> ensureExpectedHttpData(o, "bar"))
-                    .assertNext(o -> ensureExpectedHttpData(o, "baz"))
-                    .assertNext(o -> ensureExpectedHttpData(o, "qux"))
+                    .assertNext(o ->
+                            ensureExpectedHttpData(o, "{\"name\":\"Jon D\",\"age\":21,\"cars\":[\"Bmw\",\"Audi\"]}\n", true))
+                    .assertNext(o ->
+                            ensureExpectedHttpData(o, "{\"name\":\"Sarah D\",\"age\":22,\"cars\":[\"Tesla\",\"Honda\"]}\n", true))
+                    .assertNext(JsonLinesTest::assertThatLastContent)
+                    .expectComplete()
+                    .verify();
+        }
+    }
+
+    @Test
+    public void fromPublisherOrStream() {
+        final WebClient client = WebClient.of(rule.httpUri() + "/seq");
+        for (final String path : ImmutableList.of("/publisher", "/stream")) {
+            final HttpResponse response = client.get(path);
+            StepVerifier.create(response)
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK,
+                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES))
+                    .assertNext(o -> ensureExpectedHttpData(o, "foo", false))
+                    .assertNext(o -> ensureExpectedHttpData(o, "bar", false))
+                    .assertNext(o -> ensureExpectedHttpData(o, "baz", false))
+                    .assertNext(o -> ensureExpectedHttpData(o, "qux", false))
                     .assertNext(JsonLinesTest::assertThatLastContent)
                     .expectComplete()
                     .verify();
@@ -87,13 +122,18 @@ public class JsonLinesTest {
         assertThat(lastContent.isEndOfStream()).isTrue();
     }
 
-    private static void ensureExpectedHttpData(HttpObject o, String expectedString) {
+    private static void ensureExpectedHttpData(HttpObject o, String expectedString, boolean isJsonObject) {
         assertThat(o).isInstanceOf(HttpData.class);
         final HttpData data = (HttpData) o;
         try {
-            assertThat(mapper.readValue(data.array(), 0, data.length() - 1, String.class))
-                    .isEqualTo(expectedString);
-        } catch (IOException e) {
+            if (isJsonObject) {
+                assertThat(new String(((HttpData) o).array()))
+                        .isEqualTo(expectedString);
+            } else {
+                assertThat(mapper.readValue(data.array(), 0, data.length() - 1, String.class))
+                        .isEqualTo(expectedString);
+            }
+        } catch (Exception e) {
             // Always false.
             assertThat(e).isNull();
         }

@@ -325,6 +325,10 @@ public final class MediaTypeNames {
      */
     public static final String JSON_SEQ = "application/json-seq";
     /**
+     * {@value #JSON_LINES}.
+     */
+    public static final String JSON_LINES = "application/x-ndjson";
+    /**
      * {@value #MANIFEST_JSON_UTF_8}.
      */
     public static final String MANIFEST_JSON_UTF_8 = "application/manifest+json; charset=utf-8";
