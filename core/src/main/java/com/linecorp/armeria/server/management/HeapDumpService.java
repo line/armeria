@@ -164,10 +164,9 @@ enum HeapDumpService implements HttpService {
                 //noinspection unchecked
                 diagnosticMXBean = ManagementFactory
                         .getPlatformMXBean((Class<PlatformManagedObject>) diagnosticMXBeanClass);
+                final MethodType methodType = MethodType.methodType(void.class, String.class, boolean.class);
                 dumpHeapMH = MethodHandles.publicLookup()
-                                          .findVirtual(diagnosticMXBeanClass, "dumpHeap",
-                                                       MethodType.methodType(void.class, String.class,
-                                                                             boolean.class));
+                                          .findVirtual(diagnosticMXBeanClass, "dumpHeap", methodType);
             } catch (Throwable ex) {
                 throw new IllegalStateException("Unable to locate HotSpotDiagnosticMXBean", ex);
             }

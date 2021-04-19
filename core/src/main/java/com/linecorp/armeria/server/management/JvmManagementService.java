@@ -40,7 +40,9 @@ import com.linecorp.armeria.server.file.HttpFile;
  * If {@link MediaType#JSON} is specified in {@link HttpHeaderNames#ACCEPT}, the thread information will be
  * converted to a JSON. Otherwise, the thread dump will be converted to a plain text.
  * <pre>{@code
+ * // Exports thread information as a JSON array
  * curl -L -H "Accept: application/json" http://my-service.com/internal/management/threaddump
+ * // Exports thread information as a plain text
  * curl -L -H "Accept: text/plain" http://my-service.com/internal/management/threaddump
  * }</pre>
  *
@@ -48,7 +50,7 @@ import com.linecorp.armeria.server.file.HttpFile;
  * Dumps the heap to the {@link HttpFile} in the same format as the hprof heap dump.
  * <pre>{@code
  * curl -L http://my-service.com/internal/management/heapdump -o heapdump.hprof
- * // dump only live objects that are reachable from others
+ * // Dump only live objects that are reachable from others
  * curl -L http://my-service.com/internal/management/heapdump?live=true -o heapdump.hprof
  * }</pre>
  */
