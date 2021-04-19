@@ -82,7 +82,7 @@ public final class ThreadDumpService extends AbstractHttpService {
                                                  .map(StackTraceElement::toString)
                                                  .collect(toImmutableList());
 
-                // java.lang.management.ThreadInfo.isDaemon() and getPriority() added at Java 9
+                // java.lang.management.ThreadInfo.isDaemon() and getPriority() are added at Java 9
                 return new ThreadInfo(thread.getId(), thread.getName(), thread.isDaemon(),
                                       thread.getState(), thread.getPriority(), stack);
             }).collect(toImmutableList());
