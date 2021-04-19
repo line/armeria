@@ -103,7 +103,7 @@ public final class CancellationScheduler {
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> init0(eventLoop, task, timeoutNanos, server));
         } else {
-            init0(eventLoop, task, timeoutNanos,server);
+            init0(eventLoop, task, timeoutNanos, server);
         }
     }
 
