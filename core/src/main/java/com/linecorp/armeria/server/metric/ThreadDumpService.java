@@ -41,8 +41,6 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import sun.jvm.hotspot.runtime.Thread;
-
 /**
  * An {@link HttpService} that dumps the thread info for all live threads with stack trace.
  * If {@link MediaType#JSON} is specified in {@link HttpHeaderNames#ACCEPT_ENCODING}, the thread info will be
@@ -58,7 +56,6 @@ public final class ThreadDumpService extends AbstractHttpService {
 
     /**
      * Returns a singleton {@link ThreadDumpService}.
-     * @return
      */
     public static ThreadDumpService of() {
         return INSTANCE;
