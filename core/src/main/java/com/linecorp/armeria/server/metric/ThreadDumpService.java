@@ -52,7 +52,7 @@ public final class ThreadDumpService extends AbstractHttpService {
     private static final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
     private static final ThreadDumpService INSTANCE = new ThreadDumpService();
-    private static final Splitter ACCEPT_ENCODING_SPLITTER = Splitter.on(',').trimResults();
+    private static final Splitter ACCEPT_SPLITTER = Splitter.on(',').trimResults();
 
     /**
      * Returns a singleton {@link ThreadDumpService}.
@@ -67,18 +67,17 @@ public final class ThreadDumpService extends AbstractHttpService {
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
 
         boolean hasJson = false;
-        final List<String> acceptEncodings = req.headers().getAll(HttpHeaderNames.ACCEPT_ENCODING);
-        if (acceptEncodings != null) {
-            hasJson = acceptEncodings.stream().anyMatch(acceptEncoding -> {
-                return Streams.stream(ACCEPT_ENCODING_SPLITTER.split(acceptEncoding))
-                              .anyMatch(accept -> MediaType.JSON.is(MediaType.parse(accept)));
-            });
+        final String accept = req.headers().get(HttpHeaderNames.ACCEPT);
+        if (accept != null) {
+            hasJson = Streams.stream(ACCEPT_SPLITTER.split(accept))
+                              .anyMatch(accept0 -> MediaType.JSON.is(MediaType.parse(accept0)));
         }
 
         if (hasJson) {
             final List<ThreadInfo> threadInfos = Thread.getAllStackTraces().entrySet().stream().map(entry -> {
                 final Thread thread = entry.getKey();
                 final List<String> stack = Arrays.stream(entry.getValue())
+                                                 // TODO(ikhoon): Make JSON obect?
                                                  .map(StackTraceElement::toString)
                                                  .collect(toImmutableList());
 

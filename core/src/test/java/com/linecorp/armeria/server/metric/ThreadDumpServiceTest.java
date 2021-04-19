@@ -58,7 +58,7 @@ class ThreadDumpServiceTest {
         final AggregatedHttpResponse response =
                 client.prepare()
                       .get("/internal/threads")
-                      .header(HttpHeaderNames.ACCEPT_ENCODING, MediaType.JSON)
+                      .header(HttpHeaderNames.ACCEPT, MediaType.JSON)
                       .execute().aggregate().join();
 
         assertThat(response.contentType()).isEqualTo(MediaType.JSON);
