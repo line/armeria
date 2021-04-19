@@ -18,37 +18,47 @@ package com.linecorp.armeria.server.metric;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadInfo;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.primitives.Bytes;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ContentDisposition;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.management.JvmManagementService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class ThreadDumpServiceTest {
+import reactor.core.publisher.Flux;
+
+class JvmManagementServiceTest {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/internal/threads", ThreadDumpService.of());
+            sb.serviceUnder("/internal/management", JvmManagementService.of());
         }
     };
 
     @Test
     void threadDump() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
-        final AggregatedHttpResponse response = client.get("/internal/threads").aggregate().join();
+        final AggregatedHttpResponse response =
+                client.get("/internal/management/threaddump").aggregate().join();
         assertThat(response.contentType()).isEqualTo(MediaType.PLAIN_TEXT);
         assertThat(response.contentUtf8()).contains(Thread.currentThread().getName());
     }
@@ -58,7 +68,7 @@ class ThreadDumpServiceTest {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response =
                 client.prepare()
-                      .get("/internal/threads")
+                      .get("/internal/management/threaddump")
                       .header(HttpHeaderNames.ACCEPT, MediaType.JSON)
                       .execute().aggregate().join();
 
@@ -66,5 +76,31 @@ class ThreadDumpServiceTest {
         final String content = response.contentUtf8();
         assertThat(content).contains(Thread.currentThread().getName());
         assertThat(mapper.readTree(content).isArray()).isTrue();
+    }
+
+    @Test
+    void heapDump() throws InterruptedException {
+        final WebClient client = WebClient.of(server.httpUri());
+        final HttpResponse response = client.get("/internal/management/heapdump");
+        final SplitHttpResponse splitHttpResponse = response.split();
+        final ResponseHeaders headers = splitHttpResponse.headers().join();
+        final ContentDisposition disposition =
+                ContentDisposition.parse(headers.get(HttpHeaderNames.CONTENT_DISPOSITION));
+
+        assertThat(disposition).isNotNull();
+        final String filename = disposition.filename();
+        assertThat(filename).startsWith("heapdump_");
+        assertThat(filename).endsWith(".hprof");
+
+        final byte[] fileHeader = "JAVA PROFILE".getBytes(StandardCharsets.UTF_8);
+        final AtomicInteger counter = new AtomicInteger();
+        final byte[] actual = Flux.from(splitHttpResponse.body())
+                                  .map(HttpData::array)
+                                  .takeUntil(bytes -> counter.getAndAdd(bytes.length) <= fileHeader.length)
+                                  .reduce(Bytes::concat)
+                                  .block();
+
+        // Make sure that the returned file has a valid hprof format
+        assertThat(Arrays.copyOf(actual, fileHeader.length)).isEqualTo(fileHeader);
     }
 }

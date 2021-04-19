@@ -14,12 +14,11 @@
  * under the License
  */
 
-package com.linecorp.armeria.server.metric;
+package com.linecorp.armeria.server.management;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.util.Arrays;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,40 +31,23 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-/**
- * An {@link HttpService} that dumps the thread information for all live threads with stack trace.
- * If {@link MediaType#JSON} is specified in {@link HttpHeaderNames#ACCEPT}, the thread information will be
- * converted to a JSON. Otherwise, the thread dump will be converted to a plain text.
- */
-@UnstableApi
-public final class ThreadDumpService extends AbstractHttpService {
+enum ThreadDumpService implements HttpService {
+
+    INSTANCE;
 
     private static final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-
-    private static final ThreadDumpService INSTANCE = new ThreadDumpService();
     private static final Splitter ACCEPT_SPLITTER = Splitter.on(',').trimResults();
 
-    /**
-     * Returns a singleton {@link ThreadDumpService}.
-     */
-    public static ThreadDumpService of() {
-        return INSTANCE;
-    }
-
-    ThreadDumpService() {}
-
     @Override
-    protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         boolean acceptJson = false;
         final String accept = req.headers().get(HttpHeaderNames.ACCEPT);
         if (accept != null) {
             acceptJson = Streams.stream(ACCEPT_SPLITTER.split(accept))
-                              .anyMatch(accept0 -> MediaType.JSON.is(MediaType.parse(accept0)));
+                                .anyMatch(accept0 -> MediaType.JSON.is(MediaType.parse(accept0)));
         }
 
         final ThreadInfo[] threadInfos =
@@ -75,7 +57,7 @@ public final class ThreadDumpService extends AbstractHttpService {
             return HttpResponse.of(HttpStatus.OK, MediaType.JSON, mapper.writeValueAsBytes(threadInfos));
         } else {
             final String threadDump = Arrays.stream(threadInfos)
-                                            .map(Objects::toString)
+                                            .map(ThreadInfo::toString)
                                             .collect(Collectors.joining());
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, threadDump);
         }
