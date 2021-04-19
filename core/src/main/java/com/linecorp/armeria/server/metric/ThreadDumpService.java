@@ -16,16 +16,12 @@
 
 package com.linecorp.armeria.server.metric;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
-import java.lang.Thread.State;
 import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Splitter;
@@ -42,9 +38,9 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * An {@link HttpService} that dumps the thread info for all live threads with stack trace.
- * If {@link MediaType#JSON} is specified in {@link HttpHeaderNames#ACCEPT_ENCODING}, the thread info will be
- * converted as a JSON array.
+ * An {@link HttpService} that dumps the thread information for all live threads with stack trace.
+ * If {@link MediaType#JSON} is specified in {@link HttpHeaderNames#ACCEPT}, the thread information will be
+ * converted to a JSON. Otherwise, the thread dump will be converted to a plain text.
  */
 @UnstableApi
 public final class ThreadDumpService extends AbstractHttpService {
@@ -65,83 +61,23 @@ public final class ThreadDumpService extends AbstractHttpService {
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-
-        boolean hasJson = false;
+        boolean acceptJson = false;
         final String accept = req.headers().get(HttpHeaderNames.ACCEPT);
         if (accept != null) {
-            hasJson = Streams.stream(ACCEPT_SPLITTER.split(accept))
+            acceptJson = Streams.stream(ACCEPT_SPLITTER.split(accept))
                               .anyMatch(accept0 -> MediaType.JSON.is(MediaType.parse(accept0)));
         }
 
-        if (hasJson) {
-            final List<ThreadInfo> threadInfos = Thread.getAllStackTraces().entrySet().stream().map(entry -> {
-                final Thread thread = entry.getKey();
-                final List<String> stack = Arrays.stream(entry.getValue())
-                                                 // TODO(ikhoon): Make JSON obect?
-                                                 .map(StackTraceElement::toString)
-                                                 .collect(toImmutableList());
+        final ThreadInfo[] threadInfos =
+                ManagementFactory.getThreadMXBean().dumpAllThreads(true, true);
 
-                // java.lang.management.ThreadInfo.isDaemon() and getPriority() are added at Java 9
-                return new ThreadInfo(thread.getId(), thread.getName(), thread.isDaemon(),
-                                      thread.getState(), thread.getPriority(), stack);
-            }).collect(toImmutableList());
+        if (acceptJson) {
             return HttpResponse.of(HttpStatus.OK, MediaType.JSON, mapper.writeValueAsBytes(threadInfos));
         } else {
-            final java.lang.management.ThreadInfo[] threadInfos =
-                    ManagementFactory.getThreadMXBean().dumpAllThreads(true, true);
             final String threadDump = Arrays.stream(threadInfos)
                                             .map(Objects::toString)
                                             .collect(Collectors.joining());
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, threadDump);
-        }
-    }
-
-    static final class ThreadInfo {
-        private final long id;
-        private final String name;
-        private final boolean daemon;
-        private final State state;
-        private final int priority;
-        private final List<String> stack;
-
-        ThreadInfo(long id, String name, boolean daemon, State state, int priority,
-                   List<String> stack) {
-            this.id = id;
-            this.name = name;
-            this.daemon = daemon;
-            this.state = state;
-            this.priority = priority;
-            this.stack = stack;
-        }
-
-        @JsonProperty
-        long id() {
-            return id;
-        }
-
-        @JsonProperty
-        String name() {
-            return name;
-        }
-
-        @JsonProperty
-        boolean daemon() {
-            return daemon;
-        }
-
-        @JsonProperty
-        State state() {
-            return state;
-        }
-
-        @JsonProperty
-        int priority() {
-            return priority;
-        }
-
-        @JsonProperty
-        List<String> stack() {
-            return stack;
         }
     }
 }
