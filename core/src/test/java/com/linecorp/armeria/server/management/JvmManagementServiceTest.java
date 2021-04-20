@@ -14,7 +14,7 @@
  * under the License
  */
 
-package com.linecorp.armeria.server.metric;
+package com.linecorp.armeria.server.management;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

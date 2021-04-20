@@ -47,7 +47,7 @@ import com.linecorp.armeria.server.file.HttpFile;
  * }</pre>
  *
  * <h2>Heap dump</h2>
- * Dumps the heap to the {@link HttpFile} in the same format as the hprof heap dump.
+ * You can also dump the heap in the same format as the hprof heap dump by accessing {@code "/heapdump"}.
  * <pre>{@code
  * curl -L http://my-service.com/internal/management/heapdump -o heapdump.hprof
  * // Dump only live objects that are reachable from others
