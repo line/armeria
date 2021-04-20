@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.testng.annotations.Test;
 
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
@@ -88,5 +89,11 @@ public class PublisherBasedStreamMessageVerification extends StreamMessageVerifi
 
         stream.set(new PublisherBasedStreamMessage<>(publisher));
         return stream.get();
+    }
+
+    @Test
+    @Override
+    public void required_spec317_mustSupportAPendingElementCountUpToLongMaxValue() throws Throwable {
+        super.required_spec317_mustSupportAPendingElementCountUpToLongMaxValue();
     }
 }

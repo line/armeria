@@ -24,9 +24,13 @@ ext {
 
 apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
 
-def javaTestHome = System.env.JAVA_TEST_HOME
-if (javaTestHome) {
-    logger.quiet("Overriding JVM for tests with ${javaTestHome}")
+def testJavaVersion
+if (rootProject.hasProperty('testJavaVersion')) {
+    def testVersion = rootProject.findProperty('testJavaVersion')
+    if (JavaVersion.current().getMajorVersion() != testVersion) {
+        testJavaVersion = testVersion
+        logger.quiet("Overriding JVM for tests with ${testJavaVersion}")
+    }
 }
 
 // Fail the build if the console contains 'LEAK:'.
@@ -41,6 +45,7 @@ gradle.buildFinished({ result ->
 })
 
 allprojects {
+
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
         maxHeapSize = '512m'
@@ -52,7 +57,7 @@ allprojects {
         }
     }
 
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach { test ->
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
         // Use verbose exception/response reporting for easier debugging.
@@ -63,8 +68,10 @@ allprojects {
             systemProperty 'com.linecorp.armeria.testing.coverage', 'true'
         }
         // Use a different JRE for testing if necessary.
-        if (javaTestHome) {
-            executable "${javaTestHome}/bin/java"
+        if (testJavaVersion != null) {
+            javaLauncher = javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(testJavaVersion)
+            }
         }
         // Parallelize if --parallel is on.
         if (gradle.startParameter.parallelProjectExecutionEnabled) {
@@ -83,19 +90,14 @@ allprojects {
     }
 }
 
-task checkJavaVersion {
-    doLast {
-        if (JavaVersion.current().majorVersion.toInteger() < 11) {
-            throw new GradleException(
-                    "Your JDK (version ${JavaVersion.current()}) is too old to build Armeria. " +
-                    "Please check the build requirements at " +
-                    "https://armeria.dev/community/developer-guide/")
-        }
-    }
-}
-
 // Configure all Java projects
 configure(projectsWithFlags('java')) {
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(15)
+        }
+    }
 
     // Error Prone compiler
     if (!rootProject.hasProperty('noLint')) {
@@ -179,8 +181,6 @@ configure(projectsWithFlags('java')) {
     // Target Java 8.
     tasks.withType(JavaCompile) {
         options.compilerArgs += ['--release', '8']
-
-        dependsOn checkJavaVersion
     }
 
     tasks.withType(KotlinCompile) {

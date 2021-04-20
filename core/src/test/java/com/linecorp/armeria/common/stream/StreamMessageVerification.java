@@ -43,7 +43,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
     private final TestEnvironment env;
 
     protected StreamMessageVerification() {
-        this(new TestEnvironment(1000, 200));
+        this(new TestEnvironment(5000, 1000));
     }
 
     protected StreamMessageVerification(TestEnvironment env) {
