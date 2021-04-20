@@ -96,12 +96,15 @@ private static String executeCommand(...command) {
     command.each { cmd += it.toString() }
 
     def proc = cmd.execute()
-    proc.waitFor()
+    def stdout = new StringWriter()
+    def stderr = new StringWriter()
+    proc.waitForProcessOutput(stdout, stderr)
+
     if (proc.exitValue() != 0) {
         throw new IOException(
                 "'${command}' exited with a non-zero exit code: ${proc.exitValue()}:" +
-                        "${System.lineSeparator()}${proc.err.text}")
+                        "${System.lineSeparator()}${stderr.toString().trim()}")
     }
 
-    return proc.in.text.trim()
+    return stdout.toString().trim()
 }
