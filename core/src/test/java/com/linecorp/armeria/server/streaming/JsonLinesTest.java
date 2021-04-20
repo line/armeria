@@ -6,8 +6,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,33 +24,20 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 public class JsonLinesTest {
-    private static class Pojo {
-        @JsonProperty("name")
-        private final String name;
-        @JsonProperty("age")
-        private final int age;
-        @JsonProperty("cars")
-        private List<String> cars;
-        public Pojo(String n, int a, List<String> c) {
-            name = n;
-            age = a;
-            cars = c;
-        }
-
-    }
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    @ClassRule
-    public static ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) {
             sb.service("/seq/publisher",
                     (ctx, req) -> JsonLines.fromPublisher(Flux.just("foo", "bar", "baz", "qux")))
                     .service("/seq/stream",
@@ -70,7 +57,7 @@ public class JsonLinesTest {
 
     @Test
     public void fromPublisherOrStreamMultiLineJson() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/seq");
+        final WebClient client = WebClient.of(server.httpUri() + "/seq");
         for (final String path : ImmutableList.of("/custom-mapper")) {
             final HttpResponse response = client.get(path);
             StepVerifier.create(response)
@@ -88,7 +75,7 @@ public class JsonLinesTest {
 
     @Test
     public void fromPublisherOrStream() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/seq");
+        final WebClient client = WebClient.of(server.httpUri() + "/seq");
         for (final String path : ImmutableList.of("/publisher", "/stream")) {
             final HttpResponse response = client.get(path);
             StepVerifier.create(response)
@@ -107,7 +94,7 @@ public class JsonLinesTest {
     @Test
     public void singleSequence() {
         final AggregatedHttpResponse response =
-                WebClient.of(rule.httpUri() + "/seq").get("/single").aggregate().join();
+                WebClient.of(server.httpUri() + "/seq").get("/single").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().contentType()).isEqualTo(MediaType.JSON_LINES);
         // Check whether the content is serialized as a JSON Line format.
@@ -136,6 +123,21 @@ public class JsonLinesTest {
         } catch (Exception e) {
             // Always false.
             assertThat(e).isNull();
+        }
+    }
+
+    private static class Pojo {
+        @JsonProperty("name")
+        private final String name;
+        @JsonProperty("age")
+        private final int age;
+        @JsonProperty("cars")
+        private List<String> cars;
+
+        Pojo(String n, int a, List<String> c) {
+            name = n;
+            age = a;
+            cars = c;
         }
     }
 }

@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  *
  * <p>A user simply creates a streaming {@link HttpResponse} which emits JSON Lines text, e.g.
  * <pre>{@code
- * ObjectMapper mapper = new ObjectMapper().disable(SerializationFeature.INDENT_OUTPUT);
+ * ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.WRITE_ENUMS_USING_INDEX);
  * Server server =
  *     Server.builder()
  *           // Emit JSON Lines Text with a default ObjectMapper.
@@ -139,7 +139,7 @@ public final class JsonLines {
      * <p>Note that this method is intentionally hidden from the public API for use only with
      * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
      * Because the {@code contentConverter} can easily produce a malformed string which violates the
-     * <a href="https://datatracker.ietf.org/doc/rfc8259/">JSON format</a>.
+     * <a href="https://jsonlines.org/">JSON format</a>.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
@@ -224,7 +224,7 @@ public final class JsonLines {
      * <p>Note that this method is intentionally hidden from the public API for use only with
      * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
      * Because the {@code contentConverter} can easily produce a malformed string which violates the
-     * <a href="https://datatracker.ietf.org/doc/rfc8259/">JSON format</a>.
+     * <a href="https://jsonlines.org/">JSON Lines format</a>.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -294,7 +294,7 @@ public final class JsonLines {
      * <p>Note that this method is intentionally hidden from the public API for use only with
      * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
      * Because the {@code contentConverter} can easily produce a malformed string which violates the
-     * <a href="https://datatracker.ietf.org/doc/rfc8259/">JSON format</a>.
+     * <a href="https://jsonlines.org/">JSON format</a>.
      *
      * @param headers the HTTP headers supposed to send
      * @param content the object supposed to send as contents
@@ -329,7 +329,7 @@ public final class JsonLines {
                     "Overwriting the HTTP status code from '{}' to '{}' for JSON Lines. " +
                             "Do not set an HTTP status code on the HttpHeaders when calling factory methods in '{}', " +
                             "or set '{}' if you want to specify its status code. " +
-                            "Please refer to https://datatracker.ietf.org/doc/rfc7464/ for more information.",
+                            "Please refer to https://jsonlines.org/ for more information.",
                     status, HttpStatus.OK, JsonLines.class.getSimpleName(), HttpStatus.OK);
             warnedStatusCode = true;
         }
@@ -352,7 +352,7 @@ public final class JsonLines {
             logger.warn("Overwriting content-type from '{}' to '{}' for JSON Lines. " +
                             "Do not set a content-type on the HttpHeaders when calling factory methods in '{}', " +
                             "or set '{}' if you want to specify its content-type. " +
-                            "Please refer to https://datatracker.ietf.org/doc/rfc7464/ for more information.",
+                            "Please refer to https://jsonlines.org/ for more information.",
                     contentType, MediaType.JSON_LINES,
                     JsonLines.class.getSimpleName(), MediaType.JSON_LINES);
             warnedContentType = true;
