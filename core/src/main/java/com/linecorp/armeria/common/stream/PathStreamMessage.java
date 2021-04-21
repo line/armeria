@@ -41,11 +41,11 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -144,8 +144,12 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         if (this.blockingTaskExecutor != null) {
             blockingTaskExecutor = this.blockingTaskExecutor;
         } else {
-            blockingTaskExecutor =
-                    ClientRequestContext.mapCurrent(ctx -> ctx.root().blockingTaskExecutor(), null);
+            final ServiceRequestContext serviceRequestContext = ServiceRequestContext.currentOrNull();
+            if (serviceRequestContext != null) {
+                blockingTaskExecutor = serviceRequestContext.blockingTaskExecutor();
+            } else {
+                blockingTaskExecutor = null;
+            }
         }
         AsynchronousFileChannel fileChannel = null;
         boolean success = false;
