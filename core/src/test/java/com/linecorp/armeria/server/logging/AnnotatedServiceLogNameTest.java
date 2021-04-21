@@ -29,7 +29,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceNaming;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.ServiceName;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -89,7 +88,8 @@ class AnnotatedServiceLogNameTest {
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
                 .isEqualTo(MyAnnotatedService.class.getName());
         assertThat(sctx.config().defaultServiceName()).isEqualTo(MyAnnotatedService.class.getName());
-        assertThat(sctx.log().whenComplete().join().serviceName()).isEqualTo(MyAnnotatedService.class.getName());
+        assertThat(sctx.log().whenComplete().join().serviceName())
+                .isEqualTo(MyAnnotatedService.class.getName());
     }
 
     @Test
@@ -150,5 +150,4 @@ class AnnotatedServiceLogNameTest {
             return HttpResponse.of(HttpStatus.OK);
         }
     }
-
 }
