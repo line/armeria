@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.graphql;
 
 import java.util.Map;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -72,17 +74,14 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                                    MediaType.PLAIN_TEXT,
                                    "Query is required");
         }
-        final String variablesString = queryString.get("variables");
-        final Map<String, Object> variables = variablesString != null ?
-                                              parseJsonString(variablesString) : null;
+        final Map<String, Object> variables = Optional.ofNullable(queryString.get("variables"))
+                                                      .filter(Strings::isNullOrEmpty)
+                                                      .map(DefaultGraphQLService::toVariableMap)
+                                                      .orElse(ImmutableMap.of());
         final String operationName = queryString.get("operationName");
-        final String extensionsString = queryString.get("extensions");
-        final Map<String, Object> extensions = extensionsString != null ?
-                                               parseJsonString(extensionsString) : null;
-        return execute(executionInput(query, ctx, variables, operationName, extensions));
+        return execute(executionInput(query, ctx, variables, operationName));
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest request) {
         final MediaType contentType = request.contentType();
@@ -92,28 +91,25 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                     logger.warn("{} Failed to aggregate a request:", ctx, thrown);
                     return HttpResponse.ofFailure(thrown);
                 }
-                final Map<String, Object> inputMap = parseJsonString(req.contentUtf8());
-                if (inputMap.isEmpty()) {
+                final Map<String, Object> requestMap = parseJsonString(req.contentUtf8());
+                if (requestMap.isEmpty()) {
                     return HttpResponse.of(HttpStatus.BAD_REQUEST,
                                            MediaType.PLAIN_TEXT,
                                            "Body is required");
                 }
-                final String query = (String) inputMap.getOrDefault("query", "");
+                final String query = (String) requestMap.getOrDefault("query", "");
                 return execute(executionInput(query, ctx,
-                                              (Map<String, Object>) inputMap.get("variables"),
-                                              (String) inputMap.get("operationName"),
-                                              (Map<String, Object>) inputMap.get("extensions")));
+                                              toVariableMap(requestMap.get("variables")),
+                                              (String) requestMap.get("operationName")));
             }));
-        } else if (contentType != null &&
-                   contentType.type().equals(MediaType.GRAPHQL.type()) &&
-                   contentType.subtype().equals(MediaType.GRAPHQL.subtype())) {
+        } else if (contentType != null && contentType.is(MediaType.GRAPHQL)) {
             return HttpResponse.from(request.aggregate().handleAsync((req, thrown) -> {
                 if (thrown != null) {
                     logger.warn("{} Failed to aggregate a request:", ctx, thrown);
                     return HttpResponse.ofFailure(thrown);
                 }
                 final String query = req.contentUtf8();
-                return execute(executionInput(query, ctx, null, null, null));
+                return execute(executionInput(query, ctx, null, null));
             }));
         } else {
             return HttpResponse.of(HttpStatus.UNPROCESSABLE_ENTITY,
@@ -124,17 +120,13 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
 
     private ExecutionInput executionInput(String query, ServiceRequestContext ctx,
                                           @Nullable Map<String, Object> variables,
-                                          @Nullable String operationName,
-                                          @Nullable Map<String, Object> extensions) {
+                                          @Nullable String operationName) {
         final Builder builder = ExecutionInput.newExecutionInput(query);
         if (variables != null) {
             builder.variables(variables);
         }
         if (operationName != null) {
             builder.operationName(operationName);
-        }
-        if (extensions != null) {
-            builder.extensions(extensions);
         }
         if (dataLoaderRegistry != null) {
             builder.dataLoaderRegistry(dataLoaderRegistry);
@@ -152,10 +144,33 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
             return graphQL.execute(input);
         } catch (RuntimeException e) {
             return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
-                    .message(e.getMessage())
-                    .cause(e)
-                    .build());
+                                                                .message(e.getMessage())
+                                                                .cause(e)
+                                                                .build());
         }
+    }
+
+    private static Map<String, Object> toVariableMap(Object variables) {
+        if (variables == null) {
+            return ImmutableMap.of();
+        }
+
+        if (variables instanceof Map) {
+            final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+            final Map<?, ?> variablesMap = (Map<?, ?>) variables;
+            variablesMap.forEach((k, v) -> builder.put(String.valueOf(k), v));
+            return builder.build();
+        } else {
+            return toVariableMap(String.valueOf(variables));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> toVariableMap(String value) {
+        if (Strings.isNullOrEmpty(value)) {
+            return ImmutableMap.of();
+        }
+        return parseJsonString(value);
     }
 
     private static Map<String, Object> parseJsonString(@Nullable String content) {

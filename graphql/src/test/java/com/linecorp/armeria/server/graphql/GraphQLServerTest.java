@@ -51,7 +51,7 @@ class GraphQLServerTest {
     };
 
     @Test
-    void get() throws Exception {
+    void shouldGet() throws Exception {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
                                                          .get("/graphql?query={foo}")
                                                          .aggregate().get();
@@ -61,11 +61,21 @@ class GraphQLServerTest {
     }
 
     @Test
-    void postWhenGraphQLBody() throws Exception {
+    void shouldGetWithoutQuery() throws Exception {
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .get("/graphql")
+                                                         .aggregate().get();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.contentUtf8()).isEqualTo("Query is required");
+    }
+
+    @Test
+    void shouldPostWhenMediaTypeIsGraphql() throws Exception {
         final RequestHeaders headers = RequestHeaders.builder()
                                                      .path("/graphql")
                                                      .method(HttpMethod.POST)
-                                                     .contentType(MediaType.create("application", "graphql"))
+                                                     .contentType(MediaType.GRAPHQL)
                                                      .build();
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
                                                          .execute(headers, "{foo}", Charsets.UTF_8)
@@ -76,7 +86,7 @@ class GraphQLServerTest {
     }
 
     @Test
-    void postWhenJsonBody() throws Exception {
+    void shouldPostWhenMediaTypeIsJson() throws Exception {
         final RequestHeaders headers = RequestHeaders.builder()
                                                      .path("/graphql")
                                                      .method(HttpMethod.POST)
