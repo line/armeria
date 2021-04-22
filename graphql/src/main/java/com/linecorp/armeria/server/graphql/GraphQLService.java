@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import com.linecorp.armeria.server.HttpServiceWithRoutes;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.HttpService;
 
 /**
- * TBD.
+ * An {@link HttpService} that implements the GraphQL.
  */
-public interface GraphQLService extends HttpServiceWithRoutes {
+@UnstableApi
+public interface GraphQLService extends HttpService {
 
     /**
      * Returns a new {@link GraphQLServiceBuilder}.

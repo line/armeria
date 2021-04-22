@@ -471,11 +471,14 @@ public final class MediaTypeNames {
      * {@value #ZIP}.
      */
     public static final String ZIP = "application/zip";
-
     /**
      * {@value MULTIPART_FORM_DATA}.
      */
     public static final String MULTIPART_FORM_DATA = "multipart/form-data";
+    /**
+     * {@value #GRAPHQL}.
+     */
+    public static final String GRAPHQL = "application/graphql";
 
     private MediaTypeNames() {}
 }

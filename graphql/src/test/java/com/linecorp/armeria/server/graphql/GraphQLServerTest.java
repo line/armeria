@@ -30,7 +30,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.schema.StaticDataFetcher;
@@ -41,14 +40,13 @@ class GraphQLServerTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service(GraphQLService.builder()
-                                     .runtimeWiring(c -> {
-                                         final StaticDataFetcher bar = new StaticDataFetcher("bar");
-                                         c.type("Query",
-                                                typeWiring -> typeWiring.dataFetcher("foo", bar));
-                                     })
-                                     .build(),
-                       LoggingService.newDecorator());
+            sb.service("/graphql", GraphQLService.builder()
+                                                 .runtimeWiring(c -> {
+                                                     final StaticDataFetcher bar = new StaticDataFetcher("bar");
+                                                     c.type("Query",
+                                                            typeWiring -> typeWiring.dataFetcher("foo", bar));
+                                                 })
+                                                 .build());
         }
     };
 

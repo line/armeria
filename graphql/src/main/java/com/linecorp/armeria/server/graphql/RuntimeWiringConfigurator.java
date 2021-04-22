@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import graphql.schema.idl.RuntimeWiring;
 
 /**
  * Interface used to configure a scala type, data fetcher, directives, etc on the GraphQL service.
  */
+@UnstableApi
 @FunctionalInterface
 public interface RuntimeWiringConfigurator {
 

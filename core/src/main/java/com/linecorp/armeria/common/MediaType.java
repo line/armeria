@@ -616,6 +616,11 @@ public final class MediaType {
 
     public static final MediaType ZIP = createConstant(APPLICATION_TYPE, "zip");
 
+    /**
+     * <a href="https://graphql.org/learn/serving-over-http">GraphQL</a>
+     */
+    public static final MediaType GRAPHQL = createConstant(APPLICATION_TYPE, "graphql");
+
     private static final Charset NO_CHARSET = new Charset("NO_CHARSET", null) {
         @Override
         public boolean contains(Charset cs) {

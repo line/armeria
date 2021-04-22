@@ -23,15 +23,12 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import org.dataloader.DataLoaderRegistry;
 
 import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.server.Route;
 
 import graphql.GraphQL;
 import graphql.schema.GraphQLSchema;
@@ -46,10 +43,6 @@ import graphql.schema.idl.TypeDefinitionRegistry;
  */
 final class GraphQLServiceBuilder {
 
-    private static final String DEFAULT_PATH = "/graphql";
-
-    private String path = DEFAULT_PATH;
-
     private final ImmutableList.Builder<File> schemaFileBuilder = ImmutableList.builder();
 
     private final ImmutableList.Builder<RuntimeWiringConfigurator> builder = ImmutableList.builder();
@@ -57,34 +50,22 @@ final class GraphQLServiceBuilder {
     @Nullable
     private DataLoaderRegistry dataLoaderRegistry;
 
-    @Nullable
-    private Function<? super GraphQLExecutor, ? extends GraphQLExecutor> decoratorFunction;
-
     GraphQLServiceBuilder() {}
 
     /**
-     * Sets the path of the {@link GraphQLService}.
-     * If not set, {@value DEFAULT_PATH} is used by default.
+     * Sets the schema file.
+     * If not set, the `schema.graphql` or `schema.graphqls` will be imported from the resource.
      */
-    public GraphQLServiceBuilder path(String path) {
-        this.path = requireNonNull(path, "path");
-        return this;
+    public GraphQLServiceBuilder schemaFile(File... schemaFile) {
+        return schemaFile(ImmutableList.copyOf(requireNonNull(schemaFile, "schemaFile")));
     }
 
     /**
      * Sets the schema file.
      * If not set, the `schema.graphql` or `schema.graphqls` will be imported from the resource.
      */
-    public GraphQLServiceBuilder schemaFile(File... schemaFiles) {
-        return schemaFile(ImmutableList.copyOf(requireNonNull(schemaFiles, "schemaFiles")));
-    }
-
-    /**
-     * Sets the schema file.
-     * If not set, the `schema.graphql` or `schema.graphqls` will be imported from the resource.
-     */
-    public GraphQLServiceBuilder schemaFile(Iterable<File> schemaFiles) {
-        schemaFileBuilder.addAll(requireNonNull(schemaFiles, "schemaFiles"));
+    public GraphQLServiceBuilder schemaFile(Iterable<File> schemaFile) {
+        schemaFileBuilder.addAll(requireNonNull(schemaFile, "schemaFile"));
         return this;
     }
 
@@ -112,34 +93,6 @@ final class GraphQLServiceBuilder {
     }
 
     /**
-     * Adds the specified GraphQL in/output {@code decorator}.
-     */
-    @SafeVarargs
-    public final GraphQLServiceBuilder decorator(
-            Function<? super GraphQLExecutor, ? extends GraphQLExecutor>... decorator) {
-        return decorator(ImmutableList.copyOf(requireNonNull(decorator, "decorator")));
-    }
-
-    /**
-     * Adds the specified GraphQL in/output {@code decorator}.
-     */
-    public GraphQLServiceBuilder decorator(
-            Iterable<? extends Function<? super GraphQLExecutor, ? extends GraphQLExecutor>> decorator) {
-        requireNonNull(decorator, "decorator");
-
-        for (Function<? super GraphQLExecutor, ? extends GraphQLExecutor> it : decorator) {
-            requireNonNull(it, "decorators contains null.");
-            if (decoratorFunction != null) {
-                decoratorFunction = decoratorFunction.andThen(it);
-            } else {
-                decoratorFunction = it;
-            }
-        }
-
-        return this;
-    }
-
-    /**
      * Creates a {@link GraphQLService}.
      */
     public GraphQLService build() {
@@ -158,9 +111,8 @@ final class GraphQLServiceBuilder {
 
         final GraphQLSchema schema = new SchemaGenerator().makeExecutableSchema(registry, runtimeWiring);
         final GraphQL graphQL = GraphQL.newGraphQL(schema).build();
-        final Route route = Route.builder().path(path).build();
 
-        return new DefaultGraphQLService(graphQL, dataLoaderRegistry, route, decoratorFunction);
+        return new DefaultGraphQLService(graphQL, dataLoaderRegistry);
     }
 
     private static RuntimeWiring buildRuntimeWiring(
