@@ -471,7 +471,7 @@ public abstract class AbstractHttpRequestBuilder {
 
             if (hasPathParams) {
                 // Replace path parameters.
-                final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+                final StringBuilder buf = new StringBuilder(pathLen + 32); // Add a little bit of wiggle room.
                 buf.append(path);
 
                 loop: while (i < buf.length()) {
