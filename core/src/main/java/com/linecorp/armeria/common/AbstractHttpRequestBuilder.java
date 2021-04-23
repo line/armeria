@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
@@ -40,6 +41,7 @@ import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * Builds a new {@link HttpRequest}.
@@ -256,6 +258,7 @@ public abstract class AbstractHttpRequestBuilder {
     public AbstractHttpRequestBuilder pathParam(String name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
+        checkArgument(!name.isEmpty(), "name is empty.");
         if (pathParams == null) {
             pathParams = new HashMap<>();
         }
@@ -274,6 +277,13 @@ public abstract class AbstractHttpRequestBuilder {
      */
     public AbstractHttpRequestBuilder pathParams(Map<String, ?> pathParams) {
         requireNonNull(pathParams, "pathParams");
+        if (pathParams.isEmpty()) {
+            return this;
+        }
+
+        checkArgument(!pathParams.containsKey(""),
+                      "pathParams contains an entry with an empty name: %s", pathParams);
+
         if (this.pathParams == null) {
             this.pathParams = new HashMap<>();
         }
@@ -411,42 +421,99 @@ public abstract class AbstractHttpRequestBuilder {
 
     private String buildPath() {
         checkState(path != null, "path must be set.");
-        final StringBuilder pathBuilder = new StringBuilder(path);
+
         if (!disablePathParams) {
             int i = 0;
-            while (i < pathBuilder.length()) {
-                if (pathBuilder.charAt(i) == '{') {
-                    int j = i + 1;
-                    while (j < pathBuilder.length() && pathBuilder.charAt(j) != '}') {
-                        j++;
-                    }
-                    if (j == pathBuilder.length()) {
-                        break;
-                    }
-                    final String name = pathBuilder.substring(i + 1, j);
-                    checkState(pathParams != null && pathParams.containsKey(name),
-                               "param " + name + " does not have a value.");
-                    final String value = pathParams.get(name).toString();
-                    pathBuilder.replace(i, j + 1, value);
-                    i += value.length() - 1;
-                } else if (pathBuilder.charAt(i) == ':') {
-                    int j = i + 1;
-                    while (j < pathBuilder.length() && pathBuilder.charAt(j) != '/') {
-                        j++;
-                    }
-                    final String name = pathBuilder.substring(i + 1, j);
-                    checkState(pathParams != null && pathParams.containsKey(name),
-                               "param " + name + " does not have a value.");
-                    final String value = pathParams.get(name).toString();
-                    pathBuilder.replace(i, j, value);
-                    i += value.length();
+            // Look for : or { first.
+            final int pathLen = path.length();
+            loop:
+            while (i < pathLen) {
+                switch (path.charAt(i)) {
+                    case ':':
+                        if (i + 1 < pathLen && path.charAt(i + 1) == '/') {
+                            if (i + 2 < pathLen && path.charAt(i + 2) == '/') {
+                                // Found '://', i.e. path is an absolute URI.
+                                final int pathStart = path.indexOf('/', i + 3);
+                                if (pathStart < 0) {
+                                    // The URI doesn't have a path, e.g. http://example.com:8080
+                                    i = pathLen;
+                                    break loop;
+                                } else {
+                                    i = pathStart + 1; // +1 to skip the first '/' in the path
+                                    continue;
+                                }
+                            } else {
+                                // Found ':/' - Skip.
+                                i += 2;
+                                continue;
+                            }
+                        }
+                        break loop;
+                    case '{':
+                        break loop;
                 }
                 i++;
             }
+
+            if (i < pathLen) {
+                // Replace path parameters.
+                final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+                buf.append(path);
+                while (i < buf.length()) {
+                    if (buf.charAt(i) == '{') {
+                        int j = i + 1;
+                        while (j < buf.length() && buf.charAt(j) != '}') {
+                            j++;
+                        }
+                        if (j == buf.length()) {
+                            // No matching }
+                            break;
+                        }
+                        if (j > i + 1) {
+                            final String name = buf.substring(i + 1, j);
+                            checkState(pathParams != null && pathParams.containsKey(name),
+                                       "param '%s' does not have a value.", name);
+                            final String value = pathParams.get(name).toString();
+                            buf.replace(i, j + 1, value);
+                            i += value.length() - 1;
+                        }
+                    } else if (buf.charAt(i) == ':') {
+                        int j = i + 1;
+                        while (j < buf.length() && buf.charAt(j) != '/') {
+                            j++;
+                        }
+                        if (j > i + 1) {
+                            final String name = buf.substring(i + 1, j);
+                            if (!name.isEmpty()) {
+                                checkState(pathParams != null && pathParams.containsKey(name),
+                                           "param '%s' does not have a value.", name);
+                                final String value = pathParams.get(name).toString();
+                                buf.replace(i, j, value);
+                                i += value.length();
+                            }
+                        }
+                    }
+                    i++;
+                }
+
+                if (queryParams != null) {
+                    buf.append('?');
+                    queryParams.appendQueryString(buf);
+                }
+
+                return buf.toString();
+            } else {
+                // path doesn't contain : or {.
+            }
         }
+
         if (queryParams != null) {
-            pathBuilder.append('?').append(queryParams.toQueryString());
+            final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+            buf.append(path).append('?');
+            queryParams.appendQueryString(buf);
+            return buf.toString();
+        } else {
+            return path;
         }
-        return pathBuilder.toString();
     }
 }
