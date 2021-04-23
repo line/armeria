@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -50,7 +51,7 @@ class ServiceNamingTest {
         assertThat(serviceName).isEqualTo(NestedClass.class.getSimpleName());
     }
 
-    @Test
+    @RepeatedTest(1000)
     void simpleTypeName_preserveTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =

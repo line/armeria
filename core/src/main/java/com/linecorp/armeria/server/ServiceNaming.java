@@ -73,14 +73,13 @@ public interface ServiceNaming {
             if (packageIndex >= 0) {
                 simpleTypeName = fullTypeName.substring(packageIndex + 1);
             }
+            int enclosingIndex = simpleTypeName.indexOf('$');
+            if (enclosingIndex < 0) {
+                return simpleTypeName;
+            }
 
+            // Remove enclosing class name from the simpleTypeName
             for (;;) {
-                int enclosingIndex = simpleTypeName.indexOf('$');
-                if (enclosingIndex < 0) {
-                    break;
-                }
-
-                // Remove enclosing class name from the simpleTypeName
                 while (enclosingIndex + 1 < simpleTypeName.length() &&
                        simpleTypeName.charAt(enclosingIndex + 1) == '$') {
                     enclosingIndex++;
