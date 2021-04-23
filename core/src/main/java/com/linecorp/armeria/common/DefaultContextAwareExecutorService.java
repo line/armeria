@@ -54,17 +54,17 @@ class DefaultContextAwareExecutorService implements ContextAwareExecutorService 
 
     @Override
     public Future<?> submit(Runnable task) {
-        return executor.submit(context.makeContextAware(task));
+        return executor.submit(context().makeContextAware(task));
     }
 
     @Override
     public <T> Future<T> submit(Runnable task, T result) {
-        return executor.submit(context.makeContextAware(task), result);
+        return executor.submit(context().makeContextAware(task), result);
     }
 
     @Override
     public <T> Future<T> submit(Callable<T> task) {
-        return executor.submit(context.makeContextAware(task));
+        return executor.submit(context().makeContextAware(task));
     }
 
     @Override
@@ -109,20 +109,21 @@ class DefaultContextAwareExecutorService implements ContextAwareExecutorService 
 
     @Override
     public final void execute(Runnable command) {
-        executor.execute(context.makeContextAware(command));
+        executor.execute(context().makeContextAware(command));
     }
 
     private <T> Collection<? extends Callable<T>> makeContextAware(
             Collection<? extends Callable<T>> tasks) {
-        return tasks.stream().map(context::makeContextAware).collect(Collectors.toList());
+        return tasks.stream().map(context()::makeContextAware).collect(Collectors.toList());
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("context", context)
+                          .add("context", context())
                           .add("executor", executor)
                           .toString();
     }
+
 }
 
