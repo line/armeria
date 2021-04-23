@@ -424,12 +424,12 @@ public abstract class AbstractHttpRequestBuilder {
 
         boolean hasQueryString = false;
         if (!disablePathParams) {
-            int i = 0;
             // Look for : or { first.
             final int pathLen = path.length();
+            int i = 0;
             boolean hasPathParams = false;
-            loop:
-            while (i < pathLen) {
+
+            loop: while (i < pathLen) {
                 switch (path.charAt(i)) {
                     case ':':
                         if (i + 1 < pathLen && path.charAt(i + 1) == '/') {
