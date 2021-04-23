@@ -95,10 +95,10 @@ class AnnotatedServiceLogNameTest {
     @Test
     void serviceName_withDefaultNaming() {
         client.get("/default-naming/service-name").aggregate().join();
-        assertThat(sctx.config().defaultServiceNaming().serviceName(sctx)).isEqualTo("DefaultName");
+        assertThat(sctx.config().defaultServiceNaming().serviceName(sctx)).isEqualTo("DefaultNaming");
         // ServiceNaming is used.
         assertThat(sctx.config().defaultServiceName()).isNull();
-        assertThat(sctx.log().whenComplete().join().serviceName()).isEqualTo("DefaultName");
+        assertThat(sctx.log().whenComplete().join().serviceName()).isEqualTo("DefaultNaming");
     }
 
     @Test

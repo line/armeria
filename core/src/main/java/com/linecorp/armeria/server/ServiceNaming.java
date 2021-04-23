@@ -68,7 +68,31 @@ public interface ServiceNaming {
     static ServiceNaming simpleTypeName() {
         return ctx -> {
             final String fullTypeName = fullTypeName().serviceName(ctx);
-            return fullTypeName.substring(fullTypeName.lastIndexOf('.') + 1);
+            String simpleTypeName = "";
+            final int packageIndex = fullTypeName.lastIndexOf('.');
+            if (packageIndex >= 0) {
+                simpleTypeName = fullTypeName.substring(packageIndex + 1);
+            }
+
+            for (;;) {
+                int enclosingIndex = simpleTypeName.indexOf('$');
+                if (enclosingIndex < 0) {
+                    break;
+                }
+
+                // Remove enclosing class name from the simpleTypeName
+                while (enclosingIndex + 1 < simpleTypeName.length() &&
+                       simpleTypeName.charAt(enclosingIndex + 1) == '$') {
+                    enclosingIndex++;
+                }
+
+                if (enclosingIndex == 0 || enclosingIndex + 1 == simpleTypeName.length()) {
+                    break;
+                } else {
+                    simpleTypeName = simpleTypeName.substring(enclosingIndex + 1);
+                }
+            }
+            return simpleTypeName;
         };
     }
 
