@@ -73,13 +73,17 @@ public interface ServiceNaming {
             if (packageIndex >= 0) {
                 simpleTypeName = fullTypeName.substring(packageIndex + 1);
             }
-            int enclosingIndex = simpleTypeName.indexOf('$');
-            if (enclosingIndex < 0) {
+
+            if (ctx.rpcRequest() != null) {
                 return simpleTypeName;
             }
 
-            // Remove enclosing class name from the simpleTypeName
             for (;;) {
+                int enclosingIndex = simpleTypeName.indexOf('$');
+                if (enclosingIndex < 0) {
+                    return simpleTypeName;
+                }
+
                 while (enclosingIndex + 1 < simpleTypeName.length() &&
                        simpleTypeName.charAt(enclosingIndex + 1) == '$') {
                     enclosingIndex++;
@@ -87,9 +91,9 @@ public interface ServiceNaming {
 
                 if (enclosingIndex == 0 || enclosingIndex + 1 == simpleTypeName.length()) {
                     break;
-                } else {
-                    simpleTypeName = simpleTypeName.substring(enclosingIndex + 1);
                 }
+
+                simpleTypeName = simpleTypeName.substring(enclosingIndex + 1);
             }
             return simpleTypeName;
         };

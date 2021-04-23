@@ -51,7 +51,7 @@ class ServiceNamingTest {
         assertThat(serviceName).isEqualTo(NestedClass.class.getSimpleName());
     }
 
-    @RepeatedTest(1000)
+    @Test
     void simpleTypeName_preserveTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
