@@ -45,7 +45,6 @@ gradle.buildFinished({ result ->
 })
 
 allprojects {
-
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
         maxHeapSize = '512m'
