@@ -23,6 +23,8 @@ import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -43,9 +45,13 @@ class WebClientRequestPreparationTest {
             sb.service("/", (ctx, req) -> HttpResponse.of("root"));
             sb.service("/ping", (ctx, req) -> HttpResponse.of("pong"));
             sb.service("exact:/%7B%7D", (ctx, req) -> HttpResponse.of("{}"));
-            sb.service("exact:/%7Bunmatched", (ctx, req) -> HttpResponse.of("unmatched"));
             sb.service("exact:/:", (ctx, req) -> HttpResponse.of(":"));
+            sb.service("exact:/%7B%7D/%7B%7D", (ctx, req) -> HttpResponse.of("{}/{}"));
+            sb.service("exact:/%7B%7D/:", (ctx, req) -> HttpResponse.of("{}/:"));
+            sb.service("exact:/:/%7B%7D", (ctx, req) -> HttpResponse.of(":/{}"));
             sb.service("exact:/:/:", (ctx, req) -> HttpResponse.of(":/:"));
+            sb.service("exact:/%7Bunmatched", (ctx, req) -> HttpResponse.of("unmatched"));
+            sb.service("/query", (ctx, req) -> HttpResponse.of(String.valueOf(ctx.query())));
         }
     };
 
@@ -60,25 +66,15 @@ class WebClientRequestPreparationTest {
                 .hasMessageContaining("empty");
     }
 
-
-    @Test
-    void shouldFailOnMissingCurlyPathParam() {
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void shouldFailOnMissingPathParam(boolean curly) {
         assertThatThrownBy(() -> WebClient.of(server.httpUri())
                                           .prepare()
-                                          .get("/{foo}")
+                                          .get(curly ? "/{foo}" : "/:foo")
                                           .execute())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("param 'foo'");
-    }
-
-    @Test
-    void shouldFailOnMissingColonPathParam() {
-        assertThatThrownBy(() -> WebClient.of(server.httpUri())
-                                          .prepare()
-                                          .get("/:bar")
-                                          .execute())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("param 'bar'");
     }
 
     @Test
@@ -111,6 +107,21 @@ class WebClientRequestPreparationTest {
         assertThat(res.contentUtf8()).isEqualTo("pong");
     }
 
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void absoluteUriWithPathParam(boolean curly) {
+        final AggregatedHttpResponse res =
+                WebClient.of()
+                         .prepare()
+                         .get(server.httpUri() + (curly ? "/{path}": "/:path"))
+                         .pathParam("path", "ping")
+                         .execute()
+                         .aggregate()
+                         .join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("pong");
+    }
+
     @Test
     void absoluteUriWithoutPath() {
         final AggregatedHttpResponse res =
@@ -124,43 +135,32 @@ class WebClientRequestPreparationTest {
         assertThat(res.contentUtf8()).isEqualTo("root");
     }
 
-    @Test
-    void shouldIgnoreEmptyCurlyPathParam() {
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void shouldIgnoreEmptyPathParam(boolean curly) {
         final AggregatedHttpResponse res =
                 WebClient.of(server.httpUri())
                          .prepare()
-                         .get("/{}")
+                         .get(curly ? "/{}" : "/:")
                          .execute()
                          .aggregate()
                          .join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("{}");
+        assertThat(res.contentUtf8()).isEqualTo(curly ? "{}" : ":");
     }
 
-    @Test
-    void shouldIgnoreEmptyColonPathParam() {
+    @ParameterizedTest
+    @CsvSource({ "true, true", "true, false", "false, true", "false, false" })
+    void shouldIgnoreMultipleEmptyPathParams(boolean firstCurly, boolean secondCurly) {
         final AggregatedHttpResponse res =
                 WebClient.of(server.httpUri())
                          .prepare()
-                         .get("/:")
+                         .get((firstCurly ? "/{}" : "/:") + (secondCurly ? "/{}" : "/:"))
                          .execute()
                          .aggregate()
                          .join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo(":");
-    }
-
-    @Test
-    void shouldIgnoreMultipleEmptyColonPathParams() {
-        final AggregatedHttpResponse res =
-                WebClient.of(server.httpUri())
-                         .prepare()
-                         .get("/:/:")
-                         .execute()
-                         .aggregate()
-                         .join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo(":/:");
+        assertThat(res.contentUtf8()).isEqualTo((firstCurly ? "{}" : ":") + '/' + (secondCurly ? "{}" : ":"));
     }
 
     @Test
@@ -174,5 +174,78 @@ class WebClientRequestPreparationTest {
                          .join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("unmatched");
+    }
+
+    @Test
+    void queryParams() {
+        final AggregatedHttpResponse res =
+                WebClient.of(server.httpUri())
+                         .prepare()
+                         .get("/query")
+                         .queryParam("foo", "bar")
+                         .execute()
+                         .aggregate()
+                         .join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("foo=bar");
+    }
+
+    @Test
+    void queryParamsInPath() {
+        final AggregatedHttpResponse res =
+                WebClient.of(server.httpUri())
+                         .prepare()
+                         .get("/query?baz=qux")
+                         .execute()
+                         .aggregate()
+                         .join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("baz=qux");
+    }
+
+    @Test
+    void queryParamsMixed() {
+        final AggregatedHttpResponse res =
+                WebClient.of(server.httpUri())
+                         .prepare()
+                         .get("/query?foo=bar")
+                         .queryParam("baz", "qux")
+                         .execute()
+                         .aggregate()
+                         .join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("foo=bar&baz=qux");
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void pathParamAndQueryParam(boolean curly) {
+        final AggregatedHttpResponse res =
+                WebClient.of(server.httpUri())
+                         .prepare()
+                         .get(curly ? "/{path}" : "/:path")
+                         .pathParam("path", "query")
+                         .queryParam("foo", "bar")
+                         .execute()
+                         .aggregate()
+                         .join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("foo=bar");
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void pathParamAndQueryParamsMixed(boolean curly) {
+        final AggregatedHttpResponse res =
+                WebClient.of(server.httpUri())
+                         .prepare()
+                         .get((curly ? "/{path}" : "/:path") + "?foo=bar")
+                         .pathParam("path", "query")
+                         .queryParam("baz", "qux")
+                         .execute()
+                         .aggregate()
+                         .join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("foo=bar&baz=qux");
     }
 }
