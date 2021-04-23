@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
+
+import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -42,16 +45,8 @@ class WebClientRequestPreparationTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/", (ctx, req) -> HttpResponse.of("root"));
-            sb.service("/ping", (ctx, req) -> HttpResponse.of("pong"));
-            sb.service("exact:/%7B%7D", (ctx, req) -> HttpResponse.of("{}"));
-            sb.service("exact:/:", (ctx, req) -> HttpResponse.of(":"));
-            sb.service("exact:/%7B%7D/%7B%7D", (ctx, req) -> HttpResponse.of("{}/{}"));
-            sb.service("exact:/%7B%7D/:", (ctx, req) -> HttpResponse.of("{}/:"));
-            sb.service("exact:/:/%7B%7D", (ctx, req) -> HttpResponse.of(":/{}"));
-            sb.service("exact:/:/:", (ctx, req) -> HttpResponse.of(":/:"));
-            sb.service("exact:/%7Bunmatched", (ctx, req) -> HttpResponse.of("unmatched"));
-            sb.service("/query", (ctx, req) -> HttpResponse.of(String.valueOf(ctx.query())));
+            sb.serviceUnder("/", (ctx, req) -> HttpResponse.of(
+                    ctx.decodedPath() + (ctx.query() != null ? '?' + ctx.query() : "")));
         }
     };
 
@@ -90,90 +85,125 @@ class WebClientRequestPreparationTest {
                              .aggregate();
             final ClientRequestContext ctx = captor.get();
             assertThat(ctx.ownAttr(foo)).isEqualTo("bar");
-            assertThat(res.join().contentUtf8()).isEqualTo("pong");
+            assertThat(res.join().contentUtf8()).isEqualTo("/ping");
         }
     }
 
-    @Test
-    void absoluteUri() {
+    @ParameterizedTest
+    @CsvSource({
+            ",      /",
+            "/,     /",
+            "/foo,  /foo",
+            "/foo/, /foo/",
+            "/:,    /:",
+            "/:/,   /:/",
+            "/:/:,  /:/:",
+            "/:/:/, /:/:/",
+            // Note: We don't test '{}' because absolute URIs don't accept '{' or '}'.
+    })
+    void absoluteUriWithoutPathParams(@Nullable String path, String expectedPath) {
+        path = firstNonNull(path, "");
         final AggregatedHttpResponse res =
                 WebClient.of()
                          .prepare()
-                         .get(server.httpUri().resolve("/ping").toASCIIString())
+                         .get(server.httpUri() + path)
                          .execute()
                          .aggregate()
                          .join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("pong");
+        assertThat(res.contentUtf8()).isEqualTo(expectedPath);
     }
 
     @ParameterizedTest
-    @CsvSource({ "true", "false" })
-    void absoluteUriWithPathParam(boolean curly) {
+    @CsvSource({
+            ",            /",
+            "/,           /",
+            "/foo,        /foo",
+            "/foo/,       /foo/",
+            "/{},         /{}",
+            "/:,          /:",
+            "/{}/,        /{}/",
+            "/:/,         /:/",
+            "/{}/{},      /{}/{}",
+            "/{}/:,       /{}/:",
+            "/:/:,        /:/:",
+            "/:/{},       /:/{}",
+            "/{}/{}/,     /{}/{}/",
+            "/{}/:/,      /{}/:/",
+            "/:/:/,       /:/:/",
+            "/:/{}/,      /:/{}/",
+            "/{unmatched, /{unmatched"
+    })
+    void pathWithoutPathParams(@Nullable String path, String expectedPath) {
+        path = firstNonNull(path, "");
+        final AggregatedHttpResponse res =
+                WebClient.of(server.httpUri())
+                         .prepare()
+                         .get(path)
+                         .execute()
+                         .aggregate()
+                         .join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo(expectedPath);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "/{path},        /ping",
+            "/:path,         /ping",
+            "/{path}/,       /ping/",
+            "/:path/,        /ping/",
+            "/{path}/:,      /ping/:",
+            "/:path/:,       /ping/:",
+            "/{path}/:/,     /ping/:/",
+            "/:path/:/,      /ping/:/",
+            "/{path}/:/pong, /ping/:/pong",
+            "/:path/:/pong,  /ping/:/pong",
+            // Note: We don't test '{}' because absolute URIs don't accept '{' or '}'.
+    })
+    void absoluteUriWithPathParam(String path, String expectedPath) {
         final AggregatedHttpResponse res =
                 WebClient.of()
                          .prepare()
-                         .get(server.httpUri() + (curly ? "/{path}" : "/:path"))
+                         .get(server.httpUri() + path)
                          .pathParam("path", "ping")
                          .execute()
                          .aggregate()
                          .join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("pong");
-    }
-
-    @Test
-    void absoluteUriWithoutPath() {
-        final AggregatedHttpResponse res =
-                WebClient.of()
-                         .prepare()
-                         .get(server.httpUri().toASCIIString())
-                         .execute()
-                         .aggregate()
-                         .join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("root");
+        assertThat(res.contentUtf8()).isEqualTo(expectedPath);
     }
 
     @ParameterizedTest
-    @CsvSource({ "true", "false" })
-    void shouldIgnoreEmptyPathParam(boolean curly) {
+    @CsvSource({
+            "/{path},         /ping",
+            "/:path,          /ping",
+            "/{path}/,        /ping/",
+            "/:path/,         /ping/",
+            "/{path}/{},      /ping/{}",
+            "/:path/{},       /ping/{}",
+            "/{path}/:,       /ping/:",
+            "/:path/:,        /ping/:",
+            "/{path}/{}/,     /ping/{}/",
+            "/:path/{}/,      /ping/{}/",
+            "/{path}/:/,      /ping/:/",
+            "/:path/:/,       /ping/:/",
+            "/{path}/{}/pong, /ping/{}/pong",
+            "/:path/{}/pong,  /ping/{}/pong",
+            "/{path}/:/pong,  /ping/:/pong",
+            "/:path/:/pong,   /ping/:/pong",
+    })
+    void pathWithPathParam(String path, String expectedPath) {
         final AggregatedHttpResponse res =
                 WebClient.of(server.httpUri())
                          .prepare()
-                         .get(curly ? "/{}" : "/:")
+                         .get(path)
+                         .pathParam("path", "ping")
                          .execute()
                          .aggregate()
                          .join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo(curly ? "{}" : ":");
-    }
-
-    @ParameterizedTest
-    @CsvSource({ "true, true", "true, false", "false, true", "false, false" })
-    void shouldIgnoreMultipleEmptyPathParams(boolean firstCurly, boolean secondCurly) {
-        final AggregatedHttpResponse res =
-                WebClient.of(server.httpUri())
-                         .prepare()
-                         .get((firstCurly ? "/{}" : "/:") + (secondCurly ? "/{}" : "/:"))
-                         .execute()
-                         .aggregate()
-                         .join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo((firstCurly ? "{}" : ":") + '/' + (secondCurly ? "{}" : ":"));
-    }
-
-    @Test
-    void shouldIgnoreUnmatchedCurlyPathParam() {
-        final AggregatedHttpResponse res =
-                WebClient.of(server.httpUri())
-                         .prepare()
-                         .get("/{unmatched")
-                         .execute()
-                         .aggregate()
-                         .join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("unmatched");
+        assertThat(res.contentUtf8()).isEqualTo(expectedPath);
     }
 
     @Test
@@ -187,7 +217,7 @@ class WebClientRequestPreparationTest {
                          .aggregate()
                          .join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("foo=bar");
+        assertThat(res.contentUtf8()).isEqualTo("/query?foo=bar");
     }
 
     @Test
@@ -195,12 +225,12 @@ class WebClientRequestPreparationTest {
         final AggregatedHttpResponse res =
                 WebClient.of(server.httpUri())
                          .prepare()
-                         .get("/query?baz=qux")
+                         .get("/query?alice=bob")
                          .execute()
                          .aggregate()
                          .join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("baz=qux");
+        assertThat(res.contentUtf8()).isEqualTo("/query?alice=bob");
     }
 
     @Test
@@ -209,43 +239,62 @@ class WebClientRequestPreparationTest {
                 WebClient.of(server.httpUri())
                          .prepare()
                          .get("/query?foo=bar")
-                         .queryParam("baz", "qux")
+                         .queryParam("alice", "bob")
                          .execute()
                          .aggregate()
                          .join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("foo=bar&baz=qux");
+        assertThat(res.contentUtf8()).isEqualTo("/query?foo=bar&alice=bob");
     }
 
     @ParameterizedTest
-    @CsvSource({ "true", "false" })
-    void pathParamAndQueryParam(boolean curly) {
+    @CsvSource({
+            // No query string in path
+            "/{path},         /ping?alice=bob",
+            "/:path,          /ping?alice=bob",
+            "/{path}/,        /ping/?alice=bob",
+            "/:path/,         /ping/?alice=bob",
+            "/{path}/{},      /ping/{}?alice=bob",
+            "/:path/{},       /ping/{}?alice=bob",
+            "/{path}/:,       /ping/:?alice=bob",
+            "/:path/:,        /ping/:?alice=bob",
+            "/{path}/{}/,     /ping/{}/?alice=bob",
+            "/:path/{}/,      /ping/{}/?alice=bob",
+            "/{path}/:/,      /ping/:/?alice=bob",
+            "/:path/:/,       /ping/:/?alice=bob",
+            "/{path}/{}/pong, /ping/{}/pong?alice=bob",
+            "/:path/{}/pong,  /ping/{}/pong?alice=bob",
+            "/{path}/:/pong,  /ping/:/pong?alice=bob",
+            "/:path/:/pong,   /ping/:/pong?alice=bob",
+            // A query string in path
+            "/{path}?foo=bar,         /ping?foo=bar&alice=bob",
+            "/:path?foo=bar,          /ping?foo=bar&alice=bob",
+            "/{path}/?foo=bar,        /ping/?foo=bar&alice=bob",
+            "/:path/?foo=bar,         /ping/?foo=bar&alice=bob",
+            "/{path}/{}?foo=bar,      /ping/{}?foo=bar&alice=bob",
+            "/:path/{}?foo=bar,       /ping/{}?foo=bar&alice=bob",
+            "/{path}/:?foo=bar,       /ping/:?foo=bar&alice=bob",
+            "/:path/:?foo=bar,        /ping/:?foo=bar&alice=bob",
+            "/{path}/{}/?foo=bar,     /ping/{}/?foo=bar&alice=bob",
+            "/:path/{}/?foo=bar,      /ping/{}/?foo=bar&alice=bob",
+            "/{path}/:/?foo=bar,      /ping/:/?foo=bar&alice=bob",
+            "/:path/:/?foo=bar,       /ping/:/?foo=bar&alice=bob",
+            "/{path}/{}/pong?foo=bar, /ping/{}/pong?foo=bar&alice=bob",
+            "/:path/{}/pong?foo=bar,  /ping/{}/pong?foo=bar&alice=bob",
+            "/{path}/:/pong?foo=bar,  /ping/:/pong?foo=bar&alice=bob",
+            "/:path/:/pong?foo=bar,   /ping/:/pong?foo=bar&alice=bob",
+    })
+    void pathParamAndQueryParams(String path, String expectedPath) {
         final AggregatedHttpResponse res =
                 WebClient.of(server.httpUri())
                          .prepare()
-                         .get(curly ? "/{path}" : "/:path")
-                         .pathParam("path", "query")
-                         .queryParam("foo", "bar")
+                         .get(path)
+                         .pathParam("path", "ping")
+                         .queryParam("alice", "bob")
                          .execute()
                          .aggregate()
                          .join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("foo=bar");
-    }
-
-    @ParameterizedTest
-    @CsvSource({ "true", "false" })
-    void pathParamAndQueryParamsMixed(boolean curly) {
-        final AggregatedHttpResponse res =
-                WebClient.of(server.httpUri())
-                         .prepare()
-                         .get((curly ? "/{path}" : "/:path") + "?foo=bar")
-                         .pathParam("path", "query")
-                         .queryParam("baz", "qux")
-                         .execute()
-                         .aggregate()
-                         .join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.contentUtf8()).isEqualTo("foo=bar&baz=qux");
+        assertThat(res.contentUtf8()).isEqualTo(expectedPath);
     }
 }

@@ -472,53 +472,64 @@ public abstract class AbstractHttpRequestBuilder {
             if (hasPathParams) {
                 // Replace path parameters.
                 final StringBuilder buf = new StringBuilder(pathLen + 32); // Add a little bit of wiggle room.
-                buf.append(path);
+                buf.append(path, 0, i);
 
-                loop: while (i < buf.length()) {
-                    switch (buf.charAt(i)) {
+                loop: while (i < pathLen) {
+                    final char ch = path.charAt(i);
+                    switch (ch) {
                         case '{': {
                             int j = i + 1;
-                            while (j < buf.length() && buf.charAt(j) != '}') {
+                            // Find the matching '}'
+                            while (j < pathLen && path.charAt(j) != '}') {
                                 j++;
                             }
-                            if (j == buf.length()) {
-                                // No matching }
+
+                            if (j >= pathLen) {
+                                // Found no matching '}'
+                                buf.append(path, i, pathLen);
                                 break loop;
                             }
+
                             if (j > i + 1) {
-                                final String name = buf.substring(i + 1, j);
+                                final String name = path.substring(i + 1, j);
                                 checkState(pathParams != null && pathParams.containsKey(name),
                                            "param '%s' does not have a value.", name);
-                                final String value = pathParams.get(name).toString();
-                                buf.replace(i, j + 1, value);
-                                i += value.length() - 1;
+                                buf.append(pathParams.get(name));
+                                j++; // Skip '}'
+                            } else {
+                                // Found '{}'
+                                j++; // Skip '}'
+                                buf.append('{').append('}');
                             }
+                            i = j;
                             break;
                         }
                         case ':': {
                             int j = i + 1;
-                            while (j < buf.length() && buf.charAt(j) != '/' && buf.charAt(j) != '?') {
+                            while (j < pathLen && path.charAt(j) != '/' && path.charAt(j) != '?') {
                                 j++;
                             }
                             if (j > i + 1) {
-                                final String name = buf.substring(i + 1, j);
-                                if (!name.isEmpty()) {
-                                    checkState(pathParams != null && pathParams.containsKey(name),
-                                               "param '%s' does not have a value.", name);
-                                    final String value = pathParams.get(name).toString();
-                                    buf.replace(i, j, value);
-                                    i += value.length() - 1;
-                                }
+                                final String name = path.substring(i + 1, j);
+                                checkState(pathParams != null && pathParams.containsKey(name),
+                                           "param '%s' does not have a value.", name);
+                                buf.append(pathParams.get(name));
+                            } else {
+                                // Found ':' without name.
+                                buf.append(':');
                             }
+                            i = j;
                             break;
                         }
                         case '?': {
                             hasQueryString = true;
+                            buf.append(path, i, pathLen);
                             break loop;
                         }
+                        default:
+                            buf.append(ch);
+                            i++;
                     }
-
-                    i++;
                 }
 
                 if (hasQueryString) {
