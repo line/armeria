@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.file.HttpFile;
 
 /**
  * An {@link HttpService} that provides monitoring and management features for JVM.

@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.management.JvmManagementService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
