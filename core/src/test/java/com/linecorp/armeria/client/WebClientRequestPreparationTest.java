@@ -113,7 +113,7 @@ class WebClientRequestPreparationTest {
         final AggregatedHttpResponse res =
                 WebClient.of()
                          .prepare()
-                         .get(server.httpUri() + (curly ? "/{path}": "/:path"))
+                         .get(server.httpUri() + (curly ? "/{path}" : "/:path"))
                          .pathParam("path", "ping")
                          .execute()
                          .aggregate()
