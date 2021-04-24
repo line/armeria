@@ -23,10 +23,10 @@ import java.util.concurrent.ConcurrentMap;
 import com.linecorp.armeria.server.ServiceNaming;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-public final class ShortenedServiceNameProvider implements ServiceNaming {
+public final class LengthBasedServiceNaming implements ServiceNaming {
 
-    public static ShortenedServiceNameProvider of(int shortenedServiceNameLength) {
-        return new ShortenedServiceNameProvider(shortenedServiceNameLength);
+    public static LengthBasedServiceNaming of(int shortenedServiceNameLength) {
+        return new LengthBasedServiceNaming(shortenedServiceNameLength);
     }
 
     private final TargetLengthBasedClassNameAbbreviator abbreviator;
@@ -47,9 +47,8 @@ public final class ShortenedServiceNameProvider implements ServiceNaming {
         return abbreviation;
     }
 
-    private ShortenedServiceNameProvider(int shortenedServiceNameLength) {
-        checkArgument(shortenedServiceNameLength >= 0,
-                      "shortenedServiceNameLength should be equal or bigger than zero");
-        this.abbreviator = new TargetLengthBasedClassNameAbbreviator(shortenedServiceNameLength);
+    private LengthBasedServiceNaming(int shortenedServiceNameLength) {
+        checkArgument(shortenedServiceNameLength >= 0, "value: %d (expected >= 0)", shortenedServiceNameLength);
+        abbreviator = new TargetLengthBasedClassNameAbbreviator(shortenedServiceNameLength);
     }
 }

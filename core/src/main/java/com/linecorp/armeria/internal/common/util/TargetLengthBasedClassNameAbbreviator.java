@@ -30,10 +30,12 @@ package com.linecorp.armeria.internal.common.util;
 
 public final class TargetLengthBasedClassNameAbbreviator {
 
+    // Forked from https://github.com/qos-ch/logback/blob/c2dcbfc/logback-classic/src/main/java/ch/qos/logback/classic/pattern/TargetLengthBasedClassNameAbbreviator.java
+
     private static final int MAX_DOTS = 16;
     private final int targetLength;
 
-    static int computeDotIndexes(final String className, int[] dotArray) {
+    private static int computeDotIndexes(final String className, int[] dotArray) {
         int dotCount = 0;
         int k = 0;
         while (true) {
@@ -56,7 +58,6 @@ public final class TargetLengthBasedClassNameAbbreviator {
     }
 
     public String abbreviate(String fqClassName) {
-        final StringBuilder buf = new StringBuilder(targetLength);
         if (fqClassName == null) {
             throw new IllegalArgumentException("Class name may not be null");
         }
@@ -78,6 +79,7 @@ public final class TargetLengthBasedClassNameAbbreviator {
             return fqClassName;
         }
         computeLengthArray(fqClassName, dotIndexesArray, lengthArray, dotCount);
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
         for (int i = 0; i <= dotCount; i++) {
             if (i == 0) {
                 buf.append(fqClassName, 0, lengthArray[i] - 1);
@@ -89,7 +91,7 @@ public final class TargetLengthBasedClassNameAbbreviator {
         return buf.toString();
     }
 
-    void computeLengthArray(final String className, int[] dotArray, int[] lengthArray, int dotCount) {
+    private void computeLengthArray(final String className, int[] dotArray, int[] lengthArray, int dotCount) {
         int toTrim = className.length() - targetLength;
         int len;
         for (int i = 0; i < dotCount; i++) {
