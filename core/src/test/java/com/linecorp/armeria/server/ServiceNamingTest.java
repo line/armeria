@@ -58,7 +58,7 @@ class ServiceNamingTest {
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false);
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
-        assertThat(serviceName).isEqualTo(NestedClass$$$.class.getSimpleName());
+        assertThat(serviceName).isEqualTo("NestedClass$$$");
     }
 
     private static final class NestedClass implements HttpService {
