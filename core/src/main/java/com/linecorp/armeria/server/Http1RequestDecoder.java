@@ -163,8 +163,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     final HttpHeaders nettyHeaders = nettyReq.headers();
 
-                    // Validate the method.
-                    if (!HttpMethod.isSupported(nettyReq.method().name())) {
+                    // Do not accept unsupported methods.
+                    final io.netty.handler.codec.http.HttpMethod nettyMethod = nettyReq.method();
+                    if (nettyMethod == io.netty.handler.codec.http.HttpMethod.CONNECT ||
+                        !HttpMethod.isSupported(nettyMethod.name())) {
                         fail(id, HttpResponseStatus.METHOD_NOT_ALLOWED, DATA_UNSUPPORTED_METHOD);
                         return;
                     }
