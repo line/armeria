@@ -13,10 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
-import JSONbig from 'json-bigint';
 import { Endpoint, Method } from '../specification';
-import jsonPrettify from '../json-prettify';
 
 import Transport from './transport';
 
@@ -89,7 +86,7 @@ export default class AnnotatedHttpTransport extends Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<string> {
+  ): Promise<Response> {
     const endpoint = this.getDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
@@ -107,24 +104,10 @@ export default class AnnotatedHttpTransport extends Transport {
           : `${newPath}?${queries}`;
     }
 
-    const httpResponse = await fetch(encodeURI(newPath), {
+    return fetch(encodeURI(newPath), {
       headers: hdrs,
       method: method.httpMethod,
       body: bodyJson,
     });
-    const applicationType = httpResponse.headers.get('content-type') || '';
-    if (applicationType.indexOf('json') >= 0) {
-      const json = JSONbig.parse(await httpResponse.text());
-      const prettified = jsonPrettify(JSONbig.stringify(json));
-      if (prettified.length > 0) {
-        return prettified;
-      }
-    }
-
-    const responseText = await httpResponse.text();
-    if (responseText.length > 0) {
-      return responseText;
-    }
-    return '<zero-length response>';
   }
 }

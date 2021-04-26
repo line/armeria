@@ -14,7 +14,7 @@ dependencies {
     implementation project(':grpc')
     implementation project(':grpc-protocol')
     implementation project(':retrofit2')
-    implementation project(':thrift0.13')
+    implementation project(':thrift0.14')
 
     implementation 'com.squareup.retrofit2:converter-jackson'
     implementation 'com.google.protobuf:protobuf-java-util'

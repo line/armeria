@@ -265,8 +265,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
             static {
                 logger.warn("Attempted to propagate trace context, but no request context available. " +
-                            "Did you forget to use RequestContext.contextAwareExecutor() or " +
-                            "RequestContext.makeContextAware()?", new NoRequestContextException());
+                            "Did you forget to use RequestContext.makeContextAware()?",
+                            new NoRequestContextException());
             }
         }
 

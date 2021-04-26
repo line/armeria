@@ -6,8 +6,8 @@ dependencies {
     // ZooKeeper
     api 'org.apache.zookeeper:zookeeper'
 
-    // ZooKeeper JUnit
-    testImplementation 'org.dmonix.junit:zookeeper-junit'
-
     testImplementation 'com.twitter:finagle-serversets_2.13'
+    testImplementation 'io.dropwizard.metrics:metrics-core'
+    testImplementation 'org.dmonix.junit:zookeeper-junit'
+    testImplementation 'org.xerial.snappy:snappy-java'
 }

@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 buildscript {
     val managedVersions = extra["managedVersions"] as Map<*, *>
     repositories {
@@ -30,4 +32,13 @@ dependencies {
     // kotlin
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+}
+
+tasks.withType<KotlinCompile> {
+    kotlinOptions {
+        freeCompilerArgs = listOf(
+            "-Xjsr305=strict",
+            "-java-parameters"
+        )
+    }
 }

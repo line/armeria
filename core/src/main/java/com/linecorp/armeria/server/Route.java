@@ -185,4 +185,9 @@ public interface Route {
      * was matched.
      */
     boolean isFallback();
+
+    /**
+     * Returns a new {@link RouteBuilder} with the values of this {@link Route} instance.
+     */
+    RouteBuilder toBuilder();
 }

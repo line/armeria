@@ -1,6 +1,14 @@
+final def THRIFT_VERSION = '0.13.0'
+
 dependencies {
     // Thrift
-    api 'org.apache.thrift:libthrift'
+    api("org.apache.thrift:libthrift") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly THRIFT_VERSION
+        }
+    }
+
     api 'javax.annotation:javax.annotation-api'
 
     // Jetty, for testing TServlet interoperability.
@@ -11,6 +19,11 @@ dependencies {
     testImplementation 'io.dropwizard.metrics:metrics-core'
     testImplementation 'io.micrometer:micrometer-registry-prometheus'
     testImplementation 'io.prometheus:simpleclient_common'
+}
+
+// Use the old compiler.
+ext {
+    thriftVersion = THRIFT_VERSION.substring(0, THRIFT_VERSION.lastIndexOf('.'));
 }
 
 // Keep the original Guava references in ThriftListenableFuture,

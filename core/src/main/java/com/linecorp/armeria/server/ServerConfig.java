@@ -36,6 +36,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 
@@ -102,6 +103,7 @@ public final class ServerConfig {
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
     private final Supplier<RequestId> requestIdGenerator;
+    private final ExceptionHandler exceptionHandler;
 
     @Nullable
     private String strVal;
@@ -125,8 +127,8 @@ public final class ServerConfig {
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
-            Supplier<? extends RequestId> requestIdGenerator) {
-
+            Supplier<? extends RequestId> requestIdGenerator,
+            ExceptionHandler exceptionHandler) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -238,6 +240,7 @@ public final class ServerConfig {
         final Supplier<RequestId> castRequestIdGenerator =
                 (Supplier<RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
         this.requestIdGenerator = castRequestIdGenerator;
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -598,6 +601,14 @@ public final class ServerConfig {
      */
     public Supplier<RequestId> requestIdGenerator() {
         return requestIdGenerator;
+    }
+
+    /**
+     * Returns the {@link ExceptionHandler} that converts a {@link Throwable} to an
+     * {@link AggregatedHttpResponse}.
+     */
+    public ExceptionHandler exceptionHandler() {
+        return exceptionHandler;
     }
 
     @Override

@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.logging;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.util.ServiceNamingUtil.GRPC_SERVICE_NAME;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getFields;
 
@@ -297,8 +298,7 @@ interface AccessLogComponent {
                     final String name = log.name();
                     final RpcRequest rpcRequest = log.context().rpcRequest();
                     final boolean isGrpc = rpcRequest != null &&
-                                           "com.linecorp.armeria.internal.common.grpc.GrpcLogUtil".equals(
-                                                   rpcRequest.serviceType().getName());
+                                           GRPC_SERVICE_NAME.equals(rpcRequest.serviceType().getName());
 
                     final String logName;
                     if (name != null && !isGrpc) {

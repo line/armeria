@@ -66,12 +66,12 @@ import com.linecorp.armeria.common.SessionProtocol;
  * {@link ResteasyClient} could still be constructed using ArmeriaJaxrsClientEngine directly by setting it
  * to {@link ResteasyClientBuilder} via {@link ResteasyClientBuilder#httpEngine(ClientHttpEngine)} method
  * as below.
+ * </p>
  * <pre>{@code
  *     final Client jaxrsClient = ((ResteasyClientBuilder) ClientBuilder.newBuilder())
  *             .httpEngine(new ArmeriaJaxrsClientEngine(armeriaWebClient))
  *             .build();
  * }</pre>
- * </p>
  */
 public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
 
@@ -215,7 +215,7 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
      * @throws UnsupportedOperationException always
      */
     @Override
-    public ResteasyClientBuilder httpEngine(ClientHttpEngine httpEngine) {
+    public ArmeriaResteasyClientBuilder httpEngine(ClientHttpEngine httpEngine) {
         // we'll always use an embedded ArmeriaJaxrsClientEngine
         throw new UnsupportedOperationException();
     }
@@ -226,9 +226,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder useAsyncHttpEngine() {
+    public ArmeriaResteasyClientBuilder useAsyncHttpEngine() {
         // do nothing as ArmeriaJaxrsClientEngine is asynchronous
-        return delegate;
+        return this;
     }
 
     @Override
@@ -237,9 +237,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder providerFactory(ResteasyProviderFactory providerFactory) {
+    public ArmeriaResteasyClientBuilder providerFactory(ResteasyProviderFactory providerFactory) {
         delegate.providerFactory(providerFactory);
-        return delegate;
+        return this;
     }
 
     @Override
@@ -248,9 +248,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder connectionTTL(long ttl, TimeUnit unit) {
+    public ArmeriaResteasyClientBuilder connectionTTL(long ttl, TimeUnit unit) {
         delegate.connectionTTL(ttl, unit);
-        return delegate;
+        return this;
     }
 
     @Override
@@ -259,9 +259,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder maxPooledPerRoute(int maxPooledPerRoute) {
+    public ArmeriaResteasyClientBuilder maxPooledPerRoute(int maxPooledPerRoute) {
         delegate.maxPooledPerRoute(maxPooledPerRoute);
-        return delegate;
+        return this;
     }
 
     @Override
@@ -270,9 +270,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder connectionCheckoutTimeout(long timeout, TimeUnit unit) {
+    public ArmeriaResteasyClientBuilder connectionCheckoutTimeout(long timeout, TimeUnit unit) {
         delegate.connectionCheckoutTimeout(timeout, unit);
-        return delegate;
+        return this;
     }
 
     @Override
@@ -281,9 +281,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder connectionPoolSize(int connectionPoolSize) {
+    public ArmeriaResteasyClientBuilder connectionPoolSize(int connectionPoolSize) {
         delegate.connectionPoolSize(connectionPoolSize);
-        return delegate;
+        return this;
     }
 
     @Override
@@ -292,9 +292,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder responseBufferSize(int size) {
+    public ArmeriaResteasyClientBuilder responseBufferSize(int size) {
         delegate.responseBufferSize(size);
-        return delegate;
+        return this;
     }
 
     @Override
@@ -303,9 +303,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder disableTrustManager() {
+    public ArmeriaResteasyClientBuilder disableTrustManager() {
         delegate.disableTrustManager();
-        return delegate;
+        return this;
     }
 
     @Override
@@ -324,9 +324,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder hostnameVerification(HostnameVerificationPolicy policy) {
+    public ArmeriaResteasyClientBuilder hostnameVerification(HostnameVerificationPolicy policy) {
         delegate.hostnameVerification(policy);
-        return delegate;
+        return this;
     }
 
     @Override
@@ -335,9 +335,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder sniHostNames(String... sniHostNames) {
+    public ArmeriaResteasyClientBuilder sniHostNames(String... sniHostNames) {
         delegate.sniHostNames(sniHostNames);
-        return delegate;
+        return this;
     }
 
     @Override
@@ -361,27 +361,27 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder defaultProxy(String hostname) {
+    public ArmeriaResteasyClientBuilder defaultProxy(String hostname) {
         delegate.defaultProxy(hostname);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ResteasyClientBuilder defaultProxy(String hostname, int port) {
+    public ArmeriaResteasyClientBuilder defaultProxy(String hostname, int port) {
         delegate.defaultProxy(hostname, port);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ResteasyClientBuilder defaultProxy(String hostname, int port, String scheme) {
+    public ArmeriaResteasyClientBuilder defaultProxy(String hostname, int port, String scheme) {
         delegate.defaultProxy(hostname, port, scheme);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ResteasyClientBuilder enableCookieManagement() {
+    public ArmeriaResteasyClientBuilder enableCookieManagement() {
         delegate.enableCookieManagement();
-        return delegate;
+        return this;
     }
 
     @Override
@@ -425,9 +425,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder disableAutomaticRetries() {
+    public ArmeriaResteasyClientBuilder disableAutomaticRetries() {
         delegate.disableAutomaticRetries();
-        return delegate;
+        return this;
     }
 
     @Override
@@ -436,9 +436,9 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ResteasyClientBuilder withConfig(Configuration config) {
+    public ArmeriaResteasyClientBuilder withConfig(Configuration config) {
         delegate.withConfig(config);
-        return delegate;
+        return this;
     }
 
     /**
@@ -447,26 +447,26 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
      * @throws UnsupportedOperationException always
      */
     @Override
-    public ResteasyClientBuilder sslContext(SSLContext sslContext) {
+    public ArmeriaResteasyClientBuilder sslContext(SSLContext sslContext) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public ResteasyClientBuilder keyStore(KeyStore keyStore, char[] password) {
+    public ArmeriaResteasyClientBuilder keyStore(KeyStore keyStore, char[] password) {
         delegate.keyStore(keyStore, password);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ResteasyClientBuilder keyStore(KeyStore keyStore, String password) {
+    public ArmeriaResteasyClientBuilder keyStore(KeyStore keyStore, String password) {
         delegate.keyStore(keyStore, password);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ResteasyClientBuilder trustStore(KeyStore trustStore) {
+    public ArmeriaResteasyClientBuilder trustStore(KeyStore trustStore) {
         delegate.trustStore(trustStore);
-        return delegate;
+        return this;
     }
 
     /**
@@ -475,38 +475,51 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
      * @throws UnsupportedOperationException always
      */
     @Override
-    public ResteasyClientBuilder hostnameVerifier(HostnameVerifier verifier) {
+    public ArmeriaResteasyClientBuilder hostnameVerifier(HostnameVerifier verifier) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public ResteasyClientBuilder executorService(ExecutorService executorService) {
+    public ArmeriaResteasyClientBuilder executorService(ExecutorService executorService) {
         delegate.executorService(executorService);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ResteasyClientBuilder executorService(ExecutorService executorService, boolean cleanupExecutor) {
+    public ArmeriaResteasyClientBuilder executorService(
+            ExecutorService executorService, boolean cleanupExecutor) {
         delegate.executorService(executorService, cleanupExecutor);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ResteasyClientBuilder scheduledExecutorService(ScheduledExecutorService scheduledExecutorService) {
+    public ArmeriaResteasyClientBuilder scheduledExecutorService(
+            ScheduledExecutorService scheduledExecutorService) {
         delegate.scheduledExecutorService(scheduledExecutorService);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ResteasyClientBuilder connectTimeout(long timeout, TimeUnit unit) {
+    public ArmeriaResteasyClientBuilder connectTimeout(long timeout, TimeUnit unit) {
         delegate.connectTimeout(timeout, unit);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ResteasyClientBuilder readTimeout(long timeout, TimeUnit unit) {
+    public ArmeriaResteasyClientBuilder readTimeout(long timeout, TimeUnit unit) {
         delegate.readTimeout(timeout, unit);
-        return delegate;
+        return this;
+    }
+
+    @Override
+    public ArmeriaResteasyClientBuilder setFollowRedirects(boolean followRedirects) {
+        delegate.setFollowRedirects(followRedirects);
+        return this;
+    }
+
+    @Override
+    public boolean isFollowRedirects() {
+        return delegate.isFollowRedirects();
     }
 
     @Override
@@ -515,56 +528,56 @@ public final class ArmeriaResteasyClientBuilder extends ResteasyClientBuilder {
     }
 
     @Override
-    public ClientBuilder property(String name, Object value) {
+    public ArmeriaResteasyClientBuilder property(String name, Object value) {
         delegate.property(name, value);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ClientBuilder register(Class<?> componentClass) {
+    public ArmeriaResteasyClientBuilder register(Class<?> componentClass) {
         delegate.register(componentClass);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ClientBuilder register(Class<?> componentClass, int priority) {
+    public ArmeriaResteasyClientBuilder register(Class<?> componentClass, int priority) {
         delegate.register(componentClass, priority);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ClientBuilder register(Class<?> componentClass, Class<?>... contracts) {
+    public ArmeriaResteasyClientBuilder register(Class<?> componentClass, Class<?>... contracts) {
         delegate.register(componentClass, contracts);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ClientBuilder register(Class<?> componentClass, Map<Class<?>, Integer> contracts) {
+    public ArmeriaResteasyClientBuilder register(Class<?> componentClass, Map<Class<?>, Integer> contracts) {
         delegate.register(componentClass, contracts);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ClientBuilder register(Object component) {
+    public ArmeriaResteasyClientBuilder register(Object component) {
         delegate.register(component);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ClientBuilder register(Object component, int priority) {
+    public ArmeriaResteasyClientBuilder register(Object component, int priority) {
         delegate.register(component, priority);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ClientBuilder register(Object component, Class<?>... contracts) {
+    public ArmeriaResteasyClientBuilder register(Object component, Class<?>... contracts) {
         delegate.register(component, contracts);
-        return delegate;
+        return this;
     }
 
     @Override
-    public ClientBuilder register(Object component, Map<Class<?>, Integer> contracts) {
+    public ArmeriaResteasyClientBuilder register(Object component, Map<Class<?>, Integer> contracts) {
         delegate.register(component, contracts);
-        return delegate;
+        return this;
     }
 }
