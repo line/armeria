@@ -484,10 +484,18 @@ public interface RequestContext {
 
     /**
      * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, making
-     * sure to propagate the current {@link RequestContext} into the callback execution.
+     * sure to propagate this {@link RequestContext} into the callback execution.
      */
     default ExecutorService makeContextAware(ExecutorService executor) {
         return ContextAwareExecutorService.of(this, executor);
+    }
+
+    /**
+     * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, propagating
+     * the caller's {@link RequestContext} (if any) into the callback execution.
+     */
+    static ExecutorService makeContextPropagating(ExecutorService executor) {
+        return new PropagatingContextAwareExecutorService(executor);
     }
 
     /**

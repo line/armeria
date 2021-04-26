@@ -10,10 +10,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
-public abstract class AbstractContextAwareExecutorService implements ContextAwareExecutorService {
+import javax.annotation.Nullable;
+
+public abstract class AbstractContextAwareExecutorService implements ExecutorService {
     protected final ExecutorService executor;
 
     AbstractContextAwareExecutorService(ExecutorService executor) {this.executor = executor;}
+
+    @Nullable
+    protected abstract RequestContext context();
 
     @Override
     public final void shutdown() {
@@ -27,17 +32,27 @@ public abstract class AbstractContextAwareExecutorService implements ContextAwar
 
     @Override
     public Future<?> submit(Runnable task) {
-        return executor.submit(context().makeContextAware(task));
+        return executor.submit(makeContextAware(task));
+    }
+
+    private Runnable makeContextAware(Runnable task) {
+        final RequestContext context = context();
+        return null == context ? task : context.makeContextAware(task);
+    }
+
+    private <T> Callable<T> makeContextAware(Callable<T> task) {
+        final RequestContext context = context();
+        return null == context ? task : context.makeContextAware(task);
     }
 
     @Override
     public <T> Future<T> submit(Runnable task, T result) {
-        return executor.submit(context().makeContextAware(task), result);
+        return executor.submit(makeContextAware(task), result);
     }
 
     @Override
     public <T> Future<T> submit(Callable<T> task) {
-        return executor.submit(context().makeContextAware(task));
+        return executor.submit(makeContextAware(task));
     }
 
     @Override
@@ -82,11 +97,11 @@ public abstract class AbstractContextAwareExecutorService implements ContextAwar
 
     @Override
     public final void execute(Runnable command) {
-        executor.execute(context().makeContextAware(command));
+        executor.execute(makeContextAware(command));
     }
 
     private <T> Collection<? extends Callable<T>> makeContextAware(
             Collection<? extends Callable<T>> tasks) {
-        return tasks.stream().map(context()::makeContextAware).collect(Collectors.toList());
+        return tasks.stream().map(this::makeContextAware).collect(Collectors.toList());
     }
 }
