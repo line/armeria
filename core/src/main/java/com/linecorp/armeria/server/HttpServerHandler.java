@@ -234,6 +234,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             final ClosedSessionException cause = ClosedSessionException.get();
             unfinishedRequests.forEach((req, res) -> {
                 // Mark the request stream as closed due to disconnection.
+                if (!protocol.isMultiplex()) {
+                    // An HTTP2 request is cancelled by Http2RequestDecoder.onRstStreamRead()
+                    req.ctx().cancel(cause);
+                }
                 req.close(cause);
                 res.abort(cause);
             });

@@ -158,4 +158,9 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
             response.abort(cause);
         }
     }
+
+    @Nullable
+    ServiceRequestContext ctx() {
+        return ctx;
+    }
 }

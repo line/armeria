@@ -3010,7 +3010,6 @@ gov.sh
 gov.sl
 gov.so
 gov.ss
-gov.st
 gov.sx
 gov.sy
 gov.tj
@@ -3794,7 +3793,6 @@ its.me
 itv
 ivano-frankivsk.ua
 ivanovo.su
-iveco
 iveland.no
 ivgu.no
 iwade.wakayama.jp
@@ -4806,6 +4804,7 @@ me.eu.org
 me.it
 me.ke
 me.so
+me.ss
 me.tc
 me.tz
 me.uk
@@ -5383,7 +5382,6 @@ natal.br
 national.museum
 nationalfirearms.museum
 nationalheritage.museum
-nationwide
 nativeamerican.museum
 natori.miyagi.jp
 natura
@@ -5996,7 +5994,6 @@ onred.one
 onrender.com
 ontario.museum
 onthewifi.com
-onyourside
 onza.mythic-beasts.com
 ooguy.com
 ookuwa.nagano.jp
@@ -7009,6 +7006,7 @@ sch.ng
 sch.qa
 sch.sa
 sch.so
+sch.ss
 sch.zm
 schaeffler
 schlesisches.museum
@@ -7413,7 +7411,6 @@ spjelkavik.no
 sport
 sport.hu
 spot
-spreadbetting
 spy.museum
 spydeberg.no
 square.museum
