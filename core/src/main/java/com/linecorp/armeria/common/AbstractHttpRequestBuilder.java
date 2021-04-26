@@ -54,7 +54,7 @@ public abstract class AbstractHttpRequestBuilder {
     @Nullable
     private QueryParamsBuilder queryParams;
     @Nullable
-    private Map<String, Object> pathParams;
+    private Map<String, String> pathParams;
     @Nullable
     private List<Cookie> cookies;
     @Nullable
@@ -264,7 +264,7 @@ public abstract class AbstractHttpRequestBuilder {
         if (pathParams == null) {
             pathParams = new HashMap<>();
         }
-        pathParams.put(name, value);
+        pathParams.put(name, value.toString());
         return this;
     }
 
@@ -289,7 +289,9 @@ public abstract class AbstractHttpRequestBuilder {
         if (this.pathParams == null) {
             this.pathParams = new HashMap<>();
         }
-        this.pathParams.putAll(pathParams);
+
+        pathParams.forEach((key, value) -> this.pathParams.put(key, value.toString()));
+
         return this;
     }
 
@@ -473,7 +475,7 @@ public abstract class AbstractHttpRequestBuilder {
 
             if (hasPathParams) {
                 // Replace path parameters.
-                final StringBuilder buf = new StringBuilder(pathLen + 32); // Add a little bit of wiggle room.
+                final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
                 buf.append(path, 0, i);
 
                 loop: while (i < pathLen) {
