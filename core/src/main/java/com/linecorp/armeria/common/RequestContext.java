@@ -500,10 +500,18 @@ public interface RequestContext {
 
     /**
      * Returns a {@link ScheduledExecutorService} that will execute callbacks in the given {@code executor},
-     * making sure to propagate the current {@link RequestContext} into the callback execution.
+     * making sure to propagate this {@link RequestContext} into the callback execution.
      */
     default ScheduledExecutorService makeContextAware(ScheduledExecutorService executor) {
         return ContextAwareScheduledExecutorService.of(this, executor);
+    }
+
+    /**
+     * Returns a {@link ScheduledExecutorService} that will execute callbacks in the given {@code executor},
+     * propagating the caller's {@link RequestContext} (if any) into the callback execution.
+     */
+    static ScheduledExecutorService makeContextPropagating(ScheduledExecutorService executor) {
+        return new PropagatingContextAwareScheduledExecutorService(executor);
     }
 
     /**
