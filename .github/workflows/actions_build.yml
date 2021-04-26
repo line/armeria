@@ -1,9 +1,14 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
   build_on_linux:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -35,17 +40,18 @@ jobs:
         remote-build-cache-proxy-enabled: false
         arguments: --no-daemon --stacktrace --parallel --max-workers=4 lint build ${{ matrix.coverage && '-Pcoverage' || '' }}
         properties: |
+          buildJdkVersion=15
           testJavaVersion=${{ matrix.java }}
           org.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }}
 
     - if: ${{ matrix.coverage }}
       uses: codecov/codecov-action@v1
 
-    - name: Collecting the test reports ..
+    - name: Collecting the test reports
       if: failure()
       run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
 
-    - name: 'Upload Artifact'
+    - name: Upload Artifact
       if: failure()
       uses: actions/upload-artifact@v2
       with:
@@ -55,10 +61,11 @@ jobs:
 
   build_on_other:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        os: [ macos-latest, windows-latest]
+        os: [ macos-latest, windows-latest ]
     steps:
       - uses: actions/checkout@v2
 
@@ -71,13 +78,16 @@ jobs:
       - uses: burrunan/gradle-cache-action@v1.10
         with:
           remote-build-cache-proxy-enabled: false
-          arguments: --no-daemon --stacktrace -PnoLint -PnoWeb :core:test :grpc:test :thrift0.13:test :it:server:test
+          arguments: --no-daemon --stacktrace :core:test :grpc:test :thrift0.13:test :it:server:test
+          properties: |
+            noLint=true
+            noWeb=true
 
-      - name: Collecting the test reports ..
+      - name: Collecting the test reports
         if: failure()
         run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-${{ matrix.os }}.tar" {} ';'
 
-      - name: 'Upload Artifact'
+      - name: Upload Artifact
         if: failure()
         uses: actions/upload-artifact@v2
         with:
@@ -87,6 +97,7 @@ jobs:
 
   build_site:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
 
@@ -104,11 +115,12 @@ jobs:
           remote-build-cache-proxy-enabled: false
           arguments: --no-daemon --stacktrace --parallel --max-workers=4 :site:siteLint :site:site
 
-      - name: Collecting the test reports ..
+      - name: Collecting the test reports
         if: failure()
         run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-site.tar" {} ';'
+        shell: bash
 
-      - name: 'Upload Artifact'
+      - name: Upload Artifact
         if: failure()
         uses: actions/upload-artifact@v2
         with:
@@ -118,6 +130,7 @@ jobs:
 
   build_leak:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
 
@@ -130,13 +143,16 @@ jobs:
       - uses: burrunan/gradle-cache-action@v1.10
         with:
           remote-build-cache-proxy-enabled: false
-          arguments: --no-daemon --stacktrace --parallel --max-workers=4 -Pleak -PnoLint test
+          arguments: --no-daemon --stacktrace --parallel --max-workers=4 test
+          properties: |
+            noLint=true
+            leak=true
 
-      - name: Collecting the test reports ..
+      - name: Collecting the test reports
         if: failure()
         run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-leak.tar" {} ';'
 
-      - name: 'Upload Artifact'
+      - name: Upload Artifact
         if: failure()
         uses: actions/upload-artifact@v2
         with:
