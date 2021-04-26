@@ -311,12 +311,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             } else {
                 maybeCancel();
             }
-        } catch (RuntimeException e) {
+        } catch (Throwable e) {
             close(e, new Metadata());
-            throw e;
-        } catch (Throwable t) {
-            close(t, new Metadata());
-            throw new RuntimeException(t);
         }
     }
 
