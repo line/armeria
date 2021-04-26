@@ -46,7 +46,6 @@ import brave.http.HttpClientResponse;
 import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.Scope;
-import brave.propagation.TraceContext;
 
 /**
  * Decorates an {@link HttpClient} to trace outbound {@link HttpRequest}s using
@@ -104,7 +103,6 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         return delegate -> new BraveClient(delegate, httpTracing);
     }
 
-    private final Tracing tracing;
     private final Tracer tracer;
     private final HttpClientHandler<HttpClientRequest, HttpClientResponse> handler;
     @Nullable
@@ -115,7 +113,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
      */
     private BraveClient(HttpClient delegate, HttpTracing httpTracing) {
         super(delegate);
-        tracing = httpTracing.tracing();
+        final Tracing tracing = httpTracing.tracing();
         tracer = tracing.tracer();
         handler = HttpClientHandler.create(httpTracing);
         final CurrentTraceContext currentTraceContext = tracing.currentTraceContext();
