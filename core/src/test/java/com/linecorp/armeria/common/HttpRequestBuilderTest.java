@@ -152,15 +152,20 @@ class HttpRequestBuilderTest {
 
     @ParameterizedTest
     @CsvSource({
-            "https://host:8080,      https://host:8080",
-            "https://host:8080/,     https://host:8080/",
-            "https://host:8080/foo,  https://host:8080/foo",
-            "https://host:8080/foo/, https://host:8080/foo/",
-            "https://host:8080/:,    https://host:8080/:",
-            "https://host:8080/:/,   https://host:8080/:/",
-            "https://host:8080/:/:,  https://host:8080/:/:",
-            "https://host:8080/:/:/, https://host:8080/:/:/",
-            // Note: We don't test '{}' because absolute URIs don't accept '{' or '}'.
+            "https://host:8080,        https://host:8080",
+            "https://host:8080/,       https://host:8080/",
+            "https://host:8080/foo,    https://host:8080/foo",
+            "https://host:8080/foo/,   https://host:8080/foo/",
+            "https://host:8080/:,      https://host:8080/:",
+            "https://host:8080/:/,     https://host:8080/:/",
+            "https://host:8080/{}/{},  https://host:8080/{}/{}",
+            "https://host:8080/{}/:,   https://host:8080/{}/:",
+            "https://host:8080/:/{},   https://host:8080/:/{}",
+            "https://host:8080/:/:,    https://host:8080/:/:",
+            "https://host:8080/{}/{}/, https://host:8080/{}/{}/",
+            "https://host:8080/{}/:/,  https://host:8080/{}/:/",
+            "https://host:8080/:/{}/,  https://host:8080/:/{}/",
+            "https://host:8080/:/:/,   https://host:8080/:/:/",
     })
     void absoluteUriWithoutPathParams(@Nullable String uri, String expectedUri) {
         uri = firstNonNull(uri, "");
