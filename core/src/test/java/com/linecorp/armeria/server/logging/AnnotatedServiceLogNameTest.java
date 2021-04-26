@@ -63,6 +63,17 @@ class AnnotatedServiceLogNameTest {
             sb.annotatedService()
               .pathPrefix("/annotation")
               .build(new ServiceNameAnnotatedService());
+
+            sb.annotatedService()
+              .pathPrefix("/anonymous-simple")
+              .defaultServiceNaming(ServiceNaming.simpleTypeName())
+              .build(new Object() {
+                  @Get("/service-name")
+                  public HttpResponse serviceName(ServiceRequestContext ctx) {
+                      sctx = ctx;
+                      return HttpResponse.of(HttpStatus.OK);
+                  }
+              });
         }
     };
 
@@ -104,12 +115,15 @@ class AnnotatedServiceLogNameTest {
     @Test
     void serviceName_withSimpleNaming() {
         client.get("/simple-naming/service-name").aggregate().join();
+        final String expectedServiceName = AnnotatedServiceLogNameTest.class.getSimpleName() + '$' +
+                                           MyAnnotatedService.class.getSimpleName();
+
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
-                .isEqualTo(MyAnnotatedService.class.getSimpleName());
+                .isEqualTo(expectedServiceName);
         // ServiceNaming is used.
         assertThat(sctx.config().defaultServiceName()).isNull();
         assertThat(sctx.log().whenComplete().join().serviceName())
-                .isEqualTo(MyAnnotatedService.class.getSimpleName());
+                .isEqualTo(expectedServiceName);
     }
 
     @Test
@@ -128,10 +142,20 @@ class AnnotatedServiceLogNameTest {
         client.get("/annotation/service-name").aggregate().join();
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
                 .isEqualTo("MyService");
-        // ServiceNaming is used.
         assertThat(sctx.config().defaultServiceName()).isEqualTo("MyService");
         assertThat(sctx.log().whenComplete().join().serviceName())
                 .isEqualTo("MyService");
+    }
+
+    @Test
+    void serviceName_withAnonymous() {
+        client.get("/anonymous-simple/service-name").aggregate().join();
+        assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
+                .isEqualTo("AnnotatedServiceLogNameTest$1$1");
+        // ServiceNaming is used.
+        assertThat(sctx.config().defaultServiceName()).isNull();
+        assertThat(sctx.log().whenComplete().join().serviceName())
+                .isEqualTo("AnnotatedServiceLogNameTest$1$1");
     }
 
     private static class MyAnnotatedService {

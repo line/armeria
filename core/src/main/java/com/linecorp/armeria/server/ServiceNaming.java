@@ -62,8 +62,6 @@ public interface ServiceNaming {
      * Returns the {@link ServiceNaming} that returns the simple name of an RPC stub class or
      * the innermost class from the given service. It is supposed to have a class name without a period.
      * e.g. {@code HelloService}.
-     *
-     * @see Class#getSimpleName()
      */
     static ServiceNaming simpleTypeName() {
         return ctx -> {
@@ -74,28 +72,14 @@ public interface ServiceNaming {
                 simpleTypeName = fullTypeName.substring(packageIndex + 1);
             }
 
-            if (ctx.rpcRequest() != null) {
+            final int lastCharIndex = simpleTypeName.length() - 1;
+            final char lastChar = simpleTypeName.charAt(lastCharIndex);
+            if (lastChar == '$') {
+                // Trim a trailing dollar sign for scala object type which always ends with '$'
+                return simpleTypeName.substring(0, lastCharIndex);
+            } else {
                 return simpleTypeName;
             }
-
-            for (;;) {
-                int enclosingIndex = simpleTypeName.indexOf('$');
-                if (enclosingIndex < 0) {
-                    return simpleTypeName;
-                }
-
-                while (enclosingIndex + 1 < simpleTypeName.length() &&
-                       simpleTypeName.charAt(enclosingIndex + 1) == '$') {
-                    enclosingIndex++;
-                }
-
-                if (enclosingIndex == 0 || enclosingIndex + 1 == simpleTypeName.length()) {
-                    break;
-                }
-
-                simpleTypeName = simpleTypeName.substring(enclosingIndex + 1);
-            }
-            return simpleTypeName;
         };
     }
 
