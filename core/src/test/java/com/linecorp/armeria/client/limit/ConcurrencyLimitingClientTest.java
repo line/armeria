@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.limit;
 
 import static com.linecorp.armeria.client.limit.ConcurrencyLimitingClient.newDecorator;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -48,6 +49,31 @@ class ConcurrencyLimitingClientTest {
 
     @Mock
     private HttpClient delegate;
+
+    private static ClientRequestContext newContext() {
+        return ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                   .eventLoop(eventLoop.get())
+                                   .build();
+    }
+
+    /**
+     * Closes the response returned by the delegate and consumes everything from it, so that its close future
+     * is completed.
+     */
+    private static void closeAndDrain(HttpResponseWriter actualRes, HttpResponse deferredRes) {
+        actualRes.close();
+        deferredRes.subscribe(NoopSubscriber.get());
+        deferredRes.whenComplete().join();
+        waitForEventLoop();
+    }
+
+    private static void waitForEventLoop() {
+        eventLoop.get().submit(() -> { /* no-op */ }).syncUninterruptibly();
+    }
+
+    private static HttpRequest newReq() {
+        return HttpRequest.of(HttpMethod.GET, "/dummy");
+    }
 
     /**
      * Tests the request pattern  that does not exceed maxConcurrency.
@@ -216,28 +242,14 @@ class ConcurrencyLimitingClientTest {
         await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
     }
 
-    private static ClientRequestContext newContext() {
-        return ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                                   .eventLoop(eventLoop.get())
-                                   .build();
-    }
-
-    /**
-     * Closes the response returned by the delegate and consumes everything from it, so that its close future
-     * is completed.
-     */
-    private static void closeAndDrain(HttpResponseWriter actualRes, HttpResponse deferredRes) {
-        actualRes.close();
-        deferredRes.subscribe(NoopSubscriber.get());
-        deferredRes.whenComplete().join();
-        waitForEventLoop();
-    }
-
-    private static void waitForEventLoop() {
-        eventLoop.get().submit(() -> { /* no-op */ }).syncUninterruptibly();
-    }
-
-    private static HttpRequest newReq() {
-        return HttpRequest.of(HttpMethod.GET, "/dummy");
+    @Test
+    void configuresClientWithConcurrencyLimit() {
+        final ConcurrencyLimit concurrencyLimit = new ConcurrencyLimit.Builder()
+                .maxConcurrency(1)
+                .timeout(10, SECONDS)
+                .policy(requestContext -> true)
+                .build();
+        final ConcurrencyLimitingClient client = newDecorator(concurrencyLimit).apply(delegate);
+        assertThat(client.concurrencyLimit()).isEqualTo(concurrencyLimit);
     }
 }

@@ -57,6 +57,14 @@ public final class ConcurrencyLimitingClient
         return delegate -> new ConcurrencyLimitingClient(delegate, maxConcurrency, timeout, unit);
     }
 
+    /**
+     * Creates a new {@link HttpClient} decorator that limits the concurrent number of active HTTP requests.
+     */
+    public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
+            ConcurrencyLimit concurrencyLimit) {
+        return delegate -> new ConcurrencyLimitingClient(delegate, concurrencyLimit);
+    }
+
     ConcurrencyLimitingClient(HttpClient delegate, int maxConcurrency) {
         super(delegate, maxConcurrency);
     }
@@ -64,6 +72,10 @@ public final class ConcurrencyLimitingClient
     private ConcurrencyLimitingClient(HttpClient delegate,
                                       int maxConcurrency, long timeout, TimeUnit unit) {
         super(delegate, maxConcurrency, timeout, unit);
+    }
+
+    private ConcurrencyLimitingClient(HttpClient delegate, ConcurrencyLimit concurrencyLimit) {
+        super(delegate, concurrencyLimit);
     }
 
     @Override

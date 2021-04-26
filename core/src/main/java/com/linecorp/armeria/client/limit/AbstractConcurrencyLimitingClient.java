@@ -56,10 +56,9 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
 
     private static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
 
-    private final int maxConcurrency;
-    private final long timeoutMillis;
     private final AtomicInteger numActiveRequests = new AtomicInteger();
     private final Queue<PendingTask> pendingRequests = new ConcurrentLinkedQueue<>();
+    private final ConcurrencyLimit concurrencyLimit;
 
     /**
      * Creates a new instance that decorates the specified {@code delegate} to limit the concurrent number of
@@ -84,30 +83,42 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      */
     protected AbstractConcurrencyLimitingClient(Client<I, O> delegate,
                                                 int maxConcurrency, long timeout, TimeUnit unit) {
+        this(delegate, new ConcurrencyLimit.Builder()
+                .maxConcurrency(maxConcurrency)
+                .timeout(timeout, unit)
+                .build());
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@code delegate} to limit the concurrent number of
+     * active requests to {@code maxConcurrency}.
+     *
+     * @param delegate the delegate {@link Client}
+     * @param concurrencyLimit the concurrency limit config
+     */
+    public AbstractConcurrencyLimitingClient(Client<I, O> delegate, ConcurrencyLimit concurrencyLimit) {
         super(delegate);
-
-        validateAll(maxConcurrency, timeout, unit);
-
-        if (maxConcurrency == Integer.MAX_VALUE) {
-            this.maxConcurrency = 0;
-        } else {
-            this.maxConcurrency = maxConcurrency;
-        }
-        timeoutMillis = unit.toMillis(timeout);
+        this.concurrencyLimit = concurrencyLimit;
     }
 
     static void validateAll(int maxConcurrency, long timeout, TimeUnit unit) {
         validateMaxConcurrency(maxConcurrency);
-        if (timeout < 0) {
-            throw new IllegalArgumentException("timeout: " + timeout + " (expected: >= 0)");
-        }
+        validateTimeout(timeout);
         requireNonNull(unit, "unit");
     }
 
-    static void validateMaxConcurrency(int maxConcurrency) {
+    static long validateTimeout(long timeout) {
+        if (timeout < 0) {
+            throw new IllegalArgumentException("timeout: " + timeout + " (expected: >= 0)");
+        }
+        return timeout;
+    }
+
+    static int validateMaxConcurrency(int maxConcurrency) {
         if (maxConcurrency < 0) {
             throw new IllegalArgumentException("maxConcurrency: " + maxConcurrency + " (expected: >= 0)");
         }
+        return maxConcurrency;
     }
 
     /**
@@ -119,8 +130,8 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        return maxConcurrency == 0 ? unlimitedExecute(ctx, req)
-                                   : limitedExecute(ctx, req);
+        return concurrencyLimit.shouldLimit(ctx) ? limitedExecute(ctx, req)
+                                                 : unlimitedExecute(ctx, req);
     }
 
     private O limitedExecute(ClientRequestContext ctx, I req) throws Exception {
@@ -131,6 +142,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         pendingRequests.add(currentTask);
         drain();
 
+        final long timeoutMillis = concurrencyLimit.timeoutMillis();
         if (!currentTask.isRun() && timeoutMillis != 0) {
             // Current request was not delegated. Schedule a timeout.
             final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
@@ -162,6 +174,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
     }
 
     final void drain() {
+        final int maxConcurrency = concurrencyLimit.maxConcurrency();
         while (!pendingRequests.isEmpty()) {
             final int currentActiveRequests = numActiveRequests.get();
             if (currentActiveRequests >= maxConcurrency) {
@@ -199,6 +212,10 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      */
     protected abstract O newDeferredResponse(ClientRequestContext ctx,
                                              CompletionStage<O> resFuture) throws Exception;
+
+    ConcurrencyLimit concurrencyLimit() {
+        return concurrencyLimit;
+    }
 
     private final class PendingTask extends AtomicReference<ScheduledFuture<?>> implements Runnable {
 
