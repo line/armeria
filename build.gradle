@@ -24,15 +24,6 @@ ext {
 
 apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
 
-def testJavaVersion
-if (rootProject.hasProperty('testJavaVersion')) {
-    def testVersion = rootProject.findProperty('testJavaVersion')
-    if (JavaVersion.current().getMajorVersion() != testVersion) {
-        testJavaVersion = testVersion
-        logger.quiet("Overriding JVM for tests with ${testJavaVersion}")
-    }
-}
-
 // Fail the build if the console contains 'LEAK:'.
 def hasLeak = new AtomicBoolean()
 gradle.buildFinished({ result ->
@@ -56,7 +47,7 @@ allprojects {
         }
     }
 
-    tasks.withType(Test).configureEach { test ->
+    tasks.withType(Test) {
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
         // Use verbose exception/response reporting for easier debugging.
@@ -66,12 +57,7 @@ allprojects {
         if (project.hasFlags('coverage')) {
             systemProperty 'com.linecorp.armeria.testing.coverage', 'true'
         }
-        // Use a different JRE for testing if necessary.
-        if (testJavaVersion != null) {
-            javaLauncher = javaToolchains.launcherFor {
-                languageVersion = JavaLanguageVersion.of(testJavaVersion)
-            }
-        }
+
         // Parallelize if --parallel is on.
         if (gradle.startParameter.parallelProjectExecutionEnabled) {
             maxParallelForks = gradle.startParameter.maxWorkerCount
@@ -91,14 +77,6 @@ allprojects {
 
 // Configure all Java projects
 configure(projectsWithFlags('java')) {
-
-    java {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(15)
-            vendor = JvmVendorSpec.ADOPTOPENJDK
-            implementation = JvmImplementation.VENDOR_SPECIFIC
-        }
-    }
 
     // Error Prone compiler
     if (!rootProject.hasProperty('noLint')) {

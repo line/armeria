@@ -3793,7 +3793,6 @@ its.me
 itv
 ivano-frankivsk.ua
 ivanovo.su
-iveco
 iveland.no
 ivgu.no
 iwade.wakayama.jp
@@ -4805,6 +4804,7 @@ me.eu.org
 me.it
 me.ke
 me.so
+me.ss
 me.tc
 me.tz
 me.uk
@@ -7006,6 +7006,7 @@ sch.ng
 sch.qa
 sch.sa
 sch.so
+sch.ss
 sch.zm
 schaeffler
 schlesisches.museum
@@ -7410,7 +7411,6 @@ spjelkavik.no
 sport
 sport.hu
 spot
-spreadbetting
 spy.museum
 spydeberg.no
 square.museum
