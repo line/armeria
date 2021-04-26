@@ -6,7 +6,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-public class PropagatingContextAwareExecutorService extends AbstractContextAwareExecutorService {
+final class PropagatingContextAwareExecutorService extends AbstractContextAwareExecutorService {
     PropagatingContextAwareExecutorService(ExecutorService executor) {
         super(executor);
     }

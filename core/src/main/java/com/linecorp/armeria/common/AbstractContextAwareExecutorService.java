@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-public abstract class AbstractContextAwareExecutorService implements ExecutorService {
+abstract class AbstractContextAwareExecutorService implements ExecutorService {
     protected final ExecutorService executor;
 
     AbstractContextAwareExecutorService(ExecutorService executor) {this.executor = executor;}
@@ -35,12 +35,12 @@ public abstract class AbstractContextAwareExecutorService implements ExecutorSer
         return executor.submit(makeContextAware(task));
     }
 
-    private Runnable makeContextAware(Runnable task) {
+    protected final Runnable makeContextAware(Runnable task) {
         final RequestContext context = context();
         return null == context ? task : context.makeContextAware(task);
     }
 
-    private <T> Callable<T> makeContextAware(Callable<T> task) {
+    protected final <T> Callable<T> makeContextAware(Callable<T> task) {
         final RequestContext context = context();
         return null == context ? task : context.makeContextAware(task);
     }
