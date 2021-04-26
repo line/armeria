@@ -134,7 +134,9 @@ public abstract class AbstractHttpRequestBuilder {
      * Sets the path for this request.
      */
     public AbstractHttpRequestBuilder path(String path) {
-        this.path = requireNonNull(path, "path");
+        requireNonNull(path, "path");
+        checkArgument(!path.isEmpty(), "path is empty.");
+        this.path = path;
         return this;
     }
 
