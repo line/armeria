@@ -32,7 +32,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-public class TargetLengthBasedClassNameAbbreviatorTest {
+class TargetLengthBasedClassNameAbbreviatorTest {
 
     // Forked from https://github.com/qos-ch/logback/blob/c2dcbf/logback-classic/src/test/java/ch/qos/logback/classic/pattern/TargetLengthBasedClassNameAbbreviatorTest.java
 
