@@ -22,6 +22,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
@@ -37,6 +38,7 @@ public final class ConcurrencyLimit {
     private final Function<RequestContext, Boolean> policy;
     private final int maxConcurrency;
     private final long timeoutMillis;
+    private final AtomicInteger numActiveRequests = new AtomicInteger();
 
     /**
      * Creates a new instance to limit the concurrent number of active requests to {@code maxConcurrency}.
@@ -106,6 +108,10 @@ public final class ConcurrencyLimit {
                           .add("maxConcurrency", maxConcurrency)
                           .add("timeoutMillis", timeoutMillis)
                           .toString();
+    }
+
+    AtomicInteger numActiveRequests() {
+        return numActiveRequests;
     }
 
     static class Builder {

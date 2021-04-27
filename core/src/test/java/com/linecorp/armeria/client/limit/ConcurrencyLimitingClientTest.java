@@ -278,4 +278,48 @@ class ConcurrencyLimitingClientTest {
         closeAndDrain(actualRes, res);
         await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
     }
+
+    @Test
+    void enforcesConcurrencyControlOnMultipleClients() throws Exception {
+        final ClientRequestContext ctx1 = newContext();
+        final ClientRequestContext ctx2 = newContext();
+        final HttpRequest req1 = newReq();
+        final HttpRequest req2 = newReq();
+        final HttpResponseWriter actualRes1 = HttpResponse.streaming();
+        final HttpResponseWriter actualRes2 = HttpResponse.streaming();
+
+        when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
+
+        final ConcurrencyLimit concurrencyLimit = new ConcurrencyLimit.Builder()
+                .maxConcurrency(1)
+                .timeout(500, TimeUnit.MILLISECONDS)
+                .policy(requestContext -> true)
+                .build();
+
+        final ConcurrencyLimitingClient clientOne =
+                newDecorator(concurrencyLimit).apply(delegate);
+
+        final ConcurrencyLimitingClient clientTwo =
+                newDecorator(concurrencyLimit).apply(delegate);
+
+        // Send two requests, where only the first one is delegated.
+        final HttpResponse res1 = clientOne.execute(ctx1, req1);
+        final HttpResponse res2 = clientTwo.execute(ctx2, req2);
+
+        // Let req2 time out.
+        Thread.sleep(1000);
+        res2.subscribe(NoopSubscriber.get());
+        assertThatThrownBy(() -> res2.whenComplete().join())
+                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                .hasRootCauseInstanceOf(RequestTimeoutException.class);
+        assertThat(res2.isOpen()).isFalse();
+
+        // req1 should not time out because it's been delegated already.
+        res1.subscribe(NoopSubscriber.get());
+        assertThat(res1.isOpen()).isTrue();
+        assertThat(res1.whenComplete()).isNotDone();
+
+        actualRes1.close();
+        await().untilAsserted(() -> assertThat(clientOne.numActiveRequests()).isZero());
+    }
 }

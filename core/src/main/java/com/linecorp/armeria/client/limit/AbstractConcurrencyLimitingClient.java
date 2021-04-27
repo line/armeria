@@ -56,9 +56,9 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
 
     private static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
 
-    private final AtomicInteger numActiveRequests = new AtomicInteger();
     private final Queue<PendingTask> pendingRequests = new ConcurrentLinkedQueue<>();
     private final ConcurrencyLimit concurrencyLimit;
+    private final AtomicInteger numActiveRequests;
 
     /**
      * Creates a new instance that decorates the specified {@code delegate} to limit the concurrent number of
@@ -99,6 +99,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
     public AbstractConcurrencyLimitingClient(Client<I, O> delegate, ConcurrencyLimit concurrencyLimit) {
         super(delegate);
         this.concurrencyLimit = concurrencyLimit;
+        this.numActiveRequests = concurrencyLimit.numActiveRequests();
     }
 
     static void validateAll(int maxConcurrency, long timeout, TimeUnit unit) {
