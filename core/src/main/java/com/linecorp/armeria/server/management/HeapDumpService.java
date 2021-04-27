@@ -105,7 +105,7 @@ enum HeapDumpService implements HttpService {
                 final QueryParams queryParams = QueryParams.fromQueryString(ctx.query());
                 final boolean live = queryParams.contains("live", "true");
                 final String date = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm").format(LocalDateTime.now());
-                final String fileName = "heapdump_pid" + SystemInfo.pid() + '_' + date + (live ? "-live" : "");
+                final String fileName = "heapdump_pid" + SystemInfo.pid() + '_' + date + (live ? "_live" : "");
 
                 tempFile = createTempFile(fileName);
                 heapDumper.dumpHeap(tempFile, live);
