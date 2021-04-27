@@ -426,12 +426,12 @@ public abstract class AbstractHttpRequestBuilder {
     private String buildPath() {
         checkState(path != null, "path must be set.");
 
-        boolean hasQueryString = false;
         if (!disablePathParams) {
-            // Look for : or { first.
+            // Path parameter substitution is enabled. Look for : or { first.
             final int pathLen = path.length();
             int i = 0;
             boolean hasPathParams = false;
+            boolean hasQueryString = false;
 
             loop: while (i < pathLen) {
                 switch (path.charAt(i)) {
@@ -550,15 +550,22 @@ public abstract class AbstractHttpRequestBuilder {
 
                 return buf.toString();
             } else {
-                // path doesn't contain : or {.
+                // path doesn't contain a path parameter.
+                if (queryParams != null) {
+                    final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+                    buf.append(path).append(hasQueryString ? '&' : '?');
+                    queryParams.appendQueryString(buf);
+                    return buf.toString();
+                }
             }
-        }
-
-        if (queryParams != null) {
-            final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-            buf.append(path).append(hasQueryString ? '&' : '?');
-            queryParams.appendQueryString(buf);
-            return buf.toString();
+        } else {
+            // Path parameter substitution is disabled.
+            if (queryParams != null) {
+                final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+                buf.append(path).append(path.indexOf('?') >= 0 ? '&' : '?');
+                queryParams.appendQueryString(buf);
+                return buf.toString();
+            }
         }
 
         return path;

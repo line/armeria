@@ -248,30 +248,45 @@ class HttpRequestBuilderTest {
         assertThat(req.path()).isEqualTo(expectedPath);
     }
 
-    @Test
-    void buildWithQueryParams() {
-        final HttpRequest request = HttpRequest.builder().get("/")
-                                               .queryParam("foo", "bar")
-                                               .queryParams(QueryParams.of("from", 0, "limit", 10))
-                                               .build();
-        assertThat(request.path()).isEqualTo("/?foo=bar&from=0&limit=10");
-        assertThat(request).isInstanceOf(EmptyFixedHttpRequest.class);
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void buildWithQueryParams(boolean disablePathParams) {
+        final HttpRequestBuilder builder = HttpRequest.builder();
+        if (disablePathParams) {
+            builder.disablePathParams();
+        }
+
+        final HttpRequest req = builder.get("/")
+                                           .queryParam("foo", "bar")
+                                           .queryParams(QueryParams.of("from", 0, "limit", 10))
+                                           .build();
+        assertThat(req.path()).isEqualTo("/?foo=bar&from=0&limit=10");
+        assertThat(req).isInstanceOf(EmptyFixedHttpRequest.class);
     }
 
-    @Test
-    void buildWithQueryParamsInPath() {
-        final HttpRequest req = HttpRequest.builder()
-                                           .get("/query?alice=bob")
-                                           .build();
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void buildWithQueryParamsInPath(boolean disablePathParams) {
+        final HttpRequestBuilder builder = HttpRequest.builder();
+        if (disablePathParams) {
+            builder.disablePathParams();
+        }
+
+        final HttpRequest req = builder.get("/query?alice=bob").build();
         assertThat(req.path()).isEqualTo("/query?alice=bob");
     }
 
-    @Test
-    void buildWithQueryParamsMixed() {
-        final HttpRequest req = HttpRequest.builder()
-                                           .get("/query?foo=bar")
-                                           .queryParam("alice", "bob")
-                                           .build();
+    @ParameterizedTest
+    @CsvSource({ "true", "false" })
+    void buildWithQueryParamsMixed(boolean disablePathParams) {
+        final HttpRequestBuilder builder = HttpRequest.builder();
+        if (disablePathParams) {
+            builder.disablePathParams();
+        }
+
+        final HttpRequest req = builder.get("/query?foo=bar")
+                                       .queryParam("alice", "bob")
+                                       .build();
         assertThat(req.path()).isEqualTo("/query?foo=bar&alice=bob");
     }
 
