@@ -42,9 +42,8 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import javax.annotation.Nullable;
 
@@ -56,8 +55,9 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.file.HttpFile;
 
@@ -69,7 +69,8 @@ enum HeapDumpService implements HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(HeapDumpService.class);
 
-    private final Lock lock = new ReentrantLock();
+    private static final Executor heapDumpExecutor = Executors.newSingleThreadExecutor(
+            ThreadFactories.newThreadFactory("armeria-heapdump-executor", true));
 
     @Nullable
     private HeapDumper heapDumper;
@@ -84,58 +85,59 @@ enum HeapDumpService implements HttpService {
         }
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        ctx.blockingTaskExecutor().execute(() -> {
+        heapDumpExecutor.execute(() -> {
+            if (ctx.isCancelled()) {
+                return;
+            }
+
+            if (heapDumper == null) {
+                try {
+                    heapDumper = new HeapDumper();
+                } catch (Throwable ex) {
+                    unavailabilityCause = ex;
+                    responseFuture.complete(HttpResponse.ofFailure(ex));
+                    return;
+                }
+            }
+
             File tempFile = null;
             try {
-                if (lock.tryLock(ctx.requestTimeoutMillis(), TimeUnit.MILLISECONDS)) {
-                    if (heapDumper == null) {
-                        try {
-                            heapDumper = new HeapDumper();
-                        } catch (Throwable ex) {
-                            unavailabilityCause = ex;
-                            responseFuture.complete(HttpResponse.ofFailure(ex));
-                        }
-                    }
+                final QueryParams queryParams = QueryParams.fromQueryString(ctx.query());
+                final boolean live = queryParams.contains("live", "true");
+                final String date = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm").format(LocalDateTime.now());
+                final String fileName = "heapdump_pid" + SystemInfo.pid() + '_' + date + (live ? "-live" : "");
 
-                    final QueryParams queryParams = QueryParams.fromQueryString(ctx.query());
-                    final boolean live = queryParams.contains("live", "true");
-                    tempFile = createTempFile(live);
-                    heapDumper.dumpHeap(tempFile, live);
+                tempFile = createTempFile(fileName);
+                heapDumper.dumpHeap(tempFile, live);
 
-                    final ContentDisposition disposition =
-                            ContentDisposition.builder("attachment").filename(tempFile.getName()).build();
-                    final HttpFile httpFile = HttpFile.builder(tempFile)
-                                                      .addHeader(HttpHeaderNames.CONTENT_DISPOSITION,
-                                                                 disposition)
-                                                      .build();
+                final ContentDisposition disposition = ContentDisposition.builder("attachment")
+                                                                         .filename(fileName + ".hprof")
+                                                                         .build();
+                final HttpFile httpFile = HttpFile.builder(tempFile)
+                                                  .addHeader(HttpHeaderNames.CONTENT_DISPOSITION, disposition)
+                                                  .build();
 
-                    final File heapDumpFile = tempFile;
-                    final HttpResponse httpResponse = httpFile.asService().serve(ctx, req);
-                    responseFuture.complete(httpResponse);
-                    httpResponse.whenComplete().handleAsync((unused1, unused2) -> {
-                        deleteTempFile(heapDumpFile);
-                        return null;
-                    }, ctx.blockingTaskExecutor());
-                } else {
-                    responseFuture.complete(HttpResponse.ofFailure(RequestTimeoutException.get()));
-                }
+                final File heapDumpFile = tempFile;
+                final HttpResponse httpResponse = httpFile.asService().serve(ctx, req);
+                responseFuture.complete(httpResponse);
+                httpResponse.whenComplete().handleAsync((unused1, unused2) -> {
+                    deleteTempFile(heapDumpFile);
+                    return null;
+                }, heapDumpExecutor);
             } catch (Throwable cause) {
                 logger.warn("Unexpected exception while creating a heap dump", cause);
                 if (tempFile != null) {
                     deleteTempFile(tempFile);
                 }
                 responseFuture.complete(HttpResponse.ofFailure(cause));
-            } finally {
-                lock.unlock();
             }
         });
 
         return HttpResponse.from(responseFuture);
     }
 
-    private static File createTempFile(boolean live) throws IOException {
-        final String date = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm").format(LocalDateTime.now());
-        final File file = File.createTempFile("heapdump_" + date + (live ? "-live" : ""), ".hprof");
+    private static File createTempFile(String fileName) throws IOException {
+        final File file = File.createTempFile(fileName, ".hprof");
         file.delete();
         return file;
     }

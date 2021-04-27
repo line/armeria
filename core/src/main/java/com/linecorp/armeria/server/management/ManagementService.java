@@ -27,55 +27,58 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * An {@link HttpService} that provides monitoring and management features for JVM.
- * First, you need to bind a {@link JvmManagementService} under a path.
+ * An {@link HttpService} that provides monitoring and management features.
+ * First, you need to bind a {@link ManagementService} under a path.
  * <pre>{@code
  * Server.builder()
- *       .serviceUnder("/internal/management/", JvmManagementService.of())
+ *       .serviceUnder("/internal/management/", ManagementService.of())
  * }</pre>
  *
  * <h2>Thread dump</h2>
- * You can dump the thread information for all live threads with stack trace by accessing {@code "/threaddump"}.
+ * You can dump the thread information for all live threads with stack trace by accessing
+ * {@code "/jvm/threaddump"}.
  * If {@link MediaType#JSON} is specified in {@link HttpHeaderNames#ACCEPT}, the thread information will be
  * converted to a JSON. Otherwise, the thread dump will be converted to a plain text.
  * <pre>{@code
  * // Exports thread information as a JSON array
- * curl -L -H "Accept: application/json" http://my-service.com/internal/management/threaddump
+ * curl -L -H "Accept: application/json" http://my-service.com/internal/management/jvm/threaddump
  * // Exports thread information as a plain text
- * curl -L -H "Accept: text/plain" http://my-service.com/internal/management/threaddump
+ * curl -L -H "Accept: text/plain" http://my-service.com/internal/management/jvm/threaddump
  * }</pre>
  *
  * <h2>Heap dump</h2>
- * You can also dump the heap in the same format as the hprof heap dump by accessing {@code "/heapdump"}.
+ * You can also dump the heap in the same format as the hprof heap dump by accessing
+ * {@code "/jvm/heapdump"}.
  * <pre>{@code
- * curl -L http://my-service.com/internal/management/heapdump -o heapdump.hprof
+ * curl -L http://my-service.com/internal/management/jvm/heapdump -o heapdump.hprof
  * // Dump only live objects that are reachable from others
- * curl -L http://my-service.com/internal/management/heapdump?live=true -o heapdump.hprof
+ * curl -L http://my-service.com/internal/management/jvm/heapdump?live=true -o heapdump.hprof
  * }</pre>
  */
 @UnstableApi
-public final class JvmManagementService extends AbstractHttpService {
+public final class ManagementService extends AbstractHttpService {
 
-    private static final JvmManagementService INSTANCE = new JvmManagementService();
+    private static final ManagementService INSTANCE = new ManagementService();
 
     /**
-     * Returns a singleton {@link JvmManagementService}.
+     * Returns a singleton {@link ManagementService}.
      */
-    public static JvmManagementService of() {
+    public static ManagementService of() {
         return INSTANCE;
     }
 
-    JvmManagementService() {}
+    ManagementService() {}
 
     @Override
     public HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final String path = ctx.mappedPath();
-        if (path.endsWith("/threaddump")) {
-            return ThreadDumpService.INSTANCE.serve(ctx, req);
+        switch (path) {
+            case "/jvm/threaddump":
+                return ThreadDumpService.INSTANCE.serve(ctx, req);
+            case "/jvm/heapdump":
+                return HeapDumpService.INSTANCE.serve(ctx, req);
+            default:
+                return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
-        if (path.endsWith("/heapdump")) {
-            return HeapDumpService.INSTANCE.serve(ctx, req);
-        }
-        return HttpResponse.of(HttpStatus.NOT_FOUND);
     }
 }

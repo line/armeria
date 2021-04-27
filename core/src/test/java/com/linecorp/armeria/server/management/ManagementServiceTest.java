@@ -42,14 +42,14 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
 
-class JvmManagementServiceTest {
+class ManagementServiceTest {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.serviceUnder("/internal/management", JvmManagementService.of());
+            sb.serviceUnder("/internal/management", ManagementService.of());
         }
     };
 
@@ -57,7 +57,7 @@ class JvmManagementServiceTest {
     void threadDump() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response =
-                client.get("/internal/management/threaddump").aggregate().join();
+                client.get("/internal/management/jvm/threaddump").aggregate().join();
         assertThat(response.contentType()).isEqualTo(MediaType.PLAIN_TEXT);
         assertThat(response.contentUtf8()).contains(Thread.currentThread().getName());
     }
@@ -67,7 +67,7 @@ class JvmManagementServiceTest {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse response =
                 client.prepare()
-                      .get("/internal/management/threaddump")
+                      .get("/internal/management/jvm/threaddump")
                       .header(HttpHeaderNames.ACCEPT, MediaType.JSON)
                       .execute().aggregate().join();
 
@@ -80,22 +80,21 @@ class JvmManagementServiceTest {
     @Test
     void heapDump() throws InterruptedException {
         final WebClient client = WebClient.of(server.httpUri());
-        final HttpResponse response = client.get("/internal/management/heapdump");
+        final HttpResponse response = client.get("/internal/management/jvm/heapdump");
         final SplitHttpResponse splitHttpResponse = response.split();
         final ResponseHeaders headers = splitHttpResponse.headers().join();
-        final ContentDisposition disposition =
-                ContentDisposition.parse(headers.get(HttpHeaderNames.CONTENT_DISPOSITION));
+        final ContentDisposition disposition = headers.contentDisposition();
 
         assertThat(disposition).isNotNull();
         final String filename = disposition.filename();
-        assertThat(filename).startsWith("heapdump_");
+        assertThat(filename).startsWith("heapdump_pid");
         assertThat(filename).endsWith(".hprof");
 
         final byte[] fileHeader = "JAVA PROFILE".getBytes(StandardCharsets.UTF_8);
         final AtomicInteger counter = new AtomicInteger();
         final byte[] actual = Flux.from(splitHttpResponse.body())
                                   .map(HttpData::array)
-                                  .takeUntil(bytes -> counter.getAndAdd(bytes.length) <= fileHeader.length)
+                                  .takeUntil(bytes -> fileHeader.length <= counter.addAndGet(bytes.length))
                                   .reduce(Bytes::concat)
                                   .block();
 
