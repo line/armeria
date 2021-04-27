@@ -308,10 +308,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         final ClosedStreamException cause =
                 new ClosedStreamException("received a RST_STREAM frame: " + Http2Error.valueOf(errorCode));
-        // Make sure to invoke the ServiceRequestContext.whenRequestCancelling() and whenRequestCancelled()
-        // by cancelling a request
-        req.ctx().cancel(cause);
-        req.abortResponse(cause);
+        req.abortResponse(cause, /* cancel */ true);
     }
 
     @Override
