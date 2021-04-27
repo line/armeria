@@ -43,6 +43,10 @@ final class LengthBasedServiceNaming implements ServiceNaming {
     }
 
     private String abbreviate(String serviceName) {
+        final String abbreviation = cache.get(serviceName);
+        if (abbreviation != null) {
+            return abbreviation;
+        }
         return cache.computeIfAbsent(serviceName, abbreviator::abbreviate);
     }
 }
