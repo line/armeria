@@ -10,7 +10,6 @@ dependencies {
     }
     implementation 'org.scala-lang.modules:scala-collection-compat_2.12'
     implementation 'org.scala-lang.modules:scala-java8-compat_2.12'
-    implementation 'javax.annotation:javax.annotation-api'
 
     // Added for supporting Scala types in Jackson{Request,Response}ConverterFunction
     implementation 'com.fasterxml.jackson.module:jackson-module-scala_2.12'
