@@ -51,7 +51,7 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  */
 public final class JacksonResponseConverterFunction implements ResponseConverterFunction {
 
-    private static final ObjectMapper defaultObjectMapper = JacksonUtil.defaultObjectMapper();
+    private static final ObjectMapper defaultObjectMapper = JacksonUtil.newDefaultObjectMapper();
 
     private final ObjectMapper mapper;
 

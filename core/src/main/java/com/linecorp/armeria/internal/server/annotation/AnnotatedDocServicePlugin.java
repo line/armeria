@@ -44,7 +44,7 @@ import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -105,7 +105,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     static final TypeSignature BEAN = TypeSignature.ofBase("bean");
 
-    private static final ObjectMapper mapper = JacksonUtil.defaultObjectMapper();
+    private static final ObjectWriter objectWriter = JacksonUtil.newDefaultObjectMapper()
+                                                                .writerWithDefaultPrettyPrinter();
 
     @Override
     public String name() {
@@ -440,7 +441,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     public String serializeExampleRequest(String serviceName, String methodName,
                                           Object exampleRequest) {
         try {
-            return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(exampleRequest);
+            return objectWriter.writeValueAsString(exampleRequest);
         } catch (JsonProcessingException e) {
             // Ignore the exception and just return Optional.empty().
         }

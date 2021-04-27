@@ -26,31 +26,31 @@ import com.google.common.collect.ImmutableList;
 
 public final class JacksonUtil {
 
-    private static final ObjectMapper defaultMapper;
+    private static final List<Module> defaultModules;
 
     static {
-        final JsonMapper.Builder jsonMapperBuilder = JsonMapper.builder();
-
         final List<String> additionalModules = ImmutableList.of(
                 "com.fasterxml.jackson.module.scala.DefaultScalaModule",
                 "com.fasterxml.jackson.module.kotlin.KotlinModule");
 
         // Add the additional modules if they are in the classpath
+        final ImmutableList.Builder<Module> moduleBuilder = ImmutableList.builderWithExpectedSize(2);
         for (String moduleClassName : additionalModules) {
             try {
                 final Class<?> moduleClass = Class.forName(moduleClassName);
                 final Module module = (Module) moduleClass.getDeclaredConstructor().newInstance();
-                jsonMapperBuilder.addModule(module);
+                moduleBuilder.add(module);
             } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
                     IllegalAccessException | InvocationTargetException ignored) {
             }
         }
-
-        defaultMapper = jsonMapperBuilder.build();
+        defaultModules = moduleBuilder.build();
     }
 
-    public static ObjectMapper defaultObjectMapper() {
-        return defaultMapper;
+    public static ObjectMapper newDefaultObjectMapper() {
+        final JsonMapper.Builder jsonMapperBuilder = JsonMapper.builder();
+        defaultModules.forEach(jsonMapperBuilder::addModule);
+        return jsonMapperBuilder.build();
     }
 
     private JacksonUtil() {}

@@ -89,7 +89,7 @@ public final class JsonTextSequences {
     /**
      * A default {@link ObjectMapper} which converts the objects into JSON Text Sequences.
      */
-    private static final ObjectMapper defaultMapper = JacksonUtil.defaultObjectMapper();
+    private static final ObjectMapper defaultMapper = JacksonUtil.newDefaultObjectMapper();
 
     /**
      * A default {@link ResponseHeaders} of JSON Text Sequences.

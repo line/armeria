@@ -55,7 +55,7 @@ import io.netty.util.AsciiString;
  */
 public final class JacksonRequestConverterFunction implements RequestConverterFunction {
 
-    private static final ObjectMapper defaultObjectMapper = JacksonUtil.defaultObjectMapper();
+    private static final ObjectMapper defaultObjectMapper = JacksonUtil.newDefaultObjectMapper();
     private static final Map<Class<?>, Boolean> skippableTypes;
 
     static {
