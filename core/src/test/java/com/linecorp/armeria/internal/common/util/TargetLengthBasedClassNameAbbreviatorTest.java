@@ -30,14 +30,14 @@ package com.linecorp.armeria.internal.common.util;
 
 import static org.junit.Assert.assertEquals;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TargetLengthBasedClassNameAbbreviatorTest {
 
     // Forked from https://github.com/qos-ch/logback/blob/c2dcbf/logback-classic/src/test/java/ch/qos/logback/classic/pattern/TargetLengthBasedClassNameAbbreviatorTest.java
 
     @Test
-    public void testShortName() {
+    void testShortName() {
         TargetLengthBasedClassNameAbbreviator abbreviator = new TargetLengthBasedClassNameAbbreviator(100);
         String name = "hello";
         assertEquals(name, abbreviator.abbreviate(name));
@@ -48,14 +48,14 @@ public class TargetLengthBasedClassNameAbbreviatorTest {
     }
 
     @Test
-    public void testNoDot() {
+    void testNoDot() {
         final TargetLengthBasedClassNameAbbreviator abbreviator = new TargetLengthBasedClassNameAbbreviator(1);
         final String name = "hello";
         assertEquals(name, abbreviator.abbreviate(name));
     }
 
     @Test
-    public void testOneDot() {
+    void testOneDot() {
         TargetLengthBasedClassNameAbbreviator abbreviator = new TargetLengthBasedClassNameAbbreviator(1);
         String name = "hello.world";
         assertEquals("h.world", abbreviator.abbreviate(name));
@@ -70,7 +70,7 @@ public class TargetLengthBasedClassNameAbbreviatorTest {
     }
 
     @Test
-    public void testTwoDot() {
+    void testTwoDot() {
         TargetLengthBasedClassNameAbbreviator abbreviator = new TargetLengthBasedClassNameAbbreviator(1);
         String name = "com.logback.Foobar";
         assertEquals("c.l.Foobar", abbreviator.abbreviate(name));
@@ -89,7 +89,7 @@ public class TargetLengthBasedClassNameAbbreviatorTest {
     }
 
     @Test
-    public void test3Dot() {
+    void test3Dot() {
         TargetLengthBasedClassNameAbbreviator abbreviator = new TargetLengthBasedClassNameAbbreviator(1);
         String name = "com.logback.xyz.Foobar";
         assertEquals("c.l.x.Foobar", abbreviator.abbreviate(name));
@@ -108,7 +108,7 @@ public class TargetLengthBasedClassNameAbbreviatorTest {
     }
 
     @Test
-    public void testXDot() {
+    void testXDot() {
         TargetLengthBasedClassNameAbbreviator abbreviator = new TargetLengthBasedClassNameAbbreviator(21);
         String name = "com.logback.wombat.alligator.Foobar";
         assertEquals("c.l.w.a.Foobar", abbreviator.abbreviate(name));
