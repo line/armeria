@@ -155,7 +155,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
         // Make sure to invoke the ServiceRequestContext.whenRequestCancelling() and whenRequestCancelled()
         // by cancelling a request
-        if (cancel) {
+        if (cancel && ctx != null) {
             ctx.cancel(cause);
         }
 
