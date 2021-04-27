@@ -380,7 +380,7 @@ org.apache.kafka:
   kafka-clients:
     version: '2.8.0'
     javadocs:
-    - https://kafka.apache.org/26/javadoc/
+    - https://kafka.apache.org/28/javadoc/
 
 org.apache.thrift:
   libthrift:
