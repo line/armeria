@@ -127,6 +127,12 @@ public final class HttpHeaderNames {
      * The HTTP {@code ":status"} pseudo header field name.
      */
     public static final AsciiString STATUS = create(":status");
+    /**
+     * The HTTP {@code ":protocol"} pseudo header field name.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/rfc8441/">RFC 8441: Bootstrapping WebSockets with HTTP/2</a>
+     */
+    public static final AsciiString PROTOCOL = create(":protocol");
 
     // HTTP Request and Response header fields
 
