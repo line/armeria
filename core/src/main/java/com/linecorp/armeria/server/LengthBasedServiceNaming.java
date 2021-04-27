@@ -13,17 +13,16 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  */
-package com.linecorp.armeria.internal.common.util;
+package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import com.linecorp.armeria.server.ServiceNaming;
-import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.internal.common.util.TargetLengthBasedClassNameAbbreviator;
 
-public final class LengthBasedServiceNaming implements ServiceNaming {
+final class LengthBasedServiceNaming implements ServiceNaming {
 
     public static LengthBasedServiceNaming of(int shortenedServiceNameLength) {
         return new LengthBasedServiceNaming(shortenedServiceNameLength);
@@ -32,6 +31,11 @@ public final class LengthBasedServiceNaming implements ServiceNaming {
     private final TargetLengthBasedClassNameAbbreviator abbreviator;
     private final ConcurrentMap<String, String> cache = new ConcurrentHashMap<>();
 
+    private LengthBasedServiceNaming(int shortenedServiceNameLength) {
+        checkArgument(shortenedServiceNameLength >= 0, "value: %s (expected >= 0)", shortenedServiceNameLength);
+        abbreviator = new TargetLengthBasedClassNameAbbreviator(shortenedServiceNameLength);
+    }
+
     @Override
     public String serviceName(ServiceRequestContext ctx) {
         final String fullTypeName = ServiceNaming.fullTypeName().serviceName(ctx);
@@ -39,16 +43,6 @@ public final class LengthBasedServiceNaming implements ServiceNaming {
     }
 
     private String abbreviate(String serviceName) {
-        String abbreviation = cache.get(serviceName);
-        if (abbreviation == null) {
-            abbreviation = abbreviator.abbreviate(serviceName);
-            cache.putIfAbsent(serviceName, abbreviation);
-        }
-        return abbreviation;
-    }
-
-    private LengthBasedServiceNaming(int shortenedServiceNameLength) {
-        checkArgument(shortenedServiceNameLength >= 0, "value: %d (expected >= 0)", shortenedServiceNameLength);
-        abbreviator = new TargetLengthBasedClassNameAbbreviator(shortenedServiceNameLength);
+        return cache.computeIfAbsent(serviceName, abbreviator::abbreviate);
     }
 }

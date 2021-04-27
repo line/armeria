@@ -22,7 +22,6 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
-import com.linecorp.armeria.internal.common.util.LengthBasedServiceNaming;
 
 /**
  * Generates the default name of a {@link Service} from its {@link ServiceRequestContext}.
@@ -83,6 +82,19 @@ public interface ServiceNaming {
      */
     static ServiceNaming shorten(int targetLength) {
         return LengthBasedServiceNaming.of(targetLength);
+    }
+
+    /**
+     * Returns the {@link ServiceNaming} that returns the shortened service name from the full name of an RPC
+     * stub class or the innermost class from the given service. It follows Logback's abbreviation algorithm.
+     * Please note that the rightmost segment in a service name is only left and other segments are
+     * abbreviated to a letter. For instance, {@code com.foo.bar.HelloService} is able to be shorten to
+     * {@code c.f.b.HelloService}.
+     *
+     * @see <a href="http://logback.qos.ch/manual/layouts.html">Logback's abbreviation algorithm</a>
+     */
+    static ServiceNaming shorten() {
+        return shorten(0);
     }
 
     /**
