@@ -174,6 +174,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         private final boolean subscribedWithPooledObjects;
         private final boolean notifyCancellation;
 
+        private boolean completed;
         @Nullable
         private Subscription upstream;
 
@@ -206,9 +207,13 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                 filtered = filter(o);
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(o);
+                // onError(ex) should be called before upstream.cancel() to deliver the cause to downstream.
+                // upstream.cancel() and make downstream closed with CancelledSubscriptionException
+                // before sending the actual cause.
+                onError(ex);
+
                 assert upstream != null;
                 upstream.cancel();
-                onError(ex);
                 return;
             }
 
@@ -227,6 +232,10 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                 }
             }
 
+            if (completed) {
+                return;
+            }
+            completed = true;
             final Throwable filteredCause = beforeError(delegate, t);
             if (filteredCause != null) {
                 delegate.onError(filteredCause);
@@ -241,6 +250,10 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onComplete() {
+            if (completed) {
+                return;
+            }
+            completed = true;
             beforeComplete(delegate);
             delegate.onComplete();
         }

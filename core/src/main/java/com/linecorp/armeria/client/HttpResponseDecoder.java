@@ -383,9 +383,9 @@ abstract class HttpResponseDecoder {
             if (ctx instanceof DefaultClientRequestContext) {
                 final CancellationScheduler responseCancellationScheduler =
                         ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
-                responseCancellationScheduler.init(ctx.eventLoop(), newCancellationTask(),
-                                                   TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis),
-                                                   ResponseTimeoutException.get());
+                responseCancellationScheduler.init(
+                        ctx.eventLoop(), newCancellationTask(),
+                        TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis), /* server */ false);
             }
         }
 

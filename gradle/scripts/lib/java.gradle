@@ -10,7 +10,7 @@ if (rootProject.hasProperty('buildJdkVersion')) {
     def jdkVersion = rootProject.findProperty('buildJdkVersion')
     if (buildJdkVersion != jdkVersion) {
         buildJdkVersion = jdkVersion
-        logger.quiet("Overriding jDK for build with ${buildJdkVersion}")
+        logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
     }
 }
 
@@ -19,7 +19,7 @@ if (rootProject.hasProperty('testJavaVersion')) {
     def testVersion = rootProject.findProperty('testJavaVersion')
     if (buildJdkVersion != testVersion) {
         testJavaVersion = testVersion
-        logger.quiet("Overriding JVM for tests with ${testJavaVersion}")
+        logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
     }
 }
 
