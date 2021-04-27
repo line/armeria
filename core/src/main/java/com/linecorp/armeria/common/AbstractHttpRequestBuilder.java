@@ -431,9 +431,10 @@ public abstract class AbstractHttpRequestBuilder {
             final int pathLen = path.length();
             int i = 0;
             boolean hasPathParams = false;
-            boolean hasQueryString = false;
+            boolean hasQueryInPath = false;
 
-            loop: while (i < pathLen) {
+            loop:
+            while (i < pathLen) {
                 switch (path.charAt(i)) {
                     case ':':
                         if (i + 1 < pathLen && path.charAt(i + 1) == '/') {
@@ -467,7 +468,7 @@ public abstract class AbstractHttpRequestBuilder {
                             break loop;
                         }
                     case '?':
-                        hasQueryString = true;
+                        hasQueryInPath = true;
                         break loop;
                 }
                 i++;
@@ -478,7 +479,8 @@ public abstract class AbstractHttpRequestBuilder {
                 final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
                 buf.append(path, 0, i);
 
-                loop: while (i < pathLen) {
+                loop:
+                while (i < pathLen) {
                     final char ch = path.charAt(i);
                     switch (ch) {
                         case '{': {
@@ -526,7 +528,7 @@ public abstract class AbstractHttpRequestBuilder {
                             break;
                         }
                         case '?': {
-                            hasQueryString = true;
+                            hasQueryInPath = true;
                             buf.append(path, i, pathLen);
                             break loop;
                         }
@@ -536,7 +538,7 @@ public abstract class AbstractHttpRequestBuilder {
                     }
                 }
 
-                if (hasQueryString) {
+                if (hasQueryInPath) {
                     if (queryParams != null) {
                         buf.append('&');
                         queryParams.appendQueryString(buf);
@@ -552,22 +554,25 @@ public abstract class AbstractHttpRequestBuilder {
             } else {
                 // path doesn't contain a path parameter.
                 if (queryParams != null) {
-                    final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-                    buf.append(path).append(hasQueryString ? '&' : '?');
-                    queryParams.appendQueryString(buf);
-                    return buf.toString();
+                    return buildPathWithoutPathParams(path, queryParams, hasQueryInPath);
                 }
             }
         } else {
             // Path parameter substitution is disabled.
             if (queryParams != null) {
-                final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-                buf.append(path).append(path.indexOf('?') >= 0 ? '&' : '?');
-                queryParams.appendQueryString(buf);
-                return buf.toString();
+                return buildPathWithoutPathParams(path, queryParams, path.indexOf('?') >= 0);
             }
         }
 
         return path;
+    }
+
+    private static String buildPathWithoutPathParams(
+            String path, QueryParamsBuilder queryParams, boolean hasQueryInPath) {
+
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append(path).append(hasQueryInPath ? '&' : '?');
+        queryParams.appendQueryString(buf);
+        return buf.toString();
     }
 }
