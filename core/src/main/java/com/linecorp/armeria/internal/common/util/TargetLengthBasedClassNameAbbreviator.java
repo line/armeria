@@ -70,7 +70,8 @@ public final class TargetLengthBasedClassNameAbbreviator {
         // dotIndexesAndLength contains dotIndexesArray[MAX_DOTS] and lengthArray[MAX_DOTS + 1]
         // In case of lengthArray, a.b.c contains 2 dots but 2+1 parts.
         // see also http://jira.qos.ch/browse/LBCLASSIC-110
-        final int[] dotIndexesAndLength = TemporaryThreadLocals.get().intArray(MAX_DOTS * 2 + 1);
+        // TODO(hexoul): Analyze whether int array of thread local can be used or not.
+        final int[] dotIndexesAndLength = new int[MAX_DOTS * 2 + 1];
         final int dotCount = computeDotIndexes(fqClassName, dotIndexesAndLength);
 
         // if there are not dots than abbreviation is not possible
@@ -78,6 +79,7 @@ public final class TargetLengthBasedClassNameAbbreviator {
             return fqClassName;
         }
         computeLengthArray(fqClassName, dotIndexesAndLength, dotCount);
+        // TODO(hexoul): Analyze whether StringBuilder of thread local can be used or not.
         final StringBuilder buf = new StringBuilder(targetLength);
         for (int i = 0; i <= dotCount; i++) {
             if (i == 0) {
