@@ -448,6 +448,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
                 if (cause instanceof ClosedStreamException || cause instanceof ClosedSessionException) {
                     // A stream or connection was already closed by a client
+                    setDone(true);
                 } else {
                     failAndRespond(cause, convertException(cause), Http2Error.INTERNAL_ERROR, true);
                 }
