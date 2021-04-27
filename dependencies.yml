@@ -3,13 +3,13 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.12.2
-  - io.dropwizard.metrics:metrics-bom:4.1.18
+  - com.fasterxml.jackson:jackson-bom:2.12.3
+  - io.dropwizard.metrics:metrics-bom:4.1.20
   # Ensure that we use the same Protobuf version as what gRPC depends on.
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
-  - io.grpc:grpc-bom:1.36.1
-  - io.micrometer:micrometer-bom:1.6.5
+  - io.grpc:grpc-bom:1.37.0
+  - io.micrometer:micrometer-bom:1.6.6
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.63.Final
   - io.zipkin.brave:brave-bom:5.13.3
@@ -31,9 +31,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.14.0'
+    version: '3.15.0'
     javadocs:
-    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.12.1/
+    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.15.0/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -48,11 +48,11 @@ com.fasterxml.jackson.core:
 
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.8.8'
+    version: '2.9.0'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.8.8/
+    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.9.0/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
@@ -64,14 +64,14 @@ com.github.node-gradle:
   gradle-node-plugin: { version: '3.0.1' }
 
 com.google.api:
-  gax-grpc: { version: '1.62.0' }
+  gax-grpc: { version: '1.63.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 # This is only used for examples/context-propagation/dagger
 com.google.dagger:
-  dagger: { version: &DAGGER_VERSION '2.33' }
+  dagger: { version: &DAGGER_VERSION '2.35' }
   dagger-compiler: { version: *DAGGER_VERSION }
   dagger-producers: { version: *DAGGER_VERSION }
 
@@ -133,10 +133,10 @@ com.netflix.eureka:
   eureka-test-utils: {version: *EUREKA_VERSION }
 
 com.pszymczyk.consul:
-  embedded-consul: { version: '2.2.0' }
+  embedded-consul: { version: '2.2.1' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.41.1' }
+  checkstyle: { version: '8.42' }
 
 com.salesforce.servicelibs:
   reactor-grpc: { version: &REACTVIVE_GRPC_VERSION '1.0.1' }
@@ -158,7 +158,7 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 com.thesamet.scalapb:
-  scalapb-runtime_2.12: { version: &SCALAPB_VERSION '0.11.1' }
+  scalapb-runtime_2.12: { version: &SCALAPB_VERSION '0.11.2' }
   scalapb-runtime_2.13: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.12: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.13: { version: *SCALAPB_VERSION }
@@ -167,7 +167,7 @@ com.thesamet.scalapb:
 
 # Akka is used only for testing in it:grpcweb module.
 com.typesafe.akka:
-  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.13' }
+  akka-actor-typed_2.13: { version: &TYPESAFE_AKKA_VERSION '2.6.14' }
   akka-discovery_2.13: { version: *TYPESAFE_AKKA_VERSION }
   akka-stream_2.13: { version: *TYPESAFE_AKKA_VERSION }
 
@@ -184,9 +184,9 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '2.0.20'
+    version: &DROPWIZARD_VERSION '2.0.21'
     javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.13/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.21/
   dropwizard-jackson: { version: *DROPWIZARD_VERSION }
   dropwizard-lifecycle: { version: *DROPWIZARD_VERSION }
   dropwizard-jersey: { version: *DROPWIZARD_VERSION }
@@ -227,10 +227,10 @@ io.grpc:
 io.micrometer:
   micrometer-core:
     javadocs:
-    - https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.5.5/
+    - https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.5.6/
   micrometer-registry-prometheus:
     javadocs:
-    - https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.5.5/
+    - https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.5.6/
   micrometer-spring-legacy:
     javadocs:
     - https://www.javadoc.io/doc/io.micrometer/micrometer-spring-legacy/1.3.9/
@@ -255,7 +255,7 @@ io.netty.incubator:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.4.4'
+    version: &REACTOR_VERSION '3.4.5'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -277,7 +277,7 @@ io.reactivex.rxjava2:
 
 io.reactivex.rxjava3:
   rxjava:
-    version: '3.0.11'
+    version: '3.0.12'
     javadocs:
       - http://reactivex.io/RxJava/3.x/javadoc/
 
@@ -378,7 +378,7 @@ org.apache.httpcomponents:
 
 org.apache.kafka:
   kafka-clients:
-    version: '2.7.0'
+    version: '2.8.0'
     javadocs:
     - https://kafka.apache.org/26/javadoc/
 
@@ -472,7 +472,7 @@ org.jctools:
 # If you want to change `org.jetbrains.kotlin:kotlin-allopen` version,
 # you also need to change `org.jetbrains.kotlin.jvm` version in `build.gradle`.
 org.jetbrains.kotlin:
-  kotlin-allopen: { version: '1.4.32' }
+  kotlin-allopen: { version: '1.5.0' }
 
 org.jetbrains.kotlinx:
   kotlinx-coroutines-core: { version: &KOTLIN_COROUTINE_VERSION '1.4.3' }
@@ -483,13 +483,13 @@ org.jlleitschuh.gradle:
   ktlint-gradle: { version: '10.0.0' }
 
 org.jooq:
-  joor: { version: '0.9.13' }
+  joor: { version: '0.9.14' }
 
 org.jsoup:
   jsoup: { version: '1.13.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.8.0' }
+  mockito-core: { version: &MOCKITO_VERSION '3.9.0' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -536,7 +536,7 @@ org.scala-lang.modules:
   scala-java8-compat_2.13: { version: *SCALA_JAVA8_COMPAT_VERSION }
 
 org.scalameta:
-  munit_2.12: { version: &MUNIT_VERSION '0.7.23' }
+  munit_2.12: { version: &MUNIT_VERSION '0.7.25' }
   munit_2.13: { version: *MUNIT_VERSION }
 
 org.slf4j:
@@ -550,11 +550,11 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.3.5' }
+  spring-web: { version: '5.3.6' }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.4.4'
+    version: &SPRING_BOOT_VERSION '2.4.5'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
