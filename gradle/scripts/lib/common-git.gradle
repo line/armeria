@@ -27,7 +27,9 @@ private def getGitPath() {
     // Find the location of the 'git' command.
     try {
         if (current() == WINDOWS) {
-            return executeCommand('where.exe', 'git.exe')
+            def commands = executeCommand('where.exe', 'git.exe')
+            // "where.exe" returns all available commands, so select the first git.exe.
+            return commands.split('\r\n')[0]
         } else {
             return executeCommand('which', 'git')
         }
