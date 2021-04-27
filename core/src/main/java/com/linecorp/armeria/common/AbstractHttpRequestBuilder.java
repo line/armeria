@@ -564,6 +564,7 @@ public abstract class AbstractHttpRequestBuilder {
             }
         }
 
+        // No path/query parameters to substitute/encode
         return path;
     }
 
