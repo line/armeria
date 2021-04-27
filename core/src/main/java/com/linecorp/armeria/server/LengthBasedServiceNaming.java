@@ -24,7 +24,7 @@ import com.linecorp.armeria.internal.common.util.TargetLengthBasedClassNameAbbre
 
 final class LengthBasedServiceNaming implements ServiceNaming {
 
-    public static LengthBasedServiceNaming of(int shortenedServiceNameLength) {
+    static LengthBasedServiceNaming of(int shortenedServiceNameLength) {
         return new LengthBasedServiceNaming(shortenedServiceNameLength);
     }
 
