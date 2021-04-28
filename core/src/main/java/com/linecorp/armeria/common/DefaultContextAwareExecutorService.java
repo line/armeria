@@ -19,7 +19,8 @@ import java.util.concurrent.ExecutorService;
 
 import com.google.common.base.MoreObjects;
 
-class DefaultContextAwareExecutorService extends AbstractContextAwareExecutorService implements ContextAwareExecutorService {
+class DefaultContextAwareExecutorService extends AbstractContextAwareExecutorService
+        implements ContextAwareExecutorService {
     private final RequestContext context;
 
     DefaultContextAwareExecutorService(RequestContext context, ExecutorService executor) {
