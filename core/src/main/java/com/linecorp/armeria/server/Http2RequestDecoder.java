@@ -312,8 +312,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                   "received a RST_STREAM frame for an unknown stream: %d", streamId);
         }
 
-        req.abortResponse(new ClosedStreamException(
-                "received a RST_STREAM frame: " + Http2Error.valueOf(errorCode)));
+        final ClosedStreamException cause =
+                new ClosedStreamException("received a RST_STREAM frame: " + Http2Error.valueOf(errorCode));
+        req.abortResponse(cause, /* cancel */ true);
     }
 
     @Override

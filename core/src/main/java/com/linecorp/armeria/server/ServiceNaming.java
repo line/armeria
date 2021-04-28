@@ -62,14 +62,9 @@ public interface ServiceNaming {
      * Returns the {@link ServiceNaming} that returns the simple name of an RPC stub class or
      * the innermost class from the given service. It is supposed to have a class name without a period.
      * e.g. {@code HelloService}.
-     *
-     * @see Class#getSimpleName()
      */
     static ServiceNaming simpleTypeName() {
-        return ctx -> {
-            final String fullTypeName = fullTypeName().serviceName(ctx);
-            return fullTypeName.substring(fullTypeName.lastIndexOf('.') + 1);
-        };
+        return SimpleTypeServiceNaming.INSTANCE;
     }
 
     /**

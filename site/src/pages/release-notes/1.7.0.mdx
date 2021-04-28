@@ -1,0 +1,95 @@
+---
+date: 2021-04-28
+---
+
+## 🌟 New features
+
+- You can now monitor the state of all live threads and heap using <type://ManagementService>. #3463
+  ```java
+  // Server
+  Server.builder()
+        .serviceUnder("/internal/management/", ManagementService.of())
+        ...
+  // Client
+  WebClient client = ...
+  client.get("/internal/management/jvm/threaddump").aggregate().join();
+  client.get("/internal/management/jvm/heapdump").aggregate().join();
+  ```
+- You can now set the abbreviated service name that is similar to the abbreviated logger name of
+  [Logback](http://logback.qos.ch/manual/layouts.html#ClassicPatternLayout) via
+  <type://ServiceNaming#shorten(int)>. #3453
+  ```java
+  Server.builder()
+        .defaultServiceNaming(ServiceNaming.shorten(30))
+        ...
+  ```
+
+## 📈 Improvements
+
+- N/A
+
+## 🛠️ Bug fixes
+
+- You no longer see a wrong `serviceName` for annotated services when <type://ServiceNaming> is used. #3468
+  - `ServiceRequestContext.config().defaultServiceName()` no longer returns `null` if a default service name
+    is specified.
+- You no longer see a <type://ClosedStreamException> when a gRPC call is cancelled by a client. #3452 #3455
+- You no longer see the `Failed to force-initialize 'io.netty.channel.unix.Socket'` error message when
+  Armeria attempts to load native libraries. #3457 #3485
+- You can now specify an absolute URI using <type://WebClient#prepare()>. #3479
+  - You can specify a query string both in a path string and via
+    <type://WebClientRequestPreparation#queryParam(String,Object)>.
+- You no longer see redundant parameters in <type://DocService> when Kotlin data class is used. #3454 #3461
+- You no longer see an `IllegalStateException` when a <type://StreamMessage#of(Path)?full> or
+  <type://StreamMessage#of(File)?full> is used in a client-side. #3450
+- You no longer have to specify a custom <type://JacksonRequestConverterFunction> or
+  <type://JacksonResponseConverterFunction> for Kotlin data class and Scala case class if you add
+  `com.fasterxml.jackson.module:jackson-module-kotlin` or `com.fasterxml.jackson.module:jackson-module-scala`
+  as a dependency. #3458
+- You no longer see an `EofException` when writing to a timed-out response stream in <type://JettyService>.
+  It's discarded silently. #3460
+- You no longer see a <type://CancellationException> when an exception is raised by
+  a <type://FilteredStreamMessage>. #3449
+- You no longer see the <type://RequestTimeoutException> log message when a response stream fails due to
+  cancellation or timeout. #3459
+- A timeout exception is created only when a request or response is timed out. #3462
+- Armeria now rejects all CONNECT requests explicitly, except HTTP/2 CONNECT requests with a `:protocol`
+  pseudo header. #3482
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- Caffeine 2.8.8 → 2.9.0
+- Dropwizard 2.0.20 → 2.0.21
+- Dropwizard metrics 4.1.18 → 4.1.20
+- gRPC 1.36.1 → 1.37.0
+- Micrometer 1.6.5 → 1.6.6
+- Jackson 2.12.2 → 2.12.3
+- java-jwt 3.14.0 → 3.15.0
+- Reactor 3.4.4 → 3.4.5
+- RxJava 3.0.11 → 3.0.12
+- scalapb-runtime_2.12 0.11.1 → 0.11.2
+- Spring Boot 2.4.4 → 2.4.5
+- Spring web 5.3.5 → 5.3.6
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'anuraaga',
+    'fclemonschool',
+    'heowc',
+    'hexoul',
+    'ikhoon',
+    'minwoox',
+    'trustin',
+    'Waynefn'
+  ]}
+/>
