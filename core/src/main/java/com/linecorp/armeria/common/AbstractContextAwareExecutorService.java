@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -27,15 +29,15 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-abstract class AbstractContextAwareExecutorService implements ExecutorService {
-    final ExecutorService executor;
+abstract class AbstractContextAwareExecutorService<T extends ExecutorService> implements ExecutorService {
+    final T executor;
 
-    AbstractContextAwareExecutorService(ExecutorService executor) {
+    AbstractContextAwareExecutorService(T executor) {
         this.executor = requireNonNull(executor, "executor");
     }
 
     @Nullable
-    abstract RequestContext context();
+    abstract RequestContext contextOrNull();
 
     @Override
     public final void shutdown() {
@@ -48,12 +50,12 @@ abstract class AbstractContextAwareExecutorService implements ExecutorService {
     }
 
     protected final Runnable makeContextAware(Runnable task) {
-        final RequestContext context = context();
+        final RequestContext context = contextOrNull();
         return null == context ? task : context.makeContextAware(task);
     }
 
     protected final <T> Callable<T> makeContextAware(Callable<T> task) {
-        final RequestContext context = context();
+        final RequestContext context = contextOrNull();
         return null == context ? task : context.makeContextAware(task);
     }
 

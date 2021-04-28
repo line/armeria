@@ -35,6 +35,11 @@ final class DefaultContextAwareScheduledExecutorService
     }
 
     @Override
+    public RequestContext contextOrNull() {
+        return context;
+    }
+
+    @Override
     public ScheduledExecutorService withoutContext() {
         return executor;
     }
@@ -43,7 +48,7 @@ final class DefaultContextAwareScheduledExecutorService
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("executor", executor)
-                          .add("context", context())
+                          .add("context", contextOrNull())
                           .toString();
     }
 }

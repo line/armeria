@@ -20,13 +20,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-abstract class AbstractContextAwareScheduledExecutorService extends AbstractContextAwareExecutorService
+abstract class AbstractContextAwareScheduledExecutorService
+        extends AbstractContextAwareExecutorService<ScheduledExecutorService>
         implements ScheduledExecutorService {
-    final ScheduledExecutorService executor;
-
     AbstractContextAwareScheduledExecutorService(ScheduledExecutorService executor) {
         super(executor);
-        this.executor = executor;
     }
 
     @Override

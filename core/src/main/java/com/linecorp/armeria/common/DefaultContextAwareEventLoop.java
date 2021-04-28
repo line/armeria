@@ -69,22 +69,22 @@ final class DefaultContextAwareEventLoop
 
     @Override
     public <V> Promise<V> newPromise() {
-        return new ContextAwarePromise<>(context(), eventLoop.newPromise());
+        return new ContextAwarePromise<>(contextOrNull(), eventLoop.newPromise());
     }
 
     @Override
     public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new ContextAwareProgressivePromise<>(context(), eventLoop.newProgressivePromise());
+        return new ContextAwareProgressivePromise<>(contextOrNull(), eventLoop.newProgressivePromise());
     }
 
     @Override
     public <V> Future<V> newSucceededFuture(V result) {
-        return new ContextAwareFuture<>(context(), eventLoop.newSucceededFuture(result));
+        return new ContextAwareFuture<>(contextOrNull(), eventLoop.newSucceededFuture(result));
     }
 
     @Override
     public <V> Future<V> newFailedFuture(Throwable cause) {
-        return new ContextAwareFuture<>(context(), eventLoop.newFailedFuture(cause));
+        return new ContextAwareFuture<>(contextOrNull(), eventLoop.newFailedFuture(cause));
     }
 
     @Override
@@ -130,24 +130,24 @@ final class DefaultContextAwareEventLoop
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return eventLoop.schedule(context().makeContextAware(command), delay, unit);
+        return eventLoop.schedule(contextOrNull().makeContextAware(command), delay, unit);
     }
 
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return eventLoop.schedule(context().makeContextAware(callable), delay, unit);
+        return eventLoop.schedule(contextOrNull().makeContextAware(callable), delay, unit);
     }
 
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(
             Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return eventLoop.scheduleAtFixedRate(context().makeContextAware(command), initialDelay, period, unit);
+        return eventLoop.scheduleAtFixedRate(contextOrNull().makeContextAware(command), initialDelay, period, unit);
     }
 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(
             Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return eventLoop.scheduleWithFixedDelay(context().makeContextAware(command), initialDelay, delay, unit);
+        return eventLoop.scheduleWithFixedDelay(contextOrNull().makeContextAware(command), initialDelay, delay, unit);
     }
 
     @Override
@@ -170,7 +170,7 @@ final class DefaultContextAwareEventLoop
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("eventLoop", eventLoop)
-                          .add("context", context())
+                          .add("context", contextOrNull())
                           .toString();
     }
 }

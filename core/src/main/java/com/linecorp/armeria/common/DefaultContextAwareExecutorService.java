@@ -19,7 +19,7 @@ import java.util.concurrent.ExecutorService;
 
 import com.google.common.base.MoreObjects;
 
-class DefaultContextAwareExecutorService extends AbstractContextAwareExecutorService
+class DefaultContextAwareExecutorService extends AbstractContextAwareExecutorService<ExecutorService>
         implements ContextAwareExecutorService {
     private final RequestContext context;
 
@@ -34,9 +34,14 @@ class DefaultContextAwareExecutorService extends AbstractContextAwareExecutorSer
     }
 
     @Override
+    RequestContext contextOrNull() {
+        return context;
+    }
+
+    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("context", context())
+                          .add("context", contextOrNull())
                           .add("executor", executor)
                           .toString();
     }

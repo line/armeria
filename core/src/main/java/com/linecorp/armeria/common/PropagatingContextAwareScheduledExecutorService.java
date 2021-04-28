@@ -29,7 +29,7 @@ final class PropagatingContextAwareScheduledExecutorService
 
     @Override
     @Nullable
-    public RequestContext context() {
+    public RequestContext contextOrNull() {
         return RequestContext.currentOrNull();
     }
 

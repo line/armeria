@@ -21,14 +21,15 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-final class PropagatingContextAwareExecutorService extends AbstractContextAwareExecutorService {
+final class PropagatingContextAwareExecutorService
+        extends AbstractContextAwareExecutorService<ExecutorService> {
     PropagatingContextAwareExecutorService(ExecutorService executor) {
         super(executor);
     }
 
     @Override
     @Nullable
-    public RequestContext context() {
+    public RequestContext contextOrNull() {
         return RequestContext.currentOrNull();
     }
 
