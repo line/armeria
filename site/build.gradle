@@ -146,7 +146,7 @@ class ApiIndexTask extends DefaultTask {
             result.add([simpleClassName, href])
 
             def doc = Jsoup.parse(path.toFile(), 'UTF-8')
-            doc.select('.detail > h3 > a:not([id^=<init>])').each {
+            doc.select('.method-details > .member-list > li > .detail').each {
                 def methodSignature = it.attr("id")
                 def hrefWithMethod = href + '#' + methodSignature
 
