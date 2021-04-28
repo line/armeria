@@ -77,6 +77,11 @@ jobs:
           distribution: 'adopt'
           java-version: '15'
 
+      - name: Remove cache directory
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: rm -rf .gradle-cache-action
+        shell: bash
+
       - uses: burrunan/gradle-cache-action@v1.10
         with:
           remote-build-cache-proxy-enabled: false
@@ -88,6 +93,7 @@ jobs:
       - name: Collecting the test reports
         if: failure()
         run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-${{ matrix.os }}.tar" {} ';'
+        shell: bash
 
       - name: Upload Artifact
         if: failure()
@@ -120,7 +126,6 @@ jobs:
       - name: Collecting the test reports
         if: failure()
         run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-site.tar" {} ';'
-        shell: bash
 
       - name: Upload Artifact
         if: failure()
