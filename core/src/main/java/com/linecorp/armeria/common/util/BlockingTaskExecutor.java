@@ -189,7 +189,7 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
 
             private ScheduledExecutorService executor;
 
-            DefaultBlockingTaskExecutor (ScheduledThreadPoolExecutor executor) {
+            DefaultBlockingTaskExecutor(ScheduledThreadPoolExecutor executor) {
                 this.executor = executor;
             }
 
