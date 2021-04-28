@@ -48,7 +48,7 @@ jobs:
 
     - name: Install svgbob_cli
       if: ${{ matrix.site }}
-      run: sudo apt install cargo && cargo install svgbob_cli
+      run: sudo apt -y install cargo && cargo install svgbob_cli
 
     - name: Cache
       uses: actions/cache@v2
