@@ -36,9 +36,9 @@ enum SimpleTypeServiceNaming implements ServiceNaming {
 
         return cache.computeIfAbsent(fullTypeName, key -> {
             String simpleTypeName = "";
-            final int packageIndex = fullTypeName.lastIndexOf('.');
+            final int packageIndex = key.lastIndexOf('.');
             if (packageIndex >= 0) {
-                simpleTypeName = fullTypeName.substring(packageIndex + 1);
+                simpleTypeName = key.substring(packageIndex + 1);
             }
 
 
