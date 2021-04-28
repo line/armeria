@@ -33,12 +33,12 @@ date: 2021-04-28
 - You no longer see a wrong `serviceName` for annotated services when <type://ServiceNaming> is used. #3468
   - `ServiceRequestContext.config().defaultServiceName()` no longer returns `null` if a default service name
     is specified.
-- You no longer see a ClosedStreamException when a gRPC call is cancelled by a client. #3452 #3455
+- You no longer see a <type://ClosedStreamException> when a gRPC call is cancelled by a client. #3452 #3455
 - You no longer see `Socket.initialize()` error message failed due to a `UnsatisfiedLinkError`. #3457 #3485
 - You can now specify an absolute URI using <type://WebClient#prepare()>. #3479
   - You can specify a query string both in a path string and via
     <type://WebClientRequestPreparation#queryParam(String,Object)>.
-- You no longer see redundant parameters in DocService when Kotlin data class is used. #3454 #3461
+- You no longer see redundant parameters in <type://DocService> when Kotlin data class is used. #3454 #3461
 - You no longer see an `IllegalStateException` when a <type://StreamMessage#of(Path)?full> or
   <type://StreamMessage#of(File)?full> is used in a client-side. #3450
 - You no longer have to specify a custom <type://JacksonRequestConverterFunction> or
