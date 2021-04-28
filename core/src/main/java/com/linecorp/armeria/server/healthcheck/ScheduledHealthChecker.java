@@ -171,7 +171,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
                 return;
             }
             state = State.SCHEDULED;
-            eventExecutor.execute(this::runHealthCheck);
+            scheduledFuture = eventExecutor.submit(this::runHealthCheck);
         }
 
         private void stopHealthChecker() {
