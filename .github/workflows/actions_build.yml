@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  build_on_linux:
+  build:
     runs-on: ${{ matrix.on }}
     timeout-minutes: 120
     strategy:
@@ -63,17 +63,17 @@ jobs:
          ${{ runner.os }}-gradle-
 
     - name: Build with Gradle
-        run: |
-          ./gradlew --no-daemon --stacktrace --parallel --max-workers=4 build \
-          ${{ matrix.lint && 'lint' || '' }} \
-          ${{ !matrix.lint && '-PnoLint' || '' }} \
-          ${{ !matrix.site && '-PnoWeb' || '' }} \
-          ${{ matrix.coverage && '-Pcoverage' || '' }} \
-          ${{ matrix.leak && '-Pleak' || '' }} \
-          ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
-          -PbuildJdkVersion=15 \
-          -PtestJavaVersion=${{ matrix.java }} \
-          -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }} \
+      run: |
+        ./gradlew --no-daemon --stacktrace --parallel --max-workers=4 build \
+        ${{ matrix.lint && 'lint' || '' }} \
+        ${{ !matrix.lint && '-PnoLint' || '' }} \
+        ${{ !matrix.site && '-PnoWeb' || '' }} \
+        ${{ matrix.coverage && '-Pcoverage' || '' }} \
+        ${{ matrix.leak && '-Pleak' || '' }} \
+        ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
+        -PbuildJdkVersion=15 \
+        -PtestJavaVersion=${{ matrix.java }} \
+        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }} \
 
     - name: Cleanup Gradle Cache
       # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
@@ -81,6 +81,7 @@ jobs:
       run: |
         rm -f ~/.gradle/caches/modules-2/modules-2.lock
         rm -f ~/.gradle/caches/modules-2/gc.properties
+      shell: bash
 
     - name: Upload coverage to Codecov
       if: ${{ matrix.coverage }}
