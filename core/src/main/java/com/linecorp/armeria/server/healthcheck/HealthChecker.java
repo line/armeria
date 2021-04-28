@@ -45,6 +45,9 @@ public interface HealthChecker {
      *                      {@link HealthCheckStatus#ttlMillis()} determines the delay before the
      *                      next health check. If the future completed exceptionally, the specified
      *                      {@code fallbackTtl} will be used instead to determine the delay.
+     *                      {@link Supplier} should avoid returning null or throwing exception.
+     *                      The {@link CompletionStage} from {@link Supplier} should avoid completing
+     *                      with null result or failing.
      * @param fallbackTtl   The amount of delay between each health check if the previous health
      *                      check failed unexpectedly so it's not possible to determine how long
      *                      we have to wait until the next health check.
@@ -66,6 +69,9 @@ public interface HealthChecker {
      *                      {@link HealthCheckStatus#ttlMillis()} determines the delay before the
      *                      next health check. If the future completed exceptionally, the specified
      *                      {@code fallbackTtl} will be used instead to determine the delay.
+     *                      {@link Supplier} should avoid returning null or throwing exception.
+     *                      The {@link CompletionStage} from {@link Supplier} should avoid completing
+     *                      with null result or failing.
      * @param fallbackTtl   The amount of delay between each health check if the previous health
      *                      check failed unexpectedly so it's not possible to determine how long
      *                      we have to wait until the next health check.
