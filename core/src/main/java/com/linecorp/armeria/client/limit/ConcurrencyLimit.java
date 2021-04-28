@@ -30,7 +30,6 @@ import java.util.function.Predicate;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.RequestContext;
 
 /**
  * Concurrency settings that limits the concurrent number of active requests.
@@ -45,21 +44,12 @@ public final class ConcurrencyLimit {
         return new Builder();
     }
 
-    private final Predicate<RequestContext> policy;
+    private final Predicate<ClientRequestContext> policy;
     private final int maxConcurrency;
     private final long timeoutMillis;
     private final AtomicInteger numActiveRequests = new AtomicInteger();
 
-    /**
-     * Creates a new instance to limit the concurrent number of active requests to {@code maxConcurrency}.
-     *
-     * @param policy the policy to apply on the incoming {@code RequestContext} if the request should be
-     *      limited or not.
-     * @param maxConcurrency the maximum number of concurrent active requests. {@code 0} to disable the limit.
-     * @param timeoutMillis the amount of time until this decorator fails the request if the request was not
-     *                delegated to the {@code delegate} before then.
-     */
-    ConcurrencyLimit(Predicate<RequestContext> policy, int maxConcurrency, long timeoutMillis) {
+    private ConcurrencyLimit(Predicate<ClientRequestContext> policy, int maxConcurrency, long timeoutMillis) {
         this.policy = policy;
         this.maxConcurrency = maxConcurrency;
         this.timeoutMillis = timeoutMillis;
@@ -131,7 +121,7 @@ public final class ConcurrencyLimit {
     public static class Builder {
         private int maxConcurrency;
         private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
-        private Predicate<RequestContext> policy = requestContext -> true;
+        private Predicate<ClientRequestContext> policy = requestContext -> true;
 
         /**
          * Sets the maximum number of concurrent active requests. {@code 0} to disable the limit.
@@ -155,7 +145,7 @@ public final class ConcurrencyLimit {
         /**
          * Sets the predicate for which to apply the concurrency limit.
          */
-        public Builder policy(Predicate<RequestContext> policy) {
+        public Builder policy(Predicate<ClientRequestContext> policy) {
             this.policy = requireNonNull(policy, "policy");
             return this;
         }
