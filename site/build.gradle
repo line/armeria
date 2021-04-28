@@ -65,27 +65,26 @@ task develop(type: NpmTask) {
     args = ['run', 'develop']
 }
 
-final def lintEnabled = !rootProject.hasProperty('noLint')
-if (lintEnabled) {
-    task eslint(type: NpmTask) {
-        dependsOn tasks.generateSiteSources
-        args = ['run', 'lint']
-        inputs.dir('src')
-        inputs.file('.eslintrc.js')
-        inputs.file('package.json')
-        inputs.file('package-lock.json')
-    }
 
-    task siteLint {
-        dependsOn tasks.eslint
-    }
-}
+ task eslint(type: NpmTask) {
+     dependsOn tasks.generateSiteSources
+     args = ['run', 'lint']
+     inputs.dir('src')
+     inputs.file('.eslintrc.js')
+     inputs.file('package.json')
+     inputs.file('package-lock.json')
+ }
+
+// 'siteLint' could run separately regardless of '-PnoLint' option
+ task siteLint {
+     dependsOn tasks.eslint
+ }
 
 // Note that this task is not triggered by the 'build' task
 // because it takes long to build a site.
 task site(type: NpmTask) {
     dependsOn tasks.generateSiteSources
-    if (lintEnabled) {
+    if (!rootProject.hasProperty('noLint')) {
         dependsOn tasks.siteLint
     }
     args = ['run', 'build']
