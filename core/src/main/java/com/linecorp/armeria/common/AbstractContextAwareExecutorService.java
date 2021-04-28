@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 abstract class AbstractContextAwareExecutorService implements ExecutorService {
-    protected final ExecutorService executor;
+    final ExecutorService executor;
 
     AbstractContextAwareExecutorService(ExecutorService executor) {this.executor = executor;}
 

@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 abstract class AbstractContextAwareScheduledExecutorService extends AbstractContextAwareExecutorService
         implements ScheduledExecutorService {
-    protected final ScheduledExecutorService executor;
+    final ScheduledExecutorService executor;
 
     AbstractContextAwareScheduledExecutorService(ScheduledExecutorService executor) {
         super(executor);
