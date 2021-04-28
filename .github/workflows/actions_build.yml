@@ -67,10 +67,10 @@ jobs:
         ./gradlew --no-daemon --stacktrace --parallel --max-workers=4 build \
         ${{ matrix.lint && 'lint' || '' }} \
         ${{ !matrix.lint && '-PnoLint' || '' }} \
+        ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
         ${{ !matrix.site && '-PnoWeb' || '' }} \
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
-        ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
         -PbuildJdkVersion=15 \
         -PtestJavaVersion=${{ matrix.java }} \
         -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }}
