@@ -35,7 +35,7 @@ abstract class AbstractContextAwareExecutorService implements ExecutorService {
     }
 
     @Nullable
-    protected abstract RequestContext context();
+    abstract RequestContext context();
 
     @Override
     public final void shutdown() {
