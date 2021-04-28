@@ -41,7 +41,6 @@ enum SimpleTypeServiceNaming implements ServiceNaming {
                 simpleTypeName = key.substring(packageIndex + 1);
             }
 
-
             // Trim a trailing dollar sign from simpleTypeName
             int lastCharIndex = simpleTypeName.length() - 1;
             while (simpleTypeName.charAt(lastCharIndex) == '$') {
