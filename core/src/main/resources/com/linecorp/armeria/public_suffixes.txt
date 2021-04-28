@@ -2788,7 +2788,9 @@ giske.no
 git-pages.rit.edu
 git-repos.de
 gitapp.si
+github.dev
 github.io
+githubpreview.dev
 githubusercontent.com
 gitlab.io
 gitpage.si
