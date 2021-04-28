@@ -31,7 +31,7 @@ abstract class AbstractContextAwareExecutorService implements ExecutorService {
     final ExecutorService executor;
 
     AbstractContextAwareExecutorService(ExecutorService executor) {
-        this.executor = executor;
+        this.executor = requireNonNull(executor, "executor");
     }
 
     @Nullable
