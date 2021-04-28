@@ -141,7 +141,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         private final EventExecutor eventExecutor;
 
         private final SettableHealthChecker settableHealthChecker = new SettableHealthChecker(false);
-        private State state = State.INIT;
+        private volatile State state = State.INIT;
         private volatile Future<?> scheduledFuture = Futures.immediateVoidFuture();
 
         ScheduledHealthCheckerImpl(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
