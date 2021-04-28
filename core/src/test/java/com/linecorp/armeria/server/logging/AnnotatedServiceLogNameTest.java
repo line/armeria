@@ -155,7 +155,7 @@ class AnnotatedServiceLogNameTest {
         // ServiceNaming is used.
         assertThat(sctx.config().defaultServiceName()).isNull();
         assertThat(sctx.log().whenComplete().join().serviceName())
-                .isEqualTo("AnnotatedServiceLogNameTest$1$1");
+                .matches("^AnnotatedServiceLogNameTest(\\$[0-9]+)+$");
     }
 
     private static class MyAnnotatedService {

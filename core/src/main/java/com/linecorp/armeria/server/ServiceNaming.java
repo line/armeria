@@ -64,23 +64,7 @@ public interface ServiceNaming {
      * e.g. {@code HelloService}.
      */
     static ServiceNaming simpleTypeName() {
-        return ctx -> {
-            final String fullTypeName = fullTypeName().serviceName(ctx);
-            String simpleTypeName = "";
-            final int packageIndex = fullTypeName.lastIndexOf('.');
-            if (packageIndex >= 0) {
-                simpleTypeName = fullTypeName.substring(packageIndex + 1);
-            }
-
-            final int lastCharIndex = simpleTypeName.length() - 1;
-            final char lastChar = simpleTypeName.charAt(lastCharIndex);
-            if (lastChar == '$') {
-                // Trim a trailing dollar sign for scala object type which always ends with '$'
-                return simpleTypeName.substring(0, lastCharIndex);
-            } else {
-                return simpleTypeName;
-            }
-        };
+        return SimpleTypeServiceNaming.INSTANCE;
     }
 
     /**

@@ -62,6 +62,17 @@ class ServiceNamingTest {
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
     }
 
+    @Test
+    void simpleTypeName_trimTrailingDollarSignMany() {
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        final ServiceConfig config =
+                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$$$(),
+                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false);
+        when(ctx.config()).thenReturn(config);
+        final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
+        assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
+    }
+
     private static final class NestedClass implements HttpService {
 
         @Override
@@ -72,6 +83,15 @@ class ServiceNamingTest {
 
     @SuppressWarnings({ "DollarSignInName", "checkstyle:TypeName" })
     private static final class TrailingDollarSign$ implements HttpService {
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            return null;
+        }
+    }
+
+    @SuppressWarnings({ "DollarSignInName", "checkstyle:TypeName" })
+    private static final class TrailingDollarSign$$$ implements HttpService {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
