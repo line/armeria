@@ -9,9 +9,6 @@ jobs:
   build:
     runs-on: ${{ matrix.on }}
     timeout-minutes: 120
-    concurrency:
-      group: ${{ github.head_ref }}
-      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
