@@ -34,7 +34,8 @@ date: 2021-04-28
   - `ServiceRequestContext.config().defaultServiceName()` no longer returns `null` if a default service name
     is specified.
 - You no longer see a <type://ClosedStreamException> when a gRPC call is cancelled by a client. #3452 #3455
-- You no longer see `Socket.initialize()` error message failed due to a `UnsatisfiedLinkError`. #3457 #3485
+- You no longer see the `Failed to force-initialize 'io.netty.channel.unix.Socket'` error message when
+  Armeria attempts to load native libraries. #3457 #3485
 - You can now specify an absolute URI using <type://WebClient#prepare()>. #3479
   - You can specify a query string both in a path string and via
     <type://WebClientRequestPreparation#queryParam(String,Object)>.
@@ -52,7 +53,8 @@ date: 2021-04-28
 - You no longer see the <type://RequestTimeoutException> log message when a response stream fails due to
   cancellation or timeout. #3459
 - A timeout exception is created only when a request or response is timed out. #3462
-- Armeria now rejects all HTTP/1 and HTTP/2 CONNECT requests explicitly. #3482
+- Armeria now rejects all CONNECT requests explicitly, except HTTP/2 CONNECT requests with a `:protocol`
+  pseudo header. #3482
 
 ## 🏚️ Deprecations
 
