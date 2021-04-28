@@ -16,17 +16,20 @@
 
 package com.linecorp.armeria.client.limit;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.limit.AbstractConcurrencyLimitingClient.validateMaxConcurrency;
 import static java.lang.Integer.MAX_VALUE;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestContext;
 
 /**
@@ -35,7 +38,14 @@ import com.linecorp.armeria.common.RequestContext;
 public final class ConcurrencyLimit {
     private static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
 
-    private final Function<RequestContext, Boolean> policy;
+    /**
+     * Returns a new builder.
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    private final Predicate<RequestContext> policy;
     private final int maxConcurrency;
     private final long timeoutMillis;
     private final AtomicInteger numActiveRequests = new AtomicInteger();
@@ -49,7 +59,7 @@ public final class ConcurrencyLimit {
      * @param timeoutMillis the amount of time until this decorator fails the request if the request was not
      *                delegated to the {@code delegate} before then.
      */
-    ConcurrencyLimit(Function<RequestContext, Boolean> policy, int maxConcurrency, long timeoutMillis) {
+    ConcurrencyLimit(Predicate<RequestContext> policy, int maxConcurrency, long timeoutMillis) {
         this.policy = policy;
         this.maxConcurrency = maxConcurrency;
         this.timeoutMillis = timeoutMillis;
@@ -66,6 +76,7 @@ public final class ConcurrencyLimit {
      * Returns the value of the {@code "timeout"} with the desired {@code "unit"}.
      */
     public long timeout(TimeUnit desiredUnit) {
+        requireNonNull(desiredUnit, "desiredUnit");
         return desiredUnit.convert(timeoutMillis, MILLISECONDS);
     }
 
@@ -79,8 +90,12 @@ public final class ConcurrencyLimit {
     /**
      * Checks if the concurrency control should be enforced for the given {@code requestContext}.
      */
-    public Boolean shouldLimit(RequestContext requestContext) {
-        return maxConcurrency > 0 && policy.apply(requestContext);
+    public Boolean shouldLimit(ClientRequestContext requestContext) {
+        return maxConcurrency > 0 && policy.test(requestContext);
+    }
+
+    AtomicInteger numActiveRequests() {
+        return numActiveRequests;
     }
 
     @Override
@@ -92,8 +107,8 @@ public final class ConcurrencyLimit {
             return false;
         }
         final ConcurrencyLimit that = (ConcurrencyLimit) o;
-        return maxConcurrency == that.maxConcurrency && timeoutMillis == that.timeoutMillis && policy.equals(
-                that.policy);
+        return maxConcurrency == that.maxConcurrency && timeoutMillis == that.timeoutMillis &&
+               policy.equals(that.policy);
     }
 
     @Override
@@ -110,30 +125,44 @@ public final class ConcurrencyLimit {
                           .toString();
     }
 
-    AtomicInteger numActiveRequests() {
-        return numActiveRequests;
-    }
-
-    static class Builder {
+    /**
+     * Builds a {@link ConcurrencyLimit} instance using builder pattern.
+     */
+    public static class Builder {
         private int maxConcurrency;
         private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
-        private Function<RequestContext, Boolean> policy = requestContext -> true;
+        private Predicate<RequestContext> policy = requestContext -> true;
 
+        /**
+         * Sets the maximum number of concurrent active requests. {@code 0} to disable the limit.
+         */
         public Builder maxConcurrency(int maxConcurrency) {
             this.maxConcurrency = validateMaxConcurrency(maxConcurrency == MAX_VALUE ? 0 : maxConcurrency);
             return this;
         }
 
+        /**
+         * Sets the amount of time until this decorator fails the request if the request was not
+         *      delegated to the {@code delegate} before then.
+         */
         public Builder timeout(long timeout, TimeUnit unit) {
+            checkArgument(timeout >= 0, "timeout: %s (expected: >= 0)", timeout);
+            requireNonNull(unit, "unit");
             this.timeoutMillis = unit.convert(timeout, MILLISECONDS);
             return this;
         }
 
-        public Builder policy(Function<RequestContext, Boolean> policy) {
-            this.policy = policy;
+        /**
+         * Sets the predicate for which to apply the concurrency limit.
+         */
+        public Builder policy(Predicate<RequestContext> policy) {
+            this.policy = requireNonNull(policy, "policy");
             return this;
         }
 
+        /**
+         * Builds the {@code ConcurrencyLimit}.
+         */
         public ConcurrencyLimit build() {
             return new ConcurrencyLimit(policy, maxConcurrency, timeoutMillis);
         }

@@ -244,7 +244,7 @@ class ConcurrencyLimitingClientTest {
 
     @Test
     void configuresClientWithConcurrencyLimit() {
-        final ConcurrencyLimit concurrencyLimit = new ConcurrencyLimit.Builder()
+        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder()
                 .maxConcurrency(1)
                 .timeout(10, SECONDS)
                 .policy(requestContext -> true)
@@ -260,7 +260,7 @@ class ConcurrencyLimitingClientTest {
         final HttpResponseWriter actualRes = HttpResponse.streaming();
 
         when(delegate.execute(ctx, req)).thenReturn(actualRes);
-        final ConcurrencyLimit concurrencyLimit = new ConcurrencyLimit.Builder()
+        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder()
                 .maxConcurrency(1)
                 .policy(requestContext -> false)
                 .build();
@@ -290,7 +290,7 @@ class ConcurrencyLimitingClientTest {
 
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
 
-        final ConcurrencyLimit concurrencyLimit = new ConcurrencyLimit.Builder()
+        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder()
                 .maxConcurrency(1)
                 .timeout(500, TimeUnit.MILLISECONDS)
                 .policy(requestContext -> true)

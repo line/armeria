@@ -83,7 +83,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      */
     protected AbstractConcurrencyLimitingClient(Client<I, O> delegate,
                                                 int maxConcurrency, long timeout, TimeUnit unit) {
-        this(delegate, new ConcurrencyLimit.Builder()
+        this(delegate, ConcurrencyLimit.builder()
                 .maxConcurrency(maxConcurrency)
                 .timeout(timeout, unit)
                 .build());
@@ -96,7 +96,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      * @param delegate the delegate {@link Client}
      * @param concurrencyLimit the concurrency limit config
      */
-    public AbstractConcurrencyLimitingClient(Client<I, O> delegate, ConcurrencyLimit concurrencyLimit) {
+    protected AbstractConcurrencyLimitingClient(Client<I, O> delegate, ConcurrencyLimit concurrencyLimit) {
         super(delegate);
         this.concurrencyLimit = concurrencyLimit;
         this.numActiveRequests = concurrencyLimit.numActiveRequests();
