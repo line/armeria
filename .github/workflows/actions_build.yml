@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         on: [ self-hosted, macos-latest, windows-latest ]
-        java: [ '15' ]
+        java: [ 15 ]
         include:
           - java: 8
             on: self-hosted
@@ -31,7 +31,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - id: setup-jre
-      if: "!startsWith(matrix.java, '15')"
+      if: ${{ matrix.java != 15 }}
       name: Set up JRE ${{ matrix.java }}
       uses: actions/setup-java@v2
       with:
@@ -50,17 +50,17 @@ jobs:
       if: ${{ matrix.site }}
       run: sudo apt install cargo && cargo install svgbob_cli
 
-   - name: Restore Gradle Cache
-     uses: actions/cache@v2
-     with:
-       path: |
-         ~/.gradle/wrapper/dists
-         ~/.gradle/caches/jars-3
-         ~/.gradle/caches/modules-2
-         ~/.gradle/caches/package-lists
-       key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-       restore-keys: |
-         ${{ runner.os }}-gradle-
+    - name: Cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.gradle/wrapper/dists
+          ~/.gradle/caches/jars-3
+          ~/.gradle/caches/modules-2
+          ~/.gradle/caches/package-lists
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
 
     - name: Build with Gradle
       run: |
