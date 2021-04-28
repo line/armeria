@@ -108,12 +108,18 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             // Validate the method.
-            final CharSequence method = headers.method();
-            if (method == null) {
+            final CharSequence methodText = headers.method();
+            if (methodText == null) {
                 writeErrorResponse(ctx, streamId, HttpResponseStatus.BAD_REQUEST, DATA_MISSING_METHOD);
                 return;
             }
-            if (!HttpMethod.isSupported(method.toString())) {
+
+            // Reject a request with an unsupported method.
+            // Note: Accept a CONNECT request with a :protocol header, as defined in:
+            //       https://datatracker.ietf.org/doc/html/rfc8441#section-4
+            final HttpMethod method = HttpMethod.tryParse(methodText.toString());
+            if (method == null ||
+                method == HttpMethod.CONNECT && !headers.contains(HttpHeaderNames.PROTOCOL)) {
                 writeErrorResponse(ctx, streamId, HttpResponseStatus.METHOD_NOT_ALLOWED,
                                    DATA_UNSUPPORTED_METHOD);
                 return;

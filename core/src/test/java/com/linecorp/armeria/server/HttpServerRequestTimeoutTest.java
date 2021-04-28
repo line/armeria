@@ -127,9 +127,9 @@ class HttpServerRequestTimeoutTest {
             sb.requestTimeoutMillis(0)
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
-                          Flux.interval(Duration.ofMillis(100))
+                          Flux.interval(Duration.ofMillis(200))
                               .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
-                                                                   Duration.ofMillis(150)));
+                                                                   Duration.ofMillis(500)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-now", (ctx, req) -> {

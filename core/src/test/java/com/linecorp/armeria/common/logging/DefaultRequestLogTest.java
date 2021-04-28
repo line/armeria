@@ -364,6 +364,46 @@ class DefaultRequestLogTest {
     }
 
     @Test
+    void logServiceNameWithServiceNaming_shorten50() {
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.shorten(50))
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(rpcRequest, null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith("c.l.armeria.common.logging.DefaultRequestLogTest");
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_shorten() {
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.shorten())
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(rpcRequest, null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith("c.l.a.c.l.DefaultRequestLogTest");
+    }
+
+    @Test
     void logServiceNameWithServiceNaming_custom() {
         final ServiceRequestContext sctx =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))

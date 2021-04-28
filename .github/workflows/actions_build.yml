@@ -1,0 +1,131 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  build_on_linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [ '8', '11', '14', '15' ]
+        include:
+          - java: 11
+            coverage: true
+          - java: 15
+            leak: true
+    steps:
+    - uses: actions/checkout@v2
+
+    - id: setup-jre
+      if: "!startsWith(matrix.java, '15')"
+      name: Set up JRE ${{ matrix.java }}
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'adopt'
+        java-version: ${{ matrix.java }}
+        java-package: jre
+
+    - id: setup-jdk-15
+      name: Set up JDK 15
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'adopt'
+        java-version: '15'
+
+    - uses: burrunan/gradle-cache-action@v1.10
+      with:
+        remote-build-cache-proxy-enabled: false
+        arguments: --no-daemon --stacktrace --parallel --max-workers=4 lint build ${{ matrix.coverage && '-Pcoverage' || '' }} ${{ matrix.leak && '-Pleak' || '' }}
+        properties: |
+          buildJdkVersion=15
+          testJavaVersion=${{ matrix.java }}
+          org.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }}
+
+    - if: ${{ matrix.coverage }}
+      uses: codecov/codecov-action@v1
+
+    - name: Collecting the test reports
+      if: failure()
+      run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
+
+    - name: Upload Artifact
+      if: failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: reports-JVM-${{ matrix.java }}
+        path: reports-JVM-${{ matrix.java }}.tar
+        retention-days: 3
+
+  build_on_other:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ macos-latest, windows-latest ]
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK 15
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '15'
+
+      - uses: burrunan/gradle-cache-action@v1.10
+        with:
+          remote-build-cache-proxy-enabled: false
+          arguments: --no-daemon --stacktrace :core:test :grpc:test :thrift0.13:test :it:server:test
+          properties: |
+            noLint=true
+            noWeb=true
+
+      - name: Collecting the test reports
+        if: failure()
+        run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-${{ matrix.os }}.tar" {} ';'
+
+      - name: Upload Artifact
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: reports-${{ matrix.os }}
+          path: reports-${{ matrix.os }}.tar
+          retention-days: 3
+
+  build_site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK 15
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '15'
+
+      - name: Install svgbob_cli
+        run: sudo apt install cargo && cargo install svgbob_cli
+
+      - uses: burrunan/gradle-cache-action@v1.10
+        with:
+          remote-build-cache-proxy-enabled: false
+          arguments: --no-daemon --stacktrace --parallel --max-workers=4 :site:siteLint :site:site
+
+      - name: Collecting the test reports
+        if: failure()
+        run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-site.tar" {} ';'
+        shell: bash
+
+      - name: Upload Artifact
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: reports-site
+          path: reports-site.tar
+          retention-days: 3

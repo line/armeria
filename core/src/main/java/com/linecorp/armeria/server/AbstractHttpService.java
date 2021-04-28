@@ -63,6 +63,8 @@ public abstract class AbstractHttpService implements HttpService {
                 return doDelete(ctx, req);
             case TRACE:
                 return doTrace(ctx, req);
+            case CONNECT:
+                return doConnect(ctx, req);
             default:
                 return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
@@ -129,6 +131,17 @@ public abstract class AbstractHttpService implements HttpService {
      * This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response by default.
      */
     protected HttpResponse doTrace(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    /**
+     * Handles a {@link HttpMethod#CONNECT CONNECT} request. Note that Armeria handles only a {@code CONNECT}
+     * request with a {@code :protocol} HTTP/2 pseudo header, as defined in <a
+     * href="https://datatracker.ietf.org/doc/html/rfc8441#section-4">RFC8441, Bootstrapping WebSockets with
+     * HTTP/2</a>. This method sends a {@link HttpStatus#METHOD_NOT_ALLOWED 405 Method Not Allowed} response
+     * by default.
+     */
+    protected HttpResponse doConnect(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
     }
 }

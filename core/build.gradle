@@ -42,7 +42,8 @@ mrJarVersions.each { version->
         classpath = sourceSets."java${version}Test".runtimeClasspath
 
         enabled = (Integer.parseInt(JavaVersion.current().getMajorVersion()) >= version) &&
-                (!System.env.TEST_JAVA_VERSION || Integer.parseInt(System.env.TEST_JAVA_VERSION) >= version)
+                (!rootProject.hasProperty('testJavaVersion') ||
+                        Integer.parseInt(rootProject.findProperty('testJavaVersion')) >= version)
     }
 
     configurations."java${version}Implementation".extendsFrom configurations.implementation
