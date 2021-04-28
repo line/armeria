@@ -81,6 +81,7 @@ public final class ConcurrencyLimit {
      * Checks if the concurrency control should be enforced for the given {@code requestContext}.
      */
     public Boolean shouldLimit(ClientRequestContext requestContext) {
+        requireNonNull(requestContext, "requestContext");
         return maxConcurrency > 0 && policy.test(requestContext);
     }
 
