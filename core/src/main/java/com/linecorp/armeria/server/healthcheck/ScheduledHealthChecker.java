@@ -85,7 +85,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         // `stopHealthChecker()` for each `startHealthChecker()`, because this method is guarded by
         // `requestCount.getAndIncrement()` to allow only the first request to start to schedule
         // a task.
-        for (; ; ) {
+        for (;;) {
             if (impl.compareAndSet(null, newlyScheduled)) {
                 newlyScheduled.addListener(onHealthCheckerUpdate);
                 newlyScheduled.startHealthChecker();
@@ -196,9 +196,9 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
                         isHealthy = false;
                         intervalMillis = fallbackTtl.toMillis();
                     } else if (result == null) {
-                        logger.warn("Health checker returns an unexpected null result, "
-                                    + "schedule the next check after {}ms.",
-                                    fallbackTtl.toMillis(), throwable);
+                        logger.warn("Health checker returns an unexpected null result, " +
+                                    "schedule the next check after {}ms.",
+                                    fallbackTtl.toMillis());
                         isHealthy = false;
                         intervalMillis = fallbackTtl.toMillis();
                     } else {
