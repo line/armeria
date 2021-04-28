@@ -26,6 +26,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Futures;
 
@@ -44,19 +47,16 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     private final Duration fallbackTtl;
     private final EventExecutor eventExecutor;
     private final Consumer<HealthChecker> onHealthCheckerUpdate;
-    private final AtomicBoolean isHealthy;
-    private final AtomicInteger requestCount;
-    private final AtomicReference<ScheduledHealthCheckerImpl> impl;
+    private final AtomicBoolean isHealthy = new AtomicBoolean();
+    private final AtomicInteger requestCount = new AtomicInteger();
+    private final AtomicReference<ScheduledHealthCheckerImpl> impl = new AtomicReference<>();
 
     ScheduledHealthChecker(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
-                           Duration facllbackTtl, EventExecutor eventExecutor) {
+                           Duration fallbackTtl, EventExecutor eventExecutor) {
         this.healthChecker = healthChecker;
-        this.fallbackTtl = facllbackTtl;
+        this.fallbackTtl = fallbackTtl;
         this.eventExecutor = eventExecutor;
 
-        isHealthy = new AtomicBoolean();
-        requestCount = new AtomicInteger();
-        impl = new AtomicReference<>();
         onHealthCheckerUpdate = latestValue -> {
             isHealthy.set(latestValue.isHealthy());
             notifyListeners(latestValue);
@@ -74,16 +74,18 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         }
         final ScheduledHealthCheckerImpl newlyScheduled =
                 new ScheduledHealthCheckerImpl(healthChecker, fallbackTtl, eventExecutor);
-        // This spin avoid the impl is not null when this instance is shared by multiple servers.
-        // e.g. Server A start -> Server A stop(just finish decrementAndGet and get 0) ->
-        // Server B start(just finis getAndIncrement and get 0). And there is a window that impl is not set to
-        // null by Server A's stopHealthChecker. So Server B's startHealthChecker need to spin until Server
-        // A's stopHealthChecker complete.
-
-        // And this method only allow the first request can start the schedule by requestCount#getAndIncrement,
-        // if caller calling startHealthChecker/stopHealthChecker correctly(each pair should be called
-        // sequentially). So there should be no spin longer than expected.
-        for (;;) {
+        // This spin prevents the following race condition, which occurs when this instance is shared
+        // by more than one server instance:
+        //
+        // 1. Server A starts.
+        // 2. Server A stops. decrementAndGet() returns 0, but it didn't clear `impl` yet.
+        // 3. Server B starts; getAndIncrement() returns 0, but `impl` isn't `null` yet.
+        //
+        // There should be no unexpectedly long spin here, as long as a caller makes sure to call
+        // `stopHealthChecker()` for each `startHealthChecker()`, because this method is guarded by
+        // `requestCount.getAndIncrement()` to allow only the first request to start to schedule
+        // a task.
+        for (; ; ) {
             if (impl.compareAndSet(null, newlyScheduled)) {
                 newlyScheduled.addListener(onHealthCheckerUpdate);
                 newlyScheduled.startHealthChecker();
@@ -92,6 +94,10 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         }
     }
 
+    /**
+     * This method must be called after the paired startHealthChecker completes to
+     * guarantee the state consistency.
+     */
     void stopHealthChecker() {
         final int currentCount = requestCount.decrementAndGet();
         // Must be called after startHealthChecker, so it's always greater than or equal to 0.
@@ -100,11 +106,10 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
             return;
         }
 
-        final ScheduledHealthCheckerImpl current = impl.get();
+        final ScheduledHealthCheckerImpl current = impl.getAndSet(null);
         // Must be called after startHealthChecker, so it's always non null.
         assert current != null;
 
-        impl.compareAndSet(current, null);
         current.stopHealthChecker();
         current.removeListener(onHealthCheckerUpdate);
     }
@@ -128,25 +133,22 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     /**
      * Health checker can be scheduled only once. Calling startHealthChecker won't work after stopHealthChecker.
      */
-    private static class ScheduledHealthCheckerImpl implements ListenableHealthChecker {
+    private static final class ScheduledHealthCheckerImpl implements ListenableHealthChecker {
+        private static final Logger logger = LoggerFactory.getLogger(ScheduledHealthCheckerImpl.class);
 
         private final Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker;
         private final Duration fallbackTtl;
-        private final SettableHealthChecker settableHealthChecker;
         private final EventExecutor eventExecutor;
 
-        private State state;
-        private volatile Future<?> scheduledFuture;
+        private final SettableHealthChecker settableHealthChecker = new SettableHealthChecker(false);
+        private State state = State.INIT;
+        private volatile Future<?> scheduledFuture = Futures.immediateVoidFuture();
 
         ScheduledHealthCheckerImpl(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
                                    Duration fallbackTtl, EventExecutor eventExecutor) {
             this.healthChecker = healthChecker;
             this.fallbackTtl = fallbackTtl;
             this.eventExecutor = eventExecutor;
-            settableHealthChecker = new SettableHealthChecker(false);
-
-            state = State.INIT;
-            scheduledFuture = Futures.immediateVoidFuture();
         }
 
         @Override
@@ -187,20 +189,30 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
             try {
                 healthChecker.get().handle((result, throwable) -> {
                     final boolean isHealthy;
-                    final long intervalMills;
+                    final long intervalMillis;
                     if (throwable != null) {
+                        logger.warn("Health checker throws an exception, schedule the next check after {}ms.",
+                                    fallbackTtl.toMillis(), throwable);
                         isHealthy = false;
-                        intervalMills = fallbackTtl.toMillis();
+                        intervalMillis = fallbackTtl.toMillis();
+                    } else if (result == null) {
+                        logger.warn("Health checker returns an unexpected null result, "
+                                    + "schedule the next check after {}ms.",
+                                    fallbackTtl.toMillis(), throwable);
+                        isHealthy = false;
+                        intervalMillis = fallbackTtl.toMillis();
                     } else {
                         isHealthy = result.isHealthy();
-                        intervalMills = result.ttlMillis();
+                        intervalMillis = result.ttlMillis();
                     }
                     settableHealthChecker.setHealthy(isHealthy);
-                    scheduledFuture = eventExecutor.schedule(this::runHealthCheck, intervalMills,
+                    scheduledFuture = eventExecutor.schedule(this::runHealthCheck, intervalMillis,
                                                              TimeUnit.MILLISECONDS);
                     return null;
                 });
             } catch (Throwable throwable) {
+                logger.warn("Health checker throws an exception, schedule the next check after {}ms.",
+                            fallbackTtl.toMillis(), throwable);
                 settableHealthChecker.setHealthy(false);
                 scheduledFuture = eventExecutor.schedule(this::runHealthCheck, fallbackTtl.toMillis(),
                                                          TimeUnit.MILLISECONDS);

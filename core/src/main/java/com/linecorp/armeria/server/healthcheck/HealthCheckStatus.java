@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -33,6 +37,7 @@ public final class HealthCheckStatus {
      * @param ttlMillis interval for scheduling the next check
      */
     public HealthCheckStatus(boolean isHealthy, long ttlMillis) {
+        checkArgument(ttlMillis > 0, "ttlMillis: %s (expected: > 0)", ttlMillis);
         this.isHealthy = isHealthy;
         this.ttlMillis = ttlMillis;
     }
@@ -53,9 +58,9 @@ public final class HealthCheckStatus {
 
     @Override
     public String toString() {
-        return "HealthCheckStatus{" +
-               "isHealthy=" + isHealthy +
-               ", ttlMillis=" + ttlMillis +
-               '}';
+        return MoreObjects.toStringHelper(this)
+                          .add("isHealthy", isHealthy)
+                          .add("ttlMillis", ttlMillis)
+                          .toString();
     }
 }
