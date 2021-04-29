@@ -27,11 +27,15 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -51,10 +55,11 @@ class ServiceRequestCancellationTest {
         }
     };
 
-    @Test
-    void shouldCompleteLogWhenCancelledByClient() {
+    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    @ParameterizedTest
+    void shouldCompleteLogWhenCancelledByClient(SessionProtocol protocol) {
         final ClientFactory factory = ClientFactory.builder().build();
-        final WebClient client = WebClient.builder(server.httpUri())
+        final WebClient client = WebClient.builder(server.uri(protocol))
                                           .factory(factory)
                                           .build();
 
@@ -63,12 +68,21 @@ class ServiceRequestCancellationTest {
         factory.close();
         final RequestLog log = ctxRef.get().log().whenComplete().join();
 
-        assertThat(log.responseCause())
-                .isInstanceOf(ClosedStreamException.class)
-                .hasMessageContaining("received a RST_STREAM frame: CANCEL");
+        if (protocol.isMultiplex()) {
+            assertThat(log.responseCause())
+                    .isInstanceOf(ClosedStreamException.class)
+                    .hasMessageContaining("received a RST_STREAM frame: CANCEL");
 
-        assertThatThrownBy(responseFuture::join)
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(ClosedStreamException.class);
+            assertThatThrownBy(responseFuture::join)
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(ClosedStreamException.class);
+        } else {
+            assertThat(log.responseCause())
+                    .isInstanceOf(ClosedSessionException.class);
+
+            assertThatThrownBy(responseFuture::join)
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(ClosedSessionException.class);
+        }
     }
 }
