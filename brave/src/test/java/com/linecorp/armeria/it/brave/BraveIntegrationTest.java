@@ -36,6 +36,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -47,7 +48,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.HelloService.AsyncIface;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -102,9 +103,9 @@ class BraveIntegrationTest {
     static ServerExtension server = new ServerExtension(true) {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            // Our test that triggers a timeout will take a second to run. Hopefully it doesn't cause flakiness
-            // for being too short.
-            sb.requestTimeout(Duration.ofSeconds(1));
+            // Our test that triggers a timeout will take 10 seconds to run to avoid flakiness
+            // that a client cancels a request before a server receives it.
+            sb.requestTimeout(Duration.ofSeconds(10));
 
             sb.service("/foo", decorate("service/foo", THttpService.of(
                     (AsyncIface) (name, resultHandler) ->
@@ -214,12 +215,12 @@ class BraveIntegrationTest {
         timeoutClientClientTimesOut =
                 Clients.builder(server.httpUri(BINARY) + "/timeout")
                        .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                       .responseTimeout(Duration.ofMillis(3))
+                       .responseTimeout(Duration.ofSeconds(3))
                        .build(HelloService.Iface.class);
         http1TimeoutClientClientTimesOut =
                 Clients.builder(server.uri(H1C, BINARY) + "/timeout")
                        .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
-                       .responseTimeout(Duration.ofMillis(3))
+                       .responseTimeout(Duration.ofSeconds(3))
                        .build(HelloService.Iface.class);
     }
 
@@ -563,7 +564,11 @@ class BraveIntegrationTest {
         MutableSpan[] take(int numSpans) {
             final List<MutableSpan> taken = new ArrayList<>();
             while (taken.size() < numSpans) {
-                taken.add(Uninterruptibles.takeUninterruptibly(spans));
+                try {
+                    taken.add(spans.poll(30, TimeUnit.SECONDS));
+                } catch (InterruptedException e) {
+                    return Exceptions.throwUnsafely(e);
+                }
             }
 
             // Reverse the collected spans to sort the spans by request time.

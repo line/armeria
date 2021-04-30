@@ -58,6 +58,9 @@ public final class TemporaryThreadLocals {
     @VisibleForTesting
     static final int MAX_CHAR_ARRAY_CAPACITY = 4096;
 
+    @VisibleForTesting
+    static final int MAX_INT_ARRAY_CAPACITY = 4096;
+
     private static final ThreadLocal<TemporaryThreadLocals> fallback =
             ThreadLocal.withInitial(TemporaryThreadLocals::new);
 
@@ -76,6 +79,7 @@ public final class TemporaryThreadLocals {
     private byte[] byteArray;
     private StringBuilder stringBuilder;
     private char[] charArray;
+    private int[] intArray;
 
     TemporaryThreadLocals() {
         clear();
@@ -86,6 +90,7 @@ public final class TemporaryThreadLocals {
         byteArray = EmptyArrays.EMPTY_BYTES;
         stringBuilder = inflate(new StringBuilder());
         charArray = EmptyArrays.EMPTY_CHARS;
+        intArray = EmptyArrays.EMPTY_INTS;
     }
 
     /**
@@ -152,5 +157,26 @@ public final class TemporaryThreadLocals {
         stringBuilder.append('\u0100');
         stringBuilder.setLength(0);
         return stringBuilder;
+    }
+
+    /**
+     * Returns a thread-local integer array whose length is equal to or greater than the specified
+     * {@code minCapacity}.
+     */
+    public int[] intArray(int minCapacity) {
+        final int[] intArray = this.intArray;
+        if (intArray.length >= minCapacity) {
+            return intArray;
+        }
+
+        return allocateIntArray(minCapacity);
+    }
+
+    private int[] allocateIntArray(int minCapacity) {
+        final int[] intArray = new int[minCapacity];
+        if (minCapacity <= MAX_INT_ARRAY_CAPACITY) {
+            this.intArray = intArray;
+        }
+        return intArray;
     }
 }

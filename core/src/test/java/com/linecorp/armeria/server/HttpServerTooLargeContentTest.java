@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class Http1RequestDecoderTest {
+class HttpServerTooLargeContentTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {

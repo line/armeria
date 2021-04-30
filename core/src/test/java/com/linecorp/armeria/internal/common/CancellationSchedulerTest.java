@@ -31,19 +31,21 @@ import java.util.function.Consumer;
 
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.CancellationScheduler.State;
+import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.netty.util.concurrent.EventExecutor;
 
 class CancellationSchedulerTest {
 
     private static final EventExecutor eventExecutor = CommonPools.workerGroup().next();
-
-    private static final TimeoutException cancellationCause = new TimeoutException();
 
     private static final CancellationTask noopTask = new CancellationTask() {
         @Override
@@ -59,7 +61,7 @@ class CancellationSchedulerTest {
         final AtomicBoolean completed = new AtomicBoolean();
         eventExecutor.execute(() -> {
             final CancellationScheduler scheduler = new CancellationScheduler(0);
-            scheduler.init(eventExecutor, noopTask, initTimeoutNanos, cancellationCause);
+            scheduler.init(eventExecutor, noopTask, initTimeoutNanos, true);
             task.accept(scheduler);
             completed.set(true);
         });
@@ -260,14 +262,14 @@ class CancellationSchedulerTest {
 
                 @Override
                 public void run(Throwable cause) {
-                    assertThat(cause).isEqualTo(cancellationCause);
+                    assertThat(cause).isInstanceOf(RequestTimeoutException.class);
                     assertThat(scheduler.whenTimingOut()).isDone();
                     assertThat(scheduler.isFinished()).isTrue();
                     assertThat(scheduler.whenTimedOut()).isNotDone();
                     passed.set(true);
                 }
             };
-            scheduler.init(eventExecutor, task, 0, cancellationCause);
+            scheduler.init(eventExecutor, task, 0, true);
             assertThat(scheduler.isFinished()).isFalse();
 
             scheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
@@ -300,13 +302,22 @@ class CancellationSchedulerTest {
         whenTimedOutRef.get().join();
     }
 
-    @Test
-    void whenCancellingAndWhenCancelled() {
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void whenCancellingAndWhenCancelled(boolean server) {
         final AtomicReference<CancellationScheduler> schedulerRef = new AtomicReference<>();
         final AtomicReference<CompletableFuture<Throwable>> whenCancellingRef = new AtomicReference<>();
         final AtomicReference<CompletableFuture<Throwable>> whenCancelledRef = new AtomicReference<>();
         final AtomicBoolean completed = new AtomicBoolean();
         final AtomicBoolean passed = new AtomicBoolean();
+
+        final Class<? extends TimeoutException> cancellationExceptionType;
+        if (server) {
+            cancellationExceptionType = RequestTimeoutException.class;
+        } else {
+            cancellationExceptionType = ResponseTimeoutException.class;
+        }
+
         eventExecutor.execute(() -> {
             final CancellationScheduler scheduler = new CancellationScheduler(0);
             final CancellationTask task = new CancellationTask() {
@@ -317,14 +328,14 @@ class CancellationSchedulerTest {
 
                 @Override
                 public void run(Throwable cause) {
-                    assertThat(cause).isEqualTo(cancellationCause);
+                    assertThat(cause).isInstanceOf(cancellationExceptionType);
                     assertThat(scheduler.whenCancelling()).isDone();
                     assertThat(scheduler.isFinished()).isTrue();
                     assertThat(scheduler.whenCancelled()).isNotDone();
                     passed.set(true);
                 }
             };
-            scheduler.init(eventExecutor, task, 0, cancellationCause);
+            scheduler.init(eventExecutor, task, 0, server);
             assertThat(scheduler.isFinished()).isFalse();
 
             scheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
@@ -335,10 +346,12 @@ class CancellationSchedulerTest {
             whenCancelledRef.set(scheduler.whenCancelled());
             completed.set(true);
         });
+
         await().untilTrue(passed);
         await().untilTrue(completed);
-        assertThat(whenCancellingRef.get().join()).isEqualTo(cancellationCause);
-        assertThat(whenCancelledRef.get().join()).isEqualTo(cancellationCause);
+
+        assertThat(whenCancellingRef.get().join()).isInstanceOf(cancellationExceptionType);
+        assertThat(whenCancelledRef.get().join()).isInstanceOf(cancellationExceptionType);
         assertThat(schedulerRef.get().isFinished()).isTrue();
     }
 
@@ -365,30 +378,30 @@ class CancellationSchedulerTest {
         eventExecutor.execute(() -> {
             CancellationScheduler scheduler = new CancellationScheduler(MILLISECONDS.toNanos(1000));
             scheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(1000));
-            scheduler.init(eventExecutor, noopTask, 0, cancellationCause);
+            scheduler.init(eventExecutor, noopTask, 0, false);
             assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(2000));
 
             scheduler = new CancellationScheduler(MILLISECONDS.toNanos(1000));
             scheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(2000));
             scheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
-            scheduler.init(eventExecutor, noopTask, 0, cancellationCause);
+            scheduler.init(eventExecutor, noopTask, 0, false);
             assertTimeoutWithTolerance(scheduler.timeoutNanos(), MILLISECONDS.toNanos(1000));
 
             scheduler = new CancellationScheduler(MILLISECONDS.toNanos(1000));
             scheduler.clearTimeout(false);
-            scheduler.init(eventExecutor, noopTask, 0, cancellationCause);
+            scheduler.init(eventExecutor, noopTask, 0, false);
             assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(1000));
 
             scheduler = new CancellationScheduler(MILLISECONDS.toNanos(1000));
             scheduler.clearTimeout();
-            scheduler.init(eventExecutor, noopTask, 0, cancellationCause);
+            scheduler.init(eventExecutor, noopTask, 0, false);
             assertThat(scheduler.timeoutNanos()).isZero();
 
             scheduler = new CancellationScheduler(MILLISECONDS.toNanos(1000));
             scheduler.setTimeoutNanos(EXTEND, MILLISECONDS.toNanos(2000));
             scheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
             scheduler.setTimeoutNanos(SET_FROM_START, MILLISECONDS.toNanos(10000));
-            scheduler.init(eventExecutor, noopTask, 0, cancellationCause);
+            scheduler.init(eventExecutor, noopTask, 0, false);
             assertTimeoutWithTolerance(scheduler.timeoutNanos(), MILLISECONDS.toNanos(10000));
             completed.set(true);
         });
@@ -400,10 +413,10 @@ class CancellationSchedulerTest {
         final AtomicBoolean completed = new AtomicBoolean();
         final CancellationScheduler scheduler = new CancellationScheduler(0);
         eventExecutor.execute(() -> {
-            scheduler.init(eventExecutor, noopTask, MILLISECONDS.toNanos(100), cancellationCause);
+            scheduler.init(eventExecutor, noopTask, MILLISECONDS.toNanos(100), false);
             assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
 
-            scheduler.init(eventExecutor, noopTask, MILLISECONDS.toNanos(1000), cancellationCause);
+            scheduler.init(eventExecutor, noopTask, MILLISECONDS.toNanos(1000), false);
             assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
             completed.set(true);
         });
