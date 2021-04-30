@@ -65,7 +65,7 @@ jobs:
 
     - name: Build with Gradle
       run: |
-        ./gradlew --no-daemon --stacktrace --parallel --max-workers=4 build \
+        ./gradlew -Dorg.gradle.jvmargs=-Xmx4g --no-daemon --stacktrace --parallel --max-workers=4 build \
         ${{ matrix.lint && 'lint' || '' }} \
         ${{ !matrix.lint && '-PnoLint' || '' }} \
         ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
