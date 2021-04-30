@@ -2,9 +2,6 @@ import java.security.MessageDigest
 
 def offlineJavadoc = rootProject.hasProperty('offlineJavadoc')
 def javadocCacheDir = new File(gradle.gradleUserHomeDir, 'caches/package-lists')
-def defaultStylesheetFile =
-        JavaVersion.current() >= JavaVersion.VERSION_1_9 ?
-                new File(buildscript.sourceFile.parentFile, 'java-javadoc.css') : null
 def visitedUrls = new HashSet<String>()
 
 task cleanJavadocCache(type: Delete, group: 'Build', description: 'Deletes the javadoc cache directory.') {
@@ -153,9 +150,6 @@ allprojects {
             author = false
             keyWords = false
             quiet()
-            if (defaultStylesheetFile != null) {
-                stylesheetFile = defaultStylesheetFile
-            }
 
             // Enable all lints except the missing tag warnings
             addBooleanOption('Xdoclint:accessibility').value = true
