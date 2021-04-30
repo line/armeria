@@ -1126,7 +1126,7 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * A 408 request timeout response can be received even without a request.
+     * A 408 Request Timeout response can be received even without a request.
      * More details can be found at https://github.com/line/armeria/issues/3055.
      */
     public static boolean isRequestTimeoutResponse(HttpResponse httpResponse) {
