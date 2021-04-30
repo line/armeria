@@ -28,7 +28,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 
-public class Http1ResponseDecoderTest {
+class Http1ResponseDecoderTest {
 
     @Test
     void testRequestTimeoutClosesImmediately() throws Exception {

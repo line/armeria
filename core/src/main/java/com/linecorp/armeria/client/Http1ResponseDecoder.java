@@ -154,7 +154,6 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
             switch (state) {
                 case NEED_HEADERS:
                     if (msg instanceof HttpResponse) {
-
                         final HttpResponse nettyRes = (HttpResponse) msg;
                         final DecoderResult decoderResult = nettyRes.decoderResult();
                         if (!decoderResult.isSuccess()) {
@@ -167,7 +166,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         final HttpResponseWrapper res = getResponse(resId);
-                        if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse((HttpResponse) msg)) {
+                        if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
                             close(ctx);
                             return;
                         }
