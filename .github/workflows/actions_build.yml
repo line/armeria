@@ -12,20 +12,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        on: [ ubuntu-latest, macos-latest, windows-latest ]
+        on: [ self-hosted, macos-latest, windows-latest ]
         java: [ 15 ]
         include:
           - java: 8
-            on: ubuntu-latest
+            on: self-hosted
             site: true
           - java: 11
-            on: ubuntu-latest
+            on: self-hosted
             coverage: true
           - java: 14
-            on: ubuntu-latest
+            on: self-hosted
             leak: true
           - java: 15
-            on: ubuntu-latest
+            on: self-hosted
             lint: true
 
     steps:
@@ -68,7 +68,7 @@ jobs:
     - name: Build with Gradle
       run: |
         ./gradlew -Dorg.gradle.jvmargs=-Xmx4g --no-daemon --stacktrace build \
-        ${{ (matrix.on == 'ubuntu-latest') && '--max-workers=8' || '--max-workers=4' }} --parallel \
+        ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=4' }} --parallel \
         ${{ matrix.lint && 'lint' || '' }} \
         ${{ !matrix.lint && '-PnoLint' || '' }} \
         ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
