@@ -128,7 +128,12 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             return false;
         }
 
-        publisher.subscribe(s);
+        if (publisher instanceof StreamMessage) {
+            //noinspection unchecked
+            ((StreamMessage<? extends T>) publisher).subscribe(s, executor);
+        } else {
+            publisher.subscribe(s);
+        }
 
         return true;
     }

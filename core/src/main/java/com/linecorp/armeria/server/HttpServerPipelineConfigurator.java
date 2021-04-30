@@ -239,9 +239,13 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         // Not using the value greater than 2^31-1 because some HTTP/2 client implementations use a signed
         // 32-bit integer to represent an HTTP/2 SETTINGS parameter value.
-        settings.maxConcurrentStreams(Math.min(configHolder.getConfig().http2MaxStreamsPerConnection(),
-                                               Integer.MAX_VALUE));
-        settings.maxHeaderListSize(configHolder.getConfig().http2MaxHeaderListSize());
+        settings.maxConcurrentStreams(Math.min(config.http2MaxStreamsPerConnection(), Integer.MAX_VALUE));
+        settings.maxHeaderListSize(config.http2MaxHeaderListSize());
+
+        // Set SETTINGS_ENABLE_CONNECT_PROTOCOL to support protocol upgrades.
+        // See: https://datatracker.ietf.org/doc/html/rfc8441#section-3
+        settings.put((char) 0x8, (Long) 1L);
+
         return settings;
     }
 

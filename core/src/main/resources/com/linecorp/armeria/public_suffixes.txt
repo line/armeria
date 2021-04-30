@@ -32,7 +32,6 @@
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
 *.er
-*.eu.pythonanywhere.com
 *.ex.futurecms.at
 *.ex.ortsinfo.at
 *.firenet.ch
@@ -72,7 +71,6 @@
 *.paywhirl.com
 *.pg
 *.platformsh.site
-*.pythonanywhere.com
 *.quipelements.com
 *.r.appspot.com
 *.s5y.io
@@ -2311,6 +2309,7 @@ eu.int
 eu.meteorapp.com
 eu.org
 eu.platform.sh
+eu.pythonanywhere.com
 eun.eg
 eurodir.ru
 eurovision
@@ -2789,7 +2788,9 @@ giske.no
 git-pages.rit.edu
 git-repos.de
 gitapp.si
+github.dev
 github.io
+githubpreview.dev
 githubusercontent.com
 gitlab.io
 gitpage.si
@@ -3010,7 +3011,6 @@ gov.sh
 gov.sl
 gov.so
 gov.ss
-gov.st
 gov.sx
 gov.sy
 gov.tj
@@ -3794,7 +3794,6 @@ its.me
 itv
 ivano-frankivsk.ua
 ivanovo.su
-iveco
 iveland.no
 ivgu.no
 iwade.wakayama.jp
@@ -4806,6 +4805,7 @@ me.eu.org
 me.it
 me.ke
 me.so
+me.ss
 me.tc
 me.tz
 me.uk
@@ -5383,7 +5383,6 @@ natal.br
 national.museum
 nationalfirearms.museum
 nationalheritage.museum
-nationwide
 nativeamerican.museum
 natori.miyagi.jp
 natura
@@ -5996,7 +5995,6 @@ onred.one
 onrender.com
 ontario.museum
 onthewifi.com
-onyourside
 onza.mythic-beasts.com
 ooguy.com
 ookuwa.nagano.jp
@@ -6570,6 +6568,7 @@ pwc
 py
 pyatigorsk.ru
 pymnt.uk
+pythonanywhere.com
 pz.it
 q-a.eu.org
 q.bg
@@ -7009,6 +7008,7 @@ sch.ng
 sch.qa
 sch.sa
 sch.so
+sch.ss
 sch.zm
 schaeffler
 schlesisches.museum
@@ -7413,7 +7413,6 @@ spjelkavik.no
 sport
 sport.hu
 spot
-spreadbetting
 spy.museum
 spydeberg.no
 square.museum
@@ -7482,6 +7481,7 @@ store.nf
 store.ro
 store.st
 store.ve
+storebase.store
 storfjord.no
 storj.farm
 stpetersburg.museum

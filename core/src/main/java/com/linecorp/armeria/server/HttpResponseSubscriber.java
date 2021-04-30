@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -116,8 +117,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         }
 
         // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
-        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(), 0,
-                                                   RequestTimeoutException.get());
+        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(),
+                                                   0, /* server */ true);
 
         // Start consuming.
         subscription.request(1);
@@ -304,8 +305,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
         } else if (Exceptions.isStreamCancelling(cause)) {
             failAndReset(cause);
         } else {
-            logger.warn("{} Unexpected exception from a service or a response publisher: {}",
-                        ctx.channel(), service(), cause);
+            if (!(cause instanceof CancellationException)) {
+                logger.warn("{} Unexpected exception from a service or a response publisher: {}",
+                            ctx.channel(), service(), cause);
+            } else {
+                // Ignore CancellationException and its subtypes, which can be triggered when the request
+                // was cancelled or timed out even before the subscription attempt is made.
+            }
 
             failAndRespond(cause, convertException(cause), Http2Error.INTERNAL_ERROR, false);
         }
@@ -446,7 +452,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 // This method will be invoked only when `canSchedule()` returns true.
                 assert state != State.DONE;
 
-                failAndRespond(cause, convertException(cause), Http2Error.INTERNAL_ERROR, true);
+                if (cause instanceof ClosedStreamException) {
+                    // A stream or connection was already closed by a client
+                    fail(cause);
+                } else {
+                    failAndRespond(cause, convertException(cause), Http2Error.INTERNAL_ERROR, true);
+                }
             }
         };
     }

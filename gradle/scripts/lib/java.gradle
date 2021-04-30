@@ -5,6 +5,24 @@ def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle') &&
         new File(checkstyleConfigDir).isDirectory() &&
         new File("${checkstyleConfigDir}/checkstyle.xml").isFile()
 
+def buildJdkVersion = 15
+if (rootProject.hasProperty('buildJdkVersion')) {
+    def jdkVersion = rootProject.findProperty('buildJdkVersion')
+    if (buildJdkVersion != jdkVersion) {
+        buildJdkVersion = jdkVersion
+        logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
+    }
+}
+
+def testJavaVersion
+if (rootProject.hasProperty('testJavaVersion')) {
+    def testVersion = rootProject.findProperty('testJavaVersion')
+    if (buildJdkVersion != testVersion) {
+        testJavaVersion = testVersion
+        logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
+    }
+}
+
 configure(rootProject) {
     apply plugin: 'eclipse'
     apply plugin: 'idea'
@@ -24,6 +42,14 @@ configure(projectsWithFlags('java')) {
     }
     clean {
         delete project.ext.genSrcDir
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(buildJdkVersion)
+            vendor = JvmVendorSpec.ADOPTOPENJDK
+            implementation = JvmImplementation.VENDOR_SPECIFIC
+        }
     }
 
     // Add the generated source directories to the source sets.
@@ -54,13 +80,18 @@ configure(projectsWithFlags('java')) {
     }
 
     // Enable full exception logging for test failures.
-    tasks.withType(Test) {
+    tasks.withType(Test).configureEach {
         testLogging.exceptionFormat = 'full'
-    }
 
-    // Use JUnit platform.
-    tasks.withType(Test) {
+        // Use JUnit platform.
         useJUnitPlatform()
+
+        // Use a different JRE for testing if necessary.
+        if (testJavaVersion != null) {
+            javaLauncher = javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(testJavaVersion)
+            }
+        }
     }
 
     // Enforce checkstyle rules.

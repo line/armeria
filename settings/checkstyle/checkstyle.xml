@@ -186,8 +186,7 @@
       <property name="excludeScope" value="package"/>
     </module>
     <module name="JavadocMethod">
-      <property name="scope" value="protected"/>
-      <property name="excludeScope" value="package"/>
+      <property name="accessModifiers" value="protected, public"/>
       <property name="allowMissingParamTags" value="true"/>
       <property name="allowMissingReturnTag" value="true"/>
       <property name="allowedAnnotations" value="Override, Test"/>
