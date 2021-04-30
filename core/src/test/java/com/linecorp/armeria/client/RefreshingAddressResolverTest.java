@@ -22,7 +22,7 @@ import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetAddress;
@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
@@ -307,9 +308,10 @@ class RefreshingAddressResolverTest {
                                                       .addressResolverGroupFactory(builder::build)
                                                       .build()) {
                 final WebClient client = WebClient.builder("http://foo.com").factory(factory).build();
-                assertThatThrownBy(() -> client.get("/").aggregate().join())
-                        .hasCauseInstanceOf(UnprocessedRequestException.class)
-                        .hasRootCauseExactlyInstanceOf(DnsTimeoutException.class);
+                final Throwable cause = catchThrowable(() -> client.get("/").aggregate().join());
+                assertThat(cause.getCause()).isInstanceOf(UnprocessedRequestException.class);
+                assertThat(Throwables.getRootCause(cause))
+                        .isInstanceOfAny(DnsTimeoutException.class, DnsNameResolverTimeoutException.class);
             }
         }
     }
