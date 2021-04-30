@@ -28,6 +28,7 @@
 *.dapps.earth
 *.dev.adobeaemcloud.com
 *.devcdnaccesso.com
+*.developer.app
 *.dweb.link
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
@@ -5741,6 +5742,7 @@ nombre.bo
 nome.pt
 nomi.ishikawa.jp
 nonoichi.ishikawa.jp
+noop.app
 nord-aurdal.no
 nord-fron.no
 nord-odal.no
