@@ -16,6 +16,7 @@
 package com.linecorp.armeria.common;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
@@ -229,6 +230,15 @@ public interface QueryParamsBuilder extends QueryParamGetters {
     QueryParamsBuilder add(Iterable<? extends Entry<? extends String, String>> entries);
 
     /**
+     * Adds all parameter names and values of the specified {@code entries}.
+     *
+     * @return {@code this}
+     */
+    default QueryParamsBuilder add(Map<String, String> entries) {
+        return add(entries.entrySet());
+    }
+
+    /**
      * Adds a new parameter. The specified parameter value is converted into a {@link String}, as explained
      * in <a href="QueryParams.html#object-values">Specifying a non-String parameter value</a>.
      *
@@ -374,6 +384,17 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * @return {@code this}
      */
     QueryParamsBuilder set(Iterable<? extends Entry<? extends String, String>> entries);
+
+    /**
+     * Retains all current parameters but calls {@link #set(String, String)} for each entry in
+     * the specified {@code entries}.
+     *
+     * @param entries the parameters used to set the parameter values
+     * @return {@code this}
+     */
+    default QueryParamsBuilder set(Map<String, String> entries) {
+        return set(entries.entrySet());
+    }
 
     /**
      * Copies the entries missing in this parameters from the specified {@code entries}.

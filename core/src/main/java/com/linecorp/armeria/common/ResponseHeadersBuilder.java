@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import java.util.Map;
 import java.util.Map.Entry;
 
 /**
@@ -84,6 +85,11 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     @Override
+    default ResponseHeadersBuilder add(Map<? extends CharSequence, String> entries) {
+        return (ResponseHeadersBuilder) HttpHeadersBuilder.super.add(entries);
+    }
+
+    @Override
     ResponseHeadersBuilder addObject(CharSequence name, Object value);
 
     @Override
@@ -121,6 +127,11 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
 
     @Override
     ResponseHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> entries);
+
+    @Override
+    default ResponseHeadersBuilder set(Map<? extends CharSequence, String> entries) {
+        return (ResponseHeadersBuilder) HttpHeadersBuilder.super.set(entries);
+    }
 
     @Override
     ResponseHeadersBuilder setIfAbsent(Iterable<? extends Entry<? extends CharSequence, String>> entries);
