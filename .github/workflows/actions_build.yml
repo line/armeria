@@ -51,7 +51,7 @@ jobs:
       if: ${{ matrix.site }}
       run: |
         sudo yum -y install cargo && cargo install svgbob_cli
-        echo '::add-path::~/.cargo/bin'
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     - name: Cache
       uses: actions/cache@v2
