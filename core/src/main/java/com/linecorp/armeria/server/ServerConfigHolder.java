@@ -18,10 +18,10 @@ package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.util.AbstractListenable;
 
-public final class ServerConfigHolder extends AbstractListenable<ServerConfig> {
+final class ServerConfigHolder extends AbstractListenable<ServerConfig> {
     private volatile ServerConfig config;
 
-    public ServerConfigHolder(ServerConfig config) {
+    ServerConfigHolder(ServerConfig config) {
         this.config = config;
     }
 
@@ -35,6 +35,6 @@ public final class ServerConfigHolder extends AbstractListenable<ServerConfig> {
     }
 
     ServerConfig getConfig() {
-        return this.config;
+        return config;
     }
 }

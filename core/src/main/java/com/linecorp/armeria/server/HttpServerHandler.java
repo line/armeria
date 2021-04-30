@@ -92,7 +92,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static final String MSG_INVALID_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nInvalid request path";
 
     private static final HttpData DATA_INVALID_REQUEST_PATH = HttpData.ofUtf8(MSG_INVALID_REQUEST_PATH);
-    private final Consumer<ServerConfig> configUpdateListener = this::swapServerConfig;
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -156,7 +155,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private volatile ServerConfigHolder configHolder;
+    private final ServerConfigHolder configHolder;
+    private ServerConfig config;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
@@ -170,6 +170,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private final ProxiedAddresses proxiedAddresses;
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
+    private final Consumer<ServerConfig> configUpdateListener = this::swapServerConfig;
     private boolean isReading;
     private boolean handledLastRequest;
 
@@ -187,6 +188,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         this.protocol = requireNonNull(protocol, "protocol");
         this.responseEncoder = responseEncoder;
         this.proxiedAddresses = proxiedAddresses;
+        config = requireNonNull(configHolder.getConfig(), "config");
         unfinishedRequests = new IdentityHashMap<>();
     }
 
@@ -278,7 +280,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         // Update the connection-level flow-control window size.
-        final int initialWindow = configHolder.getConfig().http2InitialConnectionWindowSize();
+        final int initialWindow = config.http2InitialConnectionWindowSize();
         if (initialWindow > DEFAULT_WINDOW_SIZE) {
             incrementLocalWindowSize(pipeline, initialWindow - DEFAULT_WINDOW_SIZE);
         }
@@ -317,11 +319,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Channel channel = ctx.channel();
         final RequestHeaders headers = req.headers();
         final String hostname = hostname(headers);
-        final VirtualHost virtualHost = configHolder.getConfig().findVirtualHost(hostname);
+        final VirtualHost virtualHost = config.findVirtualHost(hostname);
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
-        final InetAddress clientAddress = configHolder
-                                         .getConfig()
-                                         .clientAddressMapper().apply(proxiedAddresses).getAddress();
+        final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 
         // Handle max connection age for HTTP/1.
         if (!protocol.isMultiplex() &&
@@ -378,7 +378,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final HttpService service = serviceCfg.service();
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, configHolder.getConfig().meterRegistry(), protocol,
+                serviceCfg, channel, config.meterRegistry(), protocol,
                 nextRequestId(), routingCtx, routingResult,
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
@@ -395,7 +395,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     serviceResponse = ((HttpResponseException) cause).httpResponse();
                 } else {
                     final AggregatedHttpResponse convertedResponse =
-                            configHolder.getConfig().exceptionHandler().convert(reqCtx, cause);
+                            config.exceptionHandler().convert(reqCtx, cause);
                     if (convertedResponse != null) {
                         serviceResponse = convertedResponse.toHttpResponse();
                     } else {
@@ -490,10 +490,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private ProxiedAddresses determineProxiedAddresses(Channel channel, RequestHeaders headers) {
         final InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
-        if (configHolder.getConfig().clientAddressTrustedProxyFilter().test(remoteAddress.getAddress())) {
+        if (config.clientAddressTrustedProxyFilter().test(remoteAddress.getAddress())) {
             return HttpHeaderUtil.determineProxiedAddresses(
-                    headers, configHolder.getConfig().clientAddressSources(), proxiedAddresses,
-                    remoteAddress, configHolder.getConfig().clientAddressFilter());
+                    headers, config.clientAddressSources(), proxiedAddresses,
+                    remoteAddress, config.clientAddressFilter());
         } else {
             return proxiedAddresses != null ? proxiedAddresses : ProxiedAddresses.of(remoteAddress);
         }
@@ -686,7 +686,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private RequestId nextRequestId() {
-        final RequestId id = configHolder.getConfig().requestIdGenerator().get();
+        final RequestId id = config.requestIdGenerator().get();
         if (id == null) {
             if (!warnedNullRequestId) {
                 warnedNullRequestId = true;
@@ -699,8 +699,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     void swapServerConfig(ServerConfig config) {
-        if (configHolder.getConfig() != config) {
+        requireNonNull(config);
+        if (this.config != config) {
             configHolder.replace(config);
+            this.config = config;
         }
     }
 

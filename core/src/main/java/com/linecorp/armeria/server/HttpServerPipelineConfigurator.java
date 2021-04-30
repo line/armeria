@@ -108,6 +108,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private final ServerPort port;
     private final ServerConfigHolder configHolder;
+    private volatile ServerConfig config;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
     private final GracefulShutdownSupport gracefulShutdownSupport;
@@ -121,6 +122,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             GracefulShutdownSupport gracefulShutdownSupport) {
 
         configHolder = new ServerConfigHolder(requireNonNull(config, "config"));
+        this.config = configHolder.getConfig();
         this.port = requireNonNull(port, "port");
         this.sslContexts = sslContexts;
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
@@ -157,7 +159,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         final ScheduledFuture<?> protocolDetectionTimeoutFuture;
         // FIXME(trustin): Add a dedicated timeout option to ServerConfig.
-        final long requestTimeoutMillis = configHolder.getConfig().defaultVirtualHost().requestTimeoutMillis();
+        final long requestTimeoutMillis = config.defaultVirtualHost().requestTimeoutMillis();
         if (requestTimeoutMillis > 0) {
             // Close the connection if the protocol detection is not finished in time.
             final Channel ch = p.channel();
@@ -171,9 +173,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
-        final long idleTimeoutMillis = configHolder.getConfig().idleTimeoutMillis();
-        final long maxConnectionAgeMillis = configHolder.getConfig().maxConnectionAgeMillis();
-        final int maxNumRequestsPerConnection = configHolder.getConfig().maxNumRequestsPerConnection();
+        final long idleTimeoutMillis = config.idleTimeoutMillis();
+        final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
+        final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
         final boolean needsKeepAliveHandler =
                 needsKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
                                       maxConnectionAgeMillis, maxNumRequestsPerConnection);
@@ -189,8 +191,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
                 p.channel(), H1C, keepAliveHandler,
-                configHolder.getConfig().isDateHeaderEnabled(),
-                configHolder.getConfig().isServerHeaderEnabled()
+                config.isDateHeaderEnabled(),
+                config.isServerHeaderEnabled()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
@@ -203,7 +205,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private Timer newKeepAliveTimer(SessionProtocol protocol) {
-        return MoreMeters.newTimer(configHolder.getConfig().meterRegistry(),
+        return MoreMeters.newTimer(config.meterRegistry(),
                                    "armeria.server.connections.lifespan",
                                    ImmutableList.of(Tag.of("protocol", protocol.uriText())));
     }
@@ -217,7 +219,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
         final Timer keepAliveTimer = newKeepAliveTimer(scheme == SCHEME_HTTP ? H2C : H2);
-        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), configHolder.getConfig(),
+        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config,
                                                        keepAliveTimer, gracefulShutdownSupport,
                                                        scheme.toString())
                 .server(true)
@@ -227,12 +229,12 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private Http2Settings http2Settings() {
         final Http2Settings settings = new Http2Settings();
-        final int initialWindowSize = configHolder.getConfig().http2InitialStreamWindowSize();
+        final int initialWindowSize = config.http2InitialStreamWindowSize();
         if (initialWindowSize != Http2CodecUtil.DEFAULT_WINDOW_SIZE) {
             settings.initialWindowSize(initialWindowSize);
         }
 
-        final int maxFrameSize = configHolder.getConfig().http2MaxFrameSize();
+        final int maxFrameSize = config.http2MaxFrameSize();
         if (maxFrameSize != Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE) {
             settings.maxFrameSize(maxFrameSize);
         }
@@ -349,7 +351,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     break;
                 case PROXY:
                     assert proxiedCandidates != null;
-                    p.addLast(new HAProxyMessageDecoder(configHolder.getConfig().proxyProtocolMaxTlvSize()));
+                    p.addLast(new HAProxyMessageDecoder(config.proxyProtocolMaxTlvSize()));
                     p.addLast(new ProxiedPipelineConfigurator(proxiedCandidates));
                     break;
                 default:
@@ -451,9 +453,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttpHandlers(ChannelHandlerContext ctx) {
             final Channel ch = ctx.channel();
             final ChannelPipeline p = ctx.pipeline();
-            final long idleTimeoutMillis = configHolder.getConfig().idleTimeoutMillis();
-            final long maxConnectionAgeMillis = configHolder.getConfig().maxConnectionAgeMillis();
-            final int maxNumRequestsPerConnection = configHolder.getConfig().maxNumRequestsPerConnection();
+            final long idleTimeoutMillis = config.idleTimeoutMillis();
+            final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
+            final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
             final boolean needsKeepAliveHandler =
                     needsKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
                                           maxConnectionAgeMillis, maxNumRequestsPerConnection);
@@ -468,13 +470,13 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             }
 
             final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
-                    ch, H1, keepAliveHandler, configHolder.getConfig().isDateHeaderEnabled(),
-                    configHolder.getConfig().isServerHeaderEnabled());
+                    ch, H1, keepAliveHandler, config.isDateHeaderEnabled(),
+                    config.isServerHeaderEnabled());
             p.addLast(new HttpServerCodec(
-                    configHolder.getConfig().http1MaxInitialLineLength(),
-                    configHolder.getConfig().http1MaxHeaderSize(),
-                    configHolder.getConfig().http1MaxChunkSize()));
-            p.addLast(new Http1RequestDecoder(configHolder.getConfig(), ch, SCHEME_HTTPS, writer));
+                    config.http1MaxInitialLineLength(),
+                    config.http1MaxHeaderSize(),
+                    config.http1MaxChunkSize()));
+            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
             p.addLast(new HttpServerHandler(configHolder,
                                             gracefulShutdownSupport,
                                             writer, H1, proxiedAddresses));
@@ -557,9 +559,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void configureHttp1WithUpgrade(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             final HttpServerCodec http1codec = new HttpServerCodec(
-                    configHolder.getConfig().http1MaxInitialLineLength(),
-                    configHolder.getConfig().http1MaxHeaderSize(),
-                    configHolder.getConfig().http1MaxChunkSize());
+                    config.http1MaxInitialLineLength(),
+                    config.http1MaxHeaderSize(),
+                    config.http1MaxChunkSize());
 
             String baseName = name;
             assert baseName != null;
@@ -576,7 +578,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     },
                     UPGRADE_REQUEST_MAX_LENGTH));
 
-            addAfter(p, baseName, new Http1RequestDecoder(configHolder.getConfig(),
+            addAfter(p, baseName, new Http1RequestDecoder(config,
                                                           ctx.channel(), SCHEME_HTTP, responseEncoder));
         }
 

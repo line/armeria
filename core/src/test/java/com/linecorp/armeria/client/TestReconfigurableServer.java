@@ -44,7 +44,7 @@ class TestReconfigurableServer {
 
         server.start().join();
 
-        WebClient originalClient = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final WebClient originalClient = WebClient.of("http://localhost:" + server.activeLocalPort());
         final AggregatedHttpResponse response = originalClient.get("/test1").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("Hello, world!");
@@ -74,14 +74,13 @@ class TestReconfigurableServer {
 
         //Open new connection to check if the newly reconfigured server is now operational
         // and old service endpoints are no longer visible.
-        WebClient client2= WebClient.of("http://localhost:" + server.activeLocalPort());
+        final WebClient client2 = WebClient.of("http://localhost:" + server.activeLocalPort());
         final AggregatedHttpResponse response2 = client2.get("/test2/world")
                 .aggregate()
                 .get();
 
         assertThat(response2.status()).isEqualTo(HttpStatus.OK);
         assertThat(response2.contentUtf8()).isEqualTo("Hello, WORLD");
-
 
         final AggregatedHttpResponse response22 = client2.get("/test2")
                 .aggregate()
@@ -95,7 +94,7 @@ class TestReconfigurableServer {
 
         // Tests that original service configurations are no longer active when you open a new connection
         // with the server.
-        WebClient client3 = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final WebClient client3 = WebClient.of("http://localhost:" + server.activeLocalPort());
         final AggregatedHttpResponse response3 = client3.get("/test1")
                 .aggregate()
                 .get();
@@ -119,7 +118,7 @@ class TestReconfigurableServer {
 
         server.start().join();
 
-        WebClient client3 = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final WebClient client3 = WebClient.of("http://localhost:" + server.activeLocalPort());
         final AggregatedHttpResponse res = client3.get("/test1")
                 .aggregate()
                 .get();

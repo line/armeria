@@ -118,7 +118,7 @@ public final class Server implements ListenableAsyncCloseable {
 
     Server(ServerConfig config) {
         this.config = requireNonNull(config, "config");
-        sslContexts = config.getSslContexts();
+        sslContexts = config.sslContextMapping();
         startStop = new ServerStartStopSupport(config.startStopExecutor());
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 

@@ -621,7 +621,7 @@ public final class ServerConfig {
      * Returns a map of SslContexts {@link SslContext}.
      */
     @Nullable
-    public Mapping<String, SslContext> getSslContexts() {
+    Mapping<String, SslContext> sslContextMapping() {
         return sslContexts;
     }
 
