@@ -36,8 +36,9 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.spring.actuate.PrometheusMetricExposureTest.TestConfiguration;
 
-@SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
+@SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "managedMetricPath" })
 @DirtiesContext
 @AutoConfigureMetrics
@@ -46,7 +47,7 @@ import com.linecorp.armeria.server.Server;
 class PrometheusMetricExposureTest {
 
     @SpringBootApplication
-    class TestConfiguration {}
+    static class TestConfiguration {}
 
     @Inject
     private Server server;
