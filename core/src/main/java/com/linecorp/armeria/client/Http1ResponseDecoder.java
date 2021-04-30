@@ -268,6 +268,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
         state = State.DISCARD;
+
         final HttpResponseWrapper res = this.res;
         this.res = null;
 
