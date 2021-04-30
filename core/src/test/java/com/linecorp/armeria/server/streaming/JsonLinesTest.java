@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package com.linecorp.armeria.server.streaming;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,6 +72,8 @@ public class JsonLinesTest {
 
     @Test
     public void fromPublisherOrStreamMultiLineJson() {
+        final String record1 = "{\"name\":\"Jon D\",\"age\":21,\"cars\":[\"Bmw\",\"Audi\"]}\n";
+        final String record2 = "{\"name\":\"Sarah D\",\"age\":22,\"cars\":[\"Tesla\",\"Honda\"]}\n";
         final WebClient client = WebClient.of(server.httpUri() + "/seq");
         for (final String path : ImmutableList.of("/custom-mapper")) {
             final HttpResponse response = client.get(path);
@@ -64,9 +81,9 @@ public class JsonLinesTest {
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                             HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES))
                     .assertNext(o ->
-                            ensureExpectedHttpData(o, "{\"name\":\"Jon D\",\"age\":21,\"cars\":[\"Bmw\",\"Audi\"]}\n", true))
+                            ensureExpectedHttpData(o, record1, true))
                     .assertNext(o ->
-                            ensureExpectedHttpData(o, "{\"name\":\"Sarah D\",\"age\":22,\"cars\":[\"Tesla\",\"Honda\"]}\n", true))
+                            ensureExpectedHttpData(o, record2, true))
                     .assertNext(JsonLinesTest::assertThatLastContent)
                     .expectComplete()
                     .verify();

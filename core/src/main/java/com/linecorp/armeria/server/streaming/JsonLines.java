@@ -1,3 +1,18 @@
+/*
+ * Copyright 2021 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package com.linecorp.armeria.server.streaming;
 
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.streamingFrom;
@@ -41,7 +56,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  *           .service("/seq1",
  *                    (ctx, req) -> JsonLines.fromPublisher(Flux.just("foo", "bar")))
  *           // Emit JSON Lines Text with the ObjectMapper
- *           // configured to use the default pretty printer.
+ *           // configured to use SerializationFeature.WRITE_ENUMS_USING_INDEX.
  *           .service("/seq2",
  *                    (ctx, req) -> JsonLines.fromPublisher(Flux.just("foo", "bar"), mapper))
  *           .build();
@@ -79,7 +94,7 @@ public final class JsonLines {
             ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES);
 
     /**
-     * Creates a new JSON Lines from the specified {@link Publisher}.
+     * Returns a newly created JSON Lines response from the specified {@link Publisher}.
      *
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      */
@@ -88,7 +103,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Publisher}.
+     * Returns a newly created JSON Lines response from specified {@link Publisher}.
      *
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      * @param mapper the mapper which converts the content object into JSON Lines
@@ -98,7 +113,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Publisher}.
+     * Returns a newly created JSON Lines response from the specified {@link Publisher}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
@@ -108,7 +123,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Publisher}.
+     * Returns a newly created JSON Lines response from the specified {@link Publisher}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
@@ -120,7 +135,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Publisher}.
+     * Returns a newly created JSON Lines response from the specified {@link Publisher}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
@@ -134,7 +149,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Publisher}.
+     * Returns a newly created JSON Lines response from the specified {@link Publisher}.
      *
      * <p>Note that this method is intentionally hidden from the public API for use only with
      * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
@@ -156,7 +171,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Stream}.
+     * Returns a newly created JSON Lines response from the specified {@link Stream}.
      *
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
      * @param executor the executor which iterates the stream
@@ -166,7 +181,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Stream}.
+     * Returns a newly created JSON Lines response from the specified {@link Stream}.
      *
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
      * @param executor the executor which iterates the stream
@@ -177,7 +192,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Stream}.
+     * Returns a newly created JSON Lines response from the specified {@link Stream}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -189,7 +204,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Stream}.
+     * Returns a newly created JSON Lines response from the specified {@link Stream}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -202,7 +217,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Stream}.
+     * Returns a newly created JSON Lines response from the specified {@link Stream}.
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
@@ -219,7 +234,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines from the specified {@link Stream}.
+     * Returns a newly created JSON Lines response from the specified {@link Stream}.
      *
      * <p>Note that this method is intentionally hidden from the public API for use only with
      * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
@@ -242,7 +257,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines of the specified {@code content}.
+     * Returns a newly created JSON Lines response from the specified {@code content}.
      *
      * @param content the object supposed to send as contents
      */
@@ -251,7 +266,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines of the specified {@code content}.
+     * Returns a newly created JSON Lines response from the specified {@code content}.
      *
      * @param headers the HTTP headers supposed to send
      * @param content the object supposed to send as contents
@@ -261,7 +276,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines of the specified {@code content}.
+     * Returns a newly created JSON Lines response from the specified {@code content}.
      *
      * @param headers the HTTP headers supposed to send
      * @param content the object supposed to send as contents
@@ -273,7 +288,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines of the specified {@code content}.
+     * Returns a newly created JSON Lines response from the specified {@code content}.
      *
      * @param headers the HTTP headers supposed to send
      * @param content the object supposed to send as contents
@@ -289,7 +304,7 @@ public final class JsonLines {
     }
 
     /**
-     * Creates a new JSON Lines of the specified {@code content}.
+     * Returns a newly created JSON Lines response from the specified {@code content}.
      *
      * <p>Note that this method is intentionally hidden from the public API for use only with
      * {@code ScalaPbResponseConverterFunction} and {@code ProtobufResponseConverterFunction}.
@@ -327,9 +342,9 @@ public final class JsonLines {
         if (!warnedStatusCode) {
             logger.warn(
                     "Overwriting the HTTP status code from '{}' to '{}' for JSON Lines. " +
-                            "Do not set an HTTP status code on the HttpHeaders when calling factory methods in '{}', " +
-                            "or set '{}' if you want to specify its status code. " +
-                            "Please refer to https://jsonlines.org/ for more information.",
+                    "Do not set an HTTP status code on the HttpHeaders when calling factory methods in '{}', " +
+                    "or set '{}' if you want to specify its status code. " +
+                    "Please refer to https://jsonlines.org/ for more information.",
                     status, HttpStatus.OK, JsonLines.class.getSimpleName(), HttpStatus.OK);
             warnedStatusCode = true;
         }
@@ -350,9 +365,9 @@ public final class JsonLines {
 
         if (!warnedContentType) {
             logger.warn("Overwriting content-type from '{}' to '{}' for JSON Lines. " +
-                            "Do not set a content-type on the HttpHeaders when calling factory methods in '{}', " +
-                            "or set '{}' if you want to specify its content-type. " +
-                            "Please refer to https://jsonlines.org/ for more information.",
+                        "Do not set a content-type on the HttpHeaders when calling factory methods in '{}', " +
+                        "or set '{}' if you want to specify its content-type. " +
+                        "Please refer to https://jsonlines.org/ for more information.",
                     contentType, MediaType.JSON_LINES,
                     JsonLines.class.getSimpleName(), MediaType.JSON_LINES);
             warnedContentType = true;
@@ -369,9 +384,8 @@ public final class JsonLines {
             if (mapper == defaultMapper) {
                 mapper.writeValue(out, value);
             } else {
-                mapper.disable(SerializationFeature.INDENT_OUTPUT);
-                JsonNode root = mapper.valueToTree(value);
-                mapper.writeValue(out, root);
+                final JsonNode root = mapper.valueToTree(value);
+                defaultMapper.writeValue(out, root);
             }
             out.write(LINE_FEED);
             return HttpData.wrap(out.toByteArray());
