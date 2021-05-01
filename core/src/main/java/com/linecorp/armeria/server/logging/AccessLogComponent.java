@@ -322,16 +322,18 @@ interface AccessLogComponent {
                     final String protocol = firstNonNull(log.sessionProtocol(),
                                                          log.context().sessionProtocol()).uriText();
 
-                    final StringBuilder requestLine = TemporaryThreadLocals.get().stringBuilder();
-                    requestLine.append(httpMethodName).append(' ').append(path);
+                    final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+                    final StringBuilder builder = tempThreadLocals.stringBuilder();
+                    builder.append(httpMethodName).append(' ').append(path);
 
                     if (logName != null) {
-                        requestLine.append('#')
+                        builder.append('#')
                                    .append(UrlEscapers.urlFragmentEscaper().escape(logName));
                     }
-                    requestLine.append(' ').append(protocol);
-                    return requestLine.toString();
-
+                    builder.append(' ').append(protocol);
+                    final String requestLine = builder.toString();
+                    tempThreadLocals.releaseStringBuilder();
+                    return requestLine;
                 case RESPONSE_STATUS_CODE:
                     return log.responseHeaders().status().code();
                 case RESPONSE_LENGTH:

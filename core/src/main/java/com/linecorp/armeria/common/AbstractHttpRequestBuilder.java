@@ -476,7 +476,8 @@ public abstract class AbstractHttpRequestBuilder {
 
             if (hasPathParams) {
                 // Replace path parameters.
-                final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+                final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+                final StringBuilder buf = tempThreadLocals.stringBuilder();
                 buf.append(path, 0, i);
 
                 loop:
@@ -550,7 +551,9 @@ public abstract class AbstractHttpRequestBuilder {
                     }
                 }
 
-                return buf.toString();
+                final String builtPath = buf.toString();
+                tempThreadLocals.releaseStringBuilder();
+                return builtPath;
             } else {
                 // path doesn't contain a path parameter.
                 if (queryParams != null) {
@@ -570,10 +573,12 @@ public abstract class AbstractHttpRequestBuilder {
 
     private static String buildPathWithoutPathParams(
             String path, QueryParamsBuilder queryParams, boolean hasQueryInPath) {
-
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder buf = tempThreadLocals.stringBuilder();
         buf.append(path).append(hasQueryInPath ? '&' : '?');
         queryParams.appendQueryString(buf);
-        return buf.toString();
+        final String builtPath = buf.toString();
+        tempThreadLocals.releaseStringBuilder();
+        return builtPath;
     }
 }

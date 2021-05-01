@@ -54,7 +54,8 @@ final class DefaultClientBuilderParams implements ClientBuilderParams {
         scheme = factory.validateScheme(Scheme.parse(uri.getScheme()));
         endpointGroup = Endpoint.parse(uri.getRawAuthority());
 
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder buf = tempThreadLocals.stringBuilder();
         buf.append(nullOrEmptyToSlash(uri.getRawPath()));
         if (uri.getRawQuery() != null) {
             buf.append('?').append(uri.getRawQuery());
@@ -63,6 +64,7 @@ final class DefaultClientBuilderParams implements ClientBuilderParams {
             buf.append('#').append(uri.getRawFragment());
         }
         absolutePathRef = buf.toString();
+        tempThreadLocals.releaseStringBuilder();
     }
 
     DefaultClientBuilderParams(Scheme scheme, EndpointGroup endpointGroup,

@@ -101,7 +101,8 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
     private String toString(boolean hint) {
         final int length = buf.readableBytes();
 
-        final StringBuilder strBuf = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder strBuf = tempThreadLocals.stringBuilder();
         strBuf.append('{').append(length).append("B, ");
 
         if (isEndOfStream()) {
@@ -112,7 +113,9 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
         }
         if ((flags & FLAG_CLOSED) != 0) {
             if (buf.refCnt() == 0) {
-                return strBuf.append("closed}").toString();
+                final String toString = strBuf.append("closed}").toString();
+                tempThreadLocals.releaseStringBuilder();
+                return toString;
             } else {
                 strBuf.append("closed, ");
             }
@@ -136,19 +139,25 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
                 } else {
                     // Can't call getBytes() when generating the hint string
                     // because it will also create a leak record.
-                    return strBuf.append("<unknown>}").toString();
+                    final String toString = strBuf.append("<unknown>}").toString();
+                    tempThreadLocals.releaseStringBuilder();
+                    return toString;
                 }
             } catch (IllegalReferenceCountException e) {
                 // Shouldn't really happen when used ByteBuf correctly,
                 // but we just don't make toString() fail because of this.
-                return strBuf.append("badRefCnt}").toString();
+                final String toString = strBuf.append("badRefCnt}").toString();
+                tempThreadLocals.releaseStringBuilder();
+                return toString;
             }
         } else {
             offset = 0;
         }
 
-        return ByteArrayHttpData.appendPreviews(strBuf, array, offset, previewLength)
-                                .append('}').toString();
+        final String toString = ByteArrayHttpData.appendPreviews(strBuf, array, offset, previewLength)
+                                                 .append('}').toString();
+        tempThreadLocals.releaseStringBuilder();
+        return toString;
     }
 
     @Override

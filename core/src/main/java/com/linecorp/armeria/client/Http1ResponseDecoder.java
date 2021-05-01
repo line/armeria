@@ -254,7 +254,8 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder buf = tempThreadLocals.stringBuilder();
         buf.append("unexpected message type: " + msg.getClass().getName() +
                    " (expected: " + expected.getName() + ", channel: " + ctx.channel() +
                    ", resId: " + resId);
@@ -264,6 +265,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
             buf.append(", lastPingReqId: " + lastPingReqId + ')');
         }
         fail(ctx, new ProtocolViolationException(buf.toString()));
+        tempThreadLocals.releaseStringBuilder();
     }
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {

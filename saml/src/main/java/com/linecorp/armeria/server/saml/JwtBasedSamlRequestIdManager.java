@@ -114,11 +114,14 @@ final class JwtBasedSamlRequestIdManager implements SamlRequestIdManager {
     private static String getUniquifierPrefix() {
         // To make a request ID globally unique, we will add MAC-based machine ID and a random number.
         // The random number tries to make this instance unique in the same machine and process.
-        final byte[] r = TemporaryThreadLocals.get().byteArray(6);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final byte[] r = tempThreadLocals.byteArray(6);
         ThreadLocalRandom.current().nextBytes(r);
         final Encoder encoder = Base64.getEncoder();
-        return new StringBuilder().append(encoder.encodeToString(defaultMachineId()))
-                                  .append(encoder.encodeToString(r))
-                                  .toString();
+        final String prefix = new StringBuilder().append(encoder.encodeToString(defaultMachineId()))
+                                                 .append(encoder.encodeToString(r))
+                                                 .toString();
+        tempThreadLocals.releaseByteArray();
+        return prefix;
     }
 }

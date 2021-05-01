@@ -40,7 +40,8 @@ final class DefaultEntityTagFunction implements BiFunction<String, HttpFileAttri
         requireNonNull(pathOrUri, "pathOrUri");
         requireNonNull(attrs, "attrs");
 
-        final byte[] data = TemporaryThreadLocals.get().byteArray(4 + 8 + 8);
+        final TemporaryThreadLocals temporaryThreadLocals = TemporaryThreadLocals.get();
+        final byte[] data = temporaryThreadLocals.byteArray(4 + 8 + 8);
         final long hashCode = pathOrUri.hashCode() & 0xFFFFFFFFL;
         final long length = attrs.length();
         final long lastModifiedMillis = attrs.lastModifiedMillis();
@@ -50,7 +51,9 @@ final class DefaultEntityTagFunction implements BiFunction<String, HttpFileAttri
         offset = appendLong(data, offset, length);
         offset = appendLong(data, offset, lastModifiedMillis);
 
-        return offset != 0 ? etagEncoding.encode(data, 0, offset) : "-";
+        final String tag = offset != 0 ? etagEncoding.encode(data, 0, offset) : "-";
+        temporaryThreadLocals.releaseByteArray();
+        return tag;
     }
 
     /**

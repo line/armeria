@@ -460,7 +460,8 @@ public final class DefaultServiceRequestContext
         final String method = method().name();
 
         // Build the string representation.
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder buf = tempThreadLocals.stringBuilder();
         buf.append("[sreqId=").append(sreqId)
            .append(", chanId=").append(chanId);
 
@@ -477,6 +478,8 @@ public final class DefaultServiceRequestContext
            .append(proto).append("://").append(authority).append(path).append('#').append(method)
            .append(']');
 
-        return strVal = buf.toString();
+        strVal = buf.toString();
+        tempThreadLocals.releaseStringBuilder();
+        return strVal;
     }
 }

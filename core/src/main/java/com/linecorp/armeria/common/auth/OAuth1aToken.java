@@ -182,7 +182,8 @@ public final class OAuth1aToken {
         if (headerValue != null) {
             return headerValue;
         }
-        final StringBuilder builder = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder builder = tempThreadLocals.stringBuilder();
         builder.append("OAuth ");
         if (!isNullOrEmpty(realm)) {
             appendValue(builder, REALM, realm, true);
@@ -200,7 +201,9 @@ public final class OAuth1aToken {
             appendValue(builder, entry.getKey(), entry.getValue(), false);
         }
 
-        return headerValue = builder.toString();
+        headerValue = builder.toString();
+        tempThreadLocals.releaseStringBuilder();
+        return headerValue;
     }
 
     private static void appendValue(StringBuilder builder, String key, String value, boolean addComma) {

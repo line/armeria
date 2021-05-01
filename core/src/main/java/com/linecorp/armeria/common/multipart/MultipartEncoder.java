@@ -173,7 +173,8 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
 
     private StreamMessage<HttpData> createBodyPartPublisher(BodyPart bodyPart) {
         // start boundary
-        final StringBuilder sb = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder sb = tempThreadLocals.stringBuilder();
         sb.append("--").append(boundary).append("\r\n");
 
         // headers lines
@@ -188,9 +189,11 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
 
         // end of headers empty line
         sb.append("\r\n");
+        final String data = sb.toString();
+        tempThreadLocals.releaseStringBuilder();
         return StreamMessage.concat(
                 // Part prefix
-                StreamMessage.of(HttpData.ofUtf8(sb.toString())),
+                StreamMessage.of(HttpData.ofUtf8(data)),
                 // Part body
                 bodyPart.content(),
                 // Part postfix

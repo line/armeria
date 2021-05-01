@@ -1424,7 +1424,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             sanitizedTrailers = null;
         }
 
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder buf = tempThreadLocals.stringBuilder();
         buf.append("{startTime=");
         TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());
 
@@ -1472,6 +1473,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         buf.append('}');
 
         requestStr = buf.toString();
+        tempThreadLocals.releaseStringBuilder();
         requestStrFlags = flags;
 
         return requestStr;
@@ -1528,7 +1530,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             sanitizedTrailers = null;
         }
 
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder buf = tempThreadLocals.stringBuilder();
         buf.append("{startTime=");
         TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());
 
@@ -1572,6 +1575,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         responseStr = buf.toString();
+        tempThreadLocals.releaseStringBuilder();
         responseStrFlags = flags;
 
         return responseStr;

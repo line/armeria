@@ -393,7 +393,8 @@ public final class ContentDisposition {
             return strVal;
         }
 
-        final StringBuilder sb = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder sb = tempThreadLocals.stringBuilder();
         sb.append(type);
 
         if (name != null) {
@@ -410,7 +411,9 @@ public final class ContentDisposition {
                 encodeFilename(sb, filename, charset);
             }
         }
-        return strVal = sb.toString();
+        strVal = sb.toString();
+        tempThreadLocals.releaseStringBuilder();
+        return strVal;
     }
 
     /**

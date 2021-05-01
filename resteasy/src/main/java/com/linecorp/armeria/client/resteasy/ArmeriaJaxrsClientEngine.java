@@ -281,7 +281,8 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
      * Extracts path, query and fragment portions of the {@link URI}.
      */
     private static String getServicePath(URI uri) {
-        final StringBuilder bufferedBuilder = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder bufferedBuilder = tempThreadLocals.stringBuilder();
         bufferedBuilder.append(nullOrEmptyToSlash(uri.getRawPath()));
         final String query = uri.getRawQuery();
         if (query != null) {
@@ -291,7 +292,9 @@ public class ArmeriaJaxrsClientEngine implements AsyncClientHttpEngine, Closeabl
         if (fragment != null) {
             bufferedBuilder.append('#').append(fragment);
         }
-        return bufferedBuilder.toString();
+        final String servicePath = bufferedBuilder.toString();
+        tempThreadLocals.releaseStringBuilder();
+        return servicePath;
     }
 
     private static String nullOrEmptyToSlash(@Nullable String absolutePathRef) {

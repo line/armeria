@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,108 +32,174 @@ class TemporaryThreadLocalsTest {
 
     @Test
     void byteArrayReuse() {
-        final byte[] array = TemporaryThreadLocals.get().byteArray(8);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final byte[] array = tempThreadLocals.byteArray(8);
         assertThat(array).hasSize(8);
+        tempThreadLocals.releaseByteArray();
         for (int i = 0; i < 8; i++) {
-            assertThat(TemporaryThreadLocals.get().byteArray(i)).isSameAs(array);
+            assertThat(tempThreadLocals.byteArray(i)).isSameAs(array);
+            tempThreadLocals.releaseByteArray();
         }
     }
 
     @Test
     void byteArrayReallocation() {
-        final byte[] array = TemporaryThreadLocals.get().byteArray(8);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final byte[] array = tempThreadLocals.byteArray(8);
         assertThat(array).hasSize(8);
-        final byte[] newArray = TemporaryThreadLocals.get().byteArray(9);
+        tempThreadLocals.releaseByteArray();
+
+        final byte[] newArray = tempThreadLocals.byteArray(9);
         assertThat(newArray).hasSize(9);
+        tempThreadLocals.releaseByteArray();
     }
 
     @Test
     void tooLargeByteArray() {
-        final byte[] largeArray =
-                TemporaryThreadLocals.get().byteArray(TemporaryThreadLocals.MAX_BYTE_ARRAY_CAPACITY + 1);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final byte[] largeArray = tempThreadLocals.byteArray(TemporaryThreadLocals.MAX_BYTE_ARRAY_CAPACITY + 1);
         assertThat(largeArray).hasSize(TemporaryThreadLocals.MAX_BYTE_ARRAY_CAPACITY + 1);
 
         // A large array should not be reused.
-        final byte[] smallArray = TemporaryThreadLocals.get().byteArray(8);
+        final byte[] smallArray = tempThreadLocals.byteArray(8);
         assertThat(smallArray).hasSize(8);
+        tempThreadLocals.releaseByteArray();
+    }
+
+    @Test
+    void byteArrayReuseBeforeReleasing() {
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        tempThreadLocals.byteArray(8);
+        assertThatThrownBy(() -> tempThreadLocals.byteArray(8))
+                .isExactlyInstanceOf(IllegalStateException.class);
+        tempThreadLocals.releaseByteArray();
     }
 
     @Test
     void charArrayReuse() {
-        final char[] array = TemporaryThreadLocals.get().charArray(8);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final char[] array = tempThreadLocals.charArray(8);
         assertThat(array).hasSize(8);
+        tempThreadLocals.releaseCharArray();
         for (int i = 0; i < 8; i++) {
-            assertThat(TemporaryThreadLocals.get().charArray(i)).isSameAs(array);
+            assertThat(tempThreadLocals.charArray(i)).isSameAs(array);
+            tempThreadLocals.releaseCharArray();
         }
     }
 
     @Test
     void charArrayReallocation() {
-        final char[] array = TemporaryThreadLocals.get().charArray(8);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final char[] array = tempThreadLocals.charArray(8);
         assertThat(array).hasSize(8);
-        final char[] newArray = TemporaryThreadLocals.get().charArray(9);
+        tempThreadLocals.releaseCharArray();
+
+        final char[] newArray = tempThreadLocals.charArray(9);
         assertThat(newArray).hasSize(9);
+        tempThreadLocals.releaseCharArray();
     }
 
     @Test
     void tooLargeCharArray() {
-        final char[] largeArray =
-                TemporaryThreadLocals.get().charArray(TemporaryThreadLocals.MAX_CHAR_ARRAY_CAPACITY + 1);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final char[] largeArray = tempThreadLocals.charArray(TemporaryThreadLocals.MAX_CHAR_ARRAY_CAPACITY + 1);
         assertThat(largeArray).hasSize(TemporaryThreadLocals.MAX_CHAR_ARRAY_CAPACITY + 1);
 
         // A large array should not be reused.
-        final char[] smallArray = TemporaryThreadLocals.get().charArray(8);
+        final char[] smallArray = tempThreadLocals.charArray(8);
         assertThat(smallArray).hasSize(8);
+        tempThreadLocals.releaseCharArray();
     }
 
     @Test
-    void stringBuilderReuse() {
-        final StringBuilder buf1 = TemporaryThreadLocals.get().stringBuilder();
-        assertThat(buf1).isEmpty();
-        buf1.append("foo");
-
-        final StringBuilder buf2 = TemporaryThreadLocals.get().stringBuilder();
-        assertThat(buf2).isEmpty();
-        assertThat(buf2).isSameAs(buf1);
-    }
-
-    @Test
-    void tooLargeStringBuilder() {
-        final StringBuilder buf1 = TemporaryThreadLocals.get().stringBuilder();
-        buf1.append(Strings.repeat("x", TemporaryThreadLocals.MAX_STRING_BUILDER_CAPACITY * 2));
-        assertThat(buf1.capacity()).isGreaterThan(TemporaryThreadLocals.MAX_STRING_BUILDER_CAPACITY);
-
-        final StringBuilder buf2 = TemporaryThreadLocals.get().stringBuilder();
-        assertThat(buf2).isEmpty();
-        assertThat(buf2.capacity()).isEqualTo(TemporaryThreadLocals.MAX_STRING_BUILDER_CAPACITY);
-        assertThat(buf2).isNotSameAs(buf1);
+    void charArrayReuseBeforeReleasing() {
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        tempThreadLocals.charArray(8);
+        assertThatThrownBy(() -> tempThreadLocals.charArray(8))
+                .isExactlyInstanceOf(IllegalStateException.class);
+        tempThreadLocals.releaseCharArray();
     }
 
     @Test
     void intArrayReuse() {
-        final int[] array = TemporaryThreadLocals.get().intArray(8);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final int[] array = tempThreadLocals.intArray(8);
         assertThat(array).hasSize(8);
+        tempThreadLocals.releaseIntArray();
         for (int i = 0; i < 8; i++) {
-            assertThat(TemporaryThreadLocals.get().intArray(i)).isSameAs(array);
+            assertThat(tempThreadLocals.intArray(i)).isSameAs(array);
+            tempThreadLocals.releaseIntArray();
         }
     }
 
     @Test
     void intArrayReallocation() {
-        final int[] array = TemporaryThreadLocals.get().intArray(8);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final int[] array = tempThreadLocals.intArray(8);
         assertThat(array).hasSize(8);
-        final int[] newArray = TemporaryThreadLocals.get().intArray(9);
+        tempThreadLocals.releaseIntArray();
+
+        final int[] newArray = tempThreadLocals.intArray(9);
         assertThat(newArray).hasSize(9);
+        tempThreadLocals.releaseIntArray();
     }
 
     @Test
     void tooLargeIntArray() {
-        final int[] largeArray =
-                TemporaryThreadLocals.get().intArray(TemporaryThreadLocals.MAX_INT_ARRAY_CAPACITY + 1);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final int[] largeArray = tempThreadLocals.intArray(TemporaryThreadLocals.MAX_INT_ARRAY_CAPACITY + 1);
         assertThat(largeArray).hasSize(TemporaryThreadLocals.MAX_INT_ARRAY_CAPACITY + 1);
 
         // A large array should not be reused.
-        final int[] smallArray = TemporaryThreadLocals.get().intArray(8);
+        final int[] smallArray = tempThreadLocals.intArray(8);
         assertThat(smallArray).hasSize(8);
+        tempThreadLocals.releaseIntArray();
+    }
+
+    @Test
+    void intArrayReuseBeforeReleasing() {
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        tempThreadLocals.intArray(8);
+        assertThatThrownBy(() -> tempThreadLocals.intArray(8))
+                .isExactlyInstanceOf(IllegalStateException.class);
+        tempThreadLocals.releaseIntArray();
+    }
+
+    @Test
+    void stringBuilderReuse() {
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder buf1 = tempThreadLocals.stringBuilder();
+        assertThat(buf1).isEmpty();
+        buf1.append("foo");
+        tempThreadLocals.releaseStringBuilder();
+
+        final StringBuilder buf2 = tempThreadLocals.stringBuilder();
+        assertThat(buf2).isEmpty();
+        assertThat(buf2).isSameAs(buf1);
+        tempThreadLocals.releaseStringBuilder();
+    }
+
+    @Test
+    void tooLargeStringBuilder() {
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder buf1 = tempThreadLocals.stringBuilder();
+        buf1.append(Strings.repeat("x", TemporaryThreadLocals.MAX_STRING_BUILDER_CAPACITY * 2));
+        assertThat(buf1.capacity()).isGreaterThan(TemporaryThreadLocals.MAX_STRING_BUILDER_CAPACITY);
+        tempThreadLocals.releaseStringBuilder();
+
+        final StringBuilder buf2 = tempThreadLocals.stringBuilder();
+        assertThat(buf2).isEmpty();
+        assertThat(buf2.capacity()).isEqualTo(TemporaryThreadLocals.MAX_STRING_BUILDER_CAPACITY);
+        assertThat(buf2).isNotSameAs(buf1);
+        tempThreadLocals.releaseStringBuilder();
+    }
+
+    @Test
+    void stringBuilderReuseBeforeReleasing() {
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        tempThreadLocals.stringBuilder();
+        assertThatThrownBy(() -> tempThreadLocals.stringBuilder())
+                .isExactlyInstanceOf(IllegalStateException.class);
+        tempThreadLocals.releaseStringBuilder();
     }
 }

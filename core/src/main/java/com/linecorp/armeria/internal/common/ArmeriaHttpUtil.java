@@ -314,7 +314,8 @@ public final class ArmeriaHttpUtil {
         // Decode percent-encoded characters.
         // An invalid character is replaced with 0xFF, which will be replaced into '�' by UTF-8 decoder.
         final int len = path.length();
-        final byte[] buf = TemporaryThreadLocals.get().byteArray(len);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final byte[] buf = tempThreadLocals.byteArray(len);
         int dstLen = 0;
         for (int i = 0; i < len; i++) {
             final char ch = path.charAt(i);
@@ -341,7 +342,9 @@ public final class ArmeriaHttpUtil {
             }
         }
 
-        return new String(buf, 0, dstLen, StandardCharsets.UTF_8);
+        final String decoded = new String(buf, 0, dstLen, StandardCharsets.UTF_8);
+        tempThreadLocals.releaseByteArray();
+        return decoded;
     }
 
     /**

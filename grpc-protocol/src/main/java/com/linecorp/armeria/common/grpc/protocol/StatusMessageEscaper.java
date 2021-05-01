@@ -88,7 +88,8 @@ public final class StatusMessageEscaper {
      * @param ri The reader index, pointed at the first byte that needs escaping.
      */
     private static String doEscape(byte[] valueBytes, int ri) {
-        final byte[] escapedBytes = TemporaryThreadLocals.get().byteArray(ri + (valueBytes.length - ri) * 3);
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final byte[] escapedBytes = tempThreadLocals.byteArray(ri + (valueBytes.length - ri) * 3);
         // copy over the good bytes
         if (ri != 0) {
             System.arraycopy(valueBytes, 0, escapedBytes, 0, ri);
@@ -109,7 +110,9 @@ public final class StatusMessageEscaper {
         }
 
         //noinspection deprecation
-        return new String(escapedBytes, 0,  0, wi);
+        final String escaped = new String(escapedBytes, 0,  0, wi);
+        tempThreadLocals.releaseByteArray();
+        return escaped;
     }
 
     /**

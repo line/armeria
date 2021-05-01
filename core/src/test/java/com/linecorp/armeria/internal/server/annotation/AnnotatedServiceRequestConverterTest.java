@@ -41,6 +41,7 @@ import java.util.UUID;
 
 import javax.annotation.Nullable;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -63,6 +64,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.MyService3.CompositeRequestBean1;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.MyService3.CompositeRequestBean2;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceRequestConverterTest.MyService3.CompositeRequestBean3;
@@ -718,6 +720,11 @@ class AnnotatedServiceRequestConverterTest {
                 @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
             return null;
         }
+    }
+
+    @BeforeEach
+    void setUp() {
+        TemporaryThreadLocals.get().releaseStringBuilder();
     }
 
     @Test

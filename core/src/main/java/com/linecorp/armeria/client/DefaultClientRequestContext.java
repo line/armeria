@@ -694,7 +694,8 @@ public final class DefaultClientRequestContext
         final String method = method().name();
 
         // Build the string representation.
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
+        final StringBuilder buf = tempThreadLocals.stringBuilder();
         buf.append("[creqId=").append(creqId);
         if (parent != null) {
             buf.append(", preqId=").append(preqId);
@@ -713,6 +714,8 @@ public final class DefaultClientRequestContext
            .append(proto).append("://").append(authority).append(path).append('#').append(method)
            .append(']');
 
-        return buf.toString();
+        final String toString = buf.toString();
+        tempThreadLocals.releaseStringBuilder();
+        return toString;
     }
 }

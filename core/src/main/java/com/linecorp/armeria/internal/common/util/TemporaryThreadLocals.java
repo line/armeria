@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import io.netty.util.internal.EmptyArrays;
@@ -53,13 +55,13 @@ public final class TemporaryThreadLocals {
     static final int MAX_BYTE_ARRAY_CAPACITY = 4096;
 
     @VisibleForTesting
-    static final int MAX_STRING_BUILDER_CAPACITY = 4096;
-
-    @VisibleForTesting
     static final int MAX_CHAR_ARRAY_CAPACITY = 4096;
 
     @VisibleForTesting
     static final int MAX_INT_ARRAY_CAPACITY = 4096;
+
+    @VisibleForTesting
+    static final int MAX_STRING_BUILDER_CAPACITY = 4096;
 
     private static final ThreadLocal<TemporaryThreadLocals> fallback =
             ThreadLocal.withInitial(TemporaryThreadLocals::new);
@@ -77,9 +79,14 @@ public final class TemporaryThreadLocals {
     }
 
     private byte[] byteArray;
-    private StringBuilder stringBuilder;
     private char[] charArray;
     private int[] intArray;
+    private StringBuilder stringBuilder;
+
+    private boolean byteArrayLock;
+    private boolean charArrayLock;
+    private boolean intArrayLock;
+    private boolean stringBuilderLock;
 
     TemporaryThreadLocals() {
         clear();
@@ -88,9 +95,14 @@ public final class TemporaryThreadLocals {
     @VisibleForTesting
     void clear() {
         byteArray = EmptyArrays.EMPTY_BYTES;
-        stringBuilder = inflate(new StringBuilder());
         charArray = EmptyArrays.EMPTY_CHARS;
         intArray = EmptyArrays.EMPTY_INTS;
+        stringBuilder = inflate(new StringBuilder());
+
+        byteArrayLock = false;
+        charArrayLock = false;
+        intArrayLock = false;
+        stringBuilderLock = false;
     }
 
     /**
@@ -98,6 +110,8 @@ public final class TemporaryThreadLocals {
      * {@code minCapacity}.
      */
     public byte[] byteArray(int minCapacity) {
+        checkState(!byteArrayLock, "Cannot be called before releasing");
+        byteArrayLock = true;
         final byte[] byteArray = this.byteArray;
         if (byteArray.length >= minCapacity) {
             return byteArray;
@@ -106,10 +120,19 @@ public final class TemporaryThreadLocals {
         return allocateByteArray(minCapacity);
     }
 
+    /**
+     * Release the byte array to be reused.
+     */
+    public void releaseByteArray() {
+        byteArrayLock = false;
+    }
+
     private byte[] allocateByteArray(int minCapacity) {
         final byte[] byteArray = new byte[minCapacity];
         if (minCapacity <= MAX_BYTE_ARRAY_CAPACITY) {
             this.byteArray = byteArray;
+        } else {
+            byteArrayLock = false;
         }
         return byteArray;
     }
@@ -119,6 +142,8 @@ public final class TemporaryThreadLocals {
      * {@code minCapacity}.
      */
     public char[] charArray(int minCapacity) {
+        checkState(!charArrayLock, "Cannot be called before releasing");
+        charArrayLock = true;
         final char[] charArray = this.charArray;
         if (charArray.length >= minCapacity) {
             return charArray;
@@ -127,18 +152,61 @@ public final class TemporaryThreadLocals {
         return allocateCharArray(minCapacity);
     }
 
+    /**
+     * Release the char array to be reused.
+     */
+    public void releaseCharArray() {
+        charArrayLock = false;
+    }
+
     private char[] allocateCharArray(int minCapacity) {
         final char[] charArray = new char[minCapacity];
         if (minCapacity <= MAX_CHAR_ARRAY_CAPACITY) {
             this.charArray = charArray;
+        } else {
+            charArrayLock = false;
         }
         return charArray;
+    }
+
+    /**
+     * Returns a thread-local integer array whose length is equal to or greater than the specified
+     * {@code minCapacity}.
+     */
+    public int[] intArray(int minCapacity) {
+        checkState(!intArrayLock, "Cannot be called before releasing");
+        intArrayLock = true;
+        final int[] intArray = this.intArray;
+        if (intArray.length >= minCapacity) {
+            return intArray;
+        }
+
+        return allocateIntArray(minCapacity);
+    }
+
+    /**
+     * Release the int array to be reused.
+     */
+    public void releaseIntArray() {
+        intArrayLock = false;
+    }
+
+    private int[] allocateIntArray(int minCapacity) {
+        final int[] intArray = new int[minCapacity];
+        if (minCapacity <= MAX_INT_ARRAY_CAPACITY) {
+            this.intArray = intArray;
+        } else {
+            intArrayLock = false;
+        }
+        return intArray;
     }
 
     /**
      * Returns a thread-local {@link StringBuilder}.
      */
     public StringBuilder stringBuilder() {
+        checkState(!stringBuilderLock, "Cannot be called before releasing");
+        stringBuilderLock = true;
         final StringBuilder stringBuilder = this.stringBuilder;
         if (stringBuilder.capacity() > MAX_STRING_BUILDER_CAPACITY) {
             return this.stringBuilder = inflate(new StringBuilder(MAX_STRING_BUILDER_CAPACITY));
@@ -146,6 +214,13 @@ public final class TemporaryThreadLocals {
             stringBuilder.setLength(0);
             return stringBuilder;
         }
+    }
+
+    /**
+     * Release the string builder to be reused.
+     */
+    public void releaseStringBuilder() {
+        stringBuilderLock = false;
     }
 
     /**
@@ -157,26 +232,5 @@ public final class TemporaryThreadLocals {
         stringBuilder.append('\u0100');
         stringBuilder.setLength(0);
         return stringBuilder;
-    }
-
-    /**
-     * Returns a thread-local integer array whose length is equal to or greater than the specified
-     * {@code minCapacity}.
-     */
-    public int[] intArray(int minCapacity) {
-        final int[] intArray = this.intArray;
-        if (intArray.length >= minCapacity) {
-            return intArray;
-        }
-
-        return allocateIntArray(minCapacity);
-    }
-
-    private int[] allocateIntArray(int minCapacity) {
-        final int[] intArray = new int[minCapacity];
-        if (minCapacity <= MAX_INT_ARRAY_CAPACITY) {
-            this.intArray = intArray;
-        }
-        return intArray;
     }
 }
