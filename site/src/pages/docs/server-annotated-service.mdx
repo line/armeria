@@ -1600,3 +1600,49 @@ serverBuilder
     })
     .build(MyAnnotatedService())
 ```
+
+## Client interoperability
+
+This section describes methods to achieve interoperability with some well-known clients.
+
+### Axios
+
+[Axios](https://github.com/axios/axios) works with Armeria annotated services without issues, except
+when serializing arrays as query parameters. By default, arrays are serialized as `?foo[]=1&foo[]=2`,
+while Armeria expects `?foo=1&foo=2`.
+
+This behavior can be modified by specifying a custom `paramsSerializer` function when creating a new
+Axios instance. For example, you can use the [`qs`](https://github.com/ljharb/qs) library:
+
+```javascript
+const axios = require('axios');
+const qs = require('qs');
+
+function paramsSerializer(params) {
+  return qs.stringify(params, { arrayFormat: 'repeat' });
+}
+
+const client = axios.create({ paramsSerializer });
+```
+
+If you prefer not to add an extra dependency, you can use the following function instead:
+
+```javascript
+function paramsSerializer(params) {
+  const parts = [];
+
+  for (const [key, values] of Object.entries(params)) {
+    if (values === null || typeof values === 'undefined') {
+      continue;
+    }
+
+    for (const value of [values].flat()) {
+      parts.push(`${key}=${encodeURIComponent(value)}`);
+    }
+  }
+
+  return parts.join('&');
+}
+```
+
+The implementation is based on [the default serializer in Axios](https://github.com/axios/axios/blob/d99d5faac29899eba68ce671e6b3cbc9832e9ad8/lib/helpers/buildURL.js#L34-L54).
