@@ -67,7 +67,8 @@ jobs:
 
     - name: Build with Gradle
       run: |
-        ./gradlew -Dorg.gradle.jvmargs=-Xmx4g --no-daemon --stacktrace build \
+        ./gradlew --no-daemon --stacktrace build \
+        ${{ (matrix.on == 'self-hosted') && '-Dorg.gradle.jvmargs=-Xmx4g' || '' }} \
         ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=4' }} --parallel \
         ${{ matrix.lint && 'lint' || '' }} \
         ${{ !matrix.lint && '-PnoLint' || '' }} \
