@@ -92,9 +92,10 @@ final class ByteArrayHttpData implements HttpData {
             buf.append("B, ");
         }
 
-        final String data = appendPreviews(buf, array, 0, Math.min(16, array.length)).append('}').toString();
+        final String toString = appendPreviews(buf, array, 0, Math.min(16, array.length))
+                .append('}').toString();
         tempThreadLocals.releaseStringBuilder();
-        return data;
+        return toString;
     }
 
     static StringBuilder appendPreviews(StringBuilder buf, byte[] array, int offset, int previewLength) {
