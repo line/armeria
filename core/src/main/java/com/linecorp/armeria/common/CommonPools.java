@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.BlockingTaskExecutorBuilder;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -33,7 +34,9 @@ public final class CommonPools {
 
     static {
         // Threads spawned as needed and reused, with a 60s timeout and unbounded work queue.
-        BLOCKING_TASK_EXECUTOR = BlockingTaskExecutor.of();
+        BLOCKING_TASK_EXECUTOR = BlockingTaskExecutorBuilder.of()
+                                                            .threadNamePrefix("armeria-common-blocking-tasks")
+                                                            .build();
 
         WORKER_GROUP = EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(),
                                                          "armeria-common-worker", true);
