@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
+
 enum SimpleTypeServiceNaming implements ServiceNaming {
 
     INSTANCE;
@@ -41,12 +43,7 @@ enum SimpleTypeServiceNaming implements ServiceNaming {
                 simpleTypeName = key.substring(packageIndex + 1);
             }
 
-            // Trim trailing dollar signs from simpleTypeName
-            int lastCharIndex = simpleTypeName.length() - 1;
-            while (simpleTypeName.charAt(lastCharIndex) == '$') {
-                lastCharIndex--;
-            }
-            return simpleTypeName.substring(0, lastCharIndex + 1);
+            return ServiceNamingUtil.trimTrailingDollarSigns(simpleTypeName);
         });
     }
 }

@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import java.util.regex.Pattern;
+
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.HttpService;
@@ -22,6 +24,7 @@ import com.linecorp.armeria.server.HttpService;
 public final class ServiceNamingUtil {
 
     public static final String GRPC_SERVICE_NAME = "com.linecorp.armeria.internal.common.grpc.GrpcLogUtil";
+    private static final Pattern TRAILING_DOLLARS = Pattern.compile("\\$+$");
 
     public static String fullTypeHttpServiceName(HttpService service) {
         Unwrappable unwrappable = service;
@@ -37,6 +40,10 @@ public final class ServiceNamingUtil {
                 return delegate.getClass().getName();
             }
         }
+    }
+
+    public static String trimTrailingDollarSigns(String serviceName) {
+        return TRAILING_DOLLARS.matcher(serviceName).replaceFirst("");
     }
 
     private ServiceNamingUtil() {}
