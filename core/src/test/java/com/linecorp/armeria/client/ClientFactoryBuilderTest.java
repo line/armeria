@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 
 import io.netty.channel.ChannelOption;
+import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.resolver.DefaultAddressResolverGroup;
 
 class ClientFactoryBuilderTest {
@@ -248,6 +249,22 @@ class ClientFactoryBuilderTest {
             assertThat(factory.options().idleTimeoutMillis()).isEqualTo(maxConnectionAgeMillis);
             // pingInterval should be disabled because idleTimeout will work first.
             assertThat(factory.options().pingIntervalMillis()).isEqualTo(0);
+        }
+    }
+
+    @Test
+    void testTcpUserTimeout() {
+        final ChannelOption<Integer> option = EpollChannelOption.TCP_USER_TIMEOUT;
+        final int value = Flags.tcpUserTimeout();
+        try (ClientFactory factory = ClientFactory.builder().build()) {
+            assertThat(factory.options().channelOptions()).containsEntry(option, value);
+        }
+
+        final int newValue = 3000;
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .channelOption(option, newValue)
+                                                  .build()) {
+            assertThat(factory.options().channelOptions()).containsEntry(option, newValue);
         }
     }
 }

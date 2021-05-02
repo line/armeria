@@ -430,6 +430,10 @@ public final class Flags {
     private static final boolean
             DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING = getBoolean("useLegacyRouteDecoratorOrdering", false);
 
+    private static final int DEFAULT_TCP_USER_TIMEOUT = 1000;
+    private static final int TCP_USER_TIMEOUT =
+            getInt("tcpUserTimeout", DEFAULT_TCP_USER_TIMEOUT, value -> value >= 0);
+
     static {
         TransportType type = null;
         switch (TRANSPORT_TYPE_NAME) {
@@ -1241,6 +1245,13 @@ public final class Flags {
      */
     public static Set<TransientServiceOption> transientServiceOptions() {
         return TRANSIENT_SERVICE_OPTIONS;
+    }
+
+    /**
+     * TBU.
+     */
+    public static int tcpUserTimeout() {
+        return TCP_USER_TIMEOUT;
     }
 
     /**
