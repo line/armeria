@@ -113,7 +113,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     @Override
     public DnsQueryLifecycleObserver queryRedirected(List<InetSocketAddress> nameServers) {
         final String servers = nameServers.stream()
-                                          .map(addr -> getHostAddress(addr))
+                                          .map(DefaultDnsQueryLifecycleObserver::getHostAddress)
                                           .collect(Collectors.joining(","));
         final List<Tag> tags = ImmutableList.of(nameTag, Tag.of(SERVERS_TAG, servers));
         meterRegistry.counter(meterIdPrefixRedirected, tags).increment();

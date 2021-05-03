@@ -105,7 +105,7 @@ class ClientMaxConnectionAgeTest {
         while (closed.get() < maxClosedConnection) {
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
             final int closed = this.closed.get();
-            await().timeout(Duration.ofMillis(500)).untilAsserted(() -> {
+            await().timeout(Duration.ofSeconds(2)).untilAsserted(() -> {
                 assertThat(opened).hasValueBetween(closed, closed + 1);
             });
         }

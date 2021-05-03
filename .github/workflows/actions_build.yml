@@ -20,13 +20,13 @@ jobs:
             site: true
           - java: 11
             on: self-hosted
-            coverage: true
+            lint: true
           - java: 14
             on: self-hosted
             leak: true
           - java: 15
             on: self-hosted
-            lint: true
+            coverage: true
 
     steps:
     - uses: actions/checkout@v2
@@ -49,7 +49,9 @@ jobs:
 
     - name: Install svgbob_cli
       if: ${{ matrix.site }}
-      run: sudo apt -y install cargo && cargo install svgbob_cli
+      run: |
+        sudo yum -y install cargo && cargo install svgbob_cli
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     - name: Cache
       uses: actions/cache@v2
@@ -59,17 +61,19 @@ jobs:
           ~/.gradle/caches/jars-3
           ~/.gradle/caches/modules-2
           ~/.gradle/caches/package-lists
+          ~/.gradle/caches/embedded-consul
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
 
     - name: Build with Gradle
       run: |
-        ./gradlew --no-daemon --stacktrace --parallel --max-workers=4 build \
+        ./gradlew --no-daemon --stacktrace build \
+        ${{ (matrix.on == 'self-hosted') && '-Dorg.gradle.jvmargs=-Xmx4g' || '' }} \
+        ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=4' }} --parallel \
         ${{ matrix.lint && 'lint' || '' }} \
         ${{ !matrix.lint && '-PnoLint' || '' }} \
         ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
-        ${{ !matrix.site && '-PnoWeb' || '' }} \
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
         -PbuildJdkVersion=15 \

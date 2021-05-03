@@ -329,7 +329,8 @@ class RefreshingAddressResolverTest {
                 final Future<InetSocketAddress> future = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
                 await().until(future::isDone);
-                assertThat(future.cause()).isInstanceOf(DnsTimeoutException.class);
+                assertThat(Throwables.getRootCause(future.cause()))
+                        .isInstanceOfAny(DnsTimeoutException.class, DnsNameResolverTimeoutException.class);
             }
         }
     }
