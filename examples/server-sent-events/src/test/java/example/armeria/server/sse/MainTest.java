@@ -31,7 +31,7 @@ class MainTest {
 
         // The server emits only 5 events here because this test is to show how the events are encoded.
         server = Main.newServer(0, 0,
-                                Duration.ofMillis(200), 5, () -> Long.toString(sequence.getAndIncrement()));
+                                Duration.ofMillis(100), 5, () -> Long.toString(sequence.getAndIncrement()));
         server.start().join();
         client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
     }
@@ -47,7 +47,7 @@ class MainTest {
     }
 
     @Test
-    void testServerSentEvents() {
+    void testServerSentEventsLong() {
         StepVerifier.create(Flux.from(client.get("/long")).log())
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM))
@@ -59,7 +59,10 @@ class MainTest {
                     .assertNext(o -> assertThat(o.isEndOfStream()).isTrue())
                     .expectComplete()
                     .verify();
+    }
 
+    @Test
+    void testServerSentEventsShort() {
         StepVerifier.create(Flux.from(client.get("/short")).log())
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM))
