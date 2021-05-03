@@ -66,8 +66,6 @@ jobs:
           ${{ runner.os }}-gradle-
 
     - name: Build with Gradle
-      # TODO(ikhoon): Remove 'jacocoExclusions' for Kotlin once JaCoCo 0.8.7 is released.
-      #               See https://github.com/jacoco/jacoco/issues/1155 for details.
       run: |
         ./gradlew --no-daemon --stacktrace build \
         ${{ (matrix.on == 'self-hosted') && '-Dorg.gradle.jvmargs=-Xmx4g' || '' }} \
@@ -75,7 +73,7 @@ jobs:
         ${{ matrix.lint && 'lint' || '' }} \
         ${{ !matrix.lint && '-PnoLint' || '' }} \
         ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
-        ${{ matrix.coverage && '-Pcoverage -PjacocoExclusions="**/kotlin/**"' || '' }} \
+        ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
         -PbuildJdkVersion=15 \
         -PtestJavaVersion=${{ matrix.java }} \
