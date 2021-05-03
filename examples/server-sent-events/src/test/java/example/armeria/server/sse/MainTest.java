@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -25,15 +26,18 @@ class MainTest {
     private static Server server;
     private static WebClient client;
 
+    static final AtomicLong sequence = new AtomicLong();
+
     @BeforeAll
     static void beforeClass() throws Exception {
-        final AtomicLong sequence = new AtomicLong();
 
         // The server emits only 5 events here because this test is to show how the events are encoded.
         server = Main.newServer(0, 0,
                                 Duration.ofMillis(100), 5, () -> Long.toString(sequence.getAndIncrement()));
         server.start().join();
-        client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
+        client = WebClient.builder("http://127.0.0.1:" + server.activeLocalPort())
+                          .responseTimeout(Duration.ofSeconds(15))
+                          .build();
     }
 
     @AfterAll
@@ -44,6 +48,11 @@ class MainTest {
         if (client != null) {
             client.options().factory().close();
         }
+    }
+
+    @AfterEach
+    void afterEach() {
+        sequence.set(0);
     }
 
     @Test
@@ -66,11 +75,11 @@ class MainTest {
         StepVerifier.create(Flux.from(client.get("/short")).log())
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM))
-                    .expectNext(HttpData.ofUtf8("id:0\ndata:5\nretry:5000\n\n"))
-                    .expectNext(HttpData.ofUtf8("id:1\ndata:6\nretry:5000\n\n"))
-                    .expectNext(HttpData.ofUtf8("id:2\ndata:7\nretry:5000\n\n"))
-                    .expectNext(HttpData.ofUtf8("id:3\ndata:8\nretry:5000\n\n"))
-                    .expectNext(HttpData.ofUtf8("id:4\ndata:9\nretry:5000\n\n"))
+                    .expectNext(HttpData.ofUtf8("id:0\ndata:0\nretry:5000\n\n"))
+                    .expectNext(HttpData.ofUtf8("id:1\ndata:1\nretry:5000\n\n"))
+                    .expectNext(HttpData.ofUtf8("id:2\ndata:2\nretry:5000\n\n"))
+                    .expectNext(HttpData.ofUtf8("id:3\ndata:3\nretry:5000\n\n"))
+                    .expectNext(HttpData.ofUtf8("id:4\ndata:4\nretry:5000\n\n"))
                     .assertNext(o -> assertThat(o.isEndOfStream()).isTrue())
                     .expectComplete()
                     .verify();
