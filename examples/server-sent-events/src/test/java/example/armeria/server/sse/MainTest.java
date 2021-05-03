@@ -42,11 +42,9 @@ class MainTest {
 
         // The server emits only 5 events here because this test is to show how the events are encoded.
         server = Main.newServer(0, 0,
-                                Duration.ofMillis(100), 5, () -> Long.toString(sequence.getAndIncrement()));
+                                Duration.ofMillis(200), 5, () -> Long.toString(sequence.getAndIncrement()));
         server.start().join();
-        client = WebClient.builder("http://127.0.0.1:" + server.activeLocalPort())
-                          .responseTimeout(Duration.ofSeconds(15))
-                          .build();
+        client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
     }
 
     @AfterAll

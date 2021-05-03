@@ -55,6 +55,8 @@ class CuratorServiceDiscoveryCompatibilityTest {
         final AtomicReference<ServiceInstance<Void>> registeredRef = new AtomicReference<>();
         final AtomicReference<Server> serverRef = new AtomicReference<>();
         final AtomicReference<CuratorFramework> clientRef = new AtomicReference<>();
+
+        // TODO(ikhoon): Need a way to easily and safely allocate unused ports.
         await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
             final Endpoint endpoint = ZooKeeperTestUtil.sampleEndpoints(1).get(0);
             final CuratorFramework client =
@@ -62,10 +64,12 @@ class CuratorServiceDiscoveryCompatibilityTest {
                                            .connectString(zkInstance.connectString())
                                            .retryPolicy(new ExponentialBackoffRetry(1000, 3))
                                            .build();
+            clientRef.set(client);
             client.start();
             final JsonInstanceSerializer<Void> serializer =
                     new JsonInstanceSerializer<>(Void.class);
             final ServiceInstance<Void> registered = serviceInstance(endpoint);
+            registeredRef.set(registered);
             final ServiceDiscoveryImpl<Void> serviceDiscovery =
                     new ServiceDiscoveryImpl<>(client, Z_NODE, serializer, registered, false);
             serviceDiscovery.start();
@@ -88,9 +92,11 @@ class CuratorServiceDiscoveryCompatibilityTest {
                                         .http(endpoint.port())
                                         .service("/", (ctx, req) -> HttpResponse.of(200))
                                         .build();
+            serverRef.set(server);
             server.addListener(listener);
             server.start().join();
         });
+
         assertInstance(registeredRef.get());
         serverRef.get().stop().join();
         clientRef.get().close();
