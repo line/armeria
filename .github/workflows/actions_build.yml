@@ -20,13 +20,13 @@ jobs:
             site: true
           - java: 11
             on: self-hosted
-            coverage: true
+            lint: true
           - java: 14
             on: self-hosted
             leak: true
           - java: 15
             on: self-hosted
-            lint: true
+            coverage: true
 
     steps:
     - uses: actions/checkout@v2
