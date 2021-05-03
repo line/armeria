@@ -15,11 +15,12 @@
  */
 package com.linecorp.armeria.server.zookeeper;
 
-import static com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil.startServerWithRetries;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -51,42 +52,48 @@ class CuratorServiceDiscoveryCompatibilityTest {
 
     @Test
     void registeredInstancesAreSameWhenUsingServiceDiscoveryImplAndUpdatingListener() throws Throwable {
-        final Endpoint endpoint = ZooKeeperTestUtil.sampleEndpoints(1).get(0);
-        final CuratorFramework client =
-                CuratorFrameworkFactory.builder()
-                                       .connectString(zkInstance.connectString())
-                                       .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-                                       .build();
-        client.start();
-        final JsonInstanceSerializer<Void> serializer =
-                new JsonInstanceSerializer<>(Void.class);
-        final ServiceInstance<Void> registered = serviceInstance(endpoint);
-        final ServiceDiscoveryImpl<Void> serviceDiscovery =
-                new ServiceDiscoveryImpl<>(client, Z_NODE, serializer, registered, false);
-        serviceDiscovery.start();
-        assertInstance(registered);
-        serviceDiscovery.close();
-        await().untilAsserted(() -> zkInstance.assertNotExists(Z_NODE + "/foo/bar"));
+        final AtomicReference<ServiceInstance<Void>> registeredRef = new AtomicReference<>();
+        final AtomicReference<Server> serverRef = new AtomicReference<>();
+        final AtomicReference<CuratorFramework> clientRef = new AtomicReference<>();
+        await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
+            final Endpoint endpoint = ZooKeeperTestUtil.sampleEndpoints(1).get(0);
+            final CuratorFramework client =
+                    CuratorFrameworkFactory.builder()
+                                           .connectString(zkInstance.connectString())
+                                           .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+                                           .build();
+            client.start();
+            final JsonInstanceSerializer<Void> serializer =
+                    new JsonInstanceSerializer<>(Void.class);
+            final ServiceInstance<Void> registered = serviceInstance(endpoint);
+            final ServiceDiscoveryImpl<Void> serviceDiscovery =
+                    new ServiceDiscoveryImpl<>(client, Z_NODE, serializer, registered, false);
+            serviceDiscovery.start();
+            assertInstance(registered);
+            serviceDiscovery.close();
+            await().untilAsserted(() -> zkInstance.assertNotExists(Z_NODE + "/foo/bar"));
 
-        final ZooKeeperRegistrationSpec registrationSpec =
-                ZooKeeperRegistrationSpec.builderForCurator("foo")
-                                         .serviceId("bar")
-                                         .serviceAddress("foo.com")
-                                         .port(endpoint.port())
-                                         .uriSpec(CURATOR_X_URI_SPEC)
-                                         .build();
+            final ZooKeeperRegistrationSpec registrationSpec =
+                    ZooKeeperRegistrationSpec.builderForCurator("foo")
+                                             .serviceId("bar")
+                                             .serviceAddress("foo.com")
+                                             .port(endpoint.port())
+                                             .uriSpec(CURATOR_X_URI_SPEC)
+                                             .build();
 
-        final ZooKeeperUpdatingListener listener =
-                ZooKeeperUpdatingListener.builder(zkInstance.connectString(), Z_NODE, registrationSpec).build();
-        final Server server = Server.builder()
-                                    .http(endpoint.port())
-                                    .service("/", (ctx, req) -> HttpResponse.of(200))
-                                    .build();
-        server.addListener(listener);
-        startServerWithRetries(server);
-        assertInstance(registered);
-        server.stop().join();
-        client.close();
+            final ZooKeeperUpdatingListener listener =
+                    ZooKeeperUpdatingListener.builder(zkInstance.connectString(), Z_NODE, registrationSpec)
+                                             .build();
+            final Server server = Server.builder()
+                                        .http(endpoint.port())
+                                        .service("/", (ctx, req) -> HttpResponse.of(200))
+                                        .build();
+            server.addListener(listener);
+            server.start().join();
+        });
+        assertInstance(registeredRef.get());
+        serverRef.get().stop().join();
+        clientRef.get().close();
     }
 
     private static void assertInstance(ServiceInstance<Void> registered) throws Throwable {
