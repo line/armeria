@@ -34,7 +34,8 @@ final class DnsTimeoutUtil {
                     .isEqualTo("SearchDomainUnknownHostException");
             assertThat(suppressed.getCause()).isInstanceOf(DnsNameResolverTimeoutException.class);
         } else {
-            assertThat(rootCause).isInstanceOf(DnsTimeoutException.class);
+            assertThat(rootCause).isInstanceOfAny(DnsTimeoutException.class,
+                                                  DnsNameResolverTimeoutException.class);
         }
     }
 
