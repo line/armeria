@@ -181,8 +181,7 @@ class GracefulShutdownIntegrationTest {
         assertThat(completed.get()).isTrue();
 
         // Should take 500 more milliseconds than the baseline.
-        assertThat(stopTime - startTime).isBetween(baselineNanos + MILLISECONDS.toNanos(100),
-                                                   baselineNanos + MILLISECONDS.toNanos(900));
+        assertThat(stopTime - startTime).isBetween(baselineNanos, baselineNanos + MILLISECONDS.toNanos(900));
     }
 
     @Test
