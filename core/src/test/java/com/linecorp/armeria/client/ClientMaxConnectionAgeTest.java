@@ -102,12 +102,12 @@ class ClientMaxConnectionAgeTest {
                                           .responseTimeoutMillis(0)
                                           .build();
 
-        while (closed.get() < maxClosedConnection) {
+        for (int i = 0; i < 5; i++) {
+            assertThat(opened).hasValue(i);
+            assertThat(closed).hasValue(i);
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
-            final int closed = this.closed.get();
-            await().timeout(Duration.ofSeconds(2)).untilAsserted(() -> {
-                assertThat(opened).hasValueBetween(closed, closed + 1);
-            });
+            await().timeout(Duration.ofSeconds(1)).untilAtomic(opened, Matchers.is(i + 1));
+            await().timeout(Duration.ofSeconds(5)).untilAtomic(closed, Matchers.is(i + 1));
         }
 
         await().untilAsserted(() -> {
@@ -125,14 +125,14 @@ class ClientMaxConnectionAgeTest {
                             scheme + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
+                                        .isBetween(MAX_CONNECTION_AGE - 300.0, MAX_CONNECTION_AGE + 4000.0);
                             })
                     .hasEntrySatisfying(
                             "armeria.client.connections.lifespan.percentile#value{phi=1,protocol=" +
                             scheme + '}',
                             value -> {
                                 assertThat(value * 1000)
-                                        .isBetween(MAX_CONNECTION_AGE - 200.0, MAX_CONNECTION_AGE + 3000.0);
+                                        .isBetween(MAX_CONNECTION_AGE - 300.0, MAX_CONNECTION_AGE + 4000.0);
                             })
                     .hasEntrySatisfying(
                             "armeria.client.connections.lifespan#count{protocol=" + scheme + '}',
