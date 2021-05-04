@@ -35,11 +35,10 @@ class MainTest {
     private static Server server;
     private static WebClient client;
 
-    static final AtomicLong sequence = new AtomicLong();
+    private static final AtomicLong sequence = new AtomicLong();
 
     @BeforeAll
     static void beforeClass() throws Exception {
-
         // The server emits only 5 events here because this test is to show how the events are encoded.
         server = Main.newServer(0, 0,
                                 Duration.ofMillis(200), 5, () -> Long.toString(sequence.getAndIncrement()));
