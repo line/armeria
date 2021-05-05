@@ -33,11 +33,14 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
@@ -54,22 +57,24 @@ class ManagementServiceTest {
     };
 
     @Test
-    void threadDump() throws InterruptedException {
-        final WebClient client = WebClient.of(server.httpUri());
+    void threadDump() throws Exception {
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         final AggregatedHttpResponse response =
-                client.get("/internal/management/jvm/threaddump").aggregate().join();
+                ThreadDumpService.INSTANCE.serve(ctx, request).aggregate().join();
         assertThat(response.contentType()).isEqualTo(MediaType.PLAIN_TEXT);
         assertThat(response.contentUtf8()).contains(Thread.currentThread().getName());
     }
 
     @Test
     void threadDumpWithJson() throws Exception {
-        final WebClient client = WebClient.of(server.httpUri());
+        final HttpRequest request = HttpRequest.builder()
+                                               .get("/")
+                                               .header(HttpHeaderNames.ACCEPT, MediaType.JSON)
+                                               .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         final AggregatedHttpResponse response =
-                client.prepare()
-                      .get("/internal/management/jvm/threaddump")
-                      .header(HttpHeaderNames.ACCEPT, MediaType.JSON)
-                      .execute().aggregate().join();
+                ThreadDumpService.INSTANCE.serve(ctx, request).aggregate().join();
 
         assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         final String content = response.contentUtf8();
