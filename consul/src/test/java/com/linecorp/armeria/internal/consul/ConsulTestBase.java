@@ -104,8 +104,11 @@ public abstract class ConsulTestBase {
             logger.warn("{}=<unspecified>", ENV_CONSUL_BINARY_DOWNLOAD_DIR);
         }
 
+        // The default timeout is 30. It'd be better to fail fast and restart Consul.
+        builder.withWaitTimeout(10);
+
         // A workaround for 'Cannot run program "**/embedded_consul/consul" error=26, Text file busy'
-        await().timeout(Duration.ofSeconds(30)).pollInSameThread().pollInterval(Duration.ofSeconds(2))
+        await().timeout(Duration.ofSeconds(40)).pollInSameThread().pollInterval(Duration.ofSeconds(2))
                .untilAsserted(() -> {
                    assertThatCode(() -> {
                        consul = builder.build().start();

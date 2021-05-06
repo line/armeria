@@ -29,7 +29,7 @@ private def getGitPath() {
         if (current() == WINDOWS) {
             def commands = executeCommand('where.exe', 'git.exe')
             // "where.exe" returns all available commands, so select the first git.exe.
-            return commands.split('\r\n')[0]
+            return commands.split('\r\n|\n')[0]
         } else {
             return executeCommand('which', 'git')
         }

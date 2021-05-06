@@ -25,7 +25,9 @@ jobs:
             on: self-hosted
             leak: true
           - java: 15
-            on: self-hosted
+            # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
+            #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
+            on: macos-latest
             coverage: true
 
     steps:
@@ -70,7 +72,7 @@ jobs:
       run: |
         ./gradlew --no-daemon --stacktrace build \
         ${{ (matrix.on == 'self-hosted') && '-Dorg.gradle.jvmargs=-Xmx4g' || '' }} \
-        ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=4' }} --parallel \
+        ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
         ${{ matrix.lint && 'lint' || '' }} \
         ${{ !matrix.lint && '-PnoLint' || '' }} \
         ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
@@ -85,8 +87,8 @@ jobs:
       # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
       # Restoring these files from a GitHub Actions cache might cause problems for future builds.
       run: |
-        rm -f ~/.gradle/caches/modules-2/modules-2.lock
-        rm -f ~/.gradle/caches/modules-2/gc.properties
+        rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
+        rm -f ~/.gradle/caches/modules-2/gc.properties || true
       shell: bash
 
     - name: Dump stuck threads
