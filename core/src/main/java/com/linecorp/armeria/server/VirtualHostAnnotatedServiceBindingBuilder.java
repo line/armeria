@@ -230,6 +230,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     @Override
+    public VirtualHostAnnotatedServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        defaultServiceConfigSetters.defaultServiceNaming(defaultServiceNaming);
+        return this;
+    }
+
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder defaultLogName(String defaultLogName) {
         defaultServiceConfigSetters.defaultLogName(defaultLogName);
         return this;

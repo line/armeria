@@ -1,0 +1,54 @@
+plugins {
+    id 'scala'
+}
+
+dependencies {
+    implementation('org.scala-lang:scala-library') {
+        version {
+            strictly '2.12.13'
+        }
+    }
+    implementation 'org.scala-lang.modules:scala-collection-compat_2.12'
+    implementation 'org.scala-lang.modules:scala-java8-compat_2.12'
+
+    // Added for supporting Scala types in Jackson{Request,Response}ConverterFunction
+    implementation 'com.fasterxml.jackson.module:jackson-module-scala_2.12'
+
+    testImplementation 'org.scalameta:munit_2.12'
+}
+
+// Use the sources from ':scala_2.13'.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
+def scala213ProjectDir = "${rootProject.projectDir}/scala/scala_2.13"
+tasks.compileScala.source "${scala213ProjectDir}/src/main/scala"
+tasks.processResources.from "${scala213ProjectDir}/src/main/resources"
+
+tasks.compileTestScala.source "${scala213ProjectDir}/src/test/scala"
+tasks.processTestResources.from "${scala213ProjectDir}/src/test/resources"
+
+tasks.sourcesJar.from "${scala213ProjectDir}/src/main/scala"
+tasks.sourcesJar.from "${scala213ProjectDir}/src/main/resources"
+tasks.scaladoc.source "${scala213ProjectDir}/src/main/scala"
+
+compileScala.targetCompatibility = 1.8
+ScalaCompileOptions.metaClass.useAnt = false
+
+task aggregatedScaladocs(
+        type: ScalaDoc,
+        description: 'Generate scaladocs from all child projects',
+        group: 'Documentation') {
+    destinationDir = file("$buildDir/docs/scaladoc")
+    title = "$project.name $version API"
+
+    subprojects.each { proj ->
+        proj.tasks.withType(ScalaDoc).each {
+            source += proj.sourceSets.main.allJava
+            source += proj.sourceSets.main.allScala
+            classpath += proj.sourceSets.main.compileClasspath
+            excludes += scaladoc.excludes
+            includes += scaladoc.includes
+        }
+    }
+}

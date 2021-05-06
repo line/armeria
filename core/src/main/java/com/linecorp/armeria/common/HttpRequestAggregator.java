@@ -20,9 +20,11 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.common.HttpObjectAggregator;
+
 import io.netty.buffer.ByteBufAllocator;
 
-final class HttpRequestAggregator extends HttpMessageAggregator<AggregatedHttpRequest> {
+final class HttpRequestAggregator extends HttpObjectAggregator<AggregatedHttpRequest> {
 
     private final HttpRequest request;
     private HttpHeaders trailers;

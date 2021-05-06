@@ -189,6 +189,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        return (ServiceBindingBuilder) super.defaultServiceNaming(defaultServiceNaming);
+    }
+
+    @Override
     public ServiceBindingBuilder defaultLogName(String defaultLogName) {
         return (ServiceBindingBuilder) super.defaultLogName(defaultLogName);
     }

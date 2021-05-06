@@ -32,6 +32,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.server.RoutingTrie.Node;
+import com.linecorp.armeria.server.RoutingTrie.NodeProcessor;
 
 class RoutingTrieTest {
 
@@ -238,7 +239,7 @@ class RoutingTrieTest {
         final Node<?> found = trie.findNode(targetPath);
         assertThat(found).isNotNull();
         assertThat(found.parent()).isNotNull();
-        assertThat(found.parent()).isSameAs(trie.findNode(parentPath, true));
+        assertThat(found.parent()).isSameAs(trie.findNode(parentPath, true, NodeProcessor.noop()));
         testValues(found, values);
         return found;
     }
@@ -248,7 +249,7 @@ class RoutingTrieTest {
         assertThat(found).isNotNull();
         assertThat(found.values).isEmpty();
         assertThat(found.parent()).isNotNull();
-        assertThat(found.parent()).isSameAs(trie.findNode(parentPath, true));
+        assertThat(found.parent()).isSameAs(trie.findNode(parentPath, true, NodeProcessor.noop()));
         return found;
     }
 

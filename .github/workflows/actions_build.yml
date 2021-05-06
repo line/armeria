@@ -1,0 +1,114 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.on }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        on: [ self-hosted, macos-latest, windows-latest ]
+        java: [ 15 ]
+        include:
+          - java: 8
+            on: self-hosted
+            site: true
+          - java: 11
+            on: self-hosted
+            lint: true
+          - java: 14
+            on: self-hosted
+            leak: true
+          - java: 15
+            # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
+            #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
+            on: macos-latest
+            coverage: true
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - id: setup-jre
+      if: ${{ matrix.java != 15 }}
+      name: Set up JRE ${{ matrix.java }}
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'adopt'
+        java-version: ${{ matrix.java }}
+        java-package: jre
+
+    - id: setup-jdk-15
+      name: Set up JDK 15
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'adopt'
+        java-version: '15'
+
+    - name: Install svgbob_cli
+      if: ${{ matrix.site }}
+      run: |
+        sudo yum -y install cargo && cargo install svgbob_cli
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.gradle/wrapper/dists
+          ~/.gradle/caches/jars-3
+          ~/.gradle/caches/modules-2
+          ~/.gradle/caches/package-lists
+          ~/.gradle/caches/embedded-consul
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Build with Gradle
+      run: |
+        ./gradlew --no-daemon --stacktrace build \
+        ${{ (matrix.on == 'self-hosted') && '-Dorg.gradle.jvmargs=-Xmx4g' || '' }} \
+        ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
+        ${{ matrix.lint && 'lint' || '' }} \
+        ${{ !matrix.lint && '-PnoLint' || '' }} \
+        ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
+        ${{ matrix.coverage && '-Pcoverage' || '' }} \
+        ${{ matrix.leak && '-Pleak' || '' }} \
+        -PbuildJdkVersion=15 \
+        -PtestJavaVersion=${{ matrix.java }} \
+        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }}
+      shell: bash
+
+    - name: Cleanup Gradle Cache
+      # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
+      # Restoring these files from a GitHub Actions cache might cause problems for future builds.
+      run: |
+        rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
+        rm -f ~/.gradle/caches/modules-2/gc.properties || true
+      shell: bash
+
+    - name: Dump stuck threads
+      if: always()
+      run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+      shell: bash
+
+    - name: Upload coverage to Codecov
+      if: ${{ matrix.coverage }}
+      uses: codecov/codecov-action@v1
+
+    - name: Collecting the test reports
+      if: failure()
+      run: find . '(' -name 'hs_err_*.log' -or -path '*/build/reports/tests' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
+      shell: bash
+
+    - name: Upload Artifact
+      if: failure()
+      uses: actions/upload-artifact@v2
+      with:
+        name: reports-JVM-${{ matrix.java }}
+        path: reports-JVM-${{ matrix.java }}.tar
+        retention-days: 3

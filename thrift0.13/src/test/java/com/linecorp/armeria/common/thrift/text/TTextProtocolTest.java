@@ -48,6 +48,7 @@ import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.transport.TIOStreamTransport;
+import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -421,7 +422,7 @@ class TTextProtocolTest {
     }
 
     @Test
-    void rpcNoMethod() {
+    void rpcNoMethod() throws TTransportException {
         final String request =
                 "{\n" +
                 "  \"type\" : \"CALL\",\n" +
@@ -440,7 +441,7 @@ class TTextProtocolTest {
     }
 
     @Test
-    void rpcNoType() {
+    void rpcNoType() throws TTransportException {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +
@@ -459,7 +460,7 @@ class TTextProtocolTest {
     }
 
     @Test
-    void noRpcArgs() {
+    void noRpcArgs() throws TTransportException {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\"\n" +
@@ -471,7 +472,7 @@ class TTextProtocolTest {
     }
 
     @Test
-    void rpcArgsNotObject() {
+    void rpcArgsNotObject() throws TTransportException {
         final String request =
                 "{\n" +
                 "  \"method\" : \"doDebug\",\n" +

@@ -51,8 +51,9 @@ public class ServiceTest {
         assertThat(outer.as(String.class)).isNull();
 
         // Test if FooService.serviceAdded() is invoked.
-        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, /* defaultServiceName */ null,
-                                                    /* defaultLogName */ null, 1, 1, true,
+        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), outer, /* defaultLogName */ null,
+                                                    /* defaultServiceName */ null,
+                                                    ServiceNaming.of("FooService"), 1, 1, true,
                                                     AccessLogWriter.disabled(), false);
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);

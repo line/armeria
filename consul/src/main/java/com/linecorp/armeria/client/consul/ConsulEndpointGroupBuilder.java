@@ -32,7 +32,7 @@ import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
 
 /**
  * A builder class for {@link ConsulEndpointGroup}.
- * <h3>Examples</h3>
+ * <h2>Examples</h2>
  * <pre>{@code
  * ConsulEndpointGroup endpointGroup = ConsulEndpointGroup.builder(consulUri, "myService")
  *                                                        .build();

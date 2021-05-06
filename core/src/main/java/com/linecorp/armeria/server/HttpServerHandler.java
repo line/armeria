@@ -36,6 +36,7 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -232,9 +233,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (!unfinishedRequests.isEmpty()) {
             final ClosedSessionException cause = ClosedSessionException.get();
             unfinishedRequests.forEach((req, res) -> {
+                // An HTTP2 request is cancelled by Http2RequestDecoder.onRstStreamRead()
+                final boolean cancel = !protocol.isMultiplex();
                 // Mark the request stream as closed due to disconnection.
-                req.close(cause);
-                res.abort(cause);
+                req.abortResponse(cause, cancel);
             });
         }
     }
@@ -359,7 +361,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             final ServiceRequestContext reqCtx =
                     newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
                                                      proxiedAddresses, clientAddress, routingCtx);
-            respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
+            respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, HttpData.empty(), cause);
             return;
         }
 
@@ -379,28 +381,40 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
             HttpResponse serviceResponse;
+            Throwable raisedException = null;
             try {
                 req.init(reqCtx);
                 serviceResponse = service.serve(reqCtx, req);
-            } catch (HttpResponseException cause) {
-                serviceResponse = cause.httpResponse();
             } catch (Throwable cause) {
-                final HttpStatus status;
-                final Throwable newCause;
-                if (cause instanceof HttpStatusException) {
-                    status = ((HttpStatusException) cause).httpStatus();
-                    // We don't want to log HttpStatusException and HttpResponseException as the cause.
-                    newCause = null;
+                if (cause instanceof HttpResponseException) {
+                    serviceResponse = ((HttpResponseException) cause).httpResponse();
                 } else {
-                    logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
-                    status = HttpStatus.INTERNAL_SERVER_ERROR;
-                    newCause = cause;
+                    final AggregatedHttpResponse convertedResponse =
+                            config.exceptionHandler().convert(reqCtx, cause);
+                    if (convertedResponse != null) {
+                        serviceResponse = convertedResponse.toHttpResponse();
+                    } else {
+                        final AggregatedHttpResponse defaultResponse =
+                                ExceptionHandler.ofDefault().convert(reqCtx, cause);
+                        assert defaultResponse != null;
+                        serviceResponse = defaultResponse.toHttpResponse();
+                    }
+                    if (!(cause instanceof HttpStatusException)) {
+                        // Do not set HttpStatusException to the raisedException because we don't want to log it
+                        // as a cause.
+                        raisedException = cause;
+                    }
                 }
-                respond(ctx, reqCtx, status, null, newCause);
-                return;
+
+                // No need to consume further since the response is ready.
+                if (raisedException != null) {
+                    req.close(raisedException);
+                } else {
+                    req.close();
+                }
             }
             final HttpResponse res = serviceResponse;
-
+            final Throwable primaryCause = raisedException;
             final EventLoop eventLoop = channel.eventLoop();
 
             // Keep track of the number of unfinished requests and
@@ -437,7 +451,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             res.whenComplete().handleAsync((ret, cause) -> {
                 try {
-                    if (cause == null) {
+                    if (primaryCause != null) {
+                        req.abort(primaryCause);
+                    } else if (cause == null) {
                         req.abort();
                     } else {
                         req.abort(cause);
@@ -462,7 +478,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             assert responseEncoder != null;
             final HttpResponseSubscriber resSubscriber =
-                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, primaryCause);
             res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
         }
     }
@@ -482,7 +498,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         respond(ctx, reqCtx,
                 ResponseHeaders.builder(HttpStatus.OK)
                                .add(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING),
-                null, null);
+                HttpData.empty(), null);
     }
 
     private void rejectInvalidPath(ChannelHandlerContext ctx, ServiceRequestContext reqCtx) {
@@ -504,21 +520,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private void respond(ChannelHandlerContext ctx, ServiceRequestContext reqCtx,
-                         HttpStatus status,
-                         @Nullable HttpData resContent,
-                         @Nullable Throwable cause) {
-
+                         HttpStatus status, HttpData resContent, @Nullable Throwable cause) {
         if (status.code() < 400) {
-            respond(ctx, reqCtx, ResponseHeaders.builder(status), null, cause);
+            respond(ctx, reqCtx, ResponseHeaders.builder(status), HttpData.empty(), cause);
             return;
         }
 
         if (reqCtx.method() == HttpMethod.HEAD || status.isContentAlwaysEmpty()) {
-            resContent = null;
-        } else if (resContent == null) {
+            resContent = HttpData.empty();
+        } else if (resContent.isEmpty()) {
             resContent = status.toHttpData();
-        } else {
-            assert !resContent.isEmpty();
         }
 
         respond(ctx, reqCtx,
@@ -528,7 +539,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private void respond(ChannelHandlerContext ctx, ServiceRequestContext reqCtx,
-                         ResponseHeadersBuilder resHeaders, @Nullable HttpData resContent,
+                         ResponseHeadersBuilder resHeaders, HttpData resContent,
                          @Nullable Throwable cause) {
         if (!handledLastRequest) {
             respond(reqCtx, true, resHeaders, resContent, cause).addListener(CLOSE_ON_FAILURE);
@@ -542,11 +553,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private ChannelFuture respond(ServiceRequestContext reqCtx, boolean addKeepAlive,
-                                  ResponseHeadersBuilder resHeaders, @Nullable HttpData resContent,
+                                  ResponseHeadersBuilder resHeaders, HttpData resContent,
                                   @Nullable Throwable cause) {
-
-        assert resContent == null || !resContent.isEmpty() : resContent;
-
         // No need to consume further since the response is ready.
         final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
         req.close();
@@ -557,7 +565,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             logBuilder.endRequest(cause);
         }
 
-        final boolean hasContent = resContent != null;
+        final boolean hasContent = !resContent.isEmpty();
 
         logBuilder.startResponse();
         assert responseEncoder != null;

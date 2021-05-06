@@ -64,8 +64,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     private static final CancellationScheduler noopResponseCancellationScheduler = new CancellationScheduler(0);
 
     static {
-        noopResponseCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0,
-                                               ResponseTimeoutException.get());
+        noopResponseCancellationScheduler
+                .init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, /* server */ false);
         noopResponseCancellationScheduler.finishNow();
     }
 
@@ -135,8 +135,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             responseCancellationScheduler = new CancellationScheduler(0);
             final CountDownLatch latch = new CountDownLatch(1);
             eventLoop().execute(() -> {
-                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0,
-                                                   ResponseTimeoutException.get());
+                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ false);
                 latch.countDown();
             });
 

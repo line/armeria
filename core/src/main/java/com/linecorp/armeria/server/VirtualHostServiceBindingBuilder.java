@@ -191,6 +191,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        return (VirtualHostServiceBindingBuilder) super.defaultServiceNaming(defaultServiceNaming);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder defaultLogName(String defaultLogName) {
         return (VirtualHostServiceBindingBuilder) super.defaultLogName(defaultLogName);
     }

@@ -22,7 +22,17 @@ rootProject.ext {
     }
 }
 
-def managedDependencyVersions = [:]
+def managedDependencyVersions = new TreeMap<String, String>() {
+    @Override
+    String get(Object key) {
+        def value = super.get(key)
+        if (value != null) {
+            return value
+        } else {
+            throw new IllegalArgumentException("Missing managed dependency: ${key}")
+        }
+    }
+}
 def managedDependencyExclusions = [:].withDefault { [] }
 def managedDependencyOverrides = [] as Set
 rootProject.ext.dependenciesYaml.forEach { String key, value ->
@@ -216,12 +226,10 @@ rootProject.ext {
             def groupId = entry.key
             entry.value.forEach { String artifactId, Map props ->
                 if (props.containsKey('javadocs')) {
-                    def version = String.valueOf(managedDependencyVersions["${groupId}:${artifactId}"])
                     props['javadocs'].each { url ->
                         list.add([
                                 groupId: groupId,
                                 artifactId: artifactId,
-                                version: version,
                                 url: url
                         ])
                     }
@@ -244,9 +252,12 @@ configure(rootProject) {
     task managedVersions(
             group: 'Build',
             description: 'Generates the file that contains dependency versions.') {
+
+        def f = file("${project.buildDir}/managed_versions.yml")
         inputs.properties managedDependencyVersions
+        outputs.file(f)
+
         doLast {
-            def f = file("${project.buildDir}/managed_versions.yml")
             f.parentFile.mkdir()
             f.withWriter('UTF-8') {
                 new Yaml().dump(managedDependencyVersions, it)

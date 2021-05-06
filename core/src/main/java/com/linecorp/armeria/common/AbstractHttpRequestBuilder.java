@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
@@ -40,6 +41,7 @@ import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * Builds a new {@link HttpRequest}.
@@ -52,7 +54,7 @@ public abstract class AbstractHttpRequestBuilder {
     @Nullable
     private QueryParamsBuilder queryParams;
     @Nullable
-    private Map<String, Object> pathParams;
+    private Map<String, String> pathParams;
     @Nullable
     private List<Cookie> cookies;
     @Nullable
@@ -132,7 +134,9 @@ public abstract class AbstractHttpRequestBuilder {
      * Sets the path for this request.
      */
     public AbstractHttpRequestBuilder path(String path) {
-        this.path = requireNonNull(path, "path");
+        requireNonNull(path, "path");
+        checkArgument(!path.isEmpty(), "path is empty.");
+        this.path = path;
         return this;
     }
 
@@ -256,10 +260,11 @@ public abstract class AbstractHttpRequestBuilder {
     public AbstractHttpRequestBuilder pathParam(String name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
+        checkArgument(!name.isEmpty(), "name is empty.");
         if (pathParams == null) {
             pathParams = new HashMap<>();
         }
-        pathParams.put(name, value);
+        pathParams.put(name, value.toString());
         return this;
     }
 
@@ -274,10 +279,19 @@ public abstract class AbstractHttpRequestBuilder {
      */
     public AbstractHttpRequestBuilder pathParams(Map<String, ?> pathParams) {
         requireNonNull(pathParams, "pathParams");
+        if (pathParams.isEmpty()) {
+            return this;
+        }
+
+        checkArgument(!pathParams.containsKey(""),
+                      "pathParams contains an entry with an empty name: %s", pathParams);
+
         if (this.pathParams == null) {
             this.pathParams = new HashMap<>();
         }
-        this.pathParams.putAll(pathParams);
+
+        pathParams.forEach((key, value) -> this.pathParams.put(key, value.toString()));
+
         return this;
     }
 
@@ -411,42 +425,155 @@ public abstract class AbstractHttpRequestBuilder {
 
     private String buildPath() {
         checkState(path != null, "path must be set.");
-        final StringBuilder pathBuilder = new StringBuilder(path);
+
         if (!disablePathParams) {
+            // Path parameter substitution is enabled. Look for : or { first.
+            final int pathLen = path.length();
             int i = 0;
-            while (i < pathBuilder.length()) {
-                if (pathBuilder.charAt(i) == '{') {
-                    int j = i + 1;
-                    while (j < pathBuilder.length() && pathBuilder.charAt(j) != '}') {
-                        j++;
-                    }
-                    if (j == pathBuilder.length()) {
-                        break;
-                    }
-                    final String name = pathBuilder.substring(i + 1, j);
-                    checkState(pathParams != null && pathParams.containsKey(name),
-                               "param " + name + " does not have a value.");
-                    final String value = pathParams.get(name).toString();
-                    pathBuilder.replace(i, j + 1, value);
-                    i += value.length() - 1;
-                } else if (pathBuilder.charAt(i) == ':') {
-                    int j = i + 1;
-                    while (j < pathBuilder.length() && pathBuilder.charAt(j) != '/') {
-                        j++;
-                    }
-                    final String name = pathBuilder.substring(i + 1, j);
-                    checkState(pathParams != null && pathParams.containsKey(name),
-                               "param " + name + " does not have a value.");
-                    final String value = pathParams.get(name).toString();
-                    pathBuilder.replace(i, j, value);
-                    i += value.length();
+            boolean hasPathParams = false;
+            boolean hasQueryInPath = false;
+
+            loop:
+            while (i < pathLen) {
+                switch (path.charAt(i)) {
+                    case ':':
+                        if (i + 1 < pathLen && path.charAt(i + 1) == '/') {
+                            if (i + 2 < pathLen && path.charAt(i + 2) == '/') {
+                                // Found '://', i.e. path is an absolute URI.
+                                final int pathStart = path.indexOf('/', i + 3);
+                                if (pathStart < 0) {
+                                    // The URI doesn't have a path, e.g. http://example.com:8080
+                                    i = pathLen;
+                                    break loop;
+                                } else {
+                                    i = pathStart + 1; // +1 to skip the first '/' in the path
+                                    continue;
+                                }
+                            } else {
+                                // Found ':/' - Skip.
+                                i += 2;
+                                continue;
+                            }
+                        } else {
+                            hasPathParams = true;
+                            break loop;
+                        }
+                    case '{':
+                        if (i + 1 < pathLen && path.charAt(i + 1) == '}') {
+                            // Found '{}' - Skip.
+                            i += 2;
+                            continue;
+                        } else {
+                            hasPathParams = true;
+                            break loop;
+                        }
+                    case '?':
+                        hasQueryInPath = true;
+                        break loop;
                 }
                 i++;
             }
+
+            if (hasPathParams) {
+                // Replace path parameters.
+                final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+                buf.append(path, 0, i);
+
+                loop:
+                while (i < pathLen) {
+                    final char ch = path.charAt(i);
+                    switch (ch) {
+                        case '{': {
+                            int j = i + 1;
+                            // Find the matching '}'
+                            while (j < pathLen && path.charAt(j) != '}') {
+                                j++;
+                            }
+
+                            if (j >= pathLen) {
+                                // Found no matching '}'
+                                buf.append(path, i, pathLen);
+                                break loop;
+                            }
+
+                            if (j > i + 1) {
+                                final String name = path.substring(i + 1, j);
+                                checkState(pathParams != null && pathParams.containsKey(name),
+                                           "param '%s' does not have a value.", name);
+                                buf.append(pathParams.get(name));
+                                j++; // Skip '}'
+                            } else {
+                                // Found '{}'
+                                j++; // Skip '}'
+                                buf.append('{').append('}');
+                            }
+                            i = j;
+                            break;
+                        }
+                        case ':': {
+                            int j = i + 1;
+                            while (j < pathLen && path.charAt(j) != '/' && path.charAt(j) != '?') {
+                                j++;
+                            }
+                            if (j > i + 1) {
+                                final String name = path.substring(i + 1, j);
+                                checkState(pathParams != null && pathParams.containsKey(name),
+                                           "param '%s' does not have a value.", name);
+                                buf.append(pathParams.get(name));
+                            } else {
+                                // Found ':' without name.
+                                buf.append(':');
+                            }
+                            i = j;
+                            break;
+                        }
+                        case '?': {
+                            hasQueryInPath = true;
+                            buf.append(path, i, pathLen);
+                            break loop;
+                        }
+                        default:
+                            buf.append(ch);
+                            i++;
+                    }
+                }
+
+                if (hasQueryInPath) {
+                    if (queryParams != null) {
+                        buf.append('&');
+                        queryParams.appendQueryString(buf);
+                    }
+                } else {
+                    if (queryParams != null) {
+                        buf.append('?');
+                        queryParams.appendQueryString(buf);
+                    }
+                }
+
+                return buf.toString();
+            } else {
+                // path doesn't contain a path parameter.
+                if (queryParams != null) {
+                    return buildPathWithoutPathParams(path, queryParams, hasQueryInPath);
+                }
+            }
+        } else {
+            // Path parameter substitution is disabled.
+            if (queryParams != null) {
+                return buildPathWithoutPathParams(path, queryParams, path.indexOf('?') >= 0);
+            }
         }
-        if (queryParams != null) {
-            pathBuilder.append('?').append(queryParams.toQueryString());
-        }
-        return pathBuilder.toString();
+
+        // No path/query parameters to substitute/encode
+        return path;
+    }
+
+    private static String buildPathWithoutPathParams(
+            String path, QueryParamsBuilder queryParams, boolean hasQueryInPath) {
+
+        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
+        buf.append(path).append(hasQueryInPath ? '&' : '?');
+        queryParams.appendQueryString(buf);
+        return buf.toString();
     }
 }
