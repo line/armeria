@@ -171,8 +171,8 @@ final class DefaultContextAwareEventLoop
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("eventLoop", eventLoop)
                           .add("context", contextOrNull())
+                          .add("eventLoop", eventLoop)
                           .toString();
     }
 }
