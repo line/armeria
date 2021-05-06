@@ -19,6 +19,7 @@ import static com.linecorp.armeria.common.metric.MoreMeters.measureAll;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
+import java.util.function.BiPredicate;
 
 import org.junit.jupiter.api.Test;
 
@@ -28,8 +29,10 @@ import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -227,7 +230,7 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, null);
         return ctx;
     }
 
@@ -258,7 +261,7 @@ class RequestMetricSupportTest {
         final String serviceTag = "service=" + ctx.config().service().getClass().getName();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true, null);
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
@@ -295,7 +298,7 @@ class RequestMetricSupportTest {
                                     .build();
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
-        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false);
+        RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false, null);
 
         ctx.logBuilder().name("BarService", "baz");
 
@@ -312,7 +315,8 @@ class RequestMetricSupportTest {
                                      .build();
         final String serviceTag = "service=" + sctx.config().service().getClass().getName();
 
-        RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET, MeterIdPrefixFunction.ofDefault("foo"), true);
+        RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET,
+                                   MeterIdPrefixFunction.ofDefault("foo"), true, null);
         sctx.logBuilder().endRequest();
         try (SafeCloseable ignored = sctx.push()) {
             final ClientRequestContext cctx =
@@ -321,7 +325,7 @@ class RequestMetricSupportTest {
                                         .endpoint(Endpoint.of("example.com", 8080))
                                         .build();
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
-                                       MeterIdPrefixFunction.ofDefault("bar"), false);
+                                       MeterIdPrefixFunction.ofDefault("bar"), false, null);
             cctx.logBuilder().endRequest();
             cctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
             cctx.logBuilder().endResponse();
@@ -353,5 +357,49 @@ class RequestMetricSupportTest {
                                serviceTag + '}', 1.0)
                 .containsEntry("foo.total.duration#count{hostname.pattern=*,http.status=200,method=POST," +
                                serviceTag + '}', 1.0);
+    }
+
+    @Test
+    void customSuccessFunction() {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final ClientRequestContext ctx1 =
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
+                                    .meterRegistry(registry)
+                                    .endpoint(Endpoint.of("example.com", 8080))
+                                    .connectionTimings(newConnectionTimings())
+                                    .build();
+        final ClientRequestContext ctx2 =
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/bar"))
+                                    .meterRegistry(registry)
+                                    .endpoint(Endpoint.of("example.com", 8080))
+                                    .connectionTimings(newConnectionTimings())
+                                    .build();
+
+        final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
+        final BiPredicate<RequestContext, RequestLog> successFunction = (context, log) -> {
+            final int statusCode = log.responseHeaders().status().code();
+            return (statusCode >= 200 && statusCode < 400) || statusCode == 409;
+        };
+        RequestMetricSupport.setup(ctx1, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction);
+        RequestMetricSupport.setup(ctx2, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction);
+
+        ctx1.logBuilder().responseHeaders(ResponseHeaders.of(409));
+        ctx1.logBuilder().endRequest();
+        ctx1.logBuilder().endResponse();
+
+        ctx2.logBuilder().responseHeaders(ResponseHeaders.of(500));
+        ctx2.logBuilder().endRequest();
+        ctx2.logBuilder().endResponse();
+
+        final Map<String, Double> measurements = measureAll(registry);
+        assertThat(measurements)
+                .containsEntry("foo.requests#count{http.status=409,method=POST,result=success,service=none}",
+                               1.0)
+                .containsEntry("foo.requests#count{http.status=409,method=POST,result=failure,service=none}",
+                               0.0)
+                .containsEntry("foo.requests#count{http.status=500,method=POST,result=success,service=none}",
+                               0.0)
+                .containsEntry("foo.requests#count{http.status=500,method=POST,result=failure,service=none}",
+                               1.0);
     }
 }

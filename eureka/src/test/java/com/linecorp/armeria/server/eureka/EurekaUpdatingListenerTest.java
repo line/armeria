@@ -208,7 +208,7 @@ class EurekaUpdatingListenerTest {
                                       .instanceId(INSTANCE_ID)
                                       .renewalInterval(Duration.ofSeconds(2))
                                       .leaseDuration(Duration.ofSeconds(10))
-                                      .port(1) // misconfigued!
+                                      .port(1) // misconfigured!
                                       .appName(APP_NAME)
                                       .build();
 

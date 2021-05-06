@@ -267,7 +267,7 @@ abstract class AbstractBindingBuilder {
 
     /**
      * Sets {@link MediaType}s that an {@link HttpService} will produce to be used in
-     * content negotiation. See <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">Accept header</a>
+     * content negotiation. See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
     public AbstractBindingBuilder produces(MediaType... produceTypes) {
@@ -277,7 +277,7 @@ abstract class AbstractBindingBuilder {
 
     /**
      * Sets {@link MediaType}s that an {@link HttpService} will produce to be used in
-     * content negotiation. See <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">Accept header</a>
+     * content negotiation. See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
     public AbstractBindingBuilder produces(Iterable<MediaType> produceTypes) {

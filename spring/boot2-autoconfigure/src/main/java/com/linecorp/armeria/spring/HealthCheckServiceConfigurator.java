@@ -24,7 +24,7 @@ import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckServiceBuilder;
 
 /**
- * Interface used to configure a {@link HealthCheckService} on the default armeria server.
+ * Interface used to configure a {@code HealthCheckService} on the default Armeria server.
  */
 @FunctionalInterface
 public interface HealthCheckServiceConfigurator extends Ordered {

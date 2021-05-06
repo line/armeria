@@ -193,10 +193,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                         ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(timeout));
                     }
                 } catch (IllegalArgumentException e) {
+                    final Metadata metadata = new Metadata();
                     return HttpResponse.of(
                             (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    GrpcStatus.fromThrowable(statusFunction, e), new Metadata()));
+                                    GrpcStatus.fromThrowable(statusFunction, e, metadata), metadata));
                 }
             }
         }
@@ -208,7 +209,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req, res, serializationFormat);
         if (call != null) {
-            ctx.whenRequestCancelling().thenRun(() -> call.close(Status.CANCELLED, new Metadata()));
+            ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
+                call.close(Status.CANCELLED.withCause(cancellationCause), new Metadata());
+                return null;
+            });
             call.startDeframing();
         }
         return res;
@@ -244,7 +248,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                 .startCall(call, MetadataUtil.copyFromHeaders(req.headers()));
         } catch (Throwable t) {
             call.setListener(new EmptyListener<>());
-            call.close(GrpcStatus.fromThrowable(statusFunction, t), new Metadata());
+            final Metadata metadata = new Metadata();
+            call.close(GrpcStatus.fromThrowable(statusFunction, t, metadata), metadata);
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
                     " - this is likely a bug in the stub implementation.");

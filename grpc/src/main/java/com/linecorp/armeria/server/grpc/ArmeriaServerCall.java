@@ -39,6 +39,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -57,6 +58,7 @@ import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -83,9 +85,11 @@ import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerCall;
 import io.grpc.Status;
+import io.grpc.Status.Code;
 import io.grpc.StatusException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.EventLoop;
 
 /**
  * Encapsulates the state of a single server call, reading messages from the client, passing to business logic
@@ -192,16 +196,27 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                            MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
         this.statusFunction = statusFunction;
 
-        res.whenComplete().handleAsync((unused, t) -> {
-            if (!closeCalled) {
-                // Closed by client, not by server.
-                cancelled = true;
-                try (SafeCloseable ignore = ctx.push()) {
-                    close(Status.CANCELLED, new Metadata());
-                }
+        res.whenComplete().handle((unused, t) -> {
+            final EventLoop eventLoop = ctx.eventLoop();
+            if (eventLoop.inEventLoop()) {
+                maybeCancel();
+            } else {
+                eventLoop.execute(this::maybeCancel);
             }
             return null;
-        }, ctx.eventLoop());
+        });
+    }
+
+    /**
+     * Cancels a call when the call was closed by a client, not by server.
+     */
+    private void maybeCancel() {
+        if (!closeCalled) {
+            cancelled = true;
+            try (SafeCloseable ignore = ctx.push()) {
+                close(Status.CANCELLED, new Metadata());
+            }
+        }
     }
 
     @Override
@@ -258,7 +273,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         sendHeadersCalled = true;
-        res.write(headers);
+        if (!res.tryWrite(headers)) {
+            maybeCancel();
+        }
     }
 
     @Override
@@ -284,22 +301,21 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         try {
-            res.write(responseFramer.writePayload(marshaller.serializeResponse(message)));
-            res.whenConsumed().thenRun(() -> {
-                if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
-                    if (blockingExecutor != null) {
-                        blockingExecutor.execute(this::invokeOnReady);
-                    } else {
-                        invokeOnReady();
+            if (res.tryWrite(responseFramer.writePayload(marshaller.serializeResponse(message)))) {
+                res.whenConsumed().thenRun(() -> {
+                    if (pendingMessagesUpdater.decrementAndGet(this) == 0) {
+                        if (blockingExecutor != null) {
+                            blockingExecutor.execute(this::invokeOnReady);
+                        } else {
+                            invokeOnReady();
+                        }
                     }
-                }
-            });
-        } catch (RuntimeException e) {
+                });
+            } else {
+                maybeCancel();
+            }
+        } catch (Throwable e) {
             close(e, new Metadata());
-            throw e;
-        } catch (Throwable t) {
-            close(t, new Metadata());
-            throw new RuntimeException(t);
         }
     }
 
@@ -321,20 +337,20 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void close(Status status, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromStatusFunction(statusFunction, status), metadata);
+            doClose(GrpcStatus.fromStatusFunction(statusFunction, status, metadata), metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromStatusFunction(statusFunction, status), metadata);
+                doClose(GrpcStatus.fromStatusFunction(statusFunction, status, metadata), metadata);
             });
         }
     }
 
     private void close(Throwable exception, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromThrowable(statusFunction, exception), metadata);
+            doClose(GrpcStatus.fromThrowable(statusFunction, exception, metadata), metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromThrowable(statusFunction, exception), metadata);
+                doClose(GrpcStatus.fromThrowable(statusFunction, exception, metadata), metadata);
             });
         }
     }
@@ -344,6 +360,14 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             // No need to write anything to client if cancelled already.
             closeListener(status);
             return;
+        }
+
+        if (status.getCode() == Code.CANCELLED) {
+            final Throwable cause = status.getCause();
+            if (cause instanceof ClosedStreamException || cause instanceof ClosedSessionException) {
+                closeListener(status);
+                return;
+            }
         }
 
         checkState(!closeCalled, "call already closed");

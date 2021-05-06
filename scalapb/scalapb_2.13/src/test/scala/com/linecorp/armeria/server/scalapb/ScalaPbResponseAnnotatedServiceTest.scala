@@ -18,10 +18,36 @@ package com.linecorp.armeria.server.scalapb
 
 import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet}
 import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.scalapb.testing.messages.SimpleResponse
+import com.linecorp.armeria.common.{
+  AggregatedHttpResponse,
+  HttpRequest,
+  HttpResponse,
+  HttpStatus,
+  MediaType,
+  MediaTypeNames
+}
+import com.linecorp.armeria.scalapb.testing.messages.{
+  Add,
+  Literal,
+  SimpleOneof,
+  SimpleOneofMessage,
+  SimpleResponse
+}
+import com.linecorp.armeria.server.annotation.{
+  Blocking,
+  ExceptionHandler,
+  ExceptionHandlerFunction,
+  Get,
+  Post,
+  Produces,
+  ProducesJson,
+  ProducesJsonSequences,
+  ProducesProtobuf
+}
 import com.linecorp.armeria.server.scalapb.ScalaPbResponseAnnotatedServiceTest.server
 import com.linecorp.armeria.server.{ServerBuilder, ServiceRequestContext}
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
+import java.io.ByteArrayOutputStream
 import java.util.stream.Stream
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
 import org.assertj.core.api.Assertions.assertThat
@@ -32,26 +58,12 @@ import org.junit.jupiter.params.provider.CsvSource
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
 import scala.concurrent.{ExecutionContext, Future}
-import scalapb.json4s.Parser
-import com.linecorp.armeria.common.{
-  AggregatedHttpResponse,
-  HttpRequest,
-  HttpResponse,
-  HttpStatus,
-  MediaType,
-  MediaTypeNames
-}
-import com.linecorp.armeria.server.annotation.{
-  Blocking,
-  ExceptionHandler,
-  ExceptionHandlerFunction,
-  Get,
-  Produces,
-  ProducesJson,
-  ProducesProtobuf
-}
+import scalapb.json4s.{JsonFormat, Parser}
 
 class ScalaPbResponseAnnotatedServiceTest {
+
+  private val RECORD_SEPARATOR: Int = 0x1e
+  private val LINE_FEED: Int = 0x0a
 
   private var client: WebClient = _
   private val parser: Parser = new Parser()
@@ -147,6 +159,69 @@ class ScalaPbResponseAnnotatedServiceTest {
         |}""".stripMargin
     assertThatJson(response.contentUtf8).isEqualTo(expected)
   }
+
+  @Test
+  def protobufOneOfResponse(): Unit = {
+    val oneof = Add(Literal(1), Literal(2))
+    val message = oneof.asMessage
+    val res = client.post("/protobuf/oneof", message.toByteArray).aggregate().join()
+    val actual = SimpleOneofMessage.parseFrom(res.content().array()).getAdd
+    assertThat(actual).isEqualTo(oneof)
+  }
+
+  @Test
+  def protobufJsonOneOfResponse(): Unit = {
+    val oneof = Add(Literal(1), Literal(2))
+    val json = ScalaPbConverterUtil.defaultJsonPrinter.print(oneof.asMessage)
+    val res = client
+      .prepare()
+      .post("/protobuf+json/oneof")
+      .content(MediaType.JSON_UTF_8, json)
+      .execute()
+      .aggregate()
+      .join()
+    val actual = JsonFormat.fromJsonString[SimpleOneofMessage](res.contentUtf8())
+    assertThat(actual.getAdd).isEqualTo(oneof)
+  }
+
+  @Test
+  def protobufJsonListOneOfResponse(): Unit = {
+    val oneofs = List(Add(Literal(1), Literal(2)), Add(Literal(3), Literal(4)))
+
+    val jsonArray = oneofs
+      .map(add => ScalaPbConverterUtil.defaultJsonPrinter.print(add.asMessage))
+      .mkString("[", ",", "]")
+    val res = client
+      .prepare()
+      .post("/protobuf+json/oneofs")
+      .content(MediaType.JSON_UTF_8, jsonArray)
+      .execute()
+      .aggregate()
+      .join()
+
+    assertThatJson(res.contentUtf8()).isEqualTo(jsonArray)
+  }
+
+  @CsvSource(Array("/protobuf+json-seq/stream", "/protobuf+json-seq/publisher", "/protobuf+json-seq/unary"))
+  @ParameterizedTest
+  def protobufJsonSeqResponse(path: String): Unit = {
+    val response = client.get(path).aggregate.join
+    val mediaType = response.headers.contentType
+    assertThat(mediaType.is(MediaType.JSON_SEQ)).isTrue
+
+    val out = new ByteArrayOutputStream
+    out.write(RECORD_SEPARATOR)
+    out.write("""{"message":"Hello, Armeria1!","status":0}""".getBytes)
+    out.write(LINE_FEED)
+
+    if (path != "/protobuf+json-seq/unary") {
+      out.write(RECORD_SEPARATOR)
+      out.write("""{"message":"Hello, Armeria2!","status":0}""".getBytes)
+      out.write(LINE_FEED)
+    }
+
+    assertThat(response.content.array).isEqualTo(out.toByteArray)
+  }
 }
 
 object ScalaPbResponseAnnotatedServiceTest {
@@ -239,6 +314,20 @@ object ScalaPbResponseAnnotatedServiceTest {
     def protobufJsonJavaMap: java.util.Map[String, SimpleResponse] =
       ImmutableMap.of("json1", SimpleResponse("Hello, Armeria1!"), "json2", SimpleResponse("Hello, Armeria2!"))
 
+    @Get("/protobuf+json-seq/publisher")
+    @ProducesJsonSequences
+    def protobufJsonSeqPublisher: Publisher[SimpleResponse] =
+      Flux.just(SimpleResponse("Hello, Armeria1!"), SimpleResponse("Hello, Armeria2!"))
+
+    @Get("/protobuf+json-seq/stream")
+    @ProducesJsonSequences
+    def protobufJsonSeqStream: Stream[SimpleResponse] =
+      Stream.of(SimpleResponse("Hello, Armeria1!"), SimpleResponse("Hello, Armeria2!"))
+
+    @Get("/protobuf+json-seq/unary")
+    @ProducesJsonSequences
+    def protobufJsonSeqUnary: SimpleResponse = SimpleResponse("Hello, Armeria1!")
+
     @Get("/protobuf/stream")
     @Produces(MediaTypeNames.PROTOBUF)
     def protobufStream: Stream[SimpleResponse] =
@@ -248,6 +337,21 @@ object ScalaPbResponseAnnotatedServiceTest {
     @Produces(MediaTypeNames.PROTOBUF)
     def protobufPublisher: Publisher[SimpleResponse] =
       Flux.just(SimpleResponse("Hello, Armeria1!"), SimpleResponse("Hello, Armeria2!"))
+
+    @Post("/protobuf+json/oneof")
+    @ProducesJson
+    def protobufJsonOneOf(oneof: SimpleOneof): SimpleOneof =
+      oneof
+
+    @Post("/protobuf/oneof")
+    @Produces(MediaTypeNames.PROTOBUF)
+    def protobufOneOf(oneof: SimpleOneof): SimpleOneof =
+      oneof
+
+    @Post("/protobuf+json/oneofs")
+    @ProducesJson
+    def protobufJsonOneOfList(oneofs: List[SimpleOneof]): List[SimpleOneof] =
+      oneofs
   }
 
   private class CustomExceptionHandlerFunction extends ExceptionHandlerFunction {

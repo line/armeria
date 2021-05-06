@@ -43,12 +43,16 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
     private final TestEnvironment env;
 
     protected StreamMessageVerification() {
-        this(new TestEnvironment(1000, 200));
+        this(new TestEnvironment(5000, 1000));
     }
 
     protected StreamMessageVerification(TestEnvironment env) {
         super(env);
         this.env = env;
+    }
+
+    protected final TestEnvironment env() {
+        return env;
     }
 
     @Override
@@ -66,16 +70,20 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
             final ManualSubscriber<T> sub = env.newManualSubscriber(pub);
             final StreamMessage<?> stream = (StreamMessage<?>) pub;
 
-            if (!(stream instanceof PublisherBasedStreamMessage || stream instanceof SplitHttpResponse)) {
+            if (stream instanceof PublisherBasedStreamMessage ||
+                stream instanceof SplitHttpResponse ||
+                stream instanceof PathStreamMessage) {
                 // It's impossible for PublisherBasedStreamMessage to tell if the stream is
                 // closed or empty yet because Publisher doesn't have enough information.
+            } else {
                 assertThat(stream.isOpen()).isFalse();
                 assertThat(stream.isEmpty()).isTrue();
             }
 
-            if (!(stream instanceof SplitHttpResponse)) {
-                // SplitHttpResponse could complete early to read HTTP headers from HttpResponse before
-                // publishing body
+            if (!(stream instanceof SplitHttpResponse || stream instanceof PathStreamMessage)) {
+                // - SplitHttpResponse could complete early to read HTTP headers from HttpResponse before
+                //   publishing body
+                // - PathStreamMessage immediately completes if a Path size is zero
                 assertThat(stream.whenComplete()).isNotDone();
             }
             sub.requestEndOfStream();
@@ -233,19 +241,22 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
 
     @Override
     @SuppressWarnings("checkstyle:LineLength")
-    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingOneByOne() throws Throwable {
+    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingOneByOne()
+            throws Throwable {
         multiSubscribeUnsupported();
     }
 
     @Override
     @SuppressWarnings("checkstyle:LineLength")
-    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfront() throws Throwable {
+    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfront()
+            throws Throwable {
         multiSubscribeUnsupported();
     }
 
     @Override
     @SuppressWarnings("checkstyle:LineLength")
-    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfrontAndCompleteAsExpected() throws Throwable {
+    public void optional_spec111_multicast_mustProduceTheSameElementsInTheSameSequenceToAllOfItsSubscribersWhenRequestingManyUpfrontAndCompleteAsExpected()
+            throws Throwable {
         multiSubscribeUnsupported();
     }
 

@@ -21,14 +21,17 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller.{
   jsonDefaultParser,
   jsonDefaultPrinter,
-  messageCompanionCache
+  messageCompanionCache,
+  typeMapperMethodCache
 }
 import io.grpc.MethodDescriptor.Marshaller
 import java.io.{InputStream, OutputStream}
-import java.util.concurrent.ConcurrentMap
+import java.lang.invoke.{MethodHandle, MethodHandles}
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 import scala.io.{Codec, Source}
+import scalapb.grpc.TypeMappedMarshaller
 import scalapb.json4s.{Parser, Printer}
-import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, GeneratedSealedOneof, TypeMapper}
 
 /**
  * A [[com.linecorp.armeria.common.grpc.GrpcJsonMarshaller]] that serializes and deserializes
@@ -39,19 +42,35 @@ final class ScalaPbJsonMarshaller private (
     jsonParser: Parser = jsonDefaultParser
 ) extends GrpcJsonMarshaller {
 
-  override def serializeMessage[A](marshaller: Marshaller[A], message: A, os: OutputStream): Unit = {
-    if (!message.isInstanceOf[GeneratedMessage])
-      throw new IllegalStateException(
-        s"Unexpected message type: ${message.getClass} (expected: ${classOf[GeneratedMessage]})")
-    val msg = message.asInstanceOf[GeneratedMessage]
-    os.write(jsonPrinter.print(msg).getBytes())
-  }
+  override def serializeMessage[A](marshaller: Marshaller[A], message: A, os: OutputStream): Unit =
+    message match {
+      case msg: GeneratedSealedOneof =>
+        os.write(jsonPrinter.print(msg.asMessage).getBytes())
+      case msg: GeneratedMessage =>
+        os.write(jsonPrinter.print(msg).getBytes())
+      case _ =>
+        throw new IllegalStateException(
+          s"Unexpected message type: ${message.getClass} (expected: ${classOf[GeneratedMessage]})")
+    }
 
   override def deserializeMessage[A](marshaller: Marshaller[A], in: InputStream): A = {
     val companion = getMessageCompanion(marshaller)
     val jsonString = Source.fromInputStream(in)(Codec.UTF8).mkString
     val message = jsonParser.fromJsonString(jsonString)(companion)
-    message.asInstanceOf[A]
+    marshaller match {
+      case marshaller: TypeMappedMarshaller[_, _] =>
+        val method = typeMapperMethodCache.computeIfAbsent(
+          marshaller,
+          key => {
+            val field = key.getClass.getDeclaredField("typeMapper")
+            field.setAccessible(true)
+            MethodHandles.lookup().unreflectGetter(field)
+          })
+        val typeMapper = method.invoke(marshaller).asInstanceOf[TypeMapper[GeneratedMessage, A]]
+        typeMapper.toCustom(message)
+      case _ =>
+        message.asInstanceOf[A]
+    }
   }
 
   private def getMessageCompanion[A](marshaller: Marshaller[A]): GeneratedMessageCompanion[GeneratedMessage] = {
@@ -76,6 +95,9 @@ final class ScalaPbJsonMarshaller private (
 object ScalaPbJsonMarshaller {
 
   private val messageCompanionCache: ConcurrentMap[Marshaller[_], GeneratedMessageCompanion[GeneratedMessage]] =
+    new MapMaker().weakKeys().makeMap()
+
+  private val typeMapperMethodCache: ConcurrentMap[Marshaller[_], MethodHandle] =
     new MapMaker().weakKeys().makeMap()
 
   private val jsonDefaultPrinter: Printer = new Printer().includingDefaultValueFields

@@ -24,8 +24,8 @@ import java.net.ServerSocket;
 import java.net.URI;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -33,9 +33,11 @@ import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList;
 import com.pszymczyk.consul.ConsulProcess;
 import com.pszymczyk.consul.ConsulStarterBuilder;
 
@@ -51,19 +53,23 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 public abstract class ConsulTestBase {
 
+    private static final Logger logger = LoggerFactory.getLogger(ConsulTestBase.class);
+
+    private static final String ENV_CONSUL_VERSION = "CONSUL_VERSION";
+    private static final String ENV_CONSUL_BINARY_DOWNLOAD_DIR = "CONSUL_BINARY_DOWNLOAD_DIR";
+    private static final String FALLBACK_CONSUL_VERSION = "1.9.3";
+
     protected static final String CONSUL_TOKEN = UUID.randomUUID().toString();
     protected static final String serviceName = "testService";
-    protected static final Set<Endpoint> sampleEndpoints;
 
-    static {
+    protected static List<Endpoint> newSampleEndpoints() {
         final int[] ports = unusedPorts(3);
-        sampleEndpoints = ImmutableSet.of(Endpoint.of("localhost", ports[0]).withWeight(2),
-                                          Endpoint.of("127.0.0.1", ports[1]).withWeight(4),
-                                          Endpoint.of("127.0.0.1", ports[2]).withWeight(2));
+        return ImmutableList.of(Endpoint.of("localhost", ports[0]).withWeight(2),
+                                Endpoint.of("127.0.0.1", ports[1]).withWeight(4),
+                                Endpoint.of("127.0.0.1", ports[2]).withWeight(2));
     }
 
-    protected ConsulTestBase() {
-    }
+    protected ConsulTestBase() {}
 
     @Nullable
     private static ConsulProcess consul;
@@ -77,23 +83,38 @@ public abstract class ConsulTestBase {
         // This EmbeddedConsul tested with Consul version above 1.4.0
         final ConsulStarterBuilder builder =
                 ConsulStarterBuilder.consulStarter()
-                                    .withConsulVersion("1.9.0")
                                     .withWaitTimeout(120)
                                     .withCustomConfig(aclConfiguration(CONSUL_TOKEN))
                                     .withToken(CONSUL_TOKEN);
 
-        final String downloadPath = System.getenv("CONSUL_DOWNLOAD_PATH");
-        if (!Strings.isNullOrEmpty(downloadPath)) {
-            builder.withConsulBinaryDownloadDirectory(Paths.get(downloadPath));
+        final String version = System.getenv(ENV_CONSUL_VERSION);
+        if (!Strings.isNullOrEmpty(version)) {
+            builder.withConsulVersion(version);
+            logger.info("{}={}", ENV_CONSUL_VERSION, version);
+        } else {
+            builder.withConsulVersion(FALLBACK_CONSUL_VERSION);
+            logger.warn("{}={} (fallback)", ENV_CONSUL_VERSION, FALLBACK_CONSUL_VERSION);
         }
 
+        final String downloadDir = System.getenv(ENV_CONSUL_BINARY_DOWNLOAD_DIR);
+        if (!Strings.isNullOrEmpty(downloadDir)) {
+            builder.withConsulBinaryDownloadDirectory(Paths.get(downloadDir));
+            logger.info("{}={}", ENV_CONSUL_BINARY_DOWNLOAD_DIR, downloadDir);
+        } else {
+            logger.warn("{}=<unspecified>", ENV_CONSUL_BINARY_DOWNLOAD_DIR);
+        }
+
+        // The default timeout is 30. It'd be better to fail fast and restart Consul.
+        builder.withWaitTimeout(10);
+
         // A workaround for 'Cannot run program "**/embedded_consul/consul" error=26, Text file busy'
-        await().timeout(Duration.ofSeconds(30)).pollInSameThread().pollInterval(Duration.ofSeconds(2))
+        await().timeout(Duration.ofSeconds(40)).pollInSameThread().pollInterval(Duration.ofSeconds(2))
                .untilAsserted(() -> {
                    assertThatCode(() -> {
                        consul = builder.build().start();
                    }).doesNotThrowAnyException();
                });
+
         // Initialize Consul client
         consulClient = ConsulClient.builder(URI.create("http://127.0.0.1:" + consul.getHttpPort()))
                                    .consulToken(CONSUL_TOKEN)
@@ -162,7 +183,7 @@ public abstract class ConsulTestBase {
     }
 
     public static class EchoService extends AbstractHttpService {
-        private HttpStatus responseStatus = HttpStatus.OK;
+        private volatile HttpStatus responseStatus = HttpStatus.OK;
 
         @Override
         protected final HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {

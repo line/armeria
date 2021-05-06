@@ -47,6 +47,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.google.common.base.Strings;
 import com.google.common.primitives.Bytes;
@@ -825,19 +826,9 @@ class GrpcServiceServerTest {
         });
     }
 
-    @Test
-    void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp2() throws Exception {
-        final RequestLog log = clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H2C);
-        assertThat(log.responseCause()).isInstanceOf(ClosedStreamException.class);
-    }
-
-    @Test
-    void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp1() throws Exception {
-        final RequestLog log = clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H1C);
-        assertThat(log.responseCause()).isInstanceOf(ClosedSessionException.class);
-    }
-
-    private static RequestLog clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol)
+    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    @ParameterizedTest
+    void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol)
             throws Exception {
 
         final ClientFactory factory = ClientFactory.builder().build();
@@ -863,6 +854,7 @@ class GrpcServiceServerTest {
                     }
                 });
         await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
+
         factory.close();
         CLIENT_CLOSED.set(true);
         await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
@@ -870,12 +862,20 @@ class GrpcServiceServerTest {
         final RequestLog log = requestLogQueue.take();
         assertThat(log.isComplete()).isTrue();
         assertThat(log.requestContent()).isNotNull();
-        assertThat(log.responseContent()).isNull();
+
+        final RpcResponse rpcResponse = (RpcResponse) log.responseContent();
+        final StatusException cause = (StatusException) rpcResponse.cause();
+        assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+        if (protocol.isMultiplex())  {
+            assertThat(cause.getStatus().getCause()).isInstanceOf(ClosedStreamException.class);
+        } else {
+            assertThat(cause.getStatus().getCause()).isInstanceOf(ClosedSessionException.class);
+        }
+
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
         assertThat(rpcReq.method()).isEqualTo(
                 "armeria.grpc.testing.UnitTestService/StreamClientCancelsBeforeResponseClosedCancels");
         assertThat(rpcReq.params()).containsExactly(SimpleRequest.getDefaultInstance());
-        return log;
     }
 
     @Test

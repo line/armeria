@@ -808,7 +808,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     return false;
                 }
 
-                if (processor.isClosed()) {
+                if (processor.isClosed() && processor.duplicator.unsubscribed == 0) {
                     if (++processor.downstreamSignaledCounter >= REQUEST_REMOVAL_THRESHOLD) {
                         // don't need to use AtomicBoolean cause it's used for rough counting
                         processor.downstreamSignaledCounter = 0;

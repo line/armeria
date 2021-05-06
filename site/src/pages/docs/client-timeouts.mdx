@@ -20,6 +20,13 @@ HelloService.Iface client =
            .build(HelloService.Iface.class);
 ```
 
+<Tip>
+
+See [Response properties](/docs/advanced-structured-logging#response-properties) to understand when the
+response timeout is scheduled.
+
+</Tip>
+
 ## Adjusting connection-level timeouts
 
 You need to build a non-default <type://ClientFactory> using <type://ClientFactoryBuilder> to override the default

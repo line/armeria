@@ -98,7 +98,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  *   <li>{@link Instant}, {@link TemporalAccessor}, {@link Date} and {@link Calendar}
  *     <ul>
  *       <li>Converted into a time and date string as specified in
- *         <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a></li>
+ *         <a href="https://datatracker.ietf.org/doc/html/rfc1123#page-55">RFC1123</a></li>
  *       <li>e.g. {@code Sun, 27 Nov 2016 19:37:15 UTC}</li>
  *     </ul>
  *   </li>

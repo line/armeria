@@ -18,6 +18,7 @@
 *.ck
 *.cloud.metacentrum.cz
 *.cns.joyent.com
+*.code.run
 *.compute-1.amazonaws.com
 *.compute.amazonaws.com
 *.compute.amazonaws.com.cn
@@ -26,6 +27,8 @@
 *.customer-oci.com
 *.dapps.earth
 *.dev.adobeaemcloud.com
+*.devcdnaccesso.com
+*.developer.app
 *.dweb.link
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
@@ -38,6 +41,7 @@
 *.gateway.dev
 *.hosting.myjino.ru
 *.hosting.ovh.net
+*.id.forgerock.io
 *.in.futurecms.at
 *.jm
 *.kawasaki.jp
@@ -47,6 +51,7 @@
 *.kunden.ortsinfo.at
 *.landing.myjino.ru
 *.lcl.dev
+*.lclstage.dev
 *.linodeobjects.com
 *.magentosite.cloud
 *.mm
@@ -54,6 +59,7 @@
 *.nagoya.jp
 *.nodebalancer.linode.com
 *.nom.br
+*.northflank.app
 *.np
 *.oci.customer-oci.com
 *.ocp.customer-oci.com
@@ -63,6 +69,7 @@
 *.on-rio.io
 *.otap.co
 *.owo.codes
+*.paywhirl.com
 *.pg
 *.platformsh.site
 *.quipelements.com
@@ -75,6 +82,7 @@
 *.spectrum.myjino.ru
 *.statics.cloud
 *.stg.dev
+*.stgstage.dev
 *.stolos.io
 *.svc.firenet.ch
 *.sys.qcx.io
@@ -83,6 +91,7 @@
 *.transurl.eu
 *.transurl.nl
 *.triton.zone
+*.tst.site
 *.uberspace.de
 *.vps.myjino.ru
 *.webhare.dev
@@ -364,8 +373,7 @@ ami.ibaraki.jp
 amica
 amli.no
 amot.no
-ams.cloudswitches.com
-ams1.jls.docktera.net
+amscompute.com
 amsterdam
 amsterdam.museum
 amsw.nl
@@ -571,7 +579,6 @@ atsugi.kanagawa.jp
 atsuma.hokkaido.jp
 attorney
 au
-au.cloudswitches.com
 au.eu.org
 auction
 audi
@@ -607,6 +614,7 @@ avoues.fr
 aw
 awaji.hyogo.jp
 aws
+awsglobalaccelerator.com
 awsmppl.com
 ax
 axa
@@ -824,6 +832,7 @@ biz.ki
 biz.ls
 biz.mv
 biz.mw
+biz.my
 biz.ni
 biz.nr
 biz.pk
@@ -970,6 +979,7 @@ bonn.museum
 boo
 book
 booking
+bookonline.app
 boomla.net
 bosch
 bostik
@@ -983,6 +993,7 @@ botany.museum
 bounceme.net
 bounty-full.com
 boutique
+boutir.com
 box
 boxfuse.io
 bozen-sudtirol.it
@@ -1082,6 +1093,7 @@ cab
 cable-modem.org
 cadaques.museum
 cafe
+cafjs.com
 cagliari.it
 cahcesuolo.no
 cal
@@ -1131,7 +1143,6 @@ casa
 casacam.net
 casadelamoneda.museum
 case
-caseih
 caserta.it
 cash
 casino
@@ -1348,13 +1359,11 @@ clinton.museum
 clock.museum
 clothing
 cloud
-cloud-de.unispace.io
 cloud-fr1.unispace.io
 cloud.fedoraproject.org
 cloud.goog
 cloud.interhostsolutions.be
 cloud.jelastic.open.tim.it
-cloud.unispace.io
 cloud66.ws
 cloud66.zone
 cloudaccess.host
@@ -1378,6 +1387,7 @@ cloudns.org
 cloudns.pro
 cloudns.pw
 cloudns.us
+cloudsite.builders
 cloudycluster.net
 club
 club.aero
@@ -1719,6 +1729,7 @@ crs
 cruise
 cruises
 cs.it
+cs.keliweb.cloud
 csc
 csx.cc
 ct.it
@@ -2046,7 +2057,9 @@ ed.jp
 ed.pw
 edeka
 edgeapp.net
+edgecompute.app
 edgestack.me
+editorx.io
 edogawa.tokyo.jp
 edu
 edu.ac
@@ -2199,7 +2212,6 @@ eiheiji.fukui.jp
 eisenbahn.museum
 ekloges.cy
 elasticbeanstalk.com
-elastyco.com
 elblag.pl
 elburg.museum
 elk.pl
@@ -2298,7 +2310,9 @@ eu.int
 eu.meteorapp.com
 eu.org
 eu.platform.sh
+eu.pythonanywhere.com
 eun.eg
+eurodir.ru
 eurovision
 eus
 evenassi.no
@@ -2345,6 +2359,7 @@ fast
 fastblog.net
 fastly-terrarium.com
 fastlylb.net
+faststacks.net
 fastvps-server.com
 fastvps.host
 fastvps.site
@@ -2485,6 +2500,7 @@ force.museum
 ford
 forde.no
 forex
+forgeblocks.com
 forgot.her.name
 forgot.his.name
 forli-cesena.it
@@ -2509,6 +2525,8 @@ fr-1.paas.massivegrid.net
 fr.eu.org
 fr.it
 fra1-de.cloudjiffy.net
+framer.app
+framercanvas.com
 frana.no
 francaise.museum
 frankfurt.museum
@@ -2634,7 +2652,6 @@ fujisawa.iwate.jp
 fujisawa.kanagawa.jp
 fujishiro.ibaraki.jp
 fujitsu
-fujixerox
 fujiyoshida.yamanashi.jp
 fukagawa.hokkaido.jp
 fukaya.saitama.jp
@@ -2772,7 +2789,9 @@ giske.no
 git-pages.rit.edu
 git-repos.de
 gitapp.si
+github.dev
 github.io
+githubpreview.dev
 githubusercontent.com
 gitlab.io
 gitpage.si
@@ -2993,7 +3012,6 @@ gov.sh
 gov.sl
 gov.so
 gov.ss
-gov.st
 gov.sx
 gov.sy
 gov.tj
@@ -3385,6 +3403,7 @@ hotel.lk
 hotel.tz
 hoteles
 hotels
+hotelwithflight.com
 hotmail
 house
 house.museum
@@ -3393,6 +3412,7 @@ hoyanger.no
 hoylandet.no
 hr
 hr.eu.org
+hra.health
 hs.kr
 hs.run
 hs.zone
@@ -3447,6 +3467,7 @@ id.au
 id.ir
 id.lv
 id.ly
+id.repl.co
 id.us
 ide.kyoto.jp
 idf.il
@@ -3758,7 +3779,6 @@ isumi.chiba.jp
 it
 it.ao
 it.eu.org
-it1-eur.jenv-arubabiz.cloud
 it1.eur.aruba.jenv-aruba.cloud
 it1.jenv-aruba.cloud
 itabashi.tokyo.jp
@@ -3775,7 +3795,6 @@ its.me
 itv
 ivano-frankivsk.ua
 ivanovo.su
-iveco
 iveland.no
 ivgu.no
 iwade.wakayama.jp
@@ -3855,7 +3874,6 @@ jgora.pl
 jinsekikogen.hiroshima.jp
 jio
 jl.cn
-jl.serv.net.mx
 jll
 jls-sto1.elastx.net
 jls-sto2.elastx.net
@@ -4117,6 +4135,7 @@ kazuno.akita.jp
 kddi
 ke
 keisen.fukuoka.jp
+keliweb.cloud
 kembuchi.hokkaido.jp
 kep.tr
 kepno.pl
@@ -4680,6 +4699,7 @@ madrid
 madrid.museum
 maebashi.gunma.jp
 magazine.aero
+magnet.page
 maibara.shiga.jp
 maif
 mail.pl
@@ -4763,6 +4783,7 @@ matta-varjjat.no
 mattel
 mayfirst.info
 mayfirst.org
+mazeplay.com
 mazowsze.pl
 mazury.pl
 mb.ca
@@ -4772,9 +4793,11 @@ mc
 mc.ax
 mc.eu.org
 mc.it
+mcdir.me
 mcdir.ru
 mckinsey
 mcpe.me
+mcpre.ru
 md
 md.ci
 md.us
@@ -4783,6 +4806,7 @@ me.eu.org
 me.it
 me.ke
 me.so
+me.ss
 me.tc
 me.tz
 me.uk
@@ -5154,6 +5178,8 @@ muika.niigata.jp
 mukawa.hokkaido.jp
 muko.kyoto.jp
 mulhouse.museum
+multibaas.app
+multibaas.com
 munakata.fukuoka.jp
 muncie.museum
 muni.il
@@ -5358,7 +5384,6 @@ natal.br
 national.museum
 nationalfirearms.museum
 nationalheritage.museum
-nationwide
 nativeamerican.museum
 natori.miyagi.jp
 natura
@@ -5553,7 +5578,6 @@ neues.museum
 neustar
 new
 newhampshire.museum
-newholland
 newjersey.museum
 newmexico.museum
 newport.museum
@@ -5718,6 +5742,7 @@ nombre.bo
 nome.pt
 nomi.ishikawa.jp
 nonoichi.ishikawa.jp
+noop.app
 nord-aurdal.no
 nord-fron.no
 nord-odal.no
@@ -5738,6 +5763,7 @@ noshiro.akita.jp
 not.br
 notaires.fr
 notaires.km
+noticeable.news
 noticias.bo
 noto.ishikawa.jp
 notodden.no
@@ -5779,7 +5805,6 @@ numata.gunma.jp
 numata.hokkaido.jp
 numazu.shizuoka.jp
 nuoro.it
-nv.elastyco.com
 nv.us
 nx.cn
 ny-1.paas.massivegrid.net
@@ -5838,7 +5863,6 @@ oceanographic.museum
 oceanographique.museum
 ocelot.mythic-beasts.com
 ochi.kochi.jp
-ocs.opusinteractive.io
 od.ua
 odate.akita.jp
 odawara.kanagawa.jp
@@ -5973,7 +5997,6 @@ onred.one
 onrender.com
 ontario.museum
 onthewifi.com
-onyourside
 onza.mythic-beasts.com
 ooguy.com
 ookuwa.nagano.jp
@@ -6255,9 +6278,9 @@ pa.gov.pl
 pa.it
 pa.leg.br
 pa.us
+paas.beebyte.io
 paas.datacenter.fi
 paas.hosted-by-previder.com
-paas.leviracloud.eu
 paas.massivegrid.com
 pacific.museum
 paderborn.museum
@@ -6547,6 +6570,7 @@ pwc
 py
 pyatigorsk.ru
 pymnt.uk
+pythonanywhere.com
 pz.it
 q-a.eu.org
 q.bg
@@ -6605,6 +6629,7 @@ ravendb.community
 ravendb.me
 ravendb.run
 ravenna.it
+ravpage.co.il
 rawa-maz.pl
 rc.it
 rdv.to
@@ -6668,6 +6693,8 @@ res.aero
 res.in
 research.aero
 research.museum
+reserve-online.com
+reserve-online.net
 resindevice.io
 resistance.museum
 rest
@@ -6681,6 +6708,7 @@ rhcloud.com
 ri.it
 ri.us
 ribeirao.br
+ric.jelastic.vps-host.net
 rich
 richardli
 ricoh
@@ -6982,6 +7010,7 @@ sch.ng
 sch.qa
 sch.sa
 sch.so
+sch.ss
 sch.zm
 schaeffler
 schlesisches.museum
@@ -7022,6 +7051,7 @@ sd
 sd.cn
 sd.us
 sdn.gov.pl
+sdscloud.pl
 se
 se.eu.org
 se.gov.br
@@ -7045,6 +7075,7 @@ seiro.niigata.jp
 seirou.niigata.jp
 seiyo.ehime.jp
 sejny.pl
+sekd1.beebyteapp.io
 seki.gifu.jp
 sekigahara.gifu.jp
 sekikawa.niigata.jp
@@ -7092,6 +7123,7 @@ servep2p.com
 servepics.com
 servequake.com
 servesarcasm.com
+service.gov.scot
 service.gov.uk
 service.one
 services
@@ -7114,7 +7146,6 @@ sf.no
 sfr
 sg
 sg-1.paas.massivegrid.net
-sg.cloudswitches.com
 sh
 sh.cn
 shacknet.nu
@@ -7135,6 +7166,8 @@ shibukawa.gunma.jp
 shibuya.tokyo.jp
 shichikashuku.miyagi.jp
 shichinohe.aomori.jp
+shiftcrypto.dev
+shiftcrypto.io
 shiftedit.io
 shiga.jp
 shiiba.miyazaki.jp
@@ -7382,7 +7415,6 @@ spjelkavik.no
 sport
 sport.hu
 spot
-spreadbetting
 spy.museum
 spydeberg.no
 square.museum
@@ -7392,6 +7424,7 @@ square7.net
 sr
 sr.gov.pl
 sr.it
+srht.site
 srl
 srv.br
 ss
@@ -7450,6 +7483,7 @@ store.nf
 store.ro
 store.st
 store.ve
+storebase.store
 storfjord.no
 storj.farm
 stpetersburg.museum
@@ -7648,6 +7682,7 @@ tawaramoto.nara.jp
 tax
 taxi
 taxi.br
+tbits.me
 tc
 tc.br
 tci
@@ -8315,6 +8350,7 @@ voto
 voyage
 vpndns.net
 vpnplus.to
+vps-host.net
 vps.mcdir.ru
 vr.it
 vs.it
@@ -8441,6 +8477,7 @@ with.marketing
 withgoogle.com
 withyoutube.com
 wiw.gov.pl
+wixsite.com
 wlocl.pl
 wloclawek.pl
 wmcloud.org

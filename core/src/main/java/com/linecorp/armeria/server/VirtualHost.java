@@ -44,7 +44,7 @@ import io.netty.util.Mapping;
  * A {@link VirtualHost} contains the following information:
  * <ul>
  *   <li>the hostname pattern, as defined in
- *       <a href="https://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a></li>
+ *       <a href="https://datatracker.ietf.org/doc/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a></li>
  *   <li>{@link SslContext} if TLS is enabled</li>
  *   <li>the list of available {@link HttpService}s and their {@link Route}s</li>
  * </ul>
@@ -72,6 +72,7 @@ public final class VirtualHost {
 
     private final Logger accessLogger;
 
+    private final ServiceNaming defaultServiceNaming;
     private final long requestTimeoutMillis;
     private final long maxRequestLength;
     private final boolean verboseResponses;
@@ -84,6 +85,7 @@ public final class VirtualHost {
                 ServiceConfig fallbackServiceConfig,
                 RejectedRouteHandler rejectionHandler,
                 Function<? super VirtualHost, ? extends Logger> accessLoggerMapper,
+                @Nullable ServiceNaming defaultServiceNaming,
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
@@ -94,6 +96,7 @@ public final class VirtualHost {
         this.defaultHostname = defaultHostname;
         this.hostnamePattern = hostnamePattern;
         this.sslContext = sslContext;
+        this.defaultServiceNaming = defaultServiceNaming;
         this.requestTimeoutMillis = requestTimeoutMillis;
         this.maxRequestLength = maxRequestLength;
         this.verboseResponses = verboseResponses;
@@ -117,7 +120,7 @@ public final class VirtualHost {
     VirtualHost withNewSslContext(SslContext sslContext) {
         return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext,
                                serviceConfigs(), fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, requestTimeoutMillis(),
+                               host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
                                accessLogWriter(), shutdownAccessLogWriterOnStop());
     }
@@ -220,7 +223,7 @@ public final class VirtualHost {
 
     /**
      * Returns the hostname pattern of this virtual host, as defined in
-     * <a href="https://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a>.
      */
     public String hostnamePattern() {
         return hostnamePattern;
@@ -246,6 +249,15 @@ public final class VirtualHost {
      */
     public Logger accessLogger() {
         return accessLogger;
+    }
+
+    /**
+     * Returns a default naming rule for the name of services.
+     *
+     * @see ServiceConfig#defaultServiceNaming()
+     */
+    public ServiceNaming defaultServiceNaming() {
+        return defaultServiceNaming;
     }
 
     /**
@@ -370,7 +382,7 @@ public final class VirtualHost {
 
         return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(),
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, requestTimeoutMillis(),
+                               host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
                                accessLogWriter(), shutdownAccessLogWriterOnStop());
     }
@@ -396,6 +408,8 @@ public final class VirtualHost {
         buf.append(serviceConfigs);
         buf.append(", accessLogger: ");
         buf.append(accessLogger());
+        buf.append(", defaultServiceNaming: ");
+        buf.append(defaultServiceNaming());
         buf.append(", requestTimeoutMillis: ");
         buf.append(requestTimeoutMillis());
         buf.append(", maxRequestLength: ");

@@ -80,7 +80,8 @@ public final class BandwidthLimit {
      * Returns a newly created {@link BandwidthLimit}. Computes {@code limit}, {@code overdraftLimit},
      * {@code initialSize} and {@code period} out of a semicolon-separated {@code specification} string
      * that conforms to the following format,
-     * as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>:
+     * as per <a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/">RateLimit Header
+     * Fields for HTTP</a>:
      * <pre>{@code
      * <limit>;window=<period(in seconds)>[;burst=<overdraftLimit>][;initial=<initialSize>]
      * }</pre>
@@ -195,7 +196,8 @@ public final class BandwidthLimit {
 
     /**
      * Returns a string representation of the {@link BandwidthLimit} in the following format,
-     * as per <a href="https://tools.ietf.org/id/draft-polli-ratelimit-headers-00.html">RateLimit Header Scheme for HTTP</a>:
+     * as per <a href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/">RateLimit Header
+     * Fields for HTTP</a>:
      * <pre>{@code
      * <limit>;window=<period(in seconds)>[;burst=<overdraftLimit>][;policy="token bucket"]
      * }</pre>

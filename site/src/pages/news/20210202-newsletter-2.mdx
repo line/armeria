@@ -29,8 +29,12 @@ import { TwitterTweetEmbed } from 'react-twitter-embed';
 - As a token of appreciation, we've sent a thank you note with a gift. 
 - Thanks all for participating with us, and we're looking forward to seeing you keep it up with this year. 😄
   <div style="width: 100%; display: flex; flex-wrap: wrap;">
-    <div style="margin-right: 1rem;"><TwitterTweetEmbed tweetId={'1337766539328712706'} /></div>
-    <div><TwitterTweetEmbed tweetId={'1337330083330215938'} /></div>
+    <div class="tweet-box" style="margin-right: 1rem;">
+      <TwitterTweetEmbed tweetId={'1337766539328712706'} />
+    </div>
+    <div class="tweet-box">
+      <TwitterTweetEmbed tweetId={'1337330083330215938'} />
+    </div>
   </div>
 
 ## From the community
@@ -77,11 +81,11 @@ Sign up for our newsletters to keep up-to-date with new releases and useful tips
   message={() => <p>Since our last newsletter, we received awesome contributions from the following contributors:</p>}
   usernames={[
     'aanrii',
-    'adriancole',
     'anuraaga',
     'arhont375',
     'cj848',
     'cnabro',
+    'codefromthecrypt',
     'delegacy',
     'eisig',
     'eonezhang',

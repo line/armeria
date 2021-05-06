@@ -181,6 +181,19 @@ class HttpHeadersBase
         }
     }
 
+    Cookies cookie() {
+        final List<String> cookieStrings = getAll(HttpHeaderNames.COOKIE);
+        if (cookieStrings.isEmpty()) {
+            return Cookies.of();
+        }
+        return Cookie.fromCookieHeaders(cookieStrings);
+    }
+
+    Cookies setCookie() {
+        final List<String> cookieHeaders = getAll(HttpHeaderNames.SET_COOKIE);
+        return Cookie.fromSetCookieHeaders(cookieHeaders);
+    }
+
     @Nullable
     List<LanguageRange> acceptLanguages() {
         final List<String> acceptHeaders = getAll(HttpHeaderNames.ACCEPT_LANGUAGE);

@@ -50,7 +50,7 @@ public final class CookieBuilder {
         return value;
     }
 
-    // As per https://tools.ietf.org/html/rfc6265#section-4.1.2.3.
+    // As per https://datatracker.ietf.org/doc/html/rfc6265#section-4.1.2.3.
     @Nullable
     private static String trimDomainDot(String domain) {
         if (domain.charAt(domain.length() - 1) == '.') {
@@ -180,7 +180,7 @@ public final class CookieBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-03#section-4.1.2.7"
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-07#section-4.1.2.7"
      * >{@code SameSite}</a> attribute of the {@link Cookie}. The value is supposed to be one of {@code "Lax"},
      * {@code "Strict"} or {@code "None"}. Note that this attribute is server-side only.
      */
