@@ -25,6 +25,8 @@ jobs:
             on: self-hosted
             leak: true
           - java: 15
+            # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
+            #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
             on: macos-latest
             coverage: true
 
