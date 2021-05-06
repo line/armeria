@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
  * An {@link EndpointSelector} strategy which implements sticky load-balancing using
  * user passed {@link ToLongFunction} to compute hashes for consistent hashing.
  *
- * <p>This strategy can be useful when all requests that qualify some given criterias must be sent to the same
+ * <p>This strategy can be useful when all requests that qualify some given criteria must be sent to the same
  * backend server. A common use case is to send all requests for the same logged-in user to the same backend,
  * which could have a local cache keyed by user id.
  *

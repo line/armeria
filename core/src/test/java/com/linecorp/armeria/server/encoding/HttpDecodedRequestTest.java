@@ -17,6 +17,12 @@
 package com.linecorp.armeria.server.encoding;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -34,7 +40,9 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
@@ -109,6 +117,23 @@ class HttpDecodedRequestTest {
         assertThat(decodedPayloadBuf.refCnt()).isZero();
     }
 
+    @Test
+    void streamDecoderFinishedIsCalledWhenRequestCanceled() throws InterruptedException {
+        final HttpRequestWriter request = HttpRequest.streaming(REQUEST_HEADERS);
+        final HttpData data = HttpData.ofUtf8("foo");
+        request.write(data);
+
+        final StreamDecoderFactory factory = mock(StreamDecoderFactory.class);
+        final StreamDecoder streamDecoder = mock(StreamDecoder.class);
+        when(factory.newDecoder(any())).thenReturn(streamDecoder);
+        when(streamDecoder.decode(any())).thenReturn(data);
+
+        final HttpRequest decoded = new HttpDecodedRequest(request, factory, ByteBufAllocator.DEFAULT);
+        decoded.subscribe(new CancelSubscriber());
+
+        await().untilAsserted(() -> verify(streamDecoder, times(1)).finish());
+    }
+
     private static HttpData requestData(HttpRequest decoded, boolean withPooledObjects) {
         final CompletableFuture<HttpData> future = new CompletableFuture<>();
         final Subscriber<HttpObject> subscriber = new Subscriber<HttpObject>() {
@@ -138,5 +163,29 @@ class HttpDecodedRequestTest {
         }
 
         return future.join();
+    }
+
+    private static class CancelSubscriber implements Subscriber<HttpObject> {
+
+        private Subscription subscription;
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            subscription = s;
+            s.request(Long.MAX_VALUE);
+        }
+
+        @Override
+        public void onNext(HttpObject httpObject) {
+            if (httpObject instanceof HttpData) {
+                subscription.cancel();
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {}
+
+        @Override
+        public void onComplete() {}
     }
 }

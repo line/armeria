@@ -17,6 +17,8 @@ package com.linecorp.armeria.server.auth;
 
 import java.util.concurrent.CompletionStage;
 
+import javax.annotation.Nullable;
+
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -28,9 +30,11 @@ final class AuthorizerUtil {
      * to {@code true}, the request is authorized, or {@code false} otherwise. If the future resolves
      * exceptionally, the request will not be authorized.
      */
-    static <T> CompletionStage<Boolean> authorize(Authorizer<T> authorizer, ServiceRequestContext ctx, T data) {
+    static <T> CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(Authorizer<T> authorizer,
+                                                                               ServiceRequestContext ctx,
+                                                                               @Nullable T data) {
         try {
-            final CompletionStage<Boolean> f = authorizer.authorize(ctx, data);
+            final CompletionStage<AuthorizationStatus> f = authorizer.authorizeAndSupplyHandlers(ctx, data);
             if (f == null) {
                 throw new NullPointerException("An " + Authorizer.class.getSimpleName() +
                                                " returned null: " + authorizer);

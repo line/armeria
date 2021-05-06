@@ -33,6 +33,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Headers;
+import io.netty.handler.codec.http2.Http2Stream;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
 
@@ -75,6 +76,15 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);
         onKeepAliveReadOrWrite();
         return encoder().writeHeaders(ctx(), streamId, converted, 0, endStream, ctx().newPromise());
+    }
+
+    @Override
+    public boolean isResponseHeadersSent(int id, int streamId) {
+        final Http2Stream stream = encoder().connection().stream(streamId);
+        if (stream == null) {
+            return false;
+        }
+        return stream.isHeadersSent();
     }
 
     private Http2Headers convertHeaders(HttpHeaders inputHeaders, boolean isTrailersEmpty) {

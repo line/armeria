@@ -107,4 +107,32 @@ class TemporaryThreadLocalsTest {
         assertThat(buf2.capacity()).isEqualTo(TemporaryThreadLocals.MAX_STRING_BUILDER_CAPACITY);
         assertThat(buf2).isNotSameAs(buf1);
     }
+
+    @Test
+    void intArrayReuse() {
+        final int[] array = TemporaryThreadLocals.get().intArray(8);
+        assertThat(array).hasSize(8);
+        for (int i = 0; i < 8; i++) {
+            assertThat(TemporaryThreadLocals.get().intArray(i)).isSameAs(array);
+        }
+    }
+
+    @Test
+    void intArrayReallocation() {
+        final int[] array = TemporaryThreadLocals.get().intArray(8);
+        assertThat(array).hasSize(8);
+        final int[] newArray = TemporaryThreadLocals.get().intArray(9);
+        assertThat(newArray).hasSize(9);
+    }
+
+    @Test
+    void tooLargeIntArray() {
+        final int[] largeArray =
+                TemporaryThreadLocals.get().intArray(TemporaryThreadLocals.MAX_INT_ARRAY_CAPACITY + 1);
+        assertThat(largeArray).hasSize(TemporaryThreadLocals.MAX_INT_ARRAY_CAPACITY + 1);
+
+        // A large array should not be reused.
+        final int[] smallArray = TemporaryThreadLocals.get().intArray(8);
+        assertThat(smallArray).hasSize(8);
+    }
 }

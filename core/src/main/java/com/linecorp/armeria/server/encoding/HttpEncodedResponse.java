@@ -60,6 +60,8 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
 
     private boolean headersSent;
 
+    private boolean encoderClosed;
+
     HttpEncodedResponse(HttpResponse delegate,
                         HttpEncodingType encodingType,
                         Predicate<MediaType> encodableContentTypePredicate,
@@ -155,16 +157,23 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         return cause;
     }
 
+    @Override
+    protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
+        closeEncoder();
+    }
+
     private void closeEncoder() {
+        if (encoderClosed) {
+            return;
+        }
+        encoderClosed = true;
         if (encodingStream == null) {
             return;
         }
         try {
             encodingStream.close();
         } catch (IOException e) {
-            throw new IllegalStateException(
-                    "Error closing encodingStream, this should not happen with byte arrays.",
-                    e);
+            logger.warn("Unexpected exception is raised while closing the encoding stream.", e);
         }
     }
 

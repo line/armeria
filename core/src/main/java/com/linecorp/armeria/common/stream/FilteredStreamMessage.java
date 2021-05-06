@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotif
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -45,13 +44,11 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
 
-    private static final SubscriptionOption[] EMPTY_OPTIONS = new SubscriptionOption[0];
-
     private final StreamMessage<T> upstream;
     private final boolean filterSupportsPooledObjects;
 
     /**
-     * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code delegate}
+     * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code upstream}
      * before passing to a subscriber.
      */
     protected FilteredStreamMessage(StreamMessage<T> upstream) {
@@ -60,7 +57,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     /**
      * (Advanced users only) Creates a new {@link FilteredStreamMessage} that filters objects published by
-     * {@code delegate} before passing to a subscriber.
+     * {@code upstream} before passing to a subscriber.
      *
      * @param withPooledObjects if {@code true}, {@link #filter(Object)} receives the pooled {@link HttpData}
      *                          as is, without making a copy. If you don't know what this means,
@@ -69,7 +66,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
      */
     @UnstableApi
     protected FilteredStreamMessage(StreamMessage<T> upstream, boolean withPooledObjects) {
-        this.upstream = requireNonNull(upstream, "delegate");
+        this.upstream = requireNonNull(upstream, "upstream");
         filterSupportsPooledObjects = withPooledObjects;
     }
 
@@ -102,6 +99,11 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     protected Throwable beforeError(Subscriber<? super U> subscriber, Throwable cause) {
         return cause;
     }
+
+    /**
+     * A callback executed when this {@link StreamMessage} is canceled by the {@link Subscriber}.
+     */
+    protected void onCancellation(Subscriber<? super U> subscriber) {}
 
     @Override
     public final boolean isOpen() {
@@ -141,19 +143,14 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private void subscribe(Subscriber<? super U> subscriber, EventExecutor executor, boolean withPooledObjects,
                            boolean notifyCancellation) {
-        upstream.subscribe(new FilteringSubscriber(subscriber, withPooledObjects),
-                           executor, filteringSubscriptionOptions(notifyCancellation));
-    }
-
-    private SubscriptionOption[] filteringSubscriptionOptions(boolean notifyCancellation) {
-        final ArrayList<SubscriptionOption> list = new ArrayList<>(2);
+        final FilteringSubscriber filteringSubscriber = new FilteringSubscriber(
+                subscriber, withPooledObjects, notifyCancellation);
         if (filterSupportsPooledObjects) {
-            list.add(SubscriptionOption.WITH_POOLED_OBJECTS);
+            upstream.subscribe(filteringSubscriber, executor,
+                               SubscriptionOption.NOTIFY_CANCELLATION, SubscriptionOption.WITH_POOLED_OBJECTS);
+        } else {
+            upstream.subscribe(filteringSubscriber, executor, SubscriptionOption.NOTIFY_CANCELLATION);
         }
-        if (notifyCancellation) {
-            list.add(SubscriptionOption.NOTIFY_CANCELLATION);
-        }
-        return list.toArray(EMPTY_OPTIONS);
     }
 
     @Override
@@ -175,21 +172,51 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         private final Subscriber<? super U> delegate;
         private final boolean subscribedWithPooledObjects;
+        private final boolean notifyCancellation;
 
-        FilteringSubscriber(Subscriber<? super U> delegate, boolean subscribedWithPooledObjects) {
+        private boolean completed;
+        @Nullable
+        private Subscription upstream;
+
+        FilteringSubscriber(Subscriber<? super U> delegate, boolean subscribedWithPooledObjects,
+                            boolean notifyCancellation) {
             this.delegate = requireNonNull(delegate, "delegate");
             this.subscribedWithPooledObjects = subscribedWithPooledObjects;
+            this.notifyCancellation = notifyCancellation;
         }
 
         @Override
         public void onSubscribe(Subscription s) {
-            beforeSubscribe(delegate, s);
+            upstream = s;
+            try {
+                beforeSubscribe(delegate, s);
+            } catch (Throwable ex) {
+                s.cancel();
+                logger.warn("Unexpected exception from {}#beforeSubscribe()",
+                            FilteredStreamMessage.this.getClass().getName(), ex);
+                return;
+            }
+
             delegate.onSubscribe(s);
         }
 
         @Override
         public void onNext(T o) {
-            U filtered = filter(o);
+            U filtered;
+            try {
+                filtered = filter(o);
+            } catch (Throwable ex) {
+                StreamMessageUtil.closeOrAbort(o);
+                // onError(ex) should be called before upstream.cancel() to deliver the cause to downstream.
+                // upstream.cancel() and make downstream closed with CancelledSubscriptionException
+                // before sending the actual cause.
+                onError(ex);
+
+                assert upstream != null;
+                upstream.cancel();
+                return;
+            }
+
             if (!subscribedWithPooledObjects) {
                 filtered = PooledObjects.copyAndClose(filtered);
             }
@@ -198,6 +225,17 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onError(Throwable t) {
+            if (t instanceof CancelledSubscriptionException) {
+                onCancellation(delegate);
+                if (!notifyCancellation) {
+                    return;
+                }
+            }
+
+            if (completed) {
+                return;
+            }
+            completed = true;
             final Throwable filteredCause = beforeError(delegate, t);
             if (filteredCause != null) {
                 delegate.onError(filteredCause);
@@ -212,6 +250,10 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onComplete() {
+            if (completed) {
+                return;
+            }
+            completed = true;
             beforeComplete(delegate);
             delegate.onComplete();
         }

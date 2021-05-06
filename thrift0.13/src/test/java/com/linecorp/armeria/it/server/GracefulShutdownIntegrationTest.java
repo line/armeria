@@ -181,7 +181,7 @@ class GracefulShutdownIntegrationTest {
         assertThat(completed.get()).isTrue();
 
         // Should take 500 more milliseconds than the baseline.
-        assertThat(stopTime - startTime).isBetween(baselineNanos + MILLISECONDS.toNanos(100),
+        assertThat(stopTime - startTime).isBetween(baselineNanos - MILLISECONDS.toNanos(100),
                                                    baselineNanos + MILLISECONDS.toNanos(900));
     }
 
@@ -219,7 +219,7 @@ class GracefulShutdownIntegrationTest {
         // Should take 1 more second than the baseline, because the long sleep will trigger shutdown timeout.
         final long stopTime = System.nanoTime();
         assertThat(stopTime - startTime).isBetween(baselineNanos + MILLISECONDS.toNanos(600),
-                                                   baselineNanos + MILLISECONDS.toNanos(1400));
+                                                   baselineNanos + MILLISECONDS.toNanos(1800));
     }
 
     @Test

@@ -45,7 +45,7 @@ import java.util.List;
 import io.netty.util.internal.InternalThreadLocalMap;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC 6265</a> compliant cookie encoder for client side.
+ * A <a href="https://datatracker.ietf.org/doc/rfc6265/">RFC 6265</a> compliant cookie encoder for client side.
  *
  * <p>Note that multiple cookies are supposed to be sent at once in a single {@code "Cookie"} header.</p>
  *

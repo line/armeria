@@ -34,6 +34,7 @@ import org.mockito.Mock;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -43,6 +44,8 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceNaming;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.Channel;
@@ -288,6 +291,7 @@ class DefaultRequestLogTest {
         log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
         log.endRequest();
         assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).isEqualTo(DefaultRequestLogTest.class.getName());
     }
 
     @Test
@@ -322,5 +326,110 @@ class DefaultRequestLogTest {
         await().untilAsserted(() -> {
             assertThat(log.whenRequestComplete()).isDone();
         });
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming() {
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.simpleTypeName())
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(rpcRequest, null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith(DefaultRequestLogTest.class.getSimpleName());
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_of() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .defaultServiceNaming(ServiceNaming.of("hardCodedServiceName"))
+                                     .build();
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).isEqualTo("hardCodedServiceName");
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_shorten50() {
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.shorten(50))
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(rpcRequest, null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith("c.l.armeria.common.logging.DefaultRequestLogTest");
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_shorten() {
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.shorten())
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(rpcRequest, null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith("c.l.a.c.l.DefaultRequestLogTest");
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_custom() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .defaultServiceNaming(ctx -> "customServiceName")
+                                     .build();
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).isEqualTo("customServiceName");
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_null() {
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .defaultServiceNaming(ctx -> null)
+                                     .build();
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith(DefaultRequestLogTest.class.getName());
     }
 }

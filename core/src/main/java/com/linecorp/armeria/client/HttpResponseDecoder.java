@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -121,13 +122,13 @@ abstract class HttpResponseDecoder {
     }
 
     final void failUnfinishedResponses(Throwable cause) {
-        try {
-            for (HttpResponseWrapper res : responses.values()) {
-                res.close(cause);
-            }
-        } finally {
-            unfinishedResponses -= responses.size();
-            responses.clear();
+        for (final Iterator<HttpResponseWrapper> iterator = responses.values().iterator();
+             iterator.hasNext();) {
+            final HttpResponseWrapper res = iterator.next();
+            // To avoid calling removeResponse by res.close(cause), remove before closing.
+            iterator.remove();
+            unfinishedResponses--;
+            res.close(cause);
         }
     }
 
@@ -382,9 +383,9 @@ abstract class HttpResponseDecoder {
             if (ctx instanceof DefaultClientRequestContext) {
                 final CancellationScheduler responseCancellationScheduler =
                         ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
-                responseCancellationScheduler.init(ctx.eventLoop(), newCancellationTask(),
-                                                   TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis),
-                                                   ResponseTimeoutException.get());
+                responseCancellationScheduler.init(
+                        ctx.eventLoop(), newCancellationTask(),
+                        TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis), /* server */ false);
             }
         }
 

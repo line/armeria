@@ -209,7 +209,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req, res, serializationFormat);
         if (call != null) {
-            ctx.whenRequestCancelling().thenRun(() -> call.close(Status.CANCELLED, new Metadata()));
+            ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
+                call.close(Status.CANCELLED.withCause(cancellationCause), new Metadata());
+                return null;
+            });
             call.startDeframing();
         }
         return res;

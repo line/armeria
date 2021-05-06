@@ -36,6 +36,7 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
+import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -113,7 +114,7 @@ class ThriftServiceTest {
     private CompletableFuture<HttpData> promise2;
 
     @BeforeEach
-    void before() {
+    void before() throws TTransportException {
         in = new TMemoryInputTransport();
         out = new TMemoryBuffer(128);
 
