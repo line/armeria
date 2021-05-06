@@ -52,6 +52,7 @@ public final class Main {
                          ctx.clearRequestTimeout();
                          return ServerSentEvents.fromPublisher(
                                  Flux.interval(sendingInterval)
+                                     .onBackpressureDrop()
                                      .take(eventCount)
                                      .map(unused -> ServerSentEvent.ofData(randomStringSupplier.get())));
                      })
@@ -63,6 +64,7 @@ public final class Main {
                              // The event stream will be closed after
                              // the request timed out (10 seconds by default).
                              return Flux.interval(sendingInterval)
+                                        .onBackpressureDrop()
                                         .take(eventCount)
                                         // A user can use a builder to build a Server-Sent Event.
                                         .map(id -> ServerSentEvent.builder()

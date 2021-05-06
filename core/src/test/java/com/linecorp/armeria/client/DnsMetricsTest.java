@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.DnsTimeoutUtil.assertDnsTimeoutException;
 import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
@@ -33,7 +34,6 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -57,7 +57,6 @@ import io.netty.handler.codec.dns.DnsOpCode;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.ReferenceCountUtil;
@@ -79,6 +78,8 @@ public class DnsMetricsTest {
                                       .domainNameResolverCustomizer(builder -> {
                                           builder.dnsServerAddressStreamProvider(dnsServerList(server));
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.maxQueriesPerResolve(16);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
                                       })
                                       .meterRegistry(meterRegistry)
                                       .build()) {
@@ -128,6 +129,7 @@ public class DnsMetricsTest {
                                       .domainNameResolverCustomizer(builder -> {
                                           builder.dnsServerAddressStreamProvider(dnsServerList(server));
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.maxQueriesPerResolve(16);
                                           builder.queryTimeout(Duration.ofSeconds(5));
                                       })
                                       .meterRegistry(meterRegistry)
@@ -154,8 +156,7 @@ public class DnsMetricsTest {
                         () -> client2.execute(RequestHeaders.of(HttpMethod.GET, "http://foo.com"))
                                      .aggregate().join());
                 assertThat(cause.getCause()).isInstanceOf(UnprocessedRequestException.class);
-                assertThat(Throwables.getRootCause(cause))
-                        .isInstanceOfAny(DnsTimeoutException.class, DnsNameResolverTimeoutException.class);
+                assertDnsTimeoutException(cause);
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
@@ -178,6 +179,11 @@ public class DnsMetricsTest {
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
+                                          // Should set maxQueriesPerResolve() and queryTimeout() to avoid
+                                          // flakiness. The default value of maxQueriesPerResolve depends on
+                                          // the configuration in /etc/resolve.conf
+                                          builder.maxQueriesPerResolve(16);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
                                           builder.dnsServerAddressStreamProvider(dnsServerList(server));
                                           builder.searchDomains();
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
@@ -223,6 +229,11 @@ public class DnsMetricsTest {
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
+                                          // Should set maxQueriesPerResolve() and queryTimeout() to avoid
+                                          // flakiness. The default value of maxQueriesPerResolve depends on
+                                          // the configuration in /etc/resolve.conf
+                                          builder.maxQueriesPerResolve(16);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
                                           builder.dnsServerAddressStreamProvider(dnsServerList(server));
                                           builder.searchDomains();
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
@@ -251,11 +262,13 @@ public class DnsMetricsTest {
                 assertThatThrownBy(() -> client.get("http://bar.com").aggregate().join())
                         .hasRootCauseInstanceOf(UnknownHostException.class);
 
-                assertThat(MoreMeters.measureAll(meterRegistry))
-                        .containsEntry(writtenMeterId, 2.0)
-                        .containsEntry(noAnswerMeterId, 1.0)
-                        .containsEntry(nxDomainMeterId, 1.0)
-                        .doesNotContainKey(otherExceptionId);
+                await().untilAsserted(() -> {
+                    assertThat(MoreMeters.measureAll(meterRegistry))
+                            .containsEntry(writtenMeterId, 2.0)
+                            .containsEntry(noAnswerMeterId, 1.0)
+                            .containsEntry(nxDomainMeterId, 1.0)
+                            .doesNotContainKey(otherExceptionId);
+                });
             }
         }
     }
@@ -272,6 +285,11 @@ public class DnsMetricsTest {
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
+                                          // Should set maxQueriesPerResolve() and queryTimeout() to avoid
+                                          // flakiness. The default value of maxQueriesPerResolve depends on
+                                          // the configuration in /etc/resolve.conf
+                                          builder.maxQueriesPerResolve(16);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
                                           builder.dnsServerAddressStreamProvider(dnsServerList(server));
                                           builder.searchDomains();
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
