@@ -166,6 +166,10 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         final HttpResponseWrapper res = getResponse(resId);
+                        if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
+                            close(ctx);
+                            return;
+                        }
                         assert res != null;
                         this.res = res;
 
@@ -274,6 +278,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
             logger.warn("Unexpected exception:", cause);
         }
 
+        ctx.close();
+    }
+
+    private void close(ChannelHandlerContext ctx) {
+        state = State.DISCARD;
         ctx.close();
     }
 

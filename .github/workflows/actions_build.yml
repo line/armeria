@@ -20,13 +20,15 @@ jobs:
             site: true
           - java: 11
             on: self-hosted
-            coverage: true
+            lint: true
           - java: 14
             on: self-hosted
             leak: true
           - java: 15
-            on: self-hosted
-            lint: true
+            # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
+            #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
+            on: macos-latest
+            coverage: true
 
     steps:
     - uses: actions/checkout@v2
@@ -51,7 +53,7 @@ jobs:
       if: ${{ matrix.site }}
       run: |
         sudo yum -y install cargo && cargo install svgbob_cli
-        echo '::add-path::~/.cargo/bin'
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     - name: Cache
       uses: actions/cache@v2
@@ -61,18 +63,19 @@ jobs:
           ~/.gradle/caches/jars-3
           ~/.gradle/caches/modules-2
           ~/.gradle/caches/package-lists
+          ~/.gradle/caches/embedded-consul
         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
           ${{ runner.os }}-gradle-
 
     - name: Build with Gradle
       run: |
-        ./gradlew -Dorg.gradle.jvmargs=-Xmx4g --no-daemon --stacktrace build \
-        ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=4' }} --parallel \
+        ./gradlew --no-daemon --stacktrace build \
+        ${{ (matrix.on == 'self-hosted') && '-Dorg.gradle.jvmargs=-Xmx4g' || '' }} \
+        ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
         ${{ matrix.lint && 'lint' || '' }} \
         ${{ !matrix.lint && '-PnoLint' || '' }} \
         ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
-        ${{ !matrix.site && '-PnoWeb' || '' }} \
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
         -PbuildJdkVersion=15 \
@@ -84,8 +87,13 @@ jobs:
       # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
       # Restoring these files from a GitHub Actions cache might cause problems for future builds.
       run: |
-        rm -f ~/.gradle/caches/modules-2/modules-2.lock
-        rm -f ~/.gradle/caches/modules-2/gc.properties
+        rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
+        rm -f ~/.gradle/caches/modules-2/gc.properties || true
+      shell: bash
+
+    - name: Dump stuck threads
+      if: always()
+      run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
       shell: bash
 
     - name: Upload coverage to Codecov
