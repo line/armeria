@@ -117,7 +117,7 @@ class KeepAliveHandlerTest {
 
         idleTimeoutScheduler.initialize(ctx);
         await().timeout(20, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(10));
-        assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(15));
+        assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(25));
         idleTimeoutScheduler.destroy();
     }
 
