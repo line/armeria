@@ -163,8 +163,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     final HttpHeaders nettyHeaders = nettyReq.headers();
 
-                    // Validate the method.
-                    if (!HttpMethod.isSupported(nettyReq.method().name())) {
+                    // Do not accept unsupported methods.
+                    final io.netty.handler.codec.http.HttpMethod nettyMethod = nettyReq.method();
+                    if (nettyMethod == io.netty.handler.codec.http.HttpMethod.CONNECT ||
+                        !HttpMethod.isSupported(nettyMethod.name())) {
                         fail(id, HttpResponseStatus.METHOD_NOT_ALLOWED, DATA_UNSUPPORTED_METHOD);
                         return;
                     }
@@ -313,11 +315,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         discarding = true;
         req = null;
 
+        // Destroy keepAlive handler before writing headers so that ServerHttp1ObjectEncoder sets
+        // "Connection: close" to the response headers
+        destroyKeepAliveHandler();
+
         final HttpData data = content != null ? content : HttpData.ofUtf8(status.toString());
         final ResponseHeaders headers =
                 ResponseHeaders.builder()
                                .status(status.code())
-                               .set(HttpHeaderNames.CONNECTION, "close")
                                .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
                                .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
                                .build();

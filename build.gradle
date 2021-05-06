@@ -6,7 +6,7 @@ plugins {
     id 'com.google.osdetector' version '1.6.2' apply false
     // If you want to change `org.jetbrains.kotlin.jvm` version,
     // you also need to change `org.jetbrains.kotlin:kotlin-allopen` version in `dependencies.yml`.
-    id 'org.jetbrains.kotlin.jvm' version '1.4.32' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.5.0' apply false
 
     id 'net.ltgt.errorprone' version '1.2.1' apply false
 }
@@ -23,11 +23,6 @@ ext {
 }
 
 apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
-
-def javaTestHome = System.env.JAVA_TEST_HOME
-if (javaTestHome) {
-    logger.quiet("Overriding JVM for tests with ${javaTestHome}")
-}
 
 // Fail the build if the console contains 'LEAK:'.
 def hasLeak = new AtomicBoolean()
@@ -62,10 +57,7 @@ allprojects {
         if (project.hasFlags('coverage')) {
             systemProperty 'com.linecorp.armeria.testing.coverage', 'true'
         }
-        // Use a different JRE for testing if necessary.
-        if (javaTestHome) {
-            executable "${javaTestHome}/bin/java"
-        }
+
         // Parallelize if --parallel is on.
         if (gradle.startParameter.parallelProjectExecutionEnabled) {
             maxParallelForks = gradle.startParameter.maxWorkerCount
@@ -79,17 +71,6 @@ allprojects {
                     hasLeak.set(true)
                 }
             })
-        }
-    }
-}
-
-task checkJavaVersion {
-    doLast {
-        if (JavaVersion.current().majorVersion.toInteger() < 11) {
-            throw new GradleException(
-                    "Your JDK (version ${JavaVersion.current()}) is too old to build Armeria. " +
-                    "Please check the build requirements at " +
-                    "https://armeria.dev/community/developer-guide/")
         }
     }
 }
@@ -179,8 +160,6 @@ configure(projectsWithFlags('java')) {
     // Target Java 8.
     tasks.withType(JavaCompile) {
         options.compilerArgs += ['--release', '8']
-
-        dependsOn checkJavaVersion
     }
 
     tasks.withType(KotlinCompile) {

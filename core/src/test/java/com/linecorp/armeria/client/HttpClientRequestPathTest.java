@@ -88,7 +88,7 @@ class HttpClientRequestPathTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = HttpMethod.class, mode = Mode.EXCLUDE, names = "UNKNOWN")
+    @EnumSource(value = HttpMethod.class, mode = Mode.EXCLUDE, names = { "CONNECT", "UNKNOWN" })
     void default_withAbsolutePath(HttpMethod method) {
         final HttpRequest request = HttpRequest.of(method, server2.httpUri() + "/simple-client");
         final HttpResponse response = WebClient.of().execute(request);

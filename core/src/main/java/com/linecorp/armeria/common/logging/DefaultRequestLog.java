@@ -1038,7 +1038,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             // Set the default names from ServiceConfig
             if (ctx instanceof ServiceRequestContext) {
-                sctx = ((ServiceRequestContext) ctx);
+                sctx = (ServiceRequestContext) ctx;
                 config = sctx.config();
                 newServiceName = config.defaultServiceNaming().serviceName(sctx);
                 newName = config.defaultLogName();

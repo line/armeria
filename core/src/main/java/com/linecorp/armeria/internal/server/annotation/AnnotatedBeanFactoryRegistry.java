@@ -241,17 +241,16 @@ final class AnnotatedBeanFactoryRegistry {
                                 method, beanFactoryId.pathParams,
                                 addToFirstIfExists(objectResolvers, converters));
                 if (!resolvers.isEmpty()) {
-                    boolean redundant = false;
+                    int redundant = 0;
                     for (AnnotatedValueResolver resolver : resolvers) {
                         if (!uniques.add(resolver)) {
-                            redundant = true;
+                            redundant++;
                             warnDuplicateResolver(resolver, method.toGenericString());
                         }
                     }
-                    if (redundant && resolvers.size() == 1) {
-                        // Prevent redundant injection only when the size of parameter is 1.
-                        // If the method contains more than 2 parameters and if one of them is used redundantly,
-                        // we'd better to inject the method rather than ignore it.
+                    if (redundant == resolvers.size()) {
+                        // Prevent redundant injection only when all parameters are redundant.
+                        // Otherwise, we'd better to inject the method rather than ignore it.
                         continue;
                     }
                     methodsBuilder.put(method, resolvers);

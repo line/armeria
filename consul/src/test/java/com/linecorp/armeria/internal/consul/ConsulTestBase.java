@@ -24,8 +24,8 @@ import java.net.ServerSocket;
 import java.net.URI;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -37,7 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableList;
 import com.pszymczyk.consul.ConsulProcess;
 import com.pszymczyk.consul.ConsulStarterBuilder;
 
@@ -61,17 +61,15 @@ public abstract class ConsulTestBase {
 
     protected static final String CONSUL_TOKEN = UUID.randomUUID().toString();
     protected static final String serviceName = "testService";
-    protected static final Set<Endpoint> sampleEndpoints;
 
-    static {
+    protected static List<Endpoint> newSampleEndpoints() {
         final int[] ports = unusedPorts(3);
-        sampleEndpoints = ImmutableSet.of(Endpoint.of("localhost", ports[0]).withWeight(2),
-                                          Endpoint.of("127.0.0.1", ports[1]).withWeight(4),
-                                          Endpoint.of("127.0.0.1", ports[2]).withWeight(2));
+        return ImmutableList.of(Endpoint.of("localhost", ports[0]).withWeight(2),
+                                Endpoint.of("127.0.0.1", ports[1]).withWeight(4),
+                                Endpoint.of("127.0.0.1", ports[2]).withWeight(2));
     }
 
-    protected ConsulTestBase() {
-    }
+    protected ConsulTestBase() {}
 
     @Nullable
     private static ConsulProcess consul;
@@ -106,8 +104,11 @@ public abstract class ConsulTestBase {
             logger.warn("{}=<unspecified>", ENV_CONSUL_BINARY_DOWNLOAD_DIR);
         }
 
+        // The default timeout is 30. It'd be better to fail fast and restart Consul.
+        builder.withWaitTimeout(10);
+
         // A workaround for 'Cannot run program "**/embedded_consul/consul" error=26, Text file busy'
-        await().timeout(Duration.ofSeconds(30)).pollInSameThread().pollInterval(Duration.ofSeconds(2))
+        await().timeout(Duration.ofSeconds(40)).pollInSameThread().pollInterval(Duration.ofSeconds(2))
                .untilAsserted(() -> {
                    assertThatCode(() -> {
                        consul = builder.build().start();
@@ -182,7 +183,7 @@ public abstract class ConsulTestBase {
     }
 
     public static class EchoService extends AbstractHttpService {
-        private HttpStatus responseStatus = HttpStatus.OK;
+        private volatile HttpStatus responseStatus = HttpStatus.OK;
 
         @Override
         protected final HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {

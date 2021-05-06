@@ -28,11 +28,11 @@
 *.dapps.earth
 *.dev.adobeaemcloud.com
 *.devcdnaccesso.com
+*.developer.app
 *.dweb.link
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
 *.er
-*.eu.pythonanywhere.com
 *.ex.futurecms.at
 *.ex.ortsinfo.at
 *.firenet.ch
@@ -72,7 +72,6 @@
 *.paywhirl.com
 *.pg
 *.platformsh.site
-*.pythonanywhere.com
 *.quipelements.com
 *.r.appspot.com
 *.s5y.io
@@ -2311,6 +2310,7 @@ eu.int
 eu.meteorapp.com
 eu.org
 eu.platform.sh
+eu.pythonanywhere.com
 eun.eg
 eurodir.ru
 eurovision
@@ -2789,7 +2789,9 @@ giske.no
 git-pages.rit.edu
 git-repos.de
 gitapp.si
+github.dev
 github.io
+githubpreview.dev
 githubusercontent.com
 gitlab.io
 gitpage.si
@@ -5740,6 +5742,7 @@ nombre.bo
 nome.pt
 nomi.ishikawa.jp
 nonoichi.ishikawa.jp
+noop.app
 nord-aurdal.no
 nord-fron.no
 nord-odal.no
@@ -6567,6 +6570,7 @@ pwc
 py
 pyatigorsk.ru
 pymnt.uk
+pythonanywhere.com
 pz.it
 q-a.eu.org
 q.bg
@@ -7479,6 +7483,7 @@ store.nf
 store.ro
 store.st
 store.ve
+storebase.store
 storfjord.no
 storj.farm
 stpetersburg.museum
