@@ -106,7 +106,7 @@ class ClientMaxConnectionAgeTest {
             assertThat(opened).hasValue(i);
             assertThat(closed).hasValue(i);
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
-            await().timeout(Duration.ofSeconds(1)).untilAtomic(opened, Matchers.is(i + 1));
+            await().timeout(Duration.ofSeconds(2)).untilAtomic(opened, Matchers.is(i + 1));
             await().timeout(Duration.ofSeconds(5)).untilAtomic(closed, Matchers.is(i + 1));
         }
 
