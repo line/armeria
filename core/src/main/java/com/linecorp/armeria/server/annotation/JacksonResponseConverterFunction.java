@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.server.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
 
@@ -46,11 +47,11 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  * Note that this {@link ResponseConverterFunction} is applied to an annotated service by default,
  * so you don't have to specify this converter explicitly unless you want to use your own {@link ObjectMapper}.
  *
- * @see <a href="https://tools.ietf.org/html/rfc7464">JavaScript Object Notation (JSON) Text Sequences</a>
+ * @see <a href="https://datatracker.ietf.org/doc/rfc7464/">JavaScript Object Notation (JSON) Text Sequences</a>
  */
 public final class JacksonResponseConverterFunction implements ResponseConverterFunction {
 
-    private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
+    private static final ObjectMapper defaultObjectMapper = JacksonUtil.newDefaultObjectMapper();
 
     private final ObjectMapper mapper;
 

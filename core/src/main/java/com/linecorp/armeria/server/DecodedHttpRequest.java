@@ -150,8 +150,15 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
      *
      * @see Http2RequestDecoder#onRstStreamRead(ChannelHandlerContext, int, long)
      */
-    void abortResponse(Throwable cause) {
+    void abortResponse(Throwable cause, boolean cancel) {
         isResponseAborted = true;
+
+        // Make sure to invoke the ServiceRequestContext.whenRequestCancelling() and whenRequestCancelled()
+        // by cancelling a request
+        if (cancel && ctx != null) {
+            ctx.cancel(cause);
+        }
+
         // Try to close the request first, then abort the response if it is already closed.
         if (!tryClose(cause) &&
             response != null && !response.isComplete()) {

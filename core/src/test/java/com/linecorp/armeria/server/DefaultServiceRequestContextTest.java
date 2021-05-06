@@ -136,7 +136,7 @@ class DefaultServiceRequestContextTest {
 
         ctx.eventLoop().execute(() -> {
             ctx.setRequestTimeoutMillis(2000);
-            assertThat(ctx.requestTimeoutMillis()).isCloseTo(2000, Offset.offset(200L));
+            assertThat(ctx.requestTimeoutMillis()).isCloseTo(2000, Offset.offset(400L));
             ctx.clearRequestTimeout();
             assertThat(ctx.requestTimeoutMillis()).isEqualTo(0);
             finished.set(true);

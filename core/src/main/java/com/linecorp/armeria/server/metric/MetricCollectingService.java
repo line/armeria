@@ -17,10 +17,15 @@ package com.linecorp.armeria.server.metric;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiPredicate;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.metric.RequestMetricSupport;
 import com.linecorp.armeria.server.HttpService;
@@ -60,20 +65,32 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
             MeterIdPrefixFunction meterIdPrefixFunction) {
 
         requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
-        return delegate -> new MetricCollectingService(delegate, meterIdPrefixFunction);
+        return builder(meterIdPrefixFunction).newDecorator();
+    }
+
+    /**
+     * Returns a newly created {@link MetricCollectingServiceBuilder}.
+     */
+    public static MetricCollectingServiceBuilder builder(MeterIdPrefixFunction meterIdPrefixFunction) {
+        return new MetricCollectingServiceBuilder(meterIdPrefixFunction);
     }
 
     private final MeterIdPrefixFunction meterIdPrefixFunction;
+    @Nullable
+    private final BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
 
-    MetricCollectingService(HttpService delegate, MeterIdPrefixFunction meterIdPrefixFunction) {
+    MetricCollectingService(HttpService delegate,
+                            MeterIdPrefixFunction meterIdPrefixFunction,
+                            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
+        this.successFunction = successFunction;
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (ctx.config().transientServiceOptions().contains(TransientServiceOption.WITH_METRIC_COLLECTION)) {
-            RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true);
+            RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true, successFunction);
         }
         return unwrap().serve(ctx, req);
     }

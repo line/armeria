@@ -27,7 +27,9 @@ private def getGitPath() {
     // Find the location of the 'git' command.
     try {
         if (current() == WINDOWS) {
-            return executeCommand('where.exe', 'git.exe')
+            def commands = executeCommand('where.exe', 'git.exe')
+            // "where.exe" returns all available commands, so select the first git.exe.
+            return commands.split('\r\n|\n')[0]
         } else {
             return executeCommand('which', 'git')
         }
@@ -96,12 +98,15 @@ private static String executeCommand(...command) {
     command.each { cmd += it.toString() }
 
     def proc = cmd.execute()
-    proc.waitFor()
+    def stdout = new StringWriter()
+    def stderr = new StringWriter()
+    proc.waitForProcessOutput(stdout, stderr)
+
     if (proc.exitValue() != 0) {
         throw new IOException(
                 "'${command}' exited with a non-zero exit code: ${proc.exitValue()}:" +
-                        "${System.lineSeparator()}${proc.err.text}")
+                        "${System.lineSeparator()}${stderr.toString().trim()}")
     }
 
-    return proc.in.text.trim()
+    return stdout.toString().trim()
 }

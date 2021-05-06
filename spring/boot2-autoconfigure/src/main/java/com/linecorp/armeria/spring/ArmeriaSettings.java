@@ -255,6 +255,12 @@ public class ArmeriaSettings {
     }
 
     /**
+     * Whether to auto configure and start the Armeria server.
+     * The default is {@code true}.
+     */
+    private boolean serverEnabled = true;
+
+    /**
      * The ports to listen on for requests. If not specified, will listen on
      * port 8080 for HTTP (not SSL).
      */

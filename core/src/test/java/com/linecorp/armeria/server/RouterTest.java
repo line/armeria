@@ -20,9 +20,12 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -62,7 +65,8 @@ class RouterTest {
                 Route.builder().path("glob:/h/**/z").build(),     // router 4
                 Route.builder().path("prefix:/i").build()         // router 5
         );
-        final List<Router<Route>> routers = Routers.routers(routes, null, Function.identity(), REJECT, false);
+        final List<Router<Route>> routers =
+                Routers.routers(routes, null, null, Function.identity(), REJECT, false);
         assertThat(routers).hasSize(5);
 
         // Map of a path string and a router index
@@ -99,7 +103,8 @@ class RouterTest {
                 Route.builder().path("glob:/h/**/z").build(),
                 Route.builder().path("prefix:/h").build()
         );
-        final List<Router<Route>> routers = Routers.routers(routes, null, Function.identity(), REJECT, false);
+        final List<Router<Route>> routers =
+                Routers.routers(routes, null, null, Function.identity(), REJECT, false);
         final CompositeRouter<Route, Route> router = new CompositeRouter<>(routers, Function.identity());
         final RoutingContext routingCtx = routingCtx(path);
         assertThat(router.find(routingCtx).route()).isEqualTo(routes.get(expectForFind));
@@ -146,7 +151,7 @@ class RouterTest {
         assertThat(Routers.routers(ImmutableList.of(Route.builder().path("/foo/:bar").build(),
                                                     Route.builder().regex("not-trie-compatible").build(),
                                                     Route.builder().path("/bar/:baz").build()),
-                                   null, Function.identity(), REJECT, false)).hasSize(3);
+                                   null, null, Function.identity(), REJECT, false)).hasSize(3);
 
         testDuplicateRoutes(Route.builder().path("/foo/:bar").build(),
                             Route.builder().regex("not-trie-compatible").build(),
@@ -214,13 +219,40 @@ class RouterTest {
     }
 
     private static void testDuplicateRoutes(Route... routes) {
-        assertThatThrownBy(() -> Routers.routers(ImmutableList.copyOf(routes), null,
+        assertThatThrownBy(() -> Routers.routers(ImmutableList.copyOf(routes), null, null,
                                                  Function.identity(), REJECT, false))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageStartingWith("duplicate route:");
     }
 
     private static void testNonDuplicateRoutes(Route... routes) {
-        Routers.routers(ImmutableList.copyOf(routes), null, Function.identity(), REJECT, false);
+        Routers.routers(ImmutableList.copyOf(routes), null, null, Function.identity(), REJECT, false);
+    }
+
+    @Test
+    void exactPathAndParameter() {
+        final List<HttpMethod> methods =
+                ImmutableList.of(HttpMethod.GET, HttpMethod.DELETE, HttpMethod.POST, HttpMethod.PUT);
+        final AtomicInteger i = new AtomicInteger(0);
+        final List<Route> routes =
+                methods.stream()
+                       .map(method -> Route.builder().path(i.incrementAndGet() % 2 == 0 ? "/foo" : "/{id}")
+                                           .methods(method).build())
+                       .collect(toImmutableList());
+        final List<Router<Route>> routers =
+                Routers.routers(routes, null, null, Function.identity(), REJECT, false);
+        assertThat(routers.size()).isOne();
+
+        methods.forEach(method -> {
+            final RoutingContext ctx = mock(RoutingContext.class);
+            when(ctx.method()).thenReturn(method);
+            when(ctx.path()).thenReturn("/foo");
+            when(ctx.query()).thenReturn(null);
+            when(ctx.acceptTypes()).thenReturn(ImmutableList.of());
+            when(ctx.contentType()).thenReturn(null);
+
+            final Routed<Route> routed = routers.get(0).find(ctx);
+            assertThat(routed.route().methods()).contains(method);
+        });
     }
 }

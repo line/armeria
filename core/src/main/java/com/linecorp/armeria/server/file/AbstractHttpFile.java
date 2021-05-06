@@ -251,7 +251,7 @@ public abstract class AbstractHttpFile implements HttpFile {
                     return HttpResponse.of(HttpStatus.NOT_FOUND);
                 }
 
-                // See https://tools.ietf.org/html/rfc7232#section-6 for more information
+                // See https://datatracker.ietf.org/doc/html/rfc7232#section-6 for more information
                 // about how conditional requests are handled.
 
                 // Handle 'if-none-match' header.

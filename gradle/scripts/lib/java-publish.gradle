@@ -38,17 +38,44 @@ configure(projectsWithFlags('publish', 'java')) {
                 // Clean up the POM.
                 pom {
                     withXml {
-                        // Strip out shaded dependencies. We manually create shading tasks instead of applying
-                        // the shadow plugin itself so need to do it ourselves.
-                        def dependencies = asNode().get('dependencies')[0]
-                        def shaded = dependencies.findAll {
-                            def groupId = it.get('groupId')[0]
-                            def artifactId = it.get('artifactId')[0]
-                            return project.ext.relocations.find {
-                                it.name == "${groupId.text()}:${artifactId.text()}"
+                        def rootNode = asNode()
+
+                        // Do not import 'com.linecorp.armeria:dependencyManagement'.
+                        if (rootNode.get('dependencyManagement')) {
+                            def dependencyManagement = rootNode.get('dependencyManagement')[0]
+                            if (dependencyManagement.get('dependencies')) {
+                                def dependencies = dependencyManagement.get('dependencies')[0]
+                                dependencies.findAll {
+                                    def groupId = it.get('groupId')[0]
+                                    def artifactId = it.get('artifactId')[0]
+                                    groupId == rootProject.group && artifactId == 'dependencyManagement'
+                                }.each {
+                                    dependencies.remove(it)
+                                }
+
+                                // Clean up empty tags.
+                                if (dependencies.directChildren.isEmpty()) {
+                                    dependencyManagement.remove(dependencies)
+                                    if (dependencyManagement.directChildren.isEmpty()) {
+                                        rootNode.remove(dependencyManagement)
+                                    }
+                                }
                             }
                         }
-                        shaded.each { dependencies.remove(it) }
+
+                        // Strip out shaded dependencies. We manually create shading tasks instead of applying
+                        // the shadow plugin itself so need to do it ourselves.
+                        if (rootNode.get('dependencies')) {
+                            def dependencies = rootNode.get('dependencies')[0]
+                            def shaded = dependencies.findAll {
+                                def groupId = it.get('groupId')[0]
+                                def artifactId = it.get('artifactId')[0]
+                                return project.ext.relocations.find {
+                                    it.name == "${groupId.text()}:${artifactId.text()}"
+                                }
+                            }
+                            shaded.each { dependencies.remove(it) }
+                        }
                     }
                 }
             }

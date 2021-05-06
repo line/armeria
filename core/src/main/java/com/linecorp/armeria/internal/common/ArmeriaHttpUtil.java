@@ -82,6 +82,7 @@ import io.netty.handler.codec.UnsupportedValueConverter;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
@@ -162,14 +163,14 @@ public final class ArmeriaHttpUtil {
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
 
-        // https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.AUTHORITY, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.METHOD, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.PATH, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.SCHEME, EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.STATUS, EMPTY_STRING);
 
-        // https://tools.ietf.org/html/rfc7540#section-8.1
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1
         // The "chunked" transfer encoding defined in Section 4.1 of [RFC7230] MUST NOT be used in HTTP/2.
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
 
@@ -177,8 +178,8 @@ public final class ArmeriaHttpUtil {
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(ExtensionHeaderNames.SCHEME.text(), EMPTY_STRING);
         HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.add(ExtensionHeaderNames.PATH.text(), EMPTY_STRING);
 
-        // https://tools.ietf.org/html/rfc7230#section-4.1.2
-        // https://tools.ietf.org/html/rfc7540#section-8.1
+        // https://datatracker.ietf.org/doc/html/rfc7230#section-4.1.2
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1
         // A sender MUST NOT generate a trailer that contains a field necessary for message framing:
         HTTP_TRAILER_DISALLOWED_LIST.add(HttpHeaderNames.TRANSFER_ENCODING, EMPTY_STRING);
         HTTP_TRAILER_DISALLOWED_LIST.add(HttpHeaderNames.CONTENT_LENGTH, EMPTY_STRING);
@@ -235,7 +236,7 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a> states the path must not
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a> states the path must not
      * be empty, and instead should be {@code /}.
      */
     private static final String EMPTY_REQUEST_PATH = "/";
@@ -511,7 +512,7 @@ public final class ArmeriaHttpUtil {
                                                          ServerConfig cfg) {
         final RequestHeadersBuilder builder = RequestHeaders.builder();
         toArmeria(builder, headers, endOfStream);
-        // A CONNECT request might not have ":scheme". See https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+        // A CONNECT request might not have ":scheme". See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
@@ -550,7 +551,7 @@ public final class ArmeriaHttpUtil {
             final CharSequence value = e.getValue();
 
             // Cookies must be concatenated into a single octet string.
-            // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+            // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.5
             if (name.equals(HttpHeaderNames.COOKIE)) {
                 if (cookieJoiner == null) {
                     cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
@@ -569,7 +570,7 @@ public final class ArmeriaHttpUtil {
     /**
      * Converts the headers of the given Netty HTTP/1.x request into Armeria HTTP/2 headers.
      * The following headers are only used if they can not be found in the {@code HOST} header or the
-     * {@code Request-Line} as defined by <a href="https://tools.ietf.org/html/rfc7230">rfc7230</a>
+     * {@code Request-Line} as defined by <a href="https://datatracker.ietf.org/doc/rfc7230/">rfc7230</a>
      * <ul>
      * <li>{@link ExtensionHeaderNames#SCHEME}</li>
      * </ul>
@@ -592,7 +593,7 @@ public final class ArmeriaHttpUtil {
         if (!out.contains(HttpHeaderNames.HOST)) {
             // The client violates the spec that the request headers must contain a Host header.
             // But we just add Host header to allow the request.
-            // https://tools.ietf.org/html/rfc7230#section-5.4
+            // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
             if (isOriginForm(requestTargetUri) || isAsteriskForm(requestTargetUri)) {
                 // requestTargetUri does not contain authority information.
                 final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
@@ -650,14 +651,14 @@ public final class ArmeriaHttpUtil {
                 continue;
             }
 
-            // https://tools.ietf.org/html/rfc7540#section-8.1.2.2 makes a special exception for TE
+            // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2 makes a special exception for TE
             if (aName.equals(HttpHeaderNames.TE)) {
                 toHttp2HeadersFilterTE(entry, out);
                 continue;
             }
 
             // Cookies must be concatenated into a single octet string.
-            // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+            // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.5
             final CharSequence value = entry.getValue();
             if (aName.equals(HttpHeaderNames.COOKIE)) {
                 if (cookieJoiner == null) {
@@ -718,7 +719,7 @@ public final class ArmeriaHttpUtil {
 
     /**
      * Filter the {@link HttpHeaderNames#TE} header according to the
-     * <a href="https://tools.ietf.org/html/rfc7540#section-8.1.2.2">special rules in the HTTP/2 RFC</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2">special rules in the HTTP/2 RFC</a>.
      *
      * @param entry the entry whose name is {@link HttpHeaderNames#TE}.
      * @param out the resulting HTTP/2 headers.
@@ -760,7 +761,7 @@ public final class ArmeriaHttpUtil {
 
     /**
      * Generate a HTTP/2 {code :path} from a URI in accordance with
-     * <a href="https://tools.ietf.org/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7230#section-5.3">rfc7230, 5.3</a>.
      */
     private static String toHttp2Path(URI uri) {
         final StringBuilder pathBuilder = new StringBuilder(
@@ -899,7 +900,7 @@ public final class ArmeriaHttpUtil {
         }
 
         // Split up cookies to allow for better compression.
-        // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.5
         final List<CharSequence> cookies = outputHeaders.getAllAndRemove(HttpHeaderNames.COOKIE);
         for (CharSequence c : cookies) {
             outputHeaders.add(HttpHeaderNames.COOKIE, COOKIE_SPLITTER.split(c));
@@ -995,7 +996,7 @@ public final class ArmeriaHttpUtil {
 
             if (HttpHeaderNames.COOKIE.equals(name)) {
                 // combine the cookie values into 1 header entry.
-                // https://tools.ietf.org/html/rfc7540#section-8.1.2.5
+                // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.5
                 if (cookieJoiner == null) {
                     cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
                 }
@@ -1044,7 +1045,7 @@ public final class ArmeriaHttpUtil {
                 }
             } else {
                 // 304 response can have the "content-length" header when it is a response to a conditional
-                // GET request. See https://tools.ietf.org/html/rfc7230#section-3.3.2
+                // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
             }
 
             return headers;
@@ -1122,6 +1123,15 @@ public final class ArmeriaHttpUtil {
             buf.append(port);
             return buf.toString();
         }
+    }
+
+    /**
+     * A 408 Request Timeout response can be received even without a request.
+     * More details can be found at https://github.com/line/armeria/issues/3055.
+     */
+    public static boolean isRequestTimeoutResponse(HttpResponse httpResponse) {
+        return httpResponse.status() == HttpResponseStatus.REQUEST_TIMEOUT &&
+               "close".equalsIgnoreCase(httpResponse.headers().get(HttpHeaderNames.CONNECTION));
     }
 
     private ArmeriaHttpUtil() {}

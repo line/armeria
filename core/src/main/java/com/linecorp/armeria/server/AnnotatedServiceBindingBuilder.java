@@ -220,6 +220,12 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     @Override
+    public AnnotatedServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        defaultServiceConfigSetters.defaultServiceNaming(defaultServiceNaming);
+        return this;
+    }
+
+    @Override
     public AnnotatedServiceBindingBuilder defaultLogName(String defaultLogName) {
         defaultServiceConfigSetters.defaultLogName(defaultLogName);
         return this;

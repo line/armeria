@@ -60,8 +60,11 @@ class ZooKeeperRegistrationTest {
     void legacyZooKeeperRegistrationSpec() throws Throwable {
         final List<Server> servers = startServersWithRetry(true);
         // all servers start and with znode created
-        await().untilAsserted(() -> sampleEndpoints.forEach(
-                endpoint -> zkInstance.assertExists(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port())));
+        await().untilAsserted(() -> {
+            for (Endpoint endpoint : sampleEndpoints) {
+                zkInstance.assertExists(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port());
+            }
+        });
 
         try (CloseableZooKeeper zk = zkInstance.connection()) {
             for (Endpoint sampleEndpoint : sampleEndpoints) {
@@ -72,6 +75,12 @@ class ZooKeeperRegistrationTest {
             validateOneNodeRemoved(servers, zk, true);
         }
         servers.forEach(s -> s.stop().join());
+
+        await().untilAsserted(() -> {
+            for (Endpoint endpoint : sampleEndpoints) {
+                zkInstance.assertNotExists(Z_NODE + '/' + endpoint.host() + '_' + endpoint.port());
+            }
+        });
     }
 
     private static void validateOneNodeRemoved(
@@ -159,11 +168,19 @@ class ZooKeeperRegistrationTest {
                 discoverySpec.decode(zk.getData(Z_NODE + '/' + CURATOR_X_SERVICE_NAME + '/' + i).get());
                 final ServiceInstance<?> actual = instanceCaptor.join();
                 final ServiceInstance<Object> expected = expectedInstance(servers, i);
-                assertThat(actual).isEqualToIgnoringGivenFields(expected, "registrationTimeUTC");
+                assertThat(actual).usingRecursiveComparison()
+                                  .ignoringFields("registrationTimeUTC")
+                                  .isEqualTo(expected);
             }
             validateOneNodeRemoved(servers, zk, false);
         }
         servers.forEach(s -> s.stop().join());
+
+        await().untilAsserted(() -> {
+            for (int i = 0; i < 3; i++) {
+                zkInstance.assertNotExists(Z_NODE + '/' + CURATOR_X_SERVICE_NAME + '/' + i);
+            }
+        });
     }
 
     private static ServiceInstance<Object> expectedInstance(List<Server> servers, int index) {

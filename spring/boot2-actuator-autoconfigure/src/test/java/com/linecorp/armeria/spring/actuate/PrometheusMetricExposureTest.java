@@ -17,6 +17,7 @@
 package com.linecorp.armeria.spring.actuate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import javax.inject.Inject;
 
@@ -64,12 +65,16 @@ class PrometheusMetricExposureTest {
 
     @Test
     void exposeMetricCollectingServiceOnManagementPort() throws Exception {
-        AggregatedHttpResponse res = client.get("/internal/actuator/prometheus").aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
-        res = managementClient.get("/internal/actuator/prometheus").aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        final AggregatedHttpResponse res404 =
+                client.get("/internal/actuator/prometheus").aggregate().get();
+        assertThat(res404.status()).isEqualTo(HttpStatus.NOT_FOUND);
 
         // Make sure that the exposed results contain the metrics collected by MetricCollectingService
-        assertThat(res.contentAscii()).contains("armeria_server_response_duration_seconds");
+        await().untilAsserted(() -> {
+            final AggregatedHttpResponse res =
+                    managementClient.get("/internal/actuator/prometheus").aggregate().get();
+            assertThat(res.status()).isEqualTo(HttpStatus.OK);
+            assertThat(res.contentAscii()).contains("armeria_server_response_duration_seconds");
+        });
     }
 }

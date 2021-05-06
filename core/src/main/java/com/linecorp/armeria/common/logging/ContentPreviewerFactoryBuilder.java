@@ -44,7 +44,7 @@ import io.netty.buffer.ByteBufUtil;
  */
 public final class ContentPreviewerFactoryBuilder {
 
-    // TODO(minwoox): Add setters for the seprate request and response previewer.
+    // TODO(minwoox): Add setters for the separate request and response previewer.
 
     private static final int DEFAULT_MAX_LENGTH = 32;
 
