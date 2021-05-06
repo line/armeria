@@ -82,6 +82,7 @@ import io.netty.handler.codec.UnsupportedValueConverter;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
@@ -1122,6 +1123,15 @@ public final class ArmeriaHttpUtil {
             buf.append(port);
             return buf.toString();
         }
+    }
+
+    /**
+     * A 408 Request Timeout response can be received even without a request.
+     * More details can be found at https://github.com/line/armeria/issues/3055.
+     */
+    public static boolean isRequestTimeoutResponse(HttpResponse httpResponse) {
+        return httpResponse.status() == HttpResponseStatus.REQUEST_TIMEOUT &&
+               "close".equalsIgnoreCase(httpResponse.headers().get(HttpHeaderNames.CONNECTION));
     }
 
     private ArmeriaHttpUtil() {}
