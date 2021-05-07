@@ -536,12 +536,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              .thenAccept(log -> {
                  final String serviceName = log.serviceName();
                  final String name = log.name();
-                 if (name != null) {
-                     if (serviceName != null) {
-                         name(serviceName, name);
-                     } else {
-                         name(name);
-                     }
+                 if (serviceName != null) {
+                     name(serviceName, name);
+                 } else {
+                     name(name);
                  }
              });
         child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
@@ -604,6 +602,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             lastChild.whenAvailable(RequestLogProperty.RESPONSE_HEADERS)
                      .thenAccept(log -> responseHeaders(log.responseHeaders()));
+        }
+
+        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
+            responseTrailers(lastChild.responseTrailers());
+        } else {
+            lastChild.whenAvailable(RequestLogProperty.RESPONSE_TRAILERS)
+                     .thenAccept(log -> responseTrailers(log.responseTrailers()));
         }
 
         if (lastChild.isComplete()) {
