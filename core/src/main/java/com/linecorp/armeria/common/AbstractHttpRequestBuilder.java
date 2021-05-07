@@ -123,6 +123,7 @@ public abstract class AbstractHttpRequestBuilder {
 
     /**
      * Sets the method for this request.
+     *
      * @see HttpMethod
      */
     public AbstractHttpRequestBuilder method(HttpMethod method) {
@@ -226,6 +227,7 @@ public abstract class AbstractHttpRequestBuilder {
      *            .headers(HttpHeaders.of("authorization", "foo", "bar", "baz"))
      *            .build();
      * }</pre>
+     *
      * @see HttpHeaders
      */
     public AbstractHttpRequestBuilder headers(
@@ -331,6 +333,7 @@ public abstract class AbstractHttpRequestBuilder {
      *            .queryParams(QueryParams.of("from", "foo", "limit", 10))
      *            .build(); // GET `/endpoint?from=foo&limit=10`
      * }</pre>
+     *
      * @see QueryParams
      */
     public AbstractHttpRequestBuilder queryParams(
@@ -351,6 +354,7 @@ public abstract class AbstractHttpRequestBuilder {
      *            .cookie(Cookie.of("cookie", "foo"))
      *            .build();
      * }</pre>
+     *
      * @see Cookie
      */
     public AbstractHttpRequestBuilder cookie(Cookie cookie) {
@@ -371,6 +375,7 @@ public abstract class AbstractHttpRequestBuilder {
      *                                Cookie.of("cookie2", "bar")))
      *            .build();
      * }</pre>
+     *
      * @see Cookies
      */
     public AbstractHttpRequestBuilder cookies(Iterable<? extends Cookie> cookies) {
@@ -499,8 +504,11 @@ public abstract class AbstractHttpRequestBuilder {
 
                             if (j > i + 1) {
                                 final String name = path.substring(i + 1, j);
-                                checkState(pathParams != null && pathParams.containsKey(name),
-                                           "param '%s' does not have a value.", name);
+                                final boolean state = pathParams != null && pathParams.containsKey(name);
+                                if (!state) {
+                                    tempThreadLocals.releaseStringBuilder();
+                                }
+                                checkState(state, "param '%s' does not have a value.", name);
                                 buf.append(pathParams.get(name));
                                 j++; // Skip '}'
                             } else {
@@ -518,8 +526,11 @@ public abstract class AbstractHttpRequestBuilder {
                             }
                             if (j > i + 1) {
                                 final String name = path.substring(i + 1, j);
-                                checkState(pathParams != null && pathParams.containsKey(name),
-                                           "param '%s' does not have a value.", name);
+                                final boolean state = pathParams != null && pathParams.containsKey(name);
+                                if (!state) {
+                                    tempThreadLocals.releaseStringBuilder();
+                                }
+                                checkState(state, "param '%s' does not have a value.", name);
                                 buf.append(pathParams.get(name));
                             } else {
                                 // Found ':' without name.

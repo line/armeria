@@ -723,9 +723,10 @@ final class TTextProtocol extends TProtocol {
             if (TTransportException.END_OF_FILE != e.getType()) {
                 throw new IOException(e);
             }
+        } finally {
+            tempThreadLocals.releaseByteArray();
         }
         root = OBJECT_MAPPER.readTree(content.toByteArray());
-        tempThreadLocals.releaseByteArray();
     }
 
     /**
