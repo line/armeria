@@ -22,11 +22,11 @@ import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.infra.Blackhole;
 
 /**
- * Microbenchmarks of an exception handler conducted when DNS query is failed.
+ * Microbenchmarks of exception matchers conducted when DNS query is failed.
  *
  * @see <a href="https://github.com/netty/netty/blob/4.1/resolver-dns/src/main/java/io/netty/resolver/dns/DnsResolveContext.java">DnsResolveContext</a>
  */
-public class DnsExceptionHandlerBenchmark {
+public class DnsExceptionMatcherBenchmark {
 
     private static final RuntimeException NXDOMAIN_QUERY_FAILED_EXCEPTION =
             new RuntimeException("No answer found and NXDOMAIN response code returned");
