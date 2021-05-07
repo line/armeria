@@ -86,24 +86,29 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
     @Override
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest request) {
         final MediaType contentType = request.contentType();
-        if (contentType != null && contentType.is(MediaType.JSON)) {
+        if (contentType == null) {
+            return HttpResponse.of(HttpStatus.UNPROCESSABLE_ENTITY,
+                                   MediaType.PLAIN_TEXT,
+                                   "Could not process GraphQL request");
+        }
+        if (contentType.is(MediaType.JSON) || contentType.subtype().endsWith("+json")) {
             return HttpResponse.from(request.aggregate().handleAsync((req, thrown) -> {
                 if (thrown != null) {
                     logger.warn("{} Failed to aggregate a request:", ctx, thrown);
                     return HttpResponse.ofFailure(thrown);
                 }
-                final Map<String, Object> requestMap = parseJsonString(req.contentUtf8());
-                if (requestMap.isEmpty()) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST,
-                                           MediaType.PLAIN_TEXT,
-                                           "Body is required");
+                final String body = req.contentUtf8();
+                if (Strings.isNullOrEmpty(body)) {
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Body is required");
                 }
+                final Map<String, Object> requestMap = parseJsonString(body);
                 final String query = (String) requestMap.getOrDefault("query", "");
                 return execute(executionInput(query, ctx,
                                               toVariableMap(requestMap.get("variables")),
                                               (String) requestMap.get("operationName")));
             }));
-        } else if (contentType != null && contentType.is(MediaType.GRAPHQL)) {
+        }
+        if (contentType.is(MediaType.GRAPHQL)) {
             return HttpResponse.from(request.aggregate().handleAsync((req, thrown) -> {
                 if (thrown != null) {
                     logger.warn("{} Failed to aggregate a request:", ctx, thrown);
@@ -112,11 +117,10 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                 final String query = req.contentUtf8();
                 return execute(executionInput(query, ctx, null, null));
             }));
-        } else {
-            return HttpResponse.of(HttpStatus.UNPROCESSABLE_ENTITY,
-                                   MediaType.PLAIN_TEXT,
-                                   "Could not process GraphQL request");
         }
+        return HttpResponse.of(HttpStatus.UNPROCESSABLE_ENTITY,
+                               MediaType.PLAIN_TEXT,
+                               "Could not process GraphQL request");
     }
 
     private ExecutionInput executionInput(String query, ServiceRequestContext ctx,
@@ -174,10 +178,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         return parseJsonString(value);
     }
 
-    private static Map<String, Object> parseJsonString(@Nullable String content) {
-        if (content == null) {
-            return ImmutableMap.of();
-        }
+    private static Map<String, Object> parseJsonString(String content) {
         try {
             return OBJECT_MAPPER.readValue(content, JSON_MAP);
         } catch (JsonProcessingException e) {
