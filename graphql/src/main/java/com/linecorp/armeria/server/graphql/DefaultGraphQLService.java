@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.internal.server.JacksonUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -50,7 +51,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultGraphQLService.class);
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.newDefaultObjectMapper();
 
     private static final TypeReference<Map<String, Object>> JSON_MAP =
             new TypeReference<Map<String, Object>>() {};
@@ -150,7 +151,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         }
     }
 
-    private static Map<String, Object> toVariableMap(Object variables) {
+    private static Map<String, Object> toVariableMap(@Nullable Object variables) {
         if (variables == null) {
             return ImmutableMap.of();
         }
