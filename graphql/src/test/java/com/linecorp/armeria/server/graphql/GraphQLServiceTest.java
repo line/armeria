@@ -16,11 +16,15 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
+import org.hamcrest.CustomTypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -38,6 +42,8 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.StaticDataFetcher;
 
 class GraphQLServiceTest {
@@ -53,10 +59,22 @@ class GraphQLServiceTest {
                                                      final StaticDataFetcher bar = new StaticDataFetcher("bar");
                                                      c.type("Query",
                                                             typeWiring -> typeWiring.dataFetcher("foo", bar));
+                                                     final ErrorDataFetcher error = new ErrorDataFetcher();
+                                                     c.type("Query",
+                                                            typeWiring -> typeWiring
+                                                                    .dataFetcher("error", error));
                                                  })
                                                  .build());
         }
     };
+
+    private static class ErrorDataFetcher implements DataFetcher<String> {
+
+        @Override
+        public String get(DataFetchingEnvironment environment) throws Exception {
+            throw new NullPointerException("npe");
+        }
+    }
 
     @Test
     void shouldGet() throws Exception {
@@ -190,5 +208,36 @@ class GraphQLServiceTest {
                 Arguments.of(MediaType.ANY_APPLICATION_TYPE),
                 Arguments.of(MediaType.FORM_DATA)
         );
+    }
+
+    @Test
+    void shouldPostWhenError() throws Exception {
+        final RequestHeaders headers = RequestHeaders.builder()
+                                                     .path("/graphql")
+                                                     .method(HttpMethod.POST)
+                                                     .contentType(MediaType.GRAPHQL)
+                                                     .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .execute(headers, "{error}", Charsets.UTF_8)
+                                                         .aggregate().get();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8())
+                .withMatcher("errors",
+                             new CustomTypeSafeMatcher<List<Map<String, String>>>("errors") {
+                                 @Override
+                                 protected boolean matchesSafely(List<Map<String, String>> item) {
+                                     final Map<String, String> error = item.get(0);
+                                     final String message = "Exception while fetching data (/error) : npe";
+                                     return message.equals(error.get("message"));
+                                 }
+                             })
+                .withMatcher("data",
+                             new CustomTypeSafeMatcher<Map<String, String>>("data") {
+                                 @Override
+                                 protected boolean matchesSafely(Map<String, String> item) {
+                                     return item.get("error") == null;
+                                 }
+                             });
     }
 }

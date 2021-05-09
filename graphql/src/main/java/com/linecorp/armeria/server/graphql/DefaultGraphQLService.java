@@ -182,7 +182,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         try {
             return OBJECT_MAPPER.readValue(content, JSON_MAP);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error serializing object to JSON: " + e.getMessage(), e);
+            throw new IllegalArgumentException("failed to parse a JSON document: " + e, e);
         }
     }
 
@@ -190,7 +190,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         try {
             return OBJECT_MAPPER.writeValueAsString(result);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error deserializing object to JSON: " + e.getMessage(), e);
+            throw new IllegalArgumentException("failed to write a JSON document: " + e, e);
         }
     }
 }

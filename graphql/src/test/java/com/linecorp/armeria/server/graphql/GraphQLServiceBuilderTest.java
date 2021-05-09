@@ -18,9 +18,11 @@ package com.linecorp.armeria.server.graphql;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 import java.io.File;
 
+import org.dataloader.DataLoaderRegistry;
 import org.junit.jupiter.api.Test;
 
 import graphql.execution.instrumentation.SimpleInstrumentation;
@@ -48,6 +50,7 @@ class GraphQLServiceBuilderTest {
         final GraphQLServiceBuilder builder = new GraphQLServiceBuilder();
         final GraphQLService service = builder.schemaFile(graphqlSchemaFile)
                                               .instrumentation(SimpleInstrumentation.INSTANCE)
+                                              .dataLoaderRegistry(new DataLoaderRegistry())
                                               .runtimeWiring(it -> {
                                                   // noop
                                               }).typeVisitors(new GraphQLTypeVisitorStub())
