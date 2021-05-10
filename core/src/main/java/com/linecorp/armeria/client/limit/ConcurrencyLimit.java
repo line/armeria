@@ -17,10 +17,8 @@
 package com.linecorp.armeria.client.limit;
 
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
@@ -58,14 +56,6 @@ public final class ConcurrencyLimit {
     }
 
     /**
-     * Returns the value of the {@code "timeout"} with the desired {@code "unit"}.
-     */
-    public long timeout(TimeUnit desiredUnit) {
-        requireNonNull(desiredUnit, "desiredUnit");
-        return desiredUnit.convert(timeoutMillis, MILLISECONDS);
-    }
-
-    /**
      * Returns the value of the {@code "timeout"} in milliseconds.
      */
     public long timeoutMillis() {
@@ -75,7 +65,7 @@ public final class ConcurrencyLimit {
     /**
      * Checks if the concurrency control should be enforced for the given {@code requestContext}.
      */
-    public Boolean shouldLimit(ClientRequestContext requestContext) {
+    public boolean shouldLimit(ClientRequestContext requestContext) {
         requireNonNull(requestContext, "requestContext");
         return maxConcurrency > 0 && policy.test(requestContext);
     }
@@ -89,7 +79,7 @@ public final class ConcurrencyLimit {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof ConcurrencyLimit)) {
             return false;
         }
         final ConcurrencyLimit that = (ConcurrencyLimit) o;

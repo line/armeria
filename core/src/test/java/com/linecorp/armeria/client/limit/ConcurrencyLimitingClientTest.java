@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.limit;
 
 import static com.linecorp.armeria.client.limit.ConcurrencyLimitingClient.newDecorator;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -25,6 +25,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -245,10 +246,10 @@ class ConcurrencyLimitingClientTest {
     @Test
     void configuresClientWithConcurrencyLimit() {
         final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder()
-                .maxConcurrency(1)
-                .timeout(10, SECONDS)
-                .policy(requestContext -> true)
-                .build();
+                                                                  .maxConcurrency(1)
+                                                                  .timeout(Duration.of(10, SECONDS))
+                                                                  .policy(requestContext -> true)
+                                                                  .build();
         final ConcurrencyLimitingClient client = newDecorator(concurrencyLimit).apply(delegate);
         assertThat(client.concurrencyLimit()).isEqualTo(concurrencyLimit);
     }
@@ -261,9 +262,9 @@ class ConcurrencyLimitingClientTest {
 
         when(delegate.execute(ctx, req)).thenReturn(actualRes);
         final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder()
-                .maxConcurrency(1)
-                .policy(requestContext -> false)
-                .build();
+                                                                  .maxConcurrency(1)
+                                                                  .policy(requestContext -> false)
+                                                                  .build();
 
         final ConcurrencyLimitingClient client =
                 newDecorator(concurrencyLimit).apply(delegate);
@@ -291,10 +292,10 @@ class ConcurrencyLimitingClientTest {
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
 
         final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder()
-                .maxConcurrency(1)
-                .timeout(500, TimeUnit.MILLISECONDS)
-                .policy(requestContext -> true)
-                .build();
+                                                                  .maxConcurrency(1)
+                                                                  .timeoutMillis(500)
+                                                                  .policy(requestContext -> true)
+                                                                  .build();
 
         final ConcurrencyLimitingClient clientOne =
                 newDecorator(concurrencyLimit).apply(delegate);

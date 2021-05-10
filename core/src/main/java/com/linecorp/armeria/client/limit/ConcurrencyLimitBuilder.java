@@ -20,9 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.limit.AbstractConcurrencyLimitingClient.validateMaxConcurrency;
 import static java.lang.Integer.MAX_VALUE;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -31,7 +30,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
  * Builds a {@link ConcurrencyLimit} instance using builder pattern.
  */
 public class ConcurrencyLimitBuilder {
-    private static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
+    public static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
 
     private int maxConcurrency;
     private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
@@ -49,10 +48,19 @@ public class ConcurrencyLimitBuilder {
      * Sets the amount of time until this decorator fails the request if the request was not
      *      delegated to the {@code delegate} before then.
      */
-    public ConcurrencyLimitBuilder timeout(long timeout, TimeUnit unit) {
-        checkArgument(timeout >= 0, "timeout: %s (expected: >= 0)", timeout);
-        requireNonNull(unit, "unit");
-        this.timeoutMillis = unit.convert(timeout, MILLISECONDS);
+    public ConcurrencyLimitBuilder timeoutMillis(long timeoutMillis) {
+        checkArgument(timeoutMillis >= 0, "timeout: %s (expected: >= 0)", timeoutMillis);
+        this.timeoutMillis = timeoutMillis;
+        return this;
+    }
+
+    /**
+     * Sets the amount of time until this decorator fails the request if the request was not
+     *      delegated to the {@code delegate} before then.
+     */
+    public ConcurrencyLimitBuilder timeout(Duration timeout) {
+        requireNonNull(timeout, "timeout");
+        timeoutMillis(timeout.toMillis());
         return this;
     }
 

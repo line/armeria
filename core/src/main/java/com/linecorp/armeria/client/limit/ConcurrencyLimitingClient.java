@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.limit;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -62,6 +64,7 @@ public final class ConcurrencyLimitingClient
      */
     public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
             ConcurrencyLimit concurrencyLimit) {
+        requireNonNull(concurrencyLimit, "concurrencyLimit");
         return delegate -> new ConcurrencyLimitingClient(delegate, concurrencyLimit);
     }
 
