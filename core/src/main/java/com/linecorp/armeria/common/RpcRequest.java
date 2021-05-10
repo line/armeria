@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.common.DefaultRpcRequest.SINGLE_NULL_PARAM;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
@@ -40,7 +41,9 @@ public interface RpcRequest extends Request {
      * Creates a new instance with a single parameter.
      */
     static RpcRequest of(Class<?> serviceType, String method, @Nullable Object parameter) {
-        return new DefaultRpcRequest(serviceType, method, Collections.singletonList(parameter));
+        final List<Object> parameters = parameter == null ? SINGLE_NULL_PARAM
+                                                          : Collections.singletonList(parameter);
+        return new DefaultRpcRequest(serviceType, method, parameters);
     }
 
     /**
