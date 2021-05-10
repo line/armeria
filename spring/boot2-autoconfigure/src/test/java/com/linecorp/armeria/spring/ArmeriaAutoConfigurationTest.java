@@ -379,10 +379,12 @@ public class ArmeriaAutoConfigurationTest {
                                              .get("/internal/metrics")
                                              .aggregate().join()
                                              .contentUtf8();
-        assertThat(metricReport).contains(
-                "http_status=\"404\",method=\"error\",result=\"success\",service=\"annotatedService\",} 1.0");
-        assertThat(metricReport).contains(
-                "http_status=\"404\",method=\"error\",result=\"failure\",service=\"annotatedService\",} 0.0");
+        await().untilAsserted(() -> {
+            assertThat(metricReport).contains(
+                    "http_status=\"404\",method=\"error\",result=\"success\",service=\"annotatedService\",} 1.0");
+            assertThat(metricReport).contains(
+                    "http_status=\"404\",method=\"error\",result=\"failure\",service=\"annotatedService\",} 0.0");
+        });
     }
 
     @Test
