@@ -112,6 +112,8 @@ public class ArmeriaAutoConfigurationTest {
                                              HttpHeaders.of("x-additional-header", "headerVal"))
                              .exampleHeaders(AnnotatedService.class, "get",
                                              HttpHeaders.of("x-additional-header", "headerVal"))
+                             .exampleHeaders(AnnotatedService.class, "error",
+                                             HttpHeaders.of("x-additional-header", "headerVal"))
                              .exampleRequests(AnnotatedService.class, "post", "{\"foo\":\"bar\"}");
         }
 
@@ -164,6 +166,15 @@ public class ArmeriaAutoConfigurationTest {
         public HealthCheckServiceConfigurator healthCheckServiceConfigurator() {
             return builder -> builder.updatable(true);
         }
+
+        @Bean
+        public MetricCollectingConfigurator metricCollectingConfigurator() {
+            return builder -> builder
+                    .successFunction((context, log) -> {
+                        final int statusCode = log.responseHeaders().status().code();
+                        return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
+                    });
+        }
     }
 
     public static class IllegalArgumentExceptionHandler implements ExceptionHandlerFunction {
@@ -198,6 +209,11 @@ public class ArmeriaAutoConfigurationTest {
         @Get("/get")
         public AggregatedHttpResponse get() {
             return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "annotated");
+        }
+
+        @Get("/error")
+        public AggregatedHttpResponse error() {
+            return AggregatedHttpResponse.of(HttpStatus.NOT_FOUND, MediaType.PLAIN_TEXT_UTF_8, "error");
         }
 
         // Handles by AnnotatedServiceRegistrationBean#exceptionHandlers
@@ -275,7 +291,7 @@ public class ArmeriaAutoConfigurationTest {
         assertThatJson(res.contentUtf8()).node("services[0].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest$AnnotatedService");
         assertThatJson(res.contentUtf8())
-                .node("services[0].methods[2].exampleRequests[0]").isStringEqualTo("{\"foo\":\"bar\"}");
+                .node("services[0].methods[3].exampleRequests[0]").isStringEqualTo("{\"foo\":\"bar\"}");
         assertThatJson(res.contentUtf8())
                 .node("services[0].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
@@ -347,6 +363,26 @@ public class ArmeriaAutoConfigurationTest {
         assertThat(metricReport).contains("# TYPE custom_armeria_server_response_duration_seconds_max gauge");
         assertThat(metricReport).contains(
                 "custom_armeria_server_response_duration_seconds_max{grpc_status=\"0\"");
+    }
+
+    @Test
+    public void testCustomSuccessMetrics() throws Exception {
+        final WebClient client = WebClient.of(newUrl("h1c"));
+
+        final HttpResponse response = client.get("/annotated/error");
+
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.contentUtf8()).isEqualTo("error");
+
+        final String metricReport = WebClient.of(newUrl("http"))
+                                             .get("/internal/metrics")
+                                             .aggregate().join()
+                                             .contentUtf8();
+        assertThat(metricReport).contains(
+                "http_status=\"404\",method=\"error\",result=\"success\",service=\"annotatedService\",} 1.0");
+        assertThat(metricReport).contains(
+                "http_status=\"404\",method=\"error\",result=\"failure\",service=\"annotatedService\",} 0.0");
     }
 
     @Test
