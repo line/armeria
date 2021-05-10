@@ -133,7 +133,7 @@ public final class PathAndQuery {
      * the parsed result was valid (e.g., when a server is able to successfully handle the parsed path).
      */
     public void storeInCache(@Nullable String rawPath) {
-        if (CACHE != null && rawPath != null && !cached) {
+        if (CACHE != null && !cached && rawPath != null) {
             cached = true;
             CACHE.put(rawPath, this);
         }
@@ -143,7 +143,7 @@ public final class PathAndQuery {
     @Nullable
     private final String query;
 
-    private volatile boolean cached;
+    private boolean cached;
 
     private PathAndQuery(String path, @Nullable String query) {
         this.path = path;
