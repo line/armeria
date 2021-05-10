@@ -31,7 +31,8 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
 public interface MetricCollectingConfigurator extends Ordered {
 
     /**
-     * Configures the {@link MetricCollectingService} using the specified {@link AbstractMetricCollectingBuilder}.
+     * Configures the {@link MetricCollectingService}
+     * using the specified {@link AbstractMetricCollectingBuilder}.
      */
     void configure(AbstractMetricCollectingBuilder metricCollectingServiceBuilder);
 

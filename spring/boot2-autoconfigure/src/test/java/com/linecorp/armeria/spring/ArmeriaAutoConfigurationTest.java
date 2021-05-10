@@ -382,9 +382,11 @@ public class ArmeriaAutoConfigurationTest {
                                              .contentUtf8();
         await().untilAsserted(() -> {
             assertThat(metricReport).contains(
-                    "http_status=\"404\",method=\"error\",result=\"success\",service=\"annotatedService\",} 1.0");
+                    "http_status=\"404\",method=\"error\",result=\"success\"," +
+                    "service=\"annotatedService\",} 1.0");
             assertThat(metricReport).contains(
-                    "http_status=\"404\",method=\"error\",result=\"failure\",service=\"annotatedService\",} 0.0");
+                    "http_status=\"404\",method=\"error\",result=\"failure\"," +
+                    "service=\"annotatedService\",} 0.0");
         });
     }
 
