@@ -33,24 +33,47 @@ public interface RpcRequest extends Request {
      * Creates a new instance with no parameter.
      */
     static RpcRequest of(Class<?> serviceType, String method) {
-        return new DefaultRpcRequest(serviceType, method, Collections.emptyList());
+        return of(serviceType, null, method);
+    }
+
+    /**
+     * Creates a new instance with no parameter.
+     */
+    static RpcRequest of(Class<?> serviceType, @Nullable String serviceName, String method) {
+        return new DefaultRpcRequest(serviceType, serviceName, method, Collections.emptyList());
     }
 
     /**
      * Creates a new instance with a single parameter.
      */
     static RpcRequest of(Class<?> serviceType, String method, @Nullable Object parameter) {
-        return new DefaultRpcRequest(serviceType, method, Collections.singletonList(parameter));
+        return of(serviceType, null, method, parameter);
+    }
+
+    /**
+     * Creates a new instance with a single parameter.
+     */
+    static RpcRequest of(Class<?> serviceType, @Nullable String serviceName, String method,
+                         @Nullable Object parameter) {
+        return new DefaultRpcRequest(serviceType, serviceName, method, Collections.singletonList(parameter));
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
     static RpcRequest of(Class<?> serviceType, String method, Iterable<?> params) {
+        return of(serviceType, null, method, params);
+    }
+
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    static RpcRequest of(Class<?> serviceType, @Nullable String serviceName, String method,
+                         Iterable<?> params) {
         requireNonNull(params, "params");
 
         if (!(params instanceof Collection)) {
-            return new DefaultRpcRequest(serviceType, method, params);
+            return new DefaultRpcRequest(serviceType, serviceName, method, params);
         }
 
         final Collection<?> paramCollection = (Collection<?>) params;
@@ -64,22 +87,29 @@ public interface RpcRequest extends Request {
                     return of(serviceType, method, paramCollection.iterator().next());
                 }
             default:
-                return new DefaultRpcRequest(serviceType, method, paramCollection.toArray());
+                return new DefaultRpcRequest(serviceType, serviceName, method, paramCollection.toArray());
         }
     }
+
 
     /**
      * Creates a new instance with the specified parameters.
      */
     static RpcRequest of(Class<?> serviceType, String method, Object... params) {
+        return of(serviceType, null, method, params);
+    }
+    /**
+     * Creates a new instance with the specified parameters.
+     */
+    static RpcRequest of(Class<?> serviceType, @Nullable String serviceName, String method, Object... params) {
         requireNonNull(params, "params");
         switch (params.length) {
             case 0:
-                return of(serviceType, method);
+                return of(serviceType, serviceName, method);
             case 1:
-                return of(serviceType, method, params[0]);
+                return of(serviceType, serviceName, method, params[0]);
             default:
-                return new DefaultRpcRequest(serviceType, method, params);
+                return new DefaultRpcRequest(serviceType, serviceName, method, params);
         }
     }
 
@@ -87,6 +117,13 @@ public interface RpcRequest extends Request {
      * Returns the type of the service this {@link RpcRequest} is called upon.
      */
     Class<?> serviceType();
+
+    /**
+     * Returns the name of the service this {@link RpcRequest} is called upon.
+     */
+    default String serviceName() {
+        return serviceType().getName();
+    }
 
     /**
      * Returns the method name.

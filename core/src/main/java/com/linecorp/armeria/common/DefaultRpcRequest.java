@@ -33,19 +33,23 @@ import com.google.common.base.MoreObjects;
 final class DefaultRpcRequest implements RpcRequest {
 
     private final Class<?> serviceType;
+    @Nullable
+    private final String serviceName;
     private final String method;
     private final List<Object> params;
 
-    DefaultRpcRequest(Class<?> serviceType, String method, Iterable<?> params) {
-        this(serviceType, method, copyParams(params));
+    DefaultRpcRequest(Class<?> serviceType, @Nullable String serviceName, String method, Iterable<?> params) {
+        this(serviceType, serviceName, method, copyParams(params));
     }
 
-    DefaultRpcRequest(Class<?> serviceType, String method, Object... params) {
-        this(serviceType, method, copyParams(params));
+    DefaultRpcRequest(Class<?> serviceType, @Nullable String serviceName, String method, Object... params) {
+        this(serviceType, serviceName, method, copyParams(params));
     }
 
-    private DefaultRpcRequest(Class<?> serviceType, String method, List<Object> params) {
+    private DefaultRpcRequest(Class<?> serviceType, @Nullable String serviceName, String method,
+                              List<Object> params) {
         this.serviceType = requireNonNull(serviceType, "serviceType");
+        this.serviceName = serviceName;
         this.method = requireNonNull(method, "method");
         this.params = params;
     }
@@ -78,6 +82,15 @@ final class DefaultRpcRequest implements RpcRequest {
     @Override
     public Class<?> serviceType() {
         return serviceType;
+    }
+
+    @Override
+    public String serviceName() {
+        if (serviceName != null) {
+            return serviceName;
+        } else {
+            return serviceType.getName();
+        }
     }
 
     @Override
@@ -114,6 +127,7 @@ final class DefaultRpcRequest implements RpcRequest {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("serviceType", simpleServiceName())
+                          .add("serviceName", serviceName())
                           .add("method", method())
                           .add("params", params()).toString();
     }

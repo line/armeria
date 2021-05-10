@@ -39,7 +39,6 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -107,6 +106,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private static final Splitter ACCEPT_ENCODING_SPLITTER = Splitter.on(',').trimResults();
 
     private final MethodDescriptor<I, O> method;
+    private final String simpleMethodName;
 
     private final StreamMessage<DeframedMessage> deframedRequest;
     private final ArmeriaMessageFramer responseFramer;
@@ -154,6 +154,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     ArmeriaServerCall(HttpRequest req,
                       MethodDescriptor<I, O> method,
+                      String simpleMethodName,
                       CompressorRegistry compressorRegistry,
                       DecompressorRegistry decompressorRegistry,
                       HttpResponseWriter res,
@@ -168,6 +169,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       @Nullable GrpcStatusFunction statusFunction) {
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
+        this.simpleMethodName = requireNonNull(simpleMethodName, "simpleMethodName");
         this.ctx = requireNonNull(ctx, "ctx");
         this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
         this.defaultHeaders = requireNonNull(defaultHeaders, "defaultHeaders");
@@ -364,7 +366,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         if (status.getCode() == Code.CANCELLED) {
             final Throwable cause = status.getCause();
-            if (cause instanceof ClosedStreamException || cause instanceof ClosedSessionException) {
+            if (cause instanceof ClosedStreamException) {
                 closeListener(status);
                 return;
             }
@@ -465,7 +467,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             request = marshaller.deserializeRequest(message, grpcWebText);
 
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, request), null);
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName, request), null);
             }
 
             if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
@@ -498,7 +500,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         clientStreamClosed = true;
         if (!closeCalled) {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
             }
 
             if (blockingExecutor != null) {

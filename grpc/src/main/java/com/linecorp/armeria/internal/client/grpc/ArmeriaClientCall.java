@@ -23,6 +23,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -108,6 +109,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final HttpClient httpClient;
     private final HttpRequestWriter req;
     private final MethodDescriptor<I, O> method;
+    private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
     private final CallOptions callOptions;
     private final ArmeriaMessageFramer requestFramer;
     private final GrpcMessageMarshaller<I, O> marshaller;
@@ -144,6 +146,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             HttpClient httpClient,
             HttpRequestWriter req,
             MethodDescriptor<I, O> method,
+            Map<MethodDescriptor<?, ?>, String> simpleMethodNames,
             int maxOutboundMessageSizeBytes,
             int maxInboundMessageSizeBytes,
             CallOptions callOptions,
@@ -158,6 +161,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.httpClient = httpClient;
         this.req = req;
         this.method = method;
+        this.simpleMethodNames = simpleMethodNames;
         this.callOptions = callOptions;
         this.compressorRegistry = compressorRegistry;
         this.decompressorRegistry = decompressorRegistry;
@@ -182,7 +186,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         req.whenComplete().handle((unused1, unused2) -> {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 // Can reach here if the request stream was empty.
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method), null);
+                final String simpleMethodName = simpleMethodNames.get(method);
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
             }
             return null;
         });
@@ -337,7 +342,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         try {
             if (!log.isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, message), null);
+                final String simpleMethodName = simpleMethodNames.get(method);
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName, message),
+                                                null);
             }
             final ByteBuf serialized = marshaller.serializeRequest(message);
             req.write(requestFramer.writePayload(serialized));
