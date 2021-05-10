@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.client.limit;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.client.limit.AbstractConcurrencyLimitingClient.validateMaxConcurrency;
-import static java.lang.Integer.MAX_VALUE;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -35,13 +32,11 @@ import com.linecorp.armeria.client.ClientRequestContext;
  * Concurrency settings that limits the concurrent number of active requests.
  */
 public final class ConcurrencyLimit {
-    private static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
-
     /**
      * Returns a new builder.
      */
-    public static Builder builder() {
-        return new Builder();
+    public static ConcurrencyLimitBuilder builder() {
+        return new ConcurrencyLimitBuilder();
     }
 
     private final Predicate<ClientRequestContext> policy;
@@ -49,7 +44,7 @@ public final class ConcurrencyLimit {
     private final long timeoutMillis;
     private final AtomicInteger numActiveRequests = new AtomicInteger();
 
-    private ConcurrencyLimit(Predicate<ClientRequestContext> policy, int maxConcurrency, long timeoutMillis) {
+    ConcurrencyLimit(Predicate<ClientRequestContext> policy, int maxConcurrency, long timeoutMillis) {
         this.policy = policy;
         this.maxConcurrency = maxConcurrency;
         this.timeoutMillis = timeoutMillis;
@@ -114,48 +109,5 @@ public final class ConcurrencyLimit {
                           .add("maxConcurrency", maxConcurrency)
                           .add("timeoutMillis", timeoutMillis)
                           .toString();
-    }
-
-    /**
-     * Builds a {@link ConcurrencyLimit} instance using builder pattern.
-     */
-    public static class Builder {
-        private int maxConcurrency;
-        private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
-        private Predicate<ClientRequestContext> policy = requestContext -> true;
-
-        /**
-         * Sets the maximum number of concurrent active requests. {@code 0} to disable the limit.
-         */
-        public Builder maxConcurrency(int maxConcurrency) {
-            this.maxConcurrency = validateMaxConcurrency(maxConcurrency == MAX_VALUE ? 0 : maxConcurrency);
-            return this;
-        }
-
-        /**
-         * Sets the amount of time until this decorator fails the request if the request was not
-         *      delegated to the {@code delegate} before then.
-         */
-        public Builder timeout(long timeout, TimeUnit unit) {
-            checkArgument(timeout >= 0, "timeout: %s (expected: >= 0)", timeout);
-            requireNonNull(unit, "unit");
-            this.timeoutMillis = unit.convert(timeout, MILLISECONDS);
-            return this;
-        }
-
-        /**
-         * Sets the predicate for which to apply the concurrency limit.
-         */
-        public Builder policy(Predicate<ClientRequestContext> policy) {
-            this.policy = requireNonNull(policy, "policy");
-            return this;
-        }
-
-        /**
-         * Builds the {@code ConcurrencyLimit}.
-         */
-        public ConcurrencyLimit build() {
-            return new ConcurrencyLimit(policy, maxConcurrency, timeoutMillis);
-        }
     }
 }
