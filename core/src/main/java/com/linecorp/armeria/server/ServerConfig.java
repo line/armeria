@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +36,6 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -112,7 +112,7 @@ public final class ServerConfig {
 
     ServerConfig(
             Iterable<ServerPort> ports,
-            VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
+            VirtualHost defaultVirtualHost, Collection<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis,
             int maxNumRequestsPerConnection, int http2InitialConnectionWindowSize,
@@ -204,7 +204,7 @@ public final class ServerConfig {
         }
 
         final List<VirtualHost> virtualHostsCopy = new ArrayList<>();
-        if (Iterables.isEmpty(virtualHosts)) {
+        if (virtualHosts.isEmpty()) {
             virtualHostMapping = null;
         } else {
             // Set virtual host definitions and initialize their domain name mapping.
