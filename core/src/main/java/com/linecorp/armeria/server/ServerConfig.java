@@ -35,6 +35,7 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -61,6 +62,7 @@ public final class ServerConfig {
     private final List<ServerPort> ports;
     private final VirtualHost defaultVirtualHost;
     private final List<VirtualHost> virtualHosts;
+    @Nullable
     private final Mapping<String, VirtualHost> virtualHostMapping;
     private final List<ServiceConfig> services;
 
@@ -201,18 +203,22 @@ public final class ServerConfig {
             this.proxyProtocolMaxTlvSize = 0;
         }
 
-        // Set virtual host definitions and initialize their domain name mapping.
-        final DomainMappingBuilder<VirtualHost> mappingBuilder =
-                new DomainMappingBuilder<>(defaultVirtualHost);
         final List<VirtualHost> virtualHostsCopy = new ArrayList<>();
-        for (VirtualHost h : virtualHosts) {
-            if (h == null) {
-                break;
+        if (Iterables.isEmpty(virtualHosts)) {
+            virtualHostMapping = null;
+        } else {
+            // Set virtual host definitions and initialize their domain name mapping.
+            final DomainMappingBuilder<VirtualHost> mappingBuilder =
+                    new DomainMappingBuilder<>(defaultVirtualHost);
+            for (VirtualHost h : virtualHosts) {
+                if (h == null) {
+                    break;
+                }
+                virtualHostsCopy.add(h);
+                mappingBuilder.add(h.hostnamePattern(), h);
             }
-            virtualHostsCopy.add(h);
-            mappingBuilder.add(h.hostnamePattern(), h);
+            virtualHostMapping = mappingBuilder.build();
         }
-        virtualHostMapping = mappingBuilder.build();
 
         // Add the default VirtualHost to the virtualHosts so that a user can retrieve all VirtualHosts
         // via virtualHosts(). i.e. no need to check defaultVirtualHost().
@@ -335,6 +341,9 @@ public final class ServerConfig {
      * {@link #defaultVirtualHost()} is returned.
      */
     public VirtualHost findVirtualHost(String hostname) {
+        if (virtualHostMapping == null) {
+            return defaultVirtualHost;
+        }
         return virtualHostMapping.map(hostname);
     }
 
