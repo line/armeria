@@ -32,12 +32,7 @@ import com.google.common.base.MoreObjects;
  */
 final class DefaultRpcRequest implements RpcRequest {
 
-    static final List<Object> SINGLE_NULL_PARAM;
-    static {
-        final List<Object> singleNullParam = new ArrayList<>(1);
-        singleNullParam.add(null);
-        SINGLE_NULL_PARAM = Collections.unmodifiableList(singleNullParam);
-    }
+    static final List<Object> SINGLE_NULL_PARAM = Collections.singletonList(null);
 
     private final Class<?> serviceType;
     private final String method;
