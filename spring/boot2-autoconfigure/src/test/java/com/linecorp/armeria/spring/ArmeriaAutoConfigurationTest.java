@@ -17,6 +17,7 @@ package com.linecorp.armeria.spring;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
