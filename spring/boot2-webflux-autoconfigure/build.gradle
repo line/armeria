@@ -46,6 +46,7 @@ task generateSources(type: Copy) {
     include '**/ArmeriaSettings.java'
     include '**/DocServiceConfigurator.java'
     include '**/HealthCheckServiceConfigurator.java'
+    include '**/MetricCollectingConfigurator.java'
     include '**/LocalArmeriaPort.java'
     include '**/LocalArmeriaPorts.java'
     include '**/*MeterIdPrefixFunctionFactory.java'
