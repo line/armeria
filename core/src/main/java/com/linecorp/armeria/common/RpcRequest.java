@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.common.DefaultRpcRequest.SINGLE_NULL_PARAM;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
@@ -23,6 +24,8 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 /**
  * An RPC {@link Request}.
@@ -55,7 +58,9 @@ public interface RpcRequest extends Request {
      */
     static RpcRequest of(Class<?> serviceType, @Nullable String serviceName, String method,
                          @Nullable Object parameter) {
-        return new DefaultRpcRequest(serviceType, serviceName, method, Collections.singletonList(parameter));
+        final List<Object> parameters = parameter == null ? SINGLE_NULL_PARAM
+                                                          : ImmutableList.of(parameter);
+        return new DefaultRpcRequest(serviceType, serviceName, method, parameters);
     }
 
     /**

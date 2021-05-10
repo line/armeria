@@ -26,11 +26,14 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Default {@link RpcRequest} implementation.
  */
 final class DefaultRpcRequest implements RpcRequest {
+
+    static final List<Object> SINGLE_NULL_PARAM = Collections.singletonList(null);
 
     private final Class<?> serviceType;
     @Nullable
@@ -56,6 +59,10 @@ final class DefaultRpcRequest implements RpcRequest {
 
     private static List<Object> copyParams(Iterable<?> params) {
         requireNonNull(params, "params");
+        if (params == SINGLE_NULL_PARAM || params instanceof ImmutableList) {
+            //noinspection unchecked
+            return (List<Object>) params;
+        }
 
         // Note we do not use ImmutableList.copyOf() here,
         // because it does not allow a null element and we should allow a null argument.

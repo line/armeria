@@ -163,7 +163,6 @@ allprojects {
             </style>
             ''')
 
-
             // Replace fonts:
             // - DejaVu Sans -> Lato
             // - DejaVu Serif -> Lato
