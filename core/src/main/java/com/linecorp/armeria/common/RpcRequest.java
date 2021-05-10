@@ -91,13 +91,13 @@ public interface RpcRequest extends Request {
         }
     }
 
-
     /**
      * Creates a new instance with the specified parameters.
      */
     static RpcRequest of(Class<?> serviceType, String method, Object... params) {
         return of(serviceType, null, method, params);
     }
+
     /**
      * Creates a new instance with the specified parameters.
      */

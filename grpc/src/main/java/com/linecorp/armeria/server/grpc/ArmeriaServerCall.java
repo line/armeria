@@ -467,7 +467,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             request = marshaller.deserializeRequest(message, grpcWebText);
 
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName, request), null);
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName, request),
+                                                null);
             }
 
             if (unsafeWrapRequestBuffers && buf != null && !grpcWebText) {
