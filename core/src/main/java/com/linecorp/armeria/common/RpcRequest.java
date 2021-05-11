@@ -19,8 +19,6 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.common.DefaultRpcRequest.SINGLE_NULL_PARAM;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -36,31 +34,16 @@ public interface RpcRequest extends Request {
      * Creates a new instance with no parameter.
      */
     static RpcRequest of(Class<?> serviceType, String method) {
-        return of(serviceType, null, method);
-    }
-
-    /**
-     * Creates a new instance with no parameter.
-     */
-    static RpcRequest of(Class<?> serviceType, @Nullable String serviceName, String method) {
-        return new DefaultRpcRequest(serviceType, serviceName, method, Collections.emptyList());
+        return new DefaultRpcRequest(serviceType, null, method, ImmutableList.of());
     }
 
     /**
      * Creates a new instance with a single parameter.
      */
     static RpcRequest of(Class<?> serviceType, String method, @Nullable Object parameter) {
-        return of(serviceType, null, method, parameter);
-    }
-
-    /**
-     * Creates a new instance with a single parameter.
-     */
-    static RpcRequest of(Class<?> serviceType, @Nullable String serviceName, String method,
-                         @Nullable Object parameter) {
         final List<Object> parameters = parameter == null ? SINGLE_NULL_PARAM
                                                           : ImmutableList.of(parameter);
-        return new DefaultRpcRequest(serviceType, serviceName, method, parameters);
+        return new DefaultRpcRequest(serviceType, null, method, parameters);
     }
 
     /**
@@ -76,46 +59,15 @@ public interface RpcRequest extends Request {
     static RpcRequest of(Class<?> serviceType, @Nullable String serviceName, String method,
                          Iterable<?> params) {
         requireNonNull(params, "params");
-
-        if (!(params instanceof Collection)) {
-            return new DefaultRpcRequest(serviceType, serviceName, method, params);
-        }
-
-        final Collection<?> paramCollection = (Collection<?>) params;
-        switch (paramCollection.size()) {
-            case 0:
-                return of(serviceType, method);
-            case 1:
-                if (paramCollection instanceof List) {
-                    return of(serviceType, method, ((List<?>) paramCollection).get(0));
-                } else {
-                    return of(serviceType, method, paramCollection.iterator().next());
-                }
-            default:
-                return new DefaultRpcRequest(serviceType, serviceName, method, paramCollection.toArray());
-        }
+        return new DefaultRpcRequest(serviceType, serviceName, method, params);
     }
 
     /**
      * Creates a new instance with the specified parameters.
      */
     static RpcRequest of(Class<?> serviceType, String method, Object... params) {
-        return of(serviceType, null, method, params);
-    }
-
-    /**
-     * Creates a new instance with the specified parameters.
-     */
-    static RpcRequest of(Class<?> serviceType, @Nullable String serviceName, String method, Object... params) {
         requireNonNull(params, "params");
-        switch (params.length) {
-            case 0:
-                return of(serviceType, serviceName, method);
-            case 1:
-                return of(serviceType, serviceName, method, params[0]);
-            default:
-                return new DefaultRpcRequest(serviceType, serviceName, method, params);
-        }
+        return new DefaultRpcRequest(serviceType, null, method, params);
     }
 
     /**

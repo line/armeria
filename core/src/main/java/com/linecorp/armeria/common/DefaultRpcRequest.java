@@ -81,6 +81,10 @@ final class DefaultRpcRequest implements RpcRequest {
     }
 
     private static List<Object> copyParams(Object... params) {
+        if (params.length == 0) {
+            return ImmutableList.of();
+        }
+
         final List<Object> copy = new ArrayList<>(params.length);
         Collections.addAll(copy, params);
         return Collections.unmodifiableList(copy);

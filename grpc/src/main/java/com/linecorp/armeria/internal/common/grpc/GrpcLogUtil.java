@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.common.grpc;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
@@ -34,7 +36,7 @@ public final class GrpcLogUtil {
      */
     public static RpcRequest rpcRequest(MethodDescriptor<?, ?> method, String simpleMethodName) {
         // See below to learn why we use GrpcLogUtil.class here.
-        return RpcRequest.of(GrpcLogUtil.class, method.getServiceName(), simpleMethodName);
+        return RpcRequest.of(GrpcLogUtil.class, method.getServiceName(), simpleMethodName, ImmutableList.of());
     }
 
     /**
@@ -46,7 +48,8 @@ public final class GrpcLogUtil {
         // We still populate it with a reasonable method name for use in logging. The service type is currently
         // arbitrarily set as gRPC doesn't use Class<?> to represent services. The method.getServiceName() is
         // actually used for logging.
-        return RpcRequest.of(GrpcLogUtil.class, method.getServiceName(), simpleMethodName, message);
+        return RpcRequest.of(GrpcLogUtil.class, method.getServiceName(),
+                             simpleMethodName, ImmutableList.of(message));
     }
 
     /**

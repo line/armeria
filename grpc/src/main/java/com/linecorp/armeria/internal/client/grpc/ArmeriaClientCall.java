@@ -186,8 +186,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         req.whenComplete().handle((unused1, unused2) -> {
             if (!ctx.log().isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
                 // Can reach here if the request stream was empty.
-                final String simpleMethodName = simpleMethodNames.get(method);
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName()), null);
             }
             return null;
         });
@@ -342,11 +341,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         try {
             if (!log.isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                String simpleMethodName = simpleMethodNames.get(method);
-                if (simpleMethodName == null) {
-                    simpleMethodName = method.getBareMethodName();
-                }
-                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName, message),
+                ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName(), message),
                                                 null);
             }
             final ByteBuf serialized = marshaller.serializeRequest(message);
@@ -567,5 +562,13 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 }
             }
         }
+    }
+
+    private String simpleMethodName() {
+        String simpleMethodName = simpleMethodNames.get(method);
+        if (simpleMethodName == null) {
+            simpleMethodName = method.getBareMethodName();
+        }
+        return simpleMethodName;
     }
 }
