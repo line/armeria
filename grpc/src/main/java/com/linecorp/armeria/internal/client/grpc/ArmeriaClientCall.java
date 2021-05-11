@@ -342,7 +342,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         try {
             if (!log.isAvailable(RequestLogProperty.REQUEST_CONTENT)) {
-                final String simpleMethodName = simpleMethodNames.get(method);
+                String simpleMethodName = simpleMethodNames.get(method);
+                if (simpleMethodName == null) {
+                    simpleMethodName = method.getBareMethodName();
+                }
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName, message),
                                                 null);
             }
