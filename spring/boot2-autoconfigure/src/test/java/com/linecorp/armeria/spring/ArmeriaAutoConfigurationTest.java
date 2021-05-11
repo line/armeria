@@ -378,16 +378,19 @@ public class ArmeriaAutoConfigurationTest {
 
         final String metricReport = WebClient.of(newUrl("http"))
                                              .get("/internal/metrics")
-                                             .aggregate().join()
+                                             .aggregate()
+                                             .join()
                                              .contentUtf8();
-        await().untilAsserted(() -> {
-            assertThat(metricReport).contains(
-                    "http_status=\"404\",method=\"error\",result=\"success\"," +
-                    "service=\"annotatedService\",} 1.0");
-            assertThat(metricReport).contains(
-                    "http_status=\"404\",method=\"error\",result=\"failure\"," +
-                    "service=\"annotatedService\",} 0.0");
-        });
+        final String expectedSuccess =
+                "http_status=\"404\",method=\"error\",result=\"success\",service=\"annotatedService\",} 1.0";
+        final String expectedFailure =
+                "http_status=\"404\",method=\"error\",result=\"failure\",service=\"annotatedService\",} 0.0";
+
+        await().atMost(20, TimeUnit.SECONDS)
+               .untilAsserted(() -> {
+                   assertThat(metricReport).contains(expectedSuccess);
+                   assertThat(metricReport).contains(expectedFailure);
+               });
     }
 
     @Test
