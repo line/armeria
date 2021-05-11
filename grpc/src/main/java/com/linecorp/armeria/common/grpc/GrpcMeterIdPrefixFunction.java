@@ -52,10 +52,13 @@ import io.micrometer.core.instrument.Tag;
  */
 public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
-    private static final Map<String, Tag> statusTags =
+    private static final Map<String, Tag> STATUS_TAGS =
             Arrays.stream(Status.Code.values())
                   .map(code -> StringUtil.toString(code.value()))
                   .collect(toImmutableMap(Function.identity(), code -> Tag.of("grpc.status", code)));
+
+    private static final Tag OK_TAG = Tag.of("grpc.status", StringUtil.toString(Code.OK_VALUE));
+    private static final Tag UNKNOWN_TAG = Tag.of("grpc.status", StringUtil.toString(Code.UNKNOWN_VALUE));
 
     /**
      * Returns a newly created {@link GrpcMeterIdPrefixFunction} with the specified {@code name}.
@@ -110,14 +113,19 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
             }
         }
 
-        tagListBuilder.add(Tag.of("grpc.status", String.valueOf(Code.UNKNOWN_VALUE)));
+        tagListBuilder.add(UNKNOWN_TAG);
     }
 
     private static Tag statusTag(String status) {
-        final Tag cached = statusTags.get(status);
+        if ("0".equals(status)) {
+            return OK_TAG;
+        }
+
+        final Tag cached = STATUS_TAGS.get(status);
         if (cached != null) {
             return cached;
         }
+
         return Tag.of("grpc.status", status);
     }
 }
