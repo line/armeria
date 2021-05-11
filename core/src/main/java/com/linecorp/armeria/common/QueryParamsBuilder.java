@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -235,6 +237,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * @return {@code this}
      */
     default QueryParamsBuilder add(Map<String, String> entries) {
+        requireNonNull(entries, "entries");
         return add(entries.entrySet());
     }
 
@@ -393,6 +396,7 @@ public interface QueryParamsBuilder extends QueryParamGetters {
      * @return {@code this}
      */
     default QueryParamsBuilder set(Map<String, String> entries) {
+        requireNonNull(entries, "entries");
         return set(entries.entrySet());
     }
 

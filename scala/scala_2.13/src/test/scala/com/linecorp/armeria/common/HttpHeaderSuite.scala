@@ -16,25 +16,26 @@
 
 package com.linecorp.armeria.common
 
-import munit.FunSuite
 import com.linecorp.armeria.scala.implicits._
+import munit.FunSuite
 
 class HttpHeaderSuite extends FunSuite {
   test("should be able to add HttpHeaders with scala.immutable.Map") {
-    val builder = HttpHeaders.builder()
-    builder.add(Map("foo" -> "bar").asJava)
-    val headers = builder.build()
+    val headers = HttpHeaders
+      .builder()
+      .add(Map("foo" -> "bar").asJava)
+      .build()
 
     assertEquals(headers.size(), 1)
     assertEquals(headers.get("foo"), "bar")
   }
 
   test("should be able to set HttpHeaders with scala.immutable.Map") {
-    val builder = HttpHeaders
+    val headers = HttpHeaders
       .builder()
       .add("foo", "old")
-    builder.set(Map("foo" -> "bar").asJava)
-    val headers = builder.build()
+      .set(Map("foo" -> "bar").asJava)
+      .build()
 
     assertEquals(headers.size(), 1)
     assertEquals(headers.get("foo"), "bar")

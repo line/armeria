@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -237,6 +239,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * @return {@code this}
      */
     default HttpHeadersBuilder add(Map<? extends CharSequence, String> entries) {
+        requireNonNull(entries, "entries");
         return add(entries.entrySet());
     }
 
@@ -395,6 +398,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * @return {@code this}
      */
     default HttpHeadersBuilder set(Map<? extends CharSequence, String> entries) {
+        requireNonNull(entries, "entries");
         return set(entries.entrySet());
     }
 
