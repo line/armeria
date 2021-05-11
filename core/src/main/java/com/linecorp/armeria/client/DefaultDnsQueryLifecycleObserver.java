@@ -19,6 +19,8 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 
@@ -144,9 +146,11 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public void queryFailed(Throwable cause) {
-        if (!cause.getMessage().contains(NO_NS_RETURNED_EXCEPTION_MESSAGE)) {
+        final String message = cause.getMessage();
+        if (message == null || !message.contains(NO_NS_RETURNED_EXCEPTION_MESSAGE)) {
             final List<Tag> tags = ImmutableList.of(
-                    nameTag, TAG_FAILURE, Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause).lowerCasedName));
+                    nameTag, TAG_FAILURE,
+                    Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause, message).lowerCasedName));
             meterRegistry.counter(meterIdPrefix.name(), tags).increment();
         }
     }
@@ -157,15 +161,16 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
         meterRegistry.counter(meterIdPrefix.name(), tags).increment();
     }
 
-    private static DnsExceptionTypes determineDnsExceptionTag(Throwable cause) {
+    private static DnsExceptionTypes determineDnsExceptionTag(Throwable cause, @Nullable String message) {
         if (cause instanceof DnsTimeoutException) {
             return DnsExceptionTypes.SERVER_TIMEOUT;
         } else if (cause instanceof DnsNameResolverTimeoutException) {
             return DnsExceptionTypes.RESOLVER_TIMEOUT;
         }
 
-        final String message = cause.getMessage();
-        if (message.contains(NXDOMAIN_EXCEPTION_MESSAGE)) {
+        if (message == null) {
+            return DnsExceptionTypes.OTHERS;
+        } else if (message.contains(NXDOMAIN_EXCEPTION_MESSAGE)) {
             return DnsExceptionTypes.NX_DOMAIN;
         } else if (message.contains(CNAME_EXCEPTION_MESSAGE)) {
             return DnsExceptionTypes.CNAME_NOT_FOUND;
