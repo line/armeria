@@ -333,9 +333,6 @@ log4j:
 me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.5.0' }
 
-net.javacrumbs.future-converter:
-  future-converter-rxjava2-java8: { version: '1.2.0' }
-
 net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '2.25.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
