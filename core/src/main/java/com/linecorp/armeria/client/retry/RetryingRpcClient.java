@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.internal.common.util.Integers;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 
 /**
  * An {@link RpcClient} decorator that handles failures of an invocation and retries RPC requests.
@@ -164,7 +164,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
 
         if (!initialAttempt) {
             derivedCtx.mutateAdditionalRequestHeaders(
-                    mutator -> mutator.add(ARMERIA_RETRY_COUNT, Integers.toString(totalAttempts - 1)));
+                    mutator -> mutator.add(ARMERIA_RETRY_COUNT, StringUtil.toString(totalAttempts - 1)));
         }
 
         final RpcResponse res = executeWithFallback(unwrap(), derivedCtx,

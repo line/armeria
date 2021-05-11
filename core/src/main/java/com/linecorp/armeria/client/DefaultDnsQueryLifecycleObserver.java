@@ -24,7 +24,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.internal.common.util.Integers;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
@@ -139,7 +139,7 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public DnsQueryLifecycleObserver queryNoAnswer(DnsResponseCode code) {
-        final List<Tag> tags = ImmutableList.of(nameTag, Tag.of(CODE_TAG, Integers.toString(code.intValue())));
+        final List<Tag> tags = ImmutableList.of(nameTag, Tag.of(CODE_TAG, StringUtil.toString(code.intValue())));
         meterRegistry.counter(meterIdPrefixNoAnswer, tags).increment();
         return this;
     }

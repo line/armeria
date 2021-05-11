@@ -16,23 +16,25 @@
 
 package com.linecorp.armeria.internal.common.util;
 
-public final class Integers {
-    private static final int CACHE_SIZE = 1001;
+public final class StringUtil {
+    private static final int CACHE_SIZE = 2001;
+    private static final int MAX_NUM = CACHE_SIZE / 2;
+    private static final int MIN_NUM = -MAX_NUM;
     private static final String[] intToString = new String[CACHE_SIZE];
 
     static {
-        for (int i = 0; i < CACHE_SIZE; i++) {
+        for (int i = MIN_NUM; i <= MAX_NUM; i++) {
             final String str = Integer.toString(i);
-            intToString[i] = str;
+            intToString[i + MAX_NUM] = str;
         }
     }
 
     public static String toString(int num) {
-        if (num >= 0 && num < CACHE_SIZE) {
-            return intToString[num];
+        if (num >= MIN_NUM && num <= MAX_NUM) {
+            return intToString[num + MAX_NUM];
         }
         return Integer.toString(num);
     }
 
-    private Integers() {}
+    private StringUtil() {}
 }

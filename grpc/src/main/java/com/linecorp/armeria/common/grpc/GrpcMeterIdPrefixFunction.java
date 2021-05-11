@@ -15,9 +15,14 @@
  */
 package com.linecorp.armeria.common.grpc;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction.addActiveRequestPrefixTags;
 import static com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction.addCompleteRequestPrefixTags;
 import static java.util.Objects.requireNonNull;
+
+import java.util.Arrays;
+import java.util.Map;
+import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -31,8 +36,10 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.internal.common.metric.DefaultMeterIdPrefixFunction;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 
+import io.grpc.Status;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 
@@ -45,6 +52,11 @@ import io.micrometer.core.instrument.Tag;
  */
 public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
+    private static final Map<String, Tag> statusTags =
+            Arrays.stream(Status.Code.values())
+                  .map(code -> StringUtil.toString(code.value()))
+                  .collect(toImmutableMap(Function.identity(), code -> Tag.of("grpc.status", code)));
+
     /**
      * Returns a newly created {@link GrpcMeterIdPrefixFunction} with the specified {@code name}.
      */
@@ -56,6 +68,7 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
     private GrpcMeterIdPrefixFunction(String name) {
         this.name = requireNonNull(name, "name");
+
     }
 
     @Override
@@ -78,13 +91,13 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
     private static void addGrpcStatus(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
         String status = log.responseHeaders().get(GrpcHeaderNames.GRPC_STATUS);
         if (status != null) {
-            tagListBuilder.add(Tag.of("grpc.status", status));
+            tagListBuilder.add(statusTag(status));
             return;
         }
 
         status = log.responseTrailers().get(GrpcHeaderNames.GRPC_STATUS);
         if (status != null) {
-            tagListBuilder.add(Tag.of("grpc.status", status));
+            tagListBuilder.add(statusTag(status));
             return;
         }
 
@@ -92,11 +105,19 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
         if (trailers != null) {
             status = trailers.get(GrpcHeaderNames.GRPC_STATUS);
             if (status != null) {
-                tagListBuilder.add(Tag.of("grpc.status", status));
+                tagListBuilder.add(statusTag(status));
                 return;
             }
         }
 
         tagListBuilder.add(Tag.of("grpc.status", String.valueOf(Code.UNKNOWN_VALUE)));
+    }
+
+    private static Tag statusTag(String status) {
+        final Tag cached = statusTags.get(status);
+        if (cached != null) {
+            return cached;
+        }
+        return Tag.of("grpc.status", status);
     }
 }

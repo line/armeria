@@ -16,24 +16,20 @@
 
 package com.linecorp.armeria.internal.common.util;
 
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.infra.Blackhole;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class IntegersBenchmark {
+import org.junit.jupiter.api.Test;
 
-    @Benchmark
-    public void pooledIntToString(Blackhole bh) {
-        for (int i = 0; i < 2000; i++) {
-            bh.consume(StringUtil.toString(i));
-            bh.consume(StringUtil.toString(2000 - i));
+class StringUtilTest {
+    @Test
+    void intToString() {
+        // cached
+        for (int i = -1000; i < 1000; i++) {
+            assertThat(StringUtil.toString(i)).isEqualTo(Integer.toString(i));
         }
-    }
 
-    @Benchmark
-    public void jdkIntToString(Blackhole bh) {
-        for (int i = 0; i < 2000; i++) {
-            bh.consume(Integer.toString(i));
-            bh.consume(Integer.toString(2000 - i));
-        }
+        // non-cached
+        assertThat(StringUtil.toString(-1001)).isEqualTo("-1001");
+        assertThat(StringUtil.toString(1001)).isEqualTo("1001");
     }
 }
