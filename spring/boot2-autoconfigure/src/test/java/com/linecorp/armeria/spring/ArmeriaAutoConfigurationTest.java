@@ -369,25 +369,23 @@ public class ArmeriaAutoConfigurationTest {
     @Test
     public void testCustomSuccessMetrics() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
-
         final HttpResponse response = client.get("/annotated/error");
-
-        final AggregatedHttpResponse res = response.aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(res.contentUtf8()).isEqualTo("error");
-
-        final String metricReport = WebClient.of(newUrl("http"))
-                                             .get("/internal/metrics")
-                                             .aggregate()
-                                             .join()
-                                             .contentUtf8();
         final String expectedSuccess =
                 "http_status=\"404\",method=\"error\",result=\"success\",service=\"annotatedService\",} 1.0";
         final String expectedFailure =
                 "http_status=\"404\",method=\"error\",result=\"failure\",service=\"annotatedService\",} 0.0";
 
-        await().atMost(20, TimeUnit.SECONDS)
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(res.contentUtf8()).isEqualTo("error");
+
+        await().pollInSameThread()
                .untilAsserted(() -> {
+                   final String metricReport = WebClient.of(newUrl("http"))
+                                                        .get("/internal/metrics")
+                                                        .aggregate()
+                                                        .join()
+                                                        .contentUtf8();
                    assertThat(metricReport).contains(expectedSuccess);
                    assertThat(metricReport).contains(expectedFailure);
                });
