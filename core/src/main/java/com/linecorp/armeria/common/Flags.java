@@ -430,6 +430,9 @@ public final class Flags {
     private static final boolean
             DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING = getBoolean("useLegacyRouteDecoratorOrdering", false);
 
+    // Note: RFC suggests at least 100s, but grpc sets this value as 20s.
+    // TODO: maybe modify to a value slightly larger than armeria's idle timeout
+    // TODO: specify unit (millis) to the name
     private static final int DEFAULT_TCP_USER_TIMEOUT = 1000;
     private static final int TCP_USER_TIMEOUT =
             getInt("tcpUserTimeout", DEFAULT_TCP_USER_TIMEOUT, value -> value >= 0);

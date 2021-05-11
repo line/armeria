@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -116,7 +117,10 @@ public final class ClientFactoryBuilder {
 
     ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
-        channelOption(EpollChannelOption.TCP_USER_TIMEOUT, Ints.saturatedCast(Flags.tcpUserTimeout()));
+        if (Flags.transportType() == TransportType.EPOLL) {
+            // TODO: also consider disabling SO_KEEPALIVE here
+            channelOption(EpollChannelOption.TCP_USER_TIMEOUT, Ints.saturatedCast(Flags.tcpUserTimeout()));
+        }
     }
 
     /**
