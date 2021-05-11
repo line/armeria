@@ -269,6 +269,7 @@ public final class ByteBufDecoderInput implements HttpDecoderInput {
         }
 
         closed = true;
+        readableBytes = 0;
         for (;;) {
             final ByteBuf buf = queue.poll();
             if (buf != null) {
