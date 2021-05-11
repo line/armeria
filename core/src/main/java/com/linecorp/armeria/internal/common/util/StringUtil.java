@@ -17,10 +17,9 @@
 package com.linecorp.armeria.internal.common.util;
 
 public final class StringUtil {
-    private static final int CACHE_SIZE = 2001;
-    private static final int MAX_NUM = CACHE_SIZE / 2;
+    private static final int MAX_NUM = 1000;
     private static final int MIN_NUM = -MAX_NUM;
-    private static final String[] intToString = new String[CACHE_SIZE];
+    private static final String[] intToString = new String[MAX_NUM * 2 + 1];
 
     static {
         for (int i = MIN_NUM; i <= MAX_NUM; i++) {
