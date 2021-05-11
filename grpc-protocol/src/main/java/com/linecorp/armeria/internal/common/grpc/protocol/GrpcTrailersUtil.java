@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.internal.common.util.Integers;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -45,7 +46,7 @@ public final class GrpcTrailersUtil {
     public static void addStatusMessageToTrailers(
             HttpHeadersBuilder trailersBuilder, int code, @Nullable String message) {
         trailersBuilder.endOfStream(true);
-        trailersBuilder.add(GrpcHeaderNames.GRPC_STATUS, GrpcStatusCodeUtil.intToString(code));
+        trailersBuilder.add(GrpcHeaderNames.GRPC_STATUS, Integers.toString(code));
         if (message != null) {
             trailersBuilder.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(message));
         }

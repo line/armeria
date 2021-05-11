@@ -14,25 +14,25 @@
  * under the License
  */
 
-package com.linecorp.armeria.internal.common.grpc.protocol;
+package com.linecorp.armeria.internal.common.util;
 
-public final class GrpcStatusCodeUtil {
-
-    /**
-     * gRPC uses the status codes from 0 to 16.
-     * <a href="https://grpc.github.io/grpc/core/md_doc_statuscodes.html">Status codes and their use in gRPC</a>
-     */
-    private static final String[] codeStrings = new String[17];
+public final class Integers {
+    private static final int CACHE_SIZE = 1001;
+    private static final String[] intToString = new String[CACHE_SIZE];
 
     static {
-        for (int code = 0; code < codeStrings.length; code++) {
-            codeStrings[code] = String.valueOf(code);
+        for (int i = 0; i < CACHE_SIZE; i++) {
+            final String str = Integer.toString(i);
+            intToString[i] = str;
         }
     }
 
-    public static String intToString(int code) {
-        return codeStrings[code];
+    public static String toString(int num) {
+        if (num >= 0 && num < CACHE_SIZE) {
+            return intToString[num];
+        }
+        return Integer.toString(num);
     }
 
-    private GrpcStatusCodeUtil() {}
+    private Integers() {}
 }

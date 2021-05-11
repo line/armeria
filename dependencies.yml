@@ -328,11 +328,13 @@ org.junit.jupiter:
 log4j:
   log4j: { version: '1.2.17' }
 
+# Please make sure the benchmark project runs with the new jmh-gradle-plugin before upgrading it.
+# See: https://github.com/line/armeria/pull/3132
 me.champeau.gradle:
-  jmh-gradle-plugin: { version: '0.5.3' }
+  jmh-gradle-plugin: { version: '0.5.0' }
 
 net.javacrumbs.future-converter:
-  future-converter-rxjava2-java8: { version: 1.2.0 }
+  future-converter-rxjava2-java8: { version: '1.2.0' }
 
 net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '2.25.0' }

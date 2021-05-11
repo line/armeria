@@ -14,22 +14,24 @@
  * under the License
  */
 
-package com.linecorp.armeria.internal.common.grpc;
+package com.linecorp.armeria.internal.common.util;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.infra.Blackhole;
 
-import org.junit.jupiter.api.Test;
+public class IntegersBenchmark {
 
-import com.linecorp.armeria.internal.common.grpc.protocol.GrpcStatusCodeUtil;
+    @Benchmark
+    public void pooledIntToString(Blackhole bh) {
+        for (int i = 0; i < 1000; i++) {
+            bh.consume(Integers.toString(i));
+        }
+    }
 
-import io.grpc.Status.Code;
-
-class GrpcStatusCodeUtilTest {
-    @Test
-    void checkStatusCode() {
-        for (Code code : Code.values()) {
-            assertThat(GrpcStatusCodeUtil.intToString(code.value()))
-                    .isEqualTo(String.valueOf(code.value()));
+    @Benchmark
+    public void jdkIntToString(Blackhole bh) {
+        for (int i = 0; i < 1000; i++) {
+            bh.consume(Integer.toString(i));
         }
     }
 }
