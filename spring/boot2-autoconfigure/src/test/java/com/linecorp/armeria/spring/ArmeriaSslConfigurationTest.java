@@ -31,7 +31,6 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -46,11 +45,9 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
+import com.linecorp.armeria.spring.ArmeriaSslConfigurationTest.TestConfiguration;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
@@ -63,23 +60,7 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguratio
 public class ArmeriaSslConfigurationTest {
 
     @SpringBootApplication
-    public static class TestConfiguration {
-
-        @Bean
-        public ArmeriaServerConfigurator okService() {
-            return sb -> sb.route()
-                           .addRoute(Route.builder().path("/ok").build())
-                           .defaultServiceName("okService")
-                           .decorators(LoggingService.newDecorator())
-                           .build(new OkService());
-        }
-    }
-
-    public static class OkService extends AbstractHttpService {
-        @Override
-        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
-        }
+    static class TestConfiguration {
     }
 
     private static final ClientFactory clientFactory =
