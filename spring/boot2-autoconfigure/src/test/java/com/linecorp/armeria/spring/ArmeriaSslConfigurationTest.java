@@ -60,14 +60,7 @@ import com.linecorp.armeria.spring.ArmeriaSslConfigurationTest.TestConfiguration
 public class ArmeriaSslConfigurationTest {
 
     @SpringBootApplication
-    public static class TestConfiguration {
-    }
-
-    public static class OkService extends AbstractHttpService {
-        @Override
-        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "ok");
-        }
+    static class TestConfiguration {
     }
 
     private static final ClientFactory clientFactory =
