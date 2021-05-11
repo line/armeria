@@ -38,15 +38,10 @@ import org.springframework.test.context.junit4.SpringRunner;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
-import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.spring.ArmeriaSslConfigurationTest.TestConfiguration;
 
 /**
