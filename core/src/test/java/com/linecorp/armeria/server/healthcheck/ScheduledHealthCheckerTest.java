@@ -21,7 +21,10 @@ import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,84 +33,108 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
 
 class ScheduledHealthCheckerTest {
+    @Test
+    void stopSchedulingAfterStop() throws InterruptedException {
+        final AtomicInteger triggerCount = new AtomicInteger();
+        final AtomicReference<CompletableFuture<HealthCheckStatus>> holder = new AtomicReference<>();
+        final ScheduledHealthChecker healthChecker =
+                (ScheduledHealthChecker) HealthChecker.of(() -> {
+                    triggerCount.incrementAndGet();
+                    final CompletableFuture<HealthCheckStatus> healthCheckFuture = new CompletableFuture<>();
+                    holder.set(healthCheckFuture);
+                    return healthCheckFuture;
+                }, Duration.ofHours(1));
+        final Server server =
+                Server.builder()
+                      .service("/hc", HealthCheckService.of(healthChecker))
+                      .build();
+
+        assertThat(triggerCount.get()).isZero();
+
+        server.start().join();
+        assertThat(triggerCount.get()).isOne();
+
+        holder.get().complete(new HealthCheckStatus(true, 100));
+        await().atMost(1, TimeUnit.SECONDS).untilAsserted(() -> assertThat(triggerCount.get()).isEqualTo(2));
+
+        server.stop().join();
+        holder.get().complete(new HealthCheckStatus(true, 100));
+        // Wait for a while to verify health checker is not triggered anymore.
+        Thread.sleep(1000);
+        assertThat(triggerCount.get()).isEqualTo(2);
+    }
 
     @Test
     void usedByMultipleServers() {
-        final ScheduledHealthChecker alwaysHealth =
-                (ScheduledHealthChecker) HealthChecker.of(
-                        () -> CompletableFuture.completedFuture(new HealthCheckStatus(true, 100)),
-                        Duration.ofDays(10));
+        final ScheduledHealthChecker healthChecker =
+                (ScheduledHealthChecker) HealthChecker.of(CompletableFuture::new, Duration.ofHours(1));
         final Server server =
                 Server.builder()
-                      .service("/hc", HealthCheckService.of(alwaysHealth))
+                      .service("/hc", HealthCheckService.of(healthChecker))
                       .build();
         server.start().join();
-        assertThat(alwaysHealth.isActive()).isTrue();
-        assertThat(alwaysHealth.getRequestCount()).isEqualTo(1);
+        assertThat(healthChecker.isActive()).isTrue();
+        assertThat(healthChecker.getRequestCount()).isEqualTo(1);
 
         final Server server2 =
                 Server.builder()
-                      .service("/hc", HealthCheckService.of(alwaysHealth))
+                      .service("/hc", HealthCheckService.of(healthChecker))
                       .build();
         server2.start().join();
-        assertThat(alwaysHealth.isActive()).isTrue();
-        assertThat(alwaysHealth.getRequestCount()).isEqualTo(2);
+        assertThat(healthChecker.isActive()).isTrue();
+        assertThat(healthChecker.getRequestCount()).isEqualTo(2);
 
         server.stop().join();
-        assertThat(alwaysHealth.isActive()).isTrue();
-        assertThat(alwaysHealth.getRequestCount()).isEqualTo(1);
+        assertThat(healthChecker.isActive()).isTrue();
+        assertThat(healthChecker.getRequestCount()).isEqualTo(1);
 
         server2.stop().join();
-        assertThat(alwaysHealth.isActive()).isFalse();
-        assertThat(alwaysHealth.getRequestCount()).isEqualTo(0);
+        assertThat(healthChecker.isActive()).isFalse();
+        assertThat(healthChecker.getRequestCount()).isEqualTo(0);
     }
 
     @Test
     void usedByMultipleServers_scheduleAgain() {
-        final ScheduledHealthChecker alwaysHealth =
-                (ScheduledHealthChecker) HealthChecker.of(
-                        () -> CompletableFuture.completedFuture(new HealthCheckStatus(true, 100)),
-                        Duration.ofDays(10));
+        final ScheduledHealthChecker healthChecker =
+                (ScheduledHealthChecker) HealthChecker.of(CompletableFuture::new, Duration.ofHours(1));
         final Server server =
                 Server.builder()
-                      .service("/hc", HealthCheckService.of(alwaysHealth))
+                      .service("/hc", HealthCheckService.of(healthChecker))
                       .build();
         server.start().join();
         server.stop().join();
-        assertThat(alwaysHealth.isActive()).isFalse();
-        assertThat(alwaysHealth.getRequestCount()).isEqualTo(0);
+        assertThat(healthChecker.isActive()).isFalse();
+        assertThat(healthChecker.getRequestCount()).isEqualTo(0);
 
         final Server server2 =
                 Server.builder()
-                      .service("/hc", HealthCheckService.of(alwaysHealth))
+                      .service("/hc", HealthCheckService.of(healthChecker))
                       .build();
         server2.start().join();
-        assertThat(alwaysHealth.isActive()).isTrue();
-        assertThat(alwaysHealth.getRequestCount()).isEqualTo(1);
+        assertThat(healthChecker.isActive()).isTrue();
+        assertThat(healthChecker.getRequestCount()).isEqualTo(1);
 
         server2.stop().join();
-        assertThat(alwaysHealth.isActive()).isFalse();
-        assertThat(alwaysHealth.getRequestCount()).isEqualTo(0);
+        assertThat(healthChecker.isActive()).isFalse();
+        assertThat(healthChecker.getRequestCount()).isEqualTo(0);
     }
 
     @Test
     void usedByMultipleService() {
-        final ScheduledHealthChecker alwaysHealth =
-                (ScheduledHealthChecker) HealthChecker.of(
-                        () -> CompletableFuture.completedFuture(new HealthCheckStatus(true, 100)),
-                        Duration.ofDays(10));
+        final ScheduledHealthChecker healthChecker =
+                (ScheduledHealthChecker) HealthChecker.of(CompletableFuture::new, Duration.ofHours(1));
         final Server server =
                 Server.builder()
-                      .service("/hc1", HealthCheckService.of(alwaysHealth))
-                      .service("/hc2", HealthCheckService.of(alwaysHealth))
+                      .service("/hc1", HealthCheckService.of(healthChecker))
+                      .service("/hc2", HealthCheckService.of(healthChecker))
                       .build();
         server.start().join();
-        assertThat(alwaysHealth.isActive()).isTrue();
-        assertThat(alwaysHealth.getRequestCount()).isEqualTo(2);
+        assertThat(healthChecker.isActive()).isTrue();
+        assertThat(healthChecker.getRequestCount()).isEqualTo(2);
 
         server.stop().join();
-        assertThat(alwaysHealth.isActive()).isFalse();
-        assertThat(alwaysHealth.getRequestCount()).isEqualTo(0);
+        assertThat(healthChecker.isActive()).isFalse();
+        assertThat(healthChecker.getRequestCount()).isEqualTo(0);
     }
 
     @Test
