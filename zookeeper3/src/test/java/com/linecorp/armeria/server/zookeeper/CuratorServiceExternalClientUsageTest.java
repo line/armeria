@@ -68,5 +68,6 @@ public class CuratorServiceExternalClientUsageTest {
         await().untilAsserted(() -> zkInstance.assertExists(Z_NODE + "/foo/bar"));
         server.stop().join();
         client.close();
+        await().untilAsserted(() -> zkInstance.assertNotExists(Z_NODE + "/foo/bar"));
     }
 }

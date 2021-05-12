@@ -16,10 +16,16 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.net.InetSocketAddress;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -29,6 +35,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import io.netty.util.AttributeMap;
 
 class HttpServerConnectMethodTest {
 
@@ -42,12 +50,38 @@ class HttpServerConnectMethodTest {
 
     @Test
     void connectMethodDisallowedInHttp1() {
-        final WebClient client = WebClient.of(server.uri(SessionProtocol.H1C));
+        final AtomicInteger closedCount = new AtomicInteger();
+        final AtomicInteger openedCount = new AtomicInteger();
+        final ConnectionPoolListener poolListener = new ConnectionPoolListener() {
+            @Override
+            public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                       InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                openedCount.incrementAndGet();
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                                         InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+                closedCount.incrementAndGet();
+            }
+        };
+
+        final ClientFactory factory = ClientFactory.builder()
+                                                   .connectionPoolListener(poolListener)
+                                                   .build();
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H1C))
+                                          .factory(factory)
+                                          .build();
+
         final AggregatedHttpResponse res1 = client
                 .execute(HttpRequest.of(HttpMethod.CONNECT, "/"))
                 .aggregate()
                 .join();
         assertThat(res1.status()).isSameAs(HttpStatus.METHOD_NOT_ALLOWED);
+        await().untilAsserted(() -> {
+            assertThat(openedCount).hasValue(1);
+            assertThat(closedCount).hasValue(1);
+        });
 
         final AggregatedHttpResponse res2 = client
                 .prepare()
@@ -60,6 +94,11 @@ class HttpServerConnectMethodTest {
 
         // HTTP/1 decoder will reject a header starts with `:` anyway.
         assertThat(res2.status()).isSameAs(HttpStatus.BAD_REQUEST);
+        await().untilAsserted(() -> {
+            assertThat(openedCount).hasValue(2);
+            assertThat(closedCount).hasValue(2);
+        });
+        factory.closeAsync();
     }
 
     @Test
