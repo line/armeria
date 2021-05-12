@@ -336,7 +336,7 @@ public final class JsonLines {
 
     static ResponseHeaders ensureHttpStatus(ResponseHeaders headers) {
         final HttpStatus status = headers.status();
-        if (status.equals(HttpStatus.OK)) {
+        if (status == HttpStatus.OK) {
             return headers;
         }
 
