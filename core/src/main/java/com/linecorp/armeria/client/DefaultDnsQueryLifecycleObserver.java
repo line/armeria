@@ -139,7 +139,8 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public DnsQueryLifecycleObserver queryNoAnswer(DnsResponseCode code) {
-        final List<Tag> tags = ImmutableList.of(nameTag, Tag.of(CODE_TAG, StringUtil.toString(code.intValue())));
+        final List<Tag> tags = ImmutableList.of(nameTag,
+                                                Tag.of(CODE_TAG, StringUtil.toString(code.intValue())));
         meterRegistry.counter(meterIdPrefixNoAnswer, tags).increment();
         return this;
     }
