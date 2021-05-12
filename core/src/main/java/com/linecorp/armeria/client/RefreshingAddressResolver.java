@@ -99,7 +99,10 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 if (entry.hasCacheableCause() && negativeTtl > 0) {
                     executor().schedule(() -> cache.invalidate(hostname), negativeTtl, TimeUnit.SECONDS);
                 } else {
-                    cache.invalidate(hostname);
+                    // cache.get() must not directly invoke cache.invalidate().
+                    // It causes an infinity loop or an `IllegalStateException: Recurse update`.
+                    // https://bugs.openjdk.java.net/browse/JDK-8074374
+                    executor().execute(() -> cache.invalidate(hostname));
                 }
                 promise.tryFailure(cause);
                 return null;
