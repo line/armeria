@@ -35,11 +35,11 @@ import com.linecorp.armeria.server.Server;
 class ScheduledHealthCheckerTest {
     @Test
     void stopSchedulingAfterStop() throws InterruptedException {
-        final AtomicInteger triggerCount = new AtomicInteger();
+        final AtomicInteger invokedCount = new AtomicInteger();
         final AtomicReference<CompletableFuture<HealthCheckStatus>> holder = new AtomicReference<>();
         final ScheduledHealthChecker healthChecker =
                 (ScheduledHealthChecker) HealthChecker.of(() -> {
-                    triggerCount.incrementAndGet();
+                    invokedCount.incrementAndGet();
                     final CompletableFuture<HealthCheckStatus> healthCheckFuture = new CompletableFuture<>();
                     holder.set(healthCheckFuture);
                     return healthCheckFuture;
@@ -49,19 +49,19 @@ class ScheduledHealthCheckerTest {
                       .service("/hc", HealthCheckService.of(healthChecker))
                       .build();
 
-        assertThat(triggerCount.get()).isZero();
+        assertThat(invokedCount.get()).isZero();
 
         server.start().join();
-        assertThat(triggerCount.get()).isOne();
+        assertThat(invokedCount.get()).isOne();
 
         holder.get().complete(new HealthCheckStatus(true, 100));
-        await().atMost(1, TimeUnit.SECONDS).untilAsserted(() -> assertThat(triggerCount.get()).isEqualTo(2));
+        await().atMost(1, TimeUnit.SECONDS).untilAsserted(() -> assertThat(invokedCount.get()).isEqualTo(2));
 
         server.stop().join();
         holder.get().complete(new HealthCheckStatus(true, 100));
-        // Wait for a while to verify health checker is not triggered anymore.
+        // Wait for a while to verify health checker is not invoked anymore.
         Thread.sleep(1000);
-        assertThat(triggerCount.get()).isEqualTo(2);
+        assertThat(invokedCount.get()).isEqualTo(2);
     }
 
     @Test
