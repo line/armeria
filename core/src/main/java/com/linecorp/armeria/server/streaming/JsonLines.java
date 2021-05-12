@@ -328,6 +328,7 @@ public final class JsonLines {
     }
 
     private static ResponseHeaders sanitizeHeaders(ResponseHeaders headers) {
+        requireNonNull(headers, "headers");
         if (headers == defaultHttpHeaders) {
             return headers;
         }
@@ -356,8 +357,8 @@ public final class JsonLines {
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
             return headers.toBuilder()
-                    .add(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES.toString())
-                    .build();
+                          .add(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES.toString())
+                          .build();
         }
 
         if (contentType.is(MediaType.JSON_LINES)) {
@@ -374,8 +375,8 @@ public final class JsonLines {
             warnedContentType = true;
         }
         return headers.toBuilder()
-                .contentType(MediaType.JSON_LINES)
-                .build();
+                      .contentType(MediaType.JSON_LINES)
+                      .build();
     }
 
     private static HttpData toHttpData(ObjectMapper mapper, @Nullable Object value) {
