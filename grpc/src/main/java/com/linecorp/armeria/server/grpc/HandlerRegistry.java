@@ -70,16 +70,23 @@ import io.grpc.ServerServiceDefinition;
 final class HandlerRegistry {
     private final ImmutableList<ServerServiceDefinition> services;
     private final ImmutableMap<String, ServerMethodDefinition<?, ?>> methods;
+    private final ImmutableMap<MethodDescriptor<?, ?>, String> simpleMethodNames;
 
     private HandlerRegistry(ImmutableList<ServerServiceDefinition> services,
-                            ImmutableMap<String, ServerMethodDefinition<?, ?>> methods) {
+                            ImmutableMap<String, ServerMethodDefinition<?, ?>> methods,
+                            ImmutableMap<MethodDescriptor<?, ?>, String> simpleMethodNames) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
+        this.simpleMethodNames = requireNonNull(simpleMethodNames, "simpleMethodNames");
     }
 
     @Nullable
     ServerMethodDefinition<?, ?> lookupMethod(String methodName) {
         return methods.get(methodName);
+    }
+
+    String simpleMethodName(MethodDescriptor<?, ?> methodName) {
+        return simpleMethodNames.get(methodName);
     }
 
     List<ServerServiceDefinition> services() {
@@ -134,6 +141,7 @@ final class HandlerRegistry {
             // Store per-service first, to make sure services are added/replaced atomically.
             final Map<String, ServerServiceDefinition> services = new HashMap<>();
             final Map<String, ServerMethodDefinition<?, ?>> methods = new HashMap<>();
+            final Map<MethodDescriptor<?, ?>, String> simpleMethodNames = new HashMap<>();
 
             for (Entry entry : entries) {
                 final ServerServiceDefinition service = entry.service();
@@ -142,8 +150,11 @@ final class HandlerRegistry {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 if (methodDescriptor == null) {
                     for (ServerMethodDefinition<?, ?> method : service.getMethods()) {
-                        final String fullMethodName = method.getMethodDescriptor().getFullMethodName();
-                        methods.put(path + '/' + extractMethodName(fullMethodName), method);
+                        final MethodDescriptor<?, ?> methodDescriptor0 = method.getMethodDescriptor();
+                        final String fullMethodName = methodDescriptor0.getFullMethodName();
+                        final String simpleMethodName = extractMethodName(fullMethodName);
+                        methods.put(path + '/' + simpleMethodName, method);
+                        simpleMethodNames.put(methodDescriptor0, simpleMethodName);
                     }
                 } else {
                     final ServerMethodDefinition<?, ?> method =
@@ -153,9 +164,13 @@ final class HandlerRegistry {
                                    .orElseThrow(() -> new IllegalArgumentException(
                                            "Failed to retrieve " + methodDescriptor + " in " + service));
                     methods.put(path, method);
+                    final MethodDescriptor<?, ?> methodDescriptor0 = method.getMethodDescriptor();
+                    final String fullMethodName = methodDescriptor0.getFullMethodName();
+                    simpleMethodNames.put(methodDescriptor0, extractMethodName(fullMethodName));
                 }
             }
-            return new HandlerRegistry(ImmutableList.copyOf(services.values()), ImmutableMap.copyOf(methods));
+            return new HandlerRegistry(ImmutableList.copyOf(services.values()), ImmutableMap.copyOf(methods),
+                                       ImmutableMap.copyOf(simpleMethodNames));
         }
     }
 

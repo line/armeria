@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,12 +58,16 @@ class HealthCheckServiceTest {
 
     private static final SettableHealthChecker checker = new SettableHealthChecker();
     private static final AtomicReference<Boolean> capturedHealthy = new AtomicReference<>();
+    private static final HealthChecker unfinishedHealthChecker = HealthChecker.of(CompletableFuture::new,
+                                                                                  Duration.ofDays(1));
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/hc", HealthCheckService.of(checker));
+            sb.service("/hc_unfinished_1", HealthCheckService.of(unfinishedHealthChecker));
+            sb.service("/hc_unfinished_2", HealthCheckService.of(unfinishedHealthChecker));
             sb.service("/hc_long_polling_disabled", HealthCheckService.builder()
                                                                       .longPolling(0)
                                                                       .build());
@@ -111,6 +116,13 @@ class HealthCheckServiceTest {
             sb.disableDateHeader();
         }
     };
+
+    @AfterAll
+    static void ensureScheduledHealthCheckerStopped() {
+        assertThat(((ScheduledHealthChecker) unfinishedHealthChecker).isActive()).isTrue();
+        server.stop().join();
+        assertThat(((ScheduledHealthChecker) unfinishedHealthChecker).isActive()).isFalse();
+    }
 
     @BeforeEach
     void clearChecker() {

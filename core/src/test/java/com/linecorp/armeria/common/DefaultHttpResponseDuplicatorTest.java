@@ -18,8 +18,17 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.VARY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
+
+import com.google.common.base.Strings;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 class DefaultHttpResponseDuplicatorTest {
 
@@ -48,5 +57,21 @@ class DefaultHttpResponseDuplicatorTest {
         assertThat(res2.headers().get(VARY)).isNull();
         assertThat(res2.contentUtf8()).isEqualTo("Armeria is awesome!");
         resDuplicator.close();
+    }
+
+    @Test
+    void closeHttpData_onContentTooLargeException() {
+        final ByteBuf byteBuf = Unpooled.copiedBuffer(Strings.repeat("a", 1000), StandardCharsets.UTF_8);
+        final HttpResponseWriter publisher = HttpResponse.streaming();
+        final HttpResponseDuplicator resDuplicator = publisher.toDuplicator(100);
+
+        publisher.write(ResponseHeaders.of(HttpStatus.OK,
+                                           HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
+        publisher.write(HttpData.wrap(byteBuf));
+        publisher.close();
+        assertThatThrownBy(resDuplicator.duplicate().aggregate()::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(ContentTooLargeException.class);
+        assertThat(byteBuf.refCnt()).isZero();
     }
 }
