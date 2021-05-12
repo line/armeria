@@ -289,9 +289,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private ServerHttp2ObjectEncoder newServerHttp2ObjectEncoder(ChannelHandlerContext ctx,
                                                                  Http2ServerConnectionHandler handler) {
         return new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
-                                            configHolder.getConfig().isDateHeaderEnabled(),
-                                            configHolder.getConfig().isServerHeaderEnabled()
-        );
+                                            config.isDateHeaderEnabled(),
+                                            config.isServerHeaderEnabled());
     }
 
     private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {
