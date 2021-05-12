@@ -42,7 +42,6 @@ import io.netty.util.concurrent.EventExecutor;
  */
 final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         implements ListenableHealthChecker {
-
     private final Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker;
     private final Duration fallbackTtl;
     private final EventExecutor eventExecutor;
@@ -87,8 +86,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         // a task.
         for (;;) {
             if (impl.compareAndSet(null, newlyScheduled)) {
-                newlyScheduled.addListener(onHealthCheckerUpdate);
-                newlyScheduled.startHealthChecker();
+                newlyScheduled.startHealthChecker(onHealthCheckerUpdate);
                 break;
             }
         }
@@ -110,8 +108,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         // Must be called after startHealthChecker, so it's always non null.
         assert current != null;
 
-        current.stopHealthChecker();
-        current.removeListener(onHealthCheckerUpdate);
+        current.stopHealthChecker(onHealthCheckerUpdate);
     }
 
     /**
@@ -132,8 +129,11 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
 
     /**
      * Health checker can be scheduled only once. Calling startHealthChecker won't work after stopHealthChecker.
+     * This class itself is not thread-safe and guarded by {@link ScheduledHealthChecker} to avoid calling
+     * {@link ScheduledHealthChecker#startHealthChecker()} and
+     * {@link ScheduledHealthChecker#stopHealthChecker()} concurrently.
      */
-    private static final class ScheduledHealthCheckerImpl implements ListenableHealthChecker {
+    private static final class ScheduledHealthCheckerImpl {
         private static final Logger logger = LoggerFactory.getLogger(ScheduledHealthCheckerImpl.class);
 
         private final Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker;
@@ -141,6 +141,8 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         private final EventExecutor eventExecutor;
 
         private final SettableHealthChecker settableHealthChecker = new SettableHealthChecker(false);
+        // The state will be set by startHealthChecker and stopHealthChecker, then read by another
+        // scheduled task in runHealthCheck.
         private volatile State state = State.INIT;
         private volatile Future<?> scheduledFuture = Futures.immediateVoidFuture();
 
@@ -151,35 +153,22 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
             this.eventExecutor = eventExecutor;
         }
 
-        @Override
-        public boolean isHealthy() {
-            return settableHealthChecker.isHealthy();
-        }
-
-        @Override
-        public void addListener(Consumer<? super HealthChecker> listener) {
-            settableHealthChecker.addListener(listener);
-        }
-
-        @Override
-        public void removeListener(Consumer<?> listener) {
-            settableHealthChecker.removeListener(listener);
-        }
-
-        private void startHealthChecker() {
+        private void startHealthChecker(Consumer<? super HealthChecker> listener) {
             if (state != State.INIT) {
                 return;
             }
             state = State.SCHEDULED;
+            settableHealthChecker.addListener(listener);
             scheduledFuture = eventExecutor.submit(this::runHealthCheck);
         }
 
-        private void stopHealthChecker() {
+        private void stopHealthChecker(Consumer<?> listener) {
             if (state != State.SCHEDULED) {
                 return;
             }
             state = State.FINISHED;
             scheduledFuture.cancel(true);
+            settableHealthChecker.removeListener(listener);
         }
 
         private void runHealthCheck() {

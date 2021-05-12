@@ -57,7 +57,7 @@ public interface HealthChecker {
     @UnstableApi
     static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
                             Duration fallbackTtl) {
-        return new ScheduledHealthChecker(healthChecker, fallbackTtl, CommonPools.workerGroup().next());
+        return of(healthChecker, fallbackTtl, CommonPools.workerGroup().next());
     }
 
     /**
@@ -81,7 +81,7 @@ public interface HealthChecker {
     static HealthChecker of(Supplier<? extends CompletionStage<HealthCheckStatus>> healthChecker,
                             Duration fallbackTtl, EventExecutor eventExecutor) {
         requireNonNull(fallbackTtl, "fallbackTtl");
-        checkArgument(fallbackTtl.isNegative() || fallbackTtl.isZero(), "fallbackTtl: %s (expected: > 0)",
+        checkArgument(!fallbackTtl.isNegative() && !fallbackTtl.isZero(), "fallbackTtl: %s (expected: > 0)",
                       fallbackTtl);
         return new ScheduledHealthChecker(requireNonNull(healthChecker, "healthChecker"),
                                           fallbackTtl,
