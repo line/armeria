@@ -144,8 +144,12 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         if (this.blockingTaskExecutor != null) {
             blockingTaskExecutor = this.blockingTaskExecutor;
         } else {
-            blockingTaskExecutor =
-                    ServiceRequestContext.mapCurrent(ServiceRequestContext::blockingTaskExecutor, null);
+            final ServiceRequestContext serviceRequestContext = ServiceRequestContext.currentOrNull();
+            if (serviceRequestContext != null) {
+                blockingTaskExecutor = serviceRequestContext.blockingTaskExecutor();
+            } else {
+                blockingTaskExecutor = null;
+            }
         }
         AsynchronousFileChannel fileChannel = null;
         boolean success = false;

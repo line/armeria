@@ -65,6 +65,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.netty.channel.EventLoop;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.context.ContextView;
 
 /**
  * A {@link ServerHttpResponse} implementation for the Armeria HTTP server.
@@ -201,10 +202,10 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
     }
 
     private Mono<Void> write(Flux<? extends DataBuffer> publisher) {
-        return Mono.defer(() -> {
+        return Mono.deferContextual(contextView -> {
             final HttpResponse response = HttpResponse.of(
                     new HttpResponseProcessor(ctx.eventLoop(), buildResponseHeaders(),
-                                              publisher.map(factoryWrapper::toHttpData)));
+                                              publisher.map(factoryWrapper::toHttpData), contextView));
             future.complete(response);
             return Mono.fromFuture(response.whenComplete())
                        .onErrorResume(cause -> cause instanceof CancelledSubscriptionException ||
@@ -342,6 +343,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
         private final EventLoop eventLoop;
         private final com.linecorp.armeria.common.HttpHeaders headers;
         private final Flux<HttpData> upstream;
+        private final ContextView contextView;
 
         private PublishingState state = PublishingState.INIT;
         private boolean onCompleteSignalReceived;
@@ -355,16 +357,17 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
 
         HttpResponseProcessor(EventLoop eventLoop,
                               com.linecorp.armeria.common.HttpHeaders headers,
-                              Flux<HttpData> upstream) {
+                              Flux<HttpData> upstream, ContextView contextView) {
             this.eventLoop = eventLoop;
             this.headers = headers;
             this.upstream = upstream;
+            this.contextView = contextView;
         }
 
         @Override
         public void subscribe(Subscriber<? super HttpObject> subscriber) {
             this.subscriber = requireNonNull(subscriber, "subscriber");
-            upstream.subscribe(this);
+            upstream.contextWrite(contextView).subscribe(this);
         }
 
         private Subscriber<? super HttpObject> subscriber() {

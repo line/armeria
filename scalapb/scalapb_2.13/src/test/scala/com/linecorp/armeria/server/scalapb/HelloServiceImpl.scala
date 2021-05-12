@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.scalapb
 
-import armeria.scalapb.hello.{HelloReply, HelloRequest, HelloServiceGrpc}
+import armeria.scalapb.hello.{HelloReply, HelloRequest, HelloServiceGrpc, SimpleOneof}
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.scalapb.HelloServiceImpl.{toMessage, _}
 import io.grpc.stub.StreamObserver
@@ -125,6 +125,9 @@ class HelloServiceImpl extends HelloServiceGrpc.HelloService {
     executor.schedule(() => promise.trySuccess(()), duration, TimeUnit.MILLISECONDS)
     promise.future
   }
+
+  override def oneof(request: SimpleOneof): Future[SimpleOneof] =
+    Future.successful(request)
 }
 
 object HelloServiceImpl {

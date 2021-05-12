@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.auth;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -130,15 +129,8 @@ public final class AuthServiceBuilder {
      */
     public <T> AuthServiceBuilder addTokenAuthorizer(
             Function<? super RequestHeaders, T> tokenExtractor, Authorizer<? super T> authorizer) {
-        requireNonNull(tokenExtractor, "tokenExtractor");
-        requireNonNull(authorizer, "authorizer");
-        final Authorizer<HttpRequest> requestAuthorizer = (ctx, req) -> {
-            final T token = tokenExtractor.apply(req.headers());
-            if (token == null) {
-                return CompletableFuture.completedFuture(false);
-            }
-            return authorizer.authorize(ctx, token);
-        };
+        final Authorizer<HttpRequest> requestAuthorizer =
+                new DelegatingHttpRequestAuthorizer<>(tokenExtractor, authorizer);
         add(requestAuthorizer);
         return this;
     }

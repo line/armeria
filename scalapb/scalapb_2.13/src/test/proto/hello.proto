@@ -9,6 +9,7 @@ service HelloService {
   rpc LotsOfReplies (HelloRequest) returns (stream HelloReply) {}
   rpc LotsOfGreetings (stream HelloRequest) returns (HelloReply) {}
   rpc BidiHello (stream HelloRequest) returns (stream HelloReply) {}
+  rpc Oneof(SimpleOneof) returns (SimpleOneof) {}
 }
 
 message HelloRequest {
@@ -17,4 +18,20 @@ message HelloRequest {
 
 message HelloReply {
   string message = 1;
+}
+
+message SimpleOneof {
+  oneof sealed_value {
+    Literal lit = 1;
+    Add add = 2;
+  }
+}
+
+message Literal {
+  int32 value = 1;
+}
+
+message Add {
+  SimpleOneof left = 1;
+  SimpleOneof right = 2;
 }

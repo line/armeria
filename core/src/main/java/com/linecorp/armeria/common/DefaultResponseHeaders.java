@@ -22,6 +22,8 @@ final class DefaultResponseHeaders extends DefaultHttpHeaders implements Respons
 
     @Nullable
     private HttpStatus status;
+    @Nullable
+    private Cookies cookies;
 
     DefaultResponseHeaders(HttpHeadersBase headers) {
         super(headers);
@@ -39,6 +41,15 @@ final class DefaultResponseHeaders extends DefaultHttpHeaders implements Respons
         }
 
         return this.status = super.status();
+    }
+
+    @Override
+    public Cookies cookies() {
+        final Cookies cookies = this.cookies;
+        if (cookies != null) {
+            return cookies;
+        }
+        return this.cookies = setCookie();
     }
 
     @Override

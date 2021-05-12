@@ -57,12 +57,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -178,6 +181,7 @@ public final class ServerBuilder {
     private ScheduledExecutorService blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
+    private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -191,6 +195,7 @@ public final class ServerBuilder {
         // Set the default host-level properties.
         virtualHostTemplate.accessLogWriter(AccessLogWriter.disabled(), true);
         virtualHostTemplate.rejectedRouteHandler(RejectedRouteHandler.WARN);
+        virtualHostTemplate.defaultServiceNaming(ServiceNaming.fullTypeName());
         virtualHostTemplate.requestTimeoutMillis(Flags.defaultRequestTimeoutMillis());
         virtualHostTemplate.maxRequestLength(Flags.defaultMaxRequestLength());
         virtualHostTemplate.verboseResponses(Flags.verboseResponses());
@@ -589,7 +594,7 @@ public final class ServerBuilder {
     public ServerBuilder http2MaxFrameSize(int http2MaxFrameSize) {
         checkArgument(http2MaxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND &&
                       http2MaxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND,
-                      "http2MaxFramSize: %s (expected: >= %s and <= %s)",
+                      "http2MaxFrameSize: %s (expected: >= %s and <= %s)",
                       http2MaxFrameSize, MAX_FRAME_SIZE_LOWER_BOUND, MAX_FRAME_SIZE_UPPER_BOUND);
         this.http2MaxFrameSize = http2MaxFrameSize;
         return this;
@@ -691,6 +696,18 @@ public final class ServerBuilder {
      */
     public ServerBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return this;
+    }
+
+    /**
+     * Sets a global naming rule for the name of services. This property can be overridden via
+     * {@link VirtualHostBuilder#defaultServiceNaming(ServiceNaming)}. The overriding is also possible if
+     * service-level naming rule is set via {@link ServiceBindingBuilder#defaultServiceNaming(ServiceNaming)}.
+     *
+     * @see RequestOnlyLog#serviceName()
+     */
+    public ServerBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        virtualHostTemplate.defaultServiceNaming(defaultServiceNaming);
         return this;
     }
 
@@ -1319,6 +1336,18 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link ExceptionHandler} that converts a {@link Throwable} to an {@link AggregatedHttpResponse}.
+     *
+     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ExceptionHandler}
+     * but the {@link HttpResponseException#httpResponse()} is sent as-is.
+     */
+    @UnstableApi
+    public ServerBuilder exceptionHandler(ExceptionHandler exceptionHandler) {
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+        return this;
+    }
+
+    /**
      * Sets a list of {@link ClientAddressSource}s which are used to determine where to look for the
      * client address, in the order of preference. {@code Forwarded} header, {@code X-Forwarded-For} header
      * and the source address of a PROXY protocol header will be used by default.
@@ -1586,7 +1615,7 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;

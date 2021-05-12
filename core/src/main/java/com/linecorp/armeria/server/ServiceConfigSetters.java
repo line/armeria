@@ -103,6 +103,14 @@ interface ServiceConfigSetters {
     ServiceConfigSetters defaultServiceName(String defaultServiceName);
 
     /**
+     * Sets the default naming rule for the {@link RequestLog#serviceName()}.
+     * If set, the service name will be converted according to given naming rule.
+     *
+     * @param defaultServiceNaming the default service naming.
+     */
+    ServiceConfigSetters defaultServiceNaming(ServiceNaming defaultServiceNaming);
+
+    /**
      * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
      * {@link RequestLogBuilder#name(String, String)}.
      *

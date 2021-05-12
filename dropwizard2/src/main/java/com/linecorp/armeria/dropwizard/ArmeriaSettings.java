@@ -99,7 +99,7 @@ import io.netty.handler.ssl.SslProvider;
  * ...
  *
  * }</pre>
- * TODO(ikhoon): Merge this DroppWizard ArmeriaSettings with c.l.a.spring.ArmeriaSettings
+ * TODO(ikhoon): Merge this DropWizard ArmeriaSettings with c.l.a.spring.ArmeriaSettings
  *               to provide common API to configure Server from JSON and YAML.
  */
 class ArmeriaSettings {

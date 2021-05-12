@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2020 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,7 +22,9 @@ import java.util.concurrent.CompletionStage;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.auth.AuthorizerChain.AuthorizerSelectionStrategy;
 
 /**
  * Determines whether a given {@code data} is authorized for the service registered in.
@@ -32,6 +34,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 @FunctionalInterface
 public interface Authorizer<T> {
+
     /**
      * Authorizes the given {@code data}.
      *
@@ -42,55 +45,37 @@ public interface Authorizer<T> {
     CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data);
 
     /**
+     * Authorizes the given {@code data}.
+     *
+     * @param ctx {@link ServiceRequestContext} of the request being authorized.
+     * @param data an actual authorization data, like {@link HttpRequest}, token extracted from it or
+     *     {@code null} if such authorization data is missing.
+     * @return a {@link CompletionStage} that will resolve to {@link AuthorizationStatus}. If the future
+     *     resolves exceptionally, the request will not be authorized.
+     */
+    @UnstableApi
+    @SuppressWarnings("ReturnOfNull")
+    default CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
+                                                                            @Nullable T data) {
+        if (data == null) {
+            return CompletableFuture.completedFuture(AuthorizationStatus.of(false));
+        }
+        return authorize(ctx, data).thenApply(b -> {
+            if (b == null) {
+                return null;
+            }
+            return AuthorizationStatus.of(b);
+        });
+    }
+
+    /**
      * Returns a new {@link Authorizer} that delegates the authorization request to the specified
      * {@link Authorizer} if this {@link Authorizer} rejects the authorization request by returning
      * a {@link CompletionStage} completed with {@code false}.
      */
     default Authorizer<T> orElse(Authorizer<T> nextAuthorizer) {
         final Authorizer<T> self = this;
-        return new Authorizer<T>() {
-            @Nullable
-            private String strVal;
-
-            @Override
-            public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, T data) {
-                return AuthorizerUtil.authorize(self, ctx, data).thenComposeAsync(result -> {
-                    if (result == null) {
-                        throw AuthorizerUtil.newNullResultException(self);
-                    } else {
-                        return result ? CompletableFuture.completedFuture(true)
-                                      : AuthorizerUtil.authorize(nextAuthorizer, ctx, data);
-                    }
-                }, ctx.eventLoop());
-            }
-
-            @Override
-            public String toString() {
-                if (strVal != null) {
-                    return strVal;
-                }
-
-                final StringBuilder buf = new StringBuilder();
-
-                // Append the first authorizer.
-                if (self.getClass() == getClass()) {
-                    final String s = self.toString();
-                    buf.append(s, 0, s.length() - 1);
-                } else {
-                    buf.append('[').append(self);
-                }
-                buf.append(", ");
-
-                // Append the second authorizer.
-                if (nextAuthorizer.getClass() == getClass()) {
-                    final String s = nextAuthorizer.toString();
-                    buf.append(s, 1, s.length());
-                } else {
-                    buf.append(nextAuthorizer).append(']');
-                }
-
-                return strVal = buf.toString();
-            }
-        };
+        return new AuthorizerChain<>(self, AuthorizerSelectionStrategy.LAST_WITH_HANDLER)
+                .orElse(nextAuthorizer);
     }
 }
