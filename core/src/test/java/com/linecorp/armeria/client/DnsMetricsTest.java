@@ -339,7 +339,7 @@ public class DnsMetricsTest {
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
                                           builder.maxQueriesPerResolve(16);
                                           builder.queryTimeout(Duration.ofSeconds(5));
-                                          builder.disableDnsQueryLifecycleObserverFactory();
+                                          builder.disableDnsQueryMetric();
                                       })
                                       .meterRegistry(meterRegistry)
                                       .build()) {
