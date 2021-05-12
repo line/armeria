@@ -29,10 +29,10 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-abstract class AbstractContextAwareExecutorService<T extends ExecutorService> implements ExecutorService {
-    final T executor;
+abstract class AbstractContextAwareExecutorService<ES extends ExecutorService> implements ExecutorService {
+    final ES executor;
 
-    AbstractContextAwareExecutorService(T executor) {
+    AbstractContextAwareExecutorService(ES executor) {
         this.executor = requireNonNull(executor, "executor");
     }
 
