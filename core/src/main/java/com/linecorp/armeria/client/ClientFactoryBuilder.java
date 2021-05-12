@@ -119,7 +119,7 @@ public final class ClientFactoryBuilder {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
         if (Flags.transportType() == TransportType.EPOLL) {
             // TODO: also consider disabling SO_KEEPALIVE here
-            channelOption(EpollChannelOption.TCP_USER_TIMEOUT, Ints.saturatedCast(Flags.tcpUserTimeout()));
+            channelOption(EpollChannelOption.TCP_USER_TIMEOUT, Ints.saturatedCast(Flags.tcpUserTimeoutMillis()));
         }
     }
 

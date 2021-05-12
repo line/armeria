@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.ClientFactoryBuilder.MIN_PING_INTERVAL_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.Map;
@@ -29,6 +30,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 
 import io.netty.channel.ChannelOption;
@@ -254,8 +256,10 @@ class ClientFactoryBuilderTest {
 
     @Test
     void testTcpUserTimeout() {
+        assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
+
         final ChannelOption<Integer> option = EpollChannelOption.TCP_USER_TIMEOUT;
-        final int value = Flags.tcpUserTimeout();
+        final int value = Flags.tcpUserTimeoutMillis();
         try (ClientFactory factory = ClientFactory.builder().build()) {
             assertThat(factory.options().channelOptions()).containsEntry(option, value);
         }
