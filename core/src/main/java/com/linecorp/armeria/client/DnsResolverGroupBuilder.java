@@ -90,7 +90,7 @@ public final class DnsResolverGroupBuilder {
     private DnsServerAddressStreamProvider dnsServerAddressStreamProvider;
     @Nullable
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory;
-    private boolean disableDnsQueryMetric;
+    private boolean dnsQueryMetricsDisabled;
     @Nullable
     private List<String> searchDomains;
     @Nullable
@@ -266,8 +266,8 @@ public final class DnsResolverGroupBuilder {
      * Disables the default {@link DnsQueryLifecycleObserverFactory} that collects DNS query metrics through
      * {@link MeterRegistry}.
      */
-    public DnsResolverGroupBuilder disableDnsQueryMetric() {
-        disableDnsQueryMetric = true;
+    public DnsResolverGroupBuilder disableDnsQueryMetrics() {
+        dnsQueryMetricsDisabled = true;
         return this;
     }
 
@@ -369,7 +369,7 @@ public final class DnsResolverGroupBuilder {
             assert meterRegistry != null;
 
             DnsQueryLifecycleObserverFactory observerFactory = dnsQueryLifecycleObserverFactory;
-            if (!disableDnsQueryMetric) {
+            if (!dnsQueryMetricsDisabled) {
                 final DefaultDnsQueryLifecycleObserverFactory defaultObserverFactory =
                         new DefaultDnsQueryLifecycleObserverFactory(
                                 meterRegistry, new MeterIdPrefix("armeria.client.dns.queries"));

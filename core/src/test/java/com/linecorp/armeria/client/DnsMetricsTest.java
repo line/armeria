@@ -42,9 +42,9 @@ import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -72,7 +72,7 @@ public class DnsMetricsTest {
                 new DefaultDnsQuestion("foo.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1"))
         ))) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
@@ -123,7 +123,7 @@ public class DnsMetricsTest {
                 new DefaultDnsQuestion("foo.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
         ), new AlwaysTimeoutHandler())) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
@@ -174,7 +174,7 @@ public class DnsMetricsTest {
                 new DefaultDnsQuestion("bar.com.", A),
                 new DefaultDnsResponse(0, DnsOpCode.QUERY, DnsResponseCode.NXDOMAIN)
         ))) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
             try (ClientFactory factory =
                          ClientFactory.builder()
@@ -224,7 +224,7 @@ public class DnsMetricsTest {
                 new DefaultDnsQuestion("bar.com.", A),
                 new DefaultDnsResponse(0, DnsOpCode.QUERY, DnsResponseCode.NOTZONE)
         ))) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
 
             try (ClientFactory factory =
                          ClientFactory.builder()
@@ -281,7 +281,7 @@ public class DnsMetricsTest {
                 new DefaultDnsQuestion("baz.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "127.0.0.1"))
         ))) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
@@ -331,7 +331,7 @@ public class DnsMetricsTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
                                          .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4"))
         ))) {
-            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            final MeterRegistry meterRegistry = new SimpleMeterRegistry();
             try (ClientFactory factory =
                          ClientFactory.builder()
                                       .domainNameResolverCustomizer(builder -> {
@@ -339,7 +339,7 @@ public class DnsMetricsTest {
                                           builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
                                           builder.maxQueriesPerResolve(16);
                                           builder.queryTimeout(Duration.ofSeconds(5));
-                                          builder.disableDnsQueryMetric();
+                                          builder.disableDnsQueryMetrics();
                                       })
                                       .meterRegistry(meterRegistry)
                                       .build()) {
@@ -348,24 +348,16 @@ public class DnsMetricsTest {
                                                   .factory(factory)
                                                   .build();
 
-                final String writeMeterId =
-                        "armeria.client.dns.queries.written#count{name=foo.com.,server=" +
-                        getHostAddress(server) + '}';
-                final String successMeterId =
-                        "armeria.client.dns.queries#count{cause=none,name=foo.com.,result=success}";
-                final String otherExceptionId =
-                        "armeria.client.dns.queries#count{" +
-                        "cause=others,name=bar.com.,result=failure}";
-                assertThat(MoreMeters.measureAll(meterRegistry))
-                        .doesNotContainKeys(writeMeterId, successMeterId);
+                assertThat(MoreMeters.measureAll(meterRegistry).entrySet().stream()
+                                     .anyMatch(entry -> entry.getKey().startsWith("armeria.client.dns.")))
+                        .isFalse();
 
                 client.get("http://foo.com:1/").aggregate();
 
                 // Give enough time for metrics to be collected by the MeterRegistry
                 Thread.sleep(1000);
                 assertThat(MoreMeters.measureAll(meterRegistry).entrySet().stream()
-                                     .anyMatch(entry -> entry.getKey()
-                                                             .contains("armeria.client.dns.queries")))
+                                     .anyMatch(entry -> entry.getKey().startsWith("armeria.client.dns.")))
                         .isFalse();
             }
         }
