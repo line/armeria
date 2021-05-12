@@ -27,7 +27,10 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
      * Returns a {@link BlockingTaskExecutor} with a 60s timeout and unbounded work queue.
      */
     static BlockingTaskExecutor of() {
-        return BlockingTaskExecutorBuilder.of()
-                                          .build();
+        return new BlockingTaskExecutorBuilder().build();
+    }
+
+    static BlockingTaskExecutorBuilder builder() {
+        return new BlockingTaskExecutorBuilder();
     }
 }

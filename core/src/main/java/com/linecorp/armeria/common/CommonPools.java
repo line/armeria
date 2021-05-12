@@ -29,18 +29,11 @@ import io.netty.channel.EventLoopGroup;
  */
 public final class CommonPools {
 
-    private static final BlockingTaskExecutor BLOCKING_TASK_EXECUTOR;
-    private static final EventLoopGroup WORKER_GROUP;
-
-    static {
-        // Threads spawned as needed and reused, with a 60s timeout and unbounded work queue.
-        BLOCKING_TASK_EXECUTOR = BlockingTaskExecutorBuilder.of()
-                                                            .threadNamePrefix("armeria-common-blocking-tasks")
-                                                            .build();
-
-        WORKER_GROUP = EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(),
-                                                         "armeria-common-worker", true);
-    }
+    // Threads spawned as needed and reused, with a 60s timeout and unbounded work queue.
+    private static final BlockingTaskExecutor BLOCKING_TASK_EXECUTOR =
+            BlockingTaskExecutor.builder().threadNamePrefix("armeria-common-blocking-tasks").build();
+    private static final EventLoopGroup WORKER_GROUP =
+            EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(), "armeria-common-worker", true);
 
     /**
      * Returns the default common blocking task {@link BlockingTaskExecutor} which is used for

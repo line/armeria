@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 
 /**
- * Provides a builder that is useful for creating an {@link ScheduledExecutorService}.
+ * Provides a builder that is useful for creating a {@link ScheduledExecutorService}.
  *
  * @see CommonPools#blockingTaskExecutor()
  */
@@ -43,19 +43,10 @@ public final class BlockingTaskExecutorBuilder {
     private int priority = Thread.NORM_PRIORITY;
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
 
-    private BlockingTaskExecutorBuilder() {}
+    BlockingTaskExecutorBuilder() {}
 
     /**
-     * Returns a new builder which builds a new blocking task {@link ScheduledExecutorService}.
-     */
-    public static BlockingTaskExecutorBuilder of() {
-        return new BlockingTaskExecutorBuilder();
-    }
-
-    /**
-     * Returns the builder {@link BlockingTaskExecutorBuilder}.
-     *
-     * @param threadNamePrefix the prefix of thread names
+     * Sets the prefix of thread names.
      */
     public BlockingTaskExecutorBuilder threadNamePrefix(String threadNamePrefix) {
         requireNonNull(threadNamePrefix, "threadNamePrefix");
@@ -64,9 +55,7 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Returns the builder {@link BlockingTaskExecutorBuilder}.
-     *
-     * @param numThreads the number of blocking task executor threads
+     * Sets the number of blocking task executor threads.
      */
     public BlockingTaskExecutorBuilder numThreads(int numThreads) {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
@@ -75,9 +64,7 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Returns the builder {@link BlockingTaskExecutorBuilder}.
-     *
-     * @param allowCoreThreadTimeout the flag to permit thread timeout
+     * Sets the flag to permit thread timeout.
      */
     public BlockingTaskExecutorBuilder allowCoreThreadTimeout(boolean allowCoreThreadTimeout) {
         this.allowCoreThreadTimeout = allowCoreThreadTimeout;
@@ -85,9 +72,7 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Returns the builder {@link BlockingTaskExecutorBuilder}.
-     *
-     * @param keepAliveTime the amount of keep alive time in seconds
+     * Sets the amount of keep alive time in seconds.
      */
     public BlockingTaskExecutorBuilder keepAliveTime(long keepAliveTime) {
         checkArgument(keepAliveTime >= 0, "keepAliveTime: %s (expected: >= 0)", keepAliveTime);
@@ -96,9 +81,7 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Returns the builder {@link BlockingTaskExecutorBuilder}.
-     *
-     * @param daemon the flag of daemon for new threads.
+     * Sets the flag of daemon for new threads.
      */
     public BlockingTaskExecutorBuilder daemon(boolean daemon) {
         this.daemon = daemon;
@@ -106,9 +89,7 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Returns the builder {@link BlockingTaskExecutorBuilder}.
-     *
-     * @param priority the priority for new threads.
+     * Sets the priority for new threads.
      */
     public BlockingTaskExecutorBuilder priority(int priority) {
         checkArgument(priority >= Thread.MIN_PRIORITY && priority <= Thread.MAX_PRIORITY,
@@ -120,7 +101,6 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Returns the builder {@link BlockingTaskExecutorBuilder}.
      * Use this method to set additional work before or after the Runnable is run. For example:
      * <pre>{@code
      * ThreadFactories.builder("thread-prefix")
@@ -134,7 +114,7 @@ public final class BlockingTaskExecutorBuilder {
      *                .build();
      * }</pre>
      *
-     * @param taskFunction the task function for new threads.
+     * Sets the task function for new threads.
      */
     public BlockingTaskExecutorBuilder taskFunction(
             Function<? super Runnable, ? extends Runnable> taskFunction) {
@@ -143,7 +123,7 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Returns a {@link BlockingTaskExecutor} given arguments.
+     * Returns a newly-created {@link BlockingTaskExecutor} with the properties given so far.
      */
     public BlockingTaskExecutor build() {
         final ThreadFactory threadFactory = ThreadFactories.builder(threadNamePrefix)
