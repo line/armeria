@@ -176,6 +176,11 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
         return (DecoratingServiceBindingBuilder) super.addRoute(route);
     }
 
+    @Override
+    public DecoratingServiceBindingBuilder exclude(Route excludedRoute) {
+        return (DecoratingServiceBindingBuilder) super.exclude(excludedRoute);
+    }
+
     /**
      * Sets the {@code decorator} and returns {@link ServerBuilder} that this
      * {@link DecoratingServiceBindingBuilder} was created from.
