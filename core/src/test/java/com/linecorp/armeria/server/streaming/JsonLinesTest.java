@@ -72,7 +72,7 @@ public class JsonLinesTest {
 
     @Test
     void fromPublisherOrStreamMultiLineJson() {
-        final String result = "{\"name\":\"Jon D\",\"age\":21,\"cars\":[\"Bmw\",\"Audi\"]}\n"+
+        final String result = "{\"name\":\"Jon D\",\"age\":21,\"cars\":[\"Bmw\",\"Audi\"]}\n" +
                               "{\"name\":\"Sarah D\",\"age\":22,\"cars\":[\"Tesla\",\"Honda\"]}\n";
         final WebClient client = WebClient.of(server.httpUri() + "/seq");
         for (final String path : ImmutableList.of("/custom-mapper")) {
