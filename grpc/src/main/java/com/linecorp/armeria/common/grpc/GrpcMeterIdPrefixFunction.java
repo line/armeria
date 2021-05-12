@@ -117,6 +117,7 @@ public final class GrpcMeterIdPrefixFunction implements MeterIdPrefixFunction {
     }
 
     private static Tag statusTag(String status) {
+        // Normally, most gRPC requests complete with 0 status.
         if ("0".equals(status)) {
             return OK_TAG;
         }
