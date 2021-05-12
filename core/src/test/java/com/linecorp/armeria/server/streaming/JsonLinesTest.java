@@ -71,45 +71,40 @@ public class JsonLinesTest {
     };
 
     @Test
-    public void fromPublisherOrStreamMultiLineJson() {
-        final String record1 = "{\"name\":\"Jon D\",\"age\":21,\"cars\":[\"Bmw\",\"Audi\"]}\n";
-        final String record2 = "{\"name\":\"Sarah D\",\"age\":22,\"cars\":[\"Tesla\",\"Honda\"]}\n";
+    void fromPublisherOrStreamMultiLineJson() {
+        final String result = "{\"name\":\"Jon D\",\"age\":21,\"cars\":[\"Bmw\",\"Audi\"]}\n"+
+                              "{\"name\":\"Sarah D\",\"age\":22,\"cars\":[\"Tesla\",\"Honda\"]}\n";
         final WebClient client = WebClient.of(server.httpUri() + "/seq");
         for (final String path : ImmutableList.of("/custom-mapper")) {
-            final HttpResponse response = client.get(path);
+            final HttpResponse response = client.get(path).aggregate().join().toHttpResponse();
             StepVerifier.create(response)
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
-                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES))
+                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES,
+                            HttpHeaderNames.CONTENT_LENGTH, 101))
                     .assertNext(o ->
-                            ensureExpectedHttpData(o, record1, true))
-                    .assertNext(o ->
-                            ensureExpectedHttpData(o, record2, true))
-                    .assertNext(JsonLinesTest::assertThatLastContent)
-                    .expectComplete()
-                    .verify();
+                            ensureExpectedHttpData(o, result, true))
+                    .assertNext(JsonLinesTest::assertThatLastContent);
         }
     }
 
     @Test
-    public void fromPublisherOrStream() {
+    void fromPublisherOrStream() {
         final WebClient client = WebClient.of(server.httpUri() + "/seq");
-        for (final String path : ImmutableList.of("/publisher", "/stream")) {
-            final HttpResponse response = client.get(path);
-            StepVerifier.create(response)
-                    .expectNext(ResponseHeaders.of(HttpStatus.OK,
-                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_LINES))
-                    .assertNext(o -> ensureExpectedHttpData(o, "foo", false))
-                    .assertNext(o -> ensureExpectedHttpData(o, "bar", false))
-                    .assertNext(o -> ensureExpectedHttpData(o, "baz", false))
-                    .assertNext(o -> ensureExpectedHttpData(o, "qux", false))
-                    .assertNext(JsonLinesTest::assertThatLastContent)
-                    .expectComplete()
-                    .verify();
-        }
+
+        final HttpResponse response = client.get("/publisher").aggregate().join().toHttpResponse();
+        assertThat(response.aggregate().join().contentUtf8()).isEqualTo("\"foo\"\n" +
+                "\"bar\"\n" +
+                "\"baz\"\n" +
+                "\"qux\"\n");
+        final HttpResponse response1 = client.get("/stream").aggregate().join().toHttpResponse();
+        assertThat(response1.aggregate().join().contentUtf8()).isEqualTo("\"foo\"\n" +
+                "\"bar\"\n" +
+                "\"baz\"\n" +
+                "\"qux\"\n");
     }
 
     @Test
-    public void singleSequence() {
+    void singleSequence() {
         final AggregatedHttpResponse response =
                 WebClient.of(server.httpUri() + "/seq").get("/single").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);

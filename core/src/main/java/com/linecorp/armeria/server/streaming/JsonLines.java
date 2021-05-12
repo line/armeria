@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.server.JacksonUtil;
 
 /**
  * A utility class which helps to create a <a href="https://jsonlines.org/">JavaScript Object
@@ -84,8 +85,8 @@ public final class JsonLines {
     /**
      * A default {@link ObjectMapper} which converts the objects into JSON Line.
      */
-    private static final ObjectMapper defaultMapper = new ObjectMapper()
-                                                          .disable(SerializationFeature.INDENT_OUTPUT);
+    private static final ObjectMapper defaultMapper =
+            JacksonUtil.newDefaultObjectMapper().disable(SerializationFeature.INDENT_OUTPUT);
 
     /**
      * A default {@link ResponseHeaders} of JSON Lines.
