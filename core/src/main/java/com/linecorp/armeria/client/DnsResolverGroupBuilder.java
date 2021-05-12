@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -90,6 +91,7 @@ public final class DnsResolverGroupBuilder {
     private DnsServerAddressStreamProvider dnsServerAddressStreamProvider;
     @Nullable
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory;
+    private boolean disableDnsQueryLifecycleObserverFactory;
     @Nullable
     private List<String> searchDomains;
     @Nullable
@@ -256,8 +258,21 @@ public final class DnsResolverGroupBuilder {
      */
     public DnsResolverGroupBuilder dnsQueryLifecycleObserverFactory(
             DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory) {
-        this.dnsQueryLifecycleObserverFactory =
-                requireNonNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
+        requireNonNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
+        checkState(!disableDnsQueryLifecycleObserverFactory,
+                   "dnsQueryLifecycleObserverFactory has been disabled.");
+        this.dnsQueryLifecycleObserverFactory = dnsQueryLifecycleObserverFactory;
+        return this;
+    }
+
+    /**
+     * Disables the default {@link DnsQueryLifecycleObserverFactory} that collects DNS query metrics through
+     * {@link MeterRegistry}.
+     */
+    public DnsResolverGroupBuilder disableDnsQueryLifecycleObserverFactory() {
+        checkState(dnsQueryLifecycleObserverFactory == null,
+                   "dnsQueryLifecycleObserverFactory has been set already.");
+        disableDnsQueryLifecycleObserverFactory = true;
         return this;
     }
 
@@ -361,13 +376,17 @@ public final class DnsResolverGroupBuilder {
                     new DefaultDnsQueryLifecycleObserverFactory(
                             meterRegistry,
                             new MeterIdPrefix("armeria.client.dns.queries"));
-            if (dnsQueryLifecycleObserverFactory == null) {
-                builder.dnsQueryLifecycleObserverFactory(observerFactory);
-            } else {
-                builder.dnsQueryLifecycleObserverFactory(
-                        new BiDnsQueryLifecycleObserverFactory(observerFactory,
-                                                               dnsQueryLifecycleObserverFactory));
+
+            if (!disableDnsQueryLifecycleObserverFactory) {
+                if (dnsQueryLifecycleObserverFactory == null) {
+                    builder.dnsQueryLifecycleObserverFactory(observerFactory);
+                } else {
+                    builder.dnsQueryLifecycleObserverFactory(
+                            new BiDnsQueryLifecycleObserverFactory(observerFactory,
+                                                                   dnsQueryLifecycleObserverFactory));
+                }
             }
+
             if (searchDomains != null) {
                 builder.searchDomains(searchDomains);
             }

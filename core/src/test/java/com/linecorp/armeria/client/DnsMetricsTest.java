@@ -324,6 +324,53 @@ public class DnsMetricsTest {
         }
     }
 
+    @Test
+    void disableMetrics() throws InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "127.0.0.1"))
+                                         .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4"))
+        ))) {
+            final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
+            try (ClientFactory factory =
+                         ClientFactory.builder()
+                                      .domainNameResolverCustomizer(builder -> {
+                                          builder.dnsServerAddressStreamProvider(dnsServerList(server));
+                                          builder.resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY);
+                                          builder.maxQueriesPerResolve(16);
+                                          builder.queryTimeout(Duration.ofSeconds(5));
+                                          builder.disableDnsQueryLifecycleObserverFactory();
+                                      })
+                                      .meterRegistry(meterRegistry)
+                                      .build()) {
+
+                final WebClient client = WebClient.builder()
+                                                  .factory(factory)
+                                                  .build();
+
+                final String writeMeterId =
+                        "armeria.client.dns.queries.written#count{name=foo.com.,server=" +
+                        getHostAddress(server) + '}';
+                final String successMeterId =
+                        "armeria.client.dns.queries#count{cause=none,name=foo.com.,result=success}";
+                final String otherExceptionId =
+                        "armeria.client.dns.queries#count{" +
+                        "cause=others,name=bar.com.,result=failure}";
+                assertThat(MoreMeters.measureAll(meterRegistry))
+                        .doesNotContainKeys(writeMeterId, successMeterId);
+
+                client.get("http://foo.com:1/").aggregate();
+
+                // Give enough time for metrics to be collected by the MeterRegistry
+                Thread.sleep(1000);
+                assertThat(MoreMeters.measureAll(meterRegistry).entrySet().stream()
+                                     .anyMatch(entry -> entry.getKey()
+                                                             .contains("armeria.client.dns.queries")))
+                        .isFalse();
+            }
+        }
+    }
+
     private static DnsServerAddressStreamProvider dnsServerList(TestDnsServer dnsServer) {
         final InetSocketAddress dnsServerAddr = dnsServer.addr();
         return hostname -> DnsServerAddresses.sequential(ImmutableList.of(dnsServerAddr)).stream();
