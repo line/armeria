@@ -33,6 +33,6 @@ import javax.annotation.meta.TypeQualifierDefault;
 @Documented
 @Target(ElementType.PACKAGE)
 @Retention(RetentionPolicy.RUNTIME)
-@TypeQualifierDefault({ ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD })
+@TypeQualifierDefault({ ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD, ElementType.TYPE_USE })
 public @interface NonNullByDefault {
 }
