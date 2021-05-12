@@ -69,7 +69,7 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
-import com.linecorp.armeria.spring.MetricCollectingConfigurator;
+import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
@@ -165,7 +165,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                findBeans(HealthChecker.class),
                                                findBeans(HealthCheckServiceConfigurator.class),
                                                meterIdPrefixFunctionOrDefault(),
-                                               findBeans(MetricCollectingConfigurator.class));
+                                               findBeans(MetricCollectingServiceConfigurator.class));
         }
 
         // In the property file, both Spring and Armeria port configuration can coexist.

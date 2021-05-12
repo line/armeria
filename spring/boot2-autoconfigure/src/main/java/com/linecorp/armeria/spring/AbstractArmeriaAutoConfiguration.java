@@ -67,7 +67,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
             Optional<MeterRegistry> meterRegistry,
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<HealthCheckServiceConfigurator>> healthCheckServiceConfigurators,
-            Optional<List<MetricCollectingConfigurator>> metricCollectingServiceConfigurators,
+            Optional<List<MetricCollectingServiceConfigurator>> metricCollectingServiceConfigurators,
             Optional<MeterIdPrefixFunction> meterIdPrefixFunction,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,

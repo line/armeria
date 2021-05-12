@@ -169,7 +169,7 @@ public class ArmeriaAutoConfigurationTest {
         }
 
         @Bean
-        public MetricCollectingConfigurator metricCollectingConfigurator() {
+        public MetricCollectingServiceConfigurator metricCollectingServiceConfigurator() {
             return builder -> builder
                     .successFunction((context, log) -> {
                         final int statusCode = log.responseHeaders().status().code();

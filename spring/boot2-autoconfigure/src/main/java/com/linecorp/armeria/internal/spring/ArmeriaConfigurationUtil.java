@@ -66,7 +66,7 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
-import com.linecorp.armeria.spring.MetricCollectingConfigurator;
+import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
 import com.linecorp.armeria.spring.Ssl;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -102,7 +102,7 @@ public final class ArmeriaConfigurationUtil {
             List<HealthChecker> healthCheckers,
             List<HealthCheckServiceConfigurator> healthCheckServiceConfigurators,
             MeterIdPrefixFunction meterIdPrefixFunction,
-            List<MetricCollectingConfigurator> metricCollectingConfigurators) {
+            List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators) {
 
         requireNonNull(server, "server");
         requireNonNull(settings, "settings");
@@ -112,7 +112,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(meterRegistry, "meterRegistry");
         requireNonNull(healthCheckers, "healthCheckers");
         requireNonNull(healthCheckServiceConfigurators, "healthCheckServiceConfigurators");
-        requireNonNull(metricCollectingConfigurators, "metricCollectingConfigurators");
+        requireNonNull(metricCollectingServiceConfigurators, "metricCollectingServiceConfigurators");
 
         configurePorts(server, settings.getPorts());
         armeriaServerConfigurators.forEach(configurator -> configurator.configure(server));
@@ -142,10 +142,10 @@ public final class ArmeriaConfigurationUtil {
         server.meterRegistry(meterRegistry);
 
         if (settings.isEnableMetrics()) {
-            if (!metricCollectingConfigurators.isEmpty()) {
+            if (!metricCollectingServiceConfigurators.isEmpty()) {
                 final MetricCollectingServiceBuilder builder = MetricCollectingService
                         .builder(meterIdPrefixFunction);
-                for (MetricCollectingConfigurator configurator : metricCollectingConfigurators) {
+                for (MetricCollectingServiceConfigurator configurator : metricCollectingServiceConfigurators) {
                     configurator.configure(builder);
                 }
                 server.decorator(builder.newDecorator());

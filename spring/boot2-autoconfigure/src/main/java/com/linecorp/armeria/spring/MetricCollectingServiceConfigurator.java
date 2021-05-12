@@ -21,20 +21,20 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.annotation.Order;
 
-import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
+import com.linecorp.armeria.server.metric.MetricCollectingServiceBuilder;
 
 /**
  * Interface used to configure a {@code MetricCollectingService} on the default Armeria server.
  */
 @FunctionalInterface
-public interface MetricCollectingConfigurator extends Ordered {
+public interface MetricCollectingServiceConfigurator extends Ordered {
 
     /**
      * Configures the {@link MetricCollectingService}
-     * using the specified {@link AbstractMetricCollectingBuilder}.
+     * using the specified {@link MetricCollectingServiceBuilder}.
      */
-    void configure(AbstractMetricCollectingBuilder metricCollectingServiceBuilder);
+    void configure(MetricCollectingServiceBuilder metricCollectingServiceBuilder);
 
     /**
      * Returns the evaluation order of this configurator. A user can specify the order with an {@link Order}
