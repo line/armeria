@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.common.logging;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -51,8 +52,16 @@ public final class LoggingDecorators {
             Logger logger, RequestContext ctx,
             Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
         final boolean isTransientService = isTransientService(ctx);
+        CompletableFuture<RequestOnlyLog> requestCompletionFuture = ctx.log().whenRequestComplete();
         if (!isTransientService) {
-            ctx.log().whenRequestComplete().thenAccept(requestLogger).exceptionally(e -> {
+            requestCompletionFuture.thenAccept(requestLogger).exceptionally(e -> {
+                try (SafeCloseable ignored = ctx.push()) {
+                    logger.warn("{} Unexpected exception while logging request: ", ctx, e);
+                }
+                return null;
+            });
+        } else {
+            requestCompletionFuture.exceptionally(e -> {
                 try (SafeCloseable ignored = ctx.push()) {
                     logger.warn("{} Unexpected exception while logging request: ", ctx, e);
                 }
@@ -60,9 +69,6 @@ public final class LoggingDecorators {
             });
         }
         ctx.log().whenComplete().thenAccept(responseLogger).exceptionally(e -> {
-            if (isTransientService) {
-                return null;
-            }
             try (SafeCloseable ignored = ctx.push()) {
                 logger.warn("{} Unexpected exception while logging response: ", ctx, e);
             }
