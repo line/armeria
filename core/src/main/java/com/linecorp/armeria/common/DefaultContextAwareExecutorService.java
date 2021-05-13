@@ -34,6 +34,7 @@ class DefaultContextAwareExecutorService extends AbstractContextAwareExecutorSer
     }
 
     @Override
+    @Nonnull
     RequestContext contextOrNull() {
         return context;
     }
@@ -46,4 +47,3 @@ class DefaultContextAwareExecutorService extends AbstractContextAwareExecutorSer
                           .toString();
     }
 }
-
