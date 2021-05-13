@@ -31,6 +31,8 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
  * Utilities for logging decorators.
@@ -48,13 +50,19 @@ public final class LoggingDecorators {
     public static void logWhenComplete(
             Logger logger, RequestContext ctx,
             Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
-        ctx.log().whenRequestComplete().thenAccept(requestLogger).exceptionally(e -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                logger.warn("{} Unexpected exception while logging request: ", ctx, e);
-            }
-            return null;
-        });
+        boolean isTransientService = isTransientService(ctx);
+        if (!isTransientService) {
+            ctx.log().whenRequestComplete().thenAccept(requestLogger).exceptionally(e -> {
+                try (SafeCloseable ignored = ctx.push()) {
+                    logger.warn("{} Unexpected exception while logging request: ", ctx, e);
+                }
+                return null;
+            });
+        }
         ctx.log().whenComplete().thenAccept(responseLogger).exceptionally(e -> {
+            if (isTransientService) {
+                return null;
+            }
             try (SafeCloseable ignored = ctx.push()) {
                 logger.warn("{} Unexpected exception while logging response: ", ctx, e);
             }
@@ -104,6 +112,10 @@ public final class LoggingDecorators {
 
         if (responseLogLevel.isEnabled(logger)) {
             final RequestContext ctx = log.context();
+            if (!log.responseHeaders().status().isServerError() && isTransientService(ctx)) {
+                return;
+            }
+
             final String responseStr = log.toStringResponseOnly(responseHeadersSanitizer,
                                                                 responseContentSanitizer,
                                                                 responseTrailersSanitizer);
@@ -147,5 +159,12 @@ public final class LoggingDecorators {
 
     private static boolean expected(Throwable responseCause) {
         return responseCause instanceof HttpResponseException || responseCause instanceof HttpStatusException;
+    }
+
+    private static boolean isTransientService(RequestContext ctx) {
+        return ctx instanceof ServiceRequestContext &&
+               !((ServiceRequestContext) ctx).config()
+                                             .transientServiceOptions()
+                                             .contains(TransientServiceOption.WITH_SERVICE_LOGGING);
     }
 }
