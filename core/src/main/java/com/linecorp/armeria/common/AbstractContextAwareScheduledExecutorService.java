@@ -44,7 +44,7 @@ abstract class AbstractContextAwareScheduledExecutorService
     }
 
     @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
+    public final ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
                                                      TimeUnit unit) {
         return executor.scheduleWithFixedDelay(makeContextAware(command), initialDelay, delay, unit);
     }
