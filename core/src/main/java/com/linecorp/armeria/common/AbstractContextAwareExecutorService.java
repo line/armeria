@@ -51,7 +51,7 @@ abstract class AbstractContextAwareExecutorService<ES extends ExecutorService> i
 
     protected final Runnable makeContextAware(Runnable task) {
         final RequestContext context = contextOrNull();
-        return null == context ? task : context.makeContextAware(task);
+        return context == null ? task : context.makeContextAware(task);
     }
 
     protected final <T> Callable<T> makeContextAware(Callable<T> task) {
