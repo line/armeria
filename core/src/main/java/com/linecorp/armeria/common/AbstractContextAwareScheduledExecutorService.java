@@ -33,7 +33,7 @@ abstract class AbstractContextAwareScheduledExecutorService
     }
 
     @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+    public final <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
         return executor.schedule(makeContextAware(callable), delay, unit);
     }
 
