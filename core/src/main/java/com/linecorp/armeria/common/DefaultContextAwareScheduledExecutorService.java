@@ -17,6 +17,8 @@ package com.linecorp.armeria.common;
 
 import java.util.concurrent.ScheduledExecutorService;
 
+import javax.annotation.Nonnull;
+
 import com.google.common.base.MoreObjects;
 
 final class DefaultContextAwareScheduledExecutorService
@@ -35,6 +37,7 @@ final class DefaultContextAwareScheduledExecutorService
     }
 
     @Override
+    @Nonnull
     public RequestContext contextOrNull() {
         return context;
     }

@@ -86,6 +86,26 @@ public interface RequestContext {
     }
 
     /**
+     * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, propagating
+     * the caller's {@link RequestContext} (if any) into the callback execution.
+     * If this executor service is only used from a single request then it's better to use
+     * {@link #makeContextAware(ExecutorService)}
+     */
+    static ExecutorService makeContextPropagating(ExecutorService executor) {
+        return new PropagatingContextAwareExecutorService(executor);
+    }
+
+    /**
+     * Returns a {@link ScheduledExecutorService} that will execute callbacks in the given {@code executor},
+     * propagating the caller's {@link RequestContext} (if any) into the callback execution.
+     * If this executor service is only used from a single request then it's better to use
+     * {@link #makeContextAware(ScheduledExecutorService)}
+     */
+    static ScheduledExecutorService makeContextPropagating(ScheduledExecutorService executor) {
+        return new PropagatingContextAwareScheduledExecutorService(executor);
+    }
+
+    /**
      * Maps the context of the {@link Request} that is being handled in the current thread.
      *
      * @param mapper the {@link Function} that maps the {@link RequestContext}
@@ -628,25 +648,5 @@ public interface RequestContext {
      */
     default Logger makeContextAware(Logger logger) {
         return ContextAwareLogger.of(this, logger);
-    }
-
-    /**
-     * Returns an {@link ExecutorService} that will execute callbacks in the given {@code executor}, propagating
-     * the caller's {@link RequestContext} (if any) into the callback execution.
-     * If this executor service is only used from a single request then it's better to use
-     * {@link #makeContextAware(ExecutorService)}
-     */
-    static ExecutorService makeContextPropagating(ExecutorService executor) {
-        return new PropagatingContextAwareExecutorService(executor);
-    }
-
-    /**
-     * Returns a {@link ScheduledExecutorService} that will execute callbacks in the given {@code executor},
-     * propagating the caller's {@link RequestContext} (if any) into the callback execution.
-     * If this executor service is only used from a single request then it's better to use
-     * {@link #makeContextAware(ScheduledExecutorService)}
-     */
-    static ScheduledExecutorService makeContextPropagating(ScheduledExecutorService executor) {
-        return new PropagatingContextAwareScheduledExecutorService(executor);
     }
 }

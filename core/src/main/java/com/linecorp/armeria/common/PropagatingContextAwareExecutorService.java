@@ -16,8 +16,7 @@
 package com.linecorp.armeria.common;
 
 import java.util.concurrent.ExecutorService;
-
-import javax.annotation.Nullable;
+import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
@@ -28,9 +27,8 @@ final class PropagatingContextAwareExecutorService
     }
 
     @Override
-    @Nullable
-    public RequestContext contextOrNull() {
-        return RequestContext.currentOrNull();
+    RequestContext contextOrNull() {
+        return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE);
     }
 
     @Override

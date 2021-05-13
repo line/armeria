@@ -25,11 +25,48 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 abstract class AbstractContextAwareExecutorService<ES extends ExecutorService> implements ExecutorService {
+    enum LogRequestContextWarningOnce implements Supplier<RequestContext> {
+        INSTANCE;
+
+        @Override
+        @Nullable
+        public RequestContext get() {
+            ClassLoaderHack.loadMe();
+            return null;
+        }
+
+        /**
+         * This won't be referenced until {@link #get()} is called. If there's only one classloader, the
+         * initializer will only be called once.
+         */
+        private static final class ClassLoaderHack {
+            static void loadMe() {}
+
+            static {
+                logger.warn(
+                        "Attempted to propagate request context to an executor task, but no request context available. "
+                        +
+                        "If this executor is used for non-request-related tasks then it's safe to ignore this",
+                        new NoRequestContextException());
+            }
+        }
+
+        private static final class NoRequestContextException extends RuntimeException {
+            private static final long serialVersionUID = 2804189311774982052L;
+        }
+    }
+
+    private static final Logger logger = LoggerFactory.getLogger(
+            AbstractContextAwareScheduledExecutorService.class);
     final ES executor;
 
     AbstractContextAwareExecutorService(ES executor) {
