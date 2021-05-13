@@ -460,11 +460,11 @@ public final class CancellationScheduler {
             }
         }
 
+        // Set state first to prevent duplicate execution
+        state = State.FINISHED;
         if (task.canSchedule()) {
             ((CancellationFuture) whenCancelling()).doComplete(cause);
         }
-        // Set state first to prevent duplicate execution
-        state = State.FINISHED;
         // The returned value of `canSchedule()` could've been changed by the callbacks of `whenCancelling`
         if (task.canSchedule()) {
             task.run(cause);
