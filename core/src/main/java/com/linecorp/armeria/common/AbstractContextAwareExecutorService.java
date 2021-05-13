@@ -53,8 +53,8 @@ abstract class AbstractContextAwareExecutorService<ES extends ExecutorService> i
 
             static {
                 logger.warn(
-                        "Attempted to propagate request context to an executor task, but no request context available. "
-                        +
+                        "Attempted to propagate request context to an executor task, " +
+                        "but no request context available. " +
                         "If this executor is used for non-request-related tasks then it's safe to ignore this",
                         new NoRequestContextException());
             }
