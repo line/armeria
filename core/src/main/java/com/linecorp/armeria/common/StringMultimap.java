@@ -53,6 +53,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 
+import com.linecorp.armeria.internal.common.util.StringUtil;
+
 import io.netty.handler.codec.DateFormatter;
 import io.netty.util.AsciiString;
 
@@ -732,7 +734,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     }
 
     final void setInt(IN_NAME name, int value) {
-        set(name, String.valueOf(value));
+        set(name, StringUtil.toString(value));
     }
 
     final void setLong(IN_NAME name, long value) {
