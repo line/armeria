@@ -86,14 +86,14 @@ abstract class AbstractContextAwareExecutorService<ES extends ExecutorService> i
         return executor.shutdownNow();
     }
 
-    protected final Runnable makeContextAware(Runnable task) {
+    final Runnable makeContextAware(Runnable task) {
         final RequestContext context = contextOrNull();
-        return null == context ? task : context.makeContextAware(task);
+        return context == null ? task : context.makeContextAware(task);
     }
 
-    protected final <T> Callable<T> makeContextAware(Callable<T> task) {
+    final <T> Callable<T> makeContextAware(Callable<T> task) {
         final RequestContext context = contextOrNull();
-        return null == context ? task : context.makeContextAware(task);
+        return context == null? task : context.makeContextAware(task);
     }
 
     private <T> Collection<? extends Callable<T>> makeContextAware(
