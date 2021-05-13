@@ -130,14 +130,19 @@ class GracefulShutdownIntegrationTest {
         }
 
         // Measure the baseline time taken for stopping the server without handling any requests.
-        server.start();
-        final long startTime = System.nanoTime();
-        server.stop().join();
-        final long stopTime = System.nanoTime();
+        long totalNanos = 0;
+        final int iteration = 2;
+        for (int i = 0; i < iteration; i++) {
+            server.start();
+            final long startTime = System.nanoTime();
+            server.stop().join();
+            final long stopTime = System.nanoTime();
+            totalNanos += stopTime - startTime;
+        }
 
-        assertThat(accessLogWriterCounter1.get()).isOne();
-        assertThat(accessLogWriterCounter2.get()).isOne();
-        return baselineNanos = stopTime - startTime;
+        assertThat(accessLogWriterCounter1).hasValue(iteration);
+        assertThat(accessLogWriterCounter2).hasValue(iteration);
+        return baselineNanos = totalNanos / iteration;
     }
 
     @Test
@@ -154,7 +159,7 @@ class GracefulShutdownIntegrationTest {
 
         // .. which should be on par with the baseline.
         assertThat(stopTime - startTime).isBetween(baselineNanos - MILLISECONDS.toNanos(400),
-                                                   baselineNanos + MILLISECONDS.toNanos(400));
+                                                   baselineNanos + MILLISECONDS.toNanos(1000));
     }
 
     @Test
