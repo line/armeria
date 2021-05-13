@@ -276,7 +276,7 @@ public final class CancellationScheduler {
 
     private void setTimeoutNanosFromNow0(long newTimeoutNanos) {
         assert eventLoop != null && eventLoop.inEventLoop() && task != null;
-        if (state == State.FINISHED || !task.canSchedule()) {
+        if (isFinishing() || !task.canSchedule()) {
             return;
         }
         // Cancel the previously scheduled timeout, if exists.
@@ -308,7 +308,7 @@ public final class CancellationScheduler {
 
     private void finishNow0(@Nullable Throwable cause) {
         assert eventLoop != null && eventLoop.inEventLoop() && task != null;
-        if (state == State.FINISHED || !task.canSchedule()) {
+        if (isFinishing() || !task.canSchedule()) {
             return;
         }
         if (state == State.SCHEDULED) {
@@ -322,6 +322,10 @@ public final class CancellationScheduler {
 
     public boolean isFinished() {
         return state == State.FINISHED;
+    }
+
+    private boolean isFinishing() {
+        return state == State.FINISHED || state == State.FINISHING;
     }
 
     @Nullable
@@ -460,12 +464,15 @@ public final class CancellationScheduler {
             }
         }
 
-        // Set state first to prevent duplicate execution
-        state = State.FINISHED;
+        // Set FINISHING to preclude executing other timeout operations from the callbacks of `whenCancelling()`
+        state = State.FINISHING;
         if (task.canSchedule()) {
             ((CancellationFuture) whenCancelling()).doComplete(cause);
         }
-        // The returned value of `canSchedule()` could've been changed by the callbacks of `whenCancelling`
+        // Set state first to prevent duplicate execution
+        state = State.FINISHED;
+
+        // The returned value of `canSchedule()` could've been changed by the callbacks of `whenCancelling()`
         if (task.canSchedule()) {
             task.run(cause);
         }
@@ -482,6 +489,7 @@ public final class CancellationScheduler {
         INIT,
         INACTIVE,
         SCHEDULED,
+        FINISHING,
         FINISHED
     }
 

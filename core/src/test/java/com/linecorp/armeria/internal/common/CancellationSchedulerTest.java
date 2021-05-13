@@ -425,7 +425,7 @@ class CancellationSchedulerTest {
     }
 
     @Test
-    void multiClearTimeoutInWhenCancelling() {
+    void multiple_ClearTimeoutInWhenCancelling() {
         final AtomicBoolean completed = new AtomicBoolean();
         final CancellationScheduler scheduler = new CancellationScheduler(0);
         scheduler.whenCancelling().thenRun(() -> {
