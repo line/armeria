@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
@@ -324,7 +325,10 @@ class HealthCheckServiceTest {
     void waitWithWrongTimeout() throws Exception {
         final AggregatedHttpResponse res = sendLongPollingGet("healthy", -1).get();
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(logger).isDebugEnabled();
+        await().atMost(5, TimeUnit.SECONDS)
+               .untilAsserted(() -> {
+                   assertThatCode(() -> verify(logger).isDebugEnabled()).doesNotThrowAnyException();
+               });
         verifyNoMoreInteractions(logger);
     }
 
@@ -333,7 +337,10 @@ class HealthCheckServiceTest {
         // A never-matching etag must disable polling.
         final AggregatedHttpResponse res = sendLongPollingGet("whatever", 1).get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        verify(logger).isDebugEnabled();
+        await().atMost(5, TimeUnit.SECONDS)
+               .untilAsserted(() -> {
+                   assertThatCode(() -> verify(logger).isDebugEnabled()).doesNotThrowAnyException();
+               });
         verifyNoMoreInteractions(logger);
     }
 
