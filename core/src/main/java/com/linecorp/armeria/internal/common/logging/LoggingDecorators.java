@@ -50,7 +50,7 @@ public final class LoggingDecorators {
     public static void logWhenComplete(
             Logger logger, RequestContext ctx,
             Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
-        boolean isTransientService = isTransientService(ctx);
+        final boolean isTransientService = isTransientService(ctx);
         if (!isTransientService) {
             ctx.log().whenRequestComplete().thenAccept(requestLogger).exceptionally(e -> {
                 try (SafeCloseable ignored = ctx.push()) {
