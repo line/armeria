@@ -17,6 +17,8 @@ package com.linecorp.armeria.common;
 
 import java.util.concurrent.ExecutorService;
 
+import javax.annotation.Nonnull;
+
 import com.google.common.base.MoreObjects;
 
 class DefaultContextAwareExecutorService extends AbstractContextAwareExecutorService<ExecutorService>
