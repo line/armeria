@@ -49,7 +49,7 @@ abstract class AbstractContextAwareExecutorService<ES extends ExecutorService> i
         return executor.shutdownNow();
     }
 
-    protected final Runnable makeContextAware(Runnable task) {
+    final Runnable makeContextAware(Runnable task) {
         final RequestContext context = contextOrNull();
         return context == null ? task : context.makeContextAware(task);
     }
