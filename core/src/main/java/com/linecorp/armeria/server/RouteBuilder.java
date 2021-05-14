@@ -445,7 +445,7 @@ public final class RouteBuilder {
      * Adds {@link Route}s that are supposed to be excluded from the {@link Route} built by this
      * {@link RouteBuilder}.
      */
-    RouteBuilder exclude(Iterable<Route> excludedRoutes) {
+    RouteBuilder exclude(Iterable<? extends Route> excludedRoutes) {
         Iterables.addAll(this.excludedRoutes, requireNonNull(excludedRoutes, "excludedRoutes"));
         return this;
     }
