@@ -17,8 +17,9 @@ package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
@@ -48,11 +49,11 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
     private static final String CAUSE_TAG = "cause";
     private static final String CNAME_TAG = "cname";
 
-    private static final Pattern NXDOMAIN_EXCEPTION = Pattern.compile("\\bNXDOMAIN\\b");
-    private static final Pattern CNAME_EXCEPTION = Pattern.compile("\\bCNAME\\b");
-    private static final Pattern NO_MATCHING_EXCEPTION = Pattern.compile("\\bmatching\\b");
-    private static final Pattern UNRECOGNIZED_TYPE_EXCEPTION = Pattern.compile("\\bunrecognized\\b");
-    private static final Pattern NO_NS_RETURNED_EXCEPTION = Pattern.compile("\\bservers returned an answer\\b");
+    private static final String NXDOMAIN_EXCEPTION_MESSAGE = "NXDOMAIN";
+    private static final String CNAME_EXCEPTION_MESSAGE = "CNAME";
+    private static final String NO_MATCHING_EXCEPTION_MESSAGE = "No matching record";
+    private static final String UNRECOGNIZED_TYPE_EXCEPTION_MESSAGE = "unrecognized";
+    private static final String NO_NS_RETURNED_EXCEPTION_MESSAGE = "No name servers";
     private static final Tag TAG_SUCCESS = Tag.of(RESULT_TAG, "success");
     private static final Tag TAG_FAILURE = Tag.of(RESULT_TAG, "failure");
 
@@ -147,9 +148,11 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
 
     @Override
     public void queryFailed(Throwable cause) {
-        if (!NO_NS_RETURNED_EXCEPTION.matcher(cause.getMessage()).find()) {
+        final String message = cause.getMessage();
+        if (message == null || !message.contains(NO_NS_RETURNED_EXCEPTION_MESSAGE)) {
             final List<Tag> tags = ImmutableList.of(
-                    nameTag, TAG_FAILURE, Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause).lowerCasedName));
+                    nameTag, TAG_FAILURE,
+                    Tag.of(CAUSE_TAG, determineDnsExceptionTag(cause, message).lowerCasedName));
             meterRegistry.counter(meterIdPrefix.name(), tags).increment();
         }
     }
@@ -160,29 +163,22 @@ final class DefaultDnsQueryLifecycleObserver implements DnsQueryLifecycleObserve
         meterRegistry.counter(meterIdPrefix.name(), tags).increment();
     }
 
-    private static DnsExceptionTypes determineDnsExceptionTag(Throwable cause) {
+    private static DnsExceptionTypes determineDnsExceptionTag(Throwable cause, @Nullable String message) {
         if (cause instanceof DnsTimeoutException) {
             return DnsExceptionTypes.SERVER_TIMEOUT;
-        }
-
-        if (cause instanceof DnsNameResolverTimeoutException) {
+        } else if (cause instanceof DnsNameResolverTimeoutException) {
             return DnsExceptionTypes.RESOLVER_TIMEOUT;
         }
 
-        final String message = cause.getMessage();
-        if (NXDOMAIN_EXCEPTION.matcher(message).find()) {
+        if (message == null) {
+            return DnsExceptionTypes.OTHERS;
+        } else if (message.contains(NXDOMAIN_EXCEPTION_MESSAGE)) {
             return DnsExceptionTypes.NX_DOMAIN;
-        }
-
-        if (CNAME_EXCEPTION.matcher(message).find()) {
+        } else if (message.contains(CNAME_EXCEPTION_MESSAGE)) {
             return DnsExceptionTypes.CNAME_NOT_FOUND;
-        }
-
-        if (NO_MATCHING_EXCEPTION.matcher(message).find()) {
+        } else if (message.contains(NO_MATCHING_EXCEPTION_MESSAGE)) {
             return DnsExceptionTypes.NO_MATCHING_RECORD;
-        }
-
-        if (UNRECOGNIZED_TYPE_EXCEPTION.matcher(message).find()) {
+        } else if (message.contains(UNRECOGNIZED_TYPE_EXCEPTION_MESSAGE)) {
             return DnsExceptionTypes.UNRECOGNIZED_TYPE;
         }
         return DnsExceptionTypes.OTHERS;
