@@ -51,13 +51,11 @@ public interface ServiceNaming {
     static ServiceNaming fullTypeName() {
         return ctx -> {
             final RpcRequest rpcReq = ctx.rpcRequest();
-            final String serviceName;
             if (rpcReq != null) {
-                serviceName = rpcReq.serviceName();
-            } else {
-                serviceName = ServiceNamingUtil.fullTypeHttpServiceName(ctx.config().service());
+                return rpcReq.serviceName();
             }
-            return ServiceNamingUtil.trimTrailingDollarSigns(serviceName);
+            return ServiceNamingUtil.trimTrailingDollarSigns(
+                    ServiceNamingUtil.fullTypeHttpServiceName(ctx.config().service()));
         };
     }
 

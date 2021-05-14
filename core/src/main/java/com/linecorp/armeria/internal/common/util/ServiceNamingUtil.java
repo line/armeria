@@ -47,7 +47,7 @@ public final class ServiceNamingUtil {
 
         do {
             lastIndex--;
-        } while (serviceName.charAt(lastIndex) == '$');
+        } while (lastIndex > 0 && serviceName.charAt(lastIndex) == '$');
         return serviceName.substring(0, lastIndex + 1);
     }
 
