@@ -317,7 +317,10 @@ class HealthCheckServiceTest {
                                   HttpHeaderNames.PREFER, "wait=60",
                                   HttpHeaderNames.IF_NONE_MATCH, "\"healthy\"")).aggregate();
         assertThat(f.get().status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
-        verify(logger).isDebugEnabled();
+        await().atMost(5, TimeUnit.SECONDS)
+               .untilAsserted(() -> {
+                   assertThatCode(() -> verify(logger).isDebugEnabled()).doesNotThrowAnyException();
+               });
         verifyNoMoreInteractions(logger);
     }
 
