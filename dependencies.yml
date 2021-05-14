@@ -46,13 +46,14 @@ com.fasterxml.jackson.core:
     javadocs:
     - https://fasterxml.github.io/jackson-databind/javadoc/2.12/
 
+# Don't upgrade Caffeine to 3.x that requires Java 11.
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '3.0.2'
+    version: '2.9.1'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/3.0.2/
+    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.9.1/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
