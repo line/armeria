@@ -177,23 +177,32 @@ final class DefaultRoute implements Route {
         }
 
         if (routingCtx.requiresMatchingParamsPredicates()) {
-            if (!paramPredicates.isEmpty() &&
-                !paramPredicates.stream().allMatch(p -> p.test(routingCtx.params()))) {
-                return RoutingResult.empty();
+            if (!paramPredicates.isEmpty()) {
+                for (RoutingPredicate<QueryParams> p : paramPredicates) {
+                    if (!p.test(routingCtx.params())) {
+                        return RoutingResult.empty();
+                    }
+                }
             }
         }
         if (routingCtx.requiresMatchingHeadersPredicates()) {
-            if (!headerPredicates.isEmpty() &&
-                !headerPredicates.stream().allMatch(p -> p.test(routingCtx.headers()))) {
-                return RoutingResult.empty();
+            if (!headerPredicates.isEmpty()) {
+                for (RoutingPredicate<HttpHeaders> p : headerPredicates) {
+                    if (!p.test(routingCtx.headers())) {
+                        return RoutingResult.empty();
+                    }
+                }
             }
         }
 
         // We assume that a user adds excluded routes as little as possible. It would be much better to split
         // routes if there's many routes to be excluded.
-        if (!excludedRoutes.isEmpty() &&
-            excludedRoutes.stream().anyMatch(r -> r.apply(routingCtx, isRouteDecorator).isPresent())) {
-            return RoutingResult.excluded();
+        if (!excludedRoutes.isEmpty()) {
+            for (Route r : excludedRoutes) {
+                if (r.apply(routingCtx, isRouteDecorator).isPresent()) {
+                    return RoutingResult.excluded();
+                }
+            }
         }
 
         return builder.build();

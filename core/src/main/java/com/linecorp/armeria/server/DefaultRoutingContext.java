@@ -60,6 +60,7 @@ final class DefaultRoutingContext implements RoutingContext {
 
     private final VirtualHost virtualHost;
     private final String hostname;
+    private final HttpMethod method;
     private final RequestHeaders headers;
     private final String path;
     @Nullable
@@ -83,6 +84,7 @@ final class DefaultRoutingContext implements RoutingContext {
         this.path = requireNonNull(path, "path");
         this.query = query;
         this.isCorsPreflight = isCorsPreflight;
+        method = headers.method();
         contentType = headers.contentType();
         acceptTypes = extractAcceptTypes(headers);
         hashCode = hashCode(this);
@@ -100,7 +102,7 @@ final class DefaultRoutingContext implements RoutingContext {
 
     @Override
     public HttpMethod method() {
-        return headers.method();
+        return method;
     }
 
     @Override
