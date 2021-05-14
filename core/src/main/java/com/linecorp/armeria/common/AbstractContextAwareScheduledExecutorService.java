@@ -39,7 +39,7 @@ abstract class AbstractContextAwareScheduledExecutorService
 
     @Override
     public final ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
-                                                  TimeUnit unit) {
+                                                        TimeUnit unit) {
         return executor.scheduleAtFixedRate(makeContextAware(command), initialDelay, period, unit);
     }
 
