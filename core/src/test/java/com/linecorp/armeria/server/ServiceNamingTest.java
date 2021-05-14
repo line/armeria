@@ -74,6 +74,17 @@ class ServiceNamingTest {
     }
 
     @Test
+    void fullTypeName_trimTrailingDollarSignOnly() {
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        final ServiceConfig config =
+                new ServiceConfig(Route.ofCatchAll(), new $$$(),
+                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false);
+        when(ctx.config()).thenReturn(config);
+        final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
+        assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName());
+    }
+
+    @Test
     void simpleTypeName_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
@@ -116,6 +127,17 @@ class ServiceNamingTest {
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
+    }
+
+    @Test
+    void simpleTypeName_trimTrailingDollarSignOnly() {
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        final ServiceConfig config =
+                new ServiceConfig(Route.ofCatchAll(), new $$$(),
+                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false);
+        when(ctx.config()).thenReturn(config);
+        final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
+        assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName());
     }
 
     @Test
@@ -165,6 +187,18 @@ class ServiceNamingTest {
                 .isEqualTo("c.l.a.s." + ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
     }
 
+    @Test
+    void shorten_trimTrailingDollarSignOnly() {
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        final ServiceConfig config =
+                new ServiceConfig(Route.ofCatchAll(), new $$$(),
+                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false);
+        when(ctx.config()).thenReturn(config);
+        final String serviceName = ServiceNaming.shorten().serviceName(ctx);
+        assertThat(serviceName)
+                .isEqualTo("c.l.a.s." + ServiceNamingTest.class.getSimpleName());
+    }
+
     private static final class NestedClass implements HttpService {
 
         @Override
@@ -184,6 +218,15 @@ class ServiceNamingTest {
 
     @SuppressWarnings({ "DollarSignInName", "checkstyle:TypeName" })
     private static final class TrailingDollarSign$$$ implements HttpService {
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+            return null;
+        }
+    }
+
+    @SuppressWarnings({ "DollarSignInName", "checkstyle:TypeName" })
+    private static final class $$$ implements HttpService {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
