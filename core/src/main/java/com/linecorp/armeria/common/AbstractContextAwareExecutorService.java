@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
