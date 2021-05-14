@@ -98,7 +98,8 @@ abstract class AbstractContextAwareExecutorService<ES extends ExecutorService> i
 
     private <T> Collection<? extends Callable<T>> makeContextAware(
             Collection<? extends Callable<T>> tasks) {
-        return tasks.stream().map(this::makeContextAware).collect(Collectors.toList());
+        return requireNonNull(tasks, "tasks").stream().map(this::makeContextAware)
+                                             .collect(toImmutableList());
     }
 
     @Override
