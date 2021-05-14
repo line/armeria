@@ -26,7 +26,7 @@ date: 2021-05-14
         .execute();
   ```
 - You can now create a <type://ContextAwareExecutorService> that propagates a <type://RequestContext>
-  to submitted tasks when if a submission thread is a request-context-aware thread. #3483
+  to submitted tasks when a submission thread is a request-context-aware thread. #3483
   ```java
   ExecutorService myExecutor = Executors.newSingleThreadExecutor();
   ExecutorService contextAwareExecutor = RequestContext.makeContextPropagating(myExecutor);
