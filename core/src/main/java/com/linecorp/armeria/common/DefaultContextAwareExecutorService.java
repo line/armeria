@@ -44,7 +44,7 @@ class DefaultContextAwareExecutorService extends AbstractContextAwareExecutorSer
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("context", contextOrNull())
+                          .add("context", context)
                           .add("executor", executor)
                           .toString();
     }

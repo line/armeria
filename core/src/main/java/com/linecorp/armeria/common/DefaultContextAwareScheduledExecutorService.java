@@ -51,7 +51,7 @@ final class DefaultContextAwareScheduledExecutorService
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("executor", executor)
-                          .add("context", contextOrNull())
+                          .add("context", context)
                           .toString();
     }
 }
