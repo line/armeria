@@ -16,8 +16,16 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -34,6 +42,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.slf4j.Logger;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
@@ -50,6 +59,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.util.NetUtil;
@@ -60,6 +70,7 @@ class HealthCheckServiceTest {
     private static final AtomicReference<Boolean> capturedHealthy = new AtomicReference<>();
     private static final HealthChecker unfinishedHealthChecker = HealthChecker.of(CompletableFuture::new,
                                                                                   Duration.ofDays(1));
+    private static final Logger logger = mock(Logger.class);
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -111,6 +122,7 @@ class HealthCheckServiceTest {
                                              });
                                          })
                                          .build());
+            sb.decorator(LoggingService.builder().logger(logger).newDecorator());
             sb.gracefulShutdownTimeout(Duration.ofSeconds(10), Duration.ofSeconds(10));
             sb.disableServerHeader();
             sb.disableDateHeader();
@@ -125,7 +137,9 @@ class HealthCheckServiceTest {
     }
 
     @BeforeEach
-    void clearChecker() {
+    void setUp() {
+        reset(logger);
+        when(logger.isDebugEnabled()).thenReturn(true);
         checker.setHealthy(true);
     }
 
@@ -154,6 +168,8 @@ class HealthCheckServiceTest {
                              "armeria-lphc: 60, 5\r\n" +
                              "content-length: 16\r\n\r\n" +
                              "{\"healthy\":true}");
+        verify(logger).isDebugEnabled();
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -165,6 +181,7 @@ class HealthCheckServiceTest {
                              "armeria-lphc: 60, 5\r\n" +
                              "content-length: 17\r\n\r\n" +
                              "{\"healthy\":false}");
+        verify(logger).debug(anyString(), any(), any());
     }
 
     @Test
@@ -174,6 +191,8 @@ class HealthCheckServiceTest {
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
                              "content-length: 16\r\n\r\n");
+        verify(logger).isDebugEnabled();
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -184,6 +203,7 @@ class HealthCheckServiceTest {
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
                              "content-length: 17\r\n\r\n");
+        verify(logger).debug(anyString(), any(), any());
     }
 
     private static void assertResponseEquals(String request, String expectedResponse) throws Exception {
@@ -297,12 +317,22 @@ class HealthCheckServiceTest {
                                   HttpHeaderNames.PREFER, "wait=60",
                                   HttpHeaderNames.IF_NONE_MATCH, "\"healthy\"")).aggregate();
         assertThat(f.get().status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        await().atMost(5, TimeUnit.SECONDS)
+               .untilAsserted(() -> {
+                   assertThatCode(() -> verify(logger).isDebugEnabled()).doesNotThrowAnyException();
+               });
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
     void waitWithWrongTimeout() throws Exception {
         final AggregatedHttpResponse res = sendLongPollingGet("healthy", -1).get();
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        await().atMost(5, TimeUnit.SECONDS)
+               .untilAsserted(() -> {
+                   assertThatCode(() -> verify(logger).isDebugEnabled()).doesNotThrowAnyException();
+               });
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -310,6 +340,11 @@ class HealthCheckServiceTest {
         // A never-matching etag must disable polling.
         final AggregatedHttpResponse res = sendLongPollingGet("whatever", 1).get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        await().atMost(5, TimeUnit.SECONDS)
+               .untilAsserted(() -> {
+                   assertThatCode(() -> verify(logger).isDebugEnabled()).doesNotThrowAnyException();
+               });
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -324,6 +359,8 @@ class HealthCheckServiceTest {
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "0, 0"),
                 HttpData.ofUtf8("{\"healthy\":true}")));
+        verify(logger).isDebugEnabled();
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
@@ -332,6 +369,8 @@ class HealthCheckServiceTest {
         final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hc"),
                                                           "{\"healthy\":false}").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        verify(logger).isDebugEnabled();
+        verifyNoMoreInteractions(logger);
     }
 
     @Test
