@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,38 @@ class WebClientRequestPreparationTest {
             final ClientRequestContext ctx = captor.get();
             assertThat(ctx.ownAttr(foo)).isEqualTo("bar");
             assertThat(res.join().contentUtf8()).isEqualTo("pong");
+        }
+    }
+
+    @Test
+    void setResponseTimeout() {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final Duration timeout = Duration.ofSeconds(42);
+            final CompletableFuture<AggregatedHttpResponse> res =
+                    WebClient.of(server.httpUri())
+                             .prepare()
+                             .get("/ping")
+                             .responseTimeout(timeout)
+                             .execute()
+                             .aggregate();
+            final ClientRequestContext ctx = captor.get();
+            assertThat(ctx.responseTimeoutMillis()).isEqualTo(timeout.toMillis());
+        }
+    }
+
+    @Test
+    void setMaxResponseLength() {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final int maxResponseLength = 4242;
+            final CompletableFuture<AggregatedHttpResponse> res =
+                    WebClient.of(server.httpUri())
+                             .prepare()
+                             .get("/ping")
+                             .maxResponseLength(maxResponseLength)
+                             .execute()
+                             .aggregate();
+            final ClientRequestContext ctx = captor.get();
+            assertThat(ctx.maxResponseLength()).isEqualTo(maxResponseLength);
         }
     }
 }
