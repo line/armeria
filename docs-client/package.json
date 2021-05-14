@@ -39,7 +39,6 @@
     "@types/react-dom": "^17.0.5",
     "@types/react-helmet": "^6.1.1",
     "@types/react-router-dom": "^5.1.7",
-    "@types/react-select": "^4.0.14",
     "@types/react-syntax-highlighter": "^13.5.0",
     "@types/webpack": "^4.41.27",
     "@types/webpack-dev-server": "^3.11.4",

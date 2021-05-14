@@ -250,7 +250,7 @@ public class CaffeineMetricSupportTest {
         void update(long hitCount, long missCount, long loadSuccessCount, long loadFailureCount,
                     long totalLoadTime, long evictionCount, long evictionWeight, long estimatedSize) {
             stats = new CacheStats(hitCount, missCount, loadSuccessCount, loadFailureCount,
-                                  totalLoadTime, evictionCount, evictionWeight);
+                                   totalLoadTime, evictionCount, evictionWeight);
             this.estimatedSize = estimatedSize;
         }
 
