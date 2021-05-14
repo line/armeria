@@ -18,8 +18,6 @@ package com.linecorp.armeria.server;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
-
 enum SimpleTypeServiceNaming implements ServiceNaming {
 
     INSTANCE;
