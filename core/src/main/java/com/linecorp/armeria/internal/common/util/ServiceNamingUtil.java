@@ -39,5 +39,17 @@ public final class ServiceNamingUtil {
         }
     }
 
+    public static String trimTrailingDollarSigns(String serviceName) {
+        int lastIndex = serviceName.length() - 1;
+        if (serviceName.charAt(lastIndex) != '$') {
+            return serviceName;
+        }
+
+        do {
+            lastIndex--;
+        } while (lastIndex > 0 && serviceName.charAt(lastIndex) == '$');
+        return serviceName.substring(0, lastIndex + 1);
+    }
+
     private ServiceNamingUtil() {}
 }

@@ -54,7 +54,8 @@ public interface ServiceNaming {
             if (rpcReq != null) {
                 return rpcReq.serviceName();
             }
-            return ServiceNamingUtil.fullTypeHttpServiceName(ctx.config().service());
+            return ServiceNamingUtil.trimTrailingDollarSigns(
+                    ServiceNamingUtil.fullTypeHttpServiceName(ctx.config().service()));
         };
     }
 
