@@ -62,7 +62,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '6.1.0' }
 
 com.github.node-gradle:
-  gradle-node-plugin: { version: '3.1.0' }
+  gradle-node-plugin: { version: '3.0.1' }
 
 com.google.api:
   gax-grpc: { version: '1.64.0' }
