@@ -22,6 +22,8 @@ import static org.mockito.Mockito.when;
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -249,8 +251,8 @@ public class CaffeineMetricSupportTest {
 
         void update(long hitCount, long missCount, long loadSuccessCount, long loadFailureCount,
                     long totalLoadTime, long evictionCount, long evictionWeight, long estimatedSize) {
-            stats = new CacheStats(hitCount, missCount, loadSuccessCount, loadFailureCount,
-                                   totalLoadTime, evictionCount, evictionWeight);
+            stats = CacheStats.of(hitCount, missCount, loadSuccessCount, loadFailureCount,
+                                  totalLoadTime, evictionCount, evictionWeight);
             this.estimatedSize = estimatedSize;
         }
 
@@ -288,6 +290,12 @@ public class CaffeineMetricSupportTest {
         @Nonnull
         @Override
         public Map<Object, Object> getAllPresent(@Nonnull Iterable<?> keys) {
+            return reject();
+        }
+
+        @Override
+        public Map<Object, Object> getAll(Iterable<?> keys,
+                                          Function<? super Set<?>, ? extends Map<?, ?>> mappingFunction) {
             return reject();
         }
 
@@ -359,8 +367,13 @@ public class CaffeineMetricSupportTest {
         }
 
         @Override
-        public void refresh(@Nonnull Object key) {
-            reject();
+        public CompletableFuture<Object> refresh(@Nonnull Object key) {
+            return reject();
+        }
+
+        @Override
+        public CompletableFuture<Map<Object, Object>> refreshAll(Iterable<?> keys) {
+            return reject();
         }
     }
 }
