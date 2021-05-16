@@ -66,6 +66,15 @@ class QueryParamsBaseTest {
         assertThat(p1).isEqualTo(p2);
     }
 
+    @Test
+    void testGetLastOperations() {
+        final QueryParamsBase params = newEmptyParams();
+        params.add("Foo", "1");
+        params.add("Foo", "2");
+
+        assertThat(params.getLast("Foo")).isEqualTo("2");
+    }
+
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
 
     @Test

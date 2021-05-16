@@ -146,6 +146,18 @@ abstract class StringMultimapBuilder<
                                : requireNonNull(defaultValue, "defaultValue");
     }
 
+    @Nullable
+    public final String getLast(IN_NAME name) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLast(name) : null;
+    }
+
+    public final String getLast(IN_NAME name, String defaultValue) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLast(name, defaultValue)
+                               : requireNonNull(defaultValue, "defaultValue");
+    }
+
     public final List<String> getAll(IN_NAME name) {
         final CONTAINER getters = getters();
         return getters != null ? getters.getAll(name) : ImmutableList.of();
@@ -163,6 +175,17 @@ abstract class StringMultimapBuilder<
     }
 
     @Nullable
+    public final Integer getLastInt(IN_NAME name) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastInt(name) : null;
+    }
+
+    public final int getLastInt(IN_NAME name, int defaultValue) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastInt(name, defaultValue) : defaultValue;
+    }
+
+    @Nullable
     public final Long getLong(IN_NAME name) {
         final CONTAINER getters = getters();
         return getters != null ? getters.getLong(name) : null;
@@ -171,6 +194,17 @@ abstract class StringMultimapBuilder<
     public final long getLong(IN_NAME name, long defaultValue) {
         final CONTAINER getters = getters();
         return getters != null ? getters.getLong(name, defaultValue) : defaultValue;
+    }
+
+    @Nullable
+    public final Long getLastLong(IN_NAME name) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastLong(name) : null;
+    }
+
+    public final long getLastLong(IN_NAME name, long defaultValue) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastLong(name, defaultValue) : defaultValue;
     }
 
     @Nullable
@@ -185,6 +219,17 @@ abstract class StringMultimapBuilder<
     }
 
     @Nullable
+    public final Float getLastFloat(IN_NAME name) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastFloat(name) : null;
+    }
+
+    public final float getLastFloat(IN_NAME name, float defaultValue) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastFloat(name, defaultValue) : defaultValue;
+    }
+
+    @Nullable
     public final Double getDouble(IN_NAME name) {
         final CONTAINER getters = getters();
         return getters != null ? getters.getDouble(name) : null;
@@ -196,6 +241,17 @@ abstract class StringMultimapBuilder<
     }
 
     @Nullable
+    public final Double getLastDouble(IN_NAME name) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastDouble(name) : null;
+    }
+
+    public final double getLastDouble(IN_NAME name, double defaultValue) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastDouble(name, defaultValue) : defaultValue;
+    }
+
+    @Nullable
     public final Long getTimeMillis(IN_NAME name) {
         final CONTAINER getters = getters();
         return getters != null ? getters.getTimeMillis(name) : null;
@@ -204,6 +260,17 @@ abstract class StringMultimapBuilder<
     public final long getTimeMillis(IN_NAME name, long defaultValue) {
         final CONTAINER getters = getters();
         return getters != null ? getters.getTimeMillis(name, defaultValue) : defaultValue;
+    }
+
+    @Nullable
+    public final Long getLastTimeMillis(IN_NAME name) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastTimeMillis(name) : null;
+    }
+
+    public final long getLastTimeMillis(IN_NAME name, long defaultValue) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastTimeMillis(name, defaultValue) : defaultValue;
     }
 
     public final boolean contains(IN_NAME name) {
