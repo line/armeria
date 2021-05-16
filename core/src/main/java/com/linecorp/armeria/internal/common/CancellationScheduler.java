@@ -261,7 +261,12 @@ public final class CancellationScheduler {
             if (eventLoop.inEventLoop()) {
                 setTimeoutNanosFromNow0(timeoutNanos);
             } else {
-                eventLoop.execute(() -> setTimeoutNanosFromNow0(timeoutNanos));
+                final long startTimeNanos = System.nanoTime();
+                eventLoop.execute(() -> {
+                    final long passedTimeNanos0 = System.nanoTime() - startTimeNanos;
+                    final long timeoutNanos0 = Math.max(1, timeoutNanos - passedTimeNanos0);
+                    setTimeoutNanosFromNow0(timeoutNanos0);
+                });
             }
         } else {
             final long startTimeNanos = System.nanoTime();
@@ -275,6 +280,7 @@ public final class CancellationScheduler {
     }
 
     private void setTimeoutNanosFromNow0(long newTimeoutNanos) {
+        assert newTimeoutNanos > 0;
         assert eventLoop != null && eventLoop.inEventLoop() && task != null;
         if (isFinishing() || !task.canSchedule()) {
             return;
@@ -283,9 +289,7 @@ public final class CancellationScheduler {
         clearTimeout0(true);
         final long passedTimeNanos = System.nanoTime() - startTimeNanos;
         timeoutNanos = LongMath.saturatedAdd(newTimeoutNanos, passedTimeNanos);
-        if (newTimeoutNanos <= 0) {
-            return;
-        }
+
         state = State.SCHEDULED;
         scheduledFuture = eventLoop.schedule(() -> invokeTask(null), newTimeoutNanos, NANOSECONDS);
     }

@@ -68,7 +68,7 @@ class WebClientRequestPreparationTest {
                              .prepare()
                              .get("/ping")
                              // Never trigger the request.
-                             .content(MediaType.ANY_TYPE, s -> {
+                             .content(MediaType.PLAIN_TEXT_UTF_8, s -> {
                              })
                              .responseTimeout(timeout)
                              .execute()
