@@ -255,20 +255,56 @@ class ClientFactoryBuilderTest {
     }
 
     @Test
-    void testTcpUserTimeout() {
+    void userDefinedTcpUserTimeoutRespected() {
         assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
 
         final ChannelOption<Integer> option = EpollChannelOption.TCP_USER_TIMEOUT;
-        final int value = Flags.tcpUserTimeoutMillis();
-        try (ClientFactory factory = ClientFactory.builder().build()) {
-            assertThat(factory.options().channelOptions()).containsEntry(option, value);
-        }
 
-        final int newValue = 3000;
+        // user defined vaues are respected
+        final int userDefinedValue = 3000;
         try (ClientFactory factory = ClientFactory.builder()
-                                                  .channelOption(option, newValue)
+                                                  .idleTimeoutMillis(15_000)
+                                                  .maxConnectionAgeMillis(12_000)
+                                                  .channelOption(option, userDefinedValue)
                                                   .build()) {
-            assertThat(factory.options().channelOptions()).containsEntry(option, newValue);
+            assertThat(factory.options().channelOptions()).containsEntry(option, userDefinedValue);
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "10000, 20000",
+            "20000, 10000",
+            "0, 20000",
+            "20000, 0",
+    })
+    void tcpUserTimeoutWithApplicationTimeouts(int idleTimeoutMillis, int maxConnectionAgeMillis) {
+        assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
+
+        final ChannelOption<Integer> option = EpollChannelOption.TCP_USER_TIMEOUT;
+
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .idleTimeoutMillis(idleTimeoutMillis)
+                                                  .maxConnectionAgeMillis(maxConnectionAgeMillis)
+                                                  .build()) {
+            assertThat(factory.options().channelOptions()).containsEntry(option, 20_000);
+        }
+    }
+
+    @Test
+    void keepAliveChannelOption() {
+        assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
+
+        final ChannelOption<Boolean> keepAliveOption = ChannelOption.SO_KEEPALIVE;
+        final ChannelOption<Integer> idleOption = EpollChannelOption.TCP_KEEPIDLE;
+        final ChannelOption<Integer> intervalOption = EpollChannelOption.TCP_KEEPINTVL;
+
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .pingIntervalMillis(10_000)
+                                                  .build()) {
+            assertThat(factory.options().channelOptions()).containsEntry(keepAliveOption, true);
+            assertThat(factory.options().channelOptions()).containsEntry(idleOption, 10_000);
+            assertThat(factory.options().channelOptions()).containsEntry(intervalOption, 10_000);
         }
     }
 }
