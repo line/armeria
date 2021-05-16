@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -66,6 +67,9 @@ class WebClientRequestPreparationTest {
                     WebClient.of(server.httpUri())
                              .prepare()
                              .get("/ping")
+                             // Never trigger the request.
+                             .content(MediaType.ANY_TYPE, s -> {
+                             })
                              .responseTimeout(timeout)
                              .execute()
                              .aggregate();
