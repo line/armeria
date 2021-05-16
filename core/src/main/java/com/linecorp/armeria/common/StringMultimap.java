@@ -502,7 +502,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     public final void forEachValue(IN_NAME name, Consumer<String> action) {
         requireNonNull(name, "name");
         requireNonNull(action, "action");
-        for (final Iterator<String> i = valueIterator(name); i.hasNext(); ) {
+        for (final Iterator<String> i = valueIterator(name); i.hasNext();) {
             action.accept(i.next());
         }
     }
