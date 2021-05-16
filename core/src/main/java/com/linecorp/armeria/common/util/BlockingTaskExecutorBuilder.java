@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.util;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
@@ -37,8 +38,7 @@ public final class BlockingTaskExecutorBuilder {
 
     private String threadNamePrefix = "armeria-blocking-tasks";
     private int numThreads = Flags.numCommonBlockingTaskThreads();
-    private long keepAliveTime = 60;
-    private boolean allowCoreThreadTimeout = true;
+    private long keepAliveTimeMillis = 600;
     private boolean daemon = true;
     private int priority = Thread.NORM_PRIORITY;
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
@@ -64,19 +64,20 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Sets the flag to permit thread timeout.
+     * Sets the amount of keep alive time in seconds.
      */
-    public BlockingTaskExecutorBuilder allowCoreThreadTimeout(boolean allowCoreThreadTimeout) {
-        this.allowCoreThreadTimeout = allowCoreThreadTimeout;
-        return this;
+    public BlockingTaskExecutorBuilder keepAliveTime(Duration keepAliveTime) {
+        checkArgument(!requireNonNull(keepAliveTime, "keepAliveTime").isNegative(),
+                      "keepAliveTime: %s (expected: >= 0)");
+        return keepAliveTimeMillis(keepAliveTime.toMillis());
     }
 
     /**
      * Sets the amount of keep alive time in seconds.
      */
-    public BlockingTaskExecutorBuilder keepAliveTime(long keepAliveTime) {
-        checkArgument(keepAliveTime >= 0, "keepAliveTime: %s (expected: >= 0)", keepAliveTime);
-        this.keepAliveTime = keepAliveTime;
+    public BlockingTaskExecutorBuilder keepAliveTimeMillis(long keepAliveTimeMillis) {
+        checkArgument(keepAliveTimeMillis >= 0, "keepAliveTimeMillis: %s (expected: >= 0)", keepAliveTimeMillis);
+        this.keepAliveTimeMillis = keepAliveTimeMillis;
         return this;
     }
 
@@ -133,8 +134,7 @@ public final class BlockingTaskExecutorBuilder {
                                                            .build();
         final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(
                 numThreads, threadFactory);
-        scheduledThreadPoolExecutor.setKeepAliveTime(keepAliveTime, TimeUnit.SECONDS);
-        scheduledThreadPoolExecutor.allowCoreThreadTimeOut(allowCoreThreadTimeout);
+        scheduledThreadPoolExecutor.setKeepAliveTime(keepAliveTimeMillis, TimeUnit.MILLISECONDS);
         return new DefaultBlockingTaskExecutor(scheduledThreadPoolExecutor);
     }
 }
