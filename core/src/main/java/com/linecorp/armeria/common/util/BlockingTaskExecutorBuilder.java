@@ -104,15 +104,15 @@ public final class BlockingTaskExecutorBuilder {
     /**
      * Use this method to set additional work before or after the Runnable is run. For example:
      * <pre>{@code
-     * ThreadFactories.builder("thread-prefix")
-     *                .taskFunction( task -> {
-     *                    return () -> {
-     *                        // Add something to do before task is run
-     *                        task.run();
-     *                        // Add something to do after task is run
-     *                    };
-     *                })
-     *                .build();
+     * BlockingTaskExecutor.builder("thread-prefix")
+     *                     .taskFunction( task -> {
+     *                         return () -> {
+     *                             // Add something to do before task is run
+     *                             task.run();
+     *                             // Add something to do after task is run
+     *                          };
+     *                     })
+     *                     .build();
      * }</pre>
      *
      * Sets the task function for new threads.
