@@ -16,13 +16,14 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -30,6 +31,8 @@ import javax.annotation.Nullable;
 import org.dataloader.DataLoaderRegistry;
 
 import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
@@ -46,12 +49,13 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 /**
  * Constructs a {@link GraphQLService} to serve GraphQL services from within Armeria.
  */
-final class GraphQLServiceBuilder {
+@UnstableApi
+public final class GraphQLServiceBuilder {
 
     private final ImmutableList.Builder<File> schemaFileBuilder = ImmutableList.builder();
 
     private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfiguratorBuilder =
-                                                                                        ImmutableList.builder();
+            ImmutableList.builder();
     private final ImmutableList.Builder<GraphQLTypeVisitor> typeVisitorBuilder = ImmutableList.builder();
     private final ImmutableList.Builder<Instrumentation> instrumentationBuilder = ImmutableList.builder();
     private final ImmutableList.Builder<Consumer<GraphQL.Builder>> configurerBuilder = ImmutableList.builder();
@@ -62,7 +66,7 @@ final class GraphQLServiceBuilder {
     GraphQLServiceBuilder() {}
 
     /**
-     * Sets the schema file.
+     * Adds the schema {@link File}s.
      * If not set, the `schema.graphql` or `schema.graphqls` will be imported from the resource.
      */
     public GraphQLServiceBuilder schemaFile(File... schemaFile) {
@@ -70,10 +74,10 @@ final class GraphQLServiceBuilder {
     }
 
     /**
-     * Sets the schema file.
+     * Adds the schema {@link File}s.
      * If not set, the `schema.graphql` or `schema.graphqls` will be imported from the resource.
      */
-    public GraphQLServiceBuilder schemaFile(Iterable<File> schemaFile) {
+    public GraphQLServiceBuilder schemaFile(Iterable<? extends File> schemaFile) {
         schemaFileBuilder.addAll(requireNonNull(schemaFile, "schemaFile"));
         return this;
     }
@@ -87,61 +91,60 @@ final class GraphQLServiceBuilder {
     }
 
     /**
-     * Sets the {@link RuntimeWiringConfigurator}.
+     * Adds the {@link RuntimeWiringConfigurator}s.
      */
     public GraphQLServiceBuilder runtimeWiring(RuntimeWiringConfigurator... runtimeWiringConfigurators) {
-        final RuntimeWiringConfigurator[] configurators =
-                requireNonNull(runtimeWiringConfigurators, "runtimeWiringConfigurators");
-        return runtimeWiring(ImmutableList.copyOf(configurators));
+        requireNonNull(runtimeWiringConfigurators, "runtimeWiringConfigurators");
+        return runtimeWiring(ImmutableList.copyOf(runtimeWiringConfigurators));
     }
 
     /**
-     * Sets the {@link RuntimeWiringConfigurator}.
+     * Adds the {@link RuntimeWiringConfigurator}s.
      */
-    public GraphQLServiceBuilder runtimeWiring(Iterable<RuntimeWiringConfigurator> configurators) {
+    public GraphQLServiceBuilder runtimeWiring(Iterable<? extends RuntimeWiringConfigurator> configurators) {
         runtimeWiringConfiguratorBuilder.addAll(requireNonNull(configurators, "configurators"));
         return this;
     }
 
     /**
-     * Sets the {@link GraphQLTypeVisitor}.
+     * Adds the {@link GraphQLTypeVisitor}s.
      */
     public GraphQLServiceBuilder typeVisitors(GraphQLTypeVisitor... typeVisitors) {
         return typeVisitors(ImmutableList.copyOf(requireNonNull(typeVisitors, "typeVisitors")));
     }
 
     /**
-     * Sets the {@link GraphQLTypeVisitor}.
+     * Adds the {@link GraphQLTypeVisitor}s.
      */
-    public GraphQLServiceBuilder typeVisitors(Iterable<GraphQLTypeVisitor> typeVisitors) {
+    public GraphQLServiceBuilder typeVisitors(Iterable<? extends GraphQLTypeVisitor> typeVisitors) {
         typeVisitorBuilder.addAll(requireNonNull(typeVisitors, "typeVisitors"));
         return this;
     }
 
     /**
-     * Sets the {@link Instrumentation}.
+     * Adds the {@link Instrumentation}s.
      */
     public GraphQLServiceBuilder instrumentation(Instrumentation... instrumentations) {
         return instrumentation(ImmutableList.copyOf(requireNonNull(instrumentations, "instrumentations")));
     }
 
     /**
-     * Sets the {@link Instrumentation}.
+     * Adds the {@link Instrumentation}s.
      */
-    public GraphQLServiceBuilder instrumentation(Iterable<Instrumentation> instrumentations) {
+    public GraphQLServiceBuilder instrumentation(Iterable<? extends Instrumentation> instrumentations) {
         instrumentationBuilder.addAll(requireNonNull(instrumentations, "instrumentations"));
         return this;
     }
 
     /**
-     * Sets the {@link GraphQL.Builder} consumer.
+     * Adds the {@link GraphQL.Builder} consumers.
      */
     public GraphQLServiceBuilder configure(Consumer<GraphQL.Builder>... configurers) {
         return configure(ImmutableList.copyOf(requireNonNull(configurers, "configurers")));
     }
 
     /**
-     * Sets the {@link GraphQL.Builder} consumer.
+     * Adds the {@link GraphQL.Builder} consumers.
      */
     public GraphQLServiceBuilder configure(Iterable<Consumer<GraphQL.Builder>> configurers) {
         configurerBuilder.addAll(requireNonNull(configurers, "configurers"));
@@ -196,14 +199,17 @@ final class GraphQLServiceBuilder {
 
     private static List<File> defaultSchemaFiles() {
         final ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        final ImmutableList.Builder<File> builder = ImmutableList.builder();
-        resourcePath(classLoader, "schema.graphqls").ifPresent(it -> builder.add(toFile(it)));
-        resourcePath(classLoader, "schema.graphql").ifPresent(it -> builder.add(toFile(it)));
-        return builder.build();
+        return ImmutableList.of("schema.graphqls", "schema.graphql")
+                            .stream()
+                            .map(it -> resourcePath(classLoader, it))
+                            .filter(Objects::nonNull)
+                            .map(GraphQLServiceBuilder::toFile)
+                            .collect(toImmutableList());
     }
 
-    private static Optional<URL> resourcePath(ClassLoader classLoader, String resourcePath) {
-        return Optional.ofNullable(classLoader.getResource(resourcePath));
+    @Nullable
+    private static URL resourcePath(ClassLoader classLoader, String resourcePath) {
+        return classLoader.getResource(resourcePath);
     }
 
     private static File toFile(URL it) {

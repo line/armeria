@@ -17,7 +17,8 @@
 package com.linecorp.armeria.server.graphql;
 
 import java.util.Map;
-import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nullable;
 
@@ -61,6 +62,10 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
     @Nullable
     private final DataLoaderRegistry dataLoaderRegistry;
 
+    DefaultGraphQLService(GraphQL graphQL) {
+        this(graphQL, null);
+    }
+
     DefaultGraphQLService(GraphQL graphQL, @Nullable DataLoaderRegistry dataLoaderRegistry) {
         this.graphQL = graphQL;
         this.dataLoaderRegistry = dataLoaderRegistry;
@@ -75,10 +80,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                                    MediaType.PLAIN_TEXT,
                                    "Query is required");
         }
-        final Map<String, Object> variables = Optional.ofNullable(queryString.get("variables"))
-                                                      .filter(Strings::isNullOrEmpty)
-                                                      .map(DefaultGraphQLService::toVariableMap)
-                                                      .orElse(ImmutableMap.of());
+        final Map<String, Object> variables = toVariableMap(queryString.get("variables"));
         final String operationName = queryString.get("operationName");
         return execute(executionInput(query, ctx, variables, operationName));
     }
@@ -146,8 +148,10 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
 
     private ExecutionResult executionResult(ExecutionInput input) {
         try {
-            return graphQL.execute(input);
-        } catch (RuntimeException e) {
+            final CompletableFuture<ExecutionResult> completableFuture = new CompletableFuture<>();
+            graphQL.executeAsync(input).thenAccept(completableFuture::complete);
+            return completableFuture.get();
+        } catch (RuntimeException | ExecutionException | InterruptedException e) {
             return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
                                                                 .message(e.getMessage())
                                                                 .cause(e)
@@ -161,8 +165,9 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         }
 
         if (variables instanceof Map) {
-            final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
             final Map<?, ?> variablesMap = (Map<?, ?>) variables;
+            final ImmutableMap.Builder<String, Object> builder =
+                    ImmutableMap.builderWithExpectedSize(variablesMap.size());
             variablesMap.forEach((k, v) -> builder.put(String.valueOf(k), v));
             return builder.build();
         } else {
@@ -171,7 +176,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> toVariableMap(String value) {
+    private static Map<String, Object> toVariableMap(@Nullable String value) {
         if (Strings.isNullOrEmpty(value)) {
             return ImmutableMap.of();
         }
@@ -182,7 +187,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         try {
             return OBJECT_MAPPER.readValue(content, JSON_MAP);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("failed to parse a JSON document: " + e, e);
+            throw new IllegalArgumentException("failed to parse a JSON document: " + content, e);
         }
     }
 
@@ -190,7 +195,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         try {
             return OBJECT_MAPPER.writeValueAsString(result);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("failed to write a JSON document: " + e, e);
+            throw new IllegalArgumentException("failed to write a JSON document: " + result, e);
         }
     }
 }
