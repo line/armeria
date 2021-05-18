@@ -1,0 +1,131 @@
+---
+date: 2021-05-14
+---
+
+## 🌟 New features
+
+- You can now create a <type://HealthChecker> that updates its healthiness periodically. #3392 #3406
+  ```java
+  HealthChecker.of(() -> {
+      HealthCheckStatus status = ...;
+      CompletableFuture.completedFuture(status);
+  }, Duration.ofSeconds(5));
+  ```
+- You can now create a propagating <type://ContextAwareExecutorService> and
+  <type://ContextAwareScheduledExecutorService> using <type://RequestContext#makeContextPropagating(ExecutorService)?full>
+  and <type://RequestContext#makeContextPropagating(ScheduledExecutorService)?full>.
+  The executors propagate a <type://RequestContext> to submitted tasks when a submission thread is 
+  a request-context-aware thread. #3483
+  ```java
+  ExecutorService myExecutor = Executors.newSingleThreadExecutor();
+  ExecutorService contextAwareExecutor = RequestContext.makeContextPropagating(myExecutor);
+  // Make sure the current thread is a request-context-aware thread
+  RequestContext ctx = RequestContext.current();
+  contextAwareExecutor.execute(() -> {
+      assert RequestContext.current() == ctx;
+  });
+  ```
+- You can now set a maximum allowed length of a server response in the request level
+  using <type://WebClientRequestPreparation#maxResponseLength(long)>. #3565
+  ```java
+  WebClient client = ...;
+  client.prepare()
+        .maxResponseLength(maxResponseLength)
+        ...
+        .execute();
+  ```
+- You can now add or set HTTP headers and query params with `java.util.Map`. #3499 #3502
+  ```java
+   HttpHeaders
+      .builder()
+      .add(Map.of("foo", "1"))
+      .set(Map.of("bar", "2"));
+  
+  QueryParams.builder()
+             .add(Map.of("page", "1"))
+             .set(Map.of("size", "2"));
+  ```
+- You can now disable DNS query metrics using <type://DnsResolverGroupBuilder#disableDnsQueryMetrics()>.
+  #3368 #3552
+  ```java
+  ClientFactory.builder()
+               .domainNameResolverCustomizer(customizer -> {
+                   customizer.disableDnsQueryMetrics();
+               })
+  ```
+- You can now create a [JSON Lines](https://jsonlines.org/) response using <type://JsonLines>. #3446 #3456
+  ```java
+  Publisher<MyObject> publisher = StreamMessage.of(new MyObject(...), new MyObject(...), ...);
+  HttpReponse response = JsonLines.fromPublisher(publisher);
+  ```
+- You can now create an <type://RpcRequest> with a service name using
+  <type://RpcRequest#of(Class,String,String,Iterable)>. #3537
+- You can now customize <type://MetricCollectingService> with <type://MetricCollectingServiceConfigurator>
+  when using Spring integration. #3536
+  ```java
+  @Bean
+  public MetricCollectingServiceConfigurator metricCollectingServiceConfigurator() {
+      return builder -> builder
+              .successFunction((context, log) -> {
+                  final int statusCode = log.responseHeaders().status().code();
+                  return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
+              });
+  }
+  ```
+
+## 📈 Improvements
+
+- Various performance optimizations. #3534 #3535 #3537 #3538 #3539 #3543 #3548
+- You can now null-safely access the elements of collections and arrays in
+  [Kotlin 1.5](https://kotlinlang.org/docs/whatsnew15.html#improvements-to-handling-nullability-annotations).
+  #3527 #3558
+- You can now use code completion for `armeria.ssl` when using IntelliJ IDEA. #3507
+
+## 🛠️ Bug fixes
+
+- Armeria server now correctly sends `Connection: close` header on an invalid HTTP/1 request. #3506
+- You no longer see an infinity loop or an `IllegalStateException: Recurse update` when invalidating 
+  a DNS cache. #3528
+- <type://LoggingService> now correctly logs a request failed with the server error class(5xx) that is served 
+  by <type://TransientService>. #3551 #3559
+- You no longer see trailing dollar signs from a service name. #3508
+- You no longer see a `NullPointerException` when a request times out. #3564
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- Caffeine 2.9.0 -> 2.9.1
+- Dropwizard Metrics 4.1.20 -> 4.1.21
+- java-jwt 3.15.0 -> 3.16.0
+- Micrometer 1.6.6 -> 1.7.0
+- Reactor 3.4.5 -> 3.4.6
+- scala-collection-compat 2.4.3 -> 2.4.4
+- scala-java8-compat 0.9.1 -> 1.0.0
+- Spring 5.3.6 -> 5.3.7
+
+## 🙇 Thank you
+
+<ThankYou
+  usernames={[
+    'amitvc',
+    'anuraaga',
+    'hexoul',
+    'hirakida',
+    'ikhoon',
+    'jrhee17',
+    'KarboniteKream',
+    'kojilin',
+    'm50d',
+    'max904-github',
+    'minwoox',
+    'nirvanarsc',
+    'trustin'
+  ]}
+/>

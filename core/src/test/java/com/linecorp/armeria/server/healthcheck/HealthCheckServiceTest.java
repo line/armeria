@@ -16,7 +16,6 @@
 package com.linecorp.armeria.server.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
@@ -168,7 +167,7 @@ class HealthCheckServiceTest {
                              "armeria-lphc: 60, 5\r\n" +
                              "content-length: 16\r\n\r\n" +
                              "{\"healthy\":true}");
-        verify(logger).isDebugEnabled();
+        verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
     }
 
@@ -181,7 +180,9 @@ class HealthCheckServiceTest {
                              "armeria-lphc: 60, 5\r\n" +
                              "content-length: 17\r\n\r\n" +
                              "{\"healthy\":false}");
-        verify(logger).debug(anyString(), any(), any());
+        await().untilAsserted(() -> {
+            verify(logger).debug(anyString(), any(), any());
+        });
     }
 
     @Test
@@ -191,7 +192,7 @@ class HealthCheckServiceTest {
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
                              "content-length: 16\r\n\r\n");
-        verify(logger).isDebugEnabled();
+        verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
     }
 
@@ -317,10 +318,7 @@ class HealthCheckServiceTest {
                                   HttpHeaderNames.PREFER, "wait=60",
                                   HttpHeaderNames.IF_NONE_MATCH, "\"healthy\"")).aggregate();
         assertThat(f.get().status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
-        await().atMost(5, TimeUnit.SECONDS)
-               .untilAsserted(() -> {
-                   assertThatCode(() -> verify(logger).isDebugEnabled()).doesNotThrowAnyException();
-               });
+        verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
     }
 
@@ -328,10 +326,7 @@ class HealthCheckServiceTest {
     void waitWithWrongTimeout() throws Exception {
         final AggregatedHttpResponse res = sendLongPollingGet("healthy", -1).get();
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        await().atMost(5, TimeUnit.SECONDS)
-               .untilAsserted(() -> {
-                   assertThatCode(() -> verify(logger).isDebugEnabled()).doesNotThrowAnyException();
-               });
+        verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
     }
 
@@ -340,10 +335,7 @@ class HealthCheckServiceTest {
         // A never-matching etag must disable polling.
         final AggregatedHttpResponse res = sendLongPollingGet("whatever", 1).get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        await().atMost(5, TimeUnit.SECONDS)
-               .untilAsserted(() -> {
-                   assertThatCode(() -> verify(logger).isDebugEnabled()).doesNotThrowAnyException();
-               });
+        verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
     }
 
@@ -359,7 +351,7 @@ class HealthCheckServiceTest {
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "0, 0"),
                 HttpData.ofUtf8("{\"healthy\":true}")));
-        verify(logger).isDebugEnabled();
+        verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
     }
 
@@ -369,7 +361,7 @@ class HealthCheckServiceTest {
         final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hc"),
                                                           "{\"healthy\":false}").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
-        verify(logger).isDebugEnabled();
+        verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
     }
 
@@ -495,6 +487,12 @@ class HealthCheckServiceTest {
         final AggregatedHttpResponse res2 = client.execute(RequestHeaders.of(HttpMethod.PUT, "/hc_custom"),
                                                            "BAD").aggregate().join();
         assertThat(res2.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    private static void verifyDebugEnabled(Logger logger) {
+        await().untilAsserted(() -> {
+            verify(logger).isDebugEnabled();
+        });
     }
 
     private static CompletableFuture<AggregatedHttpResponse> sendLongPollingGet(String healthiness) {
