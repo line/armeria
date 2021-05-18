@@ -4,7 +4,7 @@ date: 2021-05-14
 
 ## 🌟 New features
 
-- You can now create a <type://HealthChecker> that invokes a health checker repetitively. #3392 #3406
+- You can now create a <type://HealthChecker> that updates its healthiness periodically. #3392 #3406
   ```java
   HealthChecker.of(() -> {
       HealthCheckStatus status = ...;
@@ -38,20 +38,20 @@ date: 2021-05-14
   ```java
    HttpHeaders
       .builder()
-      .add(Map.of("foo", "1"));
+      .add(Map.of("foo", "1"))
       .set(Map.of("bar", "2"));
   
   QueryParams.builder()
-             .add(Map.of("page", "1"));
+             .add(Map.of("page", "1"))
              .set(Map.of("size", "2"));
   ```
 - You can now disable DNS query metrics using <type://DnsResolverGroupBuilder#disableDnsQueryMetrics()>.
   #3368 #3552
   ```java
   ClientFactory.builder()
-             .domainNameResolverCustomizer(customizer -> {
-                 customizer.disableDnsQueryMetrics();
-             })
+               .domainNameResolverCustomizer(customizer -> {
+                   customizer.disableDnsQueryMetrics();
+               })
   ```
 - You can now create a [JSON Lines](https://jsonlines.org/) response using <type://JsonLines>. #3446 #3456
   ```java
