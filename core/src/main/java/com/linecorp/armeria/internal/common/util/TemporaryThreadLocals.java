@@ -24,8 +24,8 @@ import io.netty.util.internal.EmptyArrays;
 /**
  * Provides various thread-local variables used by Armeria internally, mostly to avoid allocating
  * short-living objects, such as {@code byte[]} and {@link StringBuilder}. Keep in mind that the variables
- * provided by this class must be used with extreme care, because otherwise it will result in unpredictable
- * behavior.
+ * provided by this class must be used and released with extreme care, because otherwise it will result in
+ * unpredictable behavior.
  *
  * <p>Most common mistake is to call or recurse info a method that uses the same thread-local variable.
  * For example, the following code will produce a garbled string:
@@ -33,18 +33,47 @@ import io.netty.util.internal.EmptyArrays;
  * > class A {
  * >     @Override
  * >     public String toString() {
- * >         return TemporaryThreadLocals.get().append('"').append(new B()).append('"').toString();
+ * >         StringBuilder stringBuilder = TemporaryThreadLocals.get().stringBuilder();
+ * >         TemporaryThreadLocals.get().releaseStringBuilder();
+ * >         return stringBuilder.append('"').append(new B()).append('"').toString();
  * >     }
  * > }
  * > class B {
  * >     @Override
  * >     public String toString() {
- * >         return TemporaryThreadLocals.get().append("foo").toString();
+ * >         StringBuilder stringBuilder = TemporaryThreadLocals.get().stringBuilder();
+ * >         TemporaryThreadLocals.get().releaseStringBuilder();
+ * >         return stringBuilder.append("foo").toString();
  * >     }
  * > }
  * > // The following assertion fails, because A.toString() returns "foofoo\"".
  * > assert "\"foo\"".equals(new A().toString());
- * }</pre></p>
+ * }</pre>
+ *
+ * <p>A release method is helpful to not only prevent from being corrupted but also recognize the situation
+ * about nested use. Specifically, in case of {@link StringBuilder}, {@code toString()} is expected prior to
+ * {@code releaseStringBuilder()}:
+ * <pre>{@code
+ * > class A {
+ * >     @Override
+ * >     public String toString() {
+ * >         StringBuilder stringBuilder = TemporaryThreadLocals.get().stringBuilder();
+ * >         String toString = stringBuilder.append('"').append(new B()).append('"').toString();
+ * >         threadLocals.get().releaseStringBuilder();
+ * >         return toString;
+ * >     }
+ * > }
+ * > class B {
+ * >     @Override
+ * >     public String toString() {
+ * >         StringBuilder stringBuilder = TemporaryThreadLocals.get().stringBuilder();
+ * >         String toString = stringBuilder.append("foo").toString();
+ * >         threadLocals.get().releaseStringBuilder();
+ * >         return toString;
+ * >     }
+ * > }
+ * }</pre>
+ * In this case, instead of unpredictable behavior, an {@link IllegalStateException} occurs.
  *
  * <p>A general rule of thumb is not to call other methods while using the thread-local variables provided by
  * this class, unless you are sure the methods you're calling never uses the same thread-local variables.</p>
