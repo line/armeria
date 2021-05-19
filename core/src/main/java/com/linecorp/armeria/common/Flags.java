@@ -430,10 +430,9 @@ public final class Flags {
     private static final boolean
             DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING = getBoolean("useLegacyRouteDecoratorOrdering", false);
 
-    // Use a slightly larger value than client idle timeout to ensure connections aren't dropped
-    private static final int DEFAULT_TCP_USER_TIMEOUT_MILLIS = 15_000;
-    private static final int TCP_USER_TIMEOUT_MILLIS =
-            getInt("tcpUserTimeoutMillis", DEFAULT_TCP_USER_TIMEOUT_MILLIS, value -> value >= 0);
+    private static final boolean DEFAULT_USE_DEFAULT_NETTY_CHANNEL_OPTIONS = true;
+    private static final boolean USE_DEFAULT_NETTY_CHANNEL_OPTIONS =
+            getBoolean("useDefaultNettyChannelOptions", DEFAULT_USE_DEFAULT_NETTY_CHANNEL_OPTIONS);
 
     static {
         TransportType type = null;
@@ -1251,8 +1250,8 @@ public final class Flags {
     /**
      * TBU.
      */
-    public static int tcpUserTimeoutMillis() {
-        return TCP_USER_TIMEOUT_MILLIS;
+    public static boolean useDefaultNettyChannelOptions() {
+        return USE_DEFAULT_NETTY_CHANNEL_OPTIONS;
     }
 
     /**
