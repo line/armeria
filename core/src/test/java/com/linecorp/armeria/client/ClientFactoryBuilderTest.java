@@ -273,12 +273,13 @@ class ClientFactoryBuilderTest {
 
     @ParameterizedTest
     @CsvSource({
-            "10000, 20000",
-            "20000, 10000",
-            "0, 20000",
-            "20000, 0",
+            "10000, 20000, 20000",
+            "20000, 10000, 10000",
+            "0, 20000, 20000",
+            "20000, 0, 20000",
     })
-    void tcpUserTimeoutWithApplicationTimeouts(int idleTimeoutMillis, int maxConnectionAgeMillis) {
+    void tcpUserTimeoutWithApplicationTimeouts(int idleTimeoutMillis, int maxConnectionAgeMillis,
+                                               int expectedUserTimeoutMillis) {
         assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
 
         final ChannelOption<Integer> option = EpollChannelOption.TCP_USER_TIMEOUT;
@@ -287,7 +288,7 @@ class ClientFactoryBuilderTest {
                                                   .idleTimeoutMillis(idleTimeoutMillis)
                                                   .maxConnectionAgeMillis(maxConnectionAgeMillis)
                                                   .build()) {
-            assertThat(factory.options().channelOptions()).containsEntry(option, 20_000);
+            assertThat(factory.options().channelOptions()).containsEntry(option, expectedUserTimeoutMillis);
         }
     }
 
@@ -299,12 +300,14 @@ class ClientFactoryBuilderTest {
         final ChannelOption<Integer> idleOption = EpollChannelOption.TCP_KEEPIDLE;
         final ChannelOption<Integer> intervalOption = EpollChannelOption.TCP_KEEPINTVL;
 
+        final int pingIntervalMillis = 10_000;
         try (ClientFactory factory = ClientFactory.builder()
-                                                  .pingIntervalMillis(10_000)
+                                                  .pingIntervalMillis(pingIntervalMillis)
+                                                  .idleTimeoutMillis(pingIntervalMillis + 1)
                                                   .build()) {
             assertThat(factory.options().channelOptions()).containsEntry(keepAliveOption, true);
-            assertThat(factory.options().channelOptions()).containsEntry(idleOption, 10_000);
-            assertThat(factory.options().channelOptions()).containsEntry(intervalOption, 10_000);
+            assertThat(factory.options().channelOptions()).containsEntry(idleOption, pingIntervalMillis);
+            assertThat(factory.options().channelOptions()).containsEntry(intervalOption, pingIntervalMillis);
         }
     }
 }

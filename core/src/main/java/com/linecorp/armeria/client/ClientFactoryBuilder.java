@@ -783,19 +783,20 @@ public final class ClientFactoryBuilder {
         final Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
 
         if (Flags.transportType() == TransportType.EPOLL) {
-            if (idleTimeoutMillis > 0 || maxConnectionAgeMillis > 0) {
+            final long userTimeoutMillis = Math.max(idleTimeoutMillis, maxConnectionAgeMillis);
+            if (userTimeoutMillis > 0 && userTimeoutMillis <= Integer.MAX_VALUE) {
                 if (!userDefinedChannelOptions.containsKey(EpollChannelOption.TCP_USER_TIMEOUT)) {
                     newChannelOptionsBuilder.put(EpollChannelOption.TCP_USER_TIMEOUT,
-                                                 Math.max(idleTimeoutMillis, maxConnectionAgeMillis));
+                                                 (int) userTimeoutMillis);
                 }
             }
-            if (pingIntervalMillis > 0) {
+            if (pingIntervalMillis > 0 && pingIntervalMillis <= Integer.MAX_VALUE) {
                 if (!userDefinedChannelOptions.containsKey(EpollChannelOption.TCP_KEEPIDLE) &&
                     !userDefinedChannelOptions.containsKey(EpollChannelOption.TCP_KEEPINTVL) &&
                     !userDefinedChannelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
                     newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
-                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPIDLE, pingIntervalMillis);
-                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPINTVL, pingIntervalMillis);
+                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPIDLE, (int) pingIntervalMillis);
+                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPINTVL, (int) pingIntervalMillis);
                 }
             }
         }
