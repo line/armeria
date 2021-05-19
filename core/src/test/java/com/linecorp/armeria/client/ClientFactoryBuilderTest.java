@@ -260,7 +260,6 @@ class ClientFactoryBuilderTest {
 
         final ChannelOption<Integer> option = EpollChannelOption.TCP_USER_TIMEOUT;
 
-        // user defined vaues are respected
         final int userDefinedValue = 3000;
         try (ClientFactory factory = ClientFactory.builder()
                                                   .idleTimeoutMillis(15_000)
