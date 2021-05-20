@@ -5208,6 +5208,7 @@ museum.om
 museum.tt
 museumcenter.museum
 museumvereniging.museum
+music
 music.museum
 musica.ar
 musica.bo

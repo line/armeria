@@ -1020,16 +1020,22 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             return size;
         }
 
-        // Removes references to all objects.
+        // Removes references of all objects.
         void clear(@Nullable Throwable cause) {
             final Object[] oldElements = elements;
             if (oldElements == null) {
                 return; // Already cleared.
             }
             elements = null;
-            final int t = tail;
-            for (int i = head; i < t; i++) {
-                StreamMessageUtil.closeOrAbort(oldElements[i], cause);
+
+            int end = tail;
+            if (end < head) {
+                // odd number head wrap-around e.g. [8, N, N, N, N, 5, 6, 7]
+                end += oldElements.length;
+            }
+
+            for (int i = head; i < end; i++) {
+                StreamMessageUtil.closeOrAbort(oldElements[i % oldElements.length], cause);
             }
         }
 
