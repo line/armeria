@@ -1547,8 +1547,8 @@ public final class ServerBuilder {
                 defaultVirtualHostBuilder.build(virtualHostTemplate);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
-                        .map(vhb -> vhb.build(virtualHostTemplate))
-                        .collect(toImmutableList());
+                                   .map(vhb -> vhb.build(virtualHostTemplate))
+                                   .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
@@ -1556,8 +1556,8 @@ public final class ServerBuilder {
 
         this.ports.forEach(
                 port -> checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
-                        "protocols: %s (expected: at least one %s or %s)",
-                        port.protocols(), HTTP, HTTPS));
+                                   "protocols: %s (expected: at least one %s or %s)",
+                                   port.protocols(), HTTP, HTTPS));
 
         if (defaultSslContext == null) {
             sslContexts = null;
