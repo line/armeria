@@ -200,7 +200,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
 
         final RequestHeaders merged = mergeRequestHeaders(firstHeaders, ctx.additionalRequestHeaders());
-        logBuilder.requestHeaders(firstHeaders);
+        logBuilder.requestHeaders(merged);
         final ChannelFuture future = encoder.writeHeaders(id, streamId(), merged, request.isEmpty());
         future.addListener(this);
         ch.flush();
