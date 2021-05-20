@@ -70,6 +70,20 @@ class QueryParamsBaseTest {
     void testGetLastOperations() {
         final QueryParamsBase params = newEmptyParams();
         params.add("Foo", "1");
+
+        assertThat(params.getLast("Foo")).isEqualTo("1");
+    }
+
+    @Test
+    void testGetLastOperationsWithEmptyParams() {
+        final QueryParamsBase params = newEmptyParams();
+        assertThat(params.getLast("Foo")).isNull();
+    }
+
+    @Test
+    void testGetLastOperationsWithMultipleValues() {
+        final QueryParamsBase params = newEmptyParams();
+        params.add("Foo", "1");
         params.add("Foo", "2");
 
         assertThat(params.getLast("Foo")).isEqualTo("2");
