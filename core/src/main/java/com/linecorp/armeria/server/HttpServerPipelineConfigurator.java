@@ -582,8 +582,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     },
                     UPGRADE_REQUEST_MAX_LENGTH));
 
-            addAfter(p, baseName, new Http1RequestDecoder(config,
-                                                          ctx.channel(), SCHEME_HTTP, responseEncoder));
+            addAfter(p, baseName, new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder));
         }
 
         private void configureHttp2(ChannelHandlerContext ctx) {

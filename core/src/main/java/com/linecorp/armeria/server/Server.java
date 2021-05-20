@@ -402,11 +402,11 @@ public final class Server implements ListenableAsyncCloseable {
     /**
      * Reconfigure Server configuration.
      */
-    public void reconfigure(ServerConfigurator rs) {
-        requireNonNull(rs, "serverconfigurator");
+    public void reconfigure(ServerConfigurator serverConfigurator) {
+        requireNonNull(serverConfigurator, "serverConfigurator");
         requireNonNull(pipelineConfigurator, "pipelineConfigurator");
         final ServerBuilder sb = builder();
-        rs.reconfigure(sb);
+        serverConfigurator.reconfigure(sb);
         config = sb.buildServerConfig(config());
         pipelineConfigurator.updateConfig(config);
     }

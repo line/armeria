@@ -1575,10 +1575,9 @@ public final class ServerBuilder {
             if (!Flags.useOpenSsl() && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
                 throw new IllegalStateException(
                         "TLS configured but this is Java 8 and neither OpenSSL nor Jetty ALPN could be " +
-                        "detected. To use TLS with Armeria, you must either use Java 9+, enable " +
-                        "OpenSSL, usually by adding a build dependency on the " +
-                        "io.netty:netty-tcnative-boringssl-static artifact or " +
-                        "enable Jetty ALPN as described " +
+                        "detected. To use TLS with Armeria, you must either use Java 9+, enable OpenSSL, " +
+                        "usually by adding a build dependency on the " +
+                        "io.netty:netty-tcnative-boringssl-static artifact or enable Jetty ALPN as described " +
                         "at https://www.eclipse.org/jetty/documentation/9.4.x/alpn-chapter.html");
             }
 
