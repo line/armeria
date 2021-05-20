@@ -16,15 +16,13 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Nullable;
 
 import org.dataloader.DataLoaderRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -50,8 +48,6 @@ import graphql.com.google.common.collect.ImmutableMap;
 
 final class DefaultGraphQLService extends AbstractHttpService implements GraphQLService {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultGraphQLService.class);
-
     private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.newDefaultObjectMapper();
 
     private static final TypeReference<Map<String, Object>> JSON_MAP =
@@ -67,7 +63,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
     }
 
     DefaultGraphQLService(GraphQL graphQL, @Nullable DataLoaderRegistry dataLoaderRegistry) {
-        this.graphQL = graphQL;
+        this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistry = dataLoaderRegistry;
     }
 
@@ -93,10 +89,9 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                                    MediaType.PLAIN_TEXT,
                                    "Could not process GraphQL request");
         }
-        if (contentType.is(MediaType.JSON) || contentType.subtype().endsWith("+json")) {
-            return HttpResponse.from(request.aggregate().handleAsync((req, thrown) -> {
+        if (MediaType.isJson(contentType)) {
+            return HttpResponse.from(request.aggregate().handle((req, thrown) -> {
                 if (thrown != null) {
-                    logger.warn("{} Failed to aggregate a request:", ctx, thrown);
                     return HttpResponse.ofFailure(thrown);
                 }
                 final String body = req.contentUtf8();
@@ -111,9 +106,8 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
             }));
         }
         if (contentType.is(MediaType.GRAPHQL)) {
-            return HttpResponse.from(request.aggregate().handleAsync((req, thrown) -> {
+            return HttpResponse.from(request.aggregate().handle((req, thrown) -> {
                 if (thrown != null) {
-                    logger.warn("{} Failed to aggregate a request:", ctx, thrown);
                     return HttpResponse.ofFailure(thrown);
                 }
                 final String query = req.contentUtf8();
@@ -129,7 +123,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                                           @Nullable Map<String, Object> variables,
                                           @Nullable String operationName) {
         final Builder builder = ExecutionInput.newExecutionInput(query);
-        if (variables != null) {
+        if (variables != null && !variables.isEmpty()) {
             builder.variables(variables);
         }
         if (operationName != null) {
@@ -142,21 +136,21 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
     }
 
     private HttpResponse execute(ExecutionInput input) {
-        final ExecutionResult executionResult = executionResult(input);
-        return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(executionResult.toSpecification()));
+        return HttpResponse.from(graphQL.executeAsync(input).handle((executionResult, cause) -> {
+            if (cause != null) {
+                final ExecutionResult error = toExecutionResult(cause);
+                return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
+            }
+
+            return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(executionResult.toSpecification()));
+        }));
     }
 
-    private ExecutionResult executionResult(ExecutionInput input) {
-        try {
-            final CompletableFuture<ExecutionResult> completableFuture = new CompletableFuture<>();
-            graphQL.executeAsync(input).thenAccept(completableFuture::complete);
-            return completableFuture.get();
-        } catch (RuntimeException | ExecutionException | InterruptedException e) {
-            return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
-                                                                .message(e.getMessage())
-                                                                .cause(e)
-                                                                .build());
-        }
+    private static ExecutionResult toExecutionResult(Throwable cause) {
+        return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
+                                                            .message(cause.getMessage())
+                                                            .cause(cause)
+                                                            .build());
     }
 
     private static Map<String, Object> toVariableMap(@Nullable Object variables) {
@@ -175,7 +169,6 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         }
     }
 
-    @SuppressWarnings("unchecked")
     private static Map<String, Object> toVariableMap(@Nullable String value) {
         if (Strings.isNullOrEmpty(value)) {
             return ImmutableMap.of();

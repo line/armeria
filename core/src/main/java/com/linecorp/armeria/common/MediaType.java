@@ -1048,6 +1048,10 @@ public final class MediaType {
         }
     }
 
+    public static boolean isJson(@Nullable MediaType mediaType) {
+        return mediaType != null && (mediaType.is(JSON) || mediaType.subtype().endsWith("+json"));
+    }
+
     private static final class Tokenizer {
         final String input;
         int position;

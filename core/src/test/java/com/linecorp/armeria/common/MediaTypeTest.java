@@ -38,8 +38,11 @@ import static com.linecorp.armeria.common.MediaType.ANY_IMAGE_TYPE;
 import static com.linecorp.armeria.common.MediaType.ANY_TEXT_TYPE;
 import static com.linecorp.armeria.common.MediaType.ANY_TYPE;
 import static com.linecorp.armeria.common.MediaType.ANY_VIDEO_TYPE;
+import static com.linecorp.armeria.common.MediaType.GRAPHQL;
 import static com.linecorp.armeria.common.MediaType.HTML_UTF_8;
 import static com.linecorp.armeria.common.MediaType.JPEG;
+import static com.linecorp.armeria.common.MediaType.JSON;
+import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static java.lang.reflect.Modifier.isFinal;
 import static java.lang.reflect.Modifier.isPublic;
@@ -354,6 +357,15 @@ public class MediaTypeTest {
         assertFalse(PLAIN_TEXT_UTF_8.is(HTML_UTF_8));
         assertFalse(PLAIN_TEXT_UTF_8.withParameter("charset", "UTF-16").is(PLAIN_TEXT_UTF_8));
         assertFalse(PLAIN_TEXT_UTF_8.is(PLAIN_TEXT_UTF_8.withParameter("charset", "UTF-16")));
+    }
+
+    @Test
+    public void testIsJson() {
+        assertTrue(MediaType.isJson(JSON));
+        assertTrue(MediaType.isJson(JSON_UTF_8));
+        assertTrue(MediaType.isJson(MediaType.parse("application/graphql+json")));
+        assertFalse(MediaType.isJson(PLAIN_TEXT_UTF_8));
+        assertFalse(MediaType.isJson(GRAPHQL));
     }
 
     @Test

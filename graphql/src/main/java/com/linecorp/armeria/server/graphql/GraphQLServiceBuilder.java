@@ -29,6 +29,8 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 
 import org.dataloader.DataLoaderRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -47,11 +49,15 @@ import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 
 /**
- * Constructs a {@link GraphQLService} to serve GraphQL services from within Armeria.
+ * Constructs a {@link GraphQLService} to serve GraphQL within Armeria.
  */
 @UnstableApi
 public final class GraphQLServiceBuilder {
 
+    private static final Logger logger = LoggerFactory.getLogger(GraphQLServiceBuilder.class);
+
+    private static final ImmutableList<String> DEFAULT_SCHEMA_FILE_NAMES = ImmutableList.of("schema.graphqls",
+                                                                                            "schema.graphql");
     private final ImmutableList.Builder<File> schemaFileBuilder = ImmutableList.builder();
 
     private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfiguratorBuilder =
@@ -67,18 +73,18 @@ public final class GraphQLServiceBuilder {
 
     /**
      * Adds the schema {@link File}s.
-     * If not set, the `schema.graphql` or `schema.graphqls` will be imported from the resource.
+     * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
-    public GraphQLServiceBuilder schemaFile(File... schemaFile) {
-        return schemaFile(ImmutableList.copyOf(requireNonNull(schemaFile, "schemaFile")));
+    public GraphQLServiceBuilder schemaFile(File... schemaFiles) {
+        return schemaFile(ImmutableList.copyOf(requireNonNull(schemaFiles, "schemaFiles")));
     }
 
     /**
      * Adds the schema {@link File}s.
-     * If not set, the `schema.graphql` or `schema.graphqls` will be imported from the resource.
+     * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
-    public GraphQLServiceBuilder schemaFile(Iterable<? extends File> schemaFile) {
-        schemaFileBuilder.addAll(requireNonNull(schemaFile, "schemaFile"));
+    public GraphQLServiceBuilder schemaFile(Iterable<? extends File> schemaFiles) {
+        schemaFileBuilder.addAll(requireNonNull(schemaFiles, "schemaFiles"));
         return this;
     }
 
@@ -86,7 +92,7 @@ public final class GraphQLServiceBuilder {
      * Sets the {@link DataLoaderRegistry}.
      */
     public GraphQLServiceBuilder dataLoaderRegistry(DataLoaderRegistry dataLoaderRegistry) {
-        this.dataLoaderRegistry = dataLoaderRegistry;
+        this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
         return this;
     }
 
@@ -186,6 +192,8 @@ public final class GraphQLServiceBuilder {
         if (schemaFiles.isEmpty()) {
             throw new IllegalStateException("Not found schema file(s)");
         }
+
+        logger.info("Found schema file(s). schemaFiles: {}", schemaFiles);
         schemaFiles.forEach(it -> registry.merge(parser.parse(it)));
         return registry;
     }
@@ -199,7 +207,7 @@ public final class GraphQLServiceBuilder {
 
     private static List<File> defaultSchemaFiles() {
         final ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        return ImmutableList.of("schema.graphqls", "schema.graphql")
+        return DEFAULT_SCHEMA_FILE_NAMES
                             .stream()
                             .map(it -> resourcePath(classLoader, it))
                             .filter(Objects::nonNull)
