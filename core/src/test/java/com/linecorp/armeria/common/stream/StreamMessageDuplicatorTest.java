@@ -184,7 +184,6 @@ class StreamMessageDuplicatorTest {
         final StreamMessageDuplicator<HttpData> duplicator =
                 publisher.toDuplicator(ImmediateEventExecutor.INSTANCE);
 
-
         final CompletableFuture<String> future1 = new CompletableFuture<>();
         final HttpDataSubscriber subscriber = new HttpDataSubscriber(future1, 2);
         duplicator.duplicate().subscribe(subscriber);
@@ -611,7 +610,7 @@ class StreamMessageDuplicatorTest {
     }
 
     private static void assertRefCnt(int start, int end, int refCnt) {
-        for (int i = start; i < end; i ++) {
+        for (int i = start; i < end; i++) {
             assertThat(byteBufs.get(i).refCnt()).isEqualTo(refCnt);
         }
     }
