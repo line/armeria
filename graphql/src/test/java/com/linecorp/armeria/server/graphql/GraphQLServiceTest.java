@@ -43,7 +43,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.schema.DataFetcher;
-import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.StaticDataFetcher;
 
 class GraphQLServiceTest {
@@ -53,27 +52,26 @@ class GraphQLServiceTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final File graphqlSchemaFile = new File(ClassLoader.getSystemResource("test.graphqls").toURI());
-            sb.service("/graphql", GraphQLService.builder()
-                                                 .schemaFile(graphqlSchemaFile)
-                                                 .runtimeWiring(c -> {
-                                                     final StaticDataFetcher bar = new StaticDataFetcher("bar");
-                                                     c.type("Query",
-                                                            typeWiring -> typeWiring.dataFetcher("foo", bar));
-                                                     final ErrorDataFetcher error = new ErrorDataFetcher();
-                                                     c.type("Query",
-                                                            typeWiring -> typeWiring
-                                                                    .dataFetcher("error", error));
-                                                 })
-                                                 .build());
+            final GraphQLService graphQLService =
+                    GraphQLService.builder()
+                                  .schemaFile(graphqlSchemaFile)
+                                  .runtimeWiring(c -> {
+                                      final StaticDataFetcher bar = new StaticDataFetcher("bar");
+                                      c.type("Query",
+                                             typeWiring -> typeWiring.dataFetcher("foo", bar));
+                                      final DataFetcher<String> error = errorDataFetcher();
+                                      c.type("Query",
+                                             typeWiring -> typeWiring.dataFetcher("error", error));
+                                  })
+                                  .build();
+            sb.service("/graphql", graphQLService);
         }
     };
 
-    private static class ErrorDataFetcher implements DataFetcher<String> {
-
-        @Override
-        public String get(DataFetchingEnvironment environment) throws Exception {
+    private static DataFetcher<String> errorDataFetcher() {
+        return environment -> {
             throw new NullPointerException("npe");
-        }
+        };
     }
 
     @Test
@@ -175,7 +173,7 @@ class GraphQLServiceTest {
                                                                   Charsets.UTF_8)
                                                          .aggregate().get();
 
-        assertThat(response.status()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         assertThat(response.contentUtf8()).isEqualTo("Could not process GraphQL request");
     }
 
@@ -193,7 +191,7 @@ class GraphQLServiceTest {
                                                                   Charsets.UTF_8)
                                                          .aggregate().get();
 
-        assertThat(response.status()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         assertThat(response.contentUtf8()).isEqualTo("Could not process GraphQL request");
     }
 

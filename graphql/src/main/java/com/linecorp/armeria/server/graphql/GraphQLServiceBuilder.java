@@ -220,12 +220,12 @@ public final class GraphQLServiceBuilder {
         return classLoader.getResource(resourcePath);
     }
 
-    private static File toFile(URL it) {
+    private static File toFile(URL url) {
         File f;
         try {
-            f = new File(it.toURI());
+            f = new File(url.toURI());
         } catch (URISyntaxException ignored) {
-            f = new File(it.getPath());
+            f = new File(url.getPath());
         }
         return f;
     }

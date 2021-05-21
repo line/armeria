@@ -23,6 +23,7 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import org.dataloader.DataLoaderRegistry;
+import org.reactivestreams.Publisher;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -85,7 +86,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest request) {
         final MediaType contentType = request.contentType();
         if (contentType == null) {
-            return HttpResponse.of(HttpStatus.UNPROCESSABLE_ENTITY,
+            return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT,
                                    "Could not process GraphQL request");
         }
@@ -114,7 +115,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                 return execute(executionInput(query, ctx, null, null));
             }));
         }
-        return HttpResponse.of(HttpStatus.UNPROCESSABLE_ENTITY,
+        return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                MediaType.PLAIN_TEXT,
                                "Could not process GraphQL request");
     }
@@ -142,6 +143,13 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                 return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
             }
 
+            // TODO: When WebSocket is implemented, it should be removed.
+            if (executionResult.getData() instanceof Publisher) {
+                final ExecutionResult error =
+                        toExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
+                return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
+            }
+
             return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(executionResult.toSpecification()));
         }));
     }
@@ -165,7 +173,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
             variablesMap.forEach((k, v) -> builder.put(String.valueOf(k), v));
             return builder.build();
         } else {
-            return toVariableMap(String.valueOf(variables));
+            throw new IllegalArgumentException("Unknown parameter type variables");
         }
     }
 
