@@ -47,7 +47,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> implements
 
     @SuppressWarnings("unused")
     @Nullable
-    volatile SubscriptionImpl subscription; // set only via subscriptionUpdater
+    private volatile SubscriptionImpl subscription; // set only via subscriptionUpdater
 
     @Nullable
     private volatile CloseEvent closeEvent;
