@@ -102,10 +102,10 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Use this method to set additional work before or after the Runnable is run. For example:
+     * Use this method to set additional work before or after the {@link Runnable} is run. For example:
      * <pre>{@code
      * BlockingTaskExecutor.builder("thread-prefix")
-     *                     .taskFunction( task -> {
+     *                     .taskFunction(task -> {
      *                         return () -> {
      *                             // Add something to do before task is run
      *                             task.run();
