@@ -1034,8 +1034,9 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 end += oldElements.length;
             }
 
+            final int bitMask = oldElements.length - 1;
             for (int i = head; i < end; i++) {
-                StreamMessageUtil.closeOrAbort(oldElements[i % oldElements.length], cause);
+                StreamMessageUtil.closeOrAbort(oldElements[i & bitMask], cause);
             }
         }
 
