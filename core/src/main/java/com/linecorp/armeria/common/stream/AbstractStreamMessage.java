@@ -49,7 +49,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     static final CloseEvent CANCELLED_CLOSE = new CloseEvent(CancelledSubscriptionException.INSTANCE);
     static final CloseEvent ABORTED_CLOSE = new CloseEvent(AbortedStreamException.INSTANCE);
 
-    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
+    final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {

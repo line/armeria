@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.stream;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
+import java.util.NoSuchElementException;
+
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
@@ -151,5 +153,21 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     public final boolean isEmpty() {
         return false;
+    }
+
+    @Override
+    public boolean hasNext() {
+        return fulfilled < objs.length;
+    }
+
+    @Override
+    public T next() {
+        if (!hasNext()) {
+            throw new NoSuchElementException();
+        }
+
+        final T o = objs[fulfilled];
+        objs[fulfilled++] = null;
+        return o;
     }
 }

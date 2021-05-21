@@ -20,18 +20,20 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * An {@link AbstractStreamMessage} which only publishes a fixed number of objects known at construction time.
  */
-abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
+abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> implements Iterator<T> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<FixedStreamMessage, SubscriptionImpl>
@@ -45,7 +47,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @SuppressWarnings("unused")
     @Nullable
-    private volatile SubscriptionImpl subscription; // set only via subscriptionUpdater
+    volatile SubscriptionImpl subscription; // set only via subscriptionUpdater
 
     @Nullable
     private volatile CloseEvent closeEvent;
@@ -125,7 +127,8 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
         try {
-            subscriber.onSubscribe(subscription);
+            //noinspection unchecked
+            subscriber.onSubscribe(new DirectSubscription<>(this, subscription));
         } catch (Throwable t) {
             abort(t);
             throwIfFatal(t);
@@ -181,6 +184,43 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
             } else {
                 subscription.executor().execute(() -> cleanup(subscription));
             }
+        }
+    }
+
+    private static final class DirectSubscription<T> implements Subscription {
+        private final FixedStreamMessage<T> streamMessage;
+        private final SubscriptionImpl subscription;
+
+        private DirectSubscription(FixedStreamMessage<T> streamMessage, SubscriptionImpl subscription) {
+            this.streamMessage = streamMessage;
+            this.subscription = subscription;
+        }
+
+        @Override
+        public void request(long n) {
+            if (n < 0) {
+                subscription.subscriber().onError(new IllegalArgumentException(
+                        "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+            }
+
+            if (!streamMessage.hasNext()) {
+                return;
+            }
+
+            do {
+                subscription.subscriber().onNext(streamMessage.next());
+                n--;
+            } while (streamMessage.hasNext() && n > 0);
+
+            if (!streamMessage.hasNext()) {
+               subscription.subscriber().onComplete();
+               streamMessage.completionFuture.complete(null);
+            }
+        }
+
+        @Override
+        public void cancel() {
+            streamMessage.cancel();
         }
     }
 }

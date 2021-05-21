@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import java.util.NoSuchElementException;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -45,5 +47,15 @@ public class EmptyFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     final void cleanupObjects(@Nullable Throwable cause) {
         // Empty streams have no objects to clean.
+    }
+
+    @Override
+    public boolean hasNext() {
+        return false;
+    }
+
+    @Override
+    public T next() {
+        throw new NoSuchElementException();
     }
 }

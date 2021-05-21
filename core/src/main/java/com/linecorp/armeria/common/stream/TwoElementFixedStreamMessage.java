@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 
+import java.util.NoSuchElementException;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -128,5 +130,27 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
         } finally {
             inOnNext = false;
         }
+    }
+
+    @Override
+    public boolean hasNext() {
+        return obj2 != null;
+    }
+
+    @Override
+    public T next() {
+        if (!hasNext()) {
+            throw new NoSuchElementException();
+        }
+
+        final T o;
+        if (obj1 != null) {
+            o = obj1;
+            obj1 = null;
+        } else {
+            o = obj2;
+            obj2 = null;
+        }
+        return o;
     }
 }
