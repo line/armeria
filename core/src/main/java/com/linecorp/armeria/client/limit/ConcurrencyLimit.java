@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.limit;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.Integer.MAX_VALUE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Objects;
@@ -31,10 +33,25 @@ import com.linecorp.armeria.client.ClientRequestContext;
  */
 public final class ConcurrencyLimit {
     /**
-     * Returns a new builder.
+     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
+     *
+     * @param maxConcurrency the maximum number of concurrent active requests,
+     *                       specify {@code 0} to disable the limit.
      */
-    public static ConcurrencyLimitBuilder builder() {
-        return new ConcurrencyLimitBuilder();
+    public static ConcurrencyLimitBuilder builder(int maxConcurrency) {
+        checkArgument(maxConcurrency >= 0,
+                      "maxConcurrency: %s (expected: >= 0)", maxConcurrency);
+        return new ConcurrencyLimitBuilder(maxConcurrency == MAX_VALUE ? 0 : maxConcurrency);
+    }
+
+    /**
+     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
+     *
+     * @param maxConcurrency the maximum number of concurrent active requests,
+     *                       specify {@code 0} to disable the limit.
+     */
+    public static ConcurrencyLimitBuilder of(int maxConcurrency) {
+        return builder(maxConcurrency);
     }
 
     private final Predicate<ClientRequestContext> policy;
@@ -63,7 +80,7 @@ public final class ConcurrencyLimit {
     }
 
     /**
-     * Checks if the concurrency control should be enforced for the given {@code requestContext}.
+     * Checks if the concurrency control should be enforced for the given {@link ClientRequestContext}.
      */
     public boolean shouldLimit(ClientRequestContext requestContext) {
         requireNonNull(requestContext, "requestContext");

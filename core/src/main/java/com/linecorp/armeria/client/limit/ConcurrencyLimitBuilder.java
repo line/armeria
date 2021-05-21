@@ -17,8 +17,6 @@
 package com.linecorp.armeria.client.limit;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.client.limit.AbstractConcurrencyLimitingClient.validateMaxConcurrency;
-import static java.lang.Integer.MAX_VALUE;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -29,24 +27,20 @@ import com.linecorp.armeria.client.ClientRequestContext;
 /**
  * Builds a {@link ConcurrencyLimit} instance using builder pattern.
  */
-public class ConcurrencyLimitBuilder {
-    public static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
+public final class ConcurrencyLimitBuilder {
+    static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
 
-    private int maxConcurrency;
+    private final int maxConcurrency;
     private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
     private Predicate<ClientRequestContext> policy = requestContext -> true;
 
-    /**
-     * Sets the maximum number of concurrent active requests. {@code 0} to disable the limit.
-     */
-    public ConcurrencyLimitBuilder maxConcurrency(int maxConcurrency) {
-        this.maxConcurrency = validateMaxConcurrency(maxConcurrency == MAX_VALUE ? 0 : maxConcurrency);
-        return this;
+    ConcurrencyLimitBuilder(int maxConcurrency) {
+        this.maxConcurrency = maxConcurrency;
     }
 
     /**
      * Sets the amount of time until this decorator fails the request if the request was not
-     *      delegated to the {@code delegate} before then.
+     * delegated to the {@code delegate} before then.
      */
     public ConcurrencyLimitBuilder timeoutMillis(long timeoutMillis) {
         checkArgument(timeoutMillis >= 0, "timeout: %s (expected: >= 0)", timeoutMillis);
@@ -56,7 +50,7 @@ public class ConcurrencyLimitBuilder {
 
     /**
      * Sets the amount of time until this decorator fails the request if the request was not
-     *      delegated to the {@code delegate} before then.
+     * delegated to the {@code delegate} before then.
      */
     public ConcurrencyLimitBuilder timeout(Duration timeout) {
         requireNonNull(timeout, "timeout");
@@ -73,7 +67,7 @@ public class ConcurrencyLimitBuilder {
     }
 
     /**
-     * Builds the {@code ConcurrencyLimit}.
+     * Returns a newly-created the {@link ConcurrencyLimit} based on the properties of this builder.
      */
     public ConcurrencyLimit build() {
         return new ConcurrencyLimit(policy, maxConcurrency, timeoutMillis);

@@ -46,8 +46,8 @@ public final class ConcurrencyLimitingClient
      */
     public static Function<? super HttpClient, ConcurrencyLimitingClient>
     newDecorator(int maxConcurrency) {
-        validateMaxConcurrency(maxConcurrency);
-        return delegate -> new ConcurrencyLimitingClient(delegate, maxConcurrency);
+        return delegate -> new ConcurrencyLimitingClient(delegate, ConcurrencyLimit.builder(maxConcurrency)
+                                                                                   .build());
     }
 
     /**
@@ -55,8 +55,10 @@ public final class ConcurrencyLimitingClient
      */
     public static Function<? super HttpClient, ConcurrencyLimitingClient> newDecorator(
             int maxConcurrency, long timeout, TimeUnit unit) {
-        validateAll(maxConcurrency, timeout, unit);
-        return delegate -> new ConcurrencyLimitingClient(delegate, maxConcurrency, timeout, unit);
+        return delegate -> new ConcurrencyLimitingClient(delegate,
+                                                         ConcurrencyLimit.builder(maxConcurrency)
+                                                                         .timeoutMillis(unit.toMillis(timeout))
+                                                                         .build());
     }
 
     /**
@@ -66,15 +68,6 @@ public final class ConcurrencyLimitingClient
             ConcurrencyLimit concurrencyLimit) {
         requireNonNull(concurrencyLimit, "concurrencyLimit");
         return delegate -> new ConcurrencyLimitingClient(delegate, concurrencyLimit);
-    }
-
-    ConcurrencyLimitingClient(HttpClient delegate, int maxConcurrency) {
-        super(delegate, maxConcurrency);
-    }
-
-    private ConcurrencyLimitingClient(HttpClient delegate,
-                                      int maxConcurrency, long timeout, TimeUnit unit) {
-        super(delegate, maxConcurrency, timeout, unit);
     }
 
     private ConcurrencyLimitingClient(HttpClient delegate, ConcurrencyLimit concurrencyLimit) {

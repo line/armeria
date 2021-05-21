@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.limit;
 
 import static com.linecorp.armeria.client.limit.ConcurrencyLimitBuilder.DEFAULT_TIMEOUT_MILLIS;
-import static java.util.Objects.requireNonNull;
 
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -64,7 +63,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
     /**
      * Creates a new instance that decorates the specified {@code delegate} to limit the concurrent number of
      * active requests to {@code maxConcurrency}, with the default timeout of
-     * {@link ConcurrencyLimitBuilder.DEFAULT_TIMEOUT_MILLIS} milliseconds.
+     * {@value ConcurrencyLimitBuilder#DEFAULT_TIMEOUT_MILLIS} milliseconds.
      *
      * @param delegate the delegate {@link Client}
      * @param maxConcurrency the maximum number of concurrent active requests. {@code 0} to disable the limit.
@@ -84,9 +83,8 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      */
     protected AbstractConcurrencyLimitingClient(Client<I, O> delegate,
                                                 int maxConcurrency, long timeout, TimeUnit unit) {
-        this(delegate, ConcurrencyLimit.builder()
-                                       .maxConcurrency(maxConcurrency)
-                                       .timeoutMillis(timeout)
+        this(delegate, ConcurrencyLimit.builder(maxConcurrency)
+                                       .timeoutMillis(unit.toMillis(timeout))
                                        .build());
     }
 
@@ -101,26 +99,6 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         super(delegate);
         this.concurrencyLimit = concurrencyLimit;
         numActiveRequests = concurrencyLimit.numActiveRequests();
-    }
-
-    static void validateAll(int maxConcurrency, long timeout, TimeUnit unit) {
-        validateMaxConcurrency(maxConcurrency);
-        validateTimeout(timeout);
-        requireNonNull(unit, "unit");
-    }
-
-    static long validateTimeout(long timeout) {
-        if (timeout < 0) {
-            throw new IllegalArgumentException("timeout: " + timeout + " (expected: >= 0)");
-        }
-        return timeout;
-    }
-
-    static int validateMaxConcurrency(int maxConcurrency) {
-        if (maxConcurrency < 0) {
-            throw new IllegalArgumentException("maxConcurrency: " + maxConcurrency + " (expected: >= 0)");
-        }
-        return maxConcurrency;
     }
 
     /**

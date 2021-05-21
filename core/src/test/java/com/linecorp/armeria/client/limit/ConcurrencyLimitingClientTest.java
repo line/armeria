@@ -245,8 +245,7 @@ class ConcurrencyLimitingClientTest {
 
     @Test
     void configuresClientWithConcurrencyLimit() {
-        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder()
-                                                                  .maxConcurrency(1)
+        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
                                                                   .timeout(Duration.of(10, SECONDS))
                                                                   .policy(requestContext -> true)
                                                                   .build();
@@ -256,27 +255,38 @@ class ConcurrencyLimitingClientTest {
 
     @Test
     void skipsConcurrencyBasedOnRequestContext() throws Exception {
-        final ClientRequestContext ctx = newContext();
-        final HttpRequest req = newReq();
-        final HttpResponseWriter actualRes = HttpResponse.streaming();
+        final ClientRequestContext ctx1 = newContext();
+        final ClientRequestContext ctx2 = newContext();
+        final HttpRequest req1 = newReq();
+        final HttpRequest req2 = newReq();
+        final HttpResponseWriter actualRes1 = HttpResponse.streaming();
+        final HttpResponseWriter actualRes2 = HttpResponse.streaming();
 
-        when(delegate.execute(ctx, req)).thenReturn(actualRes);
-        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder()
-                                                                  .maxConcurrency(1)
+        when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
+        when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
+
+        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
                                                                   .policy(requestContext -> false)
                                                                   .build();
 
         final ConcurrencyLimitingClient client =
                 newDecorator(concurrencyLimit).apply(delegate);
 
-        // A request should be delegated immediately, creating no deferred response.
-        final HttpResponse res = client.execute(ctx, req);
-        verify(delegate).execute(ctx, req);
-        assertThat(res.isOpen()).isTrue();
-        assertThat(client.numActiveRequests()).isEqualTo(1);
+        // both requests should be delegated immediately, creating no deferred response.
+        final HttpResponse res1 = client.execute(ctx1, req1);
+        final HttpResponse res2 = client.execute(ctx2, req2);
+
+        verify(delegate).execute(ctx1, req1);
+        assertThat(res1.isOpen()).isTrue();
+        assertThat(client.numActiveRequests()).isEqualTo(2);
+
+        verify(delegate).execute(ctx2, req2);
+        assertThat(res2.isOpen()).isTrue();
+        assertThat(client.numActiveRequests()).isEqualTo(2);
 
         // Complete the response, leaving no active requests.
-        closeAndDrain(actualRes, res);
+        closeAndDrain(actualRes1, res1);
+        closeAndDrain(actualRes2, res2);
         await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
     }
 
@@ -291,8 +301,7 @@ class ConcurrencyLimitingClientTest {
 
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
 
-        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder()
-                                                                  .maxConcurrency(1)
+        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
                                                                   .timeoutMillis(500)
                                                                   .policy(requestContext -> true)
                                                                   .build();
