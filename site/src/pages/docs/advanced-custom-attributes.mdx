@@ -36,3 +36,18 @@ ctx.attrs().forEachRemaining(e -> {
     System.err.println(e.getKey() + ": " + e.getValue());
 });
 ```
+
+## Setting attributes using <type://WebClientRequestPreparation>
+
+You can set attributes when building a request using <type://WebClient#prepare()>.
+
+```java
+import com.linecopr.armeria.client.WebClient;
+
+WebClient client = WebClient.of("http://example.com"); 
+client.prepare()
+      .get("/my-service")
+      .attr(USER_ID, userId)
+      .attr(USER_SECRET, secret)
+      .execute();
+```

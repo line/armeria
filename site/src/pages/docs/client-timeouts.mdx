@@ -3,7 +3,7 @@
 Sometimes, the default timeouts used by the Armeria clients do not suit a particular scenario well.
 In these cases, you might want to override the timeout settings.
 
-## Using `ClientBuilder`
+## Using <type://ClientBuilder>
 
 ```java
 import java.time.Duration;
@@ -18,6 +18,20 @@ HelloService.Iface client =
            .responseTimeout(Duration.ofSeconds(responseTimeout))
            .writeTimeout(Duration.ofSeconds(writeTimeout))
            .build(HelloService.Iface.class);
+```
+
+## Using <type://WebClientRequestPreparation>
+
+You can override a request timeout in a request level using <type://WebClient#prepare()>.
+
+```java
+import com.linecopr.armeria.client.WebClient;
+
+WebClient client = WebClient.of("http://example.com"); 
+client.prepare()
+      .get("/hello")
+      .responseTimeout(Duration.ofSeconds(responseTimeout))
+      .execute();
 ```
 
 <Tip>
