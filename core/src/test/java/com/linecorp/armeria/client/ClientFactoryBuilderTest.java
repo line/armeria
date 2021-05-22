@@ -277,8 +277,8 @@ class ClientFactoryBuilderTest {
             "0, 20000, 20000",
             "20000, 0, 20000",
     })
-    void tcpUserTimeoutWithApplicationTimeouts(int idleTimeoutMillis, int maxConnectionAgeMillis,
-                                               int expectedUserTimeoutMillis) {
+    void tcpUserTimeoutWithApplicationTimeouts(long idleTimeoutMillis, long maxConnectionAgeMillis,
+                                               long expectedUserTimeoutMillis) {
         assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
 
         final ChannelOption<Integer> option = EpollChannelOption.TCP_USER_TIMEOUT;
@@ -299,7 +299,7 @@ class ClientFactoryBuilderTest {
         final ChannelOption<Integer> idleOption = EpollChannelOption.TCP_KEEPIDLE;
         final ChannelOption<Integer> intervalOption = EpollChannelOption.TCP_KEEPINTVL;
 
-        final int pingIntervalMillis = 10_000;
+        final long pingIntervalMillis = 10_000;
         try (ClientFactory factory = ClientFactory.builder()
                                                   .pingIntervalMillis(pingIntervalMillis)
                                                   .idleTimeoutMillis(pingIntervalMillis + 1)

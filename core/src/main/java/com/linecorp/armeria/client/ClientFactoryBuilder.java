@@ -787,7 +787,7 @@ public final class ClientFactoryBuilder {
             if (userTimeoutMillis > 0 && userTimeoutMillis <= Integer.MAX_VALUE) {
                 if (!userDefinedChannelOptions.containsKey(EpollChannelOption.TCP_USER_TIMEOUT)) {
                     newChannelOptionsBuilder.put(EpollChannelOption.TCP_USER_TIMEOUT,
-                                                 (int) userTimeoutMillis);
+                                                 userTimeoutMillis);
                 }
             }
             if (pingIntervalMillis > 0 && pingIntervalMillis <= Integer.MAX_VALUE) {
@@ -795,8 +795,8 @@ public final class ClientFactoryBuilder {
                     !userDefinedChannelOptions.containsKey(EpollChannelOption.TCP_KEEPINTVL) &&
                     !userDefinedChannelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
                     newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
-                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPIDLE, (int) pingIntervalMillis);
-                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPINTVL, (int) pingIntervalMillis);
+                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPIDLE, pingIntervalMillis);
+                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPINTVL, pingIntervalMillis);
                 }
             }
         }

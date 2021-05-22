@@ -1248,7 +1248,10 @@ public final class Flags {
     }
 
     /**
-     * TBU.
+     * Returns whether default socket options defined by armeria are enabled.
+     *
+     * <p>This flag is enabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.useDefaultNettyChannelOptions=false} JVM option to disable it.</p>
      */
     public static boolean useDefaultNettyChannelOptions() {
         return USE_DEFAULT_NETTY_CHANNEL_OPTIONS;
