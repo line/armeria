@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.stream.PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -360,7 +361,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * @param executor the executor to subscribe
      */
-    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor);
+    default void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+        subscribe(subscriber, executor, EMPTY_OPTIONS);
+    }
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,

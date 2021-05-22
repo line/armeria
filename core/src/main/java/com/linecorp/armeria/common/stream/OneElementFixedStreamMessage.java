@@ -16,19 +16,19 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
-
-import java.util.NoSuchElementException;
-
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Subscription;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link FixedStreamMessage} that only publishes one object.
  */
 @UnstableApi
-public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
+public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> implements Subscription {
 
     @Nullable
     private T obj;
@@ -38,66 +38,73 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    final void cleanupObjects(@Nullable Throwable cause) {
-        if (obj != null) {
-            try {
-                onRemoval(obj);
-            } finally {
-                StreamMessageUtil.closeOrAbort(obj, cause);
-            }
-            obj = null;
-        }
-    }
-
-    @Override
-    final void doRequest(SubscriptionImpl subscription, long unused) {
-        if (requested() != 0) {
-            // Already have demand, so don't need to do anything, the current demand will complete the
-            // stream.
-            return;
-        }
-        setRequested(1);
-        doNotify(subscription);
-    }
-
-    @Override
     public final boolean isEmpty() {
         return false;
     }
 
-    private void doNotify(SubscriptionImpl subscription) {
-        // Only called with correct demand, so no need to even check it.
-        assert obj != null;
-        final T published = prepareObjectForNotification(subscription, obj);
-        obj = null;
-        // Not possible to have re-entrant onNext with only one item, so no need to keep track of it.
+    @Override
+    public long demand() {
+        return 0;
+    }
 
-        try {
-            subscription.subscriber().onNext(published);
-        } catch (Throwable t) {
-            // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
-            abort(t);
-            throwIfFatal(t);
-            logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
-                        published, subscription.subscriber(), t);
+    @Override
+    final void cleanupObjects(@Nullable Throwable cause) {
+        if (obj != null) {
+            StreamMessageUtil.closeOrAbort(obj, cause);
+            obj = null;
+        }
+    }
+
+    @Override
+    public void request(long n) {
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            request1(n);
+        } else {
+            executor.execute(() -> request1(n));
+        }
+    }
+
+    private void request1(long n) {
+        if (obj == null) {
             return;
         }
-        notifySubscriberOfCloseEvent(subscription, SUCCESSFUL_CLOSE);
-    }
 
-    @Override
-    public boolean hasNext() {
-        return obj != null;
-    }
-
-    @Override
-    public T next() {
-        if (obj == null) {
-            throw new NoSuchElementException();
-        } else {
-            final T next = obj;
-            obj = null;
-            return next;
+        if (n <= 0) {
+            onError(new IllegalArgumentException(
+                    "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+            return;
         }
+
+        final T published = prepareObjectForNotification(obj);
+        obj = null;
+
+        onNext(published);
+        onComplete();
     }
+
+    @Override
+    public void cancel() {
+        if (obj == null) {
+            return;
+        }
+        super.cancel();
+    }
+
+    @Override
+    public void abort() {
+        if (obj == null) {
+            return;
+        }
+        super.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        if (obj == null) {
+            return;
+        }
+        super.abort(cause);
+    }
+
 }
