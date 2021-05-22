@@ -69,6 +69,8 @@ public final class GraphQLServiceBuilder {
     @Nullable
     private DataLoaderRegistry dataLoaderRegistry;
 
+    private boolean useBlockingTaskExecutor;
+
     GraphQLServiceBuilder() {}
 
     /**
@@ -158,6 +160,14 @@ public final class GraphQLServiceBuilder {
     }
 
     /**
+     * Sets whether the service executes service methods using the blocking executor.
+     */
+    public GraphQLServiceBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+        return this;
+    }
+
+    /**
      * Creates a {@link GraphQLService}.
      */
     public GraphQLService build() {
@@ -180,7 +190,7 @@ public final class GraphQLServiceBuilder {
         for (Consumer<GraphQL.Builder> configurer : configurers) {
             configurer.accept(builder);
         }
-        return new DefaultGraphQLService(builder.build(), dataLoaderRegistry);
+        return new DefaultGraphQLService(builder.build(), dataLoaderRegistry, useBlockingTaskExecutor);
     }
 
     private static TypeDefinitionRegistry typeDefinitionRegistry(List<File> schemaFiles) {
@@ -208,11 +218,11 @@ public final class GraphQLServiceBuilder {
     private static List<File> defaultSchemaFiles() {
         final ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         return DEFAULT_SCHEMA_FILE_NAMES
-                            .stream()
-                            .map(it -> resourcePath(classLoader, it))
-                            .filter(Objects::nonNull)
-                            .map(GraphQLServiceBuilder::toFile)
-                            .collect(toImmutableList());
+                .stream()
+                .map(it -> resourcePath(classLoader, it))
+                .filter(Objects::nonNull)
+                .map(GraphQLServiceBuilder::toFile)
+                .collect(toImmutableList());
     }
 
     @Nullable

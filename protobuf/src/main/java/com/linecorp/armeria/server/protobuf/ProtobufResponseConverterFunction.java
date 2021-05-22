@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.protobuf;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
-import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.isJson;
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.isProtobuf;
 import static java.util.Objects.requireNonNull;
 
@@ -147,7 +146,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
     public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
                                         @Nullable Object result, HttpHeaders trailers) throws Exception {
         final MediaType contentType = headers.contentType();
-        final boolean isJson = isJson(contentType);
+        final boolean isJson = MediaType.isJson(contentType);
 
         if (isJsonSeq(contentType)) {
             checkArgument(result != null, "a null value is not allowed for %s", contentType);

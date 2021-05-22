@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.schema.DataFetcher;
@@ -70,6 +71,8 @@ class GraphQLServiceTest {
 
     private static DataFetcher<String> errorDataFetcher() {
         return environment -> {
+            final ServiceRequestContext ctx = environment.getContext();
+            assertThat(ctx.eventLoop().inEventLoop()).isTrue();
             throw new NullPointerException("npe");
         };
     }

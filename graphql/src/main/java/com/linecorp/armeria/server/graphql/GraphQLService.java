@@ -16,10 +16,6 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import javax.annotation.Nullable;
-
-import org.dataloader.DataLoaderRegistry;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 
@@ -44,12 +40,5 @@ public interface GraphQLService extends HttpService {
      */
     static GraphQLService of(GraphQL graphQL) {
         return new DefaultGraphQLService(graphQL);
-    }
-
-    /**
-     * Returns a new {@link GraphQLService}.
-     */
-    static GraphQLService of(GraphQL graphQL, @Nullable DataLoaderRegistry dataLoaderRegistry) {
-        return new DefaultGraphQLService(graphQL, dataLoaderRegistry);
     }
 }

@@ -96,8 +96,7 @@ public final class JacksonRequestConverterFunction implements RequestConverterFu
             @Nullable ParameterizedType expectedParameterizedResultType) throws Exception {
 
         final MediaType contentType = request.contentType();
-        if (contentType != null && (contentType.is(MediaType.JSON) ||
-                                    contentType.subtype().endsWith("+json"))) {
+        if (MediaType.isJson(contentType)) {
             if (expectedResultType == TreeNode.class ||
                 expectedResultType == JsonNode.class) {
                 try {

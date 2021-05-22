@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.graphql;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
@@ -59,13 +60,21 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
     @Nullable
     private final DataLoaderRegistry dataLoaderRegistry;
 
+    private final boolean useBlockingTaskExecutor;
+
     DefaultGraphQLService(GraphQL graphQL) {
         this(graphQL, null);
     }
 
     DefaultGraphQLService(GraphQL graphQL, @Nullable DataLoaderRegistry dataLoaderRegistry) {
+        this(graphQL, dataLoaderRegistry, false);
+    }
+
+    DefaultGraphQLService(GraphQL graphQL, @Nullable DataLoaderRegistry dataLoaderRegistry,
+                          boolean useBlockingTaskExecutor) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistry = dataLoaderRegistry;
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
     }
 
     @Override
@@ -79,7 +88,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         }
         final Map<String, Object> variables = toVariableMap(queryString.get("variables"));
         final String operationName = queryString.get("operationName");
-        return execute(executionInput(query, ctx, variables, operationName));
+        return execute(ctx, executionInput(query, ctx, variables, operationName));
     }
 
     @Override
@@ -101,9 +110,9 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                 }
                 final Map<String, Object> requestMap = parseJsonString(body);
                 final String query = (String) requestMap.getOrDefault("query", "");
-                return execute(executionInput(query, ctx,
-                                              toVariableMap(requestMap.get("variables")),
-                                              (String) requestMap.get("operationName")));
+                return execute(ctx, executionInput(query, ctx,
+                                                   toVariableMap(requestMap.get("variables")),
+                                                   (String) requestMap.get("operationName")));
             }));
         }
         if (contentType.is(MediaType.GRAPHQL)) {
@@ -112,7 +121,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                     return HttpResponse.ofFailure(thrown);
                 }
                 final String query = req.contentUtf8();
-                return execute(executionInput(query, ctx, null, null));
+                return execute(ctx, executionInput(query, ctx, null, null));
             }));
         }
         return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
@@ -136,12 +145,21 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         return builder.context(ctx).build();
     }
 
-    private HttpResponse execute(ExecutionInput input) {
-        return HttpResponse.from(graphQL.executeAsync(input).handle((executionResult, cause) -> {
-            if (cause != null) {
-                final ExecutionResult error = toExecutionResult(cause);
-                return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
-            }
+    private HttpResponse execute(ServiceRequestContext ctx, ExecutionInput input) {
+        if (useBlockingTaskExecutor) {
+            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+            ctx.blockingTaskExecutor().execute(() -> {
+                final ExecutionResult executionResult = graphQL.execute(input);
+                future.complete(HttpResponse.of(MediaType.JSON_UTF_8,
+                                                toJsonString(executionResult.toSpecification())));
+            });
+            return HttpResponse.from(future);
+        } else {
+            return HttpResponse.from(graphQL.executeAsync(input).handle((executionResult, cause) -> {
+                if (cause != null) {
+                    final ExecutionResult error = toExecutionResult(cause);
+                    return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
+                }
 
             // TODO: When WebSocket is implemented, it should be removed.
             if (executionResult.getData() instanceof Publisher) {
@@ -150,8 +168,9 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                 return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
             }
 
-            return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(executionResult.toSpecification()));
-        }));
+                return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(executionResult.toSpecification()));
+            }));
+        }
     }
 
     private static ExecutionResult toExecutionResult(Throwable cause) {
