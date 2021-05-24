@@ -26,11 +26,10 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
-
 class TestReconfigurableServer {
 
     @Test
-    public void test_reconfiguration_of_server() throws Exception {
+    void test_reconfiguration_of_server() throws Exception {
         final ServerBuilder sb = Server.builder();
         sb.http(9009);
 
@@ -56,7 +55,7 @@ class TestReconfigurableServer {
 
         Thread.sleep(1000); // Some time goes by now want to reconfigure new server
         System.out.println("Configuring new server");
-        server.reconfigure(serverBuilder  -> {
+        server.reconfigure(serverBuilder -> {
             // Replace the entire routes with the following two services.
             serverBuilder.service("/test2", (ctx, req) -> HttpResponse.of("Hello, world!"));
 
@@ -75,42 +74,34 @@ class TestReconfigurableServer {
 
         //Open new connection to check if the newly reconfigured server is now operational
         // and old service endpoints are no longer visible.
-        final WebClient client2 = WebClient.of("http://localhost:" + server.activeLocalPort());
-        final AggregatedHttpResponse response2 = client2.get("/test2/world")
-                .aggregate()
-                .get();
+        final WebClient newClient = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final AggregatedHttpResponse rcsResponse = newClient.get("/test2/world").aggregate().get();
 
-        assertThat(response2.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response2.contentUtf8()).isEqualTo("Hello, WORLD");
+        assertThat(rcsResponse.status()).isEqualTo(HttpStatus.OK);
+        assertThat(rcsResponse.contentUtf8()).isEqualTo("Hello, WORLD");
 
-        final AggregatedHttpResponse response22 = client2.get("/test2")
-                .aggregate()
-                .get();
+        final AggregatedHttpResponse rcsResponse1 = newClient.get("/test2").aggregate().get();
 
-        assertThat(response22.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response22.contentUtf8()).isEqualTo("Hello, world!");
+        assertThat(rcsResponse1.status()).isEqualTo(HttpStatus.OK);
+        assertThat(rcsResponse1.contentUtf8()).isEqualTo("Hello, world!");
 
-        final AggregatedHttpResponse failedResponse = client2.get("/test1").aggregate().get();
+        final AggregatedHttpResponse failedResponse = newClient.get("/test1").aggregate().get();
         assertThat(failedResponse.status()).isEqualTo(HttpStatus.NOT_FOUND);
 
         // Tests that original service configurations are no longer active when you open a new connection
         // with the server.
-        final WebClient client3 = WebClient.of("http://localhost:" + server.activeLocalPort());
-        final AggregatedHttpResponse response3 = client3.get("/test1")
-                .aggregate()
-                .get();
+        final WebClient newClientForOldRoutes = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final AggregatedHttpResponse response3 = newClientForOldRoutes.get("/test1").aggregate().get();
         assertThat(response3.status()).isEqualTo(HttpStatus.NOT_FOUND);
 
-        final AggregatedHttpResponse response4 = client3.get("/test1/world")
-                .aggregate()
-                .get();
+        final AggregatedHttpResponse response4 = newClientForOldRoutes.get("/test1/world").aggregate().get();
 
         assertThat(response4.status()).isEqualTo(HttpStatus.NOT_FOUND);
         server.stop().join();
     }
 
     @Test
-    public void test_we_dont_reconfigure_empty_serviceconfig() throws Exception {
+    void test_we_dont_reconfigure_empty_serviceconfig() throws Exception {
         final ServerBuilder sb = Server.builder();
         sb.http(9010);
         sb.service("/test1", (ctx, req) -> HttpResponse.of("Hello, world!"));
@@ -119,20 +110,18 @@ class TestReconfigurableServer {
 
         server.start().join();
 
-        final WebClient client3 = WebClient.of("http://localhost:" + server.activeLocalPort());
-        final AggregatedHttpResponse res = client3.get("/test1")
-                .aggregate()
-                .get();
+        final WebClient originalClient = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final AggregatedHttpResponse res = originalClient.get("/test1").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("Hello, world!");
 
-        assertThatThrownBy(() -> server.reconfigure(serverBuilder  -> {
+        assertThatThrownBy(() -> server.reconfigure(serverBuilder -> {
             // This should not work since we do not allow empty service configuration.
         })).isInstanceOf(IllegalArgumentException.class).hasMessage("no services in the server");
     }
 
     @Test
-    public void test_reconfiguration_of_https_server() throws Exception {
+    void test_reconfiguration_of_https_server() throws Exception {
         final ServerBuilder sb = Server.builder();
         sb.https(9009);
         sb.tlsSelfSigned();
@@ -162,7 +151,7 @@ class TestReconfigurableServer {
 
         Thread.sleep(1000); // Some time goes by now want to reconfigure new server
         System.out.println("Configuring new server");
-        server.reconfigure(serverBuilder  -> {
+        server.reconfigure(serverBuilder -> {
             // Need to reconfigure ssl context.
             serverBuilder.tlsSelfSigned();
             // Replace the entire routes with the following two services.
@@ -183,41 +172,33 @@ class TestReconfigurableServer {
 
         //Open new connection to check if the newly reconfigured server is now operational
         // and old service endpoints are no longer visible.
-        final WebClient client2 = WebClient.builder("https://localhost:" + server.activeLocalPort())
+        final WebClient newClient = WebClient.builder("https://localhost:" + server.activeLocalPort())
                 .factory(ClientFactory.insecure())
                 .build();
 
-        final AggregatedHttpResponse response2 = client2.get("/test2/world")
-                .aggregate()
-                .get();
+        final AggregatedHttpResponse rcsResponse = newClient.get("/test2/world").aggregate().get();
 
-        assertThat(response2.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response2.contentUtf8()).isEqualTo("Hello, WORLD");
+        assertThat(rcsResponse.status()).isEqualTo(HttpStatus.OK);
+        assertThat(rcsResponse.contentUtf8()).isEqualTo("Hello, WORLD");
 
-        final AggregatedHttpResponse response22 = client2.get("/test2")
-                .aggregate()
-                .get();
+        final AggregatedHttpResponse rcsResponse1 = newClient.get("/test2").aggregate().get();
 
-        assertThat(response22.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response22.contentUtf8()).isEqualTo("Hello, world!");
+        assertThat(rcsResponse1.status()).isEqualTo(HttpStatus.OK);
+        assertThat(rcsResponse1.contentUtf8()).isEqualTo("Hello, world!");
 
-        final AggregatedHttpResponse failedResponse = client2.get("/test1").aggregate().get();
+        final AggregatedHttpResponse failedResponse = newClient.get("/test1").aggregate().get();
         assertThat(failedResponse.status()).isEqualTo(HttpStatus.NOT_FOUND);
 
         // Tests that original service configurations are no longer active when you open a new connection
         // with the server.
-        final WebClient client3 = WebClient.builder("https://localhost:" + server.activeLocalPort())
+        final WebClient newClientForOldRoutes = WebClient.builder("https://localhost:" + server.activeLocalPort())
                 .factory(ClientFactory.insecure())
                 .build();
 
-        final AggregatedHttpResponse response3 = client3.get("/test1")
-                .aggregate()
-                .get();
+        final AggregatedHttpResponse response3 = newClientForOldRoutes.get("/test1").aggregate().get();
         assertThat(response3.status()).isEqualTo(HttpStatus.NOT_FOUND);
 
-        final AggregatedHttpResponse response4 = client3.get("/test1/world")
-                .aggregate()
-                .get();
+        final AggregatedHttpResponse response4 = newClientForOldRoutes.get("/test1/world").aggregate().get();
 
         assertThat(response4.status()).isEqualTo(HttpStatus.NOT_FOUND);
         server.stop().join();

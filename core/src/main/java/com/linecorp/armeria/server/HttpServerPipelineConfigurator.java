@@ -191,8 +191,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
                 p.channel(), H1C, keepAliveHandler,
-                config.isDateHeaderEnabled(),
-                config.isServerHeaderEnabled()
+                config.isDateHeaderEnabled(), config.isServerHeaderEnabled()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
@@ -205,8 +204,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private Timer newKeepAliveTimer(SessionProtocol protocol) {
-        return MoreMeters.newTimer(config.meterRegistry(),
-                                   "armeria.server.connections.lifespan",
+        return MoreMeters.newTimer(config.meterRegistry(), "armeria.server.connections.lifespan",
                                    ImmutableList.of(Tag.of("protocol", protocol.uriText())));
     }
 
@@ -219,9 +217,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
         final Timer keepAliveTimer = newKeepAliveTimer(scheme == SCHEME_HTTP ? H2C : H2);
-        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config,
-                                                       keepAliveTimer, gracefulShutdownSupport,
-                                                       scheme.toString())
+        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config, keepAliveTimer,
+                                                       gracefulShutdownSupport, scheme.toString())
                 .server(true)
                 .initialSettings(http2Settings())
                 .build();
@@ -447,8 +444,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
             final HttpServerHandler httpServerHandler = new HttpServerHandler(configHolder,
-                                                                              gracefulShutdownSupport,
-                                                                              null, H2, proxiedAddresses);
+                    gracefulShutdownSupport,
+                    null, H2, proxiedAddresses);
             p.addLast(httpServerHandler);
             configHolder.addListener(httpServerHandler.configUpdateListener());
         }
