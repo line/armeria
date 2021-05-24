@@ -66,10 +66,6 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Override
     final void cleanupObjects(@Nullable Throwable cause) {
-        if (cancelled) {
-            return;
-        }
-        cancelled = true;
         while (fulfilled < objs.length) {
             final T obj = objs[fulfilled];
             objs[fulfilled++] = null;
@@ -139,9 +135,8 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
                     return;
                 }
 
-                T o = objs[fulfilled];
+                final T o = objs[fulfilled];
                 objs[fulfilled++] = null;
-                o = prepareObjectForNotification(o);
                 inOnNext = true;
                 try {
                     onNext(o);

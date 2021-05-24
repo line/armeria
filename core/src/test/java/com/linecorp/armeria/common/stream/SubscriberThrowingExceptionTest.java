@@ -114,7 +114,7 @@ class SubscriberThrowingExceptionTest {
         await().until(() -> data3.refCnt() == 0);
     }
 
-    private void subscribeAndValidate(StreamMessage<?> stream, boolean throwExceptionOnOnSubscribe) {
+    private static void subscribeAndValidate(StreamMessage<?> stream, boolean throwExceptionOnOnSubscribe) {
         final AtomicReference<Throwable> onErrorCaptor = new AtomicReference<>();
         stream.subscribe(new ExceptionThrowingSubscriber(onErrorCaptor, throwExceptionOnOnSubscribe),
                          ImmediateEventExecutor.INSTANCE);

@@ -18,8 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import javax.annotation.Nullable;
 
-import org.reactivestreams.Subscription;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -28,7 +26,7 @@ import io.netty.util.concurrent.EventExecutor;
  * A {@link FixedStreamMessage} that only publishes one object.
  */
 @UnstableApi
-public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> implements Subscription {
+public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Nullable
     private T obj;
@@ -50,7 +48,11 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> imple
     @Override
     final void cleanupObjects(@Nullable Throwable cause) {
         if (obj != null) {
-            StreamMessageUtil.closeOrAbort(obj, cause);
+            try {
+                onRemoval(obj);
+            } finally {
+                StreamMessageUtil.closeOrAbort(obj, cause);
+            }
             obj = null;
         }
     }
@@ -59,13 +61,13 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> imple
     public void request(long n) {
         final EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            request1(n);
+            request0(n);
         } else {
-            executor.execute(() -> request1(n));
+            executor.execute(() -> request0(n));
         }
     }
 
-    private void request1(long n) {
+    private void request0(long n) {
         if (obj == null) {
             return;
         }
@@ -76,10 +78,10 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> imple
             return;
         }
 
-        final T published = prepareObjectForNotification(obj);
+        T item = obj;
         obj = null;
+        onNext(item);
 
-        onNext(published);
         onComplete();
     }
 
@@ -106,5 +108,4 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> imple
         }
         super.abort(cause);
     }
-
 }

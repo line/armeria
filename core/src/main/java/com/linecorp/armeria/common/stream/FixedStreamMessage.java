@@ -69,15 +69,25 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
     private boolean withPooledObjects;
     private boolean notifyCancellation;
+    private boolean completed;
 
+    /**
+     * Clean up objects.
+     * @return {@code true} if the objects are cleaned up successfully.
+     *         {@code false} if the objects have been cleaned already or no objects to clean.
+     */
     abstract void cleanupObjects(@Nullable Throwable cause);
+
+    /**
+     * Invoked after an element is removed from the {@link StreamMessage} and before
+     * {@link Subscriber#onNext(Object)} is invoked.
+     *
+     * @param obj the removed element
+     */
+    protected void onRemoval(T obj) {}
 
     EventExecutor executor() {
         return firstNonNull(executor, ImmediateEventExecutor.INSTANCE);
-    }
-
-    boolean notifyCancellation() {
-        return notifyCancellation;
     }
 
     @Override
@@ -111,20 +121,22 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
     private void subscribe0(Subscriber<? super T> subscriber) {
         try {
+            //noinspection unchecked
             this.subscriber = (Subscriber<T>) subscriber;
             subscriber.onSubscribe(this);
             if (isEmpty()) {
-                subscriber.onComplete();
+                onComplete();
             }
         } catch (Throwable t) {
-            abort(t);
+            abort0(t);
             throwIfFatal(t);
             logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
                         subscriber, t);
         }
     }
 
-    T prepareObjectForNotification(T o) {
+    private T prepareObjectForNotification(T o) {
+        onRemoval(o);
         if (withPooledObjects) {
             PooledObjects.touch(o);
             return o;
@@ -136,10 +148,11 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     void onNext(T item) {
         assert subscriber != null;
         try {
-            subscriber.onNext(item);
+            final T published = prepareObjectForNotification(item);
+            subscriber.onNext(published);
         } catch (Throwable t) {
             // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
-            abort(t);
+            abort0(t);
             throwIfFatal(t);
             logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
                         item, subscriber, t);
@@ -147,10 +160,17 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     void onError(Throwable cause) {
+        if (completed) {
+            return;
+        }
+        completed = true;
+        onError0(cause);
+    }
+
+    private void onError0(Throwable cause) {
+        assert subscriber != null;
         try {
-            if (subscriber != null) {
-                subscriber.onError(cause);
-            }
+            subscriber.onError(cause);
             completionFuture.completeExceptionally(cause);
         } catch (Throwable t) {
             final Exception composite = new CompositeException(t, cause);
@@ -162,6 +182,11 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     void onComplete() {
+        if (completed) {
+            return;
+        }
+        completed = true;
+
         assert subscriber != null;
         try {
             subscriber.onComplete();
@@ -185,18 +210,30 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     private void cancel0() {
-        final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
-        if (notifyCancellation()) {
-            onError(cause);
+        if (completed) {
+            return;
         }
-        completionFuture.completeExceptionally(cause);
+        completed = true;
+
+        final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
         cleanupObjects(cause);
+
+        if (notifyCancellation) {
+            onError0(cause);
+        } else {
+            completionFuture.completeExceptionally(cause);
+        }
         subscriber = NeverInvokedSubscriber.get();
     }
 
     @Override
     public void abort() {
-        abort(AbortedStreamException.get());
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            abort0(null);
+        } else {
+            executor.execute(() -> abort0(null));
+        }
     }
 
     @Override
@@ -210,8 +247,21 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         }
     }
 
-    private void abort0(Throwable cause) {
-        onError(cause);
+    private void abort0(@Nullable Throwable cause) {
+        if (completed) {
+            return;
+        }
+        completed = true;
+
+        if (cause == null) {
+            cause = AbortedStreamException.get();
+        }
         cleanupObjects(cause);
+
+        if (subscriber != null) {
+            onError0(cause);
+        } else {
+            completionFuture.completeExceptionally(cause);
+        }
     }
 }

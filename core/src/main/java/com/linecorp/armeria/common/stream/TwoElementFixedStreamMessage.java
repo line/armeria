@@ -18,8 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import javax.annotation.Nullable;
 
-import org.reactivestreams.Subscription;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -28,7 +26,7 @@ import io.netty.util.concurrent.EventExecutor;
  * A {@link FixedStreamMessage} that publishes two objects.
  */
 @UnstableApi
-public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> implements Subscription {
+public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Nullable
     private T obj1;
@@ -46,7 +44,6 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> imple
         this.obj2 = obj2;
     }
 
-
     @Override
     public final boolean isEmpty() {
         return false;
@@ -60,11 +57,19 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> imple
     @Override
     final void cleanupObjects(@Nullable Throwable cause) {
         if (obj1 != null) {
-            StreamMessageUtil.closeOrAbort(obj1, cause);
+            try {
+                onRemoval(obj1);
+            } finally {
+                StreamMessageUtil.closeOrAbort(obj1, cause);
+            }
             obj1 = null;
         }
         if (obj2 != null) {
-            StreamMessageUtil.closeOrAbort(obj2, cause);
+            try {
+                onRemoval(obj2);
+            } finally {
+                StreamMessageUtil.closeOrAbort(obj2, cause);
+            }
             obj2 = null;
         }
     }
@@ -73,13 +78,13 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> imple
     public void request(long n) {
         final EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            request1(n);
+            request0(n);
         } else {
-            executor.execute(() -> request1(n));
+            executor.execute(() -> request0(n));
         }
     }
 
-    private void request1(long n) {
+    private void request0(long n) {
         if (obj2 == null) {
             return;
         }
@@ -110,11 +115,11 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> imple
         }
 
         if (obj1 != null) {
-            final T prepared = prepareObjectForNotification(obj1);
+            final T item = obj1;
             obj1 = null;
             inOnNext = true;
             try {
-                onNext(prepared);
+                onNext(item);
             } finally {
                 inOnNext = false;
             }
@@ -122,9 +127,9 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> imple
         }
 
         if ((n > 0 || requested) && obj2 != null) {
-            final T prepared = prepareObjectForNotification(obj2);
+            final T item = obj2;
             obj2 = null;
-            onNext(prepared);
+            onNext(item);
             onComplete();
         }
     }
@@ -145,4 +150,11 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> imple
         super.abort();
     }
 
+    @Override
+    public void abort(Throwable cause) {
+        if (obj2 == null) {
+            return;
+        }
+        super.abort(cause);
+    }
 }
