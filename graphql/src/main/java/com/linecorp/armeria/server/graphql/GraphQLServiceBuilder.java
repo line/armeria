@@ -62,12 +62,14 @@ public final class GraphQLServiceBuilder {
 
     private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfiguratorBuilder =
             ImmutableList.builder();
+    private final ImmutableList.Builder<Consumer<DataLoaderRegistry>> dataLoaderRegistryConsumerBuilder =
+            ImmutableList.builder();
     private final ImmutableList.Builder<GraphQLTypeVisitor> typeVisitorBuilder = ImmutableList.builder();
     private final ImmutableList.Builder<Instrumentation> instrumentationBuilder = ImmutableList.builder();
-    private final ImmutableList.Builder<Consumer<GraphQL.Builder>> configurerBuilder = ImmutableList.builder();
+    private final ImmutableList.Builder<Consumer<GraphQL.Builder>> graphQLBuilderConsumerBuilder =
+            ImmutableList.builder();
 
-    @Nullable
-    private DataLoaderRegistry dataLoaderRegistry;
+    private DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
 
     private boolean useBlockingTaskExecutor;
 
@@ -91,10 +93,19 @@ public final class GraphQLServiceBuilder {
     }
 
     /**
-     * Sets the {@link DataLoaderRegistry}.
+     * Adds the {@link DataLoaderRegistry} consumers.
      */
-    public GraphQLServiceBuilder dataLoaderRegistry(DataLoaderRegistry dataLoaderRegistry) {
-        this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
+    public GraphQLServiceBuilder configureDataLoaderRegistry(Consumer<DataLoaderRegistry>... configurers) {
+        requireNonNull(configurers, "configurers");
+        return configureDataLoaderRegistry(ImmutableList.copyOf(configurers));
+    }
+
+    /**
+     * Adds the {@link DataLoaderRegistry} consumers.
+     */
+    public GraphQLServiceBuilder configureDataLoaderRegistry(
+            Iterable<Consumer<DataLoaderRegistry>> configurers) {
+        dataLoaderRegistryConsumerBuilder.addAll(requireNonNull(configurers, "configurers"));
         return this;
     }
 
@@ -147,15 +158,15 @@ public final class GraphQLServiceBuilder {
     /**
      * Adds the {@link GraphQL.Builder} consumers.
      */
-    public GraphQLServiceBuilder configure(Consumer<GraphQL.Builder>... configurers) {
-        return configure(ImmutableList.copyOf(requireNonNull(configurers, "configurers")));
+    public GraphQLServiceBuilder configureGraphQL(Consumer<GraphQL.Builder>... configurers) {
+        return configureGraphQL(ImmutableList.copyOf(requireNonNull(configurers, "configurers")));
     }
 
     /**
      * Adds the {@link GraphQL.Builder} consumers.
      */
-    public GraphQLServiceBuilder configure(Iterable<Consumer<GraphQL.Builder>> configurers) {
-        configurerBuilder.addAll(requireNonNull(configurers, "configurers"));
+    public GraphQLServiceBuilder configureGraphQL(Iterable<Consumer<GraphQL.Builder>> configurers) {
+        graphQLBuilderConsumerBuilder.addAll(requireNonNull(configurers, "configurers"));
         return this;
     }
 
@@ -186,9 +197,15 @@ public final class GraphQLServiceBuilder {
             builder = builder.instrumentation(new ChainedInstrumentation(instrumentations));
         }
 
-        final List<Consumer<GraphQL.Builder>> configurers = configurerBuilder.build();
-        for (Consumer<GraphQL.Builder> configurer : configurers) {
+        final List<Consumer<GraphQL.Builder>> graphQLBuilders = graphQLBuilderConsumerBuilder.build();
+        for (Consumer<GraphQL.Builder> configurer : graphQLBuilders) {
             configurer.accept(builder);
+        }
+
+        final List<Consumer<DataLoaderRegistry>> dataLoaderRegistries =
+                dataLoaderRegistryConsumerBuilder.build();
+        for (Consumer<DataLoaderRegistry> configurer : dataLoaderRegistries) {
+            configurer.accept(dataLoaderRegistry);
         }
         return new DefaultGraphQLService(builder.build(), dataLoaderRegistry, useBlockingTaskExecutor);
     }

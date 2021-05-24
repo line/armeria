@@ -57,23 +57,22 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
 
     private final GraphQL graphQL;
 
-    @Nullable
     private final DataLoaderRegistry dataLoaderRegistry;
 
     private final boolean useBlockingTaskExecutor;
 
     DefaultGraphQLService(GraphQL graphQL) {
-        this(graphQL, null);
+        this(graphQL, new DataLoaderRegistry());
     }
 
-    DefaultGraphQLService(GraphQL graphQL, @Nullable DataLoaderRegistry dataLoaderRegistry) {
+    DefaultGraphQLService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry) {
         this(graphQL, dataLoaderRegistry, false);
     }
 
-    DefaultGraphQLService(GraphQL graphQL, @Nullable DataLoaderRegistry dataLoaderRegistry,
+    DefaultGraphQLService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
                           boolean useBlockingTaskExecutor) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
-        this.dataLoaderRegistry = dataLoaderRegistry;
+        this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
     }
 

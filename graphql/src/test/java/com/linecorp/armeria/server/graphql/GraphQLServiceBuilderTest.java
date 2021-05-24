@@ -20,8 +20,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.File;
+import java.util.concurrent.CompletableFuture;
 
-import org.dataloader.DataLoaderRegistry;
+import org.dataloader.DataLoader;
 import org.junit.jupiter.api.Test;
 
 import graphql.execution.instrumentation.SimpleInstrumentation;
@@ -47,13 +48,17 @@ class GraphQLServiceBuilderTest {
     void successful() throws Exception {
         final File graphqlSchemaFile = new File(ClassLoader.getSystemResource("test.graphqls").toURI());
         final GraphQLServiceBuilder builder = new GraphQLServiceBuilder();
+        final DataLoader<String, String> dataLoader =
+                DataLoader.newDataLoader(keys -> CompletableFuture.supplyAsync(() -> keys));
         final GraphQLService service = builder.schemaFile(graphqlSchemaFile)
                                               .instrumentation(SimpleInstrumentation.INSTANCE)
-                                              .dataLoaderRegistry(new DataLoaderRegistry())
+                                              .configureDataLoaderRegistry(dlr -> {
+                                                  dlr.register("dummy1", dataLoader);
+                                              })
                                               .runtimeWiring(it -> {
                                                   // noop
                                               }).typeVisitors(new GraphQLTypeVisitorStub())
-                                              .configure(it -> {
+                                              .configureGraphQL(it -> {
                                                   // noop
                                               }).build();
         assertThat(service).isNotNull();
