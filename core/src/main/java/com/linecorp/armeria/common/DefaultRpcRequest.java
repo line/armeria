@@ -26,6 +26,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
 /**
  * Default {@link RpcRequest} implementation.
@@ -35,26 +36,30 @@ final class DefaultRpcRequest implements RpcRequest {
     static final List<Object> SINGLE_NULL_PARAM = Collections.singletonList(null);
 
     private final Class<?> serviceType;
+    @Nullable
+    private final String serviceName;
     private final String method;
     private final List<Object> params;
 
-    DefaultRpcRequest(Class<?> serviceType, String method, Iterable<?> params) {
-        this(serviceType, method, copyParams(params));
+    DefaultRpcRequest(Class<?> serviceType, @Nullable String serviceName, String method, Iterable<?> params) {
+        this(serviceType, serviceName, method, copyParams(params));
     }
 
-    DefaultRpcRequest(Class<?> serviceType, String method, Object... params) {
-        this(serviceType, method, copyParams(params));
+    DefaultRpcRequest(Class<?> serviceType, @Nullable String serviceName, String method, Object... params) {
+        this(serviceType, serviceName, method, copyParams(params));
     }
 
-    private DefaultRpcRequest(Class<?> serviceType, String method, List<Object> params) {
+    private DefaultRpcRequest(Class<?> serviceType, @Nullable String serviceName, String method,
+                              List<Object> params) {
         this.serviceType = requireNonNull(serviceType, "serviceType");
+        this.serviceName = serviceName;
         this.method = requireNonNull(method, "method");
         this.params = params;
     }
 
     private static List<Object> copyParams(Iterable<?> params) {
         requireNonNull(params, "params");
-        if (params == SINGLE_NULL_PARAM) {
+        if (params == SINGLE_NULL_PARAM || params instanceof ImmutableList) {
             //noinspection unchecked
             return (List<Object>) params;
         }
@@ -76,6 +81,10 @@ final class DefaultRpcRequest implements RpcRequest {
     }
 
     private static List<Object> copyParams(Object... params) {
+        if (params.length == 0) {
+            return ImmutableList.of();
+        }
+
         final List<Object> copy = new ArrayList<>(params.length);
         Collections.addAll(copy, params);
         return Collections.unmodifiableList(copy);
@@ -84,6 +93,15 @@ final class DefaultRpcRequest implements RpcRequest {
     @Override
     public Class<?> serviceType() {
         return serviceType;
+    }
+
+    @Override
+    public String serviceName() {
+        if (serviceName != null) {
+            return serviceName;
+        } else {
+            return serviceType.getName();
+        }
     }
 
     @Override
@@ -120,6 +138,7 @@ final class DefaultRpcRequest implements RpcRequest {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("serviceType", simpleServiceName())
+                          .add("serviceName", serviceName())
                           .add("method", method())
                           .add("params", params()).toString();
     }

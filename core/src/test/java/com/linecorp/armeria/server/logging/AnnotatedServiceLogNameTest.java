@@ -61,6 +61,11 @@ class AnnotatedServiceLogNameTest {
               .build(new MyAnnotatedService());
 
             sb.annotatedService()
+              .defaultServiceNaming(ServiceNaming.shorten())
+              .pathPrefix("/shorten-naming")
+              .build(new MyAnnotatedService());
+
+            sb.annotatedService()
               .pathPrefix("/annotation")
               .build(new ServiceNameAnnotatedService());
 
@@ -135,6 +140,19 @@ class AnnotatedServiceLogNameTest {
         assertThat(sctx.config().defaultServiceName()).isNull();
         assertThat(sctx.log().whenComplete().join().serviceName())
                 .isEqualTo(MyAnnotatedService.class.getName());
+    }
+
+    @Test
+    void serviceName_withShortenNaming() {
+        client.get("/shorten-naming/service-name").aggregate().join();
+        final String expectedServiceName = "c.l.a.s.l." + AnnotatedServiceLogNameTest.class.getSimpleName() +
+                                           '$' + MyAnnotatedService.class.getSimpleName();
+        assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
+                .isEqualTo(expectedServiceName);
+        // ServiceNaming is used.
+        assertThat(sctx.config().defaultServiceName()).isNull();
+        assertThat(sctx.log().whenComplete().join().serviceName())
+                .isEqualTo(expectedServiceName);
     }
 
     @Test

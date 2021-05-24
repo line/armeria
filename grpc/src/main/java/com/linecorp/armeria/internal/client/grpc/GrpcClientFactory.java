@@ -16,12 +16,15 @@
 package com.linecorp.armeria.internal.client.grpc;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
+import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Function;
@@ -46,6 +49,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.grpc.Channel;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.stub.AbstractStub;
 
@@ -102,10 +106,14 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         } else {
             serviceDescriptor = clientStubFactory.findServiceDescriptor(clientType);
         }
-
         if (serviceDescriptor == null) {
             throw newUnknownClientTypeException(clientType);
         }
+
+        final Map<MethodDescriptor<?, ?>, String> simpleMethodNames =
+                serviceDescriptor.getMethods().stream()
+                                 .collect(toImmutableMap(Function.identity(),
+                                                         e -> extractMethodName(e.getFullMethodName())));
 
         final ClientBuilderParams newParams =
                 addTrailersExtractor(params, options, serializationFormat);
@@ -125,7 +133,8 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 meterRegistry(),
                 scheme.sessionProtocol(),
                 serializationFormat,
-                jsonMarshaller);
+                jsonMarshaller,
+                simpleMethodNames);
 
         final Object clientStub = clientStubFactory.newClientStub(clientType, channel);
         requireNonNull(clientStub, "clientStubFactory.newClientStub() returned null");

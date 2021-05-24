@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.metric;
 import static com.linecorp.armeria.common.metric.MoreMeters.measureAll;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -72,11 +74,12 @@ class PrometheusExpositionServiceTest {
 
     @Test
     void prometheusRequests() throws InterruptedException {
-        when(logger.isDebugEnabled()).thenReturn(false);
+        when(logger.isDebugEnabled()).thenReturn(true);
         final WebClient client = WebClient.of(server.httpUri());
         assertThat(client.get("/api").aggregate().join().status()).isSameAs(HttpStatus.OK);
         await().until(() -> logs.size() == 1);
         verify(logger, times(2)).isDebugEnabled();
+        verify(logger, times(2)).debug(anyString(), any(), any());
 
         client.get("/disabled").aggregate().join();
         // prometheus requests are not collected.
@@ -91,7 +94,8 @@ class PrometheusExpositionServiceTest {
         // Access log is not written.
         await().pollDelay(500, TimeUnit.MILLISECONDS).then().until(() -> logs.size() == 1);
         // LoggingService ignores the request.
-        verify(logger, times(2)).isDebugEnabled();
+        verify(logger, times(3)).isDebugEnabled();
+        verify(logger, times(2)).debug(anyString(), any(), any());
 
         client.get("/enabled").aggregate().join();
         // prometheus requests are collected.
@@ -105,6 +109,7 @@ class PrometheusExpositionServiceTest {
         });
         // Access log is written.
         await().pollDelay(500, TimeUnit.MILLISECONDS).until(() -> logs.size() == 2);
-        verify(logger, times(4)).isDebugEnabled();
+        verify(logger, times(5)).isDebugEnabled();
+        verify(logger, times(4)).debug(anyString(), any(), any());
     }
 }

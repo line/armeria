@@ -554,7 +554,8 @@ class GrpcServiceServerTest {
                 .contains("/armeria.grpc.testing.UnitTestService/StaticUnaryCall"));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StaticUnaryCall");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
@@ -569,8 +570,8 @@ class GrpcServiceServerTest {
         assertThat(recorder.getValues()).containsExactly(RESPONSE_MESSAGE, RESPONSE_MESSAGE);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo(
-                    "armeria.grpc.testing.UnitTestService/StaticStreamedOutputCall");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StaticStreamedOutputCall");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
@@ -585,7 +586,8 @@ class GrpcServiceServerTest {
         assertThat(t.getStatus().getDescription()).isNull();
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/ErrorNoMessage");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("ErrorNoMessage");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
@@ -608,7 +610,8 @@ class GrpcServiceServerTest {
         assertThat(t.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/ErrorWithMessage");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("ErrorWithMessage");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
@@ -625,7 +628,8 @@ class GrpcServiceServerTest {
         assertThat(t.getStatus().getDescription()).isEqualTo("call aborted");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/UnaryThrowsError");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("UnaryThrowsError");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
@@ -645,7 +649,8 @@ class GrpcServiceServerTest {
         assertThat(t.getStatus().getDescription()).isEqualTo("bad streaming message");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StreamThrowsError");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StreamThrowsError");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
@@ -687,8 +692,8 @@ class GrpcServiceServerTest {
         assertThat(response.getValues()).containsExactly(expectedResponse);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo(
-                    "armeria.grpc.testing.UnitTestService/CheckRequestContext");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("CheckRequestContext");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(expectedResponse);
         });
@@ -759,8 +764,8 @@ class GrpcServiceServerTest {
         nonDecompressingChannel.shutdownNow();
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo(
-                    "armeria.grpc.testing.UnitTestService/StaticUnaryCallSetsMessageCompression");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StaticUnaryCallSetsMessageCompression");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
@@ -773,8 +778,8 @@ class GrpcServiceServerTest {
                 .isEqualTo(RESPONSE_MESSAGE);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo(
-                    "armeria.grpc.testing.UnitTestService/StaticUnaryCallSetsMessageCompression");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StaticUnaryCallSetsMessageCompression");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
@@ -818,7 +823,8 @@ class GrpcServiceServerTest {
         await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StreamClientCancels");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StreamClientCancels");
             assertThat(rpcReq.params()).containsExactly(SimpleRequest.getDefaultInstance());
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(protocol.startsWith("h2") ? Code.CANCELLED
@@ -873,8 +879,8 @@ class GrpcServiceServerTest {
         }
 
         final RpcRequest rpcReq = (RpcRequest) log.requestContent();
-        assertThat(rpcReq.method()).isEqualTo(
-                "armeria.grpc.testing.UnitTestService/StreamClientCancelsBeforeResponseClosedCancels");
+        assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+        assertThat(rpcReq.method()).isEqualTo("StreamClientCancelsBeforeResponseClosedCancels");
         assertThat(rpcReq.params()).containsExactly(SimpleRequest.getDefaultInstance());
     }
 
@@ -892,7 +898,8 @@ class GrpcServiceServerTest {
                 .isEqualTo(response.content().length());
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StaticUnaryCall");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
@@ -913,7 +920,8 @@ class GrpcServiceServerTest {
                 .isEqualTo(response.content().length());
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StaticUnaryCall");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
@@ -973,7 +981,8 @@ class GrpcServiceServerTest {
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StaticUnaryCall");
             assertThat(rpcReq.params()).containsExactly(request);
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(Code.UNKNOWN);
@@ -1000,7 +1009,8 @@ class GrpcServiceServerTest {
                         serializedTrailers));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StaticUnaryCall");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
@@ -1039,7 +1049,8 @@ class GrpcServiceServerTest {
                              serializedTrailers));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StaticUnaryCall");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
@@ -1087,7 +1098,8 @@ class GrpcServiceServerTest {
                 "application/grpc+json");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("StaticUnaryCall");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
