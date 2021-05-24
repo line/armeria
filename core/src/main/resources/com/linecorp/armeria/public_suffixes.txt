@@ -41,7 +41,6 @@
 *.gateway.dev
 *.hosting.myjino.ru
 *.hosting.ovh.net
-*.id.forgerock.io
 *.in.futurecms.at
 *.jm
 *.kawasaki.jp
@@ -3468,6 +3467,7 @@ ichinoseki.iwate.jp
 icu
 id
 id.au
+id.forgerock.io
 id.ir
 id.lv
 id.ly
@@ -6601,7 +6601,6 @@ qvc
 r.bg
 r.cdn77.net
 r.se
-ra-ru.ru
 ra.it
 racing
 rackmaze.com
@@ -9163,7 +9162,6 @@ zoological.museum
 zoology.museum
 zp.gov.pl
 zp.ua
-zsew.ru
 zt.ua
 zuerich
 zushi.kanagawa.jp

@@ -277,14 +277,14 @@ class RouteTest {
         assertThat(route.apply(withPath("/foo/bar/"), false).isPresent()).isTrue();
 
         route = Route.builder().pathPrefix("/foo")
-                     .exclude(Route.builder().regex("^/foo/(bar|baz)$").build())
+                     .exclude("regex:^/foo/(bar|baz)$") // Use shortcut.
                      .build();
         assertThat(route.apply(withPath("/foo/baz"), false).isPresent()).isFalse();
         assertThat(route.apply(withPath("/foo/bar"), false).isPresent()).isFalse();
         assertThat(route.apply(withPath("/foo/bar/"), false).isPresent()).isTrue();
 
         route = Route.builder().pathPrefix("/foo")
-                     .exclude(Route.builder().glob("/foo/bar/**").build())
+                     .exclude("glob:/foo/bar/**")   // Use shortcut.
                      .build();
         assertThat(route.apply(withPath("/foo/baz"), false).isPresent()).isTrue();
         assertThat(route.apply(withPath("/foo/bar"), false).isPresent()).isTrue();

@@ -186,6 +186,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder exclude(String pathPattern) {
+        return (VirtualHostServiceBindingBuilder) super.exclude(pathPattern);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder exclude(Route excludedRoute) {
         return (VirtualHostServiceBindingBuilder) super.exclude(excludedRoute);
     }

@@ -50,7 +50,7 @@ public class ServiceRoutingExclusionTest {
             // Excluding a decorator route:
             // Matches /home/ and /home/trustin, but not /home/ikhoon
             sb.routeDecorator().pathPrefix("/home")
-              .exclude(Route.builder().pathPrefix("/home/ikhoon").build())
+              .exclude("prefix:/home/ikhoon")   // Use shortcut.
               .build((delegate, ctx, req) -> {
                   decoratorCallChecker2.set(true);
                   return delegate.serve(ctx, req);
@@ -67,7 +67,7 @@ public class ServiceRoutingExclusionTest {
     @Test
     void noExclusion() {
         final WebClient client = WebClient.of(server.httpUri());
-        assertThat(client.get("/home/foo").aggregate().join().status()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(client.get("/home/minwoox").aggregate().join().status()).isEqualTo(HttpStatus.NO_CONTENT);
         assertThat(decoratorCallChecker1.get()).isTrue();
         assertThat(decoratorCallChecker2.get()).isTrue();
     }
@@ -75,7 +75,8 @@ public class ServiceRoutingExclusionTest {
     @Test
     void excludedServiceRoute() {
         final WebClient client = WebClient.of(server.httpUri());
-        assertThat(client.get("/home/trustin/foo").aggregate().join().status()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(client.get("/home/trustin/minwoox").aggregate().join().status())
+                .isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(decoratorCallChecker1.get()).isFalse();
         // A fallback service is decorated.
         assertThat(decoratorCallChecker2.get()).isTrue();
@@ -84,7 +85,8 @@ public class ServiceRoutingExclusionTest {
     @Test
     void excludedDecoratorRoute() {
         final WebClient client = WebClient.of(server.httpUri());
-        assertThat(client.get("/home/ikhoon/foo").aggregate().join().status()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(client.get("/home/ikhoon/minwoox").aggregate().join().status())
+                .isEqualTo(HttpStatus.NO_CONTENT);
         assertThat(decoratorCallChecker1.get()).isTrue();
         assertThat(decoratorCallChecker2.get()).isFalse();
     }

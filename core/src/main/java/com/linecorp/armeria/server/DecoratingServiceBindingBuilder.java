@@ -177,6 +177,11 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
     }
 
     @Override
+    public DecoratingServiceBindingBuilder exclude(String pathPattern) {
+        return (DecoratingServiceBindingBuilder) super.exclude(pathPattern);
+    }
+
+    @Override
     public DecoratingServiceBindingBuilder exclude(Route excludedRoute) {
         return (DecoratingServiceBindingBuilder) super.exclude(excludedRoute);
     }

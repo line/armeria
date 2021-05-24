@@ -178,6 +178,11 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     }
 
     @Override
+    public VirtualHostDecoratingServiceBindingBuilder exclude(String pathPattern) {
+        return (VirtualHostDecoratingServiceBindingBuilder) super.exclude(pathPattern);
+    }
+
+    @Override
     public VirtualHostDecoratingServiceBindingBuilder exclude(Route excludedRoute) {
         return (VirtualHostDecoratingServiceBindingBuilder) super.exclude(excludedRoute);
     }

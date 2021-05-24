@@ -407,6 +407,16 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
+     * Adds a {@code pathPattern} that is supposed to be excluded from the {@link Route}s built by this
+     * {@link AbstractBindingBuilder}.
+     */
+    public AbstractBindingBuilder exclude(String pathPattern) {
+        requireNonNull(pathPattern, "pathPattern");
+        excludedRoutes.add(Route.builder().path(pathPattern).build());
+        return this;
+    }
+
+    /**
      * Adds a {@link Route} that is supposed to be excluded from the {@link Route}s built by this
      * {@link AbstractBindingBuilder}.
      */
