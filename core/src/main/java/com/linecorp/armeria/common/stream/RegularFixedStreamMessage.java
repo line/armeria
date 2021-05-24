@@ -138,6 +138,7 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
                 final T o = objs[fulfilled];
                 objs[fulfilled++] = null;
                 inOnNext = true;
+                demand--;
                 try {
                     onNext(o);
                 } finally {

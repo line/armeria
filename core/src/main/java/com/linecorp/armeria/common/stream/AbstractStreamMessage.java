@@ -150,7 +150,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         }
     }
 
-    public static final class SubscriptionImpl implements Subscription {
+    static final class SubscriptionImpl implements Subscription {
 
         private final AbstractStreamMessage<?> publisher;
         private Subscriber<Object> subscriber;

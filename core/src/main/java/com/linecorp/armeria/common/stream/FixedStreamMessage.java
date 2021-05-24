@@ -136,7 +136,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     private T prepareObjectForNotification(T o) {
-        onRemoval(o);
         if (withPooledObjects) {
             PooledObjects.touch(o);
             return o;
@@ -148,6 +147,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     void onNext(T item) {
         assert subscriber != null;
         try {
+            onRemoval(item);
             final T published = prepareObjectForNotification(item);
             subscriber.onNext(published);
         } catch (Throwable t) {

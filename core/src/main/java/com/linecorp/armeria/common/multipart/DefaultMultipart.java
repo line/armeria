@@ -81,11 +81,6 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, EMPTY_OPTIONS);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
