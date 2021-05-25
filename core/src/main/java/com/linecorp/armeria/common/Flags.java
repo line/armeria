@@ -1251,7 +1251,8 @@ public final class Flags {
      * Returns whether default socket options defined by armeria are enabled.
      *
      * <p>This flag is enabled by default.
-     * Specify the {@code -Dcom.linecorp.armeria.useDefaultSocketChannelOptions=false} JVM option to disable it.</p>
+     * Specify the {@code -Dcom.linecorp.armeria.useDefaultSocketChannelOptions=false}
+     * JVM option to disable it.</p>
      */
     public static boolean useDefaultSocketChannelOptions() {
         return USE_DEFAULT_SOCKET_CHANNEL_OPTIONS;
