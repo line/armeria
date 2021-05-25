@@ -78,7 +78,7 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             return;
         }
 
-        T item = obj;
+        final T item = obj;
         obj = null;
         onNext(item);
 

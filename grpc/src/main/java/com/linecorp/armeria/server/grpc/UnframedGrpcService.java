@@ -180,14 +180,14 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                                RequestLogProperty.RESPONSE_CONTENT);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handleAsync((clientRequest, t) -> {
             if (t != null) {
                 responseFuture.completeExceptionally(t);
             } else {
                 frameAndServe(ctx, grpcHeaders.build(), clientRequest, responseFuture);
             }
             return null;
-        });
+        }, ctx.eventLoop());
         return HttpResponse.from(responseFuture);
     }
 
@@ -221,7 +221,7 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             return;
         }
 
-        grpcResponse.aggregate().handleAsync(
+        grpcResponse.aggregate(ctx.eventLoop()).handleAsync(
                 (framedResponse, t) -> {
                     if (t != null) {
                         res.completeExceptionally(t);

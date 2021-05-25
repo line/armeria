@@ -115,6 +115,17 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Creates a new {@link StreamMessage} that will publish the three {@code obj1}, {@code obj2} and
+     * {@code obj3}.
+     */
+    static <T> StreamMessage<T> of(T obj1, T obj2, T obj3) {
+        requireNonNull(obj1, "obj1");
+        requireNonNull(obj2, "obj2");
+        requireNonNull(obj3, "obj3");
+        return new ThreeElementFixedStreamMessage<>(obj1, obj2, obj3);
+    }
+
+    /**
      * Creates a new {@link StreamMessage} that will publish the given {@code objs}.
      */
     @SafeVarargs
@@ -127,6 +138,8 @@ public interface StreamMessage<T> extends Publisher<T> {
                 return of(objs[0]);
             case 2:
                 return of(objs[0], objs[1]);
+            case 3:
+                return of(objs[0], objs[1], objs[2]);
             default:
                 for (int i = 0; i < objs.length; i++) {
                     if (objs[i] == null) {

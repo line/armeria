@@ -33,7 +33,7 @@ class RegularFixedStreamMessageTest {
     @Test
     void demandTest() {
         final int size = 6;
-        String[] strings = new String[size];
+        final String[] strings = new String[size];
         Arrays.fill(strings, "foo");
 
         final AtomicInteger counter = new AtomicInteger();
@@ -41,11 +41,11 @@ class RegularFixedStreamMessageTest {
         assertThat(streamMessage.demand()).isZero();
         streamMessage.subscribe(new Subscriber<String>() {
 
-            private Subscription s;
+            private Subscription subscription;
 
             @Override
             public void onSubscribe(Subscription s) {
-                this.s = s;
+                subscription = s;
                 s.request(3);
             }
 
@@ -60,14 +60,14 @@ class RegularFixedStreamMessageTest {
                         break;
                     case 2:
                         assertThat(streamMessage.demand()).isZero();
-                        s.request(20);
+                        subscription.request(20);
                         break;
                     case 3:
                         assertThat(streamMessage.demand()).isEqualTo(size - 1);
                         break;
                     case 4:
                         assertThat(streamMessage.demand()).isEqualTo(size - 2);
-                        s.request(20);
+                        subscription.request(20);
                         break;
                     case 5:
                         assertThat(streamMessage.demand()).isEqualTo(size - 1);

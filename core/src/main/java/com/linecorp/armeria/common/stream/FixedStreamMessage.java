@@ -24,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -32,7 +33,6 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.stream.AbstractStreamMessage.SubscriptionImpl;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
@@ -47,23 +47,27 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
     private static final Logger logger = LoggerFactory.getLogger(FixedStreamMessage.class);
+    private static final Throwable NO_ABORT_CAUSE = new Throwable();
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<FixedStreamMessage> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(FixedStreamMessage.class, "subscribed");
 
-    final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<FixedStreamMessage, Throwable> abortCauseUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(FixedStreamMessage.class, Throwable.class, "abortCause");
 
-    @SuppressWarnings("unused")
-    @Nullable
-    private volatile SubscriptionImpl subscription; // set only via subscriptionUpdater
+    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     @Nullable
-    private Subscriber<T> subscriber;
+    private volatile Subscriber<T> subscriber;
 
     @Nullable
     private volatile EventExecutor executor;
 
+    // Updated only via abortCauseUpdater
+    @Nullable
+    private volatile Throwable abortCause;
     // Updated only via subscribedUpdater
     private volatile int subscribed;
 
@@ -104,6 +108,9 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
             subscriber.onSubscribe(NoopSubscription.get());
             subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
@@ -120,15 +127,23 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     private void subscribe0(Subscriber<? super T> subscriber) {
+        @SuppressWarnings("unchecked")
+        final Subscriber<T> subscriber0 = (Subscriber<T>) subscriber;
+        this.subscriber = subscriber0;
+
         try {
-            //noinspection unchecked
-            this.subscriber = (Subscriber<T>) subscriber;
             subscriber.onSubscribe(this);
-            if (isEmpty()) {
-                onComplete();
+            if (abortCauseUpdater.compareAndSet(this, null, NO_ABORT_CAUSE)) {
+                if (isEmpty()) {
+                    onComplete();
+                }
+            } else {
+                onError0(subscriber0, abortCause);
             }
         } catch (Throwable t) {
-            abort0(t);
+            completed = true;
+            cleanupObjects(t);
+            onError0(subscriber0, t);
             throwIfFatal(t);
             logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
                         subscriber, t);
@@ -145,6 +160,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     void onNext(T item) {
+        final Subscriber<T> subscriber = this.subscriber;
         assert subscriber != null;
         try {
             onRemoval(item);
@@ -164,11 +180,10 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
             return;
         }
         completed = true;
-        onError0(cause);
+        onError0(subscriber, cause);
     }
 
-    private void onError0(Throwable cause) {
-        assert subscriber != null;
+    private void onError0(Subscriber<T> subscriber, Throwable cause) {
         try {
             subscriber.onError(cause);
             completionFuture.completeExceptionally(cause);
@@ -187,6 +202,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         }
         completed = true;
 
+        final Subscriber<T> subscriber = this.subscriber;
         assert subscriber != null;
         try {
             subscriber.onComplete();
@@ -219,7 +235,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         cleanupObjects(cause);
 
         if (notifyCancellation) {
-            onError0(cause);
+            onError0(subscriber, cause);
         } else {
             completionFuture.completeExceptionally(cause);
         }
@@ -258,10 +274,11 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         }
         cleanupObjects(cause);
 
-        if (subscriber != null) {
-            onError0(cause);
-        } else {
+        if (abortCauseUpdater.compareAndSet(this, null, cause)) {
             completionFuture.completeExceptionally(cause);
+        } else {
+            // Subscribed already
+            onError0(subscriber, cause);
         }
     }
 }

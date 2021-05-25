@@ -16,7 +16,6 @@
 package com.linecorp.armeria.common.multipart;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.multipart.MultipartEncoder.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;

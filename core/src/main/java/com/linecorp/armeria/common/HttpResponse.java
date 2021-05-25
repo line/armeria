@@ -39,6 +39,7 @@ import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
+import com.linecorp.armeria.common.FixedHttpResponse.ThreeElementFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.HttpDecoder;
@@ -373,7 +374,7 @@ public interface HttpResponse extends Response, HttpMessage {
         if (trailers.isEmpty()) {
             return new TwoElementFixedHttpResponse(newHeaders, content);
         } else {
-            return new RegularFixedHttpResponse(newHeaders, content, trailers);
+            return new ThreeElementFixedHttpResponse(newHeaders, content, trailers);
         }
     }
 

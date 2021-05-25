@@ -36,9 +36,9 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     private int fulfilled;
     private boolean inOnNext;
+    private boolean cancelled;
 
     private volatile int demand;
-    private volatile boolean cancelled;
 
     /**
      * Creates a new instance with the specified elements.
@@ -77,13 +77,13 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     public void request(long n) {
         final EventExecutor executor = executor();
         if (executor.inEventLoop()) {
-            request1(n);
+            request0(n);
         } else {
-            executor.execute(() -> request1(n));
+            executor.execute(() -> request0(n));
         }
     }
 
-    private void request1(long n) {
+    private void request0(long n) {
         if (cancelled) {
             // The subscription has been closed. An additional request should be ignored.
             // https://github.com/reactive-streams/reactive-streams-jvm#3.6
@@ -93,6 +93,10 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
         if (n <= 0) {
             onError(new IllegalArgumentException(
                     "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+            return;
+        }
+
+        if (fulfilled == objs.length) {
             return;
         }
 
@@ -119,18 +123,8 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
             if (cancelled) {
                 return;
             }
-            if (fulfilled == objs.length) {
-                onComplete();
-                return;
-            }
 
-            final int requested = demand;
-
-            if (fulfilled == requested) {
-                break;
-            }
-
-            while (fulfilled < requested) {
+            while (demand > 0 && fulfilled < objs.length) {
                 if (cancelled) {
                     return;
                 }
@@ -144,6 +138,15 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
                 } finally {
                     inOnNext = false;
                 }
+            }
+
+            if (fulfilled == objs.length) {
+                onComplete();
+                return;
+            }
+
+            if (demand == 0) {
+                return;
             }
         }
     }

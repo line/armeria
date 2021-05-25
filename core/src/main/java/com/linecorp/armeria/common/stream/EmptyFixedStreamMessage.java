@@ -43,28 +43,4 @@ public class EmptyFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Override
     public void request(long n) {}
-
-    @Override
-    public void cancel() {
-        if (completionFuture.isDone()) {
-            return;
-        }
-        completionFuture.completeExceptionally(CancelledSubscriptionException.get());
-    }
-
-    @Override
-    public void abort() {
-        if (completionFuture.isDone()) {
-            return;
-        }
-        completionFuture.completeExceptionally(AbortedStreamException.get());
-    }
-
-    @Override
-    public void abort(Throwable cause) {
-        if (completionFuture.isDone()) {
-            return;
-        }
-        completionFuture.completeExceptionally(cause);
-    }
 }
