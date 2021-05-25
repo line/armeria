@@ -35,6 +35,7 @@ import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 
 import io.netty.channel.ChannelOption;
 import io.netty.channel.epoll.EpollChannelOption;
+import io.netty.incubator.channel.uring.IOUringChannelOption;
 import io.netty.resolver.DefaultAddressResolverGroup;
 
 class ClientFactoryBuilderTest {
@@ -256,9 +257,11 @@ class ClientFactoryBuilderTest {
 
     @Test
     void userDefinedTcpUserTimeoutRespected() {
-        assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
+        assumeThat(Flags.transportType()).isIn(TransportType.EPOLL, TransportType.IO_URING);
 
-        final ChannelOption<Integer> option = EpollChannelOption.TCP_USER_TIMEOUT;
+        final ChannelOption<Integer> option =
+                Flags.transportType() == TransportType.EPOLL ?
+                EpollChannelOption.TCP_USER_TIMEOUT : IOUringChannelOption.TCP_USER_TIMEOUT;
 
         final int userDefinedValue = 3000;
         try (ClientFactory factory = ClientFactory.builder()
@@ -279,9 +282,11 @@ class ClientFactoryBuilderTest {
     })
     void tcpUserTimeoutWithApplicationTimeouts(long idleTimeoutMillis, long maxConnectionAgeMillis,
                                                long expectedUserTimeoutMillis) {
-        assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
+        assumeThat(Flags.transportType()).isIn(TransportType.EPOLL, TransportType.IO_URING);
 
-        final ChannelOption<Integer> option = EpollChannelOption.TCP_USER_TIMEOUT;
+        final ChannelOption<Integer> option =
+                Flags.transportType() == TransportType.EPOLL ?
+                EpollChannelOption.TCP_USER_TIMEOUT : IOUringChannelOption.TCP_USER_TIMEOUT;
 
         try (ClientFactory factory = ClientFactory.builder()
                                                   .idleTimeoutMillis(idleTimeoutMillis)
@@ -294,11 +299,15 @@ class ClientFactoryBuilderTest {
 
     @Test
     void keepAliveChannelOption() {
-        assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
+        assumeThat(Flags.transportType()).isIn(TransportType.EPOLL, TransportType.IO_URING);
 
         final ChannelOption<Boolean> keepAliveOption = ChannelOption.SO_KEEPALIVE;
-        final ChannelOption<Integer> idleOption = EpollChannelOption.TCP_KEEPIDLE;
-        final ChannelOption<Integer> intervalOption = EpollChannelOption.TCP_KEEPINTVL;
+        final ChannelOption<Integer> idleOption =
+                Flags.transportType() == TransportType.EPOLL ?
+                EpollChannelOption.TCP_KEEPIDLE : IOUringChannelOption.TCP_KEEPIDLE;
+        final ChannelOption<Integer> intervalOption =
+                Flags.transportType() == TransportType.EPOLL ?
+                EpollChannelOption.TCP_KEEPINTVL : IOUringChannelOption.TCP_KEEPINTVL;
 
         final long pingIntervalMillis = 10_000;
         try (ClientFactory factory = ClientFactory.builder()

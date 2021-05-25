@@ -67,6 +67,7 @@ import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.incubator.channel.uring.IOUringChannelOption;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
@@ -782,24 +783,34 @@ public final class ClientFactoryBuilder {
             Map<ChannelOption<?>, Object> channelOptions, long maxConnectionAgeMillis,
             long idleTimeoutMillis, long pingIntervalMillis) {
         final Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
-
-        if (Flags.transportType() == TransportType.EPOLL) {
-            final long userTimeoutMillis =
-                    Math.max(idleTimeoutMillis, maxConnectionAgeMillis) + TCP_USER_TIMEOUT_BUFFER_MILLIS;
-            if (userTimeoutMillis > 0 && userTimeoutMillis <= Integer.MAX_VALUE) {
-                if (!channelOptions.containsKey(EpollChannelOption.TCP_USER_TIMEOUT)) {
-                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_USER_TIMEOUT,
-                                                 userTimeoutMillis);
-                }
+        final long userTimeoutMillis =
+                Math.max(idleTimeoutMillis, maxConnectionAgeMillis) + TCP_USER_TIMEOUT_BUFFER_MILLIS;
+        if (userTimeoutMillis > 0 && userTimeoutMillis <= Integer.MAX_VALUE) {
+            if (Flags.transportType() == TransportType.EPOLL &&
+                !channelOptions.containsKey(EpollChannelOption.TCP_USER_TIMEOUT)) {
+                newChannelOptionsBuilder.put(EpollChannelOption.TCP_USER_TIMEOUT,
+                                             userTimeoutMillis);
+            } else if (Flags.transportType() == TransportType.IO_URING &&
+                       !channelOptions.containsKey(IOUringChannelOption.TCP_USER_TIMEOUT)) {
+                newChannelOptionsBuilder.put(IOUringChannelOption.TCP_USER_TIMEOUT,
+                                             userTimeoutMillis);
             }
-            if (pingIntervalMillis > 0 && pingIntervalMillis <= Integer.MAX_VALUE) {
-                if (!channelOptions.containsKey(EpollChannelOption.TCP_KEEPIDLE) &&
-                    !channelOptions.containsKey(EpollChannelOption.TCP_KEEPINTVL) &&
-                    !channelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
-                    newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
-                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPIDLE, pingIntervalMillis);
-                    newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPINTVL, pingIntervalMillis);
-                }
+        }
+        if (pingIntervalMillis > 0 && pingIntervalMillis <= Integer.MAX_VALUE) {
+            if (Flags.transportType() == TransportType.EPOLL &&
+                !channelOptions.containsKey(EpollChannelOption.TCP_KEEPIDLE) &&
+                !channelOptions.containsKey(EpollChannelOption.TCP_KEEPINTVL) &&
+                !channelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
+                newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
+                newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPIDLE, pingIntervalMillis);
+                newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPINTVL, pingIntervalMillis);
+            } else if (Flags.transportType() == TransportType.IO_URING &&
+                       !channelOptions.containsKey(IOUringChannelOption.TCP_KEEPIDLE) &&
+                       !channelOptions.containsKey(IOUringChannelOption.TCP_KEEPINTVL) &&
+                       !channelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
+                newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
+                newChannelOptionsBuilder.put(IOUringChannelOption.TCP_KEEPIDLE, pingIntervalMillis);
+                newChannelOptionsBuilder.put(IOUringChannelOption.TCP_KEEPINTVL, pingIntervalMillis);
             }
         }
         return newChannelOptionsBuilder.build();
