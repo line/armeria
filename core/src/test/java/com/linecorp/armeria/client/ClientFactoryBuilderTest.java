@@ -287,7 +287,8 @@ class ClientFactoryBuilderTest {
                                                   .idleTimeoutMillis(idleTimeoutMillis)
                                                   .maxConnectionAgeMillis(maxConnectionAgeMillis)
                                                   .build()) {
-            assertThat(factory.options().channelOptions()).containsEntry(option, expectedUserTimeoutMillis);
+            assertThat(factory.options().channelOptions()).containsEntry(
+                    option, expectedUserTimeoutMillis + ClientFactoryBuilder.TCP_USER_TIMEOUT_BUFFER_MILLIS);
         }
     }
 

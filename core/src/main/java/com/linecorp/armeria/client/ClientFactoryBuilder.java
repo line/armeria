@@ -98,6 +98,7 @@ public final class ClientFactoryBuilder {
             ClientFactoryOptions.PING_INTERVAL_MILLIS.newValue(MIN_PING_INTERVAL_MILLIS);
 
     static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
+    static final long TCP_USER_TIMEOUT_BUFFER_MILLIS = 5_000L;
 
     static {
         RequestContextUtil.init();
@@ -762,9 +763,10 @@ public final class ClientFactoryBuilder {
             }
         }
 
-        if (Flags.useDefaultNettyChannelOptions()) {
-            final Map<ChannelOption<?>, Object> newChannelOptions = getDefaultNettyChannelOptions(
-                    newOptions, maxConnectionAgeMillis, idleTimeoutMillis, pingIntervalMillis);
+        if (Flags.useDefaultSocketChannelOptions()) {
+            final Map<ChannelOption<?>, Object> newChannelOptions = setDefaultChannelOptionsIfAbsent(
+                    newOptions.channelOptions(), maxConnectionAgeMillis,
+                    idleTimeoutMillis, pingIntervalMillis);
             adjustedOptionsBuilder.add(ClientFactoryOptions.CHANNEL_OPTIONS.newValue(newChannelOptions));
         }
 
@@ -776,24 +778,24 @@ public final class ClientFactoryBuilder {
         }
     }
 
-    private static Map<ChannelOption<?>, Object> getDefaultNettyChannelOptions(
-            ClientFactoryOptions clientFactoryOptions, long maxConnectionAgeMillis,
+    private static Map<ChannelOption<?>, Object> setDefaultChannelOptionsIfAbsent(
+            Map<ChannelOption<?>, Object> channelOptions, long maxConnectionAgeMillis,
             long idleTimeoutMillis, long pingIntervalMillis) {
-        final Map<ChannelOption<?>, Object> userDefinedChannelOptions = clientFactoryOptions.channelOptions();
         final Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
 
         if (Flags.transportType() == TransportType.EPOLL) {
-            final long userTimeoutMillis = Math.max(idleTimeoutMillis, maxConnectionAgeMillis);
+            final long userTimeoutMillis =
+                    Math.max(idleTimeoutMillis, maxConnectionAgeMillis) + TCP_USER_TIMEOUT_BUFFER_MILLIS;
             if (userTimeoutMillis > 0 && userTimeoutMillis <= Integer.MAX_VALUE) {
-                if (!userDefinedChannelOptions.containsKey(EpollChannelOption.TCP_USER_TIMEOUT)) {
+                if (!channelOptions.containsKey(EpollChannelOption.TCP_USER_TIMEOUT)) {
                     newChannelOptionsBuilder.put(EpollChannelOption.TCP_USER_TIMEOUT,
                                                  userTimeoutMillis);
                 }
             }
             if (pingIntervalMillis > 0 && pingIntervalMillis <= Integer.MAX_VALUE) {
-                if (!userDefinedChannelOptions.containsKey(EpollChannelOption.TCP_KEEPIDLE) &&
-                    !userDefinedChannelOptions.containsKey(EpollChannelOption.TCP_KEEPINTVL) &&
-                    !userDefinedChannelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
+                if (!channelOptions.containsKey(EpollChannelOption.TCP_KEEPIDLE) &&
+                    !channelOptions.containsKey(EpollChannelOption.TCP_KEEPINTVL) &&
+                    !channelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
                     newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
                     newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPIDLE, pingIntervalMillis);
                     newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPINTVL, pingIntervalMillis);

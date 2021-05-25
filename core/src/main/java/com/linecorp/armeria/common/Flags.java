@@ -430,9 +430,9 @@ public final class Flags {
     private static final boolean
             DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING = getBoolean("useLegacyRouteDecoratorOrdering", false);
 
-    private static final boolean DEFAULT_USE_DEFAULT_NETTY_CHANNEL_OPTIONS = true;
-    private static final boolean USE_DEFAULT_NETTY_CHANNEL_OPTIONS =
-            getBoolean("useDefaultNettyChannelOptions", DEFAULT_USE_DEFAULT_NETTY_CHANNEL_OPTIONS);
+    private static final boolean DEFAULT_USE_DEFAULT_SOCKET_CHANNEL_OPTIONS = true;
+    private static final boolean USE_DEFAULT_SOCKET_CHANNEL_OPTIONS =
+            getBoolean("useDefaultSocketChannelOptions", DEFAULT_USE_DEFAULT_SOCKET_CHANNEL_OPTIONS);
 
     static {
         TransportType type = null;
@@ -1251,10 +1251,10 @@ public final class Flags {
      * Returns whether default socket options defined by armeria are enabled.
      *
      * <p>This flag is enabled by default.
-     * Specify the {@code -Dcom.linecorp.armeria.useDefaultNettyChannelOptions=false} JVM option to disable it.</p>
+     * Specify the {@code -Dcom.linecorp.armeria.useDefaultSocketChannelOptions=false} JVM option to disable it.</p>
      */
-    public static boolean useDefaultNettyChannelOptions() {
-        return USE_DEFAULT_NETTY_CHANNEL_OPTIONS;
+    public static boolean useDefaultSocketChannelOptions() {
+        return USE_DEFAULT_SOCKET_CHANNEL_OPTIONS;
     }
 
     /**
