@@ -200,7 +200,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                                                                           responseEncoder,
                                                                           H1C, proxiedAddresses);
         p.addLast(httpServerHandler);
-        configHolder.addListener(httpServerHandler.configUpdateListener());
     }
 
     private Timer newKeepAliveTimer(SessionProtocol protocol) {
@@ -447,7 +446,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     gracefulShutdownSupport,
                     null, H2, proxiedAddresses);
             p.addLast(httpServerHandler);
-            configHolder.addListener(httpServerHandler.configUpdateListener());
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
@@ -480,7 +478,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     gracefulShutdownSupport,
                     writer, H1, proxiedAddresses);
             p.addLast(httpServerHandler);
-            configHolder.addListener(httpServerHandler.configUpdateListener());
         }
 
         @Override

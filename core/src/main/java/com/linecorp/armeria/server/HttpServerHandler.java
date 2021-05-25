@@ -190,6 +190,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         this.proxiedAddresses = proxiedAddresses;
         config = requireNonNull(configHolder.getConfig(), "config");
         unfinishedRequests = new IdentityHashMap<>();
+        configHolder.addListener(configUpdateListener);
     }
 
     @Override
@@ -700,7 +701,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     void swapServerConfig(ServerConfig config) {
         requireNonNull(config);
         if (this.config != config) {
-            configHolder.replace(config);
             this.config = config;
         }
     }
