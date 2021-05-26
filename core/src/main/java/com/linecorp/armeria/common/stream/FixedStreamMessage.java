@@ -56,6 +56,10 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     @Nullable
     private Subscriber<T> subscriber;
 
+    private boolean withPooledObjects;
+    private boolean notifyCancellation;
+    private boolean completed;
+
     @Nullable
     private volatile EventExecutor executor;
 
@@ -64,10 +68,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     private volatile Throwable abortCause;
     // Updated only via subscribedUpdater
     private volatile int subscribed;
-
-    private boolean withPooledObjects;
-    private boolean notifyCancellation;
-    private boolean completed;
 
     /**
      * Clean up objects.
@@ -131,20 +131,15 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         }
     }
 
-    private T prepareObjectForNotification(T o) {
-        if (withPooledObjects) {
-            PooledObjects.touch(o);
-            return o;
-        } else {
-            return PooledObjects.copyAndClose(o);
-        }
-    }
-
     void onNext(T item) {
         assert subscriber != null;
         try {
-            final T published = prepareObjectForNotification(item);
-            subscriber.onNext(published);
+            if (withPooledObjects) {
+                PooledObjects.touch(item);
+                subscriber.onNext(item);
+            } else {
+                subscriber.onNext(PooledObjects.copyAndClose(item));
+            }
         } catch (Throwable t) {
             // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
             abort0(t);

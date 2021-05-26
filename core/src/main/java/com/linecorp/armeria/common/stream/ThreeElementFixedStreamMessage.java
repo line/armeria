@@ -105,38 +105,32 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
         }
 
         if (n >= 3) {
+            // All elements will be consumed. No need to restore inOnNext
             inOnNext = true;
-            try {
-                if (obj1 != null) {
-                    final T item = obj1;
-                    obj1 = null;
-                    onNext(item);
-                }
-                if (obj2 != null) {
-                    final T item = obj2;
-                    obj2 = null;
-                    onNext(item);
-                }
-                if (obj3 != null) {
-                    final T item = obj3;
-                    obj3 = null;
-                    onNext(item);
-                }
-            } finally {
-                inOnNext = false;
+            if (obj1 != null) {
+                final T item = obj1;
+                obj1 = null;
+                onNext(item);
             }
-            onComplete();
+            if (obj2 != null) {
+                final T item = obj2;
+                obj2 = null;
+                onNext(item);
+            }
+            if (obj3 != null) {
+                final T item = obj3;
+                obj3 = null;
+                onNext(item);
+                onComplete();
+            }
         } else {
             demand += n;
             if (obj1 != null) {
                 final T item = obj1;
                 obj1 = null;
                 inOnNext = true;
-                try {
-                    onNext(item);
-                } finally {
-                    inOnNext = false;
-                }
+                onNext(item);
+                inOnNext = false;
                 demand--;
             }
 
@@ -144,11 +138,8 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
                 final T item = obj2;
                 obj2 = null;
                 inOnNext = true;
-                try {
-                    onNext(item);
-                } finally {
-                    inOnNext = false;
-                }
+                onNext(item);
+                inOnNext = false;
                 demand--;
             }
 

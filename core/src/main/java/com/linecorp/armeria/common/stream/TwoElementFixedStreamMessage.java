@@ -106,23 +106,37 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             return;
         }
 
-        if (obj1 != null) {
-            final T item = obj1;
-            obj1 = null;
+        if (n >= 2) {
+            // All elements will be consumed. No need to restore inOnNext
             inOnNext = true;
-            try {
+            if (obj1 != null) {
+                final T item = obj1;
+                obj1 = null;
                 onNext(item);
-            } finally {
-                inOnNext = false;
             }
-            n--;
-        }
 
-        if ((n > 0 || requested) && obj2 != null) {
-            final T item = obj2;
-            obj2 = null;
-            onNext(item);
-            onComplete();
+            if (obj2 != null) {
+                final T item = obj2;
+                obj2 = null;
+                onNext(item);
+                onComplete();
+            }
+        } else {
+            if (obj1 != null) {
+                final T item = obj1;
+                obj1 = null;
+                inOnNext = true;
+                onNext(item);
+                inOnNext = false;
+                n--;
+            }
+
+            if ((n > 0 || requested) && obj2 != null) {
+                final T item = obj2;
+                obj2 = null;
+                onNext(item);
+                onComplete();
+            }
         }
     }
 
