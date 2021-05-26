@@ -19,7 +19,6 @@ package com.linecorp.armeria.common;
 import com.linecorp.armeria.common.stream.EmptyFixedStreamMessage;
 import com.linecorp.armeria.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
-import com.linecorp.armeria.common.stream.ThreeElementFixedStreamMessage;
 import com.linecorp.armeria.common.stream.TwoElementFixedStreamMessage;
 
 /**
@@ -66,26 +65,8 @@ final class FixedHttpRequest {
 
         private final RequestHeaders headers;
 
-        TwoElementFixedHttpRequest(
-                RequestHeaders headers, HttpObject obj1, HttpObject obj2) {
+        TwoElementFixedHttpRequest(RequestHeaders headers, HttpObject obj1, HttpObject obj2) {
             super(obj1, obj2);
-            this.headers = headers;
-        }
-
-        @Override
-        public RequestHeaders headers() {
-            return headers;
-        }
-    }
-
-    static final class ThreeElementFixedHttpRequest
-            extends ThreeElementFixedStreamMessage<HttpObject> implements HttpRequest {
-
-        private final RequestHeaders headers;
-
-        ThreeElementFixedHttpRequest(
-                RequestHeaders headers, HttpObject obj1, HttpObject obj2, HttpObject obj3) {
-            super(obj1, obj2, obj3);
             this.headers = headers;
         }
 

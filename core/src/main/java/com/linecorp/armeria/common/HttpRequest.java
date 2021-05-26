@@ -40,7 +40,6 @@ import com.google.errorprone.annotations.FormatString;
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
-import com.linecorp.armeria.common.FixedHttpRequest.ThreeElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.HttpDecoder;
@@ -257,8 +256,6 @@ public interface HttpRequest extends Request, HttpMessage {
                 return new OneElementFixedHttpRequest(headers, contents[0]);
             case 2:
                 return new TwoElementFixedHttpRequest(headers, contents[0], contents[1]);
-            case 3:
-                return new ThreeElementFixedHttpRequest(headers, contents[0], contents[1], contents[2]);
             default:
                 return new RegularFixedHttpRequest(headers, contents);
         }
