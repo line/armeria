@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -143,6 +143,7 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             if (obj2 != null && demand > 0) {
                 final T item = obj2;
                 obj2 = null;
+                inOnNext = true;
                 try {
                     onNext(item);
                 } finally {
