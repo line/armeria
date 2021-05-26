@@ -47,20 +47,15 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
     private static final Logger logger = LoggerFactory.getLogger(FixedStreamMessage.class);
-    private static final Throwable NO_ABORT_CAUSE = new Throwable();
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<FixedStreamMessage> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(FixedStreamMessage.class, "subscribed");
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<FixedStreamMessage, Throwable> abortCauseUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(FixedStreamMessage.class, Throwable.class, "abortCause");
-
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     @Nullable
-    private volatile Subscriber<T> subscriber;
+    private Subscriber<T> subscriber;
 
     @Nullable
     private volatile EventExecutor executor;
@@ -127,23 +122,20 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     private void subscribe0(Subscriber<? super T> subscriber) {
-        @SuppressWarnings("unchecked")
-        final Subscriber<T> subscriber0 = (Subscriber<T>) subscriber;
-        this.subscriber = subscriber0;
-
+        this.subscriber = (Subscriber<T>) subscriber;
         try {
             subscriber.onSubscribe(this);
-            if (abortCauseUpdater.compareAndSet(this, null, NO_ABORT_CAUSE)) {
-                if (isEmpty()) {
-                    onComplete();
-                }
-            } else {
-                onError0(subscriber0, abortCause);
+
+            final Throwable abortCause = this.abortCause;
+            if (abortCause != null) {
+                onError0(abortCause);
+            } else if (isEmpty()) {
+                onComplete();
             }
         } catch (Throwable t) {
             completed = true;
             cleanupObjects(t);
-            onError0(subscriber0, t);
+            onError0(t);
             throwIfFatal(t);
             logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
                         subscriber, t);
@@ -160,7 +152,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     void onNext(T item) {
-        final Subscriber<T> subscriber = this.subscriber;
         assert subscriber != null;
         try {
             onRemoval(item);
@@ -180,10 +171,10 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
             return;
         }
         completed = true;
-        onError0(subscriber, cause);
+        onError0(cause);
     }
 
-    private void onError0(Subscriber<T> subscriber, Throwable cause) {
+    private void onError0(Throwable cause) {
         try {
             subscriber.onError(cause);
             completionFuture.completeExceptionally(cause);
@@ -202,7 +193,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         }
         completed = true;
 
-        final Subscriber<T> subscriber = this.subscriber;
         assert subscriber != null;
         try {
             subscriber.onComplete();
@@ -235,7 +225,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         cleanupObjects(cause);
 
         if (notifyCancellation) {
-            onError0(subscriber, cause);
+            onError0(cause);
         } else {
             completionFuture.completeExceptionally(cause);
         }
@@ -274,11 +264,12 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         }
         cleanupObjects(cause);
 
-        if (abortCauseUpdater.compareAndSet(this, null, cause)) {
-            completionFuture.completeExceptionally(cause);
+        abortCause = cause;
+        if (executor == null) {
+            // abortCause will be propagated when subscribed
         } else {
             // Subscribed already
-            onError0(subscriber, cause);
+            onError0(cause);
         }
     }
 }

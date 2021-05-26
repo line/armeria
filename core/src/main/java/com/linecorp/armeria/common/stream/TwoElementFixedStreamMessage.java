@@ -34,7 +34,7 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     private T obj2;
 
     private boolean inOnNext;
-    private volatile boolean requested;
+    private boolean requested;
 
     /**
      * Constructs a new {@link TwoElementFixedStreamMessage} for the given objects.
