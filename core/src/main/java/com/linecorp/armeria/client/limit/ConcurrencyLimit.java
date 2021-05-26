@@ -54,12 +54,12 @@ public final class ConcurrencyLimit {
         return builder(maxConcurrency);
     }
 
-    private final Predicate<ClientRequestContext> policy;
+    private final Predicate<? super ClientRequestContext> policy;
     private final int maxConcurrency;
     private final long timeoutMillis;
     private final AtomicInteger numActiveRequests = new AtomicInteger();
 
-    ConcurrencyLimit(Predicate<ClientRequestContext> policy, int maxConcurrency, long timeoutMillis) {
+    ConcurrencyLimit(Predicate<? super ClientRequestContext> policy, int maxConcurrency, long timeoutMillis) {
         this.policy = policy;
         this.maxConcurrency = maxConcurrency;
         this.timeoutMillis = timeoutMillis;
