@@ -24,7 +24,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -72,18 +71,8 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
     /**
      * Clean up objects.
-     * @return {@code true} if the objects are cleaned up successfully.
-     *         {@code false} if the objects have been cleaned already or no objects to clean.
      */
     abstract void cleanupObjects(@Nullable Throwable cause);
-
-    /**
-     * Invoked after an element is removed from the {@link StreamMessage} and before
-     * {@link Subscriber#onNext(Object)} is invoked.
-     *
-     * @param obj the removed element
-     */
-    protected void onRemoval(T obj) {}
 
     EventExecutor executor() {
         return firstNonNull(executor, ImmediateEventExecutor.INSTANCE);
@@ -154,7 +143,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     void onNext(T item) {
         assert subscriber != null;
         try {
-            onRemoval(item);
             final T published = prepareObjectForNotification(item);
             subscriber.onNext(published);
         } catch (Throwable t) {

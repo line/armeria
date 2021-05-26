@@ -48,11 +48,7 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     final void cleanupObjects(@Nullable Throwable cause) {
         if (obj != null) {
-            try {
-                onRemoval(obj);
-            } finally {
-                StreamMessageUtil.closeOrAbort(obj, cause);
-            }
+            StreamMessageUtil.closeOrAbort(obj, cause);
             obj = null;
         }
     }

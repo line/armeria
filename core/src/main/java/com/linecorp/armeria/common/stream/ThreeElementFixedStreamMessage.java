@@ -60,27 +60,15 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     final void cleanupObjects(@Nullable Throwable cause) {
         if (obj1 != null) {
-            try {
-                onRemoval(obj1);
-            } finally {
-                StreamMessageUtil.closeOrAbort(obj1, cause);
-            }
+            StreamMessageUtil.closeOrAbort(obj1, cause);
             obj1 = null;
         }
         if (obj2 != null) {
-            try {
-                onRemoval(obj2);
-            } finally {
-                StreamMessageUtil.closeOrAbort(obj2, cause);
-            }
+            StreamMessageUtil.closeOrAbort(obj2, cause);
             obj2 = null;
         }
         if (obj3 != null) {
-            try {
-                onRemoval(obj3);
-            } finally {
-                StreamMessageUtil.closeOrAbort(obj3, cause);
-            }
+            StreamMessageUtil.closeOrAbort(obj3, cause);
             obj3 = null;
         }
     }
