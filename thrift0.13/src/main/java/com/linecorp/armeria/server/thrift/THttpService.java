@@ -624,10 +624,12 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
         final TBase<?, ?> result = func.newResult();
         final HttpData content;
-        if (func.setException(result, cause)) {
+        final Throwable peeledException = Exceptions.peel(cause);
+
+        if (func.setException(result, peeledException)) {
             content = encodeSuccess(ctx, rpcRes, serializationFormat, func.name(), seqId, result);
         } else {
-            content = encodeException(ctx, rpcRes, serializationFormat, seqId, func.name(), cause);
+            content = encodeException(ctx, rpcRes, serializationFormat, seqId, func.name(), peeledException);
         }
 
         respond(serializationFormat, content, httpRes);
