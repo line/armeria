@@ -150,7 +150,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             final RequestHeaders armeriaRequestHeaders =
                     ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, headers, endOfStream, scheme, cfg);
             final int id = ++nextId;
-            if (contentEmpty && endOfStream) {
+            if (endOfStream) {
                 // Close the request early when it is sure that there will be neither content nor trailers.
                 req = new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true);
             } else {

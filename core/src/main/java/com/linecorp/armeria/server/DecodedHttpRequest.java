@@ -27,6 +27,9 @@ interface DecodedHttpRequest extends HttpRequest {
 
     int streamId();
 
+    /**
+     * Returns whether to keep the connection alive after this request is handled.
+     */
     boolean isKeepAlive();
 
     void init(ServiceRequestContext ctx);

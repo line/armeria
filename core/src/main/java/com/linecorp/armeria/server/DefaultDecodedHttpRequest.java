@@ -72,9 +72,6 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
         return streamId;
     }
 
-    /**
-     * Returns whether to keep the connection alive after this request is handled.
-     */
     @Override
     public boolean isKeepAlive() {
         return keepAlive;

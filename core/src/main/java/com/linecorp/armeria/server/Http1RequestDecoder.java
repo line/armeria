@@ -228,8 +228,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
             // req is not null.
             if (msg instanceof LastHttpContent && req instanceof EmptyContentDecodedHttpRequest) {
-                this.req = req = null;
+                this.req = null;
             } else if (msg instanceof HttpContent) {
+                assert req instanceof DefaultDecodedHttpRequest;
                 final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
@@ -263,7 +264,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     decodedReq.close();
-                    this.req = req = null;
+                    this.req = null;
                 }
             }
         } catch (URISyntaxException e) {

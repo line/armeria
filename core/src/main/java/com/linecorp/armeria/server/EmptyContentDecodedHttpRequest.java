@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -69,9 +69,6 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         return streamId;
     }
 
-    /**
-     * Returns whether to keep the connection alive after this request is handled.
-     */
     @Override
     public boolean isKeepAlive() {
         return keepAlive;
