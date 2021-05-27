@@ -42,7 +42,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  * >         }
  * >     })
  * >     .decorator(CoroutineContextService.newDecorator { ctx ->
- * >         CoroutineName(CoroutineName(ctx.config().defaultServiceNaming.serviceName(ctx) ?: "name"))
+ * >         CoroutineName(ctx.config().defaultServiceNaming.serviceName(ctx) ?: "name")
  * >     })
  * }
  * </pre>
