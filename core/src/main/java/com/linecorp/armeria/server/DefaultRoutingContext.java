@@ -60,16 +60,21 @@ final class DefaultRoutingContext implements RoutingContext {
 
     private final VirtualHost virtualHost;
     private final String hostname;
+    private final HttpMethod method;
     private final RequestHeaders headers;
     private final String path;
     @Nullable
     private final String query;
+    @Nullable
+    private final MediaType contentType;
     private final List<MediaType> acceptTypes;
     @Nullable
     private volatile QueryParams queryParams;
     private final boolean isCorsPreflight;
     @Nullable
     private HttpStatusException deferredCause;
+
+    private final int hashCode;
 
     DefaultRoutingContext(VirtualHost virtualHost, String hostname, RequestHeaders headers,
                           String path, @Nullable String query, boolean isCorsPreflight) {
@@ -79,7 +84,10 @@ final class DefaultRoutingContext implements RoutingContext {
         this.path = requireNonNull(path, "path");
         this.query = query;
         this.isCorsPreflight = isCorsPreflight;
+        method = headers.method();
+        contentType = headers.contentType();
         acceptTypes = extractAcceptTypes(headers);
+        hashCode = hashCode(this);
     }
 
     @Override
@@ -94,7 +102,7 @@ final class DefaultRoutingContext implements RoutingContext {
 
     @Override
     public HttpMethod method() {
-        return headers.method();
+        return method;
     }
 
     @Override
@@ -125,7 +133,7 @@ final class DefaultRoutingContext implements RoutingContext {
     @Nullable
     @Override
     public MediaType contentType() {
-        return headers.contentType();
+        return contentType;
     }
 
     @Override
@@ -167,7 +175,7 @@ final class DefaultRoutingContext implements RoutingContext {
 
     @Override
     public int hashCode() {
-        return hashCode(this);
+        return hashCode;
     }
 
     static int hashCode(RoutingContext routingCtx) {

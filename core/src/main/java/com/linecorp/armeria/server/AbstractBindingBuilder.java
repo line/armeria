@@ -64,6 +64,7 @@ abstract class AbstractBindingBuilder {
     private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
     private final Set<RouteBuilder> pathBuilders = new LinkedHashSet<>();
     private final List<Route> additionalRoutes = new ArrayList<>();
+    private final List<Route> excludedRoutes = new ArrayList<>();
 
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to.
@@ -406,6 +407,25 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
+     * Adds a {@code pathPattern} that is supposed to be excluded from the {@link Route}s built by this
+     * {@link AbstractBindingBuilder}.
+     */
+    public AbstractBindingBuilder exclude(String pathPattern) {
+        requireNonNull(pathPattern, "pathPattern");
+        excludedRoutes.add(Route.builder().path(pathPattern).build());
+        return this;
+    }
+
+    /**
+     * Adds a {@link Route} that is supposed to be excluded from the {@link Route}s built by this
+     * {@link AbstractBindingBuilder}.
+     */
+    public AbstractBindingBuilder exclude(Route excludedRoute) {
+        excludedRoutes.add(requireNonNull(excludedRoute, "excludedRoute"));
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Route}s based on the properties of this builder.
      */
     final List<Route> buildRouteList() {
@@ -446,6 +466,7 @@ abstract class AbstractBindingBuilder {
                                     .produces(produceTypes)
                                     .matchesParams(paramPredicates)
                                     .matchesHeaders(headerPredicates)
+                                    .exclude(excludedRoutes)
                                     .build());
         });
 
