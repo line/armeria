@@ -47,7 +47,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
@@ -56,18 +55,16 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty.incubator.channel.uring.IOUringChannelOption;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
@@ -99,7 +96,6 @@ public final class ClientFactoryBuilder {
             ClientFactoryOptions.PING_INTERVAL_MILLIS.newValue(MIN_PING_INTERVAL_MILLIS);
 
     static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
-    static final long TCP_USER_TIMEOUT_BUFFER_MILLIS = 5_000L;
 
     static {
         RequestContextUtil.init();
@@ -765,9 +761,10 @@ public final class ClientFactoryBuilder {
         }
 
         if (Flags.useDefaultSocketChannelOptions()) {
-            final Map<ChannelOption<?>, Object> newChannelOptions = setDefaultChannelOptionsIfAbsent(
-                    newOptions.channelOptions(), maxConnectionAgeMillis,
-                    idleTimeoutMillis, pingIntervalMillis);
+            final Map<ChannelOption<?>, Object> newChannelOptions =
+                    ChannelUtil.applyDefaultChannelOptionsIfAbsent(
+                            Flags.transportType(), newOptions.channelOptions(), maxConnectionAgeMillis,
+                            idleTimeoutMillis, pingIntervalMillis);
             adjustedOptionsBuilder.add(ClientFactoryOptions.CHANNEL_OPTIONS.newValue(newChannelOptions));
         }
 
@@ -777,43 +774,6 @@ public final class ClientFactoryBuilder {
         } else {
             return newOptions;
         }
-    }
-
-    private static Map<ChannelOption<?>, Object> setDefaultChannelOptionsIfAbsent(
-            Map<ChannelOption<?>, Object> channelOptions, long maxConnectionAgeMillis,
-            long idleTimeoutMillis, long pingIntervalMillis) {
-        final Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
-        final long userTimeoutMillis =
-                Math.max(idleTimeoutMillis, maxConnectionAgeMillis) + TCP_USER_TIMEOUT_BUFFER_MILLIS;
-        if (userTimeoutMillis > 0 && userTimeoutMillis <= Integer.MAX_VALUE) {
-            if (Flags.transportType() == TransportType.EPOLL &&
-                !channelOptions.containsKey(EpollChannelOption.TCP_USER_TIMEOUT)) {
-                newChannelOptionsBuilder.put(EpollChannelOption.TCP_USER_TIMEOUT,
-                                             userTimeoutMillis);
-            } else if (Flags.transportType() == TransportType.IO_URING &&
-                       !channelOptions.containsKey(IOUringChannelOption.TCP_USER_TIMEOUT)) {
-                newChannelOptionsBuilder.put(IOUringChannelOption.TCP_USER_TIMEOUT,
-                                             userTimeoutMillis);
-            }
-        }
-        if (pingIntervalMillis > 0 && pingIntervalMillis <= Integer.MAX_VALUE) {
-            if (Flags.transportType() == TransportType.EPOLL &&
-                !channelOptions.containsKey(EpollChannelOption.TCP_KEEPIDLE) &&
-                !channelOptions.containsKey(EpollChannelOption.TCP_KEEPINTVL) &&
-                !channelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
-                newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
-                newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPIDLE, pingIntervalMillis);
-                newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPINTVL, pingIntervalMillis);
-            } else if (Flags.transportType() == TransportType.IO_URING &&
-                       !channelOptions.containsKey(IOUringChannelOption.TCP_KEEPIDLE) &&
-                       !channelOptions.containsKey(IOUringChannelOption.TCP_KEEPINTVL) &&
-                       !channelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
-                newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
-                newChannelOptionsBuilder.put(IOUringChannelOption.TCP_KEEPIDLE, pingIntervalMillis);
-                newChannelOptionsBuilder.put(IOUringChannelOption.TCP_KEEPINTVL, pingIntervalMillis);
-            }
-        }
-        return newChannelOptionsBuilder.build();
     }
 
     /**

@@ -93,8 +93,8 @@ public final class ServerConfig {
 
     private final int proxyProtocolMaxTlvSize;
 
-    private final Map<ChannelOption<?>, ?> channelOptions;
-    private final Map<ChannelOption<?>, ?> childChannelOptions;
+    private final Map<ChannelOption<?>, Object> channelOptions;
+    private final Map<ChannelOption<?>, Object> childChannelOptions;
 
     private final List<ClientAddressSource> clientAddressSources;
     private final Predicate<? super InetAddress> clientAddressTrustedProxyFilter;
@@ -401,14 +401,14 @@ public final class ServerConfig {
     /**
      * Returns the {@link ChannelOption}s and their values of {@link Server}'s server sockets.
      */
-    public Map<ChannelOption<?>, ?> channelOptions() {
+    public Map<ChannelOption<?>, Object> channelOptions() {
         return channelOptions;
     }
 
     /**
      * Returns the {@link ChannelOption}s and their values of sockets accepted by {@link Server}.
      */
-    public Map<ChannelOption<?>, ?> childChannelOptions() {
+    public Map<ChannelOption<?>, Object> childChannelOptions() {
         return childChannelOptions;
     }
 

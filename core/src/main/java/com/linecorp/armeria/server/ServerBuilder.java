@@ -1604,6 +1604,11 @@ public final class ServerBuilder {
             }
         }
 
+        final Map<ChannelOption<?>, Object> defaultAppliedChildChannelOptions =
+                ChannelUtil.applyDefaultChannelOptionsIfAbsent(
+                        Flags.transportType(), childChannelOptions, maxConnectionAgeMillis,
+                        idleTimeoutMillis, pingIntervalMillis);
+
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
@@ -1613,7 +1618,7 @@ public final class ServerBuilder {
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
+                meterRegistry, proxyProtocolMaxTlvSize, channelOptions, defaultAppliedChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler), sslContexts);
 

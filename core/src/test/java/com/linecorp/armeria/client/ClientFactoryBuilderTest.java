@@ -16,8 +16,12 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.ClientFactoryBuilder.MIN_PING_INTERVAL_MILLIS;
+import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
+import static io.netty.channel.ChannelOption.SO_LINGER;
+import static io.netty.channel.epoll.EpollChannelOption.TCP_USER_TIMEOUT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.mockito.Mockito.mock;
 
@@ -32,10 +36,9 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.netty.channel.ChannelOption;
-import io.netty.channel.epoll.EpollChannelOption;
-import io.netty.incubator.channel.uring.IOUringChannelOption;
 import io.netty.resolver.DefaultAddressResolverGroup;
 
 class ClientFactoryBuilderTest {
@@ -256,67 +259,32 @@ class ClientFactoryBuilderTest {
     }
 
     @Test
-    void userDefinedTcpUserTimeoutRespected() {
-        assumeThat(Flags.transportType()).isIn(TransportType.EPOLL, TransportType.IO_URING);
+    void defaultTcpUserTimeoutSet() {
+        assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
 
-        final ChannelOption<Integer> option =
-                Flags.transportType() == TransportType.EPOLL ?
-                EpollChannelOption.TCP_USER_TIMEOUT : IOUringChannelOption.TCP_USER_TIMEOUT;
+        final int lingerMillis = 100;
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .idleTimeoutMillis(10_000)
+                                                  .maxConnectionAgeMillis(12_000)
+                                                  .channelOption(SO_LINGER, lingerMillis)
+                                                  .build()) {
+            assertThat(factory.options().channelOptions()).containsOnly(
+                    entry(TCP_USER_TIMEOUT, 12_000 + ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS),
+                    entry(SO_LINGER, lingerMillis),
+                    entry(CONNECT_TIMEOUT_MILLIS, (int) Flags.defaultConnectTimeoutMillis()));
+        }
 
+        // user defined value is respected
         final int userDefinedValue = 3000;
         try (ClientFactory factory = ClientFactory.builder()
                                                   .idleTimeoutMillis(15_000)
                                                   .maxConnectionAgeMillis(12_000)
-                                                  .channelOption(option, userDefinedValue)
+                                                  .channelOption(SO_LINGER, lingerMillis)
+                                                  .channelOption(TCP_USER_TIMEOUT, userDefinedValue)
                                                   .build()) {
-            assertThat(factory.options().channelOptions()).containsEntry(option, userDefinedValue);
-        }
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "10000, 20000, 20000",
-            "20000, 10000, 10000",
-            "0, 20000, 20000",
-            "20000, 0, 20000",
-    })
-    void tcpUserTimeoutWithApplicationTimeouts(long idleTimeoutMillis, long maxConnectionAgeMillis,
-                                               long expectedUserTimeoutMillis) {
-        assumeThat(Flags.transportType()).isIn(TransportType.EPOLL, TransportType.IO_URING);
-
-        final ChannelOption<Integer> option =
-                Flags.transportType() == TransportType.EPOLL ?
-                EpollChannelOption.TCP_USER_TIMEOUT : IOUringChannelOption.TCP_USER_TIMEOUT;
-
-        try (ClientFactory factory = ClientFactory.builder()
-                                                  .idleTimeoutMillis(idleTimeoutMillis)
-                                                  .maxConnectionAgeMillis(maxConnectionAgeMillis)
-                                                  .build()) {
-            assertThat(factory.options().channelOptions()).containsEntry(
-                    option, expectedUserTimeoutMillis + ClientFactoryBuilder.TCP_USER_TIMEOUT_BUFFER_MILLIS);
-        }
-    }
-
-    @Test
-    void keepAliveChannelOption() {
-        assumeThat(Flags.transportType()).isIn(TransportType.EPOLL, TransportType.IO_URING);
-
-        final ChannelOption<Boolean> keepAliveOption = ChannelOption.SO_KEEPALIVE;
-        final ChannelOption<Integer> idleOption =
-                Flags.transportType() == TransportType.EPOLL ?
-                EpollChannelOption.TCP_KEEPIDLE : IOUringChannelOption.TCP_KEEPIDLE;
-        final ChannelOption<Integer> intervalOption =
-                Flags.transportType() == TransportType.EPOLL ?
-                EpollChannelOption.TCP_KEEPINTVL : IOUringChannelOption.TCP_KEEPINTVL;
-
-        final long pingIntervalMillis = 10_000;
-        try (ClientFactory factory = ClientFactory.builder()
-                                                  .pingIntervalMillis(pingIntervalMillis)
-                                                  .idleTimeoutMillis(pingIntervalMillis + 1)
-                                                  .build()) {
-            assertThat(factory.options().channelOptions()).containsEntry(keepAliveOption, true);
-            assertThat(factory.options().channelOptions()).containsEntry(idleOption, pingIntervalMillis);
-            assertThat(factory.options().channelOptions()).containsEntry(intervalOption, pingIntervalMillis);
+            assertThat(factory.options().channelOptions()).containsOnly(
+                    entry(TCP_USER_TIMEOUT, userDefinedValue), entry(SO_LINGER, lingerMillis),
+                    entry(CONNECT_TIMEOUT_MILLIS, (int) Flags.defaultConnectTimeoutMillis()));
         }
     }
 }

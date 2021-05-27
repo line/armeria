@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.common.util;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,22 +25,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.TransportType;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslHandler;
+import io.netty.incubator.channel.uring.IOUringChannelOption;
 
 public final class ChannelUtil {
 
     private static final Set<ChannelOption<?>> PROHIBITED_OPTIONS;
     private static final WriteBufferWaterMark DISABLED_WRITE_BUFFER_WATERMARK =
             new WriteBufferWaterMark(0, Integer.MAX_VALUE);
+    @VisibleForTesting
+    public static final long TCP_USER_TIMEOUT_BUFFER_MILLIS = 5_000L;
 
     static {
         // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
@@ -123,6 +132,43 @@ public final class ChannelUtil {
 
         final SslHandler sslHandler = channel.pipeline().get(SslHandler.class);
         return sslHandler != null ? sslHandler.engine().getSession() : null;
+    }
+
+    public static Map<ChannelOption<?>, Object> applyDefaultChannelOptionsIfAbsent(
+            TransportType transportType, Map<ChannelOption<?>, Object> channelOptions,
+            long maxConnectionAgeMillis, long idleTimeoutMillis, long pingIntervalMillis) {
+        final Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
+        final long userTimeoutMillis = Math.max(idleTimeoutMillis, maxConnectionAgeMillis);
+        if (userTimeoutMillis > 0 && userTimeoutMillis <= Integer.MAX_VALUE - TCP_USER_TIMEOUT_BUFFER_MILLIS) {
+            if (transportType == TransportType.EPOLL &&
+                !channelOptions.containsKey(EpollChannelOption.TCP_USER_TIMEOUT)) {
+                newChannelOptionsBuilder.put(EpollChannelOption.TCP_USER_TIMEOUT,
+                                             userTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+            } else if (transportType == TransportType.IO_URING &&
+                       !channelOptions.containsKey(IOUringChannelOption.TCP_USER_TIMEOUT)) {
+                newChannelOptionsBuilder.put(IOUringChannelOption.TCP_USER_TIMEOUT,
+                                             userTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+            }
+        }
+        if (pingIntervalMillis > 0 && pingIntervalMillis <= Integer.MAX_VALUE) {
+            if (transportType == TransportType.EPOLL &&
+                !channelOptions.containsKey(EpollChannelOption.TCP_KEEPIDLE) &&
+                !channelOptions.containsKey(EpollChannelOption.TCP_KEEPINTVL) &&
+                !channelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
+                newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
+                newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPIDLE, pingIntervalMillis);
+                newChannelOptionsBuilder.put(EpollChannelOption.TCP_KEEPINTVL, pingIntervalMillis);
+            } else if (transportType == TransportType.IO_URING &&
+                       !channelOptions.containsKey(IOUringChannelOption.TCP_KEEPIDLE) &&
+                       !channelOptions.containsKey(IOUringChannelOption.TCP_KEEPINTVL) &&
+                       !channelOptions.containsKey(ChannelOption.SO_KEEPALIVE)) {
+                newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
+                newChannelOptionsBuilder.put(IOUringChannelOption.TCP_KEEPIDLE, pingIntervalMillis);
+                newChannelOptionsBuilder.put(IOUringChannelOption.TCP_KEEPINTVL, pingIntervalMillis);
+            }
+        }
+        newChannelOptionsBuilder.putAll(channelOptions);
+        return newChannelOptionsBuilder.build();
     }
 
     private ChannelUtil() {}
