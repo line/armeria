@@ -22,7 +22,7 @@ HelloService.Iface client =
 
 ## Using <type://WebClientRequestPreparation>
 
-You can override a response timeout in a request level using <type://WebClient#prepare()>.
+You can override response timeout and max response length at request level using <type://WebClient#prepare()>.
 
 ```java
 import com.linecopr.armeria.client.WebClient;
@@ -30,7 +30,8 @@ import com.linecopr.armeria.client.WebClient;
 WebClient client = WebClient.of("http://example.com"); 
 client.prepare()
       .get("/hello")
-      .responseTimeout(Duration.ofSeconds(responseTimeout))
+      .responseTimeout(Duration.ofSeconds(30))
+      .maxResponseLength(1024)
       .execute();
 ```
 

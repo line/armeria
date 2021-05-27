@@ -42,7 +42,10 @@ ctx.attrs().forEachRemaining(e -> {
 You can set attributes when building a request using <type://WebClient#prepare()>.
 
 ```java
-import com.linecopr.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClient;
+
+AttributeKey<Integer> USER_ID = AttributeKey.valueOf(MyAttributeKeys.class, "USER_ID");
+AttributeKey<String> USER_SECRET = AttributeKey.valueOf(MyAttributeKeys.class, "USER_SECRET");
 
 WebClient client = WebClient.of("http://example.com"); 
 client.prepare()
