@@ -588,10 +588,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private void handleException(ServiceRequestContext ctx, CompletableFuture<HttpResponse> res,
                                  SerializationFormat serializationFormat, int seqId,
                                  ThriftFunction func, Throwable cause) {
-        final RpcResponse response = handleException(ctx, cause);
+        final RpcResponse response = handleException(ctx, Exceptions.peel(cause));
         response.handle((result, convertedCause) -> {
             if (convertedCause != null) {
-                convertedCause = Exceptions.peel(convertedCause);
                 handleException(ctx, response, res, serializationFormat, seqId, func, convertedCause);
             } else {
                 handleSuccess(ctx, response, res, serializationFormat, seqId, func, result);
