@@ -235,6 +235,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void closeWhileSubscribing() {
+        final AtomicBoolean completed = new AtomicBoolean();
         final AtomicReference<DefaultStreamMessage<String>> streamMessageRef = new AtomicReference<>();
         streamMessageRef.set(new DefaultStreamMessage<String>() {
             @Override
@@ -255,7 +256,10 @@ class DefaultStreamMessageTest {
             public void onError(Throwable t) {}
 
             @Override
-            public void onComplete() {}
+            public void onComplete() {
+                completed.set(true);
+            }
         }, ImmediateEventExecutor.INSTANCE);
+        await().untilTrue(completed);
     }
 }
