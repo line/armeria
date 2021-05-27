@@ -64,7 +64,9 @@ public final class PercentDecoder {
      * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-2.1">Percent-Encoded</a>.
      */
     public static String decodeComponent(String s) {
-        return decodeComponent(TemporaryThreadLocals.get(), s, 0, s.length());
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            return decodeComponent(tempThreadLocals, s, 0, s.length());
+        }
     }
 
     /**
@@ -87,10 +89,8 @@ public final class PercentDecoder {
 
             // At this point, `c` is one of the following characters: # % ' ) + - /
             if (c == '%' || c == '+') {
-                final String decoded = decodeUtf8Component(tempThreadLocals.charArray(toExcluded - from), s,
-                                                           from, toExcluded);
-                tempThreadLocals.releaseCharArray();
-                return decoded;
+                return decodeUtf8Component(tempThreadLocals.charArray(toExcluded - from), s,
+                                           from, toExcluded);
             }
         }
 
@@ -99,7 +99,7 @@ public final class PercentDecoder {
 
     private static String decodeUtf8Component(char[] buf, String s, int from, int toExcluded) {
         int bufIdx = 0;
-        for (int i = from; i < toExcluded;) {
+        for (int i = from; i < toExcluded; ) {
             final int undecodedChars = toExcluded - i;
             final char c = s.charAt(i++);
             if (c != '%') {

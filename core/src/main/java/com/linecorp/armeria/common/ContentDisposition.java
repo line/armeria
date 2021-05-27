@@ -342,6 +342,7 @@ public final class ContentDisposition {
 
     /**
      * Encodes the given header field param as describe in RFC 5987.
+     *
      * @param input the header field param
      * @param charset the charset of the header field param string,
      *                only the US-ASCII, UTF-8 and ISO-8859-1 charsets are supported
@@ -386,6 +387,7 @@ public final class ContentDisposition {
 
     /**
      * Returns the header value for this content disposition as defined in RFC 6266.
+     *
      * @see #parse(String)
      */
     public String asHeaderValue() {
@@ -393,27 +395,26 @@ public final class ContentDisposition {
             return strVal;
         }
 
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder sb = tempThreadLocals.stringBuilder();
-        sb.append(type);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder sb = tempThreadLocals.stringBuilder();
+            sb.append(type);
 
-        if (name != null) {
-            sb.append("; name=\"");
-            sb.append(name).append('\"');
-        }
-        if (filename != null) {
-            if (charset == null || StandardCharsets.US_ASCII.equals(charset)) {
-                sb.append("; filename=\"");
-                escapeQuotationsInFilename(sb, filename);
-                sb.append('\"');
-            } else {
-                sb.append("; filename*=");
-                encodeFilename(sb, filename, charset);
+            if (name != null) {
+                sb.append("; name=\"");
+                sb.append(name).append('\"');
             }
+            if (filename != null) {
+                if (charset == null || StandardCharsets.US_ASCII.equals(charset)) {
+                    sb.append("; filename=\"");
+                    escapeQuotationsInFilename(sb, filename);
+                    sb.append('\"');
+                } else {
+                    sb.append("; filename*=");
+                    encodeFilename(sb, filename, charset);
+                }
+            }
+            return strVal = sb.toString();
         }
-        strVal = sb.toString();
-        tempThreadLocals.releaseStringBuilder();
-        return strVal;
     }
 
     /**

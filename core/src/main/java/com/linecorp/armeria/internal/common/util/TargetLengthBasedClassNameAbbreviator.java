@@ -70,30 +70,27 @@ public final class TargetLengthBasedClassNameAbbreviator {
         // dotIndexesAndLength contains dotIndexesArray[MAX_DOTS] and lengthArray[MAX_DOTS + 1]
         // In case of lengthArray, a.b.c contains 2 dots but 2+1 parts.
         // see also http://jira.qos.ch/browse/LBCLASSIC-110
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final int[] dotIndexesAndLength = tempThreadLocals.intArray(MAX_DOTS * 2 + 1);
-        final int dotCount = computeDotIndexes(fqClassName, dotIndexesAndLength);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final int[] dotIndexesAndLength = tempThreadLocals.intArray(MAX_DOTS * 2 + 1);
+            final int dotCount = computeDotIndexes(fqClassName, dotIndexesAndLength);
 
-        // if there are not dots than abbreviation is not possible
-        if (dotCount == 0) {
-            tempThreadLocals.releaseIntArray();
-            return fqClassName;
-        }
-        computeLengthArray(fqClassName, dotIndexesAndLength, dotCount);
-        final StringBuilder buf = tempThreadLocals.stringBuilder();
-        for (int i = 0; i <= dotCount; i++) {
-            if (i == 0) {
-                buf.append(fqClassName, 0, dotIndexesAndLength[MAX_DOTS + i] - 1);
-            } else {
-                buf.append(fqClassName, dotIndexesAndLength[i - 1],
-                           dotIndexesAndLength[i - 1] + dotIndexesAndLength[MAX_DOTS + i]);
+            // if there are not dots than abbreviation is not possible
+            if (dotCount == 0) {
+                return fqClassName;
             }
-        }
+            computeLengthArray(fqClassName, dotIndexesAndLength, dotCount);
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            for (int i = 0; i <= dotCount; i++) {
+                if (i == 0) {
+                    buf.append(fqClassName, 0, dotIndexesAndLength[MAX_DOTS + i] - 1);
+                } else {
+                    buf.append(fqClassName, dotIndexesAndLength[i - 1],
+                               dotIndexesAndLength[i - 1] + dotIndexesAndLength[MAX_DOTS + i]);
+                }
+            }
 
-        final String abbreviated = buf.toString();
-        tempThreadLocals.releaseIntArray();
-        tempThreadLocals.releaseStringBuilder();
-        return abbreviated;
+            return buf.toString();
+        }
     }
 
     private void computeLengthArray(final String className, int[] dotIndexesAndLength, int dotCount) {

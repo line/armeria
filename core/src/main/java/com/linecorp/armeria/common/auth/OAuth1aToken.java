@@ -182,28 +182,27 @@ public final class OAuth1aToken {
         if (headerValue != null) {
             return headerValue;
         }
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder builder = tempThreadLocals.stringBuilder();
-        builder.append("OAuth ");
-        if (!isNullOrEmpty(realm)) {
-            appendValue(builder, REALM, realm, true);
-        }
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder builder = tempThreadLocals.stringBuilder();
+            builder.append("OAuth ");
+            if (!isNullOrEmpty(realm)) {
+                appendValue(builder, REALM, realm, true);
+            }
 
-        appendValue(builder, OAUTH_CONSUMER_KEY, consumerKey, true);
-        appendValue(builder, OAUTH_TOKEN, token, true);
-        appendValue(builder, OAUTH_SIGNATURE_METHOD, signatureMethod, true);
-        appendValue(builder, OAUTH_SIGNATURE, signature, true);
-        appendValue(builder, OAUTH_TIMESTAMP, timestamp, true);
-        appendValue(builder, OAUTH_NONCE, nonce, true);
-        appendValue(builder, OAUTH_VERSION, version, false);
-        for (Entry<String, String> entry : additionals.entrySet()) {
-            builder.append(',');
-            appendValue(builder, entry.getKey(), entry.getValue(), false);
-        }
+            appendValue(builder, OAUTH_CONSUMER_KEY, consumerKey, true);
+            appendValue(builder, OAUTH_TOKEN, token, true);
+            appendValue(builder, OAUTH_SIGNATURE_METHOD, signatureMethod, true);
+            appendValue(builder, OAUTH_SIGNATURE, signature, true);
+            appendValue(builder, OAUTH_TIMESTAMP, timestamp, true);
+            appendValue(builder, OAUTH_NONCE, nonce, true);
+            appendValue(builder, OAUTH_VERSION, version, false);
+            for (Entry<String, String> entry : additionals.entrySet()) {
+                builder.append(',');
+                appendValue(builder, entry.getKey(), entry.getValue(), false);
+            }
 
-        headerValue = builder.toString();
-        tempThreadLocals.releaseStringBuilder();
-        return headerValue;
+            return headerValue = builder.toString();
+        }
     }
 
     private static void appendValue(StringBuilder builder, String key, String value, boolean addComma) {

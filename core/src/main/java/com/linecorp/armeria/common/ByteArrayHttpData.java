@@ -82,20 +82,19 @@ final class ByteArrayHttpData implements HttpData {
             return isEndOfStream() ? "{0B, EOS}" : "{0B}";
         }
 
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder buf = tempThreadLocals.stringBuilder();
-        buf.append('{').append(array.length);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append('{').append(array.length);
 
-        if (isEndOfStream()) {
-            buf.append("B, EOS, ");
-        } else {
-            buf.append("B, ");
+            if (isEndOfStream()) {
+                buf.append("B, EOS, ");
+            } else {
+                buf.append("B, ");
+            }
+
+            return appendPreviews(buf, array, 0, Math.min(16, array.length))
+                    .append('}').toString();
         }
-
-        final String toString = appendPreviews(buf, array, 0, Math.min(16, array.length))
-                .append('}').toString();
-        tempThreadLocals.releaseStringBuilder();
-        return toString;
     }
 
     static StringBuilder appendPreviews(StringBuilder buf, byte[] array, int offset, int previewLength) {

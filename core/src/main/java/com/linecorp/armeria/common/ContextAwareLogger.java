@@ -55,13 +55,12 @@ final class ContextAwareLogger implements Logger, ContextHolder {
 
     private String decorate(String msg) {
         final String prefix = ctx.toString();
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final String decorated = tempThreadLocals.stringBuilder()
-                                                 .append(prefix)
-                                                 .append(' ')
-                                                 .append(msg).toString();
-        tempThreadLocals.releaseStringBuilder();
-        return decorated;
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            return tempThreadLocals.stringBuilder()
+                                   .append(prefix)
+                                   .append(' ')
+                                   .append(msg).toString();
+        }
     }
 
     @Override

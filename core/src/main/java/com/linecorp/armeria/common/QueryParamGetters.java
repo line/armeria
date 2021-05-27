@@ -474,11 +474,10 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      * @return the encoded query string.
      */
     default String toQueryString() {
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder buf = tempThreadLocals.stringBuilder();
-        final String queryString = appendQueryString(buf).toString();
-        tempThreadLocals.releaseStringBuilder();
-        return queryString;
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            return appendQueryString(buf).toString();
+        }
     }
 
     /**

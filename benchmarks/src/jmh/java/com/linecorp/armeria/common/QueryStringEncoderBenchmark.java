@@ -120,17 +120,16 @@ public class QueryStringEncoderBenchmark {
     }
 
     private static String guavaEncode(QueryParamGetters params) {
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder buf = tempThreadLocals.stringBuilder();
-        for (Entry<String, String> e : params) {
-            buf.append(guavaEscaper.escape(e.getKey()))
-               .append('=')
-               .append(guavaEscaper.escape(e.getValue()))
-               .append('&');
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            for (Entry<String, String> e : params) {
+                buf.append(guavaEscaper.escape(e.getKey()))
+                   .append('=')
+                   .append(guavaEscaper.escape(e.getValue()))
+                   .append('&');
+            }
+            return buf.substring(0, buf.length() - 1);
         }
-        final String encoded = buf.substring(0, buf.length() - 1);
-        tempThreadLocals.releaseStringBuilder();
-        return encoded;
     }
 
     @Benchmark
@@ -182,16 +181,15 @@ public class QueryStringEncoderBenchmark {
     }
 
     private static String jdkEncode(QueryParamGetters params) throws UnsupportedEncodingException {
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder buf = tempThreadLocals.stringBuilder();
-        for (Entry<String, String> e : params) {
-            buf.append(URLEncoder.encode(e.getKey(), "UTF-8"))
-               .append('=')
-               .append(URLEncoder.encode(e.getValue(), "UTF-8"))
-               .append('&');
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            for (Entry<String, String> e : params) {
+                buf.append(URLEncoder.encode(e.getKey(), "UTF-8"))
+                   .append('=')
+                   .append(URLEncoder.encode(e.getValue(), "UTF-8"))
+                   .append('&');
+            }
+            return buf.substring(0, buf.length() - 1);
         }
-        final String encoded = buf.substring(0, buf.length() - 1);
-        tempThreadLocals.releaseStringBuilder();
-        return encoded;
     }
 }

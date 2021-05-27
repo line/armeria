@@ -481,90 +481,83 @@ public abstract class AbstractHttpRequestBuilder {
 
             if (hasPathParams) {
                 // Replace path parameters.
-                final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-                final StringBuilder buf = tempThreadLocals.stringBuilder();
-                buf.append(path, 0, i);
+                try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+                    final StringBuilder buf = tempThreadLocals.stringBuilder();
+                    buf.append(path, 0, i);
 
-                loop:
-                while (i < pathLen) {
-                    final char ch = path.charAt(i);
-                    switch (ch) {
-                        case '{': {
-                            int j = i + 1;
-                            // Find the matching '}'
-                            while (j < pathLen && path.charAt(j) != '}') {
-                                j++;
+                    loop:
+                    while (i < pathLen) {
+                        final char ch = path.charAt(i);
+                        switch (ch) {
+                            case '{': {
+                                int j = i + 1;
+                                // Find the matching '}'
+                                while (j < pathLen && path.charAt(j) != '}') {
+                                    j++;
+                                }
+
+                                if (j >= pathLen) {
+                                    // Found no matching '}'
+                                    buf.append(path, i, pathLen);
+                                    break loop;
+                                }
+
+                                if (j > i + 1) {
+                                    final String name = path.substring(i + 1, j);
+                                    checkState(pathParams != null && pathParams.containsKey(name),
+                                               "param '%s' does not have a value.", name);
+                                    buf.append(pathParams.get(name));
+                                    j++; // Skip '}'
+                                } else {
+                                    // Found '{}'
+                                    j++; // Skip '}'
+                                    buf.append('{').append('}');
+                                }
+                                i = j;
+                                break;
                             }
-
-                            if (j >= pathLen) {
-                                // Found no matching '}'
+                            case ':': {
+                                int j = i + 1;
+                                while (j < pathLen && path.charAt(j) != '/' && path.charAt(j) != '?') {
+                                    j++;
+                                }
+                                if (j > i + 1) {
+                                    final String name = path.substring(i + 1, j);
+                                    checkState(pathParams != null && pathParams.containsKey(name),
+                                               "param '%s' does not have a value.", name);
+                                    buf.append(pathParams.get(name));
+                                } else {
+                                    // Found ':' without name.
+                                    buf.append(':');
+                                }
+                                i = j;
+                                break;
+                            }
+                            case '?': {
+                                hasQueryInPath = true;
                                 buf.append(path, i, pathLen);
                                 break loop;
                             }
-
-                            if (j > i + 1) {
-                                final String name = path.substring(i + 1, j);
-                                final boolean state = pathParams != null && pathParams.containsKey(name);
-                                if (!state) {
-                                    tempThreadLocals.releaseStringBuilder();
-                                }
-                                checkState(state, "param '%s' does not have a value.", name);
-                                buf.append(pathParams.get(name));
-                                j++; // Skip '}'
-                            } else {
-                                // Found '{}'
-                                j++; // Skip '}'
-                                buf.append('{').append('}');
-                            }
-                            i = j;
-                            break;
+                            default:
+                                buf.append(ch);
+                                i++;
                         }
-                        case ':': {
-                            int j = i + 1;
-                            while (j < pathLen && path.charAt(j) != '/' && path.charAt(j) != '?') {
-                                j++;
-                            }
-                            if (j > i + 1) {
-                                final String name = path.substring(i + 1, j);
-                                final boolean state = pathParams != null && pathParams.containsKey(name);
-                                if (!state) {
-                                    tempThreadLocals.releaseStringBuilder();
-                                }
-                                checkState(state, "param '%s' does not have a value.", name);
-                                buf.append(pathParams.get(name));
-                            } else {
-                                // Found ':' without name.
-                                buf.append(':');
-                            }
-                            i = j;
-                            break;
-                        }
-                        case '?': {
-                            hasQueryInPath = true;
-                            buf.append(path, i, pathLen);
-                            break loop;
-                        }
-                        default:
-                            buf.append(ch);
-                            i++;
                     }
+
+                    if (hasQueryInPath) {
+                        if (queryParams != null) {
+                            buf.append('&');
+                            queryParams.appendQueryString(buf);
+                        }
+                    } else {
+                        if (queryParams != null) {
+                            buf.append('?');
+                            queryParams.appendQueryString(buf);
+                        }
+                    }
+
+                    return buf.toString();
                 }
-
-                if (hasQueryInPath) {
-                    if (queryParams != null) {
-                        buf.append('&');
-                        queryParams.appendQueryString(buf);
-                    }
-                } else {
-                    if (queryParams != null) {
-                        buf.append('?');
-                        queryParams.appendQueryString(buf);
-                    }
-                }
-
-                final String builtPath = buf.toString();
-                tempThreadLocals.releaseStringBuilder();
-                return builtPath;
             } else {
                 // path doesn't contain a path parameter.
                 if (queryParams != null) {
@@ -584,12 +577,11 @@ public abstract class AbstractHttpRequestBuilder {
 
     private static String buildPathWithoutPathParams(
             String path, QueryParamsBuilder queryParams, boolean hasQueryInPath) {
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder buf = tempThreadLocals.stringBuilder();
-        buf.append(path).append(hasQueryInPath ? '&' : '?');
-        queryParams.appendQueryString(buf);
-        final String builtPath = buf.toString();
-        tempThreadLocals.releaseStringBuilder();
-        return builtPath;
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append(path).append(hasQueryInPath ? '&' : '?');
+            queryParams.appendQueryString(buf);
+            return buf.toString();
+        }
     }
 }

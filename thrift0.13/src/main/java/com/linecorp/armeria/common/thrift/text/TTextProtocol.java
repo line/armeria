@@ -713,20 +713,19 @@ final class TTextProtocol extends TProtocol {
             return;
         }
         final ByteArrayOutputStream content = new ByteArrayOutputStream();
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final byte[] buffer = tempThreadLocals.byteArray(READ_BUFFER_SIZE);
-        try {
-            while (trans_.read(buffer, 0, READ_BUFFER_SIZE) > 0) {
-                content.write(buffer);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final byte[] buffer = tempThreadLocals.byteArray(READ_BUFFER_SIZE);
+            try {
+                while (trans_.read(buffer, 0, READ_BUFFER_SIZE) > 0) {
+                    content.write(buffer);
+                }
+            } catch (TTransportException e) {
+                if (TTransportException.END_OF_FILE != e.getType()) {
+                    throw new IOException(e);
+                }
             }
-        } catch (TTransportException e) {
-            if (TTransportException.END_OF_FILE != e.getType()) {
-                throw new IOException(e);
-            }
-        } finally {
-            tempThreadLocals.releaseByteArray();
+            root = OBJECT_MAPPER.readTree(content.toByteArray());
         }
-        root = OBJECT_MAPPER.readTree(content.toByteArray());
     }
 
     /**

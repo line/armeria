@@ -101,63 +101,56 @@ final class ByteBufHttpData implements HttpData, ResourceLeakHint {
     private String toString(boolean hint) {
         final int length = buf.readableBytes();
 
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder strBuf = tempThreadLocals.stringBuilder();
-        strBuf.append('{').append(length).append("B, ");
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder strBuf = tempThreadLocals.stringBuilder();
+            strBuf.append('{').append(length).append("B, ");
 
-        if (isEndOfStream()) {
-            strBuf.append("EOS, ");
-        }
-        if (isPooled()) {
-            strBuf.append("pooled, ");
-        }
-        if ((flags & FLAG_CLOSED) != 0) {
-            if (buf.refCnt() == 0) {
-                final String toString = strBuf.append("closed}").toString();
-                tempThreadLocals.releaseStringBuilder();
-                return toString;
-            } else {
-                strBuf.append("closed, ");
+            if (isEndOfStream()) {
+                strBuf.append("EOS, ");
             }
-        }
-
-        // Generate the preview array.
-        final int previewLength = Math.min(16, length);
-        byte[] array = this.array;
-        final int offset;
-        if (array == null) {
-            try {
-                if (buf.hasArray()) {
-                    array = buf.array();
-                    offset = buf.arrayOffset() + buf.readerIndex();
-                } else if (!hint) {
-                    array = ByteBufUtil.getBytes(buf, buf.readerIndex(), previewLength);
-                    offset = 0;
-                    if (previewLength == length) {
-                        this.array = array;
-                    }
+            if (isPooled()) {
+                strBuf.append("pooled, ");
+            }
+            if ((flags & FLAG_CLOSED) != 0) {
+                if (buf.refCnt() == 0) {
+                    return strBuf.append("closed}").toString();
                 } else {
-                    // Can't call getBytes() when generating the hint string
-                    // because it will also create a leak record.
-                    final String toString = strBuf.append("<unknown>}").toString();
-                    tempThreadLocals.releaseStringBuilder();
-                    return toString;
+                    strBuf.append("closed, ");
                 }
-            } catch (IllegalReferenceCountException e) {
-                // Shouldn't really happen when used ByteBuf correctly,
-                // but we just don't make toString() fail because of this.
-                final String toString = strBuf.append("badRefCnt}").toString();
-                tempThreadLocals.releaseStringBuilder();
-                return toString;
             }
-        } else {
-            offset = 0;
-        }
 
-        final String toString = ByteArrayHttpData.appendPreviews(strBuf, array, offset, previewLength)
-                                                 .append('}').toString();
-        tempThreadLocals.releaseStringBuilder();
-        return toString;
+            // Generate the preview array.
+            final int previewLength = Math.min(16, length);
+            byte[] array = this.array;
+            final int offset;
+            if (array == null) {
+                try {
+                    if (buf.hasArray()) {
+                        array = buf.array();
+                        offset = buf.arrayOffset() + buf.readerIndex();
+                    } else if (!hint) {
+                        array = ByteBufUtil.getBytes(buf, buf.readerIndex(), previewLength);
+                        offset = 0;
+                        if (previewLength == length) {
+                            this.array = array;
+                        }
+                    } else {
+                        // Can't call getBytes() when generating the hint string
+                        // because it will also create a leak record.
+                        return strBuf.append("<unknown>}").toString();
+                    }
+                } catch (IllegalReferenceCountException e) {
+                    // Shouldn't really happen when used ByteBuf correctly,
+                    // but we just don't make toString() fail because of this.
+                    return strBuf.append("badRefCnt}").toString();
+                }
+            } else {
+                offset = 0;
+            }
+
+            return ByteArrayHttpData.appendPreviews(strBuf, array, offset, previewLength)
+                                    .append('}').toString();
+        }
     }
 
     @Override

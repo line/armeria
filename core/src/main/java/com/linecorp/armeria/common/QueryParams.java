@@ -322,8 +322,10 @@ public interface QueryParams extends QueryParamGetters {
             return of();
         }
 
-        return QueryStringDecoder.decodeParams(TemporaryThreadLocals.get(),
-                                               queryString, maxParams, semicolonAsSeparator);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            return QueryStringDecoder.decodeParams(tempThreadLocals,
+                                                   queryString, maxParams, semicolonAsSeparator);
+        }
     }
 
     /**

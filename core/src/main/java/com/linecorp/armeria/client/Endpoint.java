@@ -189,16 +189,15 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     private static String generateToString(String authority, @Nullable String ipAddr,
                                            int weight, HostType hostType) {
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder buf = tempThreadLocals.stringBuilder();
-        buf.append("Endpoint{").append(authority);
-        if (hostType == HostType.HOSTNAME_AND_IPv4 ||
-            hostType == HostType.HOSTNAME_AND_IPv6) {
-            buf.append(", ipAddr=").append(ipAddr);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("Endpoint{").append(authority);
+            if (hostType == HostType.HOSTNAME_AND_IPv4 ||
+                hostType == HostType.HOSTNAME_AND_IPv6) {
+                buf.append(", ipAddr=").append(ipAddr);
+            }
+            return buf.append(", weight=").append(weight).append('}').toString();
         }
-        final String toString = buf.append(", weight=").append(weight).append('}').toString();
-        tempThreadLocals.releaseStringBuilder();
-        return toString;
     }
 
     @Override

@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.AsciiString;
 import reactor.test.StepVerifier;
@@ -84,7 +83,6 @@ class HttpRequestBuilderTest {
         assertThatThrownBy(() -> HttpRequest.builder().path(""))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("empty");
-        TemporaryThreadLocals.get().releaseStringBuilder();
     }
 
     @Test
@@ -123,7 +121,6 @@ class HttpRequestBuilderTest {
                                             .pathParams(ImmutableMap.of("foo", "foo", "bar", "bar"))
                                             .build())
                 .isInstanceOf(IllegalStateException.class);
-        TemporaryThreadLocals.get().releaseStringBuilder();
 
         request = HttpRequest.builder().get("/{foo}/{bar}/:id/{/foo/}/::/a{")
                              .pathParams(ImmutableMap.of("id", 3, "bar", 2, "foo", 1, "/foo/", 4))
@@ -137,12 +134,10 @@ class HttpRequestBuilderTest {
         assertThatThrownBy(() -> HttpRequest.builder().pathParam("", "foo"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("empty");
-        TemporaryThreadLocals.get().releaseStringBuilder();
 
         assertThatThrownBy(() -> HttpRequest.builder().pathParams(ImmutableMap.of("", "foo")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("empty");
-        TemporaryThreadLocals.get().releaseStringBuilder();
     }
 
     @ParameterizedTest
@@ -153,7 +148,6 @@ class HttpRequestBuilderTest {
                                             .build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("param 'foo'");
-        TemporaryThreadLocals.get().releaseStringBuilder();
     }
 
     @ParameterizedTest

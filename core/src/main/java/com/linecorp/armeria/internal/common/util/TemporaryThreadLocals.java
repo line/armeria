@@ -33,16 +33,16 @@ import io.netty.util.internal.EmptyArrays;
  * > class A {
  * >     @Override
  * >     public String toString() {
- * >         StringBuilder stringBuilder = TemporaryThreadLocals.get().stringBuilder();
- * >         TemporaryThreadLocals.get().releaseStringBuilder();
+ * >         TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire();
+ * >         StringBuilder stringBuilder = tempThreadLocals.stringBuilder();
+ * >         tempThreadLocals.close();
  * >         return stringBuilder.append('"').append(new B()).append('"').toString();
  * >     }
  * > }
  * > class B {
  * >     @Override
  * >     public String toString() {
- * >         StringBuilder stringBuilder = TemporaryThreadLocals.get().stringBuilder();
- * >         TemporaryThreadLocals.get().releaseStringBuilder();
+ * >         StringBuilder stringBuilder = TemporaryThreadLocals.acquire().stringBuilder();
  * >         return stringBuilder.append("foo").toString();
  * >     }
  * > }
@@ -51,25 +51,25 @@ import io.netty.util.internal.EmptyArrays;
  * }</pre>
  *
  * <p>A release method is helpful to not only prevent from being corrupted but also recognize the situation
- * about nested use. Specifically, in case of {@link StringBuilder}, {@code toString()} is expected prior to
- * {@code releaseStringBuilder()}:
+ * about nested use. Specifically, as this utility implements {@link AutoCloseable}, the release method will
+ * be called successfully with try-with-resources statement.
  * <pre>{@code
  * > class A {
  * >     @Override
  * >     public String toString() {
- * >         StringBuilder stringBuilder = TemporaryThreadLocals.get().stringBuilder();
- * >         String toString = stringBuilder.append('"').append(new B()).append('"').toString();
- * >         threadLocals.get().releaseStringBuilder();
- * >         return toString;
+ * >         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+ * >             StringBuilder stringBuilder = tempThreadLocals.stringBuilder();
+ * >             return stringBuilder.append('"').append(new B()).append('"').toString();
+ * >         }
  * >     }
  * > }
  * > class B {
  * >     @Override
  * >     public String toString() {
- * >         StringBuilder stringBuilder = TemporaryThreadLocals.get().stringBuilder();
- * >         String toString = stringBuilder.append("foo").toString();
- * >         threadLocals.get().releaseStringBuilder();
- * >         return toString;
+ * >         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+ * >             StringBuilder stringBuilder = tempThreadLocals.stringBuilder();
+ * >             return stringBuilder.append("foo").toString();
+ * >         }
  * >     }
  * > }
  * }</pre>
@@ -78,7 +78,7 @@ import io.netty.util.internal.EmptyArrays;
  * <p>A general rule of thumb is not to call other methods while using the thread-local variables provided by
  * this class, unless you are sure the methods you're calling never uses the same thread-local variables.</p>
  */
-public final class TemporaryThreadLocals {
+public final class TemporaryThreadLocals implements AutoCloseable {
 
     @VisibleForTesting
     static final int MAX_BYTE_ARRAY_CAPACITY = 4096;
@@ -96,42 +96,48 @@ public final class TemporaryThreadLocals {
             ThreadLocal.withInitial(TemporaryThreadLocals::new);
 
     /**
-     * Returns the current {@link Thread}'s {@link TemporaryThreadLocals}.
+     * Acquire the current {@link Thread}'s {@link TemporaryThreadLocals} with lock. It should be used with
+     * try-with-resources statement.
      */
-    public static TemporaryThreadLocals get() {
+    public static TemporaryThreadLocals acquire() {
         final Thread thread = Thread.currentThread();
+        final TemporaryThreadLocals tempThreadLocals;
         if (thread instanceof EventLoopThread) {
-            return ((EventLoopThread) thread).temporaryThreadLocals;
+            tempThreadLocals = ((EventLoopThread) thread).temporaryThreadLocals;
         } else {
-            return fallback.get();
+            tempThreadLocals = fallback.get();
         }
+        tempThreadLocals.lock();
+        return tempThreadLocals;
     }
 
+    private boolean lock;
     private byte[] byteArray;
     private char[] charArray;
     private int[] intArray;
     private StringBuilder stringBuilder;
 
-    private boolean byteArrayLock;
-    private boolean charArrayLock;
-    private boolean intArrayLock;
-    private boolean stringBuilderLock;
-
     TemporaryThreadLocals() {
         clear();
     }
 
+    public void lock() {
+        checkState(!lock, "Cannot be acquired before releasing the resource");
+        lock = true;
+    }
+
+    @Override
+    public void close() {
+        lock = false;
+    }
+
     @VisibleForTesting
     void clear() {
+        lock = false;
         byteArray = EmptyArrays.EMPTY_BYTES;
         charArray = EmptyArrays.EMPTY_CHARS;
         intArray = EmptyArrays.EMPTY_INTS;
         stringBuilder = inflate(new StringBuilder());
-
-        byteArrayLock = false;
-        charArrayLock = false;
-        intArrayLock = false;
-        stringBuilderLock = false;
     }
 
     /**
@@ -139,29 +145,17 @@ public final class TemporaryThreadLocals {
      * {@code minCapacity}.
      */
     public byte[] byteArray(int minCapacity) {
-        checkState(!byteArrayLock, "Cannot be called before releasing");
-        byteArrayLock = true;
         final byte[] byteArray = this.byteArray;
         if (byteArray.length >= minCapacity) {
             return byteArray;
         }
-
         return allocateByteArray(minCapacity);
-    }
-
-    /**
-     * Release the byte array to be reused.
-     */
-    public void releaseByteArray() {
-        byteArrayLock = false;
     }
 
     private byte[] allocateByteArray(int minCapacity) {
         final byte[] byteArray = new byte[minCapacity];
         if (minCapacity <= MAX_BYTE_ARRAY_CAPACITY) {
             this.byteArray = byteArray;
-        } else {
-            byteArrayLock = false;
         }
         return byteArray;
     }
@@ -171,29 +165,17 @@ public final class TemporaryThreadLocals {
      * {@code minCapacity}.
      */
     public char[] charArray(int minCapacity) {
-        checkState(!charArrayLock, "Cannot be called before releasing");
-        charArrayLock = true;
         final char[] charArray = this.charArray;
         if (charArray.length >= minCapacity) {
             return charArray;
         }
-
         return allocateCharArray(minCapacity);
-    }
-
-    /**
-     * Release the char array to be reused.
-     */
-    public void releaseCharArray() {
-        charArrayLock = false;
     }
 
     private char[] allocateCharArray(int minCapacity) {
         final char[] charArray = new char[minCapacity];
         if (minCapacity <= MAX_CHAR_ARRAY_CAPACITY) {
             this.charArray = charArray;
-        } else {
-            charArrayLock = false;
         }
         return charArray;
     }
@@ -203,29 +185,17 @@ public final class TemporaryThreadLocals {
      * {@code minCapacity}.
      */
     public int[] intArray(int minCapacity) {
-        checkState(!intArrayLock, "Cannot be called before releasing");
-        intArrayLock = true;
         final int[] intArray = this.intArray;
         if (intArray.length >= minCapacity) {
             return intArray;
         }
-
         return allocateIntArray(minCapacity);
-    }
-
-    /**
-     * Release the int array to be reused.
-     */
-    public void releaseIntArray() {
-        intArrayLock = false;
     }
 
     private int[] allocateIntArray(int minCapacity) {
         final int[] intArray = new int[minCapacity];
         if (minCapacity <= MAX_INT_ARRAY_CAPACITY) {
             this.intArray = intArray;
-        } else {
-            intArrayLock = false;
         }
         return intArray;
     }
@@ -234,8 +204,6 @@ public final class TemporaryThreadLocals {
      * Returns a thread-local {@link StringBuilder}.
      */
     public StringBuilder stringBuilder() {
-        checkState(!stringBuilderLock, "Cannot be called before releasing");
-        stringBuilderLock = true;
         final StringBuilder stringBuilder = this.stringBuilder;
         if (stringBuilder.capacity() > MAX_STRING_BUILDER_CAPACITY) {
             return this.stringBuilder = inflate(new StringBuilder(MAX_STRING_BUILDER_CAPACITY));
@@ -243,13 +211,6 @@ public final class TemporaryThreadLocals {
             stringBuilder.setLength(0);
             return stringBuilder;
         }
-    }
-
-    /**
-     * Release the string builder to be reused.
-     */
-    public void releaseStringBuilder() {
-        stringBuilderLock = false;
     }
 
     /**

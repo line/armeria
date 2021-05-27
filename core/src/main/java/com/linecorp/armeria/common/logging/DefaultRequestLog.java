@@ -1424,56 +1424,56 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             sanitizedTrailers = null;
         }
 
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder buf = tempThreadLocals.stringBuilder();
-        buf.append("{startTime=");
-        TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("{startTime=");
+            TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());
 
-        if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_LENGTH)) {
-            buf.append(", length=");
-            TextFormatter.appendSize(buf, requestLength);
+            if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_LENGTH)) {
+                buf.append(", length=");
+                TextFormatter.appendSize(buf, requestLength);
+            }
+
+            if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_END_TIME)) {
+                buf.append(", duration=");
+                TextFormatter.appendElapsed(buf, requestDurationNanos());
+            }
+
+            if (requestCauseString != null) {
+                buf.append(", cause=").append(requestCauseString);
+            }
+
+            buf.append(", scheme=");
+            if (scheme != null) {
+                buf.append(scheme.uriText());
+            } else {
+                buf.append(SerializationFormat.UNKNOWN.uriText())
+                   .append('+')
+                   .append(sessionProtocol != null ? sessionProtocol.uriText() : "unknown");
+            }
+
+            if (name != null) {
+                buf.append(", name=").append(name);
+            }
+
+            if (sanitizedHeaders != null) {
+                buf.append(", headers=").append(sanitizedHeaders);
+            }
+
+            if (sanitizedContent != null) {
+                buf.append(", content=").append(sanitizedContent);
+            } else if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
+                       requestContentPreview != null) {
+                buf.append(", contentPreview=").append(requestContentPreview);
+            }
+
+            if (sanitizedTrailers != null) {
+                buf.append(", trailers=").append(sanitizedTrailers);
+            }
+            buf.append('}');
+
+            requestStr = buf.toString();
         }
-
-        if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_END_TIME)) {
-            buf.append(", duration=");
-            TextFormatter.appendElapsed(buf, requestDurationNanos());
-        }
-
-        if (requestCauseString != null) {
-            buf.append(", cause=").append(requestCauseString);
-        }
-
-        buf.append(", scheme=");
-        if (scheme != null) {
-            buf.append(scheme.uriText());
-        } else {
-            buf.append(SerializationFormat.UNKNOWN.uriText())
-               .append('+')
-               .append(sessionProtocol != null ? sessionProtocol.uriText() : "unknown");
-        }
-
-        if (name != null) {
-            buf.append(", name=").append(name);
-        }
-
-        if (sanitizedHeaders != null) {
-            buf.append(", headers=").append(sanitizedHeaders);
-        }
-
-        if (sanitizedContent != null) {
-            buf.append(", content=").append(sanitizedContent);
-        } else if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
-                   requestContentPreview != null) {
-            buf.append(", contentPreview=").append(requestContentPreview);
-        }
-
-        if (sanitizedTrailers != null) {
-            buf.append(", trailers=").append(sanitizedTrailers);
-        }
-        buf.append('}');
-
-        requestStr = buf.toString();
-        tempThreadLocals.releaseStringBuilder();
         requestStrFlags = flags;
 
         return requestStr;
@@ -1530,52 +1530,52 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             sanitizedTrailers = null;
         }
 
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder buf = tempThreadLocals.stringBuilder();
-        buf.append("{startTime=");
-        TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("{startTime=");
+            TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());
 
-        if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_LENGTH)) {
-            buf.append(", length=");
-            TextFormatter.appendSize(buf, responseLength);
-        }
+            if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_LENGTH)) {
+                buf.append(", length=");
+                TextFormatter.appendSize(buf, responseLength);
+            }
 
-        if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_END_TIME)) {
-            buf.append(", duration=");
-            TextFormatter.appendElapsed(buf, responseDurationNanos());
-            buf.append(", totalDuration=");
-            TextFormatter.appendElapsed(buf, totalDurationNanos());
-        }
+            if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_END_TIME)) {
+                buf.append(", duration=");
+                TextFormatter.appendElapsed(buf, responseDurationNanos());
+                buf.append(", totalDuration=");
+                TextFormatter.appendElapsed(buf, totalDurationNanos());
+            }
 
-        if (responseCauseString != null) {
-            buf.append(", cause=").append(responseCauseString);
-        }
+            if (responseCauseString != null) {
+                buf.append(", cause=").append(responseCauseString);
+            }
 
-        if (sanitizedHeaders != null) {
-            buf.append(", headers=").append(sanitizedHeaders);
-        }
+            if (sanitizedHeaders != null) {
+                buf.append(", headers=").append(sanitizedHeaders);
+            }
 
-        if (sanitizedContent != null) {
-            buf.append(", content=").append(sanitizedContent);
-        } else if (responseContentPreview != null) {
-            buf.append(", contentPreview=").append(responseContentPreview);
-        }
+            if (sanitizedContent != null) {
+                buf.append(", content=").append(sanitizedContent);
+            } else if (responseContentPreview != null) {
+                buf.append(", contentPreview=").append(responseContentPreview);
+            }
 
-        if (sanitizedTrailers != null) {
-            buf.append(", trailers=").append(sanitizedTrailers);
-        }
-        buf.append('}');
-
-        final int numChildren = children != null ? children.size() : 0;
-        if (numChildren > 1) {
-            // Append only when there were retries which the numChildren is greater than 1.
-            buf.append(", {totalAttempts=");
-            buf.append(numChildren);
+            if (sanitizedTrailers != null) {
+                buf.append(", trailers=").append(sanitizedTrailers);
+            }
             buf.append('}');
-        }
 
-        responseStr = buf.toString();
-        tempThreadLocals.releaseStringBuilder();
+            final int numChildren = children != null ? children.size() : 0;
+            if (numChildren > 1) {
+                // Append only when there were retries which the numChildren is greater than 1.
+                buf.append(", {totalAttempts=");
+                buf.append(numChildren);
+                buf.append('}');
+            }
+
+            responseStr = buf.toString();
+        }
         responseStrFlags = flags;
 
         return responseStr;
