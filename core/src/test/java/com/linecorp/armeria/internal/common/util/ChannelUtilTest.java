@@ -60,45 +60,32 @@ class ChannelUtilTest {
         final Map<ChannelOption<?>, Object> options = ImmutableMap.of(
                 ChannelOption.SO_LINGER, lingerMillis);
 
-        // ignore if parameters are infinite
+        // ignore if idle timeout not set
         Map<ChannelOption<?>, Object> newOptions =
                 ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                        transportType, options, 0, 0, 0);
+                        transportType, options, 0, 0);
         assertThat(options).containsExactlyEntriesOf(newOptions);
 
-        // ignore if parameters are out of bounds
+        // ignore if idle timeout is out of bounds
         newOptions = ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                transportType, options, Integer.MAX_VALUE - ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS + 1,
-                0, 0);
+                transportType, options,
+                Integer.MAX_VALUE - ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS + 1, 0);
         assertThat(options).containsExactlyEntriesOf(newOptions);
 
-        final int maxConnectionAgeMillis = 3000;
+        // apply idle timeout if possible
         final int idleTimeoutMillis = 2000;
         newOptions = ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                transportType, options, maxConnectionAgeMillis, 0, 0);
-        assertThat(newOptions).containsOnly(
-                entry(ChannelOption.SO_LINGER, lingerMillis),
-                entry(option, maxConnectionAgeMillis + ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS));
-
-        newOptions = ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                transportType, options, 0, idleTimeoutMillis, 0);
+                transportType, options, idleTimeoutMillis, 0);
         assertThat(newOptions).containsOnly(
                 entry(ChannelOption.SO_LINGER, lingerMillis),
                 entry(option, idleTimeoutMillis + ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS));
-
-        // max value should be applied
-        newOptions = ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                transportType, options, maxConnectionAgeMillis, idleTimeoutMillis, 0);
-        assertThat(newOptions).containsOnly(
-                entry(ChannelOption.SO_LINGER, lingerMillis),
-                entry(option, maxConnectionAgeMillis + ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS));
 
         // user defined options are respected
         final long userDefinedTcpUserTimeoutMillis = 10_000;
         final Map<ChannelOption<?>, Object> userDefinedOptions = ImmutableMap.of(
                 ChannelOption.SO_LINGER, lingerMillis, option, userDefinedTcpUserTimeoutMillis);
         newOptions = ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                transportType, userDefinedOptions, maxConnectionAgeMillis, idleTimeoutMillis, 0);
+                transportType, userDefinedOptions, idleTimeoutMillis, 0);
         assertThat(newOptions).containsExactlyInAnyOrderEntriesOf(userDefinedOptions);
     }
 
@@ -109,7 +96,7 @@ class ChannelUtilTest {
 
         final Map<ChannelOption<?>, Object> newOptions =
                 ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                        TransportType.NIO, options, 3000, 4000, 0);
+                        TransportType.NIO, options, 3000, 4000);
         assertThat(options).containsExactlyEntriesOf(newOptions);
     }
 
@@ -122,17 +109,17 @@ class ChannelUtilTest {
 
         // ignore if parameters are infinite
         Map<ChannelOption<?>, Object> newOptions =
-                ChannelUtil.applyDefaultChannelOptionsIfAbsent(type, options, 0, 0, 0);
+                ChannelUtil.applyDefaultChannelOptionsIfAbsent(type, options, 0, 0);
         assertThat(newOptions).containsExactlyEntriesOf(options);
 
         // ignore if parameters are out of bounds
         newOptions = ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                type, options, 0, 0, Long.MAX_VALUE);
+                type, options, 0, Long.MAX_VALUE);
         assertThat(newOptions).containsExactlyEntriesOf(options);
 
         final long pingIntervalMillis = 3000;
         newOptions = ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                type, options, 0, 0, pingIntervalMillis);
+                type, options, 0, pingIntervalMillis);
         if (type == TransportType.EPOLL) {
             assertThat(newOptions).containsOnly(entry(ChannelOption.SO_LINGER, lingerMillis),
                                                 entry(ChannelOption.SO_KEEPALIVE, true),
@@ -151,7 +138,7 @@ class ChannelUtilTest {
         final Map<ChannelOption<?>, Object> userDefinedOptions = ImmutableMap.of(
                 ChannelOption.SO_LINGER, lingerMillis, ChannelOption.SO_KEEPALIVE, false);
         newOptions = ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                type, userDefinedOptions, 0, 0, pingIntervalMillis);
+                type, userDefinedOptions, 0, pingIntervalMillis);
         assertThat(newOptions).containsExactlyInAnyOrderEntriesOf(userDefinedOptions);
     }
 }

@@ -263,13 +263,13 @@ class ClientFactoryBuilderTest {
         assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
 
         final int lingerMillis = 100;
+        final int idleTimeoutMillis = 10_000;
         try (ClientFactory factory = ClientFactory.builder()
-                                                  .idleTimeoutMillis(10_000)
-                                                  .maxConnectionAgeMillis(12_000)
+                                                  .idleTimeoutMillis(idleTimeoutMillis)
                                                   .channelOption(SO_LINGER, lingerMillis)
                                                   .build()) {
             assertThat(factory.options().channelOptions()).containsOnly(
-                    entry(TCP_USER_TIMEOUT, 12_000 + ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS),
+                    entry(TCP_USER_TIMEOUT, idleTimeoutMillis + ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS),
                     entry(SO_LINGER, lingerMillis),
                     entry(CONNECT_TIMEOUT_MILLIS, (int) Flags.defaultConnectTimeoutMillis()));
         }
@@ -277,8 +277,7 @@ class ClientFactoryBuilderTest {
         // user defined value is respected
         final int userDefinedValue = 3000;
         try (ClientFactory factory = ClientFactory.builder()
-                                                  .idleTimeoutMillis(15_000)
-                                                  .maxConnectionAgeMillis(12_000)
+                                                  .idleTimeoutMillis(idleTimeoutMillis)
                                                   .channelOption(SO_LINGER, lingerMillis)
                                                   .channelOption(TCP_USER_TIMEOUT, userDefinedValue)
                                                   .build()) {

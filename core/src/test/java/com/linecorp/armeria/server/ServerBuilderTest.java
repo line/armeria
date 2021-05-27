@@ -602,22 +602,21 @@ class ServerBuilderTest {
 
         // default tcp user timeout applied
         final int lingerMillis = 1000;
+        final int idleTimeoutMillis = 12_000;
         Server server = Server.builder()
                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                              .maxConnectionAgeMillis(10_000)
-                              .idleTimeoutMillis(12_000)
+                              .idleTimeoutMillis(idleTimeoutMillis)
                               .childChannelOption(SO_LINGER, lingerMillis)
                               .build();
         assertThat(server.config().childChannelOptions())
-                .containsExactly(entry(TCP_USER_TIMEOUT, 10_000 + TCP_USER_TIMEOUT_BUFFER_MILLIS),
+                .containsExactly(entry(TCP_USER_TIMEOUT, idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS),
                                  entry(SO_LINGER, lingerMillis));
 
         // user defined value is respected
         final int userDefinedValue = 30_000;
         server = Server.builder()
                        .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                       .maxConnectionAgeMillis(10_000)
-                       .idleTimeoutMillis(12_000)
+                       .idleTimeoutMillis(idleTimeoutMillis)
                        .childChannelOption(TCP_USER_TIMEOUT, userDefinedValue)
                        .childChannelOption(SO_LINGER, lingerMillis)
                        .build();

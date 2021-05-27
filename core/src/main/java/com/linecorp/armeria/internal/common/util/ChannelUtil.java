@@ -136,18 +136,17 @@ public final class ChannelUtil {
 
     public static Map<ChannelOption<?>, Object> applyDefaultChannelOptionsIfAbsent(
             TransportType transportType, Map<ChannelOption<?>, Object> channelOptions,
-            long maxConnectionAgeMillis, long idleTimeoutMillis, long pingIntervalMillis) {
+            long idleTimeoutMillis, long pingIntervalMillis) {
         final Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
-        final long userTimeoutMillis = Math.max(idleTimeoutMillis, maxConnectionAgeMillis);
-        if (userTimeoutMillis > 0 && userTimeoutMillis <= Integer.MAX_VALUE - TCP_USER_TIMEOUT_BUFFER_MILLIS) {
+        if (idleTimeoutMillis > 0 && idleTimeoutMillis <= Integer.MAX_VALUE - TCP_USER_TIMEOUT_BUFFER_MILLIS) {
             if (transportType == TransportType.EPOLL &&
                 !channelOptions.containsKey(EpollChannelOption.TCP_USER_TIMEOUT)) {
                 newChannelOptionsBuilder.put(EpollChannelOption.TCP_USER_TIMEOUT,
-                                             userTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+                                             idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
             } else if (transportType == TransportType.IO_URING &&
                        !channelOptions.containsKey(IOUringChannelOption.TCP_USER_TIMEOUT)) {
                 newChannelOptionsBuilder.put(IOUringChannelOption.TCP_USER_TIMEOUT,
-                                             userTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+                                             idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
             }
         }
         if (pingIntervalMillis > 0 && pingIntervalMillis <= Integer.MAX_VALUE) {

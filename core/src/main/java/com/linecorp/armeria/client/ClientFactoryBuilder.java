@@ -763,7 +763,7 @@ public final class ClientFactoryBuilder {
         if (Flags.useDefaultSocketChannelOptions()) {
             final Map<ChannelOption<?>, Object> newChannelOptions =
                     ChannelUtil.applyDefaultChannelOptionsIfAbsent(
-                            Flags.transportType(), newOptions.channelOptions(), maxConnectionAgeMillis,
+                            Flags.transportType(), newOptions.channelOptions(),
                             idleTimeoutMillis, pingIntervalMillis);
             adjustedOptionsBuilder.add(ClientFactoryOptions.CHANNEL_OPTIONS.newValue(newChannelOptions));
         }
