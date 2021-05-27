@@ -63,7 +63,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     @Nullable
     private volatile EventExecutor executor;
 
-    // Updated only via abortCauseUpdater
     @Nullable
     private volatile Throwable abortCause;
     // Updated only via subscribedUpdater
