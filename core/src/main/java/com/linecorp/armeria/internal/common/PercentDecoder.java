@@ -99,7 +99,7 @@ public final class PercentDecoder {
 
     private static String decodeUtf8Component(char[] buf, String s, int from, int toExcluded) {
         int bufIdx = 0;
-        for (int i = from; i < toExcluded; ) {
+        for (int i = from; i < toExcluded;) {
             final int undecodedChars = toExcluded - i;
             final char c = s.charAt(i++);
             if (c != '%') {
