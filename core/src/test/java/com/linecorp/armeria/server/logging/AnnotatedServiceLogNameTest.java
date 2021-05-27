@@ -25,6 +25,8 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceNaming;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -103,7 +105,7 @@ class AnnotatedServiceLogNameTest {
         client.get("/default/service-name").aggregate().join();
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
                 .isEqualTo(MyAnnotatedService.class.getName());
-        assertThat(sctx.config().defaultServiceName()).isEqualTo(MyAnnotatedService.class.getName());
+        assertThat(sctx.config().defaultServiceName()).isNull();
         assertThat(sctx.log().whenComplete().join().serviceName())
                 .isEqualTo(MyAnnotatedService.class.getName());
     }
@@ -160,7 +162,7 @@ class AnnotatedServiceLogNameTest {
         client.get("/annotation/service-name").aggregate().join();
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
                 .isEqualTo("MyService");
-        assertThat(sctx.config().defaultServiceName()).isEqualTo("MyService");
+        assertThat(sctx.config().defaultServiceName()).isNull();
         assertThat(sctx.log().whenComplete().join().serviceName())
                 .isEqualTo("MyService");
     }
@@ -174,6 +176,19 @@ class AnnotatedServiceLogNameTest {
         assertThat(sctx.config().defaultServiceName()).isNull();
         assertThat(sctx.log().whenComplete().join().serviceName())
                 .matches("^AnnotatedServiceLogNameTest(\\$[0-9]+)+$");
+    }
+
+    @Test
+    void globalDefaultServiceNamingIsApplied() {
+        final Server server = Server.builder()
+                                    .defaultServiceNaming(ctx -> "foo")
+                                    .annotatedService(new MyAnnotatedService()).build();
+        server.start().join();
+        final WebClient client =
+                WebClient.of("http://127.0.0.1:" + server.activeLocalPort(SessionProtocol.HTTP));
+        client.get("/service-name").aggregate().join();
+        assertThat(sctx.log().whenComplete().join().serviceName()).isEqualTo("foo");
+        server.stop().join();
     }
 
     private static class MyAnnotatedService {
