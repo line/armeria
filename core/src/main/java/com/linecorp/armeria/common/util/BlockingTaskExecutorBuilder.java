@@ -38,7 +38,7 @@ public final class BlockingTaskExecutorBuilder {
 
     private String threadNamePrefix = "armeria-blocking-tasks";
     private int numThreads = Flags.numCommonBlockingTaskThreads();
-    private long keepAliveTimeMillis = 600;
+    private long keepAliveTimeMillis = 60 * 1000;
     private boolean daemon = true;
     private int priority = Thread.NORM_PRIORITY;
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
