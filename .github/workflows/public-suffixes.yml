@@ -41,7 +41,6 @@ jobs:
           git-commit-gpgsign: true
 
       - name: Push updated public suffix list
-        if: steps.auto-commit-action.outputs.changes_detected == 'true'
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
           commit_options: '-S'
