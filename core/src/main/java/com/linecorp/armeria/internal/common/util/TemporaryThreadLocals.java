@@ -121,11 +121,6 @@ public final class TemporaryThreadLocals implements AutoCloseable {
         clear();
     }
 
-    public void lock() {
-        checkState(!lock, "Cannot be acquired before releasing the resource");
-        lock = true;
-    }
-
     @Override
     public void close() {
         lock = false;
@@ -152,14 +147,6 @@ public final class TemporaryThreadLocals implements AutoCloseable {
         return allocateByteArray(minCapacity);
     }
 
-    private byte[] allocateByteArray(int minCapacity) {
-        final byte[] byteArray = new byte[minCapacity];
-        if (minCapacity <= MAX_BYTE_ARRAY_CAPACITY) {
-            this.byteArray = byteArray;
-        }
-        return byteArray;
-    }
-
     /**
      * Returns a thread-local character array whose length is equal to or greater than the specified
      * {@code minCapacity}.
@@ -170,14 +157,6 @@ public final class TemporaryThreadLocals implements AutoCloseable {
             return charArray;
         }
         return allocateCharArray(minCapacity);
-    }
-
-    private char[] allocateCharArray(int minCapacity) {
-        final char[] charArray = new char[minCapacity];
-        if (minCapacity <= MAX_CHAR_ARRAY_CAPACITY) {
-            this.charArray = charArray;
-        }
-        return charArray;
     }
 
     /**
@@ -192,14 +171,6 @@ public final class TemporaryThreadLocals implements AutoCloseable {
         return allocateIntArray(minCapacity);
     }
 
-    private int[] allocateIntArray(int minCapacity) {
-        final int[] intArray = new int[minCapacity];
-        if (minCapacity <= MAX_INT_ARRAY_CAPACITY) {
-            this.intArray = intArray;
-        }
-        return intArray;
-    }
-
     /**
      * Returns a thread-local {@link StringBuilder}.
      */
@@ -211,6 +182,35 @@ public final class TemporaryThreadLocals implements AutoCloseable {
             stringBuilder.setLength(0);
             return stringBuilder;
         }
+    }
+
+    private void lock() {
+        checkState(!lock, "Cannot be acquired before releasing the resource");
+        lock = true;
+    }
+
+    private byte[] allocateByteArray(int minCapacity) {
+        final byte[] byteArray = new byte[minCapacity];
+        if (minCapacity <= MAX_BYTE_ARRAY_CAPACITY) {
+            this.byteArray = byteArray;
+        }
+        return byteArray;
+    }
+
+    private char[] allocateCharArray(int minCapacity) {
+        final char[] charArray = new char[minCapacity];
+        if (minCapacity <= MAX_CHAR_ARRAY_CAPACITY) {
+            this.charArray = charArray;
+        }
+        return charArray;
+    }
+
+    private int[] allocateIntArray(int minCapacity) {
+        final int[] intArray = new int[minCapacity];
+        if (minCapacity <= MAX_INT_ARRAY_CAPACITY) {
+            this.intArray = intArray;
+        }
+        return intArray;
     }
 
     /**

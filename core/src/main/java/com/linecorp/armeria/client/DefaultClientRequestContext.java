@@ -132,12 +132,12 @@ public final class DefaultClientRequestContext
      * @param eventLoop the {@link EventLoop} associated with this context
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param id the {@link RequestId} that represents the identifier of the current {@link Request}
-     * and {@link Response} pair.
+     *           and {@link Response} pair.
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
-     * e.g. {@code System.currentTimeMillis() * 1000}.
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
@@ -156,12 +156,12 @@ public final class DefaultClientRequestContext
      *
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param id the {@link RequestId} that contains the identifier of the current {@link Request}
-     * and {@link Response} pair.
+     *           and {@link Response} pair.
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
-     * e.g. {@code System.currentTimeMillis() * 1000}.
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
@@ -214,8 +214,8 @@ public final class DefaultClientRequestContext
      * This method must be invoked to finish the construction of this context.
      *
      * @return {@code true} if the initialization has succeeded.
-     * {@code false} if the initialization has failed and this context's {@link RequestLog} has been
-     * completed with the cause of the failure.
+     *         {@code false} if the initialization has failed and this context's {@link RequestLog} has been
+     *         completed with the cause of the failure.
      */
     public CompletableFuture<Boolean> init(EndpointGroup endpointGroup) {
         assert endpoint == null : endpoint;
@@ -431,7 +431,7 @@ public final class DefaultClientRequestContext
         maxResponseLength = ctx.maxResponseLength();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
-        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext(); ) {
+        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
     }
@@ -606,7 +606,7 @@ public final class DefaultClientRequestContext
     @Override
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
         requireNonNull(mutator, "mutator");
-        for (; ; ) {
+        for (;;) {
             final HttpHeaders oldValue = additionalRequestHeaders;
             final HttpHeadersBuilder builder = oldValue.toBuilder();
             mutator.accept(builder);
