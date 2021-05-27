@@ -162,7 +162,7 @@ class AnnotatedServiceLogNameTest {
         client.get("/annotation/service-name").aggregate().join();
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
                 .isEqualTo("MyService");
-        assertThat(sctx.config().defaultServiceName()).isNull();
+        assertThat(sctx.config().defaultServiceName()).isEqualTo("MyService");
         assertThat(sctx.log().whenComplete().join().serviceName())
                 .isEqualTo("MyService");
     }

@@ -1596,7 +1596,7 @@ import com.linecorp.armeria.server.kotlin.CoroutineContextService
 serverBuilder
     .annotatedService()
     .decorator(CoroutineContextService.newDecorator { ctx ->
-        CoroutineName(ctx.config().defaultServiceName() ?: "none")
+        CoroutineName(CoroutineName(ctx.config().defaultServiceNaming().serviceName(ctx) ?: "name"))
     })
     .build(MyAnnotatedService())
 ```
