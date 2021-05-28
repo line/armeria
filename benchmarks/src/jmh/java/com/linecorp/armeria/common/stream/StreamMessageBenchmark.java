@@ -128,11 +128,12 @@ public class StreamMessageBenchmark {
     }
 
     @Benchmark
-    public long noExecutor(StreamObjects streamObjects) {
+    public long noExecutor(StreamObjects streamObjects) throws InterruptedException {
         final StreamMessage<Integer> stream = newStream(streamObjects);
         stream.subscribe(streamObjects.subscriber);
         streamObjects.writeAllValues(stream);
-        // No executor, so sum will be updated inline.
+        // ensure the event loop closes the stream before checking the computed sum
+        streamObjects.completedLatch.await(10, TimeUnit.SECONDS);
         return streamObjects.computedSum();
     }
 
