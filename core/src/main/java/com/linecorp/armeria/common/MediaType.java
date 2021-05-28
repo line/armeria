@@ -868,6 +868,21 @@ public final class MediaType {
     }
 
     /**
+     * Returns {@code true} when the subtype is {@link MediaType#JSON} or the end with {@code +json}.
+     * Otherwise {@code false}.
+     *
+     * <pre>{@code
+     * JSON.isJson() // true
+     * JSON_UTF_8.isJson() // true
+     * PLAIN_TEXT_UTF_8.isJson() // false
+     * MediaType.parse("application/graphql+json").isJson() // true
+     * }</pre>
+     */
+    public boolean isJson() {
+        return is(JSON) || subtype().endsWith("+json");
+    }
+
+    /**
      * Returns {@code true} if this {@link MediaType} belongs to the given {@link MediaType}.
      * Similar to what {@link MediaType#is(MediaType)} does except that this one compares the parameters
      * case-insensitively and excludes 'q' parameter.
@@ -1046,10 +1061,6 @@ public final class MediaType {
         } catch (IllegalStateException e) {
             throw new IllegalArgumentException("Could not parse '" + input + '\'', e);
         }
-    }
-
-    public static boolean isJson(@Nullable MediaType mediaType) {
-        return mediaType != null && (mediaType.is(JSON) || mediaType.subtype().endsWith("+json"));
     }
 
     private static final class Tokenizer {

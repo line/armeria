@@ -80,14 +80,14 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest request) {
         final QueryParams queryString = QueryParams.fromQueryString(ctx.query());
         final String query = queryString.get("query");
-        if (query == null) {
+        if (Strings.isNullOrEmpty(query)) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST,
                                    MediaType.PLAIN_TEXT,
                                    "Query is required");
         }
         final Map<String, Object> variables = toVariableMap(queryString.get("variables"));
         final String operationName = queryString.get("operationName");
-        return execute(ctx, executionInput(query, ctx, variables, operationName));
+        return execute(ctx, executionInput(query, ctx, dataLoaderRegistry, variables, operationName));
     }
 
     @Override
@@ -98,7 +98,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                                    MediaType.PLAIN_TEXT,
                                    "Could not process GraphQL request");
         }
-        if (MediaType.isJson(contentType)) {
+        if (contentType.isJson()) {
             return HttpResponse.from(request.aggregate().handle((req, thrown) -> {
                 if (thrown != null) {
                     return HttpResponse.ofFailure(thrown);
@@ -109,7 +109,10 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                 }
                 final Map<String, Object> requestMap = parseJsonString(body);
                 final String query = (String) requestMap.getOrDefault("query", "");
-                return execute(ctx, executionInput(query, ctx,
+                if (Strings.isNullOrEmpty(query)) {
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Query is required");
+                }
+                return execute(ctx, executionInput(query, ctx, dataLoaderRegistry,
                                                    toVariableMap(requestMap.get("variables")),
                                                    (String) requestMap.get("operationName")));
             }));
@@ -120,7 +123,10 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                     return HttpResponse.ofFailure(thrown);
                 }
                 final String query = req.contentUtf8();
-                return execute(ctx, executionInput(query, ctx, null, null));
+                if (Strings.isNullOrEmpty(query)) {
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Query is required");
+                }
+                return execute(ctx, executionInput(query, ctx, dataLoaderRegistry, null, null));
             }));
         }
         return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
@@ -128,9 +134,10 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                                "Could not process GraphQL request");
     }
 
-    private ExecutionInput executionInput(String query, ServiceRequestContext ctx,
-                                          @Nullable Map<String, Object> variables,
-                                          @Nullable String operationName) {
+    private static ExecutionInput executionInput(String query, ServiceRequestContext ctx,
+                                                 DataLoaderRegistry dataLoaderRegistry,
+                                                 @Nullable Map<String, Object> variables,
+                                                 @Nullable String operationName) {
         final Builder builder = ExecutionInput.newExecutionInput(query);
         if (variables != null && !variables.isEmpty()) {
             builder.variables(variables);
@@ -138,45 +145,9 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         if (operationName != null) {
             builder.operationName(operationName);
         }
-        if (dataLoaderRegistry != null) {
-            builder.dataLoaderRegistry(dataLoaderRegistry);
-        }
-        return builder.context(ctx).build();
-    }
-
-    private HttpResponse execute(ServiceRequestContext ctx, ExecutionInput input) {
-        if (useBlockingTaskExecutor) {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-            ctx.blockingTaskExecutor().execute(() -> {
-                final ExecutionResult executionResult = graphQL.execute(input);
-                future.complete(HttpResponse.of(MediaType.JSON_UTF_8,
-                                                toJsonString(executionResult.toSpecification())));
-            });
-            return HttpResponse.from(future);
-        } else {
-            return HttpResponse.from(graphQL.executeAsync(input).handle((executionResult, cause) -> {
-                if (cause != null) {
-                    final ExecutionResult error = toExecutionResult(cause);
-                    return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
-                }
-
-            // TODO: When WebSocket is implemented, it should be removed.
-            if (executionResult.getData() instanceof Publisher) {
-                final ExecutionResult error =
-                        toExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
-                return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
-            }
-
-                return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(executionResult.toSpecification()));
-            }));
-        }
-    }
-
-    private static ExecutionResult toExecutionResult(Throwable cause) {
-        return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
-                                                            .message(cause.getMessage())
-                                                            .cause(cause)
-                                                            .build());
+        return builder.context(ctx)
+                      .dataLoaderRegistry(dataLoaderRegistry)
+                      .build();
     }
 
     private static Map<String, Object> toVariableMap(@Nullable Object variables) {
@@ -200,6 +171,48 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
             return ImmutableMap.of();
         }
         return parseJsonString(value);
+    }
+
+    private HttpResponse execute(ServiceRequestContext ctx, ExecutionInput input) {
+        if (useBlockingTaskExecutor) {
+            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+            ctx.blockingTaskExecutor().execute(() -> {
+                try {
+                    final ExecutionResult executionResult = graphQL.execute(input);
+                    future.complete(toHttpResponse(executionResult));
+                } catch (RuntimeException e) {
+                    final ExecutionResult error = toExecutionResult(e);
+                    future.complete(HttpResponse.of(MediaType.JSON_UTF_8,
+                                                    toJsonString(error.toSpecification())));
+                }
+            });
+            return HttpResponse.from(future);
+        }
+
+        return HttpResponse.from(graphQL.executeAsync(input).handle((executionResult, cause) -> {
+            if (cause != null) {
+                final ExecutionResult error = toExecutionResult(cause);
+                return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
+            }
+            return toHttpResponse(executionResult);
+        }));
+    }
+
+    private static HttpResponse toHttpResponse(ExecutionResult executionResult) {
+        // TODO: When WebSocket is implemented, it should be removed.
+        if (executionResult.getData() instanceof Publisher) {
+            final ExecutionResult error =
+                    toExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
+            return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
+        }
+        return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(executionResult.toSpecification()));
+    }
+
+    private static ExecutionResult toExecutionResult(Throwable cause) {
+        return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
+                                                            .message(cause.getMessage())
+                                                            .cause(cause)
+                                                            .build());
     }
 
     private static Map<String, Object> parseJsonString(String content) {

@@ -160,13 +160,13 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
                 }
             }
 
-            if (MediaType.isJson(contentType)) {
+            if (isJson(contentType)) {
                 jsonParser.merge(request.content(charset), messageBuilder);
                 return messageBuilder.build();
             }
         }
 
-        if (!MediaType.isJson(contentType) || expectedParameterizedResultType == null) {
+        if (!isJson(contentType) || expectedParameterizedResultType == null) {
             return RequestConverterFunction.fallthrough();
         }
 
@@ -226,6 +226,10 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
                contentType.is(MediaType.PROTOBUF) ||
                contentType.is(X_PROTOBUF) ||
                contentType.is(MediaType.OCTET_STREAM);
+    }
+
+    static boolean isJson(@Nullable MediaType contentType) {
+        return contentType != null && contentType.isJson();
     }
 
     private static Message.Builder getMessageBuilder(Class<?> clazz) {

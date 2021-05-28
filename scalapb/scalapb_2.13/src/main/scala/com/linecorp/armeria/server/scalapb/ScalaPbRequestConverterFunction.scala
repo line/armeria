@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentMap
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet, MapMaker}
 import com.google.protobuf.CodedInputStream
-import com.linecorp.armeria.common.{AggregatedHttpRequest, MediaType}
+import com.linecorp.armeria.common.{AggregatedHttpRequest}
 import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.RequestConverterFunction
@@ -217,12 +217,12 @@ final class ScalaPbRequestConverterFunction private (jsonParser: Parser, resultT
         } finally if (is != null)
           is.close()
       }
-      if (MediaType.isJson(contentType)) {
+      if (contentType.isJson) {
         val jsonString = request.content(charset)
         return jsonToScalaPbMessage(expectedResultType, jsonString).asInstanceOf[Object]
       }
 
-      if (!MediaType.isJson(contentType) || expectedParameterizedResultType == null)
+      if (!contentType.isJson || expectedParameterizedResultType == null)
         return RequestConverterFunction.fallthrough
     }
 

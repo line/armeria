@@ -78,7 +78,7 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
       @Nullable result: Any,
       trailers: HttpHeaders): HttpResponse = {
     val contentType = headers.contentType
-    val isJsonType = MediaType.isJson(contentType)
+    val isJsonType = contentType != null && contentType.isJson
     val isJsonSeq = contentType != null && MediaType.JSON_SEQ.is(contentType)
 
     result match {

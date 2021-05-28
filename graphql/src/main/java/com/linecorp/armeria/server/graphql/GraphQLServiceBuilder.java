@@ -69,8 +69,6 @@ public final class GraphQLServiceBuilder {
     private final ImmutableList.Builder<Consumer<GraphQL.Builder>> graphQLBuilderConsumerBuilder =
             ImmutableList.builder();
 
-    private DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
-
     private boolean useBlockingTaskExecutor;
 
     GraphQLServiceBuilder() {}
@@ -202,6 +200,7 @@ public final class GraphQLServiceBuilder {
             configurer.accept(builder);
         }
 
+        final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
         final List<Consumer<DataLoaderRegistry>> dataLoaderRegistries =
                 dataLoaderRegistryConsumerBuilder.build();
         for (Consumer<DataLoaderRegistry> configurer : dataLoaderRegistries) {

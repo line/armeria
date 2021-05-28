@@ -63,9 +63,6 @@ com.github.jengelman.gradle.plugins:
 com.github.node-gradle:
   gradle-node-plugin: { version: '3.0.1' }
 
-com.graphql-java:
-  graphql-java: { version: '16.2' }
-
 com.google.api:
   gax-grpc: { version: '1.63.0' }
 
@@ -125,6 +122,9 @@ com.google.protobuf:
     - com.google.errorprone:error_prone_annotations
   protobuf-gradle-plugin: { version: '0.8.13' }
   protoc: { version: *PROTOBUF_VERSION }
+
+com.graphql-java:
+  graphql-java: { version: '16.2' }
 
 # Akka is used only for testing in it:grpcweb module.
 com.lightbend.akka.grpc:
