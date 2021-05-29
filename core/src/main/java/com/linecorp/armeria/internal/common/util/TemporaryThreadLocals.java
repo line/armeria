@@ -33,30 +33,6 @@ import io.netty.util.internal.EmptyArrays;
  * > class A {
  * >     @Override
  * >     public String toString() {
- * >         TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire();
- * >         StringBuilder stringBuilder = tempThreadLocals.stringBuilder();
- * >         tempThreadLocals.close();
- * >         return stringBuilder.append('"').append(new B()).append('"').toString();
- * >     }
- * > }
- * > class B {
- * >     @Override
- * >     public String toString() {
- * >         StringBuilder stringBuilder = TemporaryThreadLocals.acquire().stringBuilder();
- * >         return stringBuilder.append("foo").toString();
- * >     }
- * > }
- * > // The following assertion fails, because A.toString() returns "foofoo\"".
- * > assert "\"foo\"".equals(new A().toString());
- * }</pre>
- *
- * <p>A release method is helpful to not only prevent from being corrupted but also recognize the situation
- * about nested use. Specifically, as this utility implements {@link AutoCloseable}, the release method will
- * be called successfully with try-with-resources statement.
- * <pre>{@code
- * > class A {
- * >     @Override
- * >     public String toString() {
  * >         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
  * >             StringBuilder stringBuilder = tempThreadLocals.stringBuilder();
  * >             return stringBuilder.append('"').append(new B()).append('"').toString();
@@ -73,10 +49,11 @@ import io.netty.util.internal.EmptyArrays;
  * >     }
  * > }
  * }</pre>
- * In this case, instead of unpredictable behavior, an {@link IllegalStateException} occurs.
- *
- * <p>A general rule of thumb is not to call other methods while using the thread-local variables provided by
- * this class, unless you are sure the methods you're calling never uses the same thread-local variables.</p>
+ * If no exception occurs, {@code new A().toString()} returns {@code foofoo"}. However, it does not happen
+ * in fact. When trying to acquire this class in class B, an {@link IllegalStateException} occurs by a lock
+ * mechanism. It helps to prevent thread local variables from being corrupted. Also developers recognize
+ * the situation about nested use easily. Specifically, as this utility implements {@link AutoCloseable},
+ * the release method will be called successfully with try-with-resources statement.
  */
 public final class TemporaryThreadLocals implements AutoCloseable {
 
