@@ -30,8 +30,9 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 
 /**
- * Provides a builder that is useful for creating a {@link ScheduledExecutorService}.
+ * A builder that is useful for creating a {@link ScheduledExecutorService}.
  *
+ * @see BlockingTaskExecutor#builder()
  * @see CommonPools#blockingTaskExecutor()
  */
 public final class BlockingTaskExecutorBuilder {

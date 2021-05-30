@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.util;
 
 import java.util.concurrent.ScheduledExecutorService;
 
+import com.linecorp.armeria.common.CommonPools;
+
 /**
  * Provides an executor interface which is used for potentially long-running tasks which may block I/O threads.
  */
@@ -27,7 +29,7 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
      * Returns a {@link BlockingTaskExecutor} with a 60s timeout and unbounded work queue.
      */
     static BlockingTaskExecutor of() {
-        return builder().build();
+        return (BlockingTaskExecutor) CommonPools.blockingTaskExecutor();
     }
 
     static BlockingTaskExecutorBuilder builder() {
