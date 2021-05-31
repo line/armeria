@@ -143,11 +143,10 @@ public final class DefaultClientRequestContext
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            CancellationScheduler responseCancellationScheduler,
+            RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
-             // TODO(ikhoon): Check request options
-             id, method, path, query, fragment, options, req, rpcReq, RequestOptions.of(), serviceRequestContext(),
+             id, method, path, query, fragment, options, req, rpcReq, requestOptions, serviceRequestContext(),
              responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
     }
 
@@ -219,7 +218,7 @@ public final class DefaultClientRequestContext
         while (attrs.hasNext()) {
             final Entry<AttributeKey<?>, Object> attr = attrs.next();
             //noinspection unchecked
-            setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue()) ;
+            setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
         }
 
         additionalRequestHeaders = options.get(ClientOptions.HEADERS);

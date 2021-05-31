@@ -41,7 +41,8 @@ import io.netty.util.AttributeKey;
 /**
  * Prepares and executes a new {@link HttpRequest} for {@link WebClient}.
  */
-public final class WebClientRequestPreparation extends AbstractHttpRequestBuilder implements RequestOptionsSetters {
+public final class WebClientRequestPreparation extends AbstractHttpRequestBuilder
+        implements RequestOptionsSetters {
 
     private final WebClient client;
 

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-
 import static com.linecorp.armeria.client.DefaultRequestOptions.EMPTY;
 
 import java.util.Iterator;
