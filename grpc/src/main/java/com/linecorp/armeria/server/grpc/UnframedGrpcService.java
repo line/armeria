@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -184,14 +185,16 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                                RequestLogProperty.RESPONSE_CONTENT);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handleAsync((clientRequest, t) -> {
-            if (t != null) {
-                responseFuture.completeExceptionally(t);
-            } else {
-                frameAndServe(ctx, grpcHeaders.build(), clientRequest, responseFuture);
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
+            try (SafeCloseable ignore = ctx.push()) {
+                if (t != null) {
+                    responseFuture.completeExceptionally(t);
+                } else {
+                    frameAndServe(ctx, grpcHeaders.build(), clientRequest, responseFuture);
+                }
             }
             return null;
-        }, ctx.eventLoop());
+        });
         return HttpResponse.from(responseFuture);
     }
 
@@ -225,17 +228,18 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
             return;
         }
 
-        grpcResponse.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handleAsync(
+        grpcResponse.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(
                 (framedResponse, t) -> {
-                    if (t != null) {
-                        PooledObjects.close(framedResponse.content());
-                        res.completeExceptionally(t);
-                    } else {
-                        deframeAndRespond(ctx, framedResponse, res);
+                    try (SafeCloseable ignore = ctx.push()) {
+                        if (t != null) {
+                            PooledObjects.close(framedResponse.content());
+                            res.completeExceptionally(t);
+                        } else {
+                            deframeAndRespond(ctx, framedResponse, res);
+                        }
                     }
                     return null;
-                },
-                ctx.eventLoop());
+                });
     }
 
     @VisibleForTesting
