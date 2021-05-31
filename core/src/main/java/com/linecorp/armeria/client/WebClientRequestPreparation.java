@@ -16,13 +16,10 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -38,29 +35,18 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.AttributeKey;
 
 /**
  * Prepares and executes a new {@link HttpRequest} for {@link WebClient}.
  */
-public final class WebClientRequestPreparation extends AbstractHttpRequestBuilder {
+public final class WebClientRequestPreparation extends AbstractHttpRequestBuilder implements RequestOptionsSetters {
 
     private final WebClient client;
 
-    /**
-     * Tells whether we need to use {@link Clients#withContextCustomizer(Consumer)} to set the request options.
-     */
-    private boolean needsContextCustomizer;
-
-    // request options
     @Nullable
-    private Map<AttributeKey<?>, Object> attributes;
-    private long responseTimeoutMillis = -1;
-    private long maxResponseLength = -1;
+    private RequestOptionsBuilder requestOptionsBuilder;
 
     WebClientRequestPreparation(WebClient client) {
         this.client = client;
@@ -71,82 +57,58 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
      */
     public HttpResponse execute() {
         final HttpRequest httpRequest = buildRequest();
-        if (needsContextCustomizer) {
-            try (SafeCloseable ignored = Clients.withContextCustomizer(ctx -> {
-                if (responseTimeoutMillis >= 0) {
-                    ctx.setResponseTimeoutMillis(responseTimeoutMillis);
-                }
-
-                if (maxResponseLength >= 0) {
-                    ctx.setMaxResponseLength(maxResponseLength);
-                }
-
-                if (attributes != null && !attributes.isEmpty()) {
-                    //noinspection unchecked
-                    attributes.forEach((k, v) -> ctx.setAttr((AttributeKey<Object>) k, v));
-                }
-            })) {
-                return client.execute(httpRequest);
-            }
+        final RequestOptions requestOptions;
+        if (requestOptionsBuilder != null) {
+            requestOptions = requestOptionsBuilder.build();
         } else {
-            return client.execute(httpRequest);
+            requestOptions = RequestOptions.of();
         }
+        return client.execute(httpRequest, requestOptions);
     }
 
-    /**
-     * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
-     * the specified {@link Duration} since the {@link Response} started or {@link Request} was fully sent.
-     * {@link Duration#ZERO} disables the limit.
-     */
-    public WebClientRequestPreparation responseTimeout(Duration timeout) {
-        responseTimeoutMillis(requireNonNull(timeout, "timeout").toMillis());
-        return this;
+    @Override
+    public WebClientRequestPreparation responseTimeout(Duration responseTimeout) {
+        return responseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
     }
 
-    /**
-     * Schedules the response timeout that is triggered when the {@link Response} is not fully received within
-     * the specified {@code responseTimeoutMillis} since the {@link Response} started or {@link Request} was
-     * fully sent.
-     * {@code 0} disables the limit.
-     */
+    @Override
     public WebClientRequestPreparation responseTimeoutMillis(long responseTimeoutMillis) {
-        checkArgument(responseTimeoutMillis >= 0, "responseTimeoutMillis: %s (expected: >= 0)",
-                      responseTimeoutMillis);
-        this.responseTimeoutMillis = responseTimeoutMillis;
-        needsContextCustomizer = true;
+        if (requestOptionsBuilder == null) {
+            requestOptionsBuilder = RequestOptions.builder();
+        }
+        requestOptionsBuilder.responseTimeoutMillis(responseTimeoutMillis);
         return this;
     }
 
-    /**
-     * Sets the maximum allowed length of a server response in bytes.
-     *
-     * @param maxResponseLength the maximum length in bytes. {@code 0} disables the limit.
-     */
+    @Override
+    public WebClientRequestPreparation writeTimeout(Duration writeTimeout) {
+        return writeTimeoutMillis(requireNonNull(writeTimeout, "writeTimeout").toMillis());
+    }
+
+    @Override
+    public WebClientRequestPreparation writeTimeoutMillis(long writeTimeoutMillis) {
+        if (requestOptionsBuilder == null) {
+            requestOptionsBuilder = RequestOptions.builder();
+        }
+        requestOptionsBuilder.writeTimeoutMillis(writeTimeoutMillis);
+        return this;
+    }
+
+    @Override
     public WebClientRequestPreparation maxResponseLength(long maxResponseLength) {
-        checkArgument(maxResponseLength >= 0, "maxResponseLength: %s (expected: >= 0)", maxResponseLength);
-        this.maxResponseLength = maxResponseLength;
-        needsContextCustomizer = true;
+        if (requestOptionsBuilder == null) {
+            requestOptionsBuilder = RequestOptions.builder();
+        }
+        requestOptionsBuilder.maxResponseLength(maxResponseLength);
         return this;
     }
 
-    /**
-     * Associates the specified value with the given {@link AttributeKey} in this request.
-     * If this context previously contained a mapping for the {@link AttributeKey}, the old value is replaced
-     * by the specified value.
-     */
+    @Override
     public <V> WebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
-        requireNonNull(key, "key");
-
-        if (attributes == null) {
-            attributes = new HashMap<>();
-            needsContextCustomizer = true;
+        if (requestOptionsBuilder == null) {
+            requestOptionsBuilder = RequestOptions.builder();
         }
-
-        if (value == null) {
-            attributes.remove(key);
-        } else {
-            attributes.put(key, value);
-        }
+        requestOptionsBuilder.attr(key, value);
         return this;
     }
 
