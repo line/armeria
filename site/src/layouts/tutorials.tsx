@@ -25,6 +25,10 @@ const TutorialLayout: React.FC<TutorialLayoutProps> = (props) => {
               name
             }
           }
+          frontmatter {
+             menuTitle
+             order
+          }
         }
       }
     }
@@ -36,6 +40,7 @@ const TutorialLayout: React.FC<TutorialLayoutProps> = (props) => {
       candidateMdxNodes={candidateMdxNodes}
       index={docsIndex}
       prefix="tutorials"
+      menuTitle
       pageTitleSuffix="Armeria tutorial"
     />
   );

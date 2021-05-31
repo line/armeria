@@ -20,6 +20,7 @@ import Mailchimp from '../components/mailchimp';
 import MaxWidth from '../components/max-width';
 import NoWrap from '../components/nowrap';
 import RequiredDependencies from '../components/required-dependencies';
+import TutorialSteps from '../components/steps';
 import BaseLayout from './base';
 import pagePath from './page-path';
 import styles from './mdx.module.less';
@@ -36,6 +37,7 @@ interface MdxLayoutProps extends RouteComponentProps {
   pageTitleSuffix: string;
   showPrevNextButton?: boolean;
   noEdit?: boolean;
+  menuTitle?: boolean;
 }
 
 const pathPrefix = withPrefix('/');
@@ -89,7 +91,8 @@ const mdxComponents: any = {
     return (
       <CodeBlock language={language}
         filename={props.children.props.filename}
-        highlight={props.children.props.highlight}>
+        highlight={props.children.props.highlight}
+        showlineno={props.children.props.showLineNo}>
         {props.children.props.children}
       </CodeBlock>
     );
@@ -131,6 +134,7 @@ const mdxComponents: any = {
   MaxWidth,
   NoWrap,
   RequiredDependencies,
+  TutorialSteps,
   Tabs: (props: any) => {
     return <AntdTabs animated={{ inkBar: true, tabPane: false }} {...props} />;
   },
@@ -329,6 +333,13 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
               (tocItem: any, i: number) => {
                 const href = `${mdxNode.href}${i !== 0 ? tocItem.url : ''}`;
 
+                const menuName = `${props.menuTitle && mdxNode.frontmatter !== undefined
+                                    ? mdxNode.frontmatter.menuTitle !== null
+                                      ? (mdxNode.frontmatter.order !== null 
+                                        ? mdxNode.frontmatter.order + '. ':'')
+                                          + mdxNode.frontmatter.menuTitle
+                                      : tocItem.title
+                                    : tocItem.title}`
                 return (
                   <li
                     key={href}
@@ -343,8 +354,8 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
                         {tocItem.title}
                       </OutboundLink>
                     ) : (
-                      <Link to={href} title={tocItem.title}>
-                        {tocItem.title}
+                      <Link to={href} title={menuName}>
+                        {menuName}
                       </Link>
                     )}
                   </li>
