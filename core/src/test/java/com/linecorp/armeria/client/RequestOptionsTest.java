@@ -134,7 +134,9 @@ class RequestOptionsTest {
                             .aggregate();
             } else {
                 final HttpRequest req = HttpRequest.builder().get("/ping").build();
-                final RequestOptions options = RequestOptions.builder().maxResponseLength(maxResponseLength).build();
+                final RequestOptions options = RequestOptions.builder()
+                                                             .maxResponseLength(maxResponseLength)
+                                                             .build();
                 res = client.execute(req, options).aggregate();
             }
             final ClientRequestContext ctx = captor.get();
