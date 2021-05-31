@@ -128,7 +128,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
 
             // Validate the 'content-length' header if exists.
-            final boolean contentEmpty;
             if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1L);
                 if (contentLength < 0) {
@@ -136,9 +135,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                        DATA_INVALID_CONTENT_LENGTH);
                     return;
                 }
-                contentEmpty = contentLength == 0;
-            } else {
-                contentEmpty = true;
             }
 
             if (!handle100Continue(ctx, streamId, headers)) {
@@ -250,23 +246,20 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             if (isWritable(stream)) {
                 writeErrorResponse(ctx, streamId, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, null);
                 writer.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.voidPromise());
-                if (req.isOpen()) {
-                    req.close(ContentTooLargeException.get());
+                if (decodedReq.isOpen()) {
+                    decodedReq.close(ContentTooLargeException.get());
                 }
             } else {
                 // The response has been started already. Abort the request and let the response continue.
-                req.abort();
+                decodedReq.abort();
             }
         } else if (decodedReq.isOpen()) {
             try {
+                // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");
-            }
-
-            if (endOfStream) {
-                decodedReq.close();
             }
         }
 

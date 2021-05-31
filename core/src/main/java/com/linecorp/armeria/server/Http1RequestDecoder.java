@@ -252,7 +252,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         return;
                     }
 
-                    if (req.isOpen()) {
+                    if (decodedReq.isOpen()) {
                         decodedReq.write(HttpData.wrap(data.retain()));
                     }
                 }

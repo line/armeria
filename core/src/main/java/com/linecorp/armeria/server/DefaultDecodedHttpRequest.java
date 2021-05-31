@@ -112,6 +112,9 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
             final HttpData httpData = (HttpData) obj;
             httpData.touch(ctx);
             published = super.tryWrite(httpData);
+            if (obj.isEndOfStream()) {
+                close();
+            }
             if (published) {
                 inboundTrafficController.inc(httpData.length());
             }
