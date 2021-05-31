@@ -1,43 +1,53 @@
 ---
-type: tutorial
+menuTitle: "Create a server"
+order: 1
+type: step
 tags:
-  - rest
-  - request
-  - request-converter
-  - exceptions
-  - exception-handling
-  - blocking
+  - server
 level: basic
 ---
 
-# Step 1. Create a server
+# Creating a server
 
-In this step, we will create a server instance and run a dummy service to check that the server and service are launched.
+As the first step of the tutorial, we create a server instance and run a dummy service to check that the server and service are launched.
+We will use Armeria's <type://ServerBuilder> for this task.
 
-Start by creating a `Main` class in the  `/root/main/java/example/armeria/server/blog/Main.java` file, and name the package as below.
+<TutorialSteps current={1} />
 
-```java
+## What you need
+
+You don't need to prepare anything at this stage.
+Just check that you have prepared the [prerequisites](./tutorial-blog-rest-intro/#prerequisites).
+
+## 1. Create the main class
+
+Start by creating a main class:
+
+1. Create a Java file named Main. For the full version of the file, check the [service sample code](https://github.com/line/armeria-examples/blob/master/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
+2. Add required import statements as shown below.
+3. Declare a class, `Main`.
+4. (Optional) Add a logger in the class for logging messages.
+
+```java filename=Main.java
 package example.armeria.server.blog;
-```
 
-## 1. Import packages
-
-Import the following packages in the Main.java file.
-
-```java
 import org.slf4j.Logger;            // for logger.info() calls
 import org.slf4j.LoggerFactory;     // for logger.info() calls
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+
+public final class Main {
+  private static final Logger logger = LoggerFactory.getLogger(Main.class);
+}
 ```
 
 ## 2. Create a server instance
 
-To create a server instance, use  [Armeria's ServerBuilder](https://javadoc.io/doc/com.linecorp.armeria/armeria-javadoc/latest/com/linecorp/armeria/server/ServerBuilder.html) as shown below. Server instances require at least one service to run with. At this stage, add a dummy service returning `"Hello, Armeria!"`.
+To create a server instance, use Armeria's <type://ServerBuilder>. Add the method, `newServer()`, as shown below, in the `Main` class. Since server instances require at least one service to run with, add a dummy service returning `"Hello, Armeria!"` for the mere purpose of checking that the server gets launched and runs.
 
-```java
+```java filename=Main.java highlight=6,7
 static Server newServer(int port) {
   final ServerBuilder sb = Server.builder();
   final DocService docService = DocService.builder()
@@ -49,38 +59,49 @@ static Server newServer(int port) {
 }
 ```
 
-Later on, when we [build our blog service](#), we will come back to this part of code to add an actual service.
+Later on, when we build our blog service, we will come back to this part of the code to [add an actual service](./tutorial-blog-rest-step7).
 
 ## 3. Start the server
 
-In the `main()` method of the `Main` class, call the `newServer()` method implemented in step 2. Let's set the port to `8080` as follows.
+Add the code to start the server with the dummy service.
 
-```java
-  public static void main(String[] args) throws Exception {
-      final Server server = newServer(8080);
+1. In the `Main` class, add the `main()` method as shown below.
+2. Call the `newServer()` method we implemented in step 2. Let's set the port to `8080` as in line 2.
+3. Start the server as in line 9.
 
-      Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-          server.stop().join();
-          logger.info("Server has been stopped.");
-      }));
+```java filename=Main.java highlight=2,9
+public static void main(String[] args) throws Exception {
+  final Server server = newServer(8080);
 
-      server.start().join();
+  Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      server.stop().join();
+      logger.info("Server has been stopped.");
+  }));
 
-      logger.info("Server has been started. Serving dummy service at http://127.0.0.1:{}",
-                  server.activeLocalPort());
-  }
+  server.start().join();
+
+  logger.info("Server has been started. Serving dummy service at http://127.0.0.1:{}",
+              server.activeLocalPort());
+}
 ```
 
-## 4. Run the service
+## 4. Run the server and service
 
-Run the server from your IDE or using the `gradle run` command. The server and service are launched successfully if you see the following message.
+As the last step, launch the server and run the service to check if you are all set to go. To run the server, run the `main()` method in your IDE or using Gradle. The server and service are launched successfully if you see the following message.
+
 
 ```bash
  Server has been started. Serving dummy service at http://127.0.0.1:8080
 ```
 
-Open the link `http://127.0.0.1:8080` in a web browser and check the message `Hello, Armeria!` is displayed.
+Open the URL `http://127.0.0.1:8080` on a web browser and check the message `Hello, Armeria!` is displayed in the page.
 
-## Next step
+![](../../images/tutorial_test_run.png)
 
-Next, define a blog post object to use in requests and responses. (TW: 다음 페이지 표시를 어케 할까나..)
+## What's next
+
+In this step, you've built a server, added a dummy service and launched a server.
+
+Next, at [Step 2. Prepare data files](./tutorial-blog-rest-step2), you will write a data object to specify and contain blog post information.
+
+<TutorialSteps current={1} />

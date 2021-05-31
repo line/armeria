@@ -12,43 +12,41 @@ level: basic
 
 # REST tutorial introduction
 
-In this tutorial, you will learn to build a RESTful service with Armeria.
-Using Armeria's annotations you can build RESTful services on the go.
-Armeria features you will use in this tutorial are:
+Using Armeria's annotations, you can build RESTful services on the go.
+Through this tutorial, you will learn to build a RESTful service with Armeria.
+In particular, you will be using these Armeria features:
 
 - [Service annotations](/docs/server-annotated-service)
 - [Request converter](/docs/server-annotated-service#injecting-value-of-parameters-and-http-headers-into-a-java-object)
-- Response converter
-- Exception handler
-- Blocking
+- [Exception handler](/docs/server-annotated-service#handling-exceptions)
+- [Blocking](/docs/server-annotated-service/#specifying-a-blocking-task-executor)
 
-The [sample service provided](#) is a minimal blog service with which you can create, read, update and delete blog posts.
-To keep our focus on Armeria, this tutorial and the sample service does not contain database operations.
-Instead, memory-based data operation is used.
+This tutorial is based on a [sample service](https://github.com/line/armeria-examples/tree/master/rest-api-annotated-service), a minimal blog service, with which you can create, read, update, and delete blog posts.
+To keep our focus on Armeria, this tutorial and the sample service use memor-based operations instead of database operations.
 
-[Try building a service](#run-blog-service) by following the tutorial or have a go at [running the sample service](#try-building-blog-service-yourself) right away.
+[Try writing a service yourself](#try-writing-blog-service-yourself) by following this tutorial or have a go at [running the sample service](#run-sample-service) right away.
 
 ## Assumptions
 
 This tutorial assumes that you have:
 
-- Experience in building services in Java
-- Used other Java frameworks for server-side programming
-- An understanding of RESTful APIs and how to implement them
+- Experiences in building services in Java
+- Experiences in Java frameworks for server-side programming
+- Understanding of RESTful APIs and how to implement them
 
 ## Prerequisites
 
-To run and develop the sample service yourself, install the following requirements on your computer:
+To run and develop the sample service, prepare the following requirements on your computer:
 
-- JDK 14
+- JDK 8 or higher
 - Gradle
-  - Set your Gradle to compile Java with the `-parameters` option
+  - Set your Gradle to compile Java with the [-parameters](../docs/setup/#configure--parameters-javac-option) option
 
 ## Sample service
 
-The sample blog service provides you implementations of CRUD operations.
+The sample service provides you implementations of CRUD operations as specified below.
 
-| Operation | Method | Annotation | 
+| Operation | Method | Annotation |
 | -- | -- | -- |
 | Create | `createBlogPost()` | `@Post` |
 | Read | `getBlogPost()`, `getBlogPosts()` | `@Get` |
@@ -57,7 +55,7 @@ The sample blog service provides you implementations of CRUD operations.
 
 ### Sample service structure
 
-The [sample service code](#) consists of the following folders and files.
+The [sample service code](https://github.com/line/armeria-examples/tree/master/rest-api-annotated-service) consists of the following folders and files.
 
 ```plantuml
 @startsalt
@@ -81,21 +79,32 @@ The [sample service code](#) consists of the following folders and files.
 }
 }
 @endsalt
-``` 
+```
 
 ## Run sample service
 
-Have a go at running the sample service to see the result of this tutorial. Using Armeria's Doc service, you can see a server running, receiving requests and providing responses.
+Have a go at running the sample service and experience the outcome of this tutorial.
+Using Armeria's Doc service, you can see a server running, receiving requests and providing responses.
 
-1. Download the code from [here](#).
-2. Build and run the sample service.
-3. Open TBU on your web browser. //TODO: decide whether to
+1. Download the code from [here](https://github.com/line/armeria-examples/tree/master/rest-api-annotated-service).
+2. Build the sample service using the Gradle Wrapper.
+  ```bash
+  $ ./gradlew build
+  ```
+3. Run the sample service again, using the Gradle Wrapper.
+  ```bash
+  $ ./gradlew run
+  ```
+4. Open the Doc service on your web browser at http://127.0.0.1:8080/docs.
 
 ## Try writing blog service yourself
 
 Try writing the blog service yourself by following the instructions:
 
-- [Step 1. Create a server](#)
-- [Step 2. Write](#)
-- [Step 3. TBU](#)
-- [Step 4. TBU](#)
+- [Step 1. Create a server](./tutorial-blog-rest-step1)
+- [Step 2. Prepare data files](./tutorial-blog-rest-step2)
+- [Step 3. Implement CREATE](./tutorial-blog-rest-step3)
+- [Step 4. Implement READ](./tutorial-blog-rest-step4)
+- [Step 5. Implement PUT](./tutorial-blog-rest-step5)
+- [Step 6. Implement DELETE](./tutorial-blog-rest-step6)
+- [Step 7. Add blog service to server](./tutorial-blog-rest-step7)

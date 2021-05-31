@@ -1,5 +1,7 @@
 ---
-type: tutorial
+menuTitle: "Prepare data files"
+order: 2
+type: step
 tags:
   - rest
   - request
@@ -7,20 +9,23 @@ tags:
 level: basic
 ---
 
-# Step 2. Create a service class and prepare blog post data
+# Preparing data files
 
-Before we get into writing a blog service, let's define a blog post object, to be used in service requests as well as responses.
+Before we get into writing a blog service, first prepare a data object to contain blog post information.
+This object is to be used not only for storing blog posts, but in handling requests and sending responses.
 
-<Tip>
+If you want a quick start, skip this step and copy off the [BlogPost.java](https://github.com/line/armeria-examples/blob/master/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogPost.java) of the sample service code.
 
-See the [code sample](#) for the whole file and packages to import.
+<TutorialSteps current={2} />
 
-</Tip>
+## What you need
 
+No preparation is required for this step.
 
-## 1. Define post data
+## 1. Define blog post data
 
-The `BlogPost` class defines blog post entries. For our tutorial, define the following five members in the `BlogPost` class.
+Our service needs a container for blog post information.
+Define a `BlogPost` class containing the following information.
 
 ```java
 final class BlogPost {
@@ -32,29 +37,73 @@ final class BlogPost {
 }
 ```
 
-## 2. Write constructors
+## 2. Add constructors
+
+The sample service has the following two cases to create instances of blog posts:
+
+- [When a user creates a blog post](#constructor-for-creating-blog-posts)
+- [When a user updates a blog post](#constructor-for-updating-blog-posts)
 
 ### Constructor for creating blog posts
 
-TBU
+In the `BlogPost` class, add the following two constructors.
 
-// TW Q: @RequestConverter(BlogPostRequestConverter.class)를 지금 추가해 주는 것이 좋은가?
+```java filename=BlogPost.java
+  BlogPost(int id, String title, String content) {
+      this(id, title, content, System.currentTimeMillis());
+  }
 
-```java
-BlogPost(@JsonProperty("id") int id, @JsonProperty("title") String title,
-             @JsonProperty("content") String content) {
-        this(id, title, content, System.currentTimeMillis());
-    }
+  BlogPost(int id, String title, String content, long createdAt) {
+    this(id, title, content, createdAt, createdAt);
+  }
 ```
 
-// TW Q: 이 이해가 맞는가?
-The `@JsonProperty` annotations specify the keys in an HTTP request body (JSON object) to map with the member variables of the `BlogPost` object.
+### Constructor for updating blog posts
+
+Add a constructor for updating a blog post, in the `BlogPost` class, as shown below.
+
+```java filename=BlogPost.java
+BlogPost(int id, String title, String content, long createdAt, long modifiedAt) {
+    this.id = id;
+    this.title = title;
+    this.content = content;
+    this.createdAt = createdAt;
+    this.modifiedAt = modifiedAt;
+}
+```
+
+## 3. Add methods
+
+Add the following block of code to use in the blog service.
+
+```java
+int id() { return id; }
+
+String title() { return title; }
+
+String content() { return content; }
+
+long createdAt() { return createdAt; }
+
+long modifiedAt() { return modifiedAt; }
+
+@Override
+public String toString() {
+    return MoreObjects.toStringHelper(this)
+                      .add("id", id)
+                      .add("title", title)
+                      .add("content", content)
+                      .add("createdAt", createdAt)
+                      .add("modifiedAt", modifiedAt)
+                      .toString();
+}
+```
 
 
-### Additional constructors
+## What's next?
 
+In this step, we have implemented a data object specifying and containing blog post objects.
 
+Next, at [Step 3. Implement CREATE](./tutorial-blog-rest-step3), you'll implement a CREATE operation to create blog posts.
 
-
-## 3. 뭐여야 할까나
-
+<TutorialSteps current={2} />

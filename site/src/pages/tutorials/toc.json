@@ -8,14 +8,13 @@
     "tutorial-blog-rest-step4",
     "tutorial-blog-rest-step5",
     "tutorial-blog-rest-step6",
-    "tutorial-blog-rest-step7",
-    "tutorial-summary"
+    "tutorial-blog-rest-step7"
   ],
   "gRPC service":{
-    "Coming soon": "index"
+    "Coming soon": "#"
   },
   "Thrift service":{
-    "Coming soon": "index"
+    "Coming soon": "#"
   },
   "See also": {
     "Armeria documentation": "/docs"

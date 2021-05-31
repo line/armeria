@@ -1,44 +1,115 @@
 ---
-type: tutorial
+menuTitle: "Add blog service to server"
+order: 7
+type: step
 tags:
-  - rest
-  - request
-  - request-converter
-  - exceptions
-  - exception-handling
-  - blocking
+  - docservice
+  - annotated-services
 level: basic
 ---
 
-# Step 7. Add blog service and Doc service
+# Add blog service and DocService to server
 
+In this step, we go back to the [Step 1. Create a server](./tutorial-blog-rest-step1) and add the blog service to the server. Also, we add [Armeria's DocService](/docs/server-docservice) to test our blog service.
 
-<Tip>
+<TutorialSteps current={7} />
 
-View the sample service code [here](#).
+## What you need
 
-</Tip>
+You need to have these files obtained from previous steps.
 
-// TODO: TW 이 부분은 별도 섹션이 아닌 adomination으로 변경될 가능성 있음. 고민 중임.
-// TODO: List update 예정
-
-After completing this step, you will have learnt to use the following Armeria features:
-
-  - HTTP method mapping (<type://@Delete>)
-  - Parameter injection (<type://@Param>)
-  - Exception handler (TBU)
-  - Blocking (TBU)
-
-## Prerequisites
-
-You need to have the following two files prepared from previous steps.
-
-- BlogService.java
+- BadRequestExceptionHandler.java
 - BlogPost.java
-- TBU
-- TBU
+- BlogPostRequestConverter.java
+- BlogService.java
+- Main.java
 
-## 1. Add doc service
+## 1. Add blog service
 
-.. TBU
-// TODO: TW Add a doc service to 
+In [Step 1. Create a server](./tutorial-blog-rest-step1), you've added a dummy service just to see a server launched. Now, remove the dummy service and add our blog service.
+
+1. From Main.java, remove the dummy service by removing lines 4 and 5 as shown below.
+  ```java filename=Main.java highlight=4,5
+  static Server newServer(int port) {
+    ...
+    return sb.http(port)
+              .service("/",(ctx, req) ->              // remove
+                  HttpResponse.of("Hello, Armeria!")) // remove
+              .build();
+  ```
+2. Add our service by adding line 4 as shown below.
+  ```java filename=Main.java highlight=4
+  static Server newServer(int port) {
+    ...
+    return sb.http(port)
+              .annotatedService(new BlogService())   // add this
+              .build();
+  }
+  ```
+
+## 2. Add DocService
+
+To test and call our service operations, use Armeria's <type://DocService>.
+
+1. Inside the `newServer()` method, add the <type://DocService> to our server builder.
+  ```java filename=Main.java highlight=5
+  static Server newServer(int port) {
+    ...
+    return sb.http(port)
+            .annotatedService(new BlogService())
+            .serviceUnder("/docs", docService)  // Add doc service
+            .build();
+  }
+  ```
+2. Again, in the `newServer()` method, build a <type://DocService>, and add a request example for creating blog posts, using <type://DocService.exampleRequests>. Feel free to add more examples for other service methods.
+  ```java filename=Main.java highlight=3-9
+  static Server newServer(int port) {
+    final ServerBuilder sb = Server.builder();
+    final DocService docService =
+            DocService.builder()
+                      .exampleRequests(BlogService.class,
+                                        "createBlogPost", // service method name
+                                        "{\"title\":\"My first blog\", \"content\":\"Hello Armeria!\"}")
+                      .build();
+  ```
+3. (Optional) To access the <type://DocService> result easily, edit the log message we added in [Step 1. Create a server](./tutorial-blog-rest-step1) to the one specified below.
+  ```java filename=Main.java highlight=2
+  public static void main(String[] args) throws Exception {
+      logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
+                server.activeLocalPort());
+  }
+  ```
+
+## 3. Run the server and service
+
+Like we did in [Step 1. Create a server](/tutorial-blog-rest-step1#4-run-the-server-and-service), build and run the service by running the `main()` or using Gradle.
+
+The server and services are launched successfully if you see this message.
+
+```bash
+ Server has been started. Serving DocService at http://127.0.0.1:8080/docs
+```
+
+## 4. Check DocService pages
+
+1. Click the URL `http://127.0.0.1:8080/docs` from the log message or open the URL on a web browser. If you see the <type://DocService> page, you have launched the services and server successfully.
+  ![](../../images/tutorial_blogservice_docservice.png)
+2. Click the `createBlogPost()` method from the left panel. You can make calls to the creation method from this page.
+
+  ![](../../images/tutorial_blogservice_reqex.png)
+
+  Note that in the **REQUEST BODY** section that the values specified for the <type://DocServiceBuilder> are automatically entered on the page.
+  ```java filename=Main.java highlight=5-8
+  static Server newServer(int port) {
+    final ServerBuilder sb = Server.builder();
+    final DocService docService =
+            DocService.builder()
+              .exampleRequests(
+                BlogService.class,
+                "createBlogPost",
+                "{\"title\":\"My first blog\",\"content\":\"Hello Armeria!\"}")
+              .build();
+  ```
+3. Click the **SUBMIT** button, and you will see the blog post information returned in the right panel.
+
+  ![](../../images/tutorial_blogservice_return.png)

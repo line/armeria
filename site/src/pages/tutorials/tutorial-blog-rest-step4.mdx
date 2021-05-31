@@ -1,136 +1,132 @@
 ---
-type: tutorial
+menuTitle: "Implement READ"
+order: 4
+type: step
 tags:
   - rest
-  - request
+  - request-converter
 level: basic
 ---
 
-# Step 4. Implement READ operations
+# Implementing READ operations
 
-In this step, we will write methods for retrieving blog posts. Let's write one method for retrieving a single post and in the other, multiple blog posts. The HTTP method we map with these methods are GET.
+In this step, we will implement two methods at once. One is for retrieving a single post and another for multiple blog posts. We will map both methods with HTTP GET.
 
-For retrieving a single post, we will take a blog post ID as the identifier, and for retrieving multiple posts, we will take a sorting order for the blog posts retrieved. 
+<TutorialSteps current={4} />
 
-// TODO: TW 아래 내용은 다른 형식으로 제공할 수 있음. 고민 중임.
-<Tip>
+By completing this step, you will learn to map your service with HTTP GET (<type://@Get>), parameter injection (<type://@Param>), setting default parameter value (<type://@Default>), and return a JSON object (<type://@ProducesJson>) as a response.
 
-View the sample service code [here](#).
+## What you need
 
-</Tip>
+You need to have these files prepared from previous steps.
 
-// TODO: TW 이 부분은 별도 섹션이 아닌 adomination으로 변경될 가능성 있음. 고민 중임.
-
-After completing this step, you will have learnt to use the following Armeria features:
-
-  - HTTP method mapping (<type://@Get>)
-  - Parameter injection (<type://@Param>)
-  - Parameter ...<type://@Default>
-
-## Prerequisites
-
-You need to have the following two files prepared from previous steps.
-
-- BlogService.java
-- BlogPost.java
+- [BlogService.java](./tutorial-blog-rest-step3#0-create-a-service-file)
+- [BlogPost.java](./tutorial-blog-rest-step2)
 
 ## 1. Map HTTP method
 
-Map the GET method for retrieving a _single_ blog post:
+Start by [mapping HTTP GET method](/docs/server-annotated-service#mapping-http-service-methods) with our service methods:
 
-1. Declare a service method, `getBlogPost()` in the class `BlogService`.
-2. Map the service method with the HTTP GET method by adding the <type://@Get> annotation as follows.
+1. [Create a BlogService.java file](./tutorial-blog-rest-step3#0-create-a-service-file) if you are yet to create one.
+2. Declare service methods, `getBlogPost()` and `getBlogPosts()` in the class `BlogService`.
+3. [Map these service methods](/docs/server-annotated-service#mapping-http-service-methods) with the HTTP GET method by adding the <type://@Get> annotation as follows.
+4. Assign the endpoint as `/blogs`.
 
-```java filename=BlogService.java highlight=1
+```java filename=BlogService.java highlight=1,6
 @Get("/blogs")
-public HttpResponse getBlogPost(int id) throws JsonProcessingException { 
-  // Implementation
+public HttpResponse getBlogPost(int id) throws JsonProcessingException {
+  // Retrieve a single post
 }
-```
 
-Map the GET method for retrieving _multiple_ blog posts:
-
-1. Declare a service method, `getBlogPosts()` in the class `BlogService`.
-2. Map the service method with the HTTP GET method by adding the annotation, <type://@Get>.
-
-```java filename=BlogService.java highlight=1
 @Get("/blogs")
 public Iterable<BlogPost> getBlogPosts(boolean descending) {
-  // Implementation
+  // Retrieve multiple posts
 }
 ```
 
-## 2. Handle request parameters
+## 2. Handle parameters
 
-For retrieving a single blog post, we will take the blog post ID as the identifier. Let's take the ID as the path parameter.
+Take in information through _path_ and _query_ parameters for retrieving blog posts. For retrieving a single post, we will take a blog post ID as the path parameter. For multiple posts, we will take the sorting order as a query parameter.
 
-1. Add `/:id` to the <type://@Get> annotation's parameter to get the ID as the path parameter.
-2. To inject the path parameter to the service method, annotate the paramter with <type://@Param>.
+For retrieving a single post:
+
+1. To take a path parameter, add `/:id` to the <type://@Get> annotation's parameter as in line 1.
+2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method, annotate the parameter with <type://@Param> as in line 2.
 
 ```java filename=BlogService.java
 @Get("/blogs/:id")
-public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException { }
+public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
+  // Retrieve a single post
+}
 ```
 
-For retrieving multiple blog posts, we will provide an option to specify the sorting order. Let's take the sorting order as the query parameter:
+For retrieving multiple blog posts:
 
-1. Annotate the parameter `descending` with <type://@Param>.
-2. Annotate the parameter `descending` again with <type://@Default> with its parameter as`"true"`.
+1. Specify the endpoint for the service using the <type://@Get> annotation.
+2. [Inject the parameter](/docs/server-annotated-service#parameter-injection) by annotating the parameter `descending` with <type://@Param>.
+3. Set the default sorting order to descending by annotating the parameter `descending` with <type://@Default>, with its parameter as `"true"`.
 
 ```java filename=BlogService.java highlight=2
- @Get("/blogs")
-    @ProducesJson
-    public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descending) { }
+@Get("/blogs")
+public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descending) {
+  // Retrieve multiple posts
+}
 ```
-
-See [Parameter injection](/docs/server-annotated-service#parameter-injection) for more information.
 
 ## 3. Implement service code
 
-In this step, we will write the code required for service itself.
+In this step, write the code required for service itself.
 
-For retrieving a single blog post information, copy the following code inside the `getBlogPost()` method.
+To retrieve a single blog post information, copy the following code inside the `getBlogPost()` method:
 
-```java filename=BlogService.java
-final BlogPost blogPost = blogPosts.get(id);
+```java filename=BlogService.java highlight=2
+public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
+  final BlogPost blogPost = blogPosts.get(id);
+}
 ```
 
-For retrieving multiple post information, we will get and return the result right away. See the instructions in the next step.
+To retrieve multiple blog posts, copy the following code inside the `getBlogPosts()` method:
+
+```java filename=BlogService.java highlight=3-10
+public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descending) {
+  // descending
+  if (descending) {
+      return blogPosts.entrySet()
+                      .stream()
+                      .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
+                      .map(Entry::getValue).collect(toImmutableList());
+  }
+  // ascending
+  return blogPosts.values().stream().collect(toImmutableList());
+}
+```
 
 ## 4. Return response
 
-Now, it's time to return a response to our client. Inside the `getBlogPost()` method, create and return a response using Armeria's <type://HTTPResponse> as follows.
+To return a response for the request to get a single post, use Armeria's <type://HttpResponse> in the `getBlogPost()` method.
 
-```java filename=BlogService.java
-...
-final byte[] content = mapper.writeValueAsBytes(blogPost);
-return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, content);
+```java filename=BlogService.java highlight=3-4
+public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
+  ...
+  final byte[] content = mapper.writeValueAsBytes(blogPost);
+  return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, content);
+}
 ```
 
-To return information for multiple blog posts:
+We've already implemented returning multiple blog posts in the previous step. As a final touch, annotate the method `getBlogPosts()` with <type://@ProducesJson>. This returns the response as a JSON object for you.
 
-1. Copy the following code inside the `getBlogPosts()` method.
-  ```java filename=BlogService.java highlight=2-9
-  public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descending) {
-    if (descending) {
-        return blogPosts.entrySet()
-                        .stream()
-                        .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
-                        .map(Entry::getValue).collect(toImmutableList());
-    }
-    return blogPosts.values().stream().collect(toImmutableList());
-    ```
-2. Annotate the method `getBlogPosts()` with <type://ProducesJson>. This returns the response as a JSON object for you.
-  ```java filename=BlogService.java highlight=2
-  @Get("/blogs")
-  @ProducesJson
-  public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descending) {
-  ...
-  }
-  ```
+```java filename=BlogService.java highlight=2
+@Get("/blogs")
+@ProducesJson
+public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descending) {
+  // Retrieving multiple blog posts
+}
+```
 
 ## Next step
 
-In this step, we have written methods for read operation. We have used Armeria's annotations; <type://@Get>, <type://@ProducesJson>, <type://@Param>, and <type://@Default>. Next, let's implement a read operation.
+In this step, you've implemented methods for a READ operation and used Armeria's annotations; <type://@Get>, <type://@ProducesJson>, <type://@Param>, and <type://@Default>.
 
+Next, at [Step 5. Implement PUT](./tutorial-blog-rest-step5), you will implement an UPDATE operation to modify existing blog posts.
 
+<TutorialSteps current={4} />
