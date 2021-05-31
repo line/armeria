@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.common.util;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.MustBeClosed;
 
 import io.netty.util.internal.EmptyArrays;
 
@@ -76,6 +77,7 @@ public final class TemporaryThreadLocals implements AutoCloseable {
      * Acquire the current {@link Thread}'s {@link TemporaryThreadLocals} with lock. It should be used with
      * try-with-resources statement.
      */
+    @MustBeClosed
     public static TemporaryThreadLocals acquire() {
         final Thread thread = Thread.currentThread();
         final TemporaryThreadLocals tempThreadLocals;
