@@ -84,6 +84,12 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     @Override
+    public boolean isEmpty() {
+        // All fixed streams are non-empty except for `EmptyFixedStreamMesage`.
+        return false;
+    }
+
+    @Override
     public CompletableFuture<Void> whenComplete() {
         return completionFuture;
     }

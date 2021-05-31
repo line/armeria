@@ -55,11 +55,6 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    public final boolean isEmpty() {
-        return false;
-    }
-
-    @Override
     public long demand() {
         return demand;
     }
@@ -107,12 +102,13 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
         }
 
         // As objs.length is fixed, we can safely cap the demand to it here.
-        if (n >= objs.length) {
-            demand = objs.length;
+        final int remaining = objs.length - fulfilled;
+        if (n >= remaining) {
+            demand = remaining;
         } else {
             // As objs.length is an int, large demand will always fall into the above branch and there is no
             // chance of overflow, so just simply add the demand.
-            demand = (int) Math.min(oldDemand + n, objs.length);
+            demand = (int) Math.min(oldDemand + n, remaining);
         }
 
         if (inOnNext) {

@@ -21,30 +21,37 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import java.util.concurrent.CompletableFuture;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.grpc.BindableService;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
-public class UnframedGrpcServiceTest {
+class UnframedGrpcServiceTest {
 
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
+    @RegisterExtension
+    static EventLoopExtension eventLoop = new EventLoopExtension();
 
     private static class TestService extends TestServiceImplBase {
 
@@ -58,11 +65,11 @@ public class UnframedGrpcServiceTest {
     private static final TestService testService = new TestService();
     private static final int MAX_MESSAGE_BYTES = 1024;
 
-    private ServiceRequestContext ctx;
-    private HttpRequest request;
+    private static ServiceRequestContext ctx;
+    private static HttpRequest request;
 
-    @Before
-    public void setUp() {
+    @BeforeAll
+    static void setUp() {
         request = HttpRequest.of(HttpMethod.POST,
                                  "/armeria.grpc.testing.TestService/EmptyCall",
                                  MediaType.JSON_UTF_8, "{}");
@@ -70,7 +77,7 @@ public class UnframedGrpcServiceTest {
     }
 
     @Test
-    public void statusOk() throws Exception {
+    void statusOk() throws Exception {
         final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(testService);
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
         final AggregatedHttpResponse res = response.aggregate().get();
@@ -79,7 +86,7 @@ public class UnframedGrpcServiceTest {
     }
 
     @Test
-    public void statusCancelled() throws Exception {
+    void statusCancelled() throws Exception {
         final TestService spyTestService = spy(testService);
         doThrow(Status.CANCELLED.withDescription("grpc error message").asRuntimeException())
                 .when(spyTestService)
@@ -95,7 +102,7 @@ public class UnframedGrpcServiceTest {
     }
 
     @Test
-    public void noContent() throws Exception {
+    void noContent() throws Exception {
         final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(new TestServiceImplBase() {
             @Override
             public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
@@ -107,6 +114,18 @@ public class UnframedGrpcServiceTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.content().isEmpty()).isTrue();
+    }
+
+    @Test
+    void shouldClosePooledObjectsForNonOK() {
+        final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
+        final ByteBuf byteBuf = Unpooled.buffer();
+        final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
+                                                               .add(GrpcHeaderNames.GRPC_STATUS, "1")
+                                                               .build();
+        final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders, HttpData.wrap(byteBuf));
+        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res);
+        assertThat(byteBuf.refCnt()).isZero();
     }
 
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService) {

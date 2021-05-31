@@ -48,11 +48,6 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    public final boolean isEmpty() {
-        return false;
-    }
-
-    @Override
     public long demand() {
         return demand;
     }

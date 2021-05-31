@@ -45,12 +45,10 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    public final boolean isEmpty() {
-        return false;
-    }
-
-    @Override
     public long demand() {
+        // Since the objects is drained as soon as it is requested, The demand will be zero in most cases.
+        // But the demand could be one if a subscriber calls `subscription.request(n)` while receiving a object
+        // via 'onNext(t)'
         return requested ? 1 : 0;
     }
 
