@@ -123,7 +123,8 @@ class UnframedGrpcServiceTest {
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
                                                                .add(GrpcHeaderNames.GRPC_STATUS, "1")
                                                                .build();
-        final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders, HttpData.wrap(byteBuf));
+        final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
+                                                                                HttpData.wrap(byteBuf));
         UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res);
         assertThat(byteBuf.refCnt()).isZero();
     }

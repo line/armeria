@@ -232,7 +232,6 @@ final class UnframedGrpcService extends SimpleDecoratingHttpService implements G
                 (framedResponse, t) -> {
                     try (SafeCloseable ignore = ctx.push()) {
                         if (t != null) {
-                            PooledObjects.close(framedResponse.content());
                             res.completeExceptionally(t);
                         } else {
                             deframeAndRespond(ctx, framedResponse, res);
