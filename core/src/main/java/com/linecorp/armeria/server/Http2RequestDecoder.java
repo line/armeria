@@ -162,15 +162,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         } else {
             final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
             try {
+                // Trailers is received. The decodedReq will be automatically closed.
                 decodedReq.write(ArmeriaHttpUtil.toArmeria(headers, true, endOfStream));
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
             }
-        }
-
-        if (endOfStream) {
-            req.close();
         }
     }
 
