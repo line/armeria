@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ class RegularFixedStreamMessageTest {
         final AtomicInteger counter = new AtomicInteger();
         final RegularFixedStreamMessage<String> streamMessage = new RegularFixedStreamMessage<>(strings);
         assertThat(streamMessage.demand()).isZero();
+        AtomicBoolean completed = new AtomicBoolean();
         streamMessage.subscribe(new Subscriber<String>() {
 
             private Subscription subscription;
@@ -63,14 +65,14 @@ class RegularFixedStreamMessageTest {
                         subscription.request(20);
                         break;
                     case 3:
-                        assertThat(streamMessage.demand()).isEqualTo(size - 1);
+                        assertThat(streamMessage.demand()).isEqualTo(2);
                         break;
                     case 4:
-                        assertThat(streamMessage.demand()).isEqualTo(size - 2);
+                        assertThat(streamMessage.demand()).isOne();
                         subscription.request(20);
                         break;
                     case 5:
-                        assertThat(streamMessage.demand()).isEqualTo(size - 1);
+                        assertThat(streamMessage.demand()).isZero();
                         break;
                 }
             }
@@ -80,10 +82,11 @@ class RegularFixedStreamMessageTest {
 
             @Override
             public void onComplete() {
-                assertThat(streamMessage.demand()).isEqualTo(size - 1);
+                assertThat(streamMessage.demand()).isZero();
+                completed.set(true);
             }
         }, ImmediateEventExecutor.INSTANCE);
 
-        await().untilAsserted(() -> assertThat(streamMessage.demand()).isEqualTo(size - 1));
+        await().untilTrue(completed);
     }
 }
