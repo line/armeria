@@ -23,6 +23,8 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -40,9 +42,10 @@ class RegularFixedStreamMessageTest {
         final AtomicInteger counter = new AtomicInteger();
         final RegularFixedStreamMessage<String> streamMessage = new RegularFixedStreamMessage<>(strings);
         assertThat(streamMessage.demand()).isZero();
-        AtomicBoolean completed = new AtomicBoolean();
+        final AtomicBoolean completed = new AtomicBoolean();
         streamMessage.subscribe(new Subscriber<String>() {
 
+            @Nullable
             private Subscription subscription;
 
             @Override
