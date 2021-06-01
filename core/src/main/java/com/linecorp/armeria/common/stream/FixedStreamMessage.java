@@ -165,7 +165,9 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     private void onError0(Throwable cause) {
         try {
             subscriber.onError(cause);
-            completionFuture.completeExceptionally(cause);
+            if (!completionFuture.isDone()) {
+                completionFuture.completeExceptionally(cause);
+            }
         } catch (Throwable t) {
             final Exception composite = new CompositeException(t, cause);
             completionFuture.completeExceptionally(composite);
@@ -255,6 +257,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         abortCause = cause;
         if (executor == null) {
             // abortCause will be propagated when subscribed
+            completionFuture.completeExceptionally(cause);
         } else {
             // Subscribed already
             onError0(cause);
