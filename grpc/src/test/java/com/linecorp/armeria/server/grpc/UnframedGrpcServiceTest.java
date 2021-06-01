@@ -23,7 +23,7 @@ import static org.mockito.Mockito.spy;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -68,8 +68,8 @@ class UnframedGrpcServiceTest {
     private static ServiceRequestContext ctx;
     private static HttpRequest request;
 
-    @BeforeAll
-    static void setUp() {
+    @BeforeEach
+    void setUp() {
         request = HttpRequest.of(HttpMethod.POST,
                                  "/armeria.grpc.testing.TestService/EmptyCall",
                                  MediaType.JSON_UTF_8, "{}");
@@ -80,7 +80,7 @@ class UnframedGrpcServiceTest {
     void statusOk() throws Exception {
         final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(testService);
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
-        final AggregatedHttpResponse res = response.aggregate().get();
+        final AggregatedHttpResponse res = response.aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("{}");
     }
