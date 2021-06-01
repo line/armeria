@@ -56,7 +56,7 @@ For updating a blog post, take a blog post ID (`id`) and new blog post informati
       // Update a blog post
   }
   ```
-4. For conversion, annotate blog post constructor to map JSON object keys to blog post object members.
+4. For conversion, annotate blog post constructor to map JSON object keys to blog post object members. You can find more information on `@JsonCreator` [here](https://www.baeldung.com/jackson-annotations#1-jsoncreator).
   ```java filename=BlogPost.java
   @JsonCreator
   BlogPost(@JsonProperty("id") int id, @JsonProperty("title") String title,
