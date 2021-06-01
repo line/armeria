@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotif
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -29,8 +30,11 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -123,6 +127,46 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     @Override
     public final CompletableFuture<Void> whenComplete() {
         return upstream.whenComplete();
+    }
+
+    @Override
+    public CompletableFuture<List<U>> collect(EventExecutor executor, SubscriptionOption... options) {
+        return upstream.collect(executor, options).handle((result, cause) -> {
+            final CollectingSubscription subscription = new CollectingSubscription();
+            final CollectingSubscriber<U> subscriber = new CollectingSubscriber<>();
+            beforeSubscribe(subscriber, subscription);
+            if (cause != null) {
+                beforeError(subscriber, cause);
+                return Exceptions.throwUnsafely(cause);
+            } else {
+                Throwable filterCause = null;
+                final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(result.size());
+                for (T t : result) {
+                    try {
+                        final U filtered = filter(t);
+                        if (subscriber.completed || subscriber.cause != null || subscription.cancelled) {
+                            // Stop signal was received.
+                            filterCause = subscriber.cause;
+                            break;
+                        }
+                        builder.add(filtered);
+                    } catch (Throwable ex) {
+                        filterCause = ex;
+                    }
+                }
+
+                final List<U> elements = builder.build();
+                if (filterCause != null) {
+                    for (U element : elements) {
+                        StreamMessageUtil.closeOrAbort(element, filterCause);
+                    }
+                    return Exceptions.throwUnsafely(filterCause);
+                } else {
+                    beforeComplete(subscriber);
+                    return elements;
+                }
+            }
+        });
     }
 
     @Override
@@ -256,6 +300,42 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
             completed = true;
             beforeComplete(delegate);
             delegate.onComplete();
+        }
+    }
+
+    private static final class CollectingSubscription implements Subscription {
+
+        boolean cancelled;
+
+        @Override
+        public void request(long n) {}
+
+        @Override
+        public void cancel() {
+            cancelled = true;
+        }
+    }
+
+    private static final class CollectingSubscriber<T> implements Subscriber<T> {
+
+        private boolean completed;
+        @Nullable
+        private Throwable cause;
+
+        @Override
+        public void onSubscribe(Subscription s) {}
+
+        @Override
+        public void onNext(T o) {}
+
+        @Override
+        public void onError(Throwable t) {
+            cause = t;
+        }
+
+        @Override
+        public void onComplete() {
+           completed = true;
         }
     }
 }

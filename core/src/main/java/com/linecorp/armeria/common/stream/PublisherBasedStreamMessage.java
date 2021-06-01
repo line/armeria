@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -181,6 +182,16 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         abortable.abort(cause);
         publisher.subscribe(abortable);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        if (publisher instanceof StreamMessage) {
+            //noinspection unchecked
+            return ((StreamMessage<T>) publisher).collect(executor, options);
+        } else {
+            return StreamMessage.super.collect(executor, options);
+        }
     }
 
     @Override

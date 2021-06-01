@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
@@ -89,6 +90,13 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
         delegate().abort(cause);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        @SuppressWarnings("unchecked")
+        final StreamMessage<T> delegate = (StreamMessage<T>) delegate();
+        return delegate.collect(executor, options);
     }
 
     @SuppressWarnings("unchecked")

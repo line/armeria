@@ -63,7 +63,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        final SubscriptionImpl subscription = new SubscriptionImpl(this, subscriber, executor, options);
+        final SubscriptionImpl subscription = new SubscriptionImpl(this, subscriber, executor, options, null);
         final SubscriptionImpl actualSubscription = subscribe(subscription);
         if (actualSubscription != subscription) {
             // Failed to subscribe.
@@ -126,14 +126,14 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         }
     }
 
-    final T prepareObjectForNotification(SubscriptionImpl subscription, T o) {
+    final T prepareObjectForNotification(T o, boolean withPooledObjects) {
         onRemoval(o);
-        if (!subscription.withPooledObjects()) {
-            o = PooledObjects.copyAndClose(o);
-        } else {
+        if (withPooledObjects) {
             PooledObjects.touch(o);
+            return o;
+        } else {
+            return PooledObjects.copyAndClose(o);
         }
-        return o;
     }
 
     /**
@@ -159,17 +159,22 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         private final boolean withPooledObjects;
         private final boolean notifyCancellation;
 
+        @Nullable
+        private final CompletableFuture<?> collectingFuture;
+
         private volatile boolean cancelRequested;
 
         @SuppressWarnings("unchecked")
         SubscriptionImpl(AbstractStreamMessage<?> publisher, Subscriber<?> subscriber,
-                         EventExecutor executor, SubscriptionOption[] options) {
+                         EventExecutor executor, SubscriptionOption[] options,
+                         @Nullable CompletableFuture<?> collectingFuture) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
             this.options = options;
             withPooledObjects = containsWithPooledObjects(options);
             notifyCancellation = containsNotifyCancellation(options);
+            this.collectingFuture = collectingFuture;
         }
 
         Subscriber<Object> subscriber() {
@@ -230,6 +235,11 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             return executor.inEventLoop();
         }
 
+        @Nullable
+        CompletableFuture<?> collectingFuture() {
+            return collectingFuture;
+        }
+
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(Subscription.class)
@@ -274,6 +284,10 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
                 try {
                     if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
                         subscriber.onError(cause);
+                    }
+                    final CompletableFuture<?> collectingFuture = subscription.collectingFuture();
+                    if (collectingFuture != null) {
+                        collectingFuture.completeExceptionally(cause);
                     }
                     completionFuture.completeExceptionally(cause);
                 } catch (Throwable t) {

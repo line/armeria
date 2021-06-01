@@ -451,6 +451,45 @@ public interface StreamMessage<T> extends Publisher<T> {
     void abort(Throwable cause);
 
     /**
+     * Collects the elements published by this {@link StreamMessage}.
+     * The returned {@link CompletableFuture} will be notified when the elements are fully consumed.
+     *
+     * <p>Note that if this {@link StreamMessage} was subscribed by other {@link Subscriber} already,
+     * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
+     */
+    default CompletableFuture<List<T>> collect() {
+        return collect(EMPTY_OPTIONS);
+    }
+
+    /**
+     * Collects the elements published by this {@link StreamMessage} with the specified
+     * {@link SubscriptionOption}s. The returned {@link CompletableFuture} will be notified when the elements
+     * are fully consumed.
+     *
+     * <p>Note that if this {@link StreamMessage} was subscribed by other {@link Subscriber} already,
+     * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
+     */
+    default CompletableFuture<List<T>> collect(SubscriptionOption... options) {
+        return collect(defaultSubscriberExecutor(), options);
+    }
+
+    /**
+     * Collects the elements published by this {@link StreamMessage} with the specified
+     * {@link EventExecutor} and {@link SubscriptionOption}s. The returned {@link CompletableFuture} will be
+     * notified when the elements are fully consumed.
+     *
+     * <p>Note that if this {@link StreamMessage} was subscribed by other {@link Subscriber} already,
+     * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
+     */
+    default CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+        final StreamMessageCollector<T> collector = new StreamMessageCollector<>();
+        subscribe(collector, executor, options);
+        return collector.collect();
+    }
+
+    /**
      * Filters values emitted by this {@link StreamMessage}.
      * If the {@link Predicate} test succeeds, the value is emitted.
      * If the {@link Predicate} test fails, the value is ignored and a request of {@code 1} is made to upstream.

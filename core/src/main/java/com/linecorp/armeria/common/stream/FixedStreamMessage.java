@@ -22,6 +22,7 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithP
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -72,6 +73,8 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
      * Clean up objects.
      */
     abstract void cleanupObjects(@Nullable Throwable cause);
+
+    abstract List<T> drainAll(boolean withPooledObjects);
 
     EventExecutor executor() {
         return firstNonNull(executor, ImmediateEventExecutor.INSTANCE);
@@ -136,15 +139,52 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         }
     }
 
+    @Override
+    public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+        final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();
+        if (subscribedUpdater.compareAndSet(this, 0, 1)) {
+            final Throwable abortCause = this.abortCause;
+            if (abortCause != null) {
+                collectingFuture.completeExceptionally(abortCause);
+                return collectingFuture;
+            }
+
+            if (executor.inEventLoop()) {
+                collect0(collectingFuture, executor, options);
+            } else {
+                executor.execute(() -> collect0(collectingFuture, executor, options));
+            }
+        } else {
+            collectingFuture.completeExceptionally(
+                    new IllegalStateException("subscribed by other subscriber already"));
+        }
+        return collectingFuture;
+    }
+
+    private void collect0(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
+                          SubscriptionOption... options) {
+        final boolean withPooledObjects = containsWithPooledObjects(options);
+        collectingFuture.complete(drainAll(withPooledObjects));
+        // whenComplete() should be completed after executing the callbacks of collect().
+        executor.execute(() -> whenComplete().complete(null));
+    }
+
+    final T prepareObjectForNotification(T o, boolean withPooledObjects) {
+        if (withPooledObjects) {
+            PooledObjects.touch(o);
+            return o;
+        } else {
+            return PooledObjects.copyAndClose(o);
+        }
+    }
+
     void onNext(T item) {
         assert subscriber != null;
         try {
-            if (withPooledObjects) {
-                PooledObjects.touch(item);
-                subscriber.onNext(item);
-            } else {
-                subscriber.onNext(PooledObjects.copyAndClose(item));
-            }
+            final T published = prepareObjectForNotification(item, withPooledObjects);
+            subscriber.onNext(published);
         } catch (Throwable t) {
             // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
             abort0(t);

@@ -223,6 +223,7 @@ ad
 ad.jp
 adac
 adachi.tokyo.jp
+adimo.co.uk
 adm.br
 adobeaemcloud.com
 adobeaemcloud.net
@@ -449,6 +450,7 @@ apps.lair.io
 appspacehosted.com
 appspaceusercontent.com
 appspot.com
+appudo.net
 aprendemas.cl
 aq
 aq.it
@@ -3422,6 +3424,7 @@ hs.run
 hs.zone
 hsbc
 ht
+httpbin.org
 hu
 hu.com
 hu.eu.org
@@ -5092,6 +5095,7 @@ mobi.tt
 mobi.tz
 mobile
 mochizuki.nagano.jp
+mock.pstmn.io
 mod.gi
 moda
 modalen.no
@@ -6475,6 +6479,7 @@ portal.museum
 portland.museum
 portlligat.museum
 post
+postman-echo.com
 posts-and-telecommunications.museum
 potager.org
 potenza.it
@@ -6554,6 +6559,7 @@ psc.br
 psi.br
 psp.gov.pl
 psse.gov.pl
+pstmn.io
 pt
 pt.eu.org
 pt.it

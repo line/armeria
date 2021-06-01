@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -28,6 +29,9 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -86,6 +90,40 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
     @Override
     public long demand() {
         return source.demand();
+    }
+
+    @Override
+    public CompletableFuture<List<U>> collect(EventExecutor executor, SubscriptionOption... options) {
+        return source.collect(executor, options).thenApply(items -> {
+            final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(items.size());
+            Throwable cause = null;
+            for (Object item : items) {
+                U result = null;
+                try {
+                    result = function.apply(item);
+                    if (result != null) {
+                        builder.add(result);
+                    } else {
+                        StreamMessageUtil.closeOrAbort(item);
+                    }
+                } catch (Throwable ex) {
+                    if (result != null) {
+                        StreamMessageUtil.closeOrAbort(item);
+                    }
+                    cause = ex;
+                }
+            }
+
+            final List<U> elements = builder.build();
+            if (cause != null) {
+                for (U element: elements) {
+                    StreamMessageUtil.closeOrAbort(element, cause);
+                }
+                return Exceptions.throwUnsafely(cause);
+            } else {
+                return elements;
+            }
+        });
     }
 
     @Override

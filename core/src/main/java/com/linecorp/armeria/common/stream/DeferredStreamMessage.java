@@ -20,6 +20,8 @@ import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -33,6 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -65,6 +68,14 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             abortCauseUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DeferredStreamMessage.class, Throwable.class, "abortCause");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, CompletableFuture>
+            collectingFutureUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            DeferredStreamMessage.class, CompletableFuture.class, "collectingFuture");
+
+    private static final CompletableFuture<List<?>> NO_COLLECTING_FUTURE =
+            CompletableFuture.completedFuture(null);
+
     @Nullable
     @SuppressWarnings("unused") // Updated only via upstreamUpdater
     private volatile StreamMessage<T> upstream;
@@ -76,6 +87,15 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     @Nullable
     @SuppressWarnings("unused") // Updated only via downstreamSubscriptionUpdater
     private volatile SubscriptionImpl downstreamSubscription;
+
+    @Nullable
+    // Updated only via collectingFutureUpdater
+    private volatile CompletableFuture<List<T>> collectingFuture;
+
+    @Nullable
+    private SubscriptionOption[] collectionOptions;
+    @Nullable
+    private EventExecutor collectingExecutor;
 
     @SuppressWarnings("unused") // Updated only via subscribedToUpstreamUpdater
     private volatile int subscribedToUpstream;
@@ -107,6 +127,17 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             upstream.abort(abortCause);
         }
 
+        if (!collectingFutureUpdater.compareAndSet(this, null, NO_COLLECTING_FUTURE)) {
+            upstream.collect(collectingExecutor, collectionOptions).handle((result, cause) -> {
+                if (cause == null) {
+                    collectingFuture.complete(result);
+                } else {
+                    collectingFuture.completeExceptionally(cause);
+                }
+                return null;
+            });
+        }
+
         if (!whenComplete().isDone()) {
             upstream.whenComplete().handle((unused, cause) -> {
                 if (cause == null) {
@@ -128,8 +159,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
      *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     public final void close() {
-        final DefaultStreamMessage<T> m = new DefaultStreamMessage<>();
-        m.close();
+        final StreamMessage<T> m = StreamMessage.of();
         delegate(m);
     }
 
@@ -141,8 +171,8 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
      */
     public final void close(Throwable cause) {
         requireNonNull(cause, "cause");
-        final DefaultStreamMessage<T> m = new DefaultStreamMessage<>();
-        m.close(cause);
+        final StreamMessage<T> m = StreamMessage.of();
+        m.abort(cause);
         delegate(m);
     }
 
@@ -281,7 +311,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
         upstream.subscribe(new ForwardingSubscriber(downstreamSubscription.subscriber()),
                            downstreamSubscription.executor(),
-                           builder.build().toArray(new SubscriptionOption[0]));
+                           builder.build().toArray(EMPTY_OPTIONS));
     }
 
     @Override
@@ -297,7 +327,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
+                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS, null);
         downstreamSubscriptionUpdater.compareAndSet(this, null, newSubscription);
 
         final StreamMessage<T> upstream = this.upstream;
@@ -314,6 +344,26 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         } else {
             downstreamSubscription.executor().execute(
                     () -> closeEvent.notifySubscriber(downstreamSubscription, whenComplete()));
+        }
+    }
+
+    @Override
+    public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+        final StreamMessage<T> upstream = this.upstream;
+        if (upstream != null) {
+            return upstream.collect(executor, options);
+        }
+
+        final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();
+        collectingExecutor = executor;
+        collectionOptions = options;
+        if (collectingFutureUpdater.compareAndSet(this, null, collectingFuture)) {
+            return collectingFuture;
+        } else {
+            assert upstream != null;
+            return upstream.collect(executor, options);
         }
     }
 

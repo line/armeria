@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.common.stream;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -62,6 +66,15 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             StreamMessageUtil.closeOrAbort(obj2, cause);
             obj2 = null;
         }
+    }
+
+    @Override
+    final List<T> drainAll(boolean withPooledObjects) {
+        assert obj1 != null;
+        final ImmutableList<T> objs = ImmutableList.of(prepareObjectForNotification(obj1, withPooledObjects),
+                                                       prepareObjectForNotification(obj2, withPooledObjects));
+        obj1 = obj2 = null;
+        return objs;
     }
 
     @Override
