@@ -25,11 +25,12 @@ import io.netty.util.internal.EmptyArrays;
 /**
  * Provides various thread-local variables used by Armeria internally, mostly to avoid allocating
  * short-living objects, such as {@code byte[]} and {@link StringBuilder}. Keep in mind that the variables
- * provided by this class must be used and released with extreme care, because otherwise it will result in
- * unpredictable behavior.
+ * provided by this class must be used with extreme care, because otherwise it will result in unpredictable
+ * behavior.
  *
  * <p>Most common mistake is to call or recurse info a method that uses the same thread-local variable.
- * For example, the following code will produce a garbled string:
+ * For example, the following code will throw an exception because {@link TemporaryThreadLocals#acquire()} is
+ * called twice before the first call is closed:
  * <pre>{@code
  * > class A {
  * >     @Override
@@ -50,8 +51,7 @@ import io.netty.util.internal.EmptyArrays;
  * >     }
  * > }
  * }</pre>
- * If no exception occurs, {@code new A().toString()} returns {@code foofoo"}. However, it does not happen
- * in fact. When trying to acquire this class in class B, an {@link IllegalStateException} occurs by a lock
+ * When trying to acquire this class in class B, an {@link IllegalStateException} occurs by a lock
  * mechanism. It helps to prevent thread local variables from being corrupted. Also developers recognize
  * the situation about nested use easily. Specifically, as this utility implements {@link AutoCloseable},
  * the release method will be called successfully with try-with-resources statement.

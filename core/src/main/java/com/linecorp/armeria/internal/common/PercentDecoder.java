@@ -89,8 +89,7 @@ public final class PercentDecoder {
 
             // At this point, `c` is one of the following characters: # % ' ) + - /
             if (c == '%' || c == '+') {
-                return decodeUtf8Component(tempThreadLocals.charArray(toExcluded - from), s,
-                                           from, toExcluded);
+                return decodeUtf8Component(tempThreadLocals.charArray(toExcluded - from), s, from, toExcluded);
             }
         }
 
