@@ -457,7 +457,8 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
     }
 
-    private static final class ChildStreamMessage<T> implements StreamMessage<T> {
+    @VisibleForTesting
+    static final class ChildStreamMessage<T> implements StreamMessage<T> {
 
         @SuppressWarnings("rawtypes")
         private static final AtomicReferenceFieldUpdater<ChildStreamMessage, DownstreamSubscription>

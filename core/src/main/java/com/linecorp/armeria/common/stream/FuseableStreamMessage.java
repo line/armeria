@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -95,18 +94,13 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, EMPTY_OPTIONS);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        source.subscribe(new FuseableSubscriber<U>(subscriber, function), executor, options);
+        source.subscribe(new FuseableSubscriber<>(subscriber, function), executor, options);
     }
 
     @Override
