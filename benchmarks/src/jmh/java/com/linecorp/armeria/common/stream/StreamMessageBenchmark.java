@@ -97,7 +97,8 @@ public class StreamMessageBenchmark {
             subscriber = new SummingSubscriber(completedLatch, flowControl);
         }
 
-        private long computedSum() {
+        private long computedSum(StreamMessage<Integer> stream) {
+            stream.whenComplete().join();
             final long computedSum = subscriber.sum();
             if (computedSum != sum) {
                 throw new IllegalStateException(
@@ -128,13 +129,11 @@ public class StreamMessageBenchmark {
     }
 
     @Benchmark
-    public long noExecutor(StreamObjects streamObjects) throws InterruptedException {
+    public long noExecutor(StreamObjects streamObjects) {
         final StreamMessage<Integer> stream = newStream(streamObjects);
         stream.subscribe(streamObjects.subscriber);
         streamObjects.writeAllValues(stream);
-        // ensure the event loop closes the stream before checking the computed sum
-        streamObjects.completedLatch.await(10, TimeUnit.SECONDS);
-        return streamObjects.computedSum();
+        return streamObjects.computedSum(stream);
     }
 
     // Isolates performance of stream operations, but requires the stream to execute events inline or it would
@@ -144,20 +143,19 @@ public class StreamMessageBenchmark {
         final StreamMessage<Integer> stream = newStream(streamObjects);
         stream.subscribe(streamObjects.subscriber, EventLoopJmhExecutor.currentEventLoop());
         streamObjects.writeAllValues(stream);
-        return streamObjects.computedSum();
+        return streamObjects.computedSum(stream);
     }
 
     // Has synchronization overhead, but does not require the stream to execute events inline so can be used
     // to compare approaches.
     @Benchmark
     public long notJmhEventLoop(StreamObjects streamObjects) throws Exception {
+        final StreamMessage<Integer> stream = newStream(streamObjects);
         ANOTHER_EVENT_LOOP.execute(() -> {
-            final StreamMessage<Integer> stream = newStream(streamObjects);
             stream.subscribe(streamObjects.subscriber, ANOTHER_EVENT_LOOP);
             streamObjects.writeAllValues(stream);
         });
-        streamObjects.completedLatch.await(10, TimeUnit.SECONDS);
-        return streamObjects.computedSum();
+        return streamObjects.computedSum(stream);
     }
 
     private static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
