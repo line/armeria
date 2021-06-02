@@ -58,15 +58,15 @@ public final class GraphQLServiceBuilder {
 
     private static final ImmutableList<String> DEFAULT_SCHEMA_FILE_NAMES = ImmutableList.of("schema.graphqls",
                                                                                             "schema.graphql");
-    private final ImmutableList.Builder<File> schemaFileBuilder = ImmutableList.builder();
+    private final ImmutableList.Builder<File> schemaFiles = ImmutableList.builder();
 
-    private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfiguratorBuilder =
+    private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators =
             ImmutableList.builder();
-    private final ImmutableList.Builder<Consumer<DataLoaderRegistry>> dataLoaderRegistryConsumerBuilder =
+    private final ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers =
             ImmutableList.builder();
-    private final ImmutableList.Builder<GraphQLTypeVisitor> typeVisitorBuilder = ImmutableList.builder();
-    private final ImmutableList.Builder<Instrumentation> instrumentationBuilder = ImmutableList.builder();
-    private final ImmutableList.Builder<Consumer<GraphQL.Builder>> graphQLBuilderConsumerBuilder =
+    private final ImmutableList.Builder<GraphQLTypeVisitor> typeVisitors = ImmutableList.builder();
+    private final ImmutableList.Builder<Instrumentation> instrumentations = ImmutableList.builder();
+    private final ImmutableList.Builder<GraphQLConfigurator> graphQLBuilderConsumers =
             ImmutableList.builder();
 
     private boolean useBlockingTaskExecutor;
@@ -86,7 +86,7 @@ public final class GraphQLServiceBuilder {
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
      */
     public GraphQLServiceBuilder schemaFile(Iterable<? extends File> schemaFiles) {
-        schemaFileBuilder.addAll(requireNonNull(schemaFiles, "schemaFiles"));
+        this.schemaFiles.addAll(requireNonNull(schemaFiles, "schemaFiles"));
         return this;
     }
 
@@ -102,8 +102,8 @@ public final class GraphQLServiceBuilder {
      * Adds the {@link DataLoaderRegistry} consumers.
      */
     public GraphQLServiceBuilder configureDataLoaderRegistry(
-            Iterable<Consumer<DataLoaderRegistry>> configurers) {
-        dataLoaderRegistryConsumerBuilder.addAll(requireNonNull(configurers, "configurers"));
+            Iterable<? extends Consumer<? super DataLoaderRegistry>> configurers) {
+        dataLoaderRegistryConsumers.addAll(requireNonNull(configurers, "configurers"));
         return this;
     }
 
@@ -119,7 +119,7 @@ public final class GraphQLServiceBuilder {
      * Adds the {@link RuntimeWiringConfigurator}s.
      */
     public GraphQLServiceBuilder runtimeWiring(Iterable<? extends RuntimeWiringConfigurator> configurators) {
-        runtimeWiringConfiguratorBuilder.addAll(requireNonNull(configurators, "configurators"));
+        runtimeWiringConfigurators.addAll(requireNonNull(configurators, "configurators"));
         return this;
     }
 
@@ -134,7 +134,7 @@ public final class GraphQLServiceBuilder {
      * Adds the {@link GraphQLTypeVisitor}s.
      */
     public GraphQLServiceBuilder typeVisitors(Iterable<? extends GraphQLTypeVisitor> typeVisitors) {
-        typeVisitorBuilder.addAll(requireNonNull(typeVisitors, "typeVisitors"));
+        this.typeVisitors.addAll(requireNonNull(typeVisitors, "typeVisitors"));
         return this;
     }
 
@@ -142,29 +142,31 @@ public final class GraphQLServiceBuilder {
      * Adds the {@link Instrumentation}s.
      */
     public GraphQLServiceBuilder instrumentation(Instrumentation... instrumentations) {
-        return instrumentation(ImmutableList.copyOf(requireNonNull(instrumentations, "instrumentations")));
+        requireNonNull(instrumentations, "instrumentations");
+        return instrumentation(ImmutableList.copyOf(instrumentations));
     }
 
     /**
      * Adds the {@link Instrumentation}s.
      */
     public GraphQLServiceBuilder instrumentation(Iterable<? extends Instrumentation> instrumentations) {
-        instrumentationBuilder.addAll(requireNonNull(instrumentations, "instrumentations"));
+        this.instrumentations.addAll(requireNonNull(instrumentations, "instrumentations"));
         return this;
     }
 
     /**
-     * Adds the {@link GraphQL.Builder} consumers.
+     * Adds the {@link GraphQLConfigurator} consumers.
      */
-    public GraphQLServiceBuilder configureGraphQL(Consumer<GraphQL.Builder>... configurers) {
+    public GraphQLServiceBuilder configureGraphQL(GraphQLConfigurator... configurers) {
         return configureGraphQL(ImmutableList.copyOf(requireNonNull(configurers, "configurers")));
     }
 
     /**
-     * Adds the {@link GraphQL.Builder} consumers.
+     * Adds the {@link GraphQLConfigurator} consumers.
      */
-    public GraphQLServiceBuilder configureGraphQL(Iterable<Consumer<GraphQL.Builder>> configurers) {
-        graphQLBuilderConsumerBuilder.addAll(requireNonNull(configurers, "configurers"));
+    public GraphQLServiceBuilder configureGraphQL(
+            Iterable<? extends GraphQLConfigurator> configurers) {
+        graphQLBuilderConsumers.addAll(requireNonNull(configurers, "configurers"));
         return this;
     }
 
@@ -180,30 +182,30 @@ public final class GraphQLServiceBuilder {
      * Creates a {@link GraphQLService}.
      */
     public GraphQLService build() {
-        final TypeDefinitionRegistry registry = typeDefinitionRegistry(schemaFileBuilder.build());
+        final TypeDefinitionRegistry registry = typeDefinitionRegistry(schemaFiles.build());
 
-        final RuntimeWiring runtimeWiring = buildRuntimeWiring(runtimeWiringConfiguratorBuilder.build());
+        final RuntimeWiring runtimeWiring = buildRuntimeWiring(runtimeWiringConfigurators.build());
         GraphQLSchema schema = new SchemaGenerator().makeExecutableSchema(registry, runtimeWiring);
-        final List<GraphQLTypeVisitor> typeVisitors = typeVisitorBuilder.build();
+        final List<GraphQLTypeVisitor> typeVisitors = this.typeVisitors.build();
         for (GraphQLTypeVisitor typeVisitor : typeVisitors) {
             schema = SchemaTransformer.transformSchema(schema, typeVisitor);
         }
 
         GraphQL.Builder builder = GraphQL.newGraphQL(schema);
-        final List<Instrumentation> instrumentations = instrumentationBuilder.build();
+        final List<Instrumentation> instrumentations = this.instrumentations.build();
         if (!instrumentations.isEmpty()) {
             builder = builder.instrumentation(new ChainedInstrumentation(instrumentations));
         }
 
-        final List<Consumer<GraphQL.Builder>> graphQLBuilders = graphQLBuilderConsumerBuilder.build();
-        for (Consumer<GraphQL.Builder> configurer : graphQLBuilders) {
-            configurer.accept(builder);
+        final List<GraphQLConfigurator> graphQLBuilders = graphQLBuilderConsumers.build();
+        for (GraphQLConfigurator configurer : graphQLBuilders) {
+            configurer.configure(builder);
         }
 
         final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
-        final List<Consumer<DataLoaderRegistry>> dataLoaderRegistries =
-                dataLoaderRegistryConsumerBuilder.build();
-        for (Consumer<DataLoaderRegistry> configurer : dataLoaderRegistries) {
+        final List<Consumer<? super DataLoaderRegistry>> dataLoaderRegistries =
+                dataLoaderRegistryConsumers.build();
+        for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistries) {
             configurer.accept(dataLoaderRegistry);
         }
         return new DefaultGraphQLService(builder.build(), dataLoaderRegistry, useBlockingTaskExecutor);
@@ -219,7 +221,7 @@ public final class GraphQLServiceBuilder {
             throw new IllegalStateException("Not found schema file(s)");
         }
 
-        logger.info("Found schema file(s). schemaFiles: {}", schemaFiles);
+        logger.info("Found schema files: {}", schemaFiles);
         schemaFiles.forEach(it -> registry.merge(parser.parse(it)));
         return registry;
     }

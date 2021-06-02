@@ -37,11 +37,11 @@
 *.ex.ortsinfo.at
 *.firenet.ch
 *.fk
+*.frusky.de
 *.futurecms.at
 *.gateway.dev
 *.hosting.myjino.ru
 *.hosting.ovh.net
-*.id.forgerock.io
 *.in.futurecms.at
 *.jm
 *.kawasaki.jp
@@ -948,6 +948,7 @@ blogsyte.com
 bloomberg
 bloxcms.com
 blue
+bluebite.io
 bm
 bmd.br
 bmoattachments.org
@@ -2791,7 +2792,6 @@ giske.no
 git-pages.rit.edu
 git-repos.de
 gitapp.si
-github.dev
 github.io
 githubpreview.dev
 githubusercontent.com
@@ -3468,6 +3468,7 @@ ichinoseki.iwate.jp
 icu
 id
 id.au
+id.forgerock.io
 id.ir
 id.lv
 id.ly
@@ -3899,6 +3900,7 @@ jor.br
 jorpeland.no
 joso.ibaraki.jp
 jot
+jotelulu.cloud
 journal.aero
 journalism.museum
 journalist.aero
@@ -5777,6 +5779,7 @@ notteroy.no
 nov.ru
 nov.su
 novara.it
+novecore.site
 now
 now-dns.net
 now-dns.org
@@ -5979,6 +5982,7 @@ on-the-web.tv
 on-web.fr
 on.ca
 onagawa.miyagi.jp
+onavstack.net
 oncilla.mythic-beasts.com
 ondigitalocean.app
 one
@@ -6601,7 +6605,6 @@ qvc
 r.bg
 r.cdn77.net
 r.se
-ra-ru.ru
 ra.it
 racing
 rackmaze.com
@@ -9163,7 +9166,6 @@ zoological.museum
 zoology.museum
 zp.gov.pl
 zp.ua
-zsew.ru
 zt.ua
 zuerich
 zushi.kanagawa.jp

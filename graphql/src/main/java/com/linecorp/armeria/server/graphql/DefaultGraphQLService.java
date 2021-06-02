@@ -41,7 +41,6 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.ExecutionInput;
-import graphql.ExecutionInput.Builder;
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
 import graphql.GraphQL;
@@ -60,14 +59,6 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
     private final DataLoaderRegistry dataLoaderRegistry;
 
     private final boolean useBlockingTaskExecutor;
-
-    DefaultGraphQLService(GraphQL graphQL) {
-        this(graphQL, new DataLoaderRegistry());
-    }
-
-    DefaultGraphQLService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry) {
-        this(graphQL, dataLoaderRegistry, false);
-    }
 
     DefaultGraphQLService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
                           boolean useBlockingTaskExecutor) {
@@ -138,7 +129,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                                                  DataLoaderRegistry dataLoaderRegistry,
                                                  @Nullable Map<String, Object> variables,
                                                  @Nullable String operationName) {
-        final Builder builder = ExecutionInput.newExecutionInput(query);
+        final ExecutionInput.Builder builder = ExecutionInput.newExecutionInput(query);
         if (variables != null && !variables.isEmpty()) {
             builder.variables(variables);
         }
@@ -180,8 +171,8 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                 try {
                     final ExecutionResult executionResult = graphQL.execute(input);
                     future.complete(toHttpResponse(executionResult));
-                } catch (RuntimeException e) {
-                    final ExecutionResult error = toExecutionResult(e);
+                } catch (Throwable e) {
+                    final ExecutionResult error = newExecutionResult(e);
                     future.complete(HttpResponse.of(MediaType.JSON_UTF_8,
                                                     toJsonString(error.toSpecification())));
                 }
@@ -191,7 +182,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
 
         return HttpResponse.from(graphQL.executeAsync(input).handle((executionResult, cause) -> {
             if (cause != null) {
-                final ExecutionResult error = toExecutionResult(cause);
+                final ExecutionResult error = newExecutionResult(cause);
                 return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
             }
             return toHttpResponse(executionResult);
@@ -202,13 +193,13 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         // TODO: When WebSocket is implemented, it should be removed.
         if (executionResult.getData() instanceof Publisher) {
             final ExecutionResult error =
-                    toExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
+                    newExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
             return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
         }
         return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(executionResult.toSpecification()));
     }
 
-    private static ExecutionResult toExecutionResult(Throwable cause) {
+    private static ExecutionResult newExecutionResult(Throwable cause) {
         return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
                                                             .message(cause.getMessage())
                                                             .cause(cause)
@@ -227,7 +218,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         try {
             return OBJECT_MAPPER.writeValueAsString(result);
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException("failed to write a JSON document: " + result, e);
+            throw new IllegalStateException("failed to write a JSON document: " + result, e);
         }
     }
 }
