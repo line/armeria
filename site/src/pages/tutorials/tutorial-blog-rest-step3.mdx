@@ -64,15 +64,14 @@ Armeria's [request converter](../docs/server-annotated-service#converting-an-htt
 
 We can use Armeria's default request converter as is, but here let's give a go at customizing a request converter for our blog post requests. We want to convert blog post details into a Java object.
 
-1. Create a BlogPostRequestConverter.java file.
-2. Declare a class in the file, implementing the <type://RequestConverterFunction> interface. For simplicity sake, generate impromptu IDs in this tutorial.
+1. Create a BlogPostRequestConverter.java file and declare a class, implementing the <type://RequestConverterFunction> interface. For simplicity sake, generate impromptu IDs for this tutorial.
   ```java filename=BlogRequestConverter.java
   final class BlogPostRequestConverter implements RequestConverterFunction {
     private static final ObjectMapper mapper = new ObjectMapper();
     private final AtomicInteger idGenerator = new AtomicInteger(); // Blog post ID
   }
   ```
-3. Add a method retrieving a value of a given key in a JSON object:
+2. Add a method retrieving a value of a given key in a JSON object:
   ```java filename=BlogRequestConverter.java highlight="4"
     static String stringValue(JsonNode jsonNode, String field) {
       final JsonNode value = jsonNode.get(field);
@@ -82,7 +81,7 @@ We can use Armeria's default request converter as is, but here let's give a go a
       return value.textValue();
     }
   ```
-4. Customize the default `convertRequest()` method as follows.
+3. Customize the default `convertRequest()` method as follows.
     ```java filename=BlogRequestConverter.java
     @Override
     public Object convertRequest(ServiceRequestContext ctx,
