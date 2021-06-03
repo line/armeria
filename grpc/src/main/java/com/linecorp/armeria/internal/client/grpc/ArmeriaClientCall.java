@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.EventLoopStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -68,6 +69,7 @@ import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallOptions;
@@ -239,19 +241,24 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         final HttpStreamDeframer deframer =
                 new HttpStreamDeframer(decompressorRegistry, ctx, this, null, maxInboundMessageSizeBytes);
-        final ByteBufAllocator alloc = ctx.alloc();
-        final StreamMessage<DeframedMessage> deframed =
-                res.decode(deframer, alloc, byteBufConverter(alloc, grpcWebText));
-        deframer.setDeframedStreamMessage(deframed);
 
         if (endpointInitialized) {
-            deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+            subscribeToDeframer(res, deframer);
         } else {
             addPendingTask(() -> {
-                deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+                subscribeToDeframer(res, deframer);
             });
         }
         responseListener.onReady();
+    }
+
+    private void subscribeToDeframer(HttpResponse res, HttpStreamDeframer deframer) {
+        final ByteBufAllocator alloc = ctx.alloc();
+        final StreamMessage<DeframedMessage> deframed =
+                new DecodedHttpStreamMessage<>(new EventLoopStreamMessage<>(ctx.eventLoop()),
+                                               res, deframer, alloc, byteBufConverter(alloc, grpcWebText));
+        deframer.setDeframedStreamMessage(deframed);
+        deframed.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
     @Override

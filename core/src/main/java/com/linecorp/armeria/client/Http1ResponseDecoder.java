@@ -73,7 +73,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     @Override
     HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx, EventLoop eventLoop,
+            int id, DecodedHttpResponseWriter res, @Nullable ClientRequestContext ctx, EventLoop eventLoop,
             long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper resWrapper =

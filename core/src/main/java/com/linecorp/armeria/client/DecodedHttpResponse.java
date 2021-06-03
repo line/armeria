@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,31 +16,43 @@
 
 package com.linecorp.armeria.client;
 
+import java.util.concurrent.CompletableFuture;
+
+import org.reactivestreams.Subscriber;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.DefaultHttpResponse;
+import com.linecorp.armeria.common.stream.StreamCallbackListener;
+import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
 
-final class DecodedHttpResponse extends DefaultHttpResponse {
+final class DecodedHttpResponse implements DecodedHttpResponseWriter,
+                                           StreamCallbackListener<HttpObject> {
 
     private final EventLoop eventLoop;
+    private final StreamMessageAndWriter<HttpObject> delegate;
     @Nullable
     private InboundTrafficController inboundTrafficController;
     private long writtenBytes;
 
-    DecodedHttpResponse(EventLoop eventLoop) {
+    DecodedHttpResponse(EventLoop eventLoop, StreamMessageAndWriter<HttpObject> delegate) {
         this.eventLoop = eventLoop;
+        this.delegate = delegate;
+        delegate.setCallbackListener(this);
     }
 
-    void init(InboundTrafficController inboundTrafficController) {
+    @Override
+    public void init(InboundTrafficController inboundTrafficController) {
         this.inboundTrafficController = inboundTrafficController;
     }
 
-    long writtenBytes() {
+    @Override
+    public long writtenBytes() {
         return writtenBytes;
     }
 
@@ -50,8 +62,23 @@ final class DecodedHttpResponse extends DefaultHttpResponse {
     }
 
     @Override
+    public void abort() {
+        delegate.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        delegate.abort(cause);
+    }
+
+    @Override
+    public boolean isOpen() {
+        return delegate.isOpen();
+    }
+
+    @Override
     public boolean tryWrite(HttpObject obj) {
-        final boolean published = super.tryWrite(obj);
+        final boolean published = delegate.tryWrite(obj);
         if (published && obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
             assert inboundTrafficController != null;
@@ -62,11 +89,47 @@ final class DecodedHttpResponse extends DefaultHttpResponse {
     }
 
     @Override
-    protected void onRemoval(HttpObject obj) {
+    public CompletableFuture<Void> whenConsumed() {
+        return delegate.whenConsumed();
+    }
+
+    @Override
+    public void close() {
+        delegate.close();
+    }
+
+    @Override
+    public void close(Throwable cause) {
+        delegate.close(cause);
+    }
+
+    @Override
+    public void onRemoval(HttpObject obj) {
         if (obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
             assert inboundTrafficController != null;
             inboundTrafficController.dec(length);
         }
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return delegate.isEmpty();
+    }
+
+    @Override
+    public long demand() {
+        return delegate.demand();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenComplete() {
+        return delegate.whenComplete();
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        delegate.subscribe(subscriber, executor, options);
     }
 }

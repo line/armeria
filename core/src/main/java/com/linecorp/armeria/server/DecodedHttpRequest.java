@@ -51,4 +51,10 @@ interface DecodedHttpRequest extends HttpRequest {
      * @see Http2RequestDecoder#onRstStreamRead(ChannelHandlerContext, int, long)
      */
     void abortResponse(Throwable cause, boolean cancel);
+
+    long maxRequestLength();
+
+    long transferredBytes();
+
+    void increaseTransferredBytes(long delta);
 }

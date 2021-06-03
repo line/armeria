@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -140,7 +139,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
         try {
-            subscribe0(subscription.executor(), subscription.options());
+            callbackListener.onSubscribe(subscription.executor(), subscription.options());
             // 'invokedOnSubscribe' should be set after 'subscribe0()' is completed.
             // 'onComplete()' could be invoked by a subclass which overrides 'subscribe0()' to subscribe
             // to other Publishers.
@@ -161,15 +160,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         }
     }
 
-    /**
-     * Invoked when a subscriber subscribes.
-     */
-    protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {}
-
-    /**
-     * Invoked whenever a new demand is requested.
-     */
-    protected void onRequest(long n) {}
+    @Override
+    public void setCallbackListener(StreamCallbackListener<T> callbackListener) {
+        this.callbackListener = requireNonNull(callbackListener, "callbackListener");
+    }
 
     @Override
     public final void abort() {
@@ -250,7 +244,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void doRequest(long n) {
-        onRequest(n);
+        callbackListener.onRequest(n);
 
         final long oldDemand = demand;
         if (oldDemand >= Long.MAX_VALUE - n) {
@@ -435,12 +429,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         tryClose(cause);
     }
 
-    /**
-     * Tries to close the stream with the specified {@code cause}.
-     *
-     * @return {@code true} if the stream has been closed by this method call.
-     *         {@code false} if the stream has been closed already by other party.
-     */
+    @Override
     public final boolean tryClose(Throwable cause) {
         if (setState(State.OPEN, State.CLOSED)) {
             addObjectOrEvent(new CloseEvent(cause));
@@ -476,7 +465,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             try {
                 @SuppressWarnings("unchecked")
                 final T obj = (T) e;
-                onRemoval(obj);
+                callbackListener.onRemoval(obj);
             } finally {
                 StreamMessageUtil.closeOrAbort(e, cleanupCause);
             }

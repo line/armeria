@@ -35,6 +35,7 @@ import com.linecorp.armeria.shared.EventLoopJmhExecutor;
 
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Microbenchmarks of {@link StreamMessage Stream Messages}.
@@ -60,6 +61,7 @@ public class StreamMessageBenchmark {
             DEFAULT_STREAM_MESSAGE,
             FIXED_STREAM_MESSAGE,
             DEFERRED_FIXED_STREAM_MESSAGE,
+            EVENT_LOOP_STREAM_MESSAGE,
         }
 
         @Param
@@ -130,8 +132,8 @@ public class StreamMessageBenchmark {
 
     @Benchmark
     public long noExecutor(StreamObjects streamObjects) {
-        final StreamMessage<Integer> stream = newStream(streamObjects);
-        stream.subscribe(streamObjects.subscriber);
+        final StreamMessage<Integer> stream = newStream(streamObjects, EventLoopJmhExecutor.currentEventLoop());
+        stream.subscribe(streamObjects.subscriber, ImmediateEventExecutor.INSTANCE);
         streamObjects.writeAllValues(stream);
         return streamObjects.computedSum(stream);
     }
@@ -140,7 +142,7 @@ public class StreamMessageBenchmark {
     // deadlock.
     @Benchmark
     public long jmhEventLoop(StreamObjects streamObjects) {
-        final StreamMessage<Integer> stream = newStream(streamObjects);
+        final StreamMessage<Integer> stream = newStream(streamObjects, EventLoopJmhExecutor.currentEventLoop());
         stream.subscribe(streamObjects.subscriber, EventLoopJmhExecutor.currentEventLoop());
         streamObjects.writeAllValues(stream);
         return streamObjects.computedSum(stream);
@@ -150,7 +152,7 @@ public class StreamMessageBenchmark {
     // to compare approaches.
     @Benchmark
     public long notJmhEventLoop(StreamObjects streamObjects) throws Exception {
-        final StreamMessage<Integer> stream = newStream(streamObjects);
+        final StreamMessage<Integer> stream = newStream(streamObjects, ANOTHER_EVENT_LOOP);
         ANOTHER_EVENT_LOOP.execute(() -> {
             stream.subscribe(streamObjects.subscriber, ANOTHER_EVENT_LOOP);
             streamObjects.writeAllValues(stream);
@@ -159,6 +161,11 @@ public class StreamMessageBenchmark {
     }
 
     static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
+        return newStream(streamObjects, ANOTHER_EVENT_LOOP);
+    }
+
+    static StreamMessage<Integer> newStream(StreamObjects streamObjects,
+                                            EventLoop eventLoop) {
         switch (streamObjects.streamType) {
             case DEFAULT_STREAM_MESSAGE:
                 return new DefaultStreamMessage<>();
@@ -177,6 +184,8 @@ public class StreamMessageBenchmark {
                 final DeferredStreamMessage<Integer> stream = new DeferredStreamMessage<>();
                 stream.delegate(StreamMessage.of(streamObjects.values));
                 return stream;
+            case EVENT_LOOP_STREAM_MESSAGE:
+                return new EventLoopStreamMessage<>(eventLoop);
             default:
                 throw new Error();
         }

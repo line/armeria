@@ -40,7 +40,7 @@ import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
-abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
+abstract class AbstractStreamMessage<T> implements StreamMessage<T>, StreamCallbackListener<T> {
 
     static final Logger logger = LoggerFactory.getLogger(AbstractStreamMessage.class);
 
@@ -49,6 +49,8 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     static final CloseEvent ABORTED_CLOSE = new CloseEvent(AbortedStreamException.INSTANCE);
 
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
+
+    StreamCallbackListener<T> callbackListener = this;
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
@@ -94,14 +96,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      */
     abstract void cancel();
 
-    /**
-     * Invoked after an element is removed from the {@link StreamMessage} and before
-     * {@link Subscriber#onNext(Object)} is invoked.
-     *
-     * @param obj the removed element
-     */
-    protected void onRemoval(T obj) {}
-
     static void failLateSubscriber(SubscriptionImpl actualSubscription, SubscriptionImpl lateSubscription) {
         final Subscriber<?> actualSubscriber = actualSubscription.subscriber();
         final Subscriber<?> lateSubscriber = lateSubscription.subscriber();
@@ -127,7 +121,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     }
 
     final T prepareObjectForNotification(T o, boolean withPooledObjects) {
-        onRemoval(o);
+        callbackListener.onRemoval(o);
         return touchOrCopyAndClose(o, withPooledObjects);
     }
 

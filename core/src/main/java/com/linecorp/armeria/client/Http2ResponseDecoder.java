@@ -74,7 +74,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
+            int id, DecodedHttpResponseWriter res, @Nullable ClientRequestContext ctx,
             EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper resWrapper =

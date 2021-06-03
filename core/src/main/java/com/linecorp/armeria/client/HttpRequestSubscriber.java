@@ -64,7 +64,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private final ClientHttpObjectEncoder encoder;
     private final HttpResponseDecoder responseDecoder;
     private final HttpRequest request;
-    private final DecodedHttpResponse originalRes;
+    private final DecodedHttpResponseWriter originalRes;
     private final ClientRequestContext ctx;
     private final RequestLogBuilder logBuilder;
     private final long timeoutMillis;
@@ -83,7 +83,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private boolean loggedRequestFirstBytesTransferred;
 
     HttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
-                          HttpRequest request, DecodedHttpResponse originalRes,
+                          HttpRequest request, DecodedHttpResponseWriter originalRes,
                           ClientRequestContext ctx, long timeoutMillis) {
         this.ch = ch;
         this.encoder = encoder;

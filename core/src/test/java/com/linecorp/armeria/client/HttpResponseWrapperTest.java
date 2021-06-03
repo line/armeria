@@ -30,18 +30,22 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import reactor.test.StepVerifier;
 
 class HttpResponseWrapperTest {
 
     @Test
     void headersAndData() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final EventLoop eventLoop = CommonPools.workerGroup().next();
+        final DecodedHttpResponse res =
+                new DecodedHttpResponse(eventLoop, new DefaultStreamMessage<>());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(
@@ -58,7 +62,9 @@ class HttpResponseWrapperTest {
 
     @Test
     void headersAndTrailers() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final EventLoop eventLoop = CommonPools.workerGroup().next();
+        final DecodedHttpResponse res =
+                new DecodedHttpResponse(eventLoop, new DefaultStreamMessage<>());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
@@ -74,7 +80,9 @@ class HttpResponseWrapperTest {
 
     @Test
     void dataIsIgnoreAfterSecondHeaders() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final EventLoop eventLoop = CommonPools.workerGroup().next();
+        final DecodedHttpResponse res =
+                new DecodedHttpResponse(eventLoop, new DefaultStreamMessage<>());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
@@ -92,7 +100,9 @@ class HttpResponseWrapperTest {
 
     @Test
     void splitTrailersIsIgnored() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final EventLoop eventLoop = CommonPools.workerGroup().next();
+        final DecodedHttpResponse res =
+                new DecodedHttpResponse(eventLoop, new DefaultStreamMessage<>());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
@@ -109,7 +119,9 @@ class HttpResponseWrapperTest {
 
     @Test
     void splitTrailersAfterDataIsIgnored() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final EventLoop eventLoop = CommonPools.workerGroup().next();
+        final DecodedHttpResponse res =
+                new DecodedHttpResponse(eventLoop, new DefaultStreamMessage<>());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(
@@ -129,7 +141,9 @@ class HttpResponseWrapperTest {
 
     @Test
     void informationalHeadersHeadersDataAndTrailers() throws Exception {
-        final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
+        final EventLoop eventLoop = CommonPools.workerGroup().next();
+        final DecodedHttpResponse res =
+                new DecodedHttpResponse(eventLoop, new DefaultStreamMessage<>());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(100))).isTrue();
@@ -150,7 +164,7 @@ class HttpResponseWrapperTest {
                     .verify();
     }
 
-    private static HttpResponseWrapper httpResponseWrapper(DecodedHttpResponse res) {
+    private static HttpResponseWrapper httpResponseWrapper(DecodedHttpResponseWriter res) {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext cctx = ClientRequestContext.builder(req).build();
         final InboundTrafficController controller = InboundTrafficController.disabled();

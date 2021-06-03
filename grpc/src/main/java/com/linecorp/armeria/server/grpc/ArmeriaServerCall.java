@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.stream.EventLoopStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -69,6 +70,7 @@ import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
+import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -182,7 +184,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 new HttpStreamDeframer(decompressorRegistry, ctx, this, statusFunction,
                                        maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
-        deframedRequest = req.decode(requestDeframer, alloc, byteBufConverter(alloc, grpcWebText));
+        deframedRequest = new DecodedHttpStreamMessage<>(
+                new EventLoopStreamMessage<>(ctx.eventLoop()), req, requestDeframer, alloc,
+                byteBufConverter(alloc, grpcWebText));
         requestDeframer.setDeframedStreamMessage(deframedRequest);
         responseFramer = new ArmeriaMessageFramer(alloc, maxOutboundMessageSizeBytes, grpcWebText);
 

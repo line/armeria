@@ -61,7 +61,7 @@ interface HttpSession {
 
         @Override
         public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
-                           HttpRequest req, DecodedHttpResponse res) {
+                           HttpRequest req, DecodedHttpResponseWriter res) {
             res.close(ClosedSessionException.get());
         }
 
@@ -104,7 +104,7 @@ interface HttpSession {
     boolean incrementNumUnfinishedResponses();
 
     void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
-                HttpRequest req, DecodedHttpResponse res);
+                HttpRequest req, DecodedHttpResponseWriter res);
 
     void retryWithH1C();
 

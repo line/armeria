@@ -26,11 +26,15 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.EventLoopStreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -149,17 +153,24 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 // Close the request early when it is sure that there will be neither content nor trailers.
                 req = new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true);
             } else {
-                req = new DefaultDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true,
-                                                    inboundTrafficController,
-                                                    // FIXME(trustin): Use a different maxRequestLength for
-                                                    //                 a different host.
-                                                    cfg.defaultVirtualHost().maxRequestLength());
+                final MediaType mediaType = armeriaRequestHeaders.contentType();
+                final StreamMessageAndWriter<HttpObject> writer;
+                if (mediaType != null && mediaType.isGrpc()) {
+                    writer = new EventLoopStreamMessage<>(eventLoop);
+                } else {
+                    writer = new DefaultStreamMessage<>();
+                }
+                req = new DefaultDecodedHttpRequest(
+                        writer, eventLoop, id, streamId, armeriaRequestHeaders, true, inboundTrafficController,
+                        // FIXME(trustin): Use a different maxRequestLength for a different virtual
+                        //                 host.
+                        cfg.defaultVirtualHost().maxRequestLength());
             }
 
             requests.put(streamId, req);
             ctx.fireChannelRead(req);
         } else {
-            final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
+            final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
             try {
                 // Trailers is received. The decodedReq will be automatically closed.
                 decodedReq.write(ArmeriaHttpUtil.toArmeria(headers, true, endOfStream));
@@ -233,7 +244,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             return padding;
         }
 
-        final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
+        final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
         decodedReq.increaseTransferredBytes(dataLength);
 
         final long maxContentLength = decodedReq.maxRequestLength();

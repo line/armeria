@@ -29,12 +29,10 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
-import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -66,7 +64,7 @@ class StreamMessageTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(StreamProvider.class)
+    @MethodSource("streamProviderArgs")
     void full_writeFirst(StreamMessage<Integer> stream, List<Integer> values) {
         writeTenIntegers(stream);
         stream.subscribe(new ResultCollectingSubscriber() {
@@ -79,7 +77,7 @@ class StreamMessageTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(StreamProvider.class)
+    @MethodSource("streamProviderArgs")
     void full_writeAfter(StreamMessage<Integer> stream, List<Integer> values) {
         stream.subscribe(new ResultCollectingSubscriber() {
             @Override
@@ -95,7 +93,7 @@ class StreamMessageTest {
     // reactive streams spec 3.03. If it were allowed, the order of processing would be incorrect and the test
     // would fail.
     @ParameterizedTest
-    @ArgumentsSource(StreamProvider.class)
+    @MethodSource("streamProviderArgs")
     void flowControlled_writeThenDemandThenProcess(StreamMessage<Integer> stream, List<Integer> values) {
         writeTenIntegers(stream);
         stream.subscribe(new ResultCollectingSubscriber() {
@@ -117,7 +115,7 @@ class StreamMessageTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(StreamProvider.class)
+    @MethodSource("streamProviderArgs")
     void flowControlled_writeThenDemandThenProcess_eventLoop(StreamMessage<Integer> stream,
                                                              List<Integer> values) {
         writeTenIntegers(stream);
@@ -142,7 +140,7 @@ class StreamMessageTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(StreamProvider.class)
+    @MethodSource("streamProviderArgs")
     void flowControlled_writeThenProcessThenDemand(StreamMessage<Integer> stream, List<Integer> values) {
         writeTenIntegers(stream);
         stream.subscribe(new ResultCollectingSubscriber() {
@@ -164,12 +162,10 @@ class StreamMessageTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(PooledHttpDataStreamProvider.class)
+    @MethodSource("pooledHttpDataStreamProviderArgs")
     void releaseOnConsumption_HttpData(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
-        if (stream instanceof StreamWriter) {
-            ((StreamWriter<HttpData>) stream).write(data);
-            ((StreamWriter<?>) stream).close();
-        }
+        writeData(data, stream);
+        close(stream);
         assertThat(data.isPooled()).isTrue();
         assertThat(buf.refCnt()).isOne();
 
@@ -199,12 +195,27 @@ class StreamMessageTest {
         await().untilAsserted(() -> assertThat(completed).isTrue());
     }
 
-    @ParameterizedTest
-    @ArgumentsSource(PooledHttpDataStreamProvider.class)
-    void releaseWithZeroDemand(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
-        if (stream instanceof StreamWriter) {
-            ((StreamWriter<Object>) stream).write(data);
+    @SuppressWarnings("unchecked")
+    private static void writeData(HttpData data, StreamMessage<HttpData> stream) {
+        if (stream instanceof EventLoopStreamMessage) {
+            eventLoop.get().execute(() -> ((StreamWriter<HttpData>) stream).write(data));
+        } else if (stream instanceof StreamWriter) {
+            ((StreamWriter<HttpData>) stream).write(data);
         }
+    }
+
+    private static void close(StreamMessage<HttpData> stream) {
+        if (stream instanceof EventLoopStreamMessage) {
+            eventLoop.get().execute(((StreamWriter<?>) stream)::close);
+        } else if (stream instanceof StreamWriter) {
+            ((StreamWriter<?>) stream).close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("pooledHttpDataStreamProviderArgs")
+    void releaseWithZeroDemand(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
+        writeData(data, stream);
         stream.subscribe(new Subscriber<Object>() {
             @Override
             public void onSubscribe(Subscription subscription) {
@@ -234,12 +245,10 @@ class StreamMessageTest {
     }
 
     @ParameterizedTest
-    @ArgumentsSource(PooledHttpDataStreamProvider.class)
+    @MethodSource("pooledHttpDataStreamProviderArgs")
     void releaseWithZeroDemandAndClosedStream(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
-        if (stream instanceof StreamWriter) {
-            ((StreamWriter<Object>) stream).write(data);
-            ((StreamWriter<Object>) stream).close();
-        }
+        writeData(data, stream);
+        close(stream);
 
         stream.subscribe(new Subscriber<Object>() {
             @Override
@@ -278,32 +287,33 @@ class StreamMessageTest {
                     .verify();
     }
 
-    private static class StreamProvider implements ArgumentsProvider {
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(
-                    arguments(new DefaultStreamMessage<>(), TEN_INTEGERS),
-                    arguments(StreamMessage.of(), ImmutableList.of()),
-                    arguments(StreamMessage.of(0), ImmutableList.of(0)),
-                    arguments(StreamMessage.of(0, 1), ImmutableList.of(0, 1)),
-                    arguments(StreamMessage.of(TEN_INTEGERS.toArray(new Integer[0])), TEN_INTEGERS));
-        }
+    private static Stream<Arguments> streamProviderArgs() {
+        return Stream.of(
+                arguments(new DefaultStreamMessage<>(), TEN_INTEGERS),
+                arguments(new EventLoopStreamMessage<>(eventLoop.get()), TEN_INTEGERS),
+                arguments(StreamMessage.of(), ImmutableList.of()),
+                arguments(StreamMessage.of(0), ImmutableList.of(0)),
+                arguments(StreamMessage.of(0, 1), ImmutableList.of(0, 1)),
+                arguments(StreamMessage.of(TEN_INTEGERS.toArray(new Integer[0])), TEN_INTEGERS));
     }
 
-    private static class PooledHttpDataStreamProvider implements ArgumentsProvider {
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            final ByteBuf defaultBuf = newPooledBuffer();
-            final HttpData defaultData = HttpData.wrap(defaultBuf).withEndOfStream();
-            final DefaultStreamMessage<HttpData> defaultStream = new DefaultStreamMessage<>();
+    private static Stream<Arguments> pooledHttpDataStreamProviderArgs() {
+        final ByteBuf defaultBuf = newPooledBuffer();
+        final HttpData defaultData = HttpData.wrap(defaultBuf).withEndOfStream();
+        final DefaultStreamMessage<HttpData> defaultStream = new DefaultStreamMessage<>();
 
-            final ByteBuf fixedBuf = newPooledBuffer();
-            final HttpData fixedData = HttpData.wrap(fixedBuf).withEndOfStream();
-            final StreamMessage<HttpData> fixedStream = StreamMessage.of(fixedData);
+        final ByteBuf fixedBuf = newPooledBuffer();
+        final HttpData fixedData = HttpData.wrap(fixedBuf).withEndOfStream();
+        final StreamMessage<HttpData> fixedStream = StreamMessage.of(fixedData);
 
-            return Stream.of(arguments(defaultData, defaultBuf, defaultStream),
-                             arguments(fixedData, fixedBuf, fixedStream));
-        }
+        final ByteBuf eventLoopBuf = newPooledBuffer();
+        final HttpData eventLoopData = HttpData.wrap(eventLoopBuf).withEndOfStream();
+        final EventLoopStreamMessage<Object> eventLoopStreamMessage = new EventLoopStreamMessage<>(
+                eventLoop.get());
+
+        return Stream.of(arguments(defaultData, defaultBuf, defaultStream),
+                         arguments(fixedData, fixedBuf, fixedStream),
+                         arguments(eventLoopData, eventLoopBuf, eventLoopStreamMessage));
     }
 
     private void assertSuccess(List<Integer> values) {
@@ -334,8 +344,15 @@ class StreamMessageTest {
         return PooledByteBufAllocator.DEFAULT.buffer().writeByte(0);
     }
 
+    @SuppressWarnings("unchecked")
     private static void writeTenIntegers(StreamMessage<Integer> stream) {
-        if (stream instanceof StreamWriter) {
+        if (stream instanceof EventLoopStreamMessage) {
+            eventLoop.get().execute(() -> {
+                final StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
+                TEN_INTEGERS.forEach(writer::write);
+                writer.close();
+            });
+        } else if (stream instanceof StreamWriter) {
             final StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
             TEN_INTEGERS.forEach(writer::write);
             writer.close();

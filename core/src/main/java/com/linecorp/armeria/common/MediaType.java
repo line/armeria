@@ -470,6 +470,23 @@ public final class MediaType {
      */
     public static final MediaType GEO_JSON = createConstant(APPLICATION_TYPE, "geo+json");
 
+    // GRPC media types.
+    public static final MediaType GRPC = createConstant(APPLICATION_TYPE, "grpc");
+
+    public static final MediaType GRPC_JSON = createConstant(APPLICATION_TYPE, "grpc+json");
+
+    public static final MediaType GRPC_PROTO = createConstant(APPLICATION_TYPE, "grpc+proto");
+
+    public static final MediaType GRPC_WEB = createConstant(APPLICATION_TYPE, "grpc-web");
+
+    public static final MediaType GRPC_WEB_JSON = createConstant(APPLICATION_TYPE, "grpc-web+json");
+
+    public static final MediaType GRPC_WEB_PROTO = createConstant(APPLICATION_TYPE, "grpc-web+proto");
+
+    public static final MediaType GRPC_WEB_TEXT = createConstant(APPLICATION_TYPE, "grpc-web-text");
+
+    public static final MediaType GRPC_WEB_TEXT_PROTO = createConstant(APPLICATION_TYPE, "grpc-web-text+proto");
+
     public static final MediaType GZIP = createConstant(APPLICATION_TYPE, "x-gzip");
 
     /**
@@ -954,6 +971,15 @@ public final class MediaType {
      */
     public boolean isJson() {
         return is(JSON) || subtype().endsWith("+json");
+    }
+
+    /**
+     * TBU.
+     */
+    public boolean isGrpc() {
+        return this == GRPC || this == GRPC_JSON || this == GRPC_PROTO || this == GRPC_WEB ||
+               this == GRPC_WEB_JSON || this == GRPC_WEB_PROTO || this == GRPC_WEB_TEXT ||
+               this == GRPC_WEB_TEXT_PROTO;
     }
 
     /**

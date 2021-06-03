@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,18 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.HttpRequestWriter;
 
 /**
- * An output of {@link HttpDecoder} which holds the decoded data.
+ * TBU.
  */
-@UnstableApi
-@FunctionalInterface
-public interface HttpDecoderOutput<T> extends StreamCallbackListener<T> {
-    /**
-     * Adds the decoded item to this {@link HttpDecoderOutput}.
-     */
-    void add(T e);
+public interface DecodedHttpRequestWriter extends HttpRequestWriter, DecodedHttpRequest {
 }

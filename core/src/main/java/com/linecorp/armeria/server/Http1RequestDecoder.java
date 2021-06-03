@@ -34,6 +34,9 @@ import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.EventLoopStreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
@@ -209,13 +212,19 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         this.req = req = new EmptyContentDecodedHttpRequest(
                                 eventLoop, id, 1, armeriaRequestHeaders, keepAlive);
                     } else {
+                        final MediaType mediaType = armeriaRequestHeaders.contentType();
+                        final StreamMessageAndWriter<com.linecorp.armeria.common.HttpObject> writer;
+                        if (mediaType != null && mediaType.isGrpc()) {
+                            writer = new EventLoopStreamMessage<>(eventLoop);
+                        } else {
+                            writer = new DefaultStreamMessage<>();
+                        }
+                        // FIXME(trustin): Use a different maxRequestLength for a different virtual
+                        //                 host.
                         this.req = req = new DefaultDecodedHttpRequest(
-                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive, inboundTrafficController,
-                                // FIXME(trustin): Use a different maxRequestLength for a different virtual
-                                //                 host.
-                                cfg.defaultVirtualHost().maxRequestLength());
+                                writer, eventLoop, id, 1, armeriaRequestHeaders, keepAlive,
+                                inboundTrafficController, cfg.defaultVirtualHost().maxRequestLength());
                     }
-
                     ctx.fireChannelRead(req);
                 } else {
                     fail(id, HttpResponseStatus.BAD_REQUEST, DATA_INVALID_DECODER_STATE);
@@ -227,8 +236,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             if (msg instanceof LastHttpContent && req instanceof EmptyContentDecodedHttpRequest) {
                 this.req = null;
             } else if (msg instanceof HttpContent) {
-                assert req instanceof DefaultDecodedHttpRequest;
-                final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
+                assert req instanceof DecodedHttpRequestWriter;
+                final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {

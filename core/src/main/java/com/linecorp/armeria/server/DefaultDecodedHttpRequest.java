@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,25 +16,38 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.concurrent.CompletableFuture;
+
+import org.reactivestreams.Subscriber;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.DefaultHttpRequest;
+import com.linecorp.armeria.common.stream.StreamCallbackListener;
+import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.EventExecutor;
 
-final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements DecodedHttpRequest {
+/**
+ * TODO: consider deduping with {@link EmptyContentDecodedHttpRequest}.
+ */
+final class DefaultDecodedHttpRequest implements DecodedHttpRequestWriter,
+                                                 StreamCallbackListener<HttpObject> {
 
+    private final StreamMessageAndWriter<HttpObject> delegate;
     private final EventLoop eventLoop;
     private final int id;
     private final int streamId;
     private final boolean keepAlive;
     private final InboundTrafficController inboundTrafficController;
     private final long maxRequestLength;
+    private final RequestHeaders headers;
     @Nullable
     private ServiceRequestContext ctx;
     private long transferredBytes;
@@ -43,17 +56,20 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
     private HttpResponse response;
     private boolean isResponseAborted;
 
-    DefaultDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
+    DefaultDecodedHttpRequest(StreamMessageAndWriter<HttpObject> delegate,
+                              EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                               boolean keepAlive, InboundTrafficController inboundTrafficController,
                               long maxRequestLength) {
-        super(headers);
-
+        this.delegate = delegate;
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
         this.keepAlive = keepAlive;
         this.inboundTrafficController = inboundTrafficController;
         this.maxRequestLength = maxRequestLength;
+        this.headers = headers;
+
+        delegate.setCallbackListener(this);
     }
 
     @Override
@@ -76,15 +92,18 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
         return keepAlive;
     }
 
-    long maxRequestLength() {
+    @Override
+    public long maxRequestLength() {
         return ctx != null ? ctx.maxRequestLength() : maxRequestLength;
     }
 
-    long transferredBytes() {
+    @Override
+    public long transferredBytes() {
         return transferredBytes;
     }
 
-    void increaseTransferredBytes(long delta) {
+    @Override
+    public void increaseTransferredBytes(long delta) {
         if (transferredBytes > Long.MAX_VALUE - delta) {
             transferredBytes = Long.MAX_VALUE;
         } else {
@@ -93,8 +112,44 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
     }
 
     @Override
+    public boolean isOpen() {
+        return delegate.isOpen();
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return delegate.isEmpty();
+    }
+
+    @Override
+    public long demand() {
+        return delegate.demand();
+    }
+
+    @Override
+    public CompletableFuture<Void> whenComplete() {
+        return delegate.whenComplete();
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        delegate.subscribe(subscriber, executor, options);
+    }
+
+    @Override
     public EventLoop defaultSubscriberExecutor() {
         return eventLoop;
+    }
+
+    @Override
+    public void abort() {
+        delegate.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        delegate.abort(cause);
     }
 
     @Override
@@ -103,14 +158,14 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
 
         final boolean published;
         if (obj instanceof HttpHeaders) { // HTTP trailers.
-            published = super.tryWrite(obj);
+            published = delegate.tryWrite(obj);
             ctx.logBuilder().requestTrailers((HttpHeaders) obj);
             // Close this stream because HTTP trailers is the last element of the request.
             close();
         } else {
             final HttpData httpData = (HttpData) obj;
             httpData.touch(ctx);
-            published = super.tryWrite(httpData);
+            published = delegate.tryWrite(httpData);
             if (published) {
                 ctx.logBuilder().increaseRequestLength(httpData);
                 inboundTrafficController.inc(httpData.length());
@@ -124,7 +179,22 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
     }
 
     @Override
-    protected void onRemoval(HttpObject obj) {
+    public CompletableFuture<Void> whenConsumed() {
+        return delegate.whenConsumed();
+    }
+
+    @Override
+    public void close() {
+        delegate.close();
+    }
+
+    @Override
+    public void close(Throwable cause) {
+        delegate.close(cause);
+    }
+
+    @Override
+    public void onRemoval(HttpObject obj) {
         if (obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
             inboundTrafficController.dec(length);
@@ -154,9 +224,14 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
         }
 
         // Try to close the request first, then abort the response if it is already closed.
-        if (!tryClose(cause) &&
+        if (!delegate.tryClose(cause) &&
             response != null && !response.isComplete()) {
             response.abort(cause);
         }
+    }
+
+    @Override
+    public RequestHeaders headers() {
+        return headers;
     }
 }

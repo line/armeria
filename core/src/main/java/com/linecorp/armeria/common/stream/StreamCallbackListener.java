@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,21 +16,30 @@
 
 package com.linecorp.armeria.common.stream;
 
+import org.reactivestreams.Subscriber;
+
+import io.netty.util.concurrent.EventExecutor;
+
 /**
- * A type which is both a {@link StreamMessage} and a {@link StreamWriter}. This type is mainly used by tests
- * which need to exercise both functionality.
+ * TBU.
  */
-public interface StreamMessageAndWriter<T> extends StreamMessage<T>, StreamWriter<T> {
-    /**
-     * Tries to close the stream with the specified {@code cause}.
-     *
-     * @return {@code true} if the stream has been closed by this method call.
-     *         {@code false} if the stream has been closed already by other party.
-     */
-    boolean tryClose(Throwable cause);
+public interface StreamCallbackListener<T> {
 
     /**
-     * TBU.
+     * Invoked after an element is removed from the {@link StreamMessage} and before
+     * {@link Subscriber#onNext(Object)} is invoked.
+     *
+     * @param t the removed element
      */
-    void setCallbackListener(StreamCallbackListener<T> callbackListener);
+    default void onRemoval(T t) {}
+
+    /**
+     * Invoked whenever a new demand is requested.
+     */
+    default void onRequest(long n) {}
+
+    /**
+     * Invoked when a subscriber subscribes.
+     */
+    default void onSubscribe(EventExecutor executor, SubscriptionOption[] options) {}
 }

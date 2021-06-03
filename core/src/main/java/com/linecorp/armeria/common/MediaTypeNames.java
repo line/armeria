@@ -301,6 +301,38 @@ public final class MediaTypeNames {
      */
     public static final String GRAPHQL_JSON = "application/graphql+json";
     /**
+     * {@value #GRPC}.
+     */
+    public static final String GRPC = "application/grpc";
+    /**
+     * {@value #GRPC_JSON}.
+     */
+    public static final String GRPC_JSON = "application/grpc+json";
+    /**
+     * {@value #GRPC_PROTO}.
+     */
+    public static final String GRPC_PROTO = "application/grpc+proto";
+    /**
+     * {@value #GRPC_WEB}.
+     */
+    public static final String GRPC_WEB = "application/grpc-web";
+    /**
+     * {@value #GRPC_WEB_JSON}.
+     */
+    public static final String GRPC_WEB_JSON = "application/grpc-web+json";
+    /**
+     * {@value #GRPC_WEB_PROTO}.
+     */
+    public static final String GRPC_WEB_PROTO = "application/grpc-web+proto";
+    /**
+     * {@value #GRPC_WEB_TEXT}.
+     */
+    public static final String GRPC_WEB_TEXT = "application/grpc-web-text";
+    /**
+     * {@value #GRPC_WEB_TEXT_PROTO}.
+     */
+    public static final String GRPC_WEB_TEXT_PROTO = "application/grpc-web-text+proto";
+    /**
      * {@value #GZIP}.
      */
     public static final String GZIP = "application/x-gzip";

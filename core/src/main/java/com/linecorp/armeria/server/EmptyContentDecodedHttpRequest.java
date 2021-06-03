@@ -162,4 +162,17 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
             response.abort(cause);
         }
     }
+
+    @Override
+    public long maxRequestLength() {
+        return 0;
+    }
+
+    @Override
+    public long transferredBytes() {
+        return 0;
+    }
+
+    @Override
+    public void increaseTransferredBytes(long delta) {}
 }

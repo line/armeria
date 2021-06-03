@@ -28,11 +28,14 @@ import com.linecorp.armeria.client.proxy.ProxyConfig;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
+import com.linecorp.armeria.common.stream.EventLoopStreamMessage;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -84,7 +87,14 @@ final class HttpClientDelegate implements HttpClient {
 
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
-        final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
+
+        final MediaType contentType = req.contentType();
+        final DecodedHttpResponseWriter res;
+        if (contentType != null && contentType.isGrpc()) {
+            res = new DecodedHttpResponse(eventLoop, new EventLoopStreamMessage<>(eventLoop));
+        } else {
+            res = new DecodedHttpResponse(eventLoop, new DefaultStreamMessage<>());
+        }
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
@@ -135,7 +145,7 @@ final class HttpClientDelegate implements HttpClient {
     }
 
     private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint,
-                                             HttpRequest req, DecodedHttpResponse res,
+                                             HttpRequest req, DecodedHttpResponseWriter res,
                                              ClientConnectionTimingsBuilder timingsBuilder) {
         if (ctx.eventLoop().inEventLoop()) {
             acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder);
@@ -147,7 +157,7 @@ final class HttpClientDelegate implements HttpClient {
     }
 
     private void acquireConnectionAndExecute0(ClientRequestContext ctx, Endpoint endpoint,
-                                              HttpRequest req, DecodedHttpResponse res,
+                                              HttpRequest req, DecodedHttpResponseWriter res,
                                               ClientConnectionTimingsBuilder timingsBuilder) {
         // IP address should be resolved already.
         assert endpoint.hasIpAddr();
@@ -232,7 +242,7 @@ final class HttpClientDelegate implements HttpClient {
     }
 
     private static void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,
-                                  HttpRequest req, DecodedHttpResponse res) {
+                                  HttpRequest req, DecodedHttpResponseWriter res) {
         final Channel channel = pooledChannel.get();
         final HttpSession session = HttpSession.get(channel);
         res.init(session.inboundTrafficController());

@@ -25,8 +25,10 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
@@ -110,10 +112,11 @@ public class DefaultDecodedHttpRequestTest {
 
     private static DefaultDecodedHttpRequest decodedHttpRequest(RequestHeaders headers,
                                                                 ServiceRequestContext sctx) {
-        final DefaultDecodedHttpRequest
-                request = new DefaultDecodedHttpRequest(sctx.eventLoop(), 1, 1, headers, true,
-                                                        InboundTrafficController.disabled(),
-                                                        sctx.maxRequestLength());
+        final DefaultStreamMessage<HttpObject> writer = new DefaultStreamMessage<>();
+        final DefaultDecodedHttpRequest request =
+                new DefaultDecodedHttpRequest(writer, sctx.eventLoop(), 1, 1, headers, true,
+                                              InboundTrafficController.disabled(),
+                                              sctx.maxRequestLength());
         request.init(sctx);
         return request;
     }

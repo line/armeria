@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.HttpHeaderUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
@@ -415,7 +416,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             ctx.writeAndFlush(upgradeReq);
 
             final Http2ResponseDecoder responseDecoder = this.responseDecoder;
-            final DecodedHttpResponse res = new DecodedHttpResponse(ctx.channel().eventLoop());
+            final DecodedHttpResponseWriter res = new DecodedHttpResponse(
+                    ctx.channel().eventLoop(), new DefaultStreamMessage<>());
 
             res.init(responseDecoder.inboundTrafficController());
             res.subscribe(new Subscriber<HttpObject>() {

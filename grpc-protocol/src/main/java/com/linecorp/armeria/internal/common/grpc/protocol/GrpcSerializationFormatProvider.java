@@ -16,7 +16,14 @@
 
 package com.linecorp.armeria.internal.common.grpc.protocol;
 
-import static com.linecorp.armeria.common.MediaType.create;
+import static com.linecorp.armeria.common.MediaType.GRPC;
+import static com.linecorp.armeria.common.MediaType.GRPC_JSON;
+import static com.linecorp.armeria.common.MediaType.GRPC_PROTO;
+import static com.linecorp.armeria.common.MediaType.GRPC_WEB;
+import static com.linecorp.armeria.common.MediaType.GRPC_WEB_JSON;
+import static com.linecorp.armeria.common.MediaType.GRPC_WEB_PROTO;
+import static com.linecorp.armeria.common.MediaType.GRPC_WEB_TEXT;
+import static com.linecorp.armeria.common.MediaType.GRPC_WEB_TEXT_PROTO;
 
 import java.util.Set;
 
@@ -32,13 +39,11 @@ public final class GrpcSerializationFormatProvider extends SerializationFormatPr
     @Override
     protected Set<Entry> entries() {
         return ImmutableSet.of(
-                new Entry("gproto", create("application", "grpc+proto"), create("application", "grpc")),
-                new Entry("gjson", create("application", "grpc+json")),
-                new Entry("gproto-web", create("application", "grpc-web+proto"),
-                          create("application", "grpc-web")),
-                new Entry("gjson-web", create("application", "grpc-web+json")),
-                new Entry("gproto-web-text", create("application", "grpc-web-text+proto"),
-                          create("application", "grpc-web-text")));
+                new Entry("gproto", GRPC_PROTO, GRPC),
+                new Entry("gjson", GRPC_JSON),
+                new Entry("gproto-web", GRPC_WEB_PROTO, GRPC_WEB),
+                new Entry("gjson-web", GRPC_WEB_JSON),
+                new Entry("gproto-web-text", GRPC_WEB_TEXT_PROTO, GRPC_WEB_TEXT));
     }
 
     @Override

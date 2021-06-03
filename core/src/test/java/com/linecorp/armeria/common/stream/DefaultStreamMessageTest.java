@@ -239,7 +239,7 @@ class DefaultStreamMessageTest {
         final AtomicReference<DefaultStreamMessage<String>> streamMessageRef = new AtomicReference<>();
         streamMessageRef.set(new DefaultStreamMessage<String>() {
             @Override
-            protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {
+            public void onSubscribe(EventExecutor executor, SubscriptionOption[] options) {
                 streamMessageRef.get().close();
             }
         });
