@@ -24,7 +24,7 @@ Just check that you have prepared the [prerequisites](./tutorial-blog-rest-intro
 Start by creating a main class:
 
 1. Create a Java file named Main. For the full version of the file, check the [service sample code](https://github.com/line/armeria-examples/blob/master/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
-2. Add required import statements as shown below.
+2. Add required import statements.
 3. Declare a class, `Main`.
 4. (Optional) Add a logger in the class for logging messages.
 
@@ -45,7 +45,7 @@ public final class Main {
 
 ## 2. Create a server instance
 
-To create a server instance, use Armeria's <type://ServerBuilder>. Add the method, `newServer()`, as shown below, in the `Main` class. Since server instances require at least one service to run with, add a dummy service returning `"Hello, Armeria!"` for the mere purpose of checking that the server gets launched and runs.
+To create a server instance, use Armeria's <type://ServerBuilder>. Add the method, `newServer()` in the `Main` class. Since server instances require at least one service to run with, add a dummy service returning `"Hello, Armeria!"` for the mere purpose of checking that the server gets launched and runs.
 
 ```java filename=Main.java highlight=6,7
 static Server newServer(int port) {
@@ -65,7 +65,7 @@ Later on, when we build our blog service, we will come back to this part of the 
 
 Add the code to start the server with the dummy service.
 
-1. In the `Main` class, add the `main()` method as shown below.
+1. In the `Main` class, add the `main()` method.
 2. Call the `newServer()` method we implemented in step 2. Let's set the port to `8080` as in line 2.
 3. Start the server as in line 9.
 

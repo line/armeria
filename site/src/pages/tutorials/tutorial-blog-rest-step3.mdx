@@ -26,7 +26,7 @@ You need the BlogPost.java file, created from [step 2](./tutorial-blog-rest-step
 ## 0. Create a service file
 
 1. Create a service file, BlogService.java.
-2. Declare a class, `BlogService`, in the file as shown below. Import required files as you go along the tutorial or copy all from the [sample file](https://github.com/line/armeria-examples/blob/master/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogService.java).
+2. Declare a class, `BlogService`, in the file. Import required files as you go along the tutorial or copy all from the [sample file](https://github.com/line/armeria-examples/blob/master/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogService.java).
   ```java filename=BlogService.java
   public final class BlogService {
 
@@ -152,7 +152,7 @@ Now, it's time to return a response to our client. As the response, on top of th
     ...
   }
   ```
-2. Create and return an HTTP response using Armeria's <type://HttpResponse> and include the information of the post created, as shown below, in the `createBlogPost()` method.
+2. Create and return an HTTP response using Armeria's <type://HttpResponse> and include the information of the post created in the `createBlogPost()` method.
   ```java filename=BlogService.java
   public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingException {
     ...
