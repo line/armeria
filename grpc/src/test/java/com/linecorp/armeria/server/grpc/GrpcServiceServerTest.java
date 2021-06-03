@@ -82,7 +82,6 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -395,7 +394,7 @@ class GrpcServiceServerTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.workerGroup(1);
             sb.maxRequestLength(0);
 
             sb.service(
@@ -447,7 +446,7 @@ class GrpcServiceServerTest {
     static final ServerExtension serverWithBlockingExecutor = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.workerGroup(1);
             sb.maxRequestLength(0);
 
             sb.serviceUnder("/",
@@ -473,7 +472,7 @@ class GrpcServiceServerTest {
     static final ServerExtension serverWithNoMaxMessageSize = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.workerGroup(1);
             sb.maxRequestLength(0);
 
             sb.serviceUnder("/",
@@ -492,7 +491,7 @@ class GrpcServiceServerTest {
     static final ServerExtension serverWithLongMaxRequestLimit = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.workerGroup(1);
             sb.maxRequestLength(Long.MAX_VALUE);
 
             sb.serviceUnder("/",

@@ -66,6 +66,9 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.BlockingTaskExecutorBuilder;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -418,6 +421,19 @@ public final class ServerBuilder {
     }
 
     /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * performing socket I/O and running {@link Service#serve(ServiceRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    public ServerBuilder workerGroup(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
+        return this;
+    }
+
+    /**
      * Sets the {@link Executor} which will invoke the callbacks of {@link Server#start()},
      * {@link Server#stop()} and {@link ServerListener}. If not set, {@link GlobalEventExecutor} will be used
      * by default.
@@ -689,6 +705,21 @@ public final class ServerBuilder {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
         return this;
+    }
+
+    /**
+     * Uses a newly created {@link ScheduledExecutorService} with the specified number of threads dedicated to
+     * the execution of blocking tasks or invocations.
+     * The executor {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of threads in the executor
+     */
+    public ServerBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
     }
 
     /**
