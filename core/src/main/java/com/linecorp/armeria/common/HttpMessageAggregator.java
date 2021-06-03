@@ -24,9 +24,6 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -41,8 +38,6 @@ final class HttpMessageAggregator {
 
     private static final SubscriptionOption[] POOLED_OBJECTS = { SubscriptionOption.WITH_POOLED_OBJECTS };
     private static final SubscriptionOption[] EMPTY_OPTIONS = {};
-    private static final Logger logger = LoggerFactory.getLogger(HttpMessageAggregator.class);
-
 
     static CompletableFuture<AggregatedHttpRequest> aggregateRequest(HttpRequest request,
                                                                      EventExecutor executor,
@@ -50,7 +45,6 @@ final class HttpMessageAggregator {
         final SubscriptionOption[] options = alloc != null ? POOLED_OBJECTS : EMPTY_OPTIONS;
 
         return UnmodifiableFuture.wrap(request.collect(executor, options).thenApply(objects -> {
-            logger.info("request objs: {}", objects);
             final int size = objects.size();
             final RequestHeaders headers = request.headers();
 
@@ -122,7 +116,6 @@ final class HttpMessageAggregator {
         final SubscriptionOption[] options = alloc != null ? POOLED_OBJECTS : EMPTY_OPTIONS;
 
         return UnmodifiableFuture.wrap(response.collect(executor, options).thenApply(objects -> {
-            logger.info("response objs: {}", objects);
             final int size = objects.size();
             checkState(size >= 1, "An aggregated message does not have headers.");
 

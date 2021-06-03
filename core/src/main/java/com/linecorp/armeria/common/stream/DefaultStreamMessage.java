@@ -292,14 +292,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         final SubscriptionImpl abortedSubscription = subscription;
 
         if (setState(State.OPEN, State.CLEANUP)) {
-            // final CompletableFuture<?> collectingFuture = abortedSubscription.collectingFuture();
-            // if (collectingFuture != null) {
-            //     if (abortedSubscription.needsDirectInvocation()) {
-            //         collectingFuture.completeExceptionally(cause);
-            //     } else {
-            //         abortedSubscription.executor().execute(() -> collectingFuture.completeExceptionally(cause));
-            //     }
-            // }
             notifySubscriberOfCloseEvent(abortedSubscription, newCloseEvent(cause));
             return;
         }
