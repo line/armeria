@@ -70,6 +70,13 @@ function filterLanguage(language?: string) {
   return isSupported ? language : 'none';
 }
 
+function checkShowLineNumbers(show?: boolean){
+  if(show)
+    return {marginRight: '0.9em', minWidth: '1.4em'};
+  else
+    return {display: 'none'};
+}
+
 // Override some CSS properties from the Prism style.
 const newPrismTheme = Object.entries(prismTheme).reduce(
   (result, [key, value]) => {
@@ -96,11 +103,6 @@ const newPrismTheme = Object.entries(prismTheme).reduce(
 const lineHighlights = {
     backgroundColor: '#616161',
     display: "block",
-    marginRight: "-1em",
-    marginLeft: "-1em",
-    paddingRight: "1em",
-    paddingLeft: "0.75em",
-    borderLeft: "0.1em solid #d23669",
     width:"760px"
 }
 
@@ -124,6 +126,7 @@ function getTargetLines(lines: string){
 interface CodeBlockProps extends SyntaxHighlighterProps {
   filename?: string;
   highlight?: string;
+  showLineNo?: boolean;
 }
 
 const CodeBlock: React.FC<CodeBlockProps> = (props) => {
@@ -174,8 +177,10 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
         {...props}
         style={newPrismTheme}
         language={filterLanguage(props.language)}
-        showLineNumbers={targetLines.length ? true : false}
-        lineProps={lineNumber => targetLines.length? applyHighlightStyle(lineNumber): {}}
+        showLineNumbers={targetLines.length > 0 ? true : !!props.showlineno}
+        lineNumberStyle={checkShowLineNumbers(props.showlineno)}
+        lineProps={lineNumber => applyHighlightStyle(lineNumber)}
+
       >
         {code}
       </Prism>
