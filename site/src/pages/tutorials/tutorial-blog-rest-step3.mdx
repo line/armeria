@@ -119,9 +119,11 @@ public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingExcep
 
 When the request for creation is received, our request converter creates an instance of a blog post object for us. We want to save the blog post object in the map (`blogPosts`) created in the `BlogService` class. Skip adding a database operation for this tutorial.
 
-To store the blog post information in the map, add the following line in the `createBlogPost()` method.
+To store the blog post information in the map, add the code (line 4) in the `createBlogPost()` method.
 
-```java filename=BlogService.java highlight=2
+```java filename=BlogService.java highlight=4
+@Post("/blogs")
+@RequestConverter(BlogPostRequestConverter.class)
 public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingException {
   blogPosts.put(blogPost.id(), blogPost);
 }
