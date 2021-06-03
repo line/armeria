@@ -105,7 +105,7 @@ We can use Armeria's default request converter as is, but here let's give a go a
 
 ### Assign a request converter
 
-In this step, assign the [request converter we customized](#write-a-request-converter) to our service method. Annotate the service method with <type://@RequestConverter> and specify the RequestConverterFunction class as `BlogPostRequestConverter.class`.
+In this step, assign the [request converter we customized](#write-a-request-converter) to our service method. Annotate the service method with <type://@RequestConverter> and specify the <type://RequestConverterFunction> class as `BlogPostRequestConverter.class`.
 
 ```java filename=BlogService.java highlight=2
 @Post("/blogs")
