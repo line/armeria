@@ -82,6 +82,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -362,6 +363,33 @@ public final class ServerBuilder {
     public ServerBuilder port(ServerPort port) {
         ports.add(requireNonNull(port, "port"));
         return this;
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the loopback {@code localAddress} using the specified
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = Server.builder();
+     * sb.localPort(8080, SessionProtocol.HTTP, SessionProtocol.HTTPS);
+     * }</pre>
+     */
+    public ServerBuilder localPort(int port, SessionProtocol... protocols) {
+        requireNonNull(protocols, "protocols");
+        return localPort(port, ImmutableList.copyOf(protocols));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the loopback {@code localAddress} using the specified
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = Server.builder();
+     * sb.localPort(8080, SessionProtocol.HTTP, SessionProtocol.HTTPS);
+     * }</pre>
+     */
+    public ServerBuilder localPort(int port, Iterable<SessionProtocol> protocols) {
+        return port(new InetSocketAddress(NetUtil.LOCALHOST, port), protocols);
     }
 
     /**
