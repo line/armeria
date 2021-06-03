@@ -93,6 +93,24 @@ class HttpHeadersBaseTest {
         assertThat(headers.getLast("Foo")).isEqualTo("2");
     }
 
+    @Test
+    void testGetBooleanOperation() {
+        final HttpHeadersBase headers = newEmptyHeaders();
+        headers.add("foo", "1");
+        assertThat(headers.getBoolean("foo")).isNull();
+        assertThat(headers.getBoolean("foo", true)).isTrue();
+
+        headers.add("bar", "true");
+        headers.add("bar", "false");
+        assertThat(headers.getBoolean("bar")).isTrue();
+        assertThat(headers.getLastBoolean("bar")).isFalse();
+        assertThat(headers.getLastBoolean("baz", false)).isFalse();
+
+        headers.add("baz", "false");
+        assertThat(headers.containsBoolean("baz", false)).isTrue();
+        assertThat(headers.containsBoolean("baz", true)).isFalse();
+    }
+
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
 
     @Test

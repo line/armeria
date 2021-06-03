@@ -89,6 +89,24 @@ class QueryParamsBaseTest {
         assertThat(params.getLast("Foo")).isEqualTo("2");
     }
 
+    @Test
+    void testGetBooleanOperation() {
+        final QueryParamsBase params = newEmptyParams();
+        params.add("foo", "1");
+        assertThat(params.getBoolean("foo")).isNull();
+        assertThat(params.getBoolean("foo", true)).isTrue();
+
+        params.add("bar", "true");
+        params.add("bar", "false");
+        assertThat(params.getBoolean("bar")).isTrue();
+        assertThat(params.getLastBoolean("bar")).isFalse();
+        assertThat(params.getLastBoolean("baz", false)).isFalse();
+
+        params.add("baz", "false");
+        assertThat(params.containsBoolean("baz", false)).isTrue();
+        assertThat(params.containsBoolean("baz", true)).isFalse();
+    }
+
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
 
     @Test

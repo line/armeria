@@ -91,6 +91,54 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
     List<String> getAll(String name);
 
     /**
+     * Returns the {@code boolean} value of a parameter with the specified {@code name}. If there are more
+     * than one value for the specified {@code name}, the first value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the {@code boolean} value of the first value in insertion order or {@code null}
+     *         if there is no such parameter or it can't be converted to {@code boolean}.
+     */
+    @Override
+    @Nullable
+    Boolean getBoolean(String name);
+
+    /**
+     * Returns the {@code boolean} value of a parameter with the specified {@code name}. If there are more
+     * than one value for the specified {@code name}, the first value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @param defaultValue the default value
+     * @return the {@code boolean} value of the first value in insertion order or {@code defaultValue}
+     *         if there is no such parameter or it can't be converted to {@code boolean}.
+     */
+    @Override
+    boolean getBoolean(String name, boolean defaultValue);
+
+    /**
+     * Returns the {@code boolean} value of a parameter with the specified {@code name}. If there are more
+     * than one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the {@code boolean} value of the last value in insertion order or {@code null}
+     *         if there is no such parameter or it can't be converted to {@code boolean}.
+     */
+    @Override
+    @Nullable
+    Boolean getLastBoolean(String name);
+
+    /**
+     * Returns the {@code boolean} value of a parameter with the specified {@code name}. If there are more
+     * than one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @param defaultValue the default value
+     * @return the {@code boolean} value of the last value in insertion order or {@code defaultValue}
+     *         if there is no such parameter or it can't be converted to {@code boolean}.
+     */
+    @Override
+    boolean getLastBoolean(String name, boolean defaultValue);
+
+    /**
      * Returns the {@code int} value of a parameter with the specified {@code name}. If there are more than one
      * value for the specified {@code name}, the first value in insertion order is returned.
      *
@@ -356,6 +404,16 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      */
     @Override
     boolean containsObject(String name, Object value);
+
+    /**
+     * Returns {@code true} if a parameter with the {@code name} and {@code value} exists.
+     *
+     * @param name the parameter name
+     * @param value the parameter value
+     * @return {@code true} if the parameter exists. {@code false} otherwise
+     */
+    @Override
+    boolean containsBoolean(String name, boolean value);
 
     /**
      * Returns {@code true} if a parameter with the {@code name} and {@code value} exists.

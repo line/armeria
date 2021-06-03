@@ -256,6 +256,32 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         return builder.build();
     }
 
+    @Nullable
+    @Override
+    public Boolean getBoolean(IN_NAME name) {
+        final String v = get(name);
+        return toBoolean(v);
+    }
+
+    @Override
+    public boolean getBoolean(IN_NAME name, boolean defaultValue) {
+        final Boolean v = getBoolean(name);
+        return v != null ? v : defaultValue;
+    }
+
+    @Nullable
+    @Override
+    public Boolean getLastBoolean(IN_NAME name) {
+        final String v = getLast(name);
+        return toBoolean(v);
+    }
+
+    @Override
+    public boolean getLastBoolean(IN_NAME name, boolean defaultValue) {
+        final Boolean v = getLastBoolean(name);
+        return v != null ? v : defaultValue;
+    }
+
     @Override
     @Nullable
     public final Integer getInt(IN_NAME name) {
@@ -429,6 +455,11 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     public final boolean containsObject(IN_NAME name, Object value) {
         requireNonNull(value, "value");
         return contains(name, fromObject(value));
+    }
+
+    @Override
+    public final boolean containsBoolean(IN_NAME name, boolean value) {
+        return contains(name, String.valueOf(value));
     }
 
     @Override
@@ -956,6 +987,20 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     }
 
     // Conversion functions
+
+    @Nullable
+    private static Boolean toBoolean(@Nullable String v) {
+        if (v == null) {
+            return null;
+        }
+        if ("true".equalsIgnoreCase(v)) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(v)) {
+            return false;
+        }
+        return null;
+    }
 
     @Nullable
     private static Integer toInteger(@Nullable String v) {
