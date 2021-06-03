@@ -244,7 +244,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             @SuppressWarnings("unchecked")
             T t = (T) o;
             t = prepareObjectForNotification(t, withPooledObjects);
-            logger.info("collecting: {}", t);
             builder.add(t);
         }
 
@@ -417,7 +416,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     @Override
     final void addObjectOrEvent(Object obj) {
-        logger.info("writing: {}", obj);
         queue.add(obj);
         notifySubscriber();
     }
