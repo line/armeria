@@ -83,10 +83,7 @@ We can use Armeria's default request converter as is, but here let's give a go a
     }
   ```
 4. Customize the default `convertRequest()` method as follows.
-    - Map the `title` and `content` properties of the body parameter to members in a `BlogPost` object, using the `stringValue()` method we wrote in the previous step.
-    - Throw the <type://FallthroughException> by calling <type://RequestConverterFunction#fallthrough()>, to pass on the request parameters that aren't converted by our converter to the default request converter.
-    - Feel free to add more mapping blocks (lines 9 to 11) in this request converter for other requests for the blog service.
-    ```java filename=BlogRequestConverter.java highlight=9,10,13
+    ```java filename=BlogRequestConverter.java
     @Override
     public Object convertRequest(ServiceRequestContext ctx,
       AggregatedHttpRequest request, Class<?> expectedResultType,
