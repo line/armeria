@@ -19,49 +19,41 @@ We will use Armeria's <type://ServerBuilder> for this task.
 You don't need to prepare anything at this stage.
 Just check that you have prepared the [prerequisites](./tutorial-blog-rest-intro/#prerequisites).
 
-## 1. Create the main class
+## 1. Create a server instance
 
-Start by creating a main class:
+To create a server instance, use Armeria's <type://ServerBuilder>:
 
-1. Create a Java file named Main. For the full version of the file, check the [service sample code](https://github.com/line/armeria-examples/blob/master/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
-2. Add required import statements.
-3. Declare a class, `Main`.
-4. (Optional) Add a logger in the class for logging messages.
+1. Create a main class and add in import statements. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
+  ```java filename=Main.java
+  package example.armeria.server.blog;
 
-```java filename=Main.java
-package example.armeria.server.blog;
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+  import com.linecorp.armeria.common.HttpResponse;
+  import com.linecorp.armeria.server.Server;
+  import com.linecorp.armeria.server.ServerBuilder;
 
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
-
-public final class Main {
-  private static final Logger logger = LoggerFactory.getLogger(Main.class);
-}
-```
-
-## 2. Create a server instance
-
-To create a server instance, use Armeria's <type://ServerBuilder>. Add the method, `newServer()` in the `Main` class. Since server instances require at least one service to run with, add a dummy service returning `"Hello, Armeria!"` for the mere purpose of checking that the server gets launched and runs.
-
-```java filename=Main.java highlight=6,7
-static Server newServer(int port) {
-  final ServerBuilder sb = Server.builder();
-  final DocService docService = DocService.builder()
-                                          .build();
-  return sb.http(port)
-            .service("/",(ctx, req) ->
-                HttpResponse.of("Hello, Armeria!"))
-            .build();
-}
-```
+  public final class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+  }
+  ```
+2. In the `Main` class, add the method, `newServer()`. Since a server instance requires at least one service to run with, add a dummy service returning `"Hello, Armeria!"` for the mere purpose of checking that the server gets launched and runs.
+  ```java filename=Main.java highlight=6,7
+  static Server newServer(int port) {
+    final ServerBuilder sb = Server.builder();
+    final DocService docService = DocService.builder()
+                                            .build();
+    return sb.http(port)
+              .service("/",(ctx, req) ->
+                  HttpResponse.of("Hello, Armeria!"))
+              .build();
+  }
+  ```
 
 Later on, when we build our blog service, we will come back to this part of the code to [add an actual service](./tutorial-blog-rest-step7).
 
-## 3. Start the server
+## 2. Start the server
 
 Add the code to start the server with the dummy service.
 
@@ -85,7 +77,7 @@ public static void main(String[] args) throws Exception {
 }
 ```
 
-## 4. Run the server and service
+## 3. Run the server and service
 
 As the last step, launch the server and run the service to check if you are all set to go. To run the server, run the `main()` method in your IDE. The server and service are launched successfully if you see the following message.
 
