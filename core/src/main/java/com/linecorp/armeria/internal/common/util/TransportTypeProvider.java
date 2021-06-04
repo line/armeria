@@ -19,7 +19,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Set;
@@ -155,9 +154,7 @@ public final class TransportTypeProvider {
                 initializeMethod.setAccessible(true);
                 initializeMethod.invoke(null, NetUtil.isIpV4StackPreferred());
             } catch (Throwable cause) {
-                if (cause instanceof UnsatisfiedLinkError ||
-                    (cause instanceof InvocationTargetException &&
-                     cause.getCause() instanceof UnsatisfiedLinkError)) {
+                if (Exceptions.peel(cause) instanceof UnsatisfiedLinkError) {
                     // Failed to load a native library, which is fine.
                 } else {
                     logger.debug("Failed to force-initialize 'io.netty.channel.unix.Socket':", cause);
