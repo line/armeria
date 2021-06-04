@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
@@ -88,7 +87,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
     @Override
     public boolean isEmpty() {
-        // All fixed streams are non-empty except for `EmptyFixedStreamMesage`.
+        // All fixed streams are non-empty except for `EmptyFixedStreamMessage`.
         return false;
     }
 
@@ -107,8 +106,13 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
             subscriber.onSubscribe(NoopSubscription.get());
             subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
         } else {
-            withPooledObjects = containsWithPooledObjects(options);
-            notifyCancellation = containsNotifyCancellation(options);
+            for (SubscriptionOption option : options) {
+                if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
+                    withPooledObjects = true;
+                } else if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
+                    notifyCancellation = true;
+                }
+            }
             this.executor = executor;
             if (executor.inEventLoop()) {
                 subscribe0(subscriber);

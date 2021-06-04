@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.toOptions;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
@@ -29,8 +30,6 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -301,17 +300,11 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return;
         }
 
-        final ImmutableList.Builder<SubscriptionOption> builder = ImmutableList.builder();
-        if (downstreamSubscription.withPooledObjects()) {
-            builder.add(SubscriptionOption.WITH_POOLED_OBJECTS);
-        }
-        if (downstreamSubscription.notifyCancellation()) {
-            builder.add(SubscriptionOption.NOTIFY_CANCELLATION);
-        }
+        final SubscriptionOption[] options = toOptions(downstreamSubscription.withPooledObjects(),
+                                                       downstreamSubscription.notifyCancellation());
 
         upstream.subscribe(new ForwardingSubscriber(downstreamSubscription.subscriber()),
-                           downstreamSubscription.executor(),
-                           builder.build().toArray(EMPTY_OPTIONS));
+                           downstreamSubscription.executor(), options);
     }
 
     @Override
