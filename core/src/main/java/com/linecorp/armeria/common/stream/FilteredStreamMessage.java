@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
@@ -47,6 +48,9 @@ import io.netty.util.concurrent.EventExecutor;
 public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
+    private static final SubscriptionOption[] CANCELLATION = { SubscriptionOption.NOTIFY_CANCELLATION };
+    private static final SubscriptionOption[] CANCELLATION_AND_POOLED_OBJECTS =
+            { SubscriptionOption.NOTIFY_CANCELLATION, SubscriptionOption.WITH_POOLED_OBJECTS };
 
     private final StreamMessage<T> upstream;
     private final boolean filterSupportsPooledObjects;
@@ -131,7 +135,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public CompletableFuture<List<U>> collect(EventExecutor executor, SubscriptionOption... options) {
-        return upstream.collect(executor, options).handle((result, cause) -> {
+        return upstream.collect(executor, filterOption(options)).handle((result, cause) -> {
             final CollectingSubscription subscription = new CollectingSubscription();
             final CollectingSubscriber<U> subscriber = new CollectingSubscriber<>();
             beforeSubscribe(subscriber, subscription);
@@ -182,6 +186,29 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         });
     }
 
+    private SubscriptionOption[] filterOption(SubscriptionOption[] options) {
+        if (filterSupportsPooledObjects) {
+            return options;
+        } else {
+            switch (options.length) {
+                case 0:
+                    return options;
+                case 1:
+                    if (options[0] == SubscriptionOption.WITH_POOLED_OBJECTS) {
+                        return EMPTY_OPTIONS;
+                    } else {
+                        return options;
+                    }
+                default:
+                    if (containsNotifyCancellation(options)) {
+                        return CANCELLATION;
+                    } else {
+                        return EMPTY_OPTIONS;
+                    }
+            }
+        }
+    }
+
     @Override
     public final void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
         subscribe(subscriber, executor, false, false);
@@ -198,15 +225,15 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         subscribe(subscriber, executor, withPooledObjects, notifyCancellation);
     }
 
-    private void subscribe(Subscriber<? super U> subscriber, EventExecutor executor, boolean withPooledObjects,
+    private void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
+                           boolean withPooledObjects,
                            boolean notifyCancellation) {
         final FilteringSubscriber filteringSubscriber = new FilteringSubscriber(
                 subscriber, withPooledObjects, notifyCancellation);
         if (filterSupportsPooledObjects) {
-            upstream.subscribe(filteringSubscriber, executor,
-                               SubscriptionOption.NOTIFY_CANCELLATION, SubscriptionOption.WITH_POOLED_OBJECTS);
+            upstream.subscribe(filteringSubscriber, executor, CANCELLATION_AND_POOLED_OBJECTS);
         } else {
-            upstream.subscribe(filteringSubscriber, executor, SubscriptionOption.NOTIFY_CANCELLATION);
+            upstream.subscribe(filteringSubscriber, executor, CANCELLATION);
         }
     }
 
