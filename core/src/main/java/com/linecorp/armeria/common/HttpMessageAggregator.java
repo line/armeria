@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -229,9 +230,7 @@ final class HttpMessageAggregator {
             for (int i = start; i < end; i++) {
                 try (HttpData data = (HttpData) objects.get(i)) {
                     final ByteBuf buf = data.byteBuf();
-                    if (data.isEmpty()) {
-                        data.close();
-                    } else {
+                    if (!data.isEmpty()) {
                         merged.writeBytes(buf, buf.readerIndex(), data.length());
                     }
                 }
@@ -264,10 +263,14 @@ final class HttpMessageAggregator {
         final int contentLength = data1Length + data2Length;
         if (alloc != null) {
             final ByteBuf merged = alloc.buffer(contentLength);
-            final ByteBuf buf1 = data1.byteBuf();
-            merged.writeBytes(buf1, buf1.readerIndex(), data1Length);
-            final ByteBuf buf2 = data2.byteBuf();
-            merged.writeBytes(buf2, buf2.readerIndex(), data2Length);
+            try (SafeCloseable ignore = data1) {
+                final ByteBuf buf1 = data1.byteBuf();
+                merged.writeBytes(buf1, buf1.readerIndex(), data1Length);
+            }
+            try (SafeCloseable ignore = data2) {
+                final ByteBuf buf2 = data2.byteBuf();
+                merged.writeBytes(buf2, buf2.readerIndex(), data2Length);
+            }
             return HttpData.wrap(merged);
         } else {
             final byte[] merged = new byte[contentLength];
