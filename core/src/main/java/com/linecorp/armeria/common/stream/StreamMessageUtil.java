@@ -30,9 +30,6 @@ final class StreamMessageUtil {
 
     static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
-    private static final SubscriptionOption[] POOLED_OPTIONS = { SubscriptionOption.WITH_POOLED_OBJECTS };
-    private static final SubscriptionOption[] CANCELLATION_OPTIONS = { SubscriptionOption.WITH_POOLED_OBJECTS };
-
     static boolean containsWithPooledObjects(SubscriptionOption... options) {
         requireNonNull(options, "options");
         for (SubscriptionOption option : options) {
@@ -53,19 +50,6 @@ final class StreamMessageUtil {
         }
 
         return false;
-    }
-
-    static SubscriptionOption[] toOptions(boolean withPooledObjects, boolean notifyCancellation) {
-        if (withPooledObjects && notifyCancellation) {
-            return SubscriptionOption.values();
-        }
-        if (withPooledObjects) {
-            return POOLED_OPTIONS;
-        }
-        if (notifyCancellation) {
-            return CANCELLATION_OPTIONS;
-        }
-        return EMPTY_OPTIONS;
     }
 
     static void closeOrAbort(Object obj, @Nullable Throwable cause) {

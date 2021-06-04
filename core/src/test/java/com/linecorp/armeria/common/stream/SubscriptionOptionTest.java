@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuff
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.params.provider.Arguments.of;
 
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -154,14 +153,14 @@ class SubscriptionOptionTest {
             final HttpData data = HttpData.wrap(buf).withEndOfStream();
             defaultStream.write(data);
             defaultStream.close();
-            return of(data, buf, defaultStream);
+            return Arguments.of(data, buf, defaultStream);
         }
 
         private static Arguments fixedStream() {
             final ByteBuf buf = newPooledBuffer();
             final HttpData data = HttpData.wrap(buf).withEndOfStream();
             final StreamMessage<HttpData> fixedStream = StreamMessage.of(data);
-            return of(data, buf, fixedStream);
+            return Arguments.of(data, buf, fixedStream);
         }
 
         private static Arguments deferredStream() {
@@ -172,7 +171,7 @@ class SubscriptionOptionTest {
             final HttpData data = HttpData.wrap(buf).withEndOfStream();
             d.write(data);
             d.close();
-            return of(data, buf, deferredStream);
+            return Arguments.of(data, buf, deferredStream);
         }
     }
 }

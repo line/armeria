@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.toOptions;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
@@ -300,11 +299,8 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return;
         }
 
-        final SubscriptionOption[] options = toOptions(downstreamSubscription.withPooledObjects(),
-                                                       downstreamSubscription.notifyCancellation());
-
         upstream.subscribe(new ForwardingSubscriber(downstreamSubscription.subscriber()),
-                           downstreamSubscription.executor(), options);
+                           downstreamSubscription.executor(), downstreamSubscription.options());
     }
 
     @Override
