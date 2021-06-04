@@ -139,43 +139,41 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                 beforeError(subscriber, cause);
                 return Exceptions.throwUnsafely(cause);
             } else {
-                Throwable filterCause = null;
+                Throwable abortCause = null;
                 final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(result.size());
                 for (T t : result) {
-                    if (filterCause != null) {
+                    if (abortCause != null) {
                         // This StreamMessage was aborted already. However, we need to release the remaining
                         // objects in result.
-                        StreamMessageUtil.closeOrAbort(t, filterCause);
+                        StreamMessageUtil.closeOrAbort(t, abortCause);
                         continue;
                     }
 
                     try {
                         final U filter = filter(t);
-                        requireNonNull(filter, "filter() returned null");
-                        builder.add(filter);
+
+                        if (subscriber.completed || subscription.cancelled) {
+                            abortCause = CancelledSubscriptionException.get();
+                        } else if (subscriber.cause != null) {
+                            abortCause = cause;
+                        } else {
+                            requireNonNull(filter, "filter() returned null");
+                            builder.add(filter);
+                        }
                     } catch (Throwable ex) {
                         // Failed to filter the object.
-                        StreamMessageUtil.closeOrAbort(t, filterCause);
-                        filterCause = ex;
-                    }
-
-                    if (filterCause == null) {
-                        if (subscriber.completed || subscription.cancelled) {
-                            // A safe stop signal was received.
-                            filterCause = CancelledSubscriptionException.get();
-                        } else if (subscriber.cause != null) {
-                            filterCause = cause;
-                        }
+                        StreamMessageUtil.closeOrAbort(t, abortCause);
+                        abortCause = ex;
                     }
                 }
 
                 final List<U> elements = builder.build();
-                if (filterCause != null && !(filterCause instanceof CancelledSubscriptionException)) {
+                if (abortCause != null && !(abortCause instanceof CancelledSubscriptionException)) {
                     // The stream was aborted with an unsafe exception.
                     for (U element : elements) {
-                        StreamMessageUtil.closeOrAbort(element, filterCause);
+                        StreamMessageUtil.closeOrAbort(element, abortCause);
                     }
-                    return Exceptions.throwUnsafely(filterCause);
+                    return Exceptions.throwUnsafely(abortCause);
                 }
 
                 beforeComplete(subscriber);
