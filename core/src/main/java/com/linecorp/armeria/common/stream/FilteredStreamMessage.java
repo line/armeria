@@ -142,29 +142,44 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                 Throwable filterCause = null;
                 final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(result.size());
                 for (T t : result) {
+                    if (filterCause != null) {
+                        // This StreamMessage was aborted already. However, we need to release the remaining
+                        // objects in result.
+                        StreamMessageUtil.closeOrAbort(t, filterCause);
+                        continue;
+                    }
+
                     try {
-                        final U filtered = filter(t);
-                        if (subscriber.completed || subscriber.cause != null || subscription.cancelled) {
-                            // Stop signal was received.
-                            filterCause = subscriber.cause;
-                            break;
-                        }
-                        builder.add(filtered);
+                        final U filter = filter(t);
+                        requireNonNull(filter, "filter() returned null");
+                        builder.add(filter);
                     } catch (Throwable ex) {
+                        // Failed to filter the object.
+                        StreamMessageUtil.closeOrAbort(t, filterCause);
                         filterCause = ex;
+                    }
+
+                    if (filterCause == null) {
+                        if (subscriber.completed || subscription.cancelled) {
+                            // A safe stop signal was received.
+                            filterCause = CancelledSubscriptionException.get();
+                        } else if (subscriber.cause != null) {
+                            filterCause = cause;
+                        }
                     }
                 }
 
                 final List<U> elements = builder.build();
-                if (filterCause != null) {
+                if (filterCause != null && !(filterCause instanceof CancelledSubscriptionException)) {
+                    // The stream was aborted with an unsafe exception.
                     for (U element : elements) {
                         StreamMessageUtil.closeOrAbort(element, filterCause);
                     }
                     return Exceptions.throwUnsafely(filterCause);
-                } else {
-                    beforeComplete(subscriber);
-                    return elements;
                 }
+
+                beforeComplete(subscriber);
+                return elements;
             }
         });
     }
@@ -330,12 +345,18 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onError(Throwable t) {
+            if (completed) {
+                return;
+            }
             cause = t;
         }
 
         @Override
         public void onComplete() {
-           completed = true;
+            if (cause != null) {
+                return;
+            }
+            completed = true;
         }
     }
 }

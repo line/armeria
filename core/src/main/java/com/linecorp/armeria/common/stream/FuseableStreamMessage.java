@@ -94,28 +94,33 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public CompletableFuture<List<U>> collect(EventExecutor executor, SubscriptionOption... options) {
-        return source.collect(executor, options).thenApply(items -> {
-            final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(items.size());
+        return source.collect(executor, options).thenApply(objs -> {
+            final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(objs.size());
             Throwable cause = null;
-            for (Object item : items) {
+            for (Object obj : objs) {
+                if (cause != null) {
+                    // An error was raised. The remaing objects should be released.
+                    StreamMessageUtil.closeOrAbort(obj, cause);
+                    continue;
+                }
+
                 U result = null;
                 try {
-                    result = function.apply(item);
+                    result = function.apply(obj);
                     if (result != null) {
                         builder.add(result);
                     } else {
-                        StreamMessageUtil.closeOrAbort(item);
+                        StreamMessageUtil.closeOrAbort(obj);
                     }
                 } catch (Throwable ex) {
-                    if (result != null) {
-                        StreamMessageUtil.closeOrAbort(item);
-                    }
+                    StreamMessageUtil.closeOrAbort(obj);
                     cause = ex;
                 }
             }
 
             final List<U> elements = builder.build();
             if (cause != null) {
+                // An error was raised. The transformed objects should be released.
                 for (U element: elements) {
                     StreamMessageUtil.closeOrAbort(element, cause);
                 }

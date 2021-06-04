@@ -24,15 +24,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -127,6 +132,162 @@ class StreamMessageCollectingTest {
                 .isInstanceOf(CompletionException.class)
                 .hasCause(cause);
         await().untilAsserted(() -> assertRefCount(data, 0));
+    }
+
+    @Test
+    void filteredStreamMessage_exception() {
+        final int size = 5;
+        final Map<HttpData, ByteBuf> data = newHttpData(size);
+        final HttpData[] httpData = data.keySet().toArray(HTTP_DATA);
+        final StreamMessage<HttpData> stream = newStreamMessage(httpData, true);
+
+        final Throwable cause = new IllegalStateException("oops");
+        final StreamMessage<HttpData> filtered = new FilteredStreamMessage<HttpData, HttpData>(stream) {
+            int count;
+
+            @Override
+            protected HttpData filter(HttpData obj) {
+                count++;
+                if (count < 2) {
+                    return obj;
+                } else {
+                    return Exceptions.throwUnsafely(cause);
+                }
+            }
+        };
+
+        assertThatThrownBy(() -> {
+            filtered.collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
+        }).isInstanceOf(CompletionException.class)
+          .hasCause(cause);
+
+        assertRefCount(data, 0);
+    }
+
+    @Test
+    void filteredStreamMessage_cancel() {
+        final int size = 5;
+        final Map<HttpData, ByteBuf> data = newHttpData(size);
+        final HttpData[] httpData = data.keySet().toArray(HTTP_DATA);
+        final StreamMessage<HttpData> stream = newStreamMessage(httpData, true);
+
+        final StreamMessage<HttpData> filtered = new FilteredStreamMessage<HttpData, HttpData>(stream) {
+
+            private Subscription subscription;
+            int count;
+
+            @Override
+            protected void beforeSubscribe(Subscriber<? super HttpData> subscriber, Subscription subscription) {
+                this.subscription = subscription;
+            }
+
+            @Override
+            protected HttpData filter(HttpData obj) {
+                count++;
+                if (count < 2) {
+                    return obj;
+                } else {
+                    subscription.cancel();
+                    return obj;
+                }
+            }
+        };
+
+        final List<HttpData> collected = filtered.collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
+        assertThat(collected).hasSize(2);
+
+        final List<ByteBuf> bufs = ImmutableList.copyOf(data.values());
+
+        assertThat(bufs.get(0).refCnt()).isOne();
+        assertThat(bufs.get(1).refCnt()).isOne();
+        assertThat(bufs.get(2).refCnt()).isZero();
+        assertThat(bufs.get(3).refCnt()).isZero();
+        assertThat(bufs.get(4).refCnt()).isZero();
+
+        bufs.get(0).release();
+        bufs.get(1).release();
+    }
+
+    @Test
+    void fuseableStreamMessage_map() {
+        final int size = 5;
+        Map<HttpData, ByteBuf> data = newHttpData(size);
+        HttpData[] httpData = data.keySet().toArray(HTTP_DATA);
+        StreamMessage<HttpData> stream = newStreamMessage(httpData, false);
+        List<HttpData> collected = stream.map(Function.identity())
+                                         .collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
+
+        assertData(collected, size);
+        assertRefCount(data, 1);
+        releaseAll(data);
+
+        data = newHttpData(size);
+        httpData = data.keySet().toArray(HTTP_DATA);
+        stream = newStreamMessage(httpData, false);
+        collected = stream.map(Function.identity()).collect().join();
+        assertData(collected, size);
+        assertRefCount(data, 0);
+
+        data = newHttpData(size);
+        httpData = data.keySet().toArray(HTTP_DATA);
+        final StreamMessage<HttpData> stream1 = newStreamMessage(httpData, false);
+        final AtomicInteger counter = new AtomicInteger();
+        final Throwable cause = new IllegalStateException("oops");
+        assertThatThrownBy(() -> {
+            stream1.map(obj -> {
+                if (counter.incrementAndGet() > 2) {
+                    return Exceptions.throwUnsafely(cause);
+                } else {
+                    return obj;
+                }
+            }).collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
+        }).isInstanceOf(CompletionException.class)
+          .hasCause(cause);
+
+        assertRefCount(data, 0);
+    }
+
+    @Test
+    void fuseableStreamMessage_filter() {
+        final int size = 5;
+        Map<HttpData, ByteBuf> data = newHttpData(size);
+        HttpData[] httpData = data.keySet().toArray(HTTP_DATA);
+        final StreamMessage<HttpData> stream = newStreamMessage(httpData, false);
+        final AtomicInteger counter = new AtomicInteger();
+
+        final List<HttpData> collected = stream.filter(x -> counter.getAndIncrement() < 2)
+                                               .collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
+        assertThat(collected).hasSize(2);
+
+        final List<ByteBuf> bufs = ImmutableList.copyOf(data.values());
+
+        assertThat(bufs.get(0).refCnt()).isOne();
+        assertThat(bufs.get(1).refCnt()).isOne();
+        assertThat(bufs.get(2).refCnt()).isZero();
+        assertThat(bufs.get(3).refCnt()).isZero();
+        assertThat(bufs.get(4).refCnt()).isZero();
+
+        bufs.get(0).release();
+        bufs.get(1).release();
+
+        data = newHttpData(size);
+        httpData = data.keySet().toArray(HTTP_DATA);
+        final StreamMessage<HttpData> stream1 = newStreamMessage(httpData, false);
+        counter.set(0);
+
+        final Throwable cause = new IllegalStateException("oops");
+        assertThatThrownBy(() -> {
+            stream1.filter(x -> {
+                if (counter.getAndIncrement() < 2) {
+                    return true;
+                } else {
+                    return Exceptions.throwUnsafely(cause);
+                }
+            }).collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
+        }).isInstanceOf(CompletionException.class)
+          .hasCause(cause);
+
+        assertRefCount(data, 0);
     }
 
     private static StreamMessage<HttpData> newStreamMessage(HttpData[] httpData, boolean fixedStream) {
