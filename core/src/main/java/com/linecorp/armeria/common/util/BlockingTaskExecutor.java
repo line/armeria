@@ -34,6 +34,9 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
         return (BlockingTaskExecutor) CommonPools.blockingTaskExecutor();
     }
 
+    /**
+     * Returns a new builder for {@link BlockingTaskExecutor}.
+     */
     static BlockingTaskExecutorBuilder builder() {
         return new BlockingTaskExecutorBuilder();
     }

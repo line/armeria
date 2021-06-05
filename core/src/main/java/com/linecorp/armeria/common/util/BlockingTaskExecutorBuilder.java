@@ -77,7 +77,8 @@ public final class BlockingTaskExecutorBuilder {
      * Sets the amount of keep alive time in seconds.
      */
     public BlockingTaskExecutorBuilder keepAliveTimeMillis(long keepAliveTimeMillis) {
-        checkArgument(keepAliveTimeMillis >= 0, "keepAliveTimeMillis: %s (expected: >= 0)", keepAliveTimeMillis);
+        checkArgument(keepAliveTimeMillis >= 0,
+                      "keepAliveTimeMillis: %s (expected: >= 0)", keepAliveTimeMillis);
         this.keepAliveTimeMillis = keepAliveTimeMillis;
         return this;
     }
@@ -103,7 +104,8 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Use this method to set additional work before or after the {@link Runnable} is run. For example:
+     * Sets the task function for new threads. Use this method to set additional work before or after
+     * the {@link Runnable} is run. For example:
      * <pre>{@code
      * BlockingTaskExecutor.builder("thread-prefix")
      *                     .taskFunction(task -> {
@@ -115,8 +117,6 @@ public final class BlockingTaskExecutorBuilder {
      *                     })
      *                     .build();
      * }</pre>
-     *
-     * Sets the task function for new threads.
      */
     public BlockingTaskExecutorBuilder taskFunction(
             Function<? super Runnable, ? extends Runnable> taskFunction) {
