@@ -110,7 +110,8 @@ public final class EventLoopGroups {
     }
 
     /**
-     * Warms up all {@link EventLoop}s in the given {@code eventLoopGroup}.
+     * Warms up all {@link EventLoop}s in the given {@code eventLoopGroup}
+     * by making sure all event loop threads are active.
      */
     public static EventLoopGroup warmUp(EventLoopGroup eventLoopGroup) {
         requireNonNull(eventLoopGroup, "eventLoopGroup");
