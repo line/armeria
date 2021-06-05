@@ -240,5 +240,3 @@ class PublicSuffixesTask extends DefaultTask {
 }
 
 task publicSuffixes(type: PublicSuffixesTask)
-tasks.processResources.dependsOn publicSuffixes
-tasks.classes.dependsOn publicSuffixes
