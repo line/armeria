@@ -142,4 +142,9 @@ public class DecoratingClientFactory extends AbstractUnwrappable<ClientFactory> 
     public void close() {
         unwrap().close();
     }
+
+    @Override
+    public int numConnections() {
+        return unwrap().numConnections();
+    }
 }
