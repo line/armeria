@@ -26,7 +26,9 @@ import com.linecorp.armeria.common.CommonPools;
 public interface BlockingTaskExecutor extends ScheduledExecutorService {
 
     /**
-     * Returns a {@link BlockingTaskExecutor} with a 60s timeout and unbounded work queue.
+     * Returns the default {@link BlockingTaskExecutor} with a 60s timeout and unbounded work
+     * queue. Note that this method returns the same instance with what
+     * {@link CommonPools#blockingTaskExecutor()} returns.
      */
     static BlockingTaskExecutor of() {
         return (BlockingTaskExecutor) CommonPools.blockingTaskExecutor();
