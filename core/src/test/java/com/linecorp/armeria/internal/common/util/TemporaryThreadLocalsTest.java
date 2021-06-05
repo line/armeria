@@ -171,7 +171,7 @@ class TemporaryThreadLocalsTest {
             tempThreadLocals.charArray(8);
             tempThreadLocals.intArray(8);
             tempThreadLocals.stringBuilder();
-            assertThatThrownBy(TemporaryThreadLocals::acquire).isExactlyInstanceOf(IllegalStateException.class);
+            assertThatThrownBy(TemporaryThreadLocals::acquire).isExactlyInstanceOf(AssertionError.class);
         }
     }
 }
