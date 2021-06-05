@@ -132,7 +132,8 @@ public final class AnnotatedService implements HttpService {
 
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
-    private final String defaultServiceName;
+    private final String serviceName;
+    private final boolean serviceNameSetByAnnotation;
 
     AnnotatedService(Object object, Method method,
                      List<AnnotatedValueResolver> resolvers,
@@ -178,9 +179,11 @@ public final class AnnotatedService implements HttpService {
             serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
         }
         if (serviceName != null) {
-            defaultServiceName = serviceName.value();
+            this.serviceName = serviceName.value();
+            serviceNameSetByAnnotation = true;
         } else {
-            defaultServiceName = getUserClass(object.getClass()).getName();
+            this.serviceName = getUserClass(object.getClass()).getName();
+            serviceNameSetByAnnotation = false;
         }
 
         this.method.setAccessible(true);
@@ -244,7 +247,11 @@ public final class AnnotatedService implements HttpService {
     }
 
     public String serviceName() {
-        return defaultServiceName;
+        return serviceName;
+    }
+
+    public boolean serviceNameSetByAnnotation() {
+        return serviceNameSetByAnnotation;
     }
 
     public String methodName() {
