@@ -197,7 +197,7 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
     Object newClient(ClientBuilderParams params);
 
     /**
-     * Returns the number of open connections on this {@link ClientFactory}.
+     * Returns the number of open connections managed by this {@link ClientFactory}.
      */
     int numConnections();
 
