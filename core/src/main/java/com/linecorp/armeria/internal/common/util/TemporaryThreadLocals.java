@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.MustBeClosed;
 
