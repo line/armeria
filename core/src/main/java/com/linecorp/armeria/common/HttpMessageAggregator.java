@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,6 @@ import io.netty.util.concurrent.EventExecutor;
 final class HttpMessageAggregator {
 
     private static final SubscriptionOption[] POOLED_OBJECTS = { SubscriptionOption.WITH_POOLED_OBJECTS };
-    private static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
     static CompletableFuture<AggregatedHttpRequest> aggregateRequest(HttpRequest request,
                                                                      EventExecutor executor,

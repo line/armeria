@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.CANCELLATION_AND_POOLED_OPTIONS;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.CANCELLATION_OPTION;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -48,9 +50,6 @@ import io.netty.util.concurrent.EventExecutor;
 public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
-    private static final SubscriptionOption[] CANCELLATION = { SubscriptionOption.NOTIFY_CANCELLATION };
-    private static final SubscriptionOption[] CANCELLATION_AND_POOLED_OBJECTS =
-            { SubscriptionOption.NOTIFY_CANCELLATION, SubscriptionOption.WITH_POOLED_OBJECTS };
 
     private final StreamMessage<T> upstream;
     private final boolean filterSupportsPooledObjects;
@@ -154,15 +153,18 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                     }
 
                     try {
-                        final U filter = filter(t);
+                        final U filtered = filter(t);
 
-                        if (subscriber.completed || subscription.cancelled) {
-                            abortCause = CancelledSubscriptionException.get();
-                        } else if (subscriber.cause != null) {
-                            abortCause = cause;
+                        if (subscriber.completed || subscriber.cause != null || subscription.cancelled) {
+                            if (subscriber.cause != null) {
+                                abortCause = cause;
+                            } else {
+                                abortCause = CancelledSubscriptionException.get();
+                            }
+                            StreamMessageUtil.closeOrAbort(filtered, abortCause);
                         } else {
-                            requireNonNull(filter, "filter() returned null");
-                            builder.add(filter);
+                            requireNonNull(filtered, "filter() returned null");
+                            builder.add(filtered);
                         }
                     } catch (Throwable ex) {
                         // Failed to filter the object.
@@ -189,23 +191,23 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     private SubscriptionOption[] filterOption(SubscriptionOption[] options) {
         if (filterSupportsPooledObjects) {
             return options;
-        } else {
-            switch (options.length) {
-                case 0:
+        }
+
+        switch (options.length) {
+            case 0:
+                return options;
+            case 1:
+                if (options[0] == SubscriptionOption.WITH_POOLED_OBJECTS) {
+                    return EMPTY_OPTIONS;
+                } else {
                     return options;
-                case 1:
-                    if (options[0] == SubscriptionOption.WITH_POOLED_OBJECTS) {
-                        return EMPTY_OPTIONS;
-                    } else {
-                        return options;
-                    }
-                default:
-                    if (containsNotifyCancellation(options)) {
-                        return CANCELLATION;
-                    } else {
-                        return EMPTY_OPTIONS;
-                    }
-            }
+                }
+            default:
+                if (containsNotifyCancellation(options)) {
+                    return CANCELLATION_OPTION;
+                } else {
+                    return EMPTY_OPTIONS;
+                }
         }
     }
 
@@ -231,9 +233,9 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         final FilteringSubscriber filteringSubscriber = new FilteringSubscriber(
                 subscriber, withPooledObjects, notifyCancellation);
         if (filterSupportsPooledObjects) {
-            upstream.subscribe(filteringSubscriber, executor, CANCELLATION_AND_POOLED_OBJECTS);
+            upstream.subscribe(filteringSubscriber, executor, CANCELLATION_AND_POOLED_OPTIONS);
         } else {
-            upstream.subscribe(filteringSubscriber, executor, CANCELLATION);
+            upstream.subscribe(filteringSubscriber, executor, CANCELLATION_OPTION);
         }
     }
 

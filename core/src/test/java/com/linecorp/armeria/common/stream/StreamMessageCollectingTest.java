@@ -171,7 +171,7 @@ class StreamMessageCollectingTest {
         final HttpData[] httpData = data.keySet().toArray(HTTP_DATA);
         final StreamMessage<HttpData> stream = newStreamMessage(httpData, true);
 
-        final StreamMessage<HttpData> filtered = new FilteredStreamMessage<HttpData, HttpData>(stream) {
+        final StreamMessage<HttpData> filtered = new FilteredStreamMessage<HttpData, HttpData>(stream, true) {
 
             private Subscription subscription;
             int count;
@@ -184,7 +184,7 @@ class StreamMessageCollectingTest {
             @Override
             protected HttpData filter(HttpData obj) {
                 count++;
-                if (count < 2) {
+                if (count < 3) {
                     return obj;
                 } else {
                     subscription.cancel();

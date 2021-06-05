@@ -19,10 +19,11 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.CANCELLATION_AND_POOLED_OPTIONS;
 import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -175,8 +176,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 this.maxSignalLength = (int) maxSignalLength;
             }
             signals = new SignalQueue(this.signalLengthGetter);
-            upstream.subscribe(this, executor,
-                               SubscriptionOption.WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION);
+            upstream.subscribe(this, executor, CANCELLATION_AND_POOLED_OPTIONS);
         }
 
         StreamMessage<T> upstream() {

@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
@@ -129,8 +129,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     final T prepareObjectForNotification(T o, boolean withPooledObjects) {
         onRemoval(o);
         if (withPooledObjects) {
-            PooledObjects.touch(o);
-            return o;
+            return PooledObjects.touch(o);
         } else {
             return PooledObjects.copyAndClose(o);
         }

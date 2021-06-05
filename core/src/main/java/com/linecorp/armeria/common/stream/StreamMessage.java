@@ -19,7 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.stream.PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -484,7 +484,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     default CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
-        final StreamMessageCollector<T> collector = new StreamMessageCollector<>();
+        final StreamMessageCollector<T> collector = new StreamMessageCollector<>(options);
         subscribe(collector, executor, options);
         return collector.collect();
     }

@@ -54,8 +54,6 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
 
     private static final HttpData CRLF = HttpData.ofUtf8("\r\n");
 
-    static final SubscriptionOption[] EMPTY_OPTIONS = {};
-
     private final String boundary;
 
     private final StreamMessage<BodyPart> publisher;

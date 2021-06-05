@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -28,12 +29,19 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.unsafe.PooledObjects;
+
 final class StreamMessageCollector<T> implements Subscriber<T> {
 
     private final CompletableFuture<List<T>> future = new CompletableFuture<>();
+    private final boolean withPooledObjects;
 
     @Nullable
     private ImmutableList.Builder<T> elementsBuilder = ImmutableList.builder();
+
+    StreamMessageCollector(SubscriptionOption[] options) {
+        withPooledObjects = containsWithPooledObjects(options);
+    }
 
     public CompletableFuture<List<T>> collect() {
         return future;
@@ -47,7 +55,14 @@ final class StreamMessageCollector<T> implements Subscriber<T> {
     @Override
     public void onNext(T o) {
         requireNonNull(o, "o");
-        elementsBuilder.add(o);
+
+        final T published;
+        if (withPooledObjects) {
+            published = PooledObjects.touch(o);
+        } else {
+            published = PooledObjects.copyAndClose(o);
+        }
+        elementsBuilder.add(published);
     }
 
     @Override
