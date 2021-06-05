@@ -162,7 +162,7 @@ public final class TemporaryThreadLocals implements AutoCloseable {
     }
 
     private void lock() {
-        assert !lock;
+        assert !lock : "Cannot be acquired before releasing the resource";
         lock = true;
     }
 
