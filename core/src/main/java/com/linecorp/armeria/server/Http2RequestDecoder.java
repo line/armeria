@@ -238,13 +238,18 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         decodedReq.increaseTransferredBytes(dataLength);
 
         final long maxContentLength = decodedReq.maxRequestLength();
-        if (maxContentLength > 0 && decodedReq.transferredBytes() > maxContentLength) {
+        final long transferredLength = decodedReq.transferredBytes();
+        if (maxContentLength > 0 && transferredLength > maxContentLength) {
             final Http2Stream stream = writer.connection().stream(streamId);
             if (isWritable(stream)) {
                 writeErrorResponse(ctx, streamId, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, null);
                 writer.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.voidPromise());
                 if (decodedReq.isOpen()) {
-                    decodedReq.close(ContentTooLargeException.get());
+                    decodedReq.close(ContentTooLargeException.builder()
+                                                             .transferred(transferredLength)
+                                                             .total(dataLength)
+                                                             .maximum(maxContentLength)
+                                                             .build());
                 }
             } else {
                 // The response has been started already. Abort the request and let the response continue.

@@ -242,7 +242,12 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 if (dataLength > 0) {
                     final int allowedMaxSignalLength = maxSignalLength - signalLength;
                     if (dataLength > allowedMaxSignalLength) {
-                        final ContentTooLargeException cause = ContentTooLargeException.get();
+                        final ContentTooLargeException cause =
+                                ContentTooLargeException.builder()
+                                                        .maximum(maxSignalLength)
+                                                        .total(dataLength)
+                                                        .transferred(signalLength)
+                                                        .build();
                         StreamMessageUtil.closeOrAbort(obj, cause);
                         upstream.abort(cause);
                         return;

@@ -25,18 +25,48 @@ public final class ContentTooLargeException extends RuntimeException {
 
     private static final ContentTooLargeException INSTANCE = new ContentTooLargeException(false);
 
+    private long transferred;
+    private long total;
+    private long maximum;
+
     /**
-     * Returns a {@link ContentTooLargeException} which may be a singleton or a new instance, depending on
-     * {@link Flags#verboseExceptionSampler()}'s decision.
+     * Returns a {@link ContentTooLargeExceptionBuilder} which may return a singleton or a new instance in its
+     * {@code build} method, depending on {@link Flags#verboseExceptionSampler()}'s decision.
      */
-    public static ContentTooLargeException get() {
-        return Flags.verboseExceptionSampler().isSampled(ContentTooLargeException.class) ?
-               new ContentTooLargeException() : INSTANCE;
+    public static ContentTooLargeExceptionBuilder builder() {
+        return new ContentTooLargeExceptionBuilder();
     }
 
-    private ContentTooLargeException() {}
-
-    private ContentTooLargeException(@SuppressWarnings("unused") boolean dummy) {
+    ContentTooLargeException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);
+    }
+
+    ContentTooLargeException(long transferred, long total, long maximum) {
+        super(String.format("content length too large: %d + %d > %d", transferred, total, maximum));
+
+        this.transferred = transferred;
+        this.total = total;
+        this.maximum = maximum;
+    }
+
+    /**
+     * Returns how many bytes of the content have been transferred.
+     */
+    public long transferred() {
+        return transferred;
+    }
+
+    /**
+     * Returns the expected total number of bytes in the request or response.
+     */
+    public long total() {
+        return total;
+    }
+
+    /**
+     * Returns the maximum number of content bytes allowed.
+     */
+    public long maximum() {
+        return maximum;
     }
 }

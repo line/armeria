@@ -245,11 +245,16 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         final long maxContentLength = res.maxContentLength();
-        if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
-            res.close(ContentTooLargeException.get());
+        final long transferredLength = res.writtenBytes();
+        if (maxContentLength > 0 && transferredLength > maxContentLength - dataLength) {
+            res.close(ContentTooLargeException.builder()
+                                              .maximum(maxContentLength)
+                                              .total(dataLength)
+                                              .transferred(transferredLength)
+                                              .build());
             throw connectionError(INTERNAL_ERROR,
                                   "content length too large: %d + %d > %d (stream: %d)",
-                                  res.writtenBytes(), dataLength, maxContentLength, streamId);
+                                  transferredLength, dataLength, maxContentLength, streamId);
         }
 
         try {
