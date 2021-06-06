@@ -260,6 +260,13 @@ public class GrantedOAuth2AccessToken implements Serializable {
     }
 
     /**
+     * Indicates whether or not the Access Token is refreshable via refresh token.
+     */
+    public boolean isRefreshable() {
+        return refreshToken != null;
+    }
+
+    /**
      * {@value OAuth2Constants#REFRESH_TOKEN} Access Token response field,
      * OPTIONAL. The refresh token, which can be used to obtain new access tokens using the same
      * authorization grant as described at

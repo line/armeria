@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -53,9 +52,6 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
 
     @Nullable
     private Consumer<? super GrantedOAuth2AccessToken> tokenConsumer;
-
-    @Nullable
-    private Executor executor;
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
@@ -186,20 +182,6 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     @Nullable
     final Consumer<? super GrantedOAuth2AccessToken> tokenPersistencyConsumer() {
         return tokenConsumer;
-    }
-
-    /**
-     * An optional {@link Executor} that facilitates asynchronous access token obtain and refresh operations.
-     */
-    @SuppressWarnings("unchecked")
-    public final T executor(Executor executor) {
-        this.executor = requireNonNull(executor, "executor");
-        return (T) this;
-    }
-
-    @Nullable
-    final Executor executor() {
-        return executor;
     }
 
     abstract AbstractAccessTokenRequest buildObtainRequest(

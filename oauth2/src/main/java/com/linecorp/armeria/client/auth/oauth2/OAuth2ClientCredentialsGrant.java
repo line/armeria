@@ -20,9 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -54,11 +51,8 @@ public final class OAuth2ClientCredentialsGrant extends AbstractOAuth2Authorizat
     private final ClientCredentialsTokenRequest obtainRequest;
 
     OAuth2ClientCredentialsGrant(ClientCredentialsTokenRequest obtainRequest,
-                                 RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
-                                 @Nullable Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier,
-                                 @Nullable Consumer<? super GrantedOAuth2AccessToken> tokenConsumer,
-                                 @Nullable Executor executor) {
-        super(refreshRequest, refreshBefore, tokenSupplier, tokenConsumer, executor);
+                                 RefreshAccessTokenRequest refreshRequest, Duration refreshBefore) {
+        super(refreshRequest, refreshBefore);
         this.obtainRequest = requireNonNull(obtainRequest);
     }
 

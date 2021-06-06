@@ -23,8 +23,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -130,8 +130,8 @@ public class OAuth2ClientCredentialsGrantTest {
         final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-        try (Server server = resourceServer.start()) {
 
+        try (Server ignored = resourceServer.start()) {
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
                                               .build();
@@ -154,33 +154,22 @@ public class OAuth2ClientCredentialsGrantTest {
         final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-        try (Server server = resourceServer.start()) {
-
-            final WebClient client = WebClient.of(resourceServer.httpUri());
+        try (Server ignored = resourceServer.start()) {
+            final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                              .decorator(OAuth2Client.newDecorator(grant))
+                                              .build();
 
             final HttpRequest request1 = HttpRequest.of(HttpMethod.GET, "/resource-read-write/");
-            final CompletionStage<HttpRequest> authorizedRequest1 = grant.withAuthorization(request1);
-
             final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/resource-read/");
-            final CompletionStage<HttpRequest> authorizedRequest2 = grant.withAuthorization(request2);
-
             final HttpRequest request3 = HttpRequest.of(HttpMethod.GET, "/resource-read-write-update/");
-            final CompletionStage<HttpRequest> authorizedRequest3 = grant.withAuthorization(request3);
 
-            final AggregatedHttpResponse response1 =
-                    authorizedRequest1.thenCompose(signed -> client.execute(signed).aggregate())
-                                      .toCompletableFuture().join();
-            assertThat(response1.status()).isEqualTo(HttpStatus.OK);
+            final CompletableFuture<AggregatedHttpResponse> response1 = client.execute(request1).aggregate();
+            final CompletableFuture<AggregatedHttpResponse> response2 = client.execute(request2).aggregate();
+            final CompletableFuture<AggregatedHttpResponse> response3 = client.execute(request3).aggregate();
 
-            final AggregatedHttpResponse response2 =
-                    authorizedRequest2.thenCompose(signed -> client.execute(signed).aggregate())
-                                      .toCompletableFuture().join();
-            assertThat(response2.status()).isEqualTo(HttpStatus.OK);
-
-            final AggregatedHttpResponse response3 =
-                    authorizedRequest3.thenCompose(signed -> client.execute(signed).aggregate())
-                                      .toCompletableFuture().join();
-            assertThat(response3.status()).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(response1.get().status()).isEqualTo(HttpStatus.OK);
+            assertThat(response2.get().status()).isEqualTo(HttpStatus.OK);
+            assertThat(response3.get().status()).isEqualTo(HttpStatus.FORBIDDEN);
         }
     }
 
@@ -192,9 +181,8 @@ public class OAuth2ClientCredentialsGrantTest {
         final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS)
-                .executor(executor).build();
-        try (Server server = resourceServer.start()) {
-
+                .build();
+        try (Server ignored = resourceServer.start()) {
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
                                               .build();
@@ -248,8 +236,7 @@ public class OAuth2ClientCredentialsGrantTest {
         final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
                 .clientBasicAuthorization(() -> SERVER_CREDENTIALS).build();
-        try (Server server = resourceServer.start()) {
-
+        try (Server ignored = resourceServer.start()) {
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
                                               .build();

@@ -22,18 +22,24 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Consumer;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
 import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
 import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
+
+import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * Base implementation of OAuth 2.0 Access Token Grant flow to obtain Access Token.
@@ -41,54 +47,21 @@ import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenReques
  */
 abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
 
-    private final RefreshAccessTokenRequest refreshRequest;
+    private static final int MAX_TOTAL_ATTEMPTS = 10;
 
+    private static final AtomicIntegerFieldUpdater<AbstractOAuth2AuthorizationGrant> authenticatingUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractOAuth2AuthorizationGrant.class, "authenticating");
+
+    private final RefreshAccessTokenRequest refreshRequest;
     private final Duration refreshBefore;
 
-    /**
-     * Holds a token object and facilitates its lifecycle.
-     */
-    private final TokenLifecycleManager<GrantedOAuth2AccessToken> tokenManager;
+    @Nullable
+    private volatile GrantedOAuth2AccessToken accessToken;
+    private volatile int authenticating;
 
-    AbstractOAuth2AuthorizationGrant(RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
-                                     @Nullable Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier,
-                                     @Nullable Consumer<? super GrantedOAuth2AccessToken> tokenConsumer,
-                                     @Nullable Executor executor) {
+    AbstractOAuth2AuthorizationGrant(RefreshAccessTokenRequest refreshRequest, Duration refreshBefore) {
         this.refreshRequest = requireNonNull(refreshRequest, "refreshRequest");
         this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
-        tokenManager = new TokenLifecycleManager<>(this::isValid, AbstractOAuth2AuthorizationGrant::canRefresh,
-                                                   AbstractOAuth2AuthorizationGrant::shallObtainInsteadOfUpdate,
-                                                   this::obtainAccessToken, this::refreshAccessToken,
-                                                   tokenSupplier, tokenConsumer, executor);
-    }
-
-    /**
-     * Tests the token for validity at the given {@link Instant} time.
-     */
-    private boolean isValid(GrantedOAuth2AccessToken token, Instant now) {
-        return token.isValid(now.plus(refreshBefore));
-    }
-
-    /**
-     * Tests whether the token object can be refreshed or re-obtained.
-     */
-    private static boolean canRefresh(GrantedOAuth2AccessToken token) {
-        return token.refreshToken() != null;
-    }
-
-    /**
-     * Tests whether given {@link Throwable} indicates that the token shall be re-obtained
-     * after the refresh operation failure.
-     */
-    private static boolean shallObtainInsteadOfUpdate(Throwable throwable) {
-        return throwable instanceof TokenRequestException;
-    }
-
-    /**
-     * Refreshes access token.
-     */
-    private CompletionStage<GrantedOAuth2AccessToken> refreshAccessToken(GrantedOAuth2AccessToken token) {
-        return refreshRequest.make(token);
     }
 
     /**
@@ -117,7 +90,101 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * Validates access token and refreshes it if necessary.
      */
     @Override
-    public final CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
-        return tokenManager.get();
+    public final CompletionStage<GrantedOAuth2AccessToken> getAccessToken(ClientRequestContext ctx) {
+        final CompletableFuture<GrantedOAuth2AccessToken> future = new CompletableFuture<>();
+        doGetAccessToken(ctx, future, 1);
+        return future;
+    }
+
+    private void doGetAccessToken(ClientRequestContext ctx,
+                                  CompletableFuture<GrantedOAuth2AccessToken> future, int attempts) {
+        final GrantedOAuth2AccessToken accessToken = this.accessToken;
+
+        if (isValidToken(accessToken)) {
+            future.complete(accessToken);
+            return;
+        }
+        if (!authenticatingUpdater.compareAndSet(this, 0, 1)) {
+            scheduleNextRetry(ctx, future, attempts);
+            return;
+        }
+
+        final GrantedOAuth2AccessToken currentToken = this.accessToken;
+
+        // check token's validity again since it may have been updated.
+        if (isValidToken(currentToken)) {
+            authenticatingUpdater.set(this, 0);
+            future.complete(currentToken);
+            return;
+        }
+        if (currentToken != null && currentToken.isRefreshable()) {
+            refreshAccessToken(currentToken).handle((newToken, cause) -> {
+                if (cause != null) {
+                    if (cause instanceof TokenRequestException) {
+                        // retry after setting accessToken null
+                        // so that it tries to issue a new token from scratch.
+                        this.accessToken = null;
+                        authenticatingUpdater.set(this, 0);
+                        scheduleNextRetry(ctx, future, attempts);
+                        return null;
+                    }
+                    authenticatingUpdater.set(this, 0);
+                    future.completeExceptionally(cause);
+                    return null;
+                }
+                this.accessToken = newToken;
+                authenticatingUpdater.set(this, 0);
+                future.complete(newToken);
+                return null;
+            });
+            return;
+        }
+        obtainAccessToken(currentToken).handle((newToken, cause) -> {
+            if (cause != null) {
+                authenticatingUpdater.set(this, 0);
+                future.completeExceptionally(cause);
+                return null;
+            }
+            this.accessToken = newToken;
+            authenticatingUpdater.set(this, 0);
+            future.complete(newToken);
+            return null;
+        });
+    }
+
+    private boolean isValidToken(@Nullable GrantedOAuth2AccessToken token) {
+        return token != null && token.isValid(Instant.now().plus(refreshBefore));
+    }
+
+    private CompletionStage<GrantedOAuth2AccessToken> refreshAccessToken(GrantedOAuth2AccessToken token) {
+        return refreshRequest.make(token);
+    }
+
+    private void scheduleNextRetry(ClientRequestContext ctx,
+                                   CompletableFuture<GrantedOAuth2AccessToken> future, int attempts) {
+        if (attempts > MAX_TOTAL_ATTEMPTS) {
+            // TODO(ks-yim): throw a more specific exception
+            future.completeExceptionally(new TimeoutException());
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        final ScheduledFuture<Void> scheduledFuture =
+                (ScheduledFuture<Void>) ctx.eventLoop().schedule(
+                        () -> doGetAccessToken(ctx, future, attempts + 1),
+                        getNextDelay(attempts), TimeUnit.MILLISECONDS);
+        scheduledFuture.addListener(scheduled -> {
+            if (scheduled.isCancelled()) {
+                // future is cancelled when the client factory is closed.
+                future.completeExceptionally(new IllegalStateException(
+                        ClientFactory.class.getSimpleName() + " has been closed."));
+            } else if (scheduled.cause() != null) {
+                future.completeExceptionally(scheduled.cause());
+            }
+        });
+    }
+
+    private static long getNextDelay(int numAttemptsSoFar) {
+        // TODO(ks-yim): replace this with exponential + jitter delay.
+        return ThreadLocalRandom.current().nextLong(70L);
     }
 }

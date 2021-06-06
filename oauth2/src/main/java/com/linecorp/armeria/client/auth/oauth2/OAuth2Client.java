@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
+import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -26,7 +28,6 @@ import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * Decorates a {@link HttpClient} with an OAuth 2.0 Authorization Grant flow.
@@ -58,14 +59,9 @@ public final class OAuth2Client extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(authorizationGrant.withAuthorization(req).thenApply(reqWithAuth -> {
-            // Update the ctx.request
-            ctx.updateRequest(reqWithAuth);
-            try {
-                return unwrap().execute(ctx, reqWithAuth);
-            } catch (Exception e) {
-                return Exceptions.throwUnsafely(Exceptions.peel(e));
-            }
-        }));
+        final CompletionStage<HttpResponse> future =
+                authorizationGrant.withAuthorization(ctx, req).thenApply(ignored -> executeWithFallback(
+                        unwrap(), ctx, (context, cause) -> HttpResponse.ofFailure(cause)));
+        return HttpResponse.from(future);
     }
 }
