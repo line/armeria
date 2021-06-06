@@ -18,7 +18,9 @@ package com.linecorp.armeria.internal.common;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -27,225 +29,149 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
+import com.linecorp.armeria.common.RequestContext;
+
 public class ContextFutureCallbackArgumentsProvider implements ArgumentsProvider {
+    static final class CallbackResult {
+        final AtomicReference<RequestContext> context = new AtomicReference<>();
+        final AtomicBoolean called = new AtomicBoolean();
+    }
+
+    private final Function<CallbackResult, Void> fn = result -> {
+        result.called.set(true);
+        result.context.set(RequestContext.current());
+        return null;
+    };
 
     @Override
     public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
         final Arguments thenApply = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.thenApply(res -> {
-                        called.set(true);
-                        return null;
-                    }).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<Object>, CallbackResult>) (future, result) -> {
+                    future.thenApply(res -> fn.apply(result))
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments thenApplyAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.thenApplyAsync(res -> {
-                        called.set(true);
-                        return null;
-                    }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.thenApplyAsync(res -> fn.apply(result), MoreExecutors.directExecutor())
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments thenAccept = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.thenAccept(res -> {
-                        called.set(true);
-                    }).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.thenAccept(res -> fn.apply(result))
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments thenAcceptAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.thenAcceptAsync(res -> {
-                        called.set(true);
-                    }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.thenAcceptAsync(res -> fn.apply(result), MoreExecutors.directExecutor())
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments thenRun = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.thenRun(() -> {
-                        called.set(true);
-                    }).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.thenRun(() -> fn.apply(result))
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments thenRunAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.thenRunAsync(() -> {
-                        called.set(true);
-                    }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.thenRunAsync(() -> fn.apply(result), MoreExecutors.directExecutor())
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final CompletableFuture<Void> completedFuture = CompletableFuture.completedFuture(null);
         final Arguments thenCombine = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.thenCombine(completedFuture, (a, b) -> {
-                        called.set(true);
-                        return null;
-                    }).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.thenCombine(completedFuture, (a, b) -> fn.apply(result))
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments thenCombineAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.thenCombineAsync(completedFuture, (a, b) -> {
-                        called.set(true);
-                        return null;
-                    }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.thenCombineAsync(completedFuture, (a, b) -> fn.apply(result),
+                                            MoreExecutors.directExecutor())
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments thenAcceptBoth = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.thenAcceptBoth(completedFuture, (a, b) -> {
-                        called.set(true);
-                    }).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.thenAcceptBoth(completedFuture, (a, b) -> fn.apply(result))
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments thenAcceptBothAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.thenAcceptBothAsync(completedFuture, (a, b) -> {
-                        called.set(true);
-                    }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.thenAcceptBothAsync(completedFuture, (a, b) -> fn.apply(result),
+                                               MoreExecutors.directExecutor())
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments runAfterBoth = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.runAfterBoth(completedFuture, () -> {
-                        called.set(true);
-                    }).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.runAfterBoth(completedFuture, () -> fn.apply(result))
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments runAfterBothAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.runAfterBothAsync(completedFuture, () -> {
-                        called.set(true);
-                    }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.runAfterBothAsync(completedFuture, () -> fn.apply(result),
+                                             MoreExecutors.directExecutor())
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final CompletableFuture<Object> neverCompleteFuture = new CompletableFuture<>();
         final Arguments applyToEither = Arguments.of(
-                (BiConsumer<CompletableFuture<Object>, AtomicBoolean>) (future, called) -> {
-                    future.applyToEither(neverCompleteFuture, a -> {
-                        called.set(true);
-                        return null;
-                    }).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<Object>, CallbackResult>) (future, result) -> {
+                    future.applyToEither(neverCompleteFuture, a -> fn.apply(result))
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments applyToEitherAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<Object>, AtomicBoolean>) (future, called) -> {
-                    future.applyToEitherAsync(neverCompleteFuture, a -> {
-                        called.set(true);
-                        return null;
-                    }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<Object>, CallbackResult>) (future, result) -> {
+                    future.applyToEitherAsync(neverCompleteFuture, a -> fn.apply(result),
+                                              MoreExecutors.directExecutor())
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments acceptEither = Arguments.of(
-                (BiConsumer<CompletableFuture<Object>, AtomicBoolean>) (future, called) -> {
-                    future.acceptEither(neverCompleteFuture, a -> {
-                        called.set(true);
-                    }).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<Object>, CallbackResult>) (future, result) -> {
+                    future.acceptEither(neverCompleteFuture, a -> fn.apply(result))
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments acceptEitherAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<Object>, AtomicBoolean>) (future, called) -> {
-                    future.acceptEitherAsync(neverCompleteFuture, a -> {
-                        called.set(true);
-                    }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<Object>, CallbackResult>) (future, result) -> {
+                    future.acceptEitherAsync(neverCompleteFuture, a -> fn.apply(result),
+                                             MoreExecutors.directExecutor())
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments runAfterEither = Arguments.of(
-                (BiConsumer<CompletableFuture<Object>, AtomicBoolean>) (future, called) -> {
-                    future.runAfterEither(neverCompleteFuture, () -> {
-                        called.set(true);
-                    }).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<Object>, CallbackResult>) (future, result) -> {
+                    future.runAfterEither(neverCompleteFuture, () -> fn.apply(result))
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments runAfterEitherAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<Object>, AtomicBoolean>) (future, called) -> {
-                    future.runAfterEitherAsync(neverCompleteFuture, () -> {
-                        called.set(true);
-                    }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<Object>, CallbackResult>) (future, result) -> {
+                    future.runAfterEitherAsync(neverCompleteFuture, () -> fn.apply(result),
+                                               MoreExecutors.directExecutor())
+                          .exceptionally(cause -> fn.apply(result));
                 });
         final Arguments thenCompose = Arguments.of(
-                (BiConsumer<CompletableFuture<Object>, AtomicBoolean>) (future, called) -> {
+                (BiConsumer<CompletableFuture<Object>, CallbackResult>) (future, result) -> {
                     future.thenCompose(f -> {
-                        called.set(true);
+                        fn.apply(result);
                         return null;
-                    }).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                    }).exceptionally(cause -> fn.apply(result));
                 });
         final Arguments thenComposeAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<Object>, AtomicBoolean>) (future, called) -> {
+                (BiConsumer<CompletableFuture<Object>, CallbackResult>) (future, result) -> {
                     future.thenComposeAsync(f -> {
-                        called.set(true);
+                        fn.apply(result);
                         return null;
-                    }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                        called.set(true);
-                        return null;
-                    });
+                    }, MoreExecutors.directExecutor()).exceptionally(cause -> fn.apply(result));
                 });
         final Arguments whenComplete = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.whenComplete((res, cause) -> {
-                        called.set(true);
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.whenComplete((res, cause) -> fn.apply(result));
                 });
         final Arguments whenCompleteAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.whenCompleteAsync((res, cause) -> {
-                        called.set(true);
-                    }, MoreExecutors.directExecutor());
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.whenCompleteAsync((res, cause) -> fn.apply(result), MoreExecutors.directExecutor());
                 });
         final Arguments handle = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.handle((res, cause) -> {
-                        called.set(true);
-                        return null;
-                    });
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.handle((res, cause) -> fn.apply(result));
                 });
         final Arguments handleAsync = Arguments.of(
-                (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
-                    future.handleAsync((res, cause) -> {
-                        called.set(true);
-                        return null;
-                    }, MoreExecutors.directExecutor());
+                (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
+                    future.handleAsync((res, cause) -> fn.apply(result), MoreExecutors.directExecutor());
                 });
         return Stream.of(thenApply, thenApplyAsync,
                          thenAccept, thenAcceptAsync,
@@ -259,5 +185,9 @@ public class ContextFutureCallbackArgumentsProvider implements ArgumentsProvider
                          thenCompose, thenComposeAsync,
                          whenComplete, whenCompleteAsync,
                          handle, handleAsync);
+    }
+
+    Function<CallbackResult, Void> fn() {
+        return fn;
     }
 }
