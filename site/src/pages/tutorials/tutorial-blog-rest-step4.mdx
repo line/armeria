@@ -10,11 +10,13 @@ level: basic
 
 # Implementing READ operations
 
-In this step, we will implement two methods at once. One is for retrieving a single post and another for multiple blog posts. We will map both methods with HTTP GET.
+We've implemented a [CREATE](./tutorial-blog-rest-step3) operation.
+
+In this step, we'll implement two methods at once. One is for retrieving a single post and another for multiple blog posts. We'll map both methods with HTTP GET.
 
 <TutorialSteps current={4} />
 
-By completing this step, you will learn to map your service with HTTP GET (<type://@Get>), parameter injection (<type://@Param>), setting default parameter value (<type://@Default>), and return a JSON object (<type://@ProducesJson>) as a response.
+By completing this step, you'll learn to map your service with the HTTP GET (<type://@Get>) method, use parameter injection (<type://@Param>), set default parameter value (<type://@Default>), and return a JSON object (<type://@ProducesJson>) as a response.
 
 ## What you need
 
@@ -25,9 +27,9 @@ You need to have these files prepared from previous steps.
 
 ## 1. Map HTTP method
 
-Start by [mapping HTTP GET method](/docs/server-annotated-service#mapping-http-service-methods) with our service methods:
+Let's start with [mapping the HTTP GET method](/docs/server-annotated-service#mapping-http-service-methods) with our service methods:
 
-1. [Create a BlogService.java file](./tutorial-blog-rest-step3#0-create-a-service-file) if you are yet to create one.
+1. [Create a service file](./tutorial-blog-rest-step3#0-create-a-service-file) if you're yet to create one.
 2. Declare service methods, `getBlogPost()` and `getBlogPosts()` in the class `BlogService`.
 3. [Map these service methods](/docs/server-annotated-service#mapping-http-service-methods) with the HTTP GET method by adding the <type://@Get> annotation as follows.
 4. Assign the endpoint as `/blogs`.
@@ -48,7 +50,7 @@ public Iterable<BlogPost> getBlogPosts(boolean descending) {
 
 Take in information through _path_ and _query_ parameters for retrieving blog posts. For retrieving a single post, we will take a blog post ID as the path parameter. For multiple posts, we will take the sorting order as a query parameter.
 
-For retrieving a single post:
+Let's retrieve a single post:
 
 1. To take a path parameter, add `/:id` to the <type://@Get> annotation's parameter as in line 1.
 2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method, annotate the parameter with <type://@Param> as in line 2.
@@ -60,7 +62,7 @@ public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
 }
 ```
 
-For retrieving multiple blog posts:
+Now, let's retrieve multiple blog posts:
 
 1. Specify the endpoint for the service using the <type://@Get> annotation.
 2. [Inject the parameter](/docs/server-annotated-service#parameter-injection) by annotating the parameter `descending` with <type://@Param>.
@@ -127,6 +129,6 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 
 In this step, you've implemented methods for a READ operation and used Armeria's annotations; <type://@Get>, <type://@ProducesJson>, <type://@Param>, and <type://@Default>.
 
-Next, at [Step 5. Implement UPDATE](./tutorial-blog-rest-step5), you will implement an UPDATE operation to modify existing blog posts.
+Next, at [Step 5. Implement UPDATE](./tutorial-blog-rest-step5), you'll implement an UPDATE operation to modify existing blog posts.
 
 <TutorialSteps current={4} />

@@ -21,7 +21,7 @@ Just check that you have prepared the [prerequisites](./tutorial-blog-rest-intro
 
 ## 1. Create a server instance
 
-To create a server instance, use Armeria's <type://ServerBuilder>:
+Let's create a server instance using Armeria's <type://ServerBuilder>:
 
 1. Create a main class and add in import statements. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
   ```java filename=Main.java
@@ -55,7 +55,7 @@ Later on, when we build our blog service, we will come back to this part of the 
 
 ## 2. Start the server
 
-Add the code to start the server with the dummy service.
+Now that we have a server, have a go at starting the server with the dummy service.
 
 1. In the `Main` class, add the `main()` method.
 2. Call the `newServer()` method we implemented in step 2. Let's set the port to `8080` as in line 2.
@@ -80,7 +80,6 @@ public static void main(String[] args) throws Exception {
 ## 3. Run the server and service
 
 As the last step, launch the server and run the service to check if you are all set to go. To run the server, run the `main()` method in your IDE. The server and service are launched successfully if you see the following message.
-
 
 ```bash
  Server has been started. Serving dummy service at http://127.0.0.1:8080

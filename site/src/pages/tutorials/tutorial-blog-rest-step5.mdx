@@ -11,11 +11,13 @@ level: basic
 
 # Implementing UPDATE operation
 
-In this step, we will write a method for updating a blog post. The HTTP method we map with this method is GET.
+We've implemented [CREATE](./tutorial-blog-rest-step3) and [READ](./tutorial-blog-rest-step4) operations.
+
+In this step, we'll write a method for updating a blog post. The HTTP method we map with this method is GET.
 
 <TutorialSteps current={5} />
 
-By completing this step, you will learn to map your service with HTTP PUT (<type://@Put>), parameter injection, and convert request body into a Java object using a request object (<type://@RequestObject>).
+By completing this step, you'll learn to map your service with the HTTP PUT (<type://@Put>) method, use parameter injection, and convert request body into a Java object using a request object (<type://@RequestObject>).
 
 ## What you need
 
@@ -26,9 +28,9 @@ You need to have these files prepared from previous steps.
 
 ## 1. Map HTTP method
 
-Start by [mapping HTTP PUT method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
+Let's start by [mapping the HTTP PUT method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
 
-1. [Create a BlogService.java file](./tutorial-blog-rest-step3#0-create-a-service-file) if you are yet to create one.
+1. [Create a service file](./tutorial-blog-rest-step3#0-create-a-service-file) if you're yet to create one.
 2. Declare a service method, `updateBlogPost()`, in the class `BlogService`.
 3. [Map this service method](/docs/server-annotated-service#mapping-http-service-methods) with the HTTP PUT by adding the <type://@Put> annotation.
 4. Assign the endpoint as `/blogs`.
@@ -37,13 +39,13 @@ Start by [mapping HTTP PUT method](/docs/server-annotated-service#mapping-http-s
 @Put("/blogs")
 public HttpResponse updateBlogPost(int id, BlogPost blogPost)
         throws JsonProcessingException {
-  // Implementation
+  // Update a blog post
 }
 ```
 
 ## 2. Handle parameters
 
-For updating a blog post, take a blog post ID (`id`) and new blog post information to update with. For [creating a blog post](./tutorial-blog-rest-step3), we've used Armeria's <type://RequestConverter> to convert a request body into a Java object. For a change, let's try using <type://@RequestObject> to convert a request body.
+For updating a blog post, let's take a blog post ID (`id`) and new blog post information to update with. For [creating a blog post](./tutorial-blog-rest-step3), we've used Armeria's <type://RequestConverter> to convert a request body into a Java object. For a change, let's try using <type://@RequestObject> to convert a request body.
 
 1. Take in the ID value as a path parameter by adding `/blogs/:id` to the <type://@Put> annotation.
 2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method by annotating the parameter with <type://@Param>.
@@ -67,7 +69,7 @@ For updating a blog post, take a blog post ID (`id`) and new blog post informati
 
 ## 3. Implement service code
 
-In this step, write the code required for service itself. You need to update the information contained in the `blogPosts` map. In real services, you will be retrieving and updating the blog post information from and to a database.
+In this step, write the code required for service itself. You need to update the information contained in the `blogPosts` map. In real services, you'll be retrieving and updating the blog post information from and to a database.
 
 To update a blog post, copy the following code inside the `updateBlogPost()` method.
 
@@ -94,6 +96,8 @@ Two possibilities are available for the response. If the blog post to update exi
 
 ### Return error
 
+Let's return an error for the request to update a blog post that doesn't exist.
+
 Inside the condition block of the `getBlogPost()` method added in the previous step, return a response using Armeria's <type://HTTPResponse>, with the content of the response as `HttpStatus.NOT_FOUND`.
 
 ```java filename=BlogService.java highlight=4
@@ -107,7 +111,7 @@ public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPo
 
 ### Return success
 
-If the blog post exists, we want to return the updated information. To return updated information, copy the following code inside the `updateBlogPost()` method.
+Let's return the information updated when the blog post exists. To return updated information, copy the code below to the `updateBlogPost()` method.
 
 ```java filename=BlogService.java
 public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost){
@@ -121,6 +125,6 @@ public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPo
 
 In this step, you've implemented a method for an UPDATE operation and used Armeria's annotations; <type://@Put>, <type://@Param>, and <type://@RequestObject>.
 
-Next, at [Step 6. Implement DELETE](./tutorial-blog-rest-step6), you will implement a DELETE operation to delete blog posts.
+Next, at [Step 6. Implement DELETE](./tutorial-blog-rest-step6), you'll implement a DELETE operation to delete blog posts.
 
 <TutorialSteps current={5} />

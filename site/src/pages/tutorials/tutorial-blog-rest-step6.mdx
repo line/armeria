@@ -14,11 +14,11 @@ level: basic
 
 # Implement DELETE operation
 
-In this step, we will write a method for deleting a blog post. The HTTP method we map with this method is DELETE.
+In this step, we'll write a method for deleting a blog post. The HTTP method we map with this method is DELETE.
 
 <TutorialSteps current={6} />
 
-By completing this step, you will learn to map your service with HTTP DELETE (<type://@Delete>), customize an exception handler, and use a blocking task executor.
+By completing this step, you'll learn to map your service with the HTTP DELETE (<type://@Delete>) method, customize an exception handler, and use a blocking task executor.
 
 ## What you need
 
@@ -29,9 +29,9 @@ You need to have these files prepared from previous steps.
 
 ## 1. Map HTTP method
 
-Start by [mapping HTTP DELETE method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
+Let's start with [mapping the HTTP DELETE method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
 
-1. [Create a BlogService.java file](./tutorial-blog-rest-step3#0-create-a-service-file) if you are yet to create one.
+1. [Create a BlogService.java file](./tutorial-blog-rest-step3#0-create-a-service-file) if you're yet to create one.
 2. Declare a service method, `deleteBlogPost()` in the class `BlogService`.
 3. [Map this service method](/docs/server-annotated-service#mapping-http-service-methods) with the HTTP DELETE by adding the <type://@Delete> annotation.
 4. Assign the endpoint as `/blogs`.
@@ -45,7 +45,7 @@ public HttpResponse deleteBlogPost(int id) {
 
 ## 2. Handle parameters
 
-For deleting a blog post, take the blog post ID (`id`) to identify the post to delete, as a path parameter.
+Let's take the blog post ID (`id`) as a path parameter for identifying the post to delete.
 
 1. Take in the ID value as a path parameter by adding `/blogs/:id` to the <type://@Delete> annotation.
 2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method by annotating the parameter with <type://@Param>.
@@ -68,7 +68,7 @@ In this step, write the code to delete a blog post, handle an exception, and blo
 
 Deleting a given blog post in this tutorial means removing a blog post from the map, `blogPosts`. However, in real services you would be performing this action on a database.
 
-To delete a blog post, copy the following code inside the `deleteBlogPost()` method.
+To delete a blog post, copy the code below to the `deleteBlogPost()` method.
 
 ```java filename=BlogService.Java highlight=2
 public HttpResponse deleteBlogPost(@Param int id) {
@@ -95,7 +95,7 @@ What if there is no such post to delete? We can check if the blog exists before 
     ...
   }
   ```
-3. Implement our own exception handler by overriding the default `handleException()` method. Add a code block for handling the `IllegalArgumentException` thrown. For our tutorial, return a BAD REQUEST as the response.
+3. Implement your own exception handler by overriding the default `handleException()` method. Add a code block for handling the `IllegalArgumentException` thrown. For this tutorial, return a BAD REQUEST as the response.
   ```java filename=BadRequesExceptionHandler.java highlight=3,9,10,12,14
   @Override
   public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
@@ -123,9 +123,9 @@ What if there is no such post to delete? We can check if the blog exists before 
 
 ### Add blocking
 
-With real services, accessing and operating on a database takes time. To prevent the service to wait on our task, we want to inform the task executor to handle other tasks until we are done with database operation.
+With real services, accessing and operating on a database takes time. To prevent the service to wait on our task, we want to inform the task executor to handle other tasks until we're done with database operation.
 
-To enable this, we use Armeria's [blocking task executor](/docs/server-annotated-service#specifying-a-blocking-task-executor). There are a few options of implementing this; we will annotate our service method with the <type://@Blocking>.
+To enable this, we use Armeria's [blocking task executor](/docs/server-annotated-service#specifying-a-blocking-task-executor). There are a few options of implementing this; we'll annotate our service method with the <type://@Blocking>.
 
 ```java filename=BlogService.java highlight=1
 @Blocking
@@ -136,7 +136,7 @@ public HttpResponse deleteBlogPost(@Param int id) {
 
 ## 4. Return response
 
-We've already handled returning the not found error in the [exception handling section](#handle-exception). Here, we will return a response for successful deletion.
+We've already handled returning the not found error in the [exception handling section](#handle-exception). Here, we'll return a response for successful deletion.
 
 ```java filename=BlogService.java
 public HttpResponse deleteBlogPost(@Param int id) {

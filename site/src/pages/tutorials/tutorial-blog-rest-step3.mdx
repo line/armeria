@@ -15,9 +15,9 @@ Now that we've prepared minimal files for the tutorial in [step 2](./tutorial-bl
 
 <TutorialSteps current={3} />
 
-In this step, we create a file to contain our service methods. The first service method we write is for creating a blog post. The HTTP method to map with is POST.
+In this step, you'll create a file to contain service methods. The first service method to write is for creating a blog post. The HTTP method to map with is POST.
 
-By completing this step, you learn how to map your service with HTTP POST (<type://@Post>) and make your own request converter (<type://@RequestConverter>).
+By completing this step, you'll learn to map your service with the HTTP POST (<type://@Post>) method and make your own request converter (<type://@RequestConverter>).
 
 ## What you need
 
@@ -38,7 +38,7 @@ You need the BlogPost.java file, created from [step 2](./tutorial-blog-rest-step
 
 ## 1. Map HTTP method
 
-Start by [mapping HTTP POST method](/docs/server-annotated-service#mapping-http-service-methods) with our service method, which we will declare at this step:
+Let's start with [mapping the HTTP POST method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
 
 1. Declare a service method, `createBlogPost()`, in the class `BlogService`.
 2. [Map this service method](/docs/server-annotated-service#mapping-http-service-methods) with the HTTP POST by adding the <type://@Post> annotations.
@@ -115,7 +115,7 @@ public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingExcep
 
 When the request for creation is received, our request converter creates an instance of a blog post object for us. We want to save the blog post object in the map (`blogPosts`) created in the `BlogService` class.
 
-To store the blog post information in the map, add the code (line 4) in the `createBlogPost()` method.
+Let's store the blog post information in the map by adding line 4, in the `createBlogPost()` method.
 
 ```java filename=BlogService.java highlight=4
 @Post("/blogs")
@@ -128,6 +128,8 @@ public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingExcep
 ## 4. Return response
 
 Now, it's time to return a response to our client. As the response, on top of the information received, add the ID of the post, created time, plus modified time which would be identical to the created time.
+
+Let's a return a response for blog post creation:
 
 1. Specify JSON object keys for each member of our blog post object, by annotating the following methods with `@JsonProperty`.
   ```java filename=BlogPost.java highlight=3,6,9,12,15
@@ -162,6 +164,6 @@ Now, it's time to return a response to our client. As the response, on top of th
 
 In this step, you've written a method to implement a CREATE operation and used Armeria's annotations; <type://@Post> and <type://@RequestConverter>.
 
-Next, at [Step 4. Implement READ](./tutorial-blog-rest-step4), you will implement a READ operation to read a single post and multiple posts.
+Next, at [Step 4. Implement READ](./tutorial-blog-rest-step4), you'll implement a READ operation to read a single post and multiple posts.
 
 <TutorialSteps current={3} />
