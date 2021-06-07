@@ -39,11 +39,9 @@ Let's create a server instance using Armeria's <type://ServerBuilder>:
   }
   ```
 2. In the `Main` class, add the method, `newServer()`. Since a server instance requires at least one service to run with, let's add a dummy service returning `"Hello, Armeria!"` for now.
-  ```java filename=Main.java highlight=6,7
+  ```java filename=Main.java highlight=4
   static Server newServer(int port) {
     final ServerBuilder sb = Server.builder();
-    final DocService docService = DocService.builder()
-                                            .build();
     return sb.http(port)
              .service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!"))
              .build();
