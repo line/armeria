@@ -16,10 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -77,11 +75,14 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     final List<T> drainAll(boolean withPooledObjects) {
         assert objs[0] != null;
-        final ImmutableList<T> copied = Arrays.stream(objs)
-                                              .map(obj -> prepareObjectForNotification(obj, withPooledObjects))
-                                              .collect(toImmutableList());
-        Arrays.fill(objs, null);
-        return copied;
+        final int length = objs.length;
+        final ImmutableList.Builder<T> builder = ImmutableList.builderWithExpectedSize(length);
+        for (int i = 0; i < length; i++) {
+            final T obj = objs[i];
+            objs[i] = null;
+            builder.add(prepareObjectForNotification(obj, withPooledObjects));
+        }
+        return builder.build();
     }
 
     @Override

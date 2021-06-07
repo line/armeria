@@ -39,7 +39,7 @@ final class StreamMessageCollector<T> implements Subscriber<T> {
     @Nullable
     private ImmutableList.Builder<T> elementsBuilder = ImmutableList.builder();
 
-    StreamMessageCollector(SubscriptionOption[] options) {
+    StreamMessageCollector(SubscriptionOption... options) {
         withPooledObjects = containsWithPooledObjects(options);
     }
 

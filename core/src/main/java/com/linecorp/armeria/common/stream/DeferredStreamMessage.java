@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -350,8 +350,9 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         if (collectingFutureUpdater.compareAndSet(this, null, collectingFuture)) {
             return collectingFuture;
         } else {
-            assert upstream != null;
-            return upstream.collect(executor, options);
+            final StreamMessage<T> upstream0 = this.upstream;
+            assert upstream0 != null;
+            return upstream0.collect(executor, options);
         }
     }
 

@@ -17,8 +17,8 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -123,6 +123,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     }
 
     private void subscribe0(Subscriber<? super T> subscriber) {
+        //noinspection unchecked
         this.subscriber = (Subscriber<T>) subscriber;
         try {
             subscriber.onSubscribe(this);

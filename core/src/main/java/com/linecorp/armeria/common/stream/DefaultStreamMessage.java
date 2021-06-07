@@ -16,9 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -178,10 +177,11 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 new SubscriptionImpl(this, NoopSubscriber.get(), executor, options, collectingFuture);
         if (subscriptionUpdater.compareAndSet(this, null, subscription)) {
             if (setState(State.CLOSED, State.CLEANUP)) {
+                final boolean withPooledObjects = subscription.withPooledObjects();
                 if (executor.inEventLoop()) {
-                    collectAll(collectingFuture, executor, options);
+                    collectAll(collectingFuture, executor, withPooledObjects);
                 } else {
-                    executor.execute(() -> collectAll(collectingFuture, executor, options));
+                    executor.execute(() -> collectAll(collectingFuture, executor, withPooledObjects));
                 }
             }
         } else {
@@ -198,9 +198,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void collectAll(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
-                            SubscriptionOption... options) {
+                            boolean withPooledObjects) {
         try {
-            collectingFuture.complete(drainAll(containsWithPooledObjects(options)));
+            collectingFuture.complete(drainAll(withPooledObjects, true));
             // whenComplete() should be completed after executing the callbacks of collect().
             executor.execute(() -> whenComplete().complete(null));
         } catch (Throwable throwable) {
@@ -209,8 +209,16 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         }
     }
 
-    private List<T> drainAll(boolean withPooledObjects) throws Throwable {
-        final ImmutableList.Builder<T> builder = ImmutableList.builderWithExpectedSize(queue.size());
+    private List<T> drainAll(boolean withPooledObjects, boolean isClosed) throws Throwable {
+        final int estimatedSize;
+        if (isClosed) {
+            // ClosedEvent was added to the queue
+            estimatedSize = queue.size() - 1;
+        } else {
+            estimatedSize = queue.size();
+        }
+
+        final ImmutableList.Builder<T> builder = ImmutableList.builderWithExpectedSize(estimatedSize);
         CloseEvent closeEvent = null;
         Throwable closeCause = null;
         for (;;) {
@@ -581,7 +589,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 if (setState(State.CLOSED, State.CLEANUP)) {
                     if (cause == null) {
                         try {
-                            collectingFuture.complete(drainAll(subscription.withPooledObjects()));
+                            collectingFuture.complete(drainAll(subscription.withPooledObjects(), false));
                             whenComplete().complete(null);
                         } catch (Throwable cause0) {
                             collectingFuture.completeExceptionally(cause0);

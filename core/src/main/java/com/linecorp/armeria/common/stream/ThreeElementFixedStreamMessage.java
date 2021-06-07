@@ -75,9 +75,9 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     final List<T> drainAll(boolean withPooledObjects) {
         assert obj1 != null;
-        final ImmutableList<T> objs = ImmutableList.of(prepareObjectForNotification(obj1, withPooledObjects),
-                                                       prepareObjectForNotification(obj2, withPooledObjects),
-                                                       prepareObjectForNotification(obj3, withPooledObjects));
+        final List<T> objs = ImmutableList.of(prepareObjectForNotification(obj1, withPooledObjects),
+                                              prepareObjectForNotification(obj2, withPooledObjects),
+                                              prepareObjectForNotification(obj3, withPooledObjects));
         obj1 = obj2 = obj3 = null;
         return objs;
     }

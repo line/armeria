@@ -107,7 +107,7 @@ public class StreamMessageBenchmark {
             return computedSum;
         }
 
-        private void writeAllValues(StreamMessage<Integer> stream) {
+        void writeAllValues(StreamMessage<Integer> stream) {
             if (stream instanceof StreamWriter) {
                 @SuppressWarnings("unchecked")
                 final StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
@@ -159,7 +159,7 @@ public class StreamMessageBenchmark {
         return streamObjects.computedSum();
     }
 
-    private static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
+    static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
         switch (streamObjects.streamType) {
             case DEFAULT_STREAM_MESSAGE:
                 return new DefaultStreamMessage<>();
