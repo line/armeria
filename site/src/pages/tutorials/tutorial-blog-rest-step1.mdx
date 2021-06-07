@@ -38,7 +38,7 @@ Let's create a server instance using Armeria's <type://ServerBuilder>:
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
   }
   ```
-2. In the `Main` class, add the method, `newServer()`. Since a server instance requires at least one service to run with, add a dummy service returning `"Hello, Armeria!"` for the mere purpose of checking that the server gets launched and runs.
+2. In the `Main` class, add the method, `newServer()`. Since a server instance requires at least one service to run with, let's add a dummy service returning `"Hello, Armeria!"` for now.
   ```java filename=Main.java highlight=6,7
   static Server newServer(int port) {
     final ServerBuilder sb = Server.builder();
