@@ -85,17 +85,6 @@ String content() { return content; }
 long createdAt() { return createdAt; }
 
 long modifiedAt() { return modifiedAt; }
-
-@Override
-public String toString() {
-    return MoreObjects.toStringHelper(this)
-                      .add("id", id)
-                      .add("title", title)
-                      .add("content", content)
-                      .add("createdAt", createdAt)
-                      .add("modifiedAt", modifiedAt)
-                      .toString();
-}
 ```
 
 
