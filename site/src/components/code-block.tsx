@@ -106,7 +106,7 @@ const lineHighlights = {
     width:"760px"
 }
 
-function getTargetLines(lines: string){
+function getTargetLines(lines: string): string[] {
   const range = (start, end, length = end-start+1 ) => 
     Array.from({ length }, (_, i) => start + i);
 
