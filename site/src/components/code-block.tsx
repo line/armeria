@@ -132,7 +132,7 @@ interface CodeBlockProps extends SyntaxHighlighterProps {
 const CodeBlock: React.FC<CodeBlockProps> = (props) => {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef(null);
-  const targetLines = props.highlight ? getTargetLines(props.highlight): [];
+  const targetLines = props.highlight ? getTargetLines(props.highlight) : [];
 
   const onCopyCallback = useCallback(() => {
     setCopied(true);
