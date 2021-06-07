@@ -10,14 +10,14 @@ level: basic
 # Creating a server
 
 As the first step of the tutorial, we create a server instance and run a dummy service to check that the server and service are launched.
-We will use Armeria's <type://ServerBuilder> for this task.
+We'll use Armeria's <type://ServerBuilder> for this task.
 
 <TutorialSteps current={1} />
 
 ## What you need
 
 You don't need to prepare anything at this stage.
-Just check that you have prepared the [prerequisites](./tutorial-blog-rest-intro/#prerequisites).
+Just check that you've prepared the [prerequisites](./tutorial-blog-rest-intro/#prerequisites).
 
 ## 1. Create a server instance
 
@@ -45,13 +45,12 @@ Let's create a server instance using Armeria's <type://ServerBuilder>:
     final DocService docService = DocService.builder()
                                             .build();
     return sb.http(port)
-              .service("/",(ctx, req) ->
-                  HttpResponse.of("Hello, Armeria!"))
-              .build();
+            .service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!"))
+            .build();
   }
   ```
 
-Later on, when we build our blog service, we will come back to this part of the code to [add an actual service](./tutorial-blog-rest-step7).
+Later on, when we build our blog service, we'll come back to this part of the code to [add an actual service](./tutorial-blog-rest-step7).
 
 ## 2. Start the server
 
@@ -79,7 +78,7 @@ public static void main(String[] args) throws Exception {
 
 ## 3. Run the server and service
 
-As the last step, launch the server and run the service to check if you are all set to go. To run the server, run the `main()` method in your IDE. The server and service are launched successfully if you see the following message.
+As the last step, launch the server and run the service to check if you're all set to go. To run the server, run the `main()` method in your IDE. The server and service are launched successfully if you see the following message.
 
 ```bash
  Server has been started. Serving dummy service at http://127.0.0.1:8080
