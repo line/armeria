@@ -147,7 +147,7 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
     return null;
   }
   const applyHighlightStyle = (lineNumber) => {
-    if(lineNumber!=0 && targetLines.includes(lineNumber)){
+    if(lineNumber != 0 && targetLines.includes(lineNumber)){
       return { style: lineHighlights }
     }
     else
