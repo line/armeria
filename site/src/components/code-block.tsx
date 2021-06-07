@@ -151,7 +151,7 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
       return { style: lineHighlights }
     }
     else
-      return { };
+      return {};
   };
 
   return (
