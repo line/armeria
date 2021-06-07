@@ -86,8 +86,8 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     @SuppressWarnings("unused") // Updated only via downstreamSubscriptionUpdater
     private volatile SubscriptionImpl downstreamSubscription;
 
-    @Nullable
     // Updated only via collectingFutureUpdater
+    @Nullable
     private volatile CompletableFuture<List<T>> collectingFuture;
 
     @Nullable
@@ -169,8 +169,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
      */
     public final void close(Throwable cause) {
         requireNonNull(cause, "cause");
-        final StreamMessage<T> m = StreamMessage.of();
-        m.abort(cause);
+        final StreamMessage<T> m = StreamMessage.aborted(cause);
         delegate(m);
     }
 

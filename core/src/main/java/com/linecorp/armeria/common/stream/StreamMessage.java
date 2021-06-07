@@ -276,6 +276,17 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Returns a aborted {@link StreamMessage} that terminates with the specified {@link Throwable}
+     * via {@link Subscriber#onError(Throwable)} immediately after being subscribed to.
+     */
+    static <T> StreamMessage<T> aborted(Throwable cause) {
+        requireNonNull(cause, "cause");
+        final StreamMessage<T> aborted = of();
+        aborted.abort(cause);
+        return aborted;
+    }
+
+    /**
      * Returns {@code true} if this stream is not closed yet. Note that a stream may not be
      * {@linkplain #whenComplete() complete} even if it's closed; a stream is complete when it's fully
      * consumed by a {@link Subscriber}.
