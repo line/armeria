@@ -209,6 +209,48 @@ class StreamMessageCollectingTest {
     }
 
     @Test
+    void filteredStreamMessage_filterWithPooledObjects() {
+        final int size = 5;
+        final Map<HttpData, ByteBuf> data = newHttpData(size);
+        final HttpData[] httpData = data.keySet().toArray(HTTP_DATA);
+        final StreamMessage<HttpData> stream = newStreamMessage(httpData, true);
+
+        final StreamMessage<HttpData> filtered = new FilteredStreamMessage<HttpData, HttpData>(stream, true) {
+
+            @Override
+            protected HttpData filter(HttpData obj) {
+                assertThat(obj.isPooled()).isTrue();
+                return obj;
+            }
+        };
+
+        final List<HttpData> collected = filtered.collect().join();
+        assertThat(collected).hasSize(size);
+        assertRefCount(data, 0);
+    }
+
+    @Test
+    void filteredStreamMessage_filterWithUnpooledObjects() {
+        final int size = 5;
+        final Map<HttpData, ByteBuf> data = newHttpData(size);
+        final HttpData[] httpData = data.keySet().toArray(HTTP_DATA);
+        final StreamMessage<HttpData> stream = newStreamMessage(httpData, true);
+
+        final StreamMessage<HttpData> filtered = new FilteredStreamMessage<HttpData, HttpData>(stream, false) {
+
+            @Override
+            protected HttpData filter(HttpData obj) {
+                assertThat(obj.isPooled()).isFalse();
+                return obj;
+            }
+        };
+
+        final List<HttpData> collected = filtered.collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
+        assertThat(collected).hasSize(size);
+        assertRefCount(data, 0);
+    }
+
+    @Test
     void fuseableStreamMessage_map() {
         final int size = 5;
         Map<HttpData, ByteBuf> data = newHttpData(size);
