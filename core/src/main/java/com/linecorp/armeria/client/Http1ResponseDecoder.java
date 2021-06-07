@@ -214,8 +214,8 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             final long transferredLength = res.writtenBytes();
                             if (maxContentLength > 0 && transferredLength > maxContentLength - dataLength) {
                                 fail(ctx, ContentTooLargeException.builder()
-                                                                  .maximum(maxContentLength)
-                                                                  .total(dataLength)
+                                                                  .limit(maxContentLength)
+                                                                  .delta(dataLength)
                                                                   .transferred(transferredLength)
                                                                   .build());
                                 return;

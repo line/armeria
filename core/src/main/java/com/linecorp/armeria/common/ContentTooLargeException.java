@@ -23,50 +23,81 @@ public final class ContentTooLargeException extends RuntimeException {
 
     private static final long serialVersionUID = 4901614315474105954L;
 
-    private static final ContentTooLargeException INSTANCE = new ContentTooLargeException(false);
+    private static final ContentTooLargeException INSTANCE = new ContentTooLargeException(true);
 
-    private long transferred;
-    private long total;
-    private long maximum;
+    /**
+     * Returns a {@link ContentTooLargeException} which may be a singleton or a new instance, depending on
+     * {@link Flags#verboseExceptionSampler()}'s decision.
+     */
+    public static ContentTooLargeException get() {
+        return Flags.verboseExceptionSampler().isSampled(ContentTooLargeException.class) ?
+               new ContentTooLargeException() : INSTANCE;
+    }
 
     /**
      * Returns a {@link ContentTooLargeExceptionBuilder} which may return a singleton or a new instance in its
-     * {@code build} method, depending on {@link Flags#verboseExceptionSampler()}'s decision.
+     * {@link ContentTooLargeExceptionBuilder#build()} method, depending on
+     * {@link Flags#verboseExceptionSampler()}'s decision.
      */
     public static ContentTooLargeExceptionBuilder builder() {
         return new ContentTooLargeExceptionBuilder();
     }
 
-    ContentTooLargeException(@SuppressWarnings("unused") boolean dummy) {
-        super(null, null, false, false);
+    private final boolean neverSample;
+    private final long transferred;
+    private final long delta;
+    private final long limit;
+
+    private ContentTooLargeException() {
+        this(false);
     }
 
-    ContentTooLargeException(long transferred, long total, long maximum) {
-        super(String.format("content length too large: %d + %d > %d", transferred, total, maximum));
+    private ContentTooLargeException(boolean neverSample) {
+        super(null, null, !neverSample, !neverSample);
+        this.neverSample = neverSample;
+        limit = -1;
+        transferred = -1;
+        delta = -1;
+    }
 
+    ContentTooLargeException(long transferred, long delta, long limit) {
+        super(String.format("content length too large: transferred(%d) + delta(%d) > limit(%d)",
+                            transferred, delta, limit));
+        neverSample = false;
         this.transferred = transferred;
-        this.total = total;
-        this.maximum = maximum;
+        this.delta = delta;
+        this.limit = limit;
     }
 
     /**
-     * Returns how many bytes of the content have been transferred.
+     * Returns the number of bytes transferred so far,
+     * or {@code -1} if this value is not known.
      */
     public long transferred() {
         return transferred;
     }
 
     /**
-     * Returns the expected total number of bytes in the request or response.
+     * Returns the number of bytes that were being transferred additionally,
+     * or {@code -1} if this value is not known.
      */
-    public long total() {
-        return total;
+    public long delta() {
+        return delta;
     }
 
     /**
-     * Returns the maximum number of content bytes allowed.
+     * Returns the maximum allowed content length in bytes,
+     * or {@code -1} if this value is not known.
      */
-    public long maximum() {
-        return maximum;
+    public long limit() {
+        return limit;
+    }
+
+    @Override
+    public Throwable fillInStackTrace() {
+        if (!neverSample && Flags.verboseExceptionSampler().isSampled(getClass())) {
+            super.fillInStackTrace();
+        }
+        return this;
     }
 }

@@ -247,8 +247,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 if (decodedReq.isOpen()) {
                     decodedReq.close(ContentTooLargeException.builder()
                                                              .transferred(transferredLength)
-                                                             .total(dataLength)
-                                                             .maximum(maxContentLength)
+                                                             .delta(dataLength)
+                                                             .limit(maxContentLength)
                                                              .build());
                 }
             } else {

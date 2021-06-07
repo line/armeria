@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,50 +16,53 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
- * Builds a new {@link ContentTooLargeException} or a singleton, depending on
- * {@link Flags#verboseExceptionSampler()}'s decision.
+ * Builds a new {@link ContentTooLargeException}.
  */
 public final class ContentTooLargeExceptionBuilder {
-    private static final ContentTooLargeException INSTANCE = new ContentTooLargeException(false);
-
-    private long transferred;
-    private long total;
-    private long maximum;
+    private long transferred = -1;
+    private long delta = -1;
+    private long limit = -1;
 
     ContentTooLargeExceptionBuilder() {
     }
 
     /**
-     * Sets the transferred bytes of the content.
+     * Sets the number of bytes transferred so far.
      */
     public ContentTooLargeExceptionBuilder transferred(long transferred) {
+        checkArgument(transferred >= 0, "transferred: %s (expected: >= 0)", transferred);
         this.transferred = transferred;
         return this;
     }
 
     /**
-     * Sets the total bytes of the content.
+     * Sets the number of bytes that were being transferred additionally.
      */
-    public ContentTooLargeExceptionBuilder total(long total) {
-        this.total = total;
+    public ContentTooLargeExceptionBuilder delta(long delta) {
+        checkArgument(delta >= 0, "delta: %s (expected: >= 0)", delta);
+        this.delta = delta;
         return this;
     }
 
     /**
-     * Sets the maximum allowed bytes of the content.
+     * Sets the maximum allowed content length in bytes.
      */
-    public ContentTooLargeExceptionBuilder maximum(long maximum) {
-        this.maximum = maximum;
+    public ContentTooLargeExceptionBuilder limit(long limit) {
+        checkArgument(limit >= 0, "limit: %s (expected: >= 0)", limit);
+        this.limit = limit;
         return this;
     }
 
     /**
-     * Returns a singleton or a new instance of {@link ContentTooLargeException},
-     * depending on {@link Flags#verboseExceptionSampler()}'s decision.
+     * Returns a new instance of {@link ContentTooLargeException}.
      */
     public ContentTooLargeException build() {
-        return Flags.verboseExceptionSampler().isSampled(ContentTooLargeException.class) ?
-               new ContentTooLargeException(transferred, total, maximum) : INSTANCE;
+        if (transferred < 0 && delta < 0 && limit < 0) {
+            return ContentTooLargeException.get();
+        }
+        return new ContentTooLargeException(transferred, delta, limit);
     }
 }
