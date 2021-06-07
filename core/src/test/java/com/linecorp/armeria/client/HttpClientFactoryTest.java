@@ -19,8 +19,6 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -40,8 +38,8 @@ class HttpClientFactoryTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/", new AbstractHttpService() {
                 @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.from(new CompletableFuture<>());
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.streaming();
                 }
             });
         }
@@ -83,9 +81,9 @@ class HttpClientFactoryTest {
         try (Server server2 = Server.builder()
                                     .service("/", new AbstractHttpService() {
                                         @Override
-                                        protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
-                                                throws Exception {
-                                            return HttpResponse.from(new CompletableFuture<>());
+                                        protected HttpResponse doGet(ServiceRequestContext ctx,
+                                                                     HttpRequest req) {
+                                            return HttpResponse.streaming();
                                         }
                                     }).build();
              ClientFactory clientFactory = ClientFactory.builder().build()) {
