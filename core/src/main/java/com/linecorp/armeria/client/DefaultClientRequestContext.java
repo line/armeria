@@ -214,9 +214,7 @@ public final class DefaultClientRequestContext
             maxResponseLength = options.maxResponseLength();
         }
         this.maxResponseLength = maxResponseLength;
-        final Iterator<Entry<AttributeKey<?>, Object>> attrs = requestOptions.attrs();
-        while (attrs.hasNext()) {
-            final Entry<AttributeKey<?>, Object> attr = attrs.next();
+        for (Entry<AttributeKey<?>, Object> attr : requestOptions.attrs().entrySet()) {
             //noinspection unchecked
             setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
         }

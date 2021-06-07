@@ -18,8 +18,7 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.DefaultRequestOptions.EMPTY;
 
-import java.util.Iterator;
-import java.util.Map.Entry;
+import java.util.Map;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
@@ -72,7 +71,7 @@ public interface RequestOptions {
     long maxResponseLength();
 
     /**
-     * Returns the {@link Iterator} of all {@link Entry}s this {@link RequestOptions} contains.
+     * Returns the {@link Map} of all attributes this {@link RequestOptions} contains.
      */
-    Iterator<Entry<AttributeKey<?>, Object>> attrs();
+    Map<AttributeKey<?>, Object> attrs();
 }

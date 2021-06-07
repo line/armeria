@@ -67,6 +67,38 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
         return client.execute(httpRequest, requestOptions);
     }
 
+    /**
+     * Sets the specified {@link RequestOptions} that could overwrite the previously configured values such as
+     * {@link #responseTimeout(Duration)}, {@link #writeTimeout(Duration)}, {@link #maxResponseLength(long)}
+     * and {@link #attr(AttributeKey, Object)}.
+     */
+    public WebClientRequestPreparation requestOptions(RequestOptions requestOptions) {
+        requireNonNull(requestOptions, "requestOptions");
+
+        final long maxResponseLength = requestOptions.maxResponseLength();
+        if (maxResponseLength != -1) {
+            maxResponseLength(maxResponseLength);
+        }
+
+        final long responseTimeoutMillis = requestOptions.responseTimeoutMillis();
+        if (responseTimeoutMillis != -1) {
+            responseTimeoutMillis(responseTimeoutMillis);
+        }
+
+        final long writeTimeoutMillis = requestOptions.writeTimeoutMillis();
+        if (writeTimeoutMillis != -1) {
+            writeTimeoutMillis(writeTimeoutMillis);
+        }
+
+        final Map<AttributeKey<?>, Object> attrs = requestOptions.attrs();
+        if (!attrs.isEmpty()) {
+            //noinspection unchecked
+            attrs.forEach((key, value) -> attr((AttributeKey<Object>) key, value));
+        }
+
+        return this;
+    }
+
     @Override
     public WebClientRequestPreparation responseTimeout(Duration responseTimeout) {
         return responseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());

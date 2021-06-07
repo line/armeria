@@ -19,9 +19,12 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -141,6 +144,41 @@ class RequestOptionsTest {
             }
             final ClientRequestContext ctx = captor.get();
             assertThat(ctx.maxResponseLength()).isEqualTo(maxResponseLength);
+            assertThat(res.join().contentUtf8()).isEqualTo("pong");
+        }
+    }
+
+    @Test
+    void overwriteTest() {
+        final AttributeKey<String> foo = AttributeKey.valueOf("foo");
+        final AttributeKey<String> bar = AttributeKey.valueOf("foo");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final RequestOptions requestOptions = RequestOptions.builder()
+                                                                .responseTimeoutMillis(2000)
+                                                                .writeTimeoutMillis(1000)
+                                                                .maxResponseLength(1028)
+                                                                .attr(foo, "hello")
+                                                                .attr(bar, "options")
+                                                                .build();
+            final CompletableFuture<AggregatedHttpResponse> res;
+            res = client.prepare()
+                        .get("/ping")
+                        .maxResponseLength(10)
+                        .responseTimeoutMillis(500)
+                        .writeTimeoutMillis(300)
+                        .attr(foo, "world")
+                        .requestOptions(requestOptions)
+                        .execute()
+                        .aggregate();
+            final ClientRequestContext ctx = captor.get();
+            assertThat(ctx.responseTimeoutMillis()).isEqualTo(requestOptions.responseTimeoutMillis());
+            assertThat(ctx.writeTimeoutMillis()).isEqualTo(requestOptions.writeTimeoutMillis());
+            assertThat(ctx.maxResponseLength()).isEqualTo(requestOptions.maxResponseLength());
+            final Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
+            while (attrs.hasNext()) {
+                final Entry<AttributeKey<?>, Object> next = attrs.next();
+                assertThat(requestOptions.attrs()).contains(next);
+            }
             assertThat(res.join().contentUtf8()).isEqualTo("pong");
         }
     }

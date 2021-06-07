@@ -34,7 +34,7 @@ import io.netty.util.AttributeKey;
 /**
  * A builder for creating a new {@link RequestOptions}.
  */
-public class RequestOptionsBuilder implements RequestOptionsSetters {
+public final class RequestOptionsBuilder implements RequestOptionsSetters {
 
     private long responseTimeoutMillis = -1;
     private long writeTimeoutMillis = -1;

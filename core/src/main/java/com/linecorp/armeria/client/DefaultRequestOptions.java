@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
@@ -60,8 +58,8 @@ final class DefaultRequestOptions implements RequestOptions {
     }
 
     @Override
-    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
-        return attributeMap.entrySet().iterator();
+    public Map<AttributeKey<?>, Object> attrs() {
+        return attributeMap;
     }
 
     @Override
