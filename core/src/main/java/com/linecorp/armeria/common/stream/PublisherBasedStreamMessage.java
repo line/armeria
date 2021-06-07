@@ -48,6 +48,13 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 /**
  * Adapts a {@link Publisher} into a {@link StreamMessage}.
  *
+ * <p>Note that the elements in the {@link Publisher} are not released when {@link Subscription#cancel()} or
+ * {@link #abort()} is called. So you should add a hook in order to release the elements. You can use
+ * <a href="https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#doOnDiscard-java.lang.Class-java.util.function.Consumer-">doOnDiscard</a>
+ * if you are using Reactor, or you can use
+ * <a href="http://reactivex.io/RxJava/3.x/javadoc/io/reactivex/rxjava3/core/Observable.html#doOnDispose-io.reactivex.rxjava3.functions.Action-">doOnDispose</a>
+ * if you are using RxJava.
+ *
  * @param <T> the type of element signaled
  */
 @UnstableApi

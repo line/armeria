@@ -101,11 +101,11 @@ class SubscriptionOptionTest {
 
     @ParameterizedTest
     @ArgumentsSource(PooledHttpDataStreamProvider.class)
-    void notifyCancellation(HttpData unused1, ByteBuf unused2, StreamMessage<HttpData> stream) {
-        notifyCancellation(stream);
+    void notifyCancellation(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
+        notifyCancellation(buf, stream);
     }
 
-    static void notifyCancellation(StreamMessage<HttpData> stream) {
+    static void notifyCancellation(ByteBuf buf, StreamMessage<HttpData> stream) {
         final AtomicBoolean completed = new AtomicBoolean();
         stream.subscribe(new Subscriber<HttpData>() {
             @Override
@@ -132,6 +132,7 @@ class SubscriptionOptionTest {
 
         await().untilAsserted(() -> assertThat(completed).isTrue());
         await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompletedExceptionally());
+        assertThat(buf.refCnt()).isZero();
     }
 
     static SubscriptionOption[] subscriptionOptions(boolean subscribedWithPooledObjects) {
@@ -180,7 +181,8 @@ class SubscriptionOptionTest {
             final ByteBuf buf = newPooledBuffer();
             final HttpData data = HttpData.wrap(buf).withEndOfStream();
             final PublisherBasedStreamMessage<HttpData> publisherBasedStream =
-                    new PublisherBasedStreamMessage<>(Mono.just(data));
+                    new PublisherBasedStreamMessage<>(Mono.just(data)
+                                                          .doOnDiscard(HttpData.class, HttpData::close));
             return of(data, buf, publisherBasedStream);
         }
     }

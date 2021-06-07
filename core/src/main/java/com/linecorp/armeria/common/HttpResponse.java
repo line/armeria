@@ -32,6 +32,7 @@ import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.ThreeElementFixedHttpRespon
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.HttpDecoder;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -387,6 +389,10 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Creates a new HTTP response whose stream is produced from an existing {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpObject}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
      */
     static HttpResponse of(Publisher<? extends HttpObject> publisher) {
         requireNonNull(publisher, "publisher");
@@ -400,6 +406,10 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Creates a new HTTP response with the specified headers whose stream is produced from an existing
      * {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpObject}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
      */
     static HttpResponse of(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
         requireNonNull(headers, "headers");
