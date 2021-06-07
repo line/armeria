@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.POOLED_OBJECTS;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,8 +38,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 final class HttpMessageAggregator {
-
-    private static final SubscriptionOption[] POOLED_OBJECTS = { SubscriptionOption.WITH_POOLED_OBJECTS };
 
     static CompletableFuture<AggregatedHttpRequest> aggregateRequest(HttpRequest request,
                                                                      EventExecutor executor,

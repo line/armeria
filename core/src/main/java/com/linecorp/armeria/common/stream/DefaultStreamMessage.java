@@ -209,9 +209,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         }
     }
 
-    private List<T> drainAll(boolean withPooledObjects, boolean isClosed) throws Throwable {
+    private List<T> drainAll(boolean withPooledObjects, boolean wasClosed) throws Throwable {
         final int estimatedSize;
-        if (isClosed) {
+        if (wasClosed) {
             // ClosedEvent was added to the queue
             estimatedSize = queue.size() - 1;
         } else {

@@ -24,6 +24,9 @@ public final class InternalStreamMessageUtil {
 
     public static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
+    public static final SubscriptionOption[] POOLED_OBJECTS = { SubscriptionOption.WITH_POOLED_OBJECTS };
+
+
     public static boolean containsWithPooledObjects(SubscriptionOption... options) {
         requireNonNull(options, "options");
         for (SubscriptionOption option : options) {

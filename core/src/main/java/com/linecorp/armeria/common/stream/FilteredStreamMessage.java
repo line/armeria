@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.CANCELLATION_AND_POOLED_OPTIONS;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.CANCELLATION_OPTION;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.POOLED_OBJECTS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
@@ -134,7 +135,8 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public CompletableFuture<List<U>> collect(EventExecutor executor, SubscriptionOption... options) {
-        return upstream.collect(executor, filterOption(options)).handle((result, cause) -> {
+        final SubscriptionOption[] filterOptions = filterSupportsPooledObjects ? POOLED_OBJECTS : EMPTY_OPTIONS;
+        return upstream.collect(executor, filterOptions).handle((result, cause) -> {
             final CollectingSubscription subscription = new CollectingSubscription();
             final CollectingSubscriber<U> subscriber = new CollectingSubscriber<>();
             beforeSubscribe(subscriber, subscription);
@@ -144,6 +146,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
             } else {
                 Throwable abortCause = null;
                 final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(result.size());
+                final boolean withPooledObjects = containsWithPooledObjects(options);
                 for (T t : result) {
                     if (abortCause != null) {
                         // This StreamMessage was aborted already. However, we need to release the remaining
@@ -153,7 +156,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                     }
 
                     try {
-                        final U filtered = filter(t);
+                        U filtered = filter(t);
 
                         if (subscriber.completed || subscriber.cause != null || subscription.cancelled) {
                             if (subscriber.cause != null) {
@@ -164,6 +167,9 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                             StreamMessageUtil.closeOrAbort(filtered, abortCause);
                         } else {
                             requireNonNull(filtered, "filter() returned null");
+                            if (!withPooledObjects) {
+                                filtered = PooledObjects.copyAndClose(filtered);
+                            }
                             builder.add(filtered);
                         }
                     } catch (Throwable ex) {
@@ -186,29 +192,6 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                 return elements;
             }
         });
-    }
-
-    private SubscriptionOption[] filterOption(SubscriptionOption[] options) {
-        if (filterSupportsPooledObjects) {
-            return options;
-        }
-
-        switch (options.length) {
-            case 0:
-                return options;
-            case 1:
-                if (options[0] == SubscriptionOption.WITH_POOLED_OBJECTS) {
-                    return EMPTY_OPTIONS;
-                } else {
-                    return options;
-                }
-            default:
-                if (containsNotifyCancellation(options)) {
-                    return CANCELLATION_OPTION;
-                } else {
-                    return EMPTY_OPTIONS;
-                }
-        }
     }
 
     @Override
