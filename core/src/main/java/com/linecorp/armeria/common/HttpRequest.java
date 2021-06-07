@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static java.util.Objects.requireNonNull;
 
@@ -269,6 +270,9 @@ public interface HttpRequest extends Request, HttpMessage {
         requireNonNull(publisher, "publisher");
         if (publisher instanceof HttpRequest) {
             return ((HttpRequest) publisher).withHeaders(headers);
+        } else if (publisher instanceof StreamMessage) {
+            //noinspection unchecked
+            return new StreamMessageBasedHttpRequest(headers, (StreamMessage<? extends HttpObject>) publisher);
         } else {
             return new PublisherBasedHttpRequest(headers, publisher);
         }
@@ -518,5 +522,55 @@ public interface HttpRequest extends Request, HttpMessage {
     default <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
                                         Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
         return new DecodedHttpStreamMessage<>(this, decoder, alloc, byteBufConverter);
+    }
+
+    /**
+     * Transforms the {@link ResponseHeaders} of this {@link HttpRequest} by applying the specified
+     * {@link Function}.
+     */
+    default HttpRequest mapHeaders(Function<? super RequestHeaders, ? extends RequestHeaders> function) {
+        requireNonNull(function, "function");
+        final RequestHeaders transformed = function.apply(headers());
+        requireNonNull(transformed, "function.apply() returned null");
+        return of(transformed, this);
+    }
+
+    /**
+     * Transforms the {@link HttpData}s emitted by this {@link HttpRequest} by applying the specified
+     * {@link Function}.
+     */
+    default HttpRequest mapData(Function<? super HttpData, ? extends HttpData> function) {
+        requireNonNull(function, "function");
+        final StreamMessage<HttpObject> stream =
+                map(obj -> obj instanceof HttpData ? function.apply((HttpData) obj) : obj);
+        return of(headers(), stream);
+    }
+
+    /**
+     * Transforms the {@linkplain HttpHeaders trailers} emitted by this {@link HttpRequest} by applying the
+     * specified {@link Function}.
+     */
+    default HttpRequest mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
+        requireNonNull(function, "function");
+        final StreamMessage<HttpObject> stream = map(obj -> {
+            if (obj instanceof HttpHeaders && !(obj instanceof RequestHeaders)) {
+                return function.apply((HttpHeaders) obj);
+            }
+            return obj;
+        });
+        return of(headers(), stream);
+    }
+
+    /**
+     * Transforms the {@linkplain HttpObject}s emitted by this {@link HttpRequest} by applying the
+     * specified {@link Function}.
+     */
+    default HttpRequest mapObject(Function<? super HttpObject, ? extends HttpObject> function) {
+        requireNonNull(function, "function");
+        final HttpObject transformedHeaders = function.apply(headers());
+        checkState(transformedHeaders instanceof RequestHeaders,
+                   "function.apply() returned %s (expected: an instance of %s)",
+                   transformedHeaders, RequestHeaders.class.getName());
+        return of((RequestHeaders) transformedHeaders, map(function));
     }
 }
