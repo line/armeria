@@ -24,14 +24,14 @@ By completing this step, you'll learn to map your service with the HTTP DELETE (
 
 You need to have these files prepared from previous steps.
 
-- [BlogService.java](./tutorial-blog-rest-step3#0-create-a-service-file)
-- [BlogPost.java](./tutorial-blog-rest-step2)
+- [BlogService.java](/tutorials/tutorial-blog-rest-step3#0-create-a-service-file)
+- [BlogPost.java](/tutorials/tutorial-blog-rest-step2)
 
 ## 1. Map HTTP method
 
 Let's start with [mapping the HTTP DELETE method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
 
-1. [Create a BlogService.java file](./tutorial-blog-rest-step3#0-create-a-service-file) if you're yet to create one.
+1. [Create a BlogService.java file](/tutorials/tutorial-blog-rest-step3#0-create-a-service-file) if you're yet to create one.
 2. Declare a service method, `deleteBlogPost()` in the class `BlogService`.
 3. [Map this service method](/docs/server-annotated-service#mapping-http-service-methods) with the HTTP DELETE by adding the <type://@Delete> annotation.
 4. Assign the endpoint as `/blogs`.
@@ -149,6 +149,6 @@ public HttpResponse deleteBlogPost(@Param int id) {
 
 In this step, you've written a method for a DELETE operation and used Armeria's annotations; <type://@Delete>, <type://@Param>, <type://@ExceptionHandler> and <type://@Blocking>.
 
-Next, at [Step 7. Add services to server](./tutorial-blog-rest-step7), let's go back to the main method and add the blog service to our server.
+Next, at [Step 7. Add services to server](/tutorials/tutorial-blog-rest-step7), let's go back to the main method and add the blog service to our server.
 
 <TutorialSteps current={6} />

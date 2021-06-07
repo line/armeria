@@ -10,7 +10,7 @@ level: basic
 
 # Implementing READ operation
 
-We've implemented a [CREATE](./tutorial-blog-rest-step3) operation.
+We've implemented a [CREATE](/tutorials/tutorial-blog-rest-step3) operation.
 
 In this step, we'll implement two methods at once. One is for retrieving a single post and another for multiple blog posts. We'll map both methods with HTTP GET.
 
@@ -22,14 +22,14 @@ By completing this step, you'll learn to map your service with the HTTP GET (<ty
 
 You need to have these files prepared from previous steps.
 
-- [BlogService.java](./tutorial-blog-rest-step3#0-create-a-service-file)
-- [BlogPost.java](./tutorial-blog-rest-step2)
+- [BlogService.java](/tutorials/tutorial-blog-rest-step3#0-create-a-service-file)
+- [BlogPost.java](/tutorials/tutorial-blog-rest-step2)
 
 ## 1. Map HTTP method
 
 Let's start with [mapping the HTTP GET method](/docs/server-annotated-service#mapping-http-service-methods) with our service methods:
 
-1. [Create a service file](./tutorial-blog-rest-step3#0-create-a-service-file) if you're yet to create one.
+1. [Create a service file](/tutorials/tutorial-blog-rest-step3#0-create-a-service-file) if you're yet to create one.
 2. Declare service methods, `getBlogPost()` and `getBlogPosts()` in the class `BlogService`.
 3. [Map these service methods](/docs/server-annotated-service#mapping-http-service-methods) with the HTTP GET method by adding the <type://@Get> annotation as follows.
 4. Assign the endpoint as `/blogs`.
@@ -129,6 +129,6 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 
 In this step, you've implemented methods for a READ operation and used Armeria's annotations; <type://@Get>, <type://@ProducesJson>, <type://@Param>, and <type://@Default>.
 
-Next, at [Step 5. Implement UPDATE](./tutorial-blog-rest-step5), you'll implement an UPDATE operation to modify existing blog posts.
+Next, at [Step 5. Implement UPDATE](/tutorials/tutorial-blog-rest-step5), you'll implement an UPDATE operation to modify existing blog posts.
 
 <TutorialSteps current={4} />

@@ -10,7 +10,7 @@ level: basic
 
 # Adding blog service and DocService to server
 
-In this step, we go back to the [Step 1. Create a server](./tutorial-blog-rest-step1) and add the blog service to the server. Also, we'll add Armeria's [DocService](/docs/server-docservice) to test our blog service.
+In this step, we go back to the [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1) and add the blog service to the server. Also, we'll add Armeria's [DocService](/docs/server-docservice) to test our blog service.
 
 <TutorialSteps current={7} />
 
@@ -26,7 +26,7 @@ You need to have these files obtained from previous steps.
 
 ## 1. Add blog service
 
-In [Step 1. Create a server](./tutorial-blog-rest-step1), you've added a dummy service just to check that a server is launched. Now, let's remove the dummy service and add our blog service.
+In [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1), you've added a dummy service just to check that a server is launched. Now, let's remove the dummy service and add our blog service.
 
 1. From Main.java, remove the dummy service at line 4.
   ```java filename=Main.java highlight=4
@@ -74,7 +74,7 @@ Let's test and call our service operations, using Armeria's <type://DocService>.
              .build();
   }
   ```
-3. (Optional) To access the <type://DocService> result easily, edit the log message we added in [Step 1. Create a server](./tutorial-blog-rest-step1) to the one specified below.
+3. (Optional) To access the <type://DocService> result easily, edit the log message we added in [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1) to the one specified below.
   ```java filename=Main.java highlight=2
   public static void main(String[] args) throws Exception {
       logger.info("Server has been started. Serving DocService at http://127.0.0.1:{}/docs",
