@@ -64,11 +64,9 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -179,21 +177,10 @@ class GrpcClientTest {
                                        .build()
                                        .decorate((service, ctx, req) -> {
                                            final HttpResponse res = service.serve(ctx, req);
-                                           return new FilteredHttpResponse(res) {
-                                               private boolean headersReceived;
-
-                                               @Override
-                                               protected HttpObject filter(HttpObject obj) {
-                                                   if (obj instanceof HttpHeaders) {
-                                                       if (!headersReceived) {
-                                                           headersReceived = true;
-                                                       } else {
-                                                           SERVER_TRAILERS_CAPTURE.set((HttpHeaders) obj);
-                                                       }
-                                                   }
-                                                   return obj;
-                                               }
-                                           };
+                                           return res.mapTrailers(trailers -> {
+                                               SERVER_TRAILERS_CAPTURE.set(trailers);
+                                               return trailers;
+                                           });
                                        }));
         }
     };

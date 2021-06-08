@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.cookie;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.util.List;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -78,8 +79,16 @@ public final class CookieClient extends SimpleDecoratingHttpClient {
             req = req.withHeaders(req.headers().toBuilder().add(HttpHeaderNames.COOKIE, cookieHeader));
             ctx.updateRequest(req);
         }
-        final HttpResponse res = unwrap().execute(ctx, req);
-        return new SetCookieResponse(res, setCookieHeaders ->
-                cookieJar.set(uri, Cookie.fromSetCookieHeaders(setCookieHeaders)));
+        return unwrap().execute(ctx, req).mapHeaders(headers -> {
+            if (headers.status().isInformational()) {
+                return headers;
+            }
+
+            final List<String> setCookieHeaders = headers.getAll(HttpHeaderNames.SET_COOKIE);
+            if (!setCookieHeaders.isEmpty()) {
+                cookieJar.set(uri, Cookie.fromSetCookieHeaders(setCookieHeaders));
+            }
+            return headers;
+        });
     }
 }
