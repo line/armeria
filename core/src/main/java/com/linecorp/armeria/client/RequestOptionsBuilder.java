@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.DefaultRequestOptions.EMPTY;
 import static java.util.Objects.requireNonNull;
@@ -104,8 +103,14 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             maxResponseLength == -1 && attributes == null) {
             return EMPTY;
         } else {
-            return new DefaultRequestOptions(responseTimeoutMillis, writeTimeoutMillis, maxResponseLength,
-                                             firstNonNull(attributes, ImmutableMap.of()));
+            final Map<AttributeKey<?>, Object> attributes;
+            if (this.attributes == null || this.attributes.isEmpty()) {
+                attributes = ImmutableMap.of();
+            } else {
+                attributes = ImmutableMap.copyOf(this.attributes);
+            }
+            return new DefaultRequestOptions(responseTimeoutMillis, writeTimeoutMillis,
+                                             maxResponseLength, attributes);
         }
     }
 }
