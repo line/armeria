@@ -80,7 +80,7 @@ final class StreamMessageCollector<T> implements Subscriber<T> {
             return;
         }
         final ImmutableList<T> elements = elementsBuilder.build();
-        for (final T element : elements) {
+        for (T element : elements) {
             StreamMessageUtil.closeOrAbort(element, t);
         }
         future.completeExceptionally(t);

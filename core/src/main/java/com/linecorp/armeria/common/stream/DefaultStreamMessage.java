@@ -573,8 +573,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         if (setState(State.OPEN, State.CLOSED)) {
             if (!tryCollect(cause)) {
                 addObjectOrEvent(new CloseEvent(cause));
-                return true;
             }
+            return true;
         }
         return false;
     }

@@ -157,8 +157,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
      *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     public final void close() {
-        final StreamMessage<T> m = StreamMessage.of();
-        delegate(m);
+        delegate(StreamMessage.of());
     }
 
     /**
@@ -169,8 +168,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
      */
     public final void close(Throwable cause) {
         requireNonNull(cause, "cause");
-        final StreamMessage<T> m = StreamMessage.aborted(cause);
-        delegate(m);
+        delegate(StreamMessage.aborted(cause));
     }
 
     @Override

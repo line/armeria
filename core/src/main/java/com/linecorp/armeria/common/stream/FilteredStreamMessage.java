@@ -159,11 +159,8 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                         U filtered = filter(t);
 
                         if (subscriber.completed || subscriber.cause != null || subscription.cancelled) {
-                            if (subscriber.cause != null) {
-                                abortCause = cause;
-                            } else {
-                                abortCause = CancelledSubscriptionException.get();
-                            }
+                            abortCause = subscriber.cause != null ? cause
+                                                                  : CancelledSubscriptionException.get();
                             StreamMessageUtil.closeOrAbort(filtered, abortCause);
                         } else {
                             requireNonNull(filtered, "filter() returned null");
