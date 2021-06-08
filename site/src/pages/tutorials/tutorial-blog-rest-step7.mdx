@@ -29,7 +29,7 @@ You need to have these files obtained from previous steps.
 In [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1), you've added a dummy service just to check that a server is launched. Now, let's remove the dummy service and add our blog service.
 
 1. From Main.java, remove the dummy service at line 4.
-  ```java filename=Main.java highlight=4
+  ```java filename=Main.java highlight=4 showlineno=true
   static Server newServer(int port) {
     ...
     return sb.http(port)
@@ -37,7 +37,7 @@ In [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1), you've added 
              .build();
   ```
 2. Add our service by adding line 4.
-  ```java filename=Main.java highlight=4
+  ```java filename=Main.java highlight=4 showlineno=true
   static Server newServer(int port) {
     ...
     return sb.http(port)
