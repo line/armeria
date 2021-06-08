@@ -28,7 +28,7 @@ You need the BlogPost.java file, created from [step 2](/tutorials/tutorial-blog-
 Create a service file, BlogService.java. Import required files as you go along the tutorial or copy at once from the [sample file](https://github.com/line/armeria-examples/blob/master/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogService.java).
   ```java filename=BlogService.java
   public final class BlogService {
-
+    // Used for serializing and deserializing JSON
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
