@@ -38,14 +38,7 @@ final class BlogPost {
 
 ## 2. Add constructors
 
-You need to create a blog post instance for the following cases:
-
-- [When a user creates a blog post](#constructor-for-creating-blog-posts)
-- [When a user updates a blog post](#constructor-for-updating-blog-posts)
-
-### Constructor for creating blog posts
-
-Let's add constructors for creating a blog post in the `BlogPost` class.
+You need to create a blog post instance for creating and updating blog posts. First, let's add constructors for creating a blog post in the `BlogPost` class.
 
 ```java filename=BlogPost.java
   BlogPost(int id, String title, String content) {
@@ -56,8 +49,6 @@ Let's add constructors for creating a blog post in the `BlogPost` class.
     this(id, title, content, createdAt, createdAt);
   }
 ```
-
-### Constructor for updating blog posts
 
 Again, in the `BlogPost` class, add another constructor for updating a blog post.
 
