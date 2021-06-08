@@ -98,7 +98,7 @@ class RequestMapTest {
         assertThat(aggregated2.contentUtf8()).isEqualTo("foo");
         assertThat(aggregated2.trailers().size()).isEqualTo(2);
         assertThat(aggregated2.trailers().get("trailer1")).isEqualTo("1");
-        assertThat(aggregated2.trailers().get("trailers2")).isEqualTo("2");
+        assertThat(aggregated2.trailers().get("trailer2")).isEqualTo("2");
     }
 
     @Test
