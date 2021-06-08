@@ -31,7 +31,7 @@ Let's start with [mapping the HTTP GET method](/docs/server-annotated-service#ma
 
 1. [Create a service file](/tutorials/tutorial-blog-rest-step3#0-create-a-service-file) if you're yet to create one.
 2. Declare service methods, `getBlogPost()` and `getBlogPosts()` in the class `BlogService`.
-3. [Map these service methods](/docs/server-annotated-service#mapping-http-service-methods) with the HTTP GET method by adding the <type://@Get> annotation as follows.
+3. Map these service methods with the HTTP GET method by adding the <type://@Get> annotation as follows.
 4. Assign the endpoint as `/blogs`.
 
 ```java filename=BlogService.java highlight=1,6
@@ -52,7 +52,7 @@ Take in information through _path_ and _query_ parameters for retrieving blog po
 
 Let's retrieve a single post:
 
-1. To take a path parameter, add `/:id` to the <type://@Get> annotation's parameter as in line 1.
+1. To take in a path parameter, add `/:id` to the <type://@Get> annotation's parameter as in line 1.
 2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method, annotate the parameter with <type://@Param> as in line 2.
 
 ```java filename=BlogService.java
