@@ -435,6 +435,8 @@ public final class RouteBuilder {
     /**
      * Adds a {@code pathPattern} that is supposed to be excluded from the {@link Route} built by this
      * {@link RouteBuilder}.
+     * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
+     * in order to learn how to specify a path pattern.
      */
     RouteBuilder exclude(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
