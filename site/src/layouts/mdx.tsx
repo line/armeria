@@ -92,7 +92,7 @@ const mdxComponents: any = {
       <CodeBlock language={language}
         filename={props.children.props.filename}
         highlight={props.children.props.highlight}
-        showlineno={props.children.props.showLineNo}>
+        showlineno={props.children.props.showlineno}>
         {props.children.props.children}
       </CodeBlock>
     );
