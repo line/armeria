@@ -35,13 +35,13 @@ Let's create a server instance using Armeria's <type://ServerBuilder>:
   import com.linecorp.armeria.server.ServerBuilder;
 
   public final class Main {
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+    private static Logger logger = LoggerFactory.getLogger(Main.class);
   }
   ```
 2. In the `Main` class, add the method, `newServer()`. Since a server instance requires at least one service to run with, let's add a dummy service returning `"Hello, Armeria!"` for now.
   ```java filename=Main.java highlight=4
   static Server newServer(int port) {
-    final ServerBuilder sb = Server.builder();
+    ServerBuilder sb = Server.builder();
     return sb.http(port)
              .service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!"))
              .build();
@@ -60,7 +60,7 @@ Now that we have a server, have a go at starting the server with the dummy servi
 
 ```java filename=Main.java highlight=2,9
 public static void main(String[] args) throws Exception {
-  final Server server = newServer(8080);
+  Server server = newServer(8080);
 
   Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       server.stop().join();
