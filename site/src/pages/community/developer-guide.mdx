@@ -386,3 +386,52 @@ try {
     assertTrue(e.getMessage().contains("bad method"));
 }
 ```
+
+## How to write PR description
+
+There are three sections you need to write: `Motivation`, `Modifications`, and `Result`.
+
+### Motivation
+
+Explain why you're sending the PR and what's the problem you're trying to solve.
+You do not have to include all the detail but please include as much as the reviewers can get the background
+of this change.
+If there's related GitHub issues, please link to them.
+If you referred to some RFCs or good resources to make this change, please link to them as well.
+
+These are good examples:
+- https://github.com/line/armeria/pull/3479#issue-621862219
+- https://github.com/line/armeria/pull/3331#issue-567485208
+
+### Modifications
+
+Describe the list of modifications you've done.
+Again, you do not have to include all the modifications you made but modifications that you wish the
+readers notice.
+If the PR has a deprecation or breaking change, you need to describe it here. For example:
+```
+- (Deprecated) Foo.bar() is deprecated.
+  - Use Baz.bar() instead.
+```
+
+### Result
+
+Specify `- Closes #<GitHub issue number>` if this resolves the issue.
+Describe the consequences that a user will face after this PR is merged.
+
+For example, if the PR fixes a bug, you can write: `You no longer see a Foo exception when using Bar.`
+If you introduce a new feature, you can write: `You can now do A using B.`
+These are examples:
+- You no longer see a `NullPointerException` when a request times out.
+- You can now monitor the state of all live threads and heap using `ManagementService`.
+
+In case of introducing a new feature, you can insert code snippet.
+```
+Server.builder()
+      .serviceUnder("/internal/management/", ManagementService.of());
+```
+
+Please keep in mind that we publish our [release notes](https://armeria.dev/release-notes/) using the
+result section of each PR. That is why writing good PR description is important.
+If this PR is something that we don't need to announce in the release notes such as cleaning up some logs,
+you can simply write it such as "Less verbose".
