@@ -56,8 +56,8 @@ Let's add Armeria's Documentation service:
 
   public final class Main {
     static Server newServer(int port) {
-      final ServerBuilder sb = Server.builder();
-      final DocService docService =
+      ServerBuilder sb = Server.builder();
+      DocService docService =
               DocService.builder()
                         .exampleRequests(BlogService.class,
                             "createBlogPost", // service method name
@@ -105,8 +105,8 @@ Let's test and call our service operations, using Armeria's Documentation servic
   Note that in the **REQUEST BODY** section that the values specified for the <type://DocServiceBuilder> are automatically entered on the page.
   ```java filename=Main.java highlight=5-8
   static Server newServer(int port) {
-    final ServerBuilder sb = Server.builder();
-    final DocService docService =
+    ServerBuilder sb = Server.builder();
+    DocService docService =
             DocService.builder()
                       .exampleRequests(
                         BlogService.class,

@@ -81,7 +81,7 @@ To retrieve a single blog post information, copy the following code inside the `
 
 ```java filename=BlogService.java highlight=2
 public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
-  final BlogPost blogPost = blogPosts.get(id);
+  BlogPost blogPost = blogPosts.get(id);
 }
 ```
 
@@ -108,7 +108,7 @@ To return a response for the request to get a single post, use Armeria's <type:/
 ```java filename=BlogService.java highlight=3-4
 public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
   ...
-  final byte[] content = mapper.writeValueAsBytes(blogPost);
+  byte[] content = mapper.writeValueAsBytes(blogPost);
   return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, content);
 }
 ```

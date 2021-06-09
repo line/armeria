@@ -72,7 +72,7 @@ To delete a blog post, copy the code below to the `deleteBlogPost()` method.
 
 ```java filename=BlogService.Java highlight=2
 public HttpResponse deleteBlogPost(@Param int id) {
-  final BlogPost removed = blogPosts.remove(id);
+  BlogPost removed = blogPosts.remove(id);
   ...
 ```
 
@@ -91,7 +91,7 @@ What if there is no such post to delete? We can check if the blog exists before 
   2. In the file, declare a custom exception handler implementing Armeria's <type://ExceptionHandlerFunction> interface.
   ```java filename=BadRequestExceptionHandler.java
   public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static ObjectMapper mapper = new ObjectMapper();
     ...
   }
   ```
@@ -100,8 +100,8 @@ What if there is no such post to delete? We can check if the blog exists before 
   @Override
   public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
     if (cause instanceof IllegalArgumentException) {
-        final String message = cause.getMessage();
-        final ObjectNode objectNode = mapper.createObjectNode();
+        String message = cause.getMessage();
+        ObjectNode objectNode = mapper.createObjectNode();
         objectNode.put("error", message);
         try {
             return HttpResponse.of(HttpStatus.BAD_REQUEST,

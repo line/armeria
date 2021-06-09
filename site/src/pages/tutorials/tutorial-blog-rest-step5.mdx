@@ -73,12 +73,12 @@ To update a blog post, copy the following code inside the `updateBlogPost()` met
 
 ```java filename=BlogService.java
   public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost){
-    final BlogPost oldBlogPost = blogPosts.get(id);
+    BlogPost oldBlogPost = blogPosts.get(id);
     // Check if the given blog post exists
     if (oldBlogPost == null) {
         // Return a Not Found error. See the next section for instructions
     }
-    final BlogPost newBlogPost = new BlogPost(id, blogPost.title(),
+    BlogPost newBlogPost = new BlogPost(id, blogPost.title(),
         blogPost.content(),
         oldBlogPost.createdAt(),
         blogPost.createdAt()
@@ -114,7 +114,7 @@ Let's return the information updated when the blog post exists. To return update
 ```java filename=BlogService.java
 public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost){
   ...
-  final byte[] bytes = mapper.writeValueAsBytes(newBlogPost);
+  byte[] bytes = mapper.writeValueAsBytes(newBlogPost);
   return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, bytes);
 }
 ```
