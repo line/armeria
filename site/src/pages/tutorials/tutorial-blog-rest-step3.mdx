@@ -128,7 +128,7 @@ public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingExcep
 
 Now, it's time to return a response to our client. As the response, on top of the information received, add the ID of the post, created time, plus modified time which would be identical to the created time.
 
-Let's a return a response for blog post creation:
+Let's return a response for blog post creation:
 
 1. Specify JSON object keys for each member of our blog post object, by annotating the following methods with `@JsonProperty`.
   ```java filename=BlogPost.java highlight=3,6,9,12,15
