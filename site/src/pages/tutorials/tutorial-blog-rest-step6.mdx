@@ -123,9 +123,7 @@ What if there is no such post to delete? We can check if the blog exists before 
 
 ### Add blocking
 
-With real services, accessing and operating on a database takes time. To prevent the service to wait on our task, we want to inform the task executor to handle other tasks until we're done with database operation.
-
-To enable this, we use Armeria's [blocking task executor](/docs/server-annotated-service#specifying-a-blocking-task-executor). There are a few options of implementing this; we'll annotate our service method with the <type://@Blocking>.
+With real services, accessing and operating on a database takes time. We need to hand over such blocking tasks to [blocking task executor](/docs/server-annotated-service#specifying-a-blocking-task-executor) so that the EventLoop isn't blocked. There are a few options to imeplement this; we'll annotate our service method with the <type://@Blocking>.
 
 ```java filename=BlogService.java highlight=1
 @Blocking
