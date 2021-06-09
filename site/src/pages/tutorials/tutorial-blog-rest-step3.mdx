@@ -52,7 +52,7 @@ public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingExcep
 
 Let's take post information through a request body. Armeria's [request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) converts request parameters in HTTP messages into Java objects for you. In the request converter we define what keys of a JSON object to map with what properties of a Java object.
 
-To handle parameters received for creating a blog post, use <type://RequestConvert>, in these steps. The order may be changed.
+To handle parameters received for creating a blog post, use <type://RequestConverter>, in these steps. The order may be changed.
 
 - [Write a request converter](#write-a-request-converter)
 - [Assign a request converter](#assign-a-request-converter)
