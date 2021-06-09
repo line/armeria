@@ -83,5 +83,7 @@ class ServiceRequestCancellationTest {
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ClosedSessionException.class);
         }
+
+        ctxRef.set(null);
     }
 }

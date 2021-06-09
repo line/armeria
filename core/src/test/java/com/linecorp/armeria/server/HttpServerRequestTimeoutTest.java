@@ -65,6 +65,7 @@ class HttpServerRequestTimeoutTest {
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
+                              .onBackpressureDrop()
                               .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
                                                                    Duration.ofMillis(500)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
@@ -72,15 +73,16 @@ class HttpServerRequestTimeoutTest {
               .service("/extend-timeout-from-start", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
+                              .onBackpressureDrop()
                               .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.EXTEND, Duration.ofMillis(200)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-while-writing", (ctx, req) -> {
-                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(200));
+                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(200)).onBackpressureDrop();
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-before-writing", (ctx, req) -> {
-                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(800));
+                  final Flux<Long> publisher = Flux.interval(Duration.ofMillis(800)).onBackpressureDrop();
                   return JsonTextSequences.fromPublisher(publisher.take(5));
               })
               .service("/timeout-immediately", (ctx, req) -> {
@@ -128,6 +130,7 @@ class HttpServerRequestTimeoutTest {
               .service("/extend-timeout-from-now", (ctx, req) -> {
                   final Flux<Long> publisher =
                           Flux.interval(Duration.ofMillis(200))
+                              .onBackpressureDrop()
                               .doOnNext(i -> ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW,
                                                                    Duration.ofMillis(500)));
                   return JsonTextSequences.fromPublisher(publisher.take(5));

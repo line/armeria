@@ -84,11 +84,6 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {
-        delegate.subscribe(subscriber, executor);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         delegate.subscribe(subscriber, executor, options);

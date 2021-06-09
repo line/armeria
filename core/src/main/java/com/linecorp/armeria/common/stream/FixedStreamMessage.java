@@ -16,87 +16,65 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.util.CompositeException;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.unsafe.PooledObjects;
+
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
- * An {@link AbstractStreamMessage} which only publishes a fixed number of objects known at construction time.
+ * A {@link StreamMessage} which only publishes a fixed number of objects known at construction time.
  */
-abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
+abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
+
+    private static final Logger logger = LoggerFactory.getLogger(FixedStreamMessage.class);
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<FixedStreamMessage, SubscriptionImpl>
-            subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            FixedStreamMessage.class, SubscriptionImpl.class, "subscription");
+    private static final AtomicIntegerFieldUpdater<FixedStreamMessage> subscribedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(FixedStreamMessage.class, "subscribed");
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<FixedStreamMessage, CloseEvent>
-            closeEventUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            FixedStreamMessage.class, CloseEvent.class, "closeEvent");
-
-    @SuppressWarnings("unused")
-    @Nullable
-    private volatile SubscriptionImpl subscription; // set only via subscriptionUpdater
+    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     @Nullable
-    private volatile CloseEvent closeEvent;
+    private Subscriber<T> subscriber;
 
-    private int requested;
+    private boolean withPooledObjects;
+    private boolean notifyCancellation;
+    private boolean completed;
 
+    @Nullable
+    private volatile EventExecutor executor;
+
+    @Nullable
+    private volatile Throwable abortCause;
+    // Updated only via subscribedUpdater
+    private volatile int subscribed;
+
+    /**
+     * Clean up objects.
+     */
     abstract void cleanupObjects(@Nullable Throwable cause);
 
-    abstract void doRequest(SubscriptionImpl subscription, long n);
-
-    @Nullable
-    final CloseEvent closeEvent() {
-        return closeEvent;
-    }
-
-    final void cleanup(SubscriptionImpl subscription) {
-        final CloseEvent closeEvent = this.closeEvent;
-        assert closeEvent != null;
-        notifySubscriberOfCloseEvent(subscription, closeEvent);
-    }
-
-    final int requested() {
-        return requested;
-    }
-
-    final void setRequested(int n) {
-        requested = n;
-    }
-
-    @Override
-    final void request(long n) {
-        final SubscriptionImpl subscription = this.subscription;
-        // A user cannot access subscription without subscribing.
-        assert subscription != null;
-
-        if (closeEvent != null) {
-            // The subscription has been closed. An additional request should be ignored.
-            // https://github.com/reactive-streams/reactive-streams-jvm#3.6
-            return;
-        }
-
-        if (subscription.needsDirectInvocation()) {
-            doRequest(subscription, n);
-        } else {
-            subscription.executor().execute(() -> doRequest(subscription, n));
-        }
-    }
-
-    @Override
-    public final long demand() {
-        return requested;
+    EventExecutor executor() {
+        return firstNonNull(executor, ImmediateEventExecutor.INSTANCE);
     }
 
     @Override
@@ -106,81 +84,183 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    final SubscriptionImpl subscribe(SubscriptionImpl subscription) {
-        if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
-            final SubscriptionImpl oldSubscription = this.subscription;
-            assert oldSubscription != null;
-            return oldSubscription;
-        }
-
-        final Subscriber<Object> subscriber = subscription.subscriber();
-        if (subscription.needsDirectInvocation()) {
-            subscribe(subscription, subscriber);
-        } else {
-            subscription.executor().execute(() -> subscribe(subscription, subscriber));
-        }
-
-        return subscription;
+    public boolean isEmpty() {
+        // All fixed streams are non-empty except for `EmptyFixedStreamMesage`.
+        return false;
     }
 
-    private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
+    @Override
+    public CompletableFuture<Void> whenComplete() {
+        return completionFuture;
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+        if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
+            subscriber.onSubscribe(NoopSubscription.get());
+            subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
+        } else {
+            withPooledObjects = containsWithPooledObjects(options);
+            notifyCancellation = containsNotifyCancellation(options);
+            this.executor = executor;
+            if (executor.inEventLoop()) {
+                subscribe0(subscriber);
+            } else {
+                executor.execute(() -> subscribe0(subscriber));
+            }
+        }
+    }
+
+    private void subscribe0(Subscriber<? super T> subscriber) {
+        this.subscriber = (Subscriber<T>) subscriber;
         try {
-            subscriber.onSubscribe(subscription);
+            subscriber.onSubscribe(this);
+
+            final Throwable abortCause = this.abortCause;
+            if (abortCause != null) {
+                onError0(abortCause);
+            } else if (isEmpty()) {
+                onComplete();
+            }
         } catch (Throwable t) {
-            abort(t);
+            completed = true;
+            cleanupObjects(t);
+            onError0(t);
             throwIfFatal(t);
             logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
                         subscriber, t);
         }
     }
 
-    final void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
+    void onNext(T item) {
+        assert subscriber != null;
         try {
-            event.notifySubscriber(subscription, whenComplete());
-        } finally {
-            subscription.clearSubscriber();
-            cleanupObjects(event.cause);
+            if (withPooledObjects) {
+                PooledObjects.touch(item);
+                subscriber.onNext(item);
+            } else {
+                subscriber.onNext(PooledObjects.copyAndClose(item));
+            }
+        } catch (Throwable t) {
+            // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
+            abort0(t);
+            throwIfFatal(t);
+            logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
+                        item, subscriber, t);
         }
     }
 
-    @Override
-    final void cancel() {
-        cancelOrAbort(CancelledSubscriptionException.get());
-    }
-
-    @Override
-    public final void abort() {
-        abort0(AbortedStreamException.get());
-    }
-
-    @Override
-    public final void abort(Throwable cause) {
-        requireNonNull(cause, "cause");
-        abort0(cause);
-    }
-
-    private void abort0(Throwable cause) {
-        final SubscriptionImpl currentSubscription = subscription;
-        if (currentSubscription != null) {
-            cancelOrAbort(cause);
+    void onError(Throwable cause) {
+        if (completed) {
             return;
         }
-
-        final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
-        subscriptionUpdater.compareAndSet(this, null, newSubscription);
-        cancelOrAbort(cause);
+        completed = true;
+        onError0(cause);
     }
 
-    private void cancelOrAbort(Throwable cause) {
-        if (closeEventUpdater.compareAndSet(this, null, newCloseEvent(cause))) {
-            final SubscriptionImpl subscription = this.subscription;
-            assert subscription != null;
-            if (subscription.needsDirectInvocation()) {
-                cleanup(subscription);
-            } else {
-                subscription.executor().execute(() -> cleanup(subscription));
+    private void onError0(Throwable cause) {
+        try {
+            subscriber.onError(cause);
+            if (!completionFuture.isDone()) {
+                completionFuture.completeExceptionally(cause);
             }
+        } catch (Throwable t) {
+            final Exception composite = new CompositeException(t, cause);
+            completionFuture.completeExceptionally(composite);
+            throwIfFatal(t);
+            logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+                        subscriber, composite);
+        }
+    }
+
+    void onComplete() {
+        if (completed) {
+            return;
+        }
+        completed = true;
+
+        assert subscriber != null;
+        try {
+            subscriber.onComplete();
+            completionFuture.complete(null);
+        } catch (Throwable t) {
+            completionFuture.completeExceptionally(t);
+            throwIfFatal(t);
+            logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
+                        subscriber, t);
+        }
+    }
+
+    @Override
+    public void cancel() {
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            cancel0();
+        } else {
+            executor.execute(this::cancel0);
+        }
+    }
+
+    private void cancel0() {
+        if (completed) {
+            return;
+        }
+        completed = true;
+
+        final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
+        cleanupObjects(cause);
+
+        if (notifyCancellation) {
+            onError0(cause);
+        } else {
+            completionFuture.completeExceptionally(cause);
+        }
+        subscriber = NeverInvokedSubscriber.get();
+    }
+
+    @Override
+    public void abort() {
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            abort0(null);
+        } else {
+            executor.execute(() -> abort0(null));
+        }
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            abort0(cause);
+        } else {
+            executor.execute(() -> abort0(cause));
+        }
+    }
+
+    private void abort0(@Nullable Throwable cause) {
+        if (completed) {
+            return;
+        }
+        completed = true;
+
+        if (cause == null) {
+            cause = AbortedStreamException.get();
+        }
+        cleanupObjects(cause);
+
+        abortCause = cause;
+        if (executor == null) {
+            // abortCause will be propagated when subscribed
+            completionFuture.completeExceptionally(cause);
+        } else {
+            // Subscribed already
+            onError0(cause);
         }
     }
 }

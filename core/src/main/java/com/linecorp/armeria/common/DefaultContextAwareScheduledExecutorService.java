@@ -15,22 +15,31 @@
  */
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+
+import javax.annotation.Nonnull;
 
 import com.google.common.base.MoreObjects;
 
 final class DefaultContextAwareScheduledExecutorService
-        extends DefaultContextAwareExecutorService implements ContextAwareScheduledExecutorService {
+        extends AbstractContextAwareScheduledExecutorService implements ContextAwareScheduledExecutorService {
 
-    private final ScheduledExecutorService executor;
+    private final RequestContext context;
 
-    DefaultContextAwareScheduledExecutorService(
-            RequestContext context, ScheduledExecutorService executor) {
-        super(context, executor);
-        this.executor = executor;
+    DefaultContextAwareScheduledExecutorService(RequestContext context, ScheduledExecutorService executor) {
+        super(executor);
+        this.context = context;
+    }
+
+    @Override
+    public RequestContext context() {
+        return context;
+    }
+
+    @Override
+    @Nonnull
+    public RequestContext contextOrNull() {
+        return context;
     }
 
     @Override
@@ -39,33 +48,10 @@ final class DefaultContextAwareScheduledExecutorService
     }
 
     @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return executor.schedule(context().makeContextAware(command), delay, unit);
-    }
-
-    @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return executor.schedule(context().makeContextAware(callable), delay, unit);
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
-                                                  TimeUnit unit) {
-        return executor.scheduleAtFixedRate(context().makeContextAware(command), initialDelay, period, unit);
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
-                                                     TimeUnit unit) {
-        return executor.scheduleWithFixedDelay(context().makeContextAware(command),
-                                               initialDelay, delay, unit);
-    }
-
-    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("executor", executor)
-                          .add("context", context())
+                          .add("context", context)
                           .toString();
     }
 }

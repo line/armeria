@@ -67,6 +67,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
             Optional<MeterRegistry> meterRegistry,
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<HealthCheckServiceConfigurator>> healthCheckServiceConfigurators,
+            Optional<List<MetricCollectingServiceConfigurator>> metricCollectingServiceConfigurators,
             Optional<MeterIdPrefixFunction> meterIdPrefixFunction,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
@@ -95,7 +96,8 @@ public abstract class AbstractArmeriaAutoConfiguration {
                                            healthCheckers.orElse(ImmutableList.of()),
                                            healthCheckServiceConfigurators.orElse(ImmutableList.of()),
                                            meterIdPrefixFunction.orElse(
-                                                   MeterIdPrefixFunction.ofDefault("armeria.server")));
+                                                   MeterIdPrefixFunction.ofDefault("armeria.server")),
+                                           metricCollectingServiceConfigurators.orElse(ImmutableList.of()));
 
         final Server server = serverBuilder.build();
 

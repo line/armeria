@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -193,9 +194,14 @@ class DefaultRequestLogTest {
         assertThatThrownBy(() -> log.responseFirstBytesTransferredTimeNanos())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
-        final ResponseHeaders bar = ResponseHeaders.of(200);
-        child.responseHeaders(bar);
+        final ResponseHeaders responseHeaders = ResponseHeaders.of(200);
+        child.responseHeaders(responseHeaders);
         assertThatThrownBy(() -> log.responseHeaders())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+
+        final HttpHeaders responseTrailers = HttpHeaders.of("status", 0);
+        child.responseTrailers(responseTrailers);
+        assertThatThrownBy(() -> log.responseTrailers())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
         log.endResponseWithLastChild();
@@ -203,7 +209,8 @@ class DefaultRequestLogTest {
 
         assertThat(log.responseFirstBytesTransferredTimeNanos())
                 .isEqualTo(child.responseFirstBytesTransferredTimeNanos());
-        assertThat(log.responseHeaders()).isSameAs(bar);
+        assertThat(log.responseHeaders()).isSameAs(responseHeaders);
+        assertThat(log.responseTrailers()).isSameAs(responseTrailers);
 
         final String responseContent = "baz1";
         final String rawResponseContent = "qux1";

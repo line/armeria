@@ -187,6 +187,11 @@ public interface Route {
     boolean isFallback();
 
     /**
+     * Returns the {@link Route}s that are supposed to be excluded from this {@link Route}.
+     */
+    List<Route> excludedRoutes();
+
+    /**
      * Returns a new {@link RouteBuilder} with the values of this {@link Route} instance.
      */
     RouteBuilder toBuilder();

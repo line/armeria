@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.spring.LocalArmeriaPortTest.TestConfiguration;
+import com.linecorp.armeria.spring.LocalArmeriaPortHttpsTest.TestConfiguration;
 
 /**
  * Tests for {@link LocalArmeriaPort} when https.

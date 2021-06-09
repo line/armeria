@@ -51,10 +51,16 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
 
     private final WebClient client;
 
+    /**
+     * Tells whether we need to use {@link Clients#withContextCustomizer(Consumer)} to set the request options.
+     */
+    private boolean needsContextCustomizer;
+
     // request options
     @Nullable
     private Map<AttributeKey<?>, Object> attributes;
     private long responseTimeoutMillis = -1;
+    private long maxResponseLength = -1;
 
     WebClientRequestPreparation(WebClient client) {
         this.client = client;
@@ -65,32 +71,26 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
      */
     public HttpResponse execute() {
         final HttpRequest httpRequest = buildRequest();
-        final Consumer<ClientRequestContext> customizer = newContextCustomizer();
+        if (needsContextCustomizer) {
+            try (SafeCloseable ignored = Clients.withContextCustomizer(ctx -> {
+                if (responseTimeoutMillis >= 0) {
+                    ctx.setResponseTimeoutMillis(responseTimeoutMillis);
+                }
 
-        if (customizer != null) {
-            try (SafeCloseable ignored = Clients.withContextCustomizer(customizer)) {
+                if (maxResponseLength >= 0) {
+                    ctx.setMaxResponseLength(maxResponseLength);
+                }
+
+                if (attributes != null && !attributes.isEmpty()) {
+                    //noinspection unchecked
+                    attributes.forEach((k, v) -> ctx.setAttr((AttributeKey<Object>) k, v));
+                }
+            })) {
                 return client.execute(httpRequest);
             }
         } else {
             return client.execute(httpRequest);
         }
-    }
-
-    @Nullable
-    private Consumer<ClientRequestContext> newContextCustomizer() {
-        if (responseTimeoutMillis == -1 && (attributes == null || attributes.isEmpty())) {
-            return null;
-        }
-
-        return ctx -> {
-            if (responseTimeoutMillis > -1) {
-                ctx.setResponseTimeoutMillis(responseTimeoutMillis);
-            }
-            if (attributes != null) {
-                //noinspection unchecked
-                attributes.forEach((k, v) -> ctx.setAttr((AttributeKey<Object>) k, v));
-            }
-        };
     }
 
     /**
@@ -113,6 +113,19 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
         checkArgument(responseTimeoutMillis >= 0, "responseTimeoutMillis: %s (expected: >= 0)",
                       responseTimeoutMillis);
         this.responseTimeoutMillis = responseTimeoutMillis;
+        needsContextCustomizer = true;
+        return this;
+    }
+
+    /**
+     * Sets the maximum allowed length of a server response in bytes.
+     *
+     * @param maxResponseLength the maximum length in bytes. {@code 0} disables the limit.
+     */
+    public WebClientRequestPreparation maxResponseLength(long maxResponseLength) {
+        checkArgument(maxResponseLength >= 0, "maxResponseLength: %s (expected: >= 0)", maxResponseLength);
+        this.maxResponseLength = maxResponseLength;
+        needsContextCustomizer = true;
         return this;
     }
 
@@ -126,6 +139,7 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
 
         if (attributes == null) {
             attributes = new HashMap<>();
+            needsContextCustomizer = true;
         }
 
         if (value == null) {

@@ -39,6 +39,11 @@ interface StringMultimapGetters<IN_NAME extends CharSequence, NAME extends IN_NA
 
     String get(IN_NAME name, String defaultValue);
 
+    @Nullable
+    String getLast(IN_NAME name);
+
+    String getLast(IN_NAME name, String defaultValue);
+
     List<String> getAll(IN_NAME name);
 
     @Nullable
@@ -47,9 +52,19 @@ interface StringMultimapGetters<IN_NAME extends CharSequence, NAME extends IN_NA
     int getInt(IN_NAME name, int defaultValue);
 
     @Nullable
+    Integer getLastInt(IN_NAME name);
+
+    int getLastInt(IN_NAME name, int defaultValue);
+
+    @Nullable
     Long getLong(IN_NAME name);
 
     long getLong(IN_NAME name, long defaultValue);
+
+    @Nullable
+    Long getLastLong(IN_NAME name);
+
+    long getLastLong(IN_NAME name, long defaultValue);
 
     @Nullable
     Float getFloat(IN_NAME name);
@@ -57,14 +72,29 @@ interface StringMultimapGetters<IN_NAME extends CharSequence, NAME extends IN_NA
     float getFloat(IN_NAME name, float defaultValue);
 
     @Nullable
+    Float getLastFloat(IN_NAME name);
+
+    float getLastFloat(IN_NAME name, float defaultValue);
+
+    @Nullable
     Double getDouble(IN_NAME name);
 
     double getDouble(IN_NAME name, double defaultValue);
 
     @Nullable
+    Double getLastDouble(IN_NAME name);
+
+    double getLastDouble(IN_NAME name, double defaultValue);
+
+    @Nullable
     Long getTimeMillis(IN_NAME name);
 
     long getTimeMillis(IN_NAME name, long defaultValue);
+
+    @Nullable
+    Long getLastTimeMillis(IN_NAME name);
+
+    long getLastTimeMillis(IN_NAME name, long defaultValue);
 
     boolean contains(IN_NAME name);
 

@@ -26,24 +26,21 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public class EmptyFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
-    // No objects, so just notify of close as soon as there is demand.
-    @Override
-    final void doRequest(SubscriptionImpl subscription, long unused) {
-        if (requested() != 0) {
-            // Already have demand so don't need to do anything.
-            return;
-        }
-        setRequested(1);
-        notifySubscriberOfCloseEvent(subscription, SUCCESSFUL_CLOSE);
-    }
-
     @Override
     public final boolean isEmpty() {
         return true;
     }
 
     @Override
+    public long demand() {
+        return 0;
+    }
+
+    @Override
     final void cleanupObjects(@Nullable Throwable cause) {
         // Empty streams have no objects to clean.
     }
+
+    @Override
+    public void request(long n) {}
 }

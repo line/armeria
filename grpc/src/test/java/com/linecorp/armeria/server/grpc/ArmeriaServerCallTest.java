@@ -95,6 +95,7 @@ class ArmeriaServerCallTest {
         call = new ArmeriaServerCall<>(
                 HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),
+                TestServiceGrpc.getUnaryCallMethod().getBareMethodName(),
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
                 res,
@@ -145,6 +146,7 @@ class ArmeriaServerCallTest {
         call = new ArmeriaServerCall<>(
                 HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),
+                TestServiceGrpc.getUnaryCallMethod().getBareMethodName(),
                 CompressorRegistry.getDefaultInstance(),
                 DecompressorRegistry.getDefaultInstance(),
                 res,

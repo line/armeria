@@ -52,9 +52,10 @@ public interface ServiceNaming {
         return ctx -> {
             final RpcRequest rpcReq = ctx.rpcRequest();
             if (rpcReq != null) {
-                return ServiceNamingUtil.fullTypeRpcServiceName(rpcReq);
+                return rpcReq.serviceName();
             }
-            return ServiceNamingUtil.fullTypeHttpServiceName(ctx.config().service());
+            return ServiceNamingUtil.trimTrailingDollarSigns(
+                    ServiceNamingUtil.fullTypeHttpServiceName(ctx.config().service()));
         };
     }
 

@@ -424,6 +424,23 @@ class CancellationSchedulerTest {
         await().untilTrue(completed);
     }
 
+    @Test
+    void multiple_ClearTimeoutInWhenCancelling() {
+        final AtomicBoolean completed = new AtomicBoolean();
+        final CancellationScheduler scheduler = new CancellationScheduler(0);
+        scheduler.whenCancelling().thenRun(() -> {
+            scheduler.clearTimeout(false);
+            scheduler.clearTimeout(false);
+            completed.set(true);
+        });
+        eventExecutor.execute(() -> {
+            scheduler.init(eventExecutor, noopTask, MILLISECONDS.toNanos(100), false);
+            assertThat(scheduler.timeoutNanos()).isEqualTo(MILLISECONDS.toNanos(100));
+        });
+
+        await().untilTrue(completed);
+    }
+
     static void assertTimeoutWithTolerance(long actualNanos, long expectedNanos) {
         assertTimeoutWithTolerance(actualNanos, expectedNanos, MILLISECONDS.toNanos(200));
     }

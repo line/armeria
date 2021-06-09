@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.client.grpc;
 import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
 
 import java.net.URI;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -65,19 +66,22 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     @Nullable
     private final GrpcJsonMarshaller jsonMarshaller;
     private final String advertisedEncodingsHeader;
+    private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
 
     ArmeriaChannel(ClientBuilderParams params,
                    HttpClient httpClient,
                    MeterRegistry meterRegistry,
                    SessionProtocol sessionProtocol,
                    SerializationFormat serializationFormat,
-                   @Nullable GrpcJsonMarshaller jsonMarshaller) {
+                   @Nullable GrpcJsonMarshaller jsonMarshaller,
+                   Map<MethodDescriptor<?, ?>, String> simpleMethodNames) {
         this.params = params;
         this.httpClient = httpClient;
         this.meterRegistry = meterRegistry;
         this.sessionProtocol = sessionProtocol;
         this.serializationFormat = serializationFormat;
         this.jsonMarshaller = jsonMarshaller;
+        this.simpleMethodNames = simpleMethodNames;
 
         advertisedEncodingsHeader = String.join(
                 ",", DecompressorRegistry.getDefaultInstance().getAdvertisedMessageEncodings());
@@ -116,6 +120,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 client,
                 req,
                 method,
+                simpleMethodNames,
                 maxOutboundMessageSizeBytes,
                 maxInboundMessageSizeBytes,
                 callOptions,
