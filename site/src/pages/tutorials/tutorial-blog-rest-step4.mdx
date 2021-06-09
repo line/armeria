@@ -30,7 +30,7 @@ Let's start with [mapping the HTTP GET method](/docs/server-annotated-service#ma
 1. [Create a service file](/tutorials/tutorial-blog-rest-step3#0-create-a-service-file) if you're yet to create one.
 2. Declare service methods, `getBlogPost()` and `getBlogPosts()` in the class `BlogService`.
 3. Map these service methods with the HTTP GET method by adding the <type://@Get> annotation as follows.
-4. Assign the endpoint as `/blogs`.
+4. Bind the endpoint `/blogs` to the method.
 
 ```java filename=BlogService.java highlight=1,6
 @Get("/blogs")

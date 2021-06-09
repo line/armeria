@@ -41,7 +41,7 @@ Let's start with [mapping the HTTP POST method](/docs/server-annotated-service#m
 
 1. Declare a service method, `createBlogPost()`, in the class `BlogService`.
 2. Map this service method with the HTTP POST method by adding the <type://@Post> annotations.
-3. Assign the endpoint as `/blogs`.
+3. Bind the endpoint `/blogs` to the method.
 
 ```java filename=BlogService.java highlight=1
 @Post("/blogs")
