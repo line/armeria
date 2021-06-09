@@ -11,5 +11,5 @@ Result:
 - Closes #<GitHub issue number>. (If this resolves the issue.)
 - Describe the consequences that a user will face after this PR is merged.
 
-See [How to write PR description](https://armeria.dev/community/developer-guide#how-to-write-pr-description)
+See [How to write pull request description](https://armeria.dev/community/developer-guide#how-to-write-pull-request-description)
 for more information.

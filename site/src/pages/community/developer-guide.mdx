@@ -387,13 +387,13 @@ try {
 }
 ```
 
-## How to write PR description
+## How to write pull request description
 
 There are three sections you need to write: `Motivation`, `Modifications`, and `Result`.
 
 ### Motivation
 
-Explain why you're sending the PR and what's the problem you're trying to solve.
+Explain why you're sending the pull request (PR) and what's the problem you're trying to solve.
 You do not have to include all the detail but please include as much as the reviewers can get the background
 of this change.
 If there's related GitHub issues, please link to them.
@@ -426,12 +426,12 @@ These are examples:
 - You can now monitor the state of all live threads and heap using `ManagementService`.
 
 In case of introducing a new feature, you can insert code snippet.
-```
+```java
 Server.builder()
       .serviceUnder("/internal/management/", ManagementService.of());
 ```
 
 Please keep in mind that we publish our [release notes](https://armeria.dev/release-notes/) using the
-result section of each PR. That is why writing good PR description is important.
+result section of each PR. That is why writing good a PR description is important.
 If this PR is something that we don't need to announce in the release notes such as cleaning up some logs,
 you can simply write it such as "Less verbose".
