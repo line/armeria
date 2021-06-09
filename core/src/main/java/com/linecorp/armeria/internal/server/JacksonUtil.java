@@ -21,6 +21,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.ServiceLoader;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -29,6 +32,10 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.server.JacksonModuleProvider;
 
 public final class JacksonUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(JacksonUtil.class);
+
+    private static boolean noticed;
 
     public static ObjectMapper newDefaultObjectMapper() {
         final JsonMapper.Builder jsonMapperBuilder = JsonMapper.builder();
@@ -42,7 +49,12 @@ public final class JacksonUtil {
                 jsonMapperBuilder.addModules(modules);
             }
         }
-        return jsonMapperBuilder.build();
+        final JsonMapper mapper = jsonMapperBuilder.build();
+        if (!noticed) {
+            logger.debug("Available Jackson Modules: {}", mapper.getRegisteredModuleIds());
+            noticed = true;
+        }
+        return mapper;
     }
 
     private JacksonUtil() {}
