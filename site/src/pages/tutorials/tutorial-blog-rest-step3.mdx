@@ -31,7 +31,7 @@ Create a service file, BlogService.java. Import required files as you go along t
     // Used for serializing and deserializing JSON
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
+    private Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
     ...
   ```
 
@@ -67,13 +67,13 @@ We can use Armeria's default request converter as is, but here let's give a go a
   ```java filename=BlogRequestConverter.java
   final class BlogPostRequestConverter implements RequestConverterFunction {
     private static final ObjectMapper mapper = new ObjectMapper();
-    private final AtomicInteger idGenerator = new AtomicInteger(); // Blog post ID
+    private AtomicInteger idGenerator = new AtomicInteger(); // Blog post ID
   }
   ```
 2. Add a method retrieving a value of a given key in a JSON object:
   ```java filename=BlogRequestConverter.java highlight="4"
     static String stringValue(JsonNode jsonNode, String field) {
-      final JsonNode value = jsonNode.get(field);
+      JsonNode value = jsonNode.get(field);
       if (value == null) {
           throw new IllegalArgumentException(field + " is missing!");
       }
@@ -88,10 +88,10 @@ We can use Armeria's default request converter as is, but here let's give a go a
       @Nullable ParameterizedType expectedParameterizedResultType)
         throws Exception {
       if (expectedResultType == BlogPost.class) {
-        final JsonNode jsonNode = mapper.readTree(request.contentUtf8());
-        final int id = idGenerator.getAndIncrement();
-        final String title = stringValue(jsonNode, "title");
-        final String content = stringValue(jsonNode, "content");
+        JsonNode jsonNode = mapper.readTree(request.contentUtf8());
+        int id = idGenerator.getAndIncrement();
+        String title = stringValue(jsonNode, "title");
+        String content = stringValue(jsonNode, "content");
         return new BlogPost(id, title, content); // Create an instance of BlogPost object
       }
       return RequestConverterFunction.fallthrough();

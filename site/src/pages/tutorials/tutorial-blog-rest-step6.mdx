@@ -91,7 +91,7 @@ What if there is no such post to delete? We can check if the blog exists before 
   2. In the file, declare a custom exception handler implementing Armeria's <type://ExceptionHandlerFunction> interface.
   ```java filename=BadRequestExceptionHandler.java
   public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
-    private static ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper();
     ...
   }
   ```
