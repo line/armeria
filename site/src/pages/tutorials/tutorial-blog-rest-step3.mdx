@@ -63,7 +63,7 @@ Armeria's [request converter](/docs/server-annotated-service#converting-an-http-
 
 We can use Armeria's default request converter as is, but here let's give a go at customizing a request converter for our blog post requests. We want to convert blog post details into a Java object.
 
-1. Create a BlogPostRequestConverter.java file and declare a class, implementing the <type://RequestConverterFunction> interface. For simplicity sake, generate impromptu IDs for this tutorial.
+1. Create a BlogPostRequestConverter.java file and declare a class, implementing the <type://RequestConverterFunction> interface. For the sake of simplicity, generate impromptu IDs for this tutorial.
   ```java filename=BlogRequestConverter.java
   final class BlogPostRequestConverter implements RequestConverterFunction {
     private static final ObjectMapper mapper = new ObjectMapper();
