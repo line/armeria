@@ -705,5 +705,4 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         requireNonNull(config, "config");
         this.config = config;
     }
-
 }
