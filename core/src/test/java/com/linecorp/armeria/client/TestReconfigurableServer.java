@@ -29,7 +29,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 class TestReconfigurableServer {
 
     @Test
-    void test_reconfiguration_of_server() throws Exception {
+    void shouldBeAbleToReconfigureServer() throws Exception {
         final ServerBuilder sb = Server.builder();
         sb.http(9009);
 
@@ -101,7 +101,7 @@ class TestReconfigurableServer {
     }
 
     @Test
-    void test_we_dont_reconfigure_empty_serviceconfig() throws Exception {
+    void reconfigureShouldConfigureAtleastOneService() throws Exception {
         final ServerBuilder sb = Server.builder();
         sb.http(9010);
         sb.service("/test1", (ctx, req) -> HttpResponse.of("Hello, world!"));
@@ -121,7 +121,7 @@ class TestReconfigurableServer {
     }
 
     @Test
-    void test_reconfiguration_of_https_server() throws Exception {
+    void reconfigureHttpsServerConfig() throws Exception {
         final ServerBuilder sb = Server.builder();
         sb.https(9009);
         sb.tlsSelfSigned();

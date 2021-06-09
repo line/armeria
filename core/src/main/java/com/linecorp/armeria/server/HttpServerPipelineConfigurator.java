@@ -248,8 +248,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     void updateConfig(ServerConfig config) {
-        final ServerConfig cfg = requireNonNull(config, "config");
-        configHolder.replaceAndNotify(cfg);
+        requireNonNull(config, "config");
+        configHolder.replace(config);
     }
 
     private final class ProtocolDetectionHandler extends ByteToMessageDecoder {
@@ -443,8 +443,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
             final HttpServerHandler httpServerHandler = new HttpServerHandler(configHolder,
-                    gracefulShutdownSupport,
-                    null, H2, proxiedAddresses);
+                    gracefulShutdownSupport, null, H2, proxiedAddresses);
             p.addLast(httpServerHandler);
         }
 
@@ -475,8 +474,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.http1MaxChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
             final HttpServerHandler httpServerHandler = new HttpServerHandler(configHolder,
-                    gracefulShutdownSupport,
-                    writer, H1, proxiedAddresses);
+                    gracefulShutdownSupport, writer, H1, proxiedAddresses);
             p.addLast(httpServerHandler);
         }
 

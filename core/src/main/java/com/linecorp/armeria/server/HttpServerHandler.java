@@ -228,7 +228,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // endOfStream set.
                 cleanup();
         }
-        //Cleanup the listener from ServerConfigHolder once the channel becomes inactive.
+        //Clean up the listener from ServerConfigHolder once the channel becomes inactive.
         configHolder.removeListener(configUpdateListener);
     }
 
@@ -702,13 +702,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     void swapServerConfig(ServerConfig config) {
-        requireNonNull(config);
-        if (this.config != config) {
-            this.config = config;
-        }
+        requireNonNull(config, "config");
+        this.config = config;
     }
 
-    Consumer<ServerConfig> configUpdateListener() {
-        return configUpdateListener;
-    }
 }

@@ -400,7 +400,8 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     /**
-     * Reconfigure Server configuration.
+     * Reconfigure Server configuration. This feature is only available once a server is configured
+     * and started. We do not allow ports to be reconfigured.
      */
     public void reconfigure(ServerConfigurator serverConfigurator) {
         requireNonNull(serverConfigurator, "serverConfigurator");
@@ -408,6 +409,9 @@ public final class Server implements ListenableAsyncCloseable {
         final ServerBuilder sb = builder();
         serverConfigurator.reconfigure(sb);
         config = sb.buildServerConfig(config());
+        // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
+        // add a listener to it.
+        config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
         pipelineConfigurator.updateConfig(config);
     }
 
