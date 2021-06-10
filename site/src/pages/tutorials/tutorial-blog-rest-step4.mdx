@@ -32,9 +32,10 @@ Let's start with [mapping the HTTP GET method](/docs/server-annotated-service#ma
 3. Map these service methods with the HTTP GET method by adding the <type://@Get> annotation as follows.
 4. Bind the endpoint `/blogs` to the method.
 
-```java filename=BlogService.java highlight=1,6
+```java filename=BlogService.java highlight=1,7
 @Get("/blogs")
-public HttpResponse getBlogPost(int id) throws JsonProcessingException {
+public HttpResponse getBlogPost(int id) 
+    throws JsonProcessingException {
   // Retrieve a single post
 }
 
@@ -55,7 +56,8 @@ Let's retrieve a single post:
 
 ```java filename=BlogService.java showlineno=true
 @Get("/blogs/:id")
-public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
+public HttpResponse getBlogPost(@Param int id)
+    throws JsonProcessingException {
   // Retrieve a single post
 }
 ```
@@ -79,15 +81,18 @@ In this step, write the code required for service itself.
 
 To retrieve a single blog post information, copy the following code inside the `getBlogPost()` method:
 
-```java filename=BlogService.java highlight=2
-public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
+```java filename=BlogService.java highlight=3
+public HttpResponse getBlogPost(@Param int id)
+    throws JsonProcessingException {
   BlogPost blogPost = blogPosts.get(id);
 }
 ```
 
 To retrieve multiple blog posts, copy the following code inside the `getBlogPosts()` method:
 
-```java filename=BlogService.java highlight=3-10
+```java filename=BlogService.java highlight=5-12
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descending) {
   // descending
   if (descending) {
@@ -105,8 +110,9 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 
 To return a response for the request to get a single post, use Armeria's <type://HttpResponse> in the `getBlogPost()` method.
 
-```java filename=BlogService.java highlight=3-4
-public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
+```java filename=BlogService.java highlight=4-5
+public HttpResponse getBlogPost(@Param int id)
+    throws JsonProcessingException {
   ...
   byte[] content = mapper.writeValueAsBytes(blogPost);
   return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, content);
