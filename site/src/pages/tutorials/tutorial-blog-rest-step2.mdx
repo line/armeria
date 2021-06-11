@@ -28,11 +28,11 @@ Let's define a `BlogPost` class containing the following information.
 
 ```java
 final class BlogPost {
-    private final int id;           // The post ID
-    private final String title;     // The post title
-    private final String content;   // The post content
-    private final long createdAt;   // The time post is created at
-    private final long modifiedAt;  // The time post is modified at
+  private final int id;           // The post ID
+  private final String title;     // The post title
+  private final String content;   // The post content
+  private final long createdAt;   // The time post is created at
+  private final long modifiedAt;  // The time post is modified at
 }
 ```
 
@@ -42,7 +42,7 @@ You need to create a blog post instance for creating and updating blog posts. Fi
 
 ```java filename=BlogPost.java
   BlogPost(int id, String title, String content) {
-      this(id, title, content, System.currentTimeMillis());
+    this(id, title, content, System.currentTimeMillis());
   }
 
   BlogPost(int id, String title, String content, long createdAt) {
@@ -54,11 +54,11 @@ Again, in the `BlogPost` class, add another constructor for updating a blog post
 
 ```java filename=BlogPost.java
 BlogPost(int id, String title, String content, long createdAt, long modifiedAt) {
-    this.id = id;
-    this.title = title;
-    this.content = content;
-    this.createdAt = createdAt;
-    this.modifiedAt = modifiedAt;
+  this.id = id;
+  this.title = title;
+  this.content = content;
+  this.createdAt = createdAt;
+  this.modifiedAt = modifiedAt;
 }
 ```
 
@@ -67,15 +67,19 @@ BlogPost(int id, String title, String content, long createdAt, long modifiedAt) 
 Add the following block of code in the blog service.
 
 ```java
-int id() { return id; }
+final class BlogPost {
+  ...
 
-String title() { return title; }
+  public int getId() { return id; }
 
-String content() { return content; }
+  public String getTitle() { return title; }
 
-long createdAt() { return createdAt; }
+  public String getContent() { return content; }
 
-long modifiedAt() { return modifiedAt; }
+  public long getCreatedAt() { return createdAt; }
+
+  public long getModifiedAt() { return modifiedAt; }
+}
 ```
 
 

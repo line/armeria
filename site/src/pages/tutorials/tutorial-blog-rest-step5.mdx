@@ -52,7 +52,7 @@ For updating a blog post, let's take a blog post ID (`id`) and new blog post inf
   // Instructions 1 to 3
   @Put("/blogs/:id")
   public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost)
-    throws JsonProcessingException {
+      throws JsonProcessingException {
       // Update a blog post
   }
   ```
@@ -78,10 +78,10 @@ To update a blog post, copy the following code inside the `updateBlogPost()` met
     if (oldBlogPost == null) {
         // Return a Not Found error. See the next section for instructions
     }
-    BlogPost newBlogPost = new BlogPost(id, blogPost.title(),
-        blogPost.content(),
-        oldBlogPost.createdAt(),
-        blogPost.createdAt()
+    BlogPost newBlogPost = new BlogPost(id, blogPost.getTitle(),
+        blogPost.getContent(),
+        oldBlogPost.getCreatedAt(),
+        blogPost.getCreatedAt()
     );
     blogPosts.put(id, newBlogPost); // Update the info in the map
     ...
