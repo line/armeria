@@ -36,11 +36,10 @@ This tutorial assumes that you have:
 
 ## Prerequisites
 
-To run and develop the sample service, prepare the following requirements on your computer:
+To run and develop the sample service, set your computer with the requirements:
 
 - JDK 8 or higher
-- Gradle
-  - Set your Gradle to compile Java with the [-parameters](/docs/setup/#configure--parameters-javac-option) option
+- Gradle: Set your Gradle to compile Java with the [-parameters](/docs/setup/#configure--parameters-javac-option) option
 
 ## Sample service
 
@@ -79,6 +78,28 @@ The [sample service code](https://github.com/line/armeria-examples/tree/master/r
 }
 }
 @endsalt
+```
+
+### build.gradle
+
+The sample service uses third party libraries, Guava and Jackson. They are added as dependencies in the build.gradle file.
+
+```groovy filename=build.gradle highlight=9,10
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'eclipse'\n
+repositories {
+    mavenCentral()
+}\n
+dependencies {
+  implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
+  implementation "com.google.guava:guava:${versions['com.google.guava:guava']}"\n
+  implementation "com.fasterxml.jackson.core:jackson-core:${versions['com.fasterxml.jackson.core:jackson-core']}"\n
+  // Logging
+  runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'
+  runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'
+}
+`}
 ```
 
 ## Run sample service
