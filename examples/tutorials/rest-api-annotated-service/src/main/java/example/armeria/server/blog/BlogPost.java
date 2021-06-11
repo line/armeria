@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
-final class BlogPost {
+public final class BlogPost {
     private final int id;
     private final String title;
     private final String content;
@@ -29,28 +29,23 @@ final class BlogPost {
         this.modifiedAt = modifiedAt;
     }
 
-    @JsonProperty("id")
-    int id() {
+    public int getId() {
         return id;
     }
 
-    @JsonProperty("title")
-    String title() {
+    public String getTitle() {
         return title;
     }
 
-    @JsonProperty("content")
-    String content() {
+    public String getContent() {
         return content;
     }
 
-    @JsonProperty("createdAt")
-    long createdAt() {
+    public long getCreatedAt() {
         return createdAt;
     }
 
-    @JsonProperty("modifiedAt")
-    long modifiedAt() {
+    public long getModifiedAt() {
         return modifiedAt;
     }
 

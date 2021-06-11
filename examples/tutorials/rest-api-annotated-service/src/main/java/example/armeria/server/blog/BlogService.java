@@ -41,7 +41,7 @@ public final class BlogService {
     @RequestConverter(BlogPostRequestConverter.class)
     public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingException {
         // Use a map to store the blog. In real world, you should use a database.
-        blogPosts.put(blogPost.id(), blogPost);
+        blogPosts.put(blogPost.getId(), blogPost);
 
         // Send the created blog post as the response.
         // We can add additional property such as a url of
@@ -50,7 +50,7 @@ public final class BlogService {
     }
 
     /**
-     * Retrieves a {@link BlogPost} whose {@link BlogPost#id()} is the {@code :id} in the path parameter.
+     * Retrieves a {@link BlogPost} whose {@link BlogPost#getId()} is the {@code :id} in the path parameter.
      */
     @Get("/blogs/:id")
     public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
@@ -75,7 +75,7 @@ public final class BlogService {
     }
 
     /**
-     * Updates the {@link BlogPost} whose {@link BlogPost#id()} is the {@code :id} in the path parameter.
+     * Updates the {@link BlogPost} whose {@link BlogPost#getId()} is the {@code :id} in the path parameter.
      */
     @Put("/blogs/:id")
     public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost)
@@ -84,15 +84,15 @@ public final class BlogService {
         if (oldBlogPost == null) {
             return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
-        final BlogPost newBlogPost = new BlogPost(id, blogPost.title(), blogPost.content(),
-                                                  oldBlogPost.createdAt(), blogPost.createdAt());
+        final BlogPost newBlogPost = new BlogPost(id, blogPost.getTitle(), blogPost.getContent(),
+                                                  oldBlogPost.getCreatedAt(), blogPost.getCreatedAt());
         blogPosts.put(id, newBlogPost);
         final byte[] bytes = mapper.writeValueAsBytes(newBlogPost);
         return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, bytes);
     }
 
     /**
-     * Deletes the {@link BlogPost} whose {@link BlogPost#id()} is the {@code :id} in the path parameter.
+     * Deletes the {@link BlogPost} whose {@link BlogPost#getId()} is the {@code :id} in the path parameter.
      */
     @Blocking
     @Delete("/blogs/:id")
