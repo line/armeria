@@ -16,23 +16,19 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.CompletableFuture;
-
-import org.reactivestreams.Subscriber;
-
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class StreamMessageBasedHttpRequest implements HttpRequest {
+final class StreamMessageBasedHttpRequest extends NonOverridableStreamMessageWrapper<HttpObject>
+        implements HttpRequest {
 
     private final RequestHeaders headers;
-    private final StreamMessage<? extends HttpObject> delegate;
 
     StreamMessageBasedHttpRequest(RequestHeaders headers, StreamMessage<? extends HttpObject> delegate) {
+        super(delegate);
         this.headers = headers;
-        this.delegate = delegate;
     }
 
     @Override
@@ -41,38 +37,12 @@ final class StreamMessageBasedHttpRequest implements HttpRequest {
     }
 
     @Override
-    public boolean isOpen() {
-        return delegate.isOpen();
+    public HttpRequestDuplicator toDuplicator() {
+        return toDuplicator(defaultSubscriberExecutor());
     }
 
     @Override
-    public boolean isEmpty() {
-        return delegate.isEmpty();
-    }
-
-    @Override
-    public long demand() {
-        return delegate.demand();
-    }
-
-    @Override
-    public CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-        delegate.subscribe(subscriber, executor, options);
-    }
-
-    @Override
-    public void abort() {
-        delegate.abort();
-    }
-
-    @Override
-    public void abort(Throwable cause) {
-        delegate.abort(cause);
+    public HttpRequestDuplicator toDuplicator(EventExecutor executor) {
+        return HttpRequest.super.toDuplicator(executor);
     }
 }

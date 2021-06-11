@@ -599,13 +599,4 @@ public interface HttpResponse extends Response, HttpMessage {
         });
         return of(stream);
     }
-
-    /**
-     * Transforms the {@linkplain HttpObject}s emitted by this {@link HttpRequest} by applying the
-     * specified {@link Function}.
-     */
-    default HttpResponse mapObject(Function<? super HttpObject, ? extends HttpObject> function) {
-        requireNonNull(function, "function");
-        return of(map(function));
-    }
 }

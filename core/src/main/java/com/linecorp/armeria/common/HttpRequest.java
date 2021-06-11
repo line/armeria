@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static java.util.Objects.requireNonNull;
 
@@ -532,7 +531,7 @@ public interface HttpRequest extends Request, HttpMessage {
         requireNonNull(function, "function");
         final RequestHeaders transformed = function.apply(headers());
         requireNonNull(transformed, "function.apply() returned null");
-        return of(transformed, this);
+        return withHeaders(transformed);
     }
 
     /**
@@ -559,18 +558,5 @@ public interface HttpRequest extends Request, HttpMessage {
             return obj;
         });
         return of(headers(), stream);
-    }
-
-    /**
-     * Transforms the {@linkplain HttpObject}s emitted by this {@link HttpRequest} by applying the
-     * specified {@link Function}.
-     */
-    default HttpRequest mapObject(Function<? super HttpObject, ? extends HttpObject> function) {
-        requireNonNull(function, "function");
-        final HttpObject transformedHeaders = function.apply(headers());
-        checkState(transformedHeaders instanceof RequestHeaders,
-                   "function.apply() returned %s (expected: an instance of %s)",
-                   transformedHeaders, RequestHeaders.class.getName());
-        return of((RequestHeaders) transformedHeaders, map(function));
     }
 }

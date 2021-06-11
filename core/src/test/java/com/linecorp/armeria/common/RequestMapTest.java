@@ -102,6 +102,28 @@ class RequestMapTest {
     }
 
     @Test
+    void mapChain() {
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/test"),
+                                               HttpData.ofUtf8("foo"),
+                                               HttpHeaders.of("status", "0"));
+        final AggregatedHttpRequest response =
+                req.mapHeaders(headers -> headers.toBuilder().add("header1", "1").build())
+                   .mapHeaders(headers -> headers.toBuilder().add("header2", "2").build())
+                   .mapData(data -> HttpData.ofUtf8(data.toStringUtf8() + '!'))
+                   .mapData(data -> HttpData.ofUtf8(data.toStringUtf8() + '!'))
+                   .mapTrailers(trailers -> trailers.toBuilder().add("trailer1", "1").build())
+                   .mapTrailers(trailers -> trailers.toBuilder().add("trailer2", "2").build())
+                   .aggregate().join();
+
+        assertThat(response.headers().get("header1")).isEqualTo("1");
+        assertThat(response.headers().get("header2")).isEqualTo("2");
+        assertThat(response.contentUtf8()).isEqualTo("foo!!");
+        assertThat(response.trailers().get("status")).isEqualTo("0");
+        assertThat(response.trailers().get("trailer")).isEqualTo("1");
+        assertThat(response.trailers().get("trailer")).isEqualTo("1");
+    }
+
+    @Test
     void withDecorator() {
         final WebClient client =
                 WebClient.builder(server.httpUri())

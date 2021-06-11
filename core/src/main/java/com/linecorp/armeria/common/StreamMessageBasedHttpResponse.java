@@ -16,56 +16,25 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.concurrent.CompletableFuture;
-
-import org.reactivestreams.Subscriber;
-
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class StreamMessageBasedHttpResponse implements HttpResponse {
-
-    private final StreamMessage<? extends HttpObject> delegate;
+final class StreamMessageBasedHttpResponse extends NonOverridableStreamMessageWrapper<HttpObject>
+        implements HttpResponse {
 
     StreamMessageBasedHttpResponse(StreamMessage<? extends HttpObject> delegate) {
-        this.delegate = delegate;
+        super(delegate);
     }
 
     @Override
-    public boolean isOpen() {
-        return delegate.isOpen();
+    public HttpResponseDuplicator toDuplicator() {
+        return toDuplicator(defaultSubscriberExecutor());
     }
 
     @Override
-    public boolean isEmpty() {
-        return delegate.isEmpty();
-    }
-
-    @Override
-    public long demand() {
-        return delegate.demand();
-    }
-
-    @Override
-    public CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-        delegate.subscribe(subscriber, executor, options);
-    }
-
-    @Override
-    public void abort() {
-        delegate.abort();
-    }
-
-    @Override
-    public void abort(Throwable cause) {
-        delegate.abort(cause);
+    public HttpResponseDuplicator toDuplicator(EventExecutor executor) {
+        return HttpResponse.super.toDuplicator(executor);
     }
 }
