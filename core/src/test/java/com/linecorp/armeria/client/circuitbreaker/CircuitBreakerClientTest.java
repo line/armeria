@@ -37,13 +37,20 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
 
 class CircuitBreakerClientTest {
 
@@ -59,6 +66,14 @@ class CircuitBreakerClientTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/unavailable", (ctx, req) -> HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE));
+            sb.service("/long-streaming", (ctx, req) -> {
+                final HttpResponseWriter writer = HttpResponse.streaming();
+                writer.write(ResponseHeaders.of(200));
+                writer.write(HttpData.ofUtf8("Hello"));
+                writer.write(HttpData.ofUtf8("World"));
+                // Leave stream opened.
+                return writer;
+            });
         }
     };
 
@@ -152,7 +167,6 @@ class CircuitBreakerClientTest {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
-        @SuppressWarnings("unchecked")
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
 
@@ -173,7 +187,6 @@ class CircuitBreakerClientTest {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
-        @SuppressWarnings("unchecked")
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
 
@@ -195,7 +208,6 @@ class CircuitBreakerClientTest {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
-        @SuppressWarnings("unchecked")
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
 
@@ -215,7 +227,6 @@ class CircuitBreakerClientTest {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
-        @SuppressWarnings("unchecked")
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
 
@@ -237,7 +248,6 @@ class CircuitBreakerClientTest {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
-        @SuppressWarnings("unchecked")
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
 
@@ -259,7 +269,6 @@ class CircuitBreakerClientTest {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
-        @SuppressWarnings("unchecked")
         final CircuitBreakerFactory factory = mock(CircuitBreakerFactory.class);
         when(factory.apply(any(), any(), any())).thenReturn(circuitBreaker);
 
@@ -287,6 +296,54 @@ class CircuitBreakerClientTest {
         final CircuitBreakerRuleWithContent<HttpResponse> rule =
                 CircuitBreakerRuleWithContent.<HttpResponse>builder().onServerErrorStatus().thenFailure();
         circuitBreakerIsOpenOnServerError(CircuitBreakerClient.builder(rule, 10000));
+    }
+
+    @Test
+    void shouldReceiveStreamDataBeforeEos() {
+        final CircuitBreakerRule rule =
+                CircuitBreakerRule.builder()
+                                  .onResponseTrailers((ctx, trailers) -> true)
+                                  .onUnprocessed()
+                                  .thenFailure();
+        WebClient client =
+                WebClient.builder(server.httpUri())
+                         .responseTimeoutMillis(2000)
+                         .decorator(CircuitBreakerClient.newDecorator(CircuitBreaker.ofDefaultName(), rule))
+                         .build();
+        HttpResponse response = client.get("/long-streaming");
+        StepVerifier.create(response)
+                    .expectNextMatches(headers -> ((ResponseHeaders) headers).status() == HttpStatus.OK)
+                    .expectNextMatches(data -> ((HttpData) data).toStringUtf8().equals("Hello"))
+                    .expectNextMatches(data -> ((HttpData) data).toStringUtf8().equals("World"))
+                    .expectError(ResponseTimeoutException.class)
+                    .verify();
+
+        final CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent =
+                CircuitBreakerRuleWithContent.<HttpResponse>builder()
+                                             .onResponseTrailers((ctx, trailers) -> true)
+                                             .onResponse((ctx, res) -> {
+                                                 return Flux.from(res.split().body())
+                                                            .take(2)
+                                                            .map(HttpData::toStringUtf8)
+                                                            .reduce((a, b) -> a + b)
+                                                            .toFuture()
+                                                            .thenApply(str -> str.startsWith("Hello"));
+                                             })
+                                             .onUnprocessed()
+                                             .thenFailure();
+        client = WebClient.builder(server.httpUri())
+                          .responseTimeoutMillis(2000)
+                          .decorator(CircuitBreakerClient
+                                             .newDecorator(CircuitBreaker.ofDefaultName(), ruleWithContent))
+                          .build();
+
+        response = client.get("/long-streaming");
+        StepVerifier.create(response)
+                    .expectNextMatches(headers -> ((ResponseHeaders) headers).status() == HttpStatus.OK)
+                    .expectNextMatches(data -> ((HttpData) data).toStringUtf8().equals("Hello"))
+                    .expectNextMatches(data -> ((HttpData) data).toStringUtf8().equals("World"))
+                    .expectError(ResponseTimeoutException.class)
+                    .verify();
     }
 
     private static void circuitBreakerIsOpenOnServerError(CircuitBreakerClientBuilder builder) {
