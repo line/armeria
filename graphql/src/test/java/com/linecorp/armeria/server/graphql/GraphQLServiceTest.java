@@ -120,11 +120,10 @@ class GraphQLServiceTest {
                                                      .method(HttpMethod.POST)
                                                      .contentType(graphqlPlusJson)
                                                      .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(headers,
-                                                                  "{\"query\": \"{foo}\"}",
-                                                                  Charsets.UTF_8)
-                                                         .aggregate().get();
+        final AggregatedHttpResponse response =
+                WebClient.of(server.httpUri())
+                         .execute(headers, "{\"query\": \"{foo}\"}", Charsets.UTF_8)
+                         .aggregate().get();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("{\"data\":{\"foo\":\"bar\"}}");
@@ -137,11 +136,10 @@ class GraphQLServiceTest {
                                                      .method(HttpMethod.POST)
                                                      .contentType(MediaType.JSON)
                                                      .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(headers,
-                                                                  "{\"query\": \"{foo}\"}",
-                                                                  Charsets.UTF_8)
-                                                         .aggregate().get();
+        final AggregatedHttpResponse response =
+                WebClient.of(server.httpUri())
+                         .execute(headers, "{\"query\": \"{foo}\"}", Charsets.UTF_8)
+                         .aggregate().get();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("{\"data\":{\"foo\":\"bar\"}}");
@@ -154,11 +152,10 @@ class GraphQLServiceTest {
                                                      .method(HttpMethod.POST)
                                                      .contentType(MediaType.JSON)
                                                      .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(headers,
-                                                                  "",
-                                                                  Charsets.UTF_8)
-                                                         .aggregate().get();
+        final AggregatedHttpResponse response =
+                WebClient.of(server.httpUri())
+                         .execute(headers, "", Charsets.UTF_8)
+                         .aggregate().get();
 
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.contentUtf8()).isEqualTo("Body is required");
@@ -170,14 +167,14 @@ class GraphQLServiceTest {
                                                      .path("/graphql")
                                                      .method(HttpMethod.POST)
                                                      .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(headers,
-                                                                  "{\"query\": \"{foo}\"}",
-                                                                  Charsets.UTF_8)
-                                                         .aggregate().get();
+        final AggregatedHttpResponse response =
+                WebClient.of(server.httpUri())
+                         .execute(headers, "{\"query\": \"{foo}\"}", Charsets.UTF_8)
+                         .aggregate().get();
 
         assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
-        assertThat(response.contentUtf8()).isEqualTo("Could not process GraphQL request");
+        assertThat(response.contentUtf8()).isEqualTo("Unsupported media type. Only JSON compatible types and " +
+                                                     "application/graphql are supported.");
     }
 
     @ParameterizedTest
@@ -188,14 +185,14 @@ class GraphQLServiceTest {
                                                      .method(HttpMethod.POST)
                                                      .contentType(mediaType)
                                                      .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(headers,
-                                                                  "{\"query\": \"{foo}\"}",
-                                                                  Charsets.UTF_8)
-                                                         .aggregate().get();
+        final AggregatedHttpResponse response =
+                WebClient.of(server.httpUri())
+                         .execute(headers, "{\"query\": \"{foo}\"}", Charsets.UTF_8)
+                         .aggregate().get();
 
         assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
-        assertThat(response.contentUtf8()).isEqualTo("Could not process GraphQL request");
+        assertThat(response.contentUtf8()).isEqualTo("Unsupported media type. Only JSON compatible types and " +
+                                                     "application/graphql are supported.");
     }
 
     private static Stream<Arguments> provideMediaTypeArguments() {
@@ -218,9 +215,10 @@ class GraphQLServiceTest {
                                                      .method(HttpMethod.POST)
                                                      .contentType(MediaType.GRAPHQL)
                                                      .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(headers, "{error}", Charsets.UTF_8)
-                                                         .aggregate().get();
+        final AggregatedHttpResponse response =
+                WebClient.of(server.httpUri())
+                         .execute(headers, "{error}", Charsets.UTF_8)
+                         .aggregate().get();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8())

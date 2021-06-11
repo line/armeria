@@ -87,7 +87,8 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         if (contentType == null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT,
-                                   "Could not process GraphQL request");
+                                   "Unsupported media type. Only JSON compatible types and " +
+                                   "application/graphql are supported.");
         }
         if (contentType.isJson()) {
             return HttpResponse.from(request.aggregate().handle((req, thrown) -> {
@@ -122,7 +123,8 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         }
         return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                MediaType.PLAIN_TEXT,
-                               "Could not process GraphQL request");
+                               "Unsupported media type. Only JSON compatible types and " +
+                               "application/graphql are supported.");
     }
 
     private static ExecutionInput executionInput(String query, ServiceRequestContext ctx,

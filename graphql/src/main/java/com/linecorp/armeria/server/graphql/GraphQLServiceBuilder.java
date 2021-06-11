@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import javax.annotation.Nullable;
-
 import org.dataloader.DataLoaderRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +41,6 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLTypeVisitor;
 import graphql.schema.SchemaTransformer;
 import graphql.schema.idl.RuntimeWiring;
-import graphql.schema.idl.RuntimeWiring.Builder;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
@@ -222,39 +219,32 @@ public final class GraphQLServiceBuilder {
         }
 
         logger.info("Found schema files: {}", schemaFiles);
-        schemaFiles.forEach(it -> registry.merge(parser.parse(it)));
+        schemaFiles.forEach(file -> registry.merge(parser.parse(file)));
         return registry;
     }
 
     private static RuntimeWiring buildRuntimeWiring(
             List<RuntimeWiringConfigurator> runtimeWiringConfigurators) {
-        final Builder runtimeWiringBuilder = RuntimeWiring.newRuntimeWiring();
+        final RuntimeWiring.Builder runtimeWiringBuilder = RuntimeWiring.newRuntimeWiring();
         runtimeWiringConfigurators.forEach(it -> it.configure(runtimeWiringBuilder));
         return runtimeWiringBuilder.build();
     }
 
     private static List<File> defaultSchemaFiles() {
-        final ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+        final ClassLoader classLoader = GraphQLServiceBuilder.class.getClassLoader();
         return DEFAULT_SCHEMA_FILE_NAMES
                 .stream()
-                .map(it -> resourcePath(classLoader, it))
+                .map(classLoader::getResource)
                 .filter(Objects::nonNull)
                 .map(GraphQLServiceBuilder::toFile)
                 .collect(toImmutableList());
     }
 
-    @Nullable
-    private static URL resourcePath(ClassLoader classLoader, String resourcePath) {
-        return classLoader.getResource(resourcePath);
-    }
-
     private static File toFile(URL url) {
-        File f;
         try {
-            f = new File(url.toURI());
+            return new File(url.toURI());
         } catch (URISyntaxException ignored) {
-            f = new File(url.getPath());
+            return new File(url.getPath());
         }
-        return f;
     }
 }

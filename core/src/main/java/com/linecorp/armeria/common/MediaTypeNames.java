@@ -289,6 +289,10 @@ public final class MediaTypeNames {
      */
     public static final String GEO_JSON = "application/geo+json";
     /**
+     * {@value #GRAPHQL}.
+     */
+    public static final String GRAPHQL = "application/graphql";
+    /**
      * {@value #GZIP}.
      */
     public static final String GZIP = "application/x-gzip";
@@ -471,14 +475,14 @@ public final class MediaTypeNames {
      * {@value #ZIP}.
      */
     public static final String ZIP = "application/zip";
+
+    /* multipart types */
+
     /**
      * {@value MULTIPART_FORM_DATA}.
      */
     public static final String MULTIPART_FORM_DATA = "multipart/form-data";
-    /**
-     * {@value #GRAPHQL}.
-     */
-    public static final String GRAPHQL = "application/graphql";
+
 
     private MediaTypeNames() {}
 }

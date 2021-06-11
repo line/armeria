@@ -361,11 +361,11 @@ public class MediaTypeTest {
 
     @Test
     public void testIsJson() {
-        assertTrue(JSON.isJson());
-        assertTrue(JSON_UTF_8.isJson());
-        assertTrue(MediaType.parse("application/graphql+json").isJson());
-        assertFalse(PLAIN_TEXT_UTF_8.isJson());
-        assertFalse(GRAPHQL.isJson());
+        assertThat(JSON.isJson()).isTrue();
+        assertThat(JSON_UTF_8.isJson()).isTrue();
+        assertThat(MediaType.parse("application/graphql+json").isJson()).isTrue();
+        assertThat(PLAIN_TEXT_UTF_8.isJson()).isFalse();
+        assertThat(GRAPHQL.isJson()).isFalse();
     }
 
     @Test
