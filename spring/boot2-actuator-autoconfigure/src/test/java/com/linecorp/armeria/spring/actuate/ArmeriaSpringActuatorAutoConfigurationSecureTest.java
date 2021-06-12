@@ -38,8 +38,9 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationSecureTest.TestConfiguration;
 
-@SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
+@SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "secureTest" })
 @DirtiesContext
 @AutoConfigureMetrics

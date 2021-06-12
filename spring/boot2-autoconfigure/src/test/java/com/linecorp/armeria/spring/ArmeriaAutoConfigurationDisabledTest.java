@@ -28,7 +28,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithConsumerTest.TestConfiguration;
+import com.linecorp.armeria.spring.ArmeriaAutoConfigurationDisabledTest.TestConfiguration;
 
 /**
  * This test {@link ArmeriaAutoConfiguration} could be disabled.

@@ -70,11 +70,6 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
-        delegate().subscribe(subscriber, executor);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         delegate().subscribe(subscriber, executor, options);

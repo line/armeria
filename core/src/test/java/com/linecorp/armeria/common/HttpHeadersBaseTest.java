@@ -70,6 +70,29 @@ class HttpHeadersBaseTest {
         assertThat(h1).isEqualTo(h2);
     }
 
+    @Test
+    void testGetLastOperations() {
+        final HttpHeadersBase headers = newEmptyHeaders();
+        headers.add("Foo", "1");
+
+        assertThat(headers.getLast("Foo")).isEqualTo("1");
+    }
+
+    @Test
+    void testGetLastOperationsWithEmptyHeaders() {
+        final HttpHeadersBase headers = newEmptyHeaders();
+        assertThat(headers.getLast("Foo")).isNull();
+    }
+
+    @Test
+    void testGetLastOperationsWithMultipleValues() {
+        final HttpHeadersBase headers = newEmptyHeaders();
+        headers.add("Foo", "1");
+        headers.add("Foo", "2");
+
+        assertThat(headers.getLast("Foo")).isEqualTo("2");
+    }
+
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
 
     @Test

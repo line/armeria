@@ -24,15 +24,20 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.apache.thrift.TException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingRpcService;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
 import com.linecorp.armeria.service.test.thrift.main.FooService.AsyncIface;
 import com.linecorp.armeria.service.test.thrift.main.FooServiceException;
@@ -45,36 +50,71 @@ class THttpServiceBuilderTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final AsyncIface service = mock(AsyncIface.class);
-            doThrow(new IllegalStateException()).when(service).bar1(any());
-            doThrow(new IllegalArgumentException()).when(service).bar2(any());
-            sb.service("/exception", THttpService.builder()
-                                                 .addService(service)
-                                                 .exceptionHandler((ctx, cause) -> {
-                                                     if (cause instanceof IllegalStateException) {
-                                                         return RpcResponse.ofFailure(
-                                                                 new FooServiceException("Illegal state!"));
-                                                     }
-                                                     if (cause instanceof IllegalArgumentException) {
-                                                         return RpcResponse.of("I'm generous");
-                                                     }
-                                                     return RpcResponse.ofFailure(cause);
-                                                 })
-                                                 .build());
+            final AsyncIface service1 = mock(AsyncIface.class);
+            doThrow(new IllegalStateException()).when(service1).bar1(any());
+            doThrow(new IllegalArgumentException()).when(service1).bar2(any());
+            final AsyncIface service2 = mock(AsyncIface.class);
+            doThrow(new FooServiceException("Foo Bar Qux")).when(service2).bar1(any());
+
+            final THttpService httpService1 = THttpService
+                    .builder()
+                    .addService(service1)
+                    .exceptionHandler((ctx, cause) -> {
+                        if (cause instanceof IllegalStateException) {
+                            return RpcResponse.ofFailure(
+                                    new FooServiceException("Illegal state!"));
+                        }
+                        if (cause instanceof IllegalArgumentException) {
+                            return RpcResponse.of("I'm generous");
+                        }
+                        return RpcResponse.ofFailure(cause);
+                    })
+                    .build();
+
+            final THttpService httpService2 = THttpService
+                    .builder()
+                    .addService(service2)
+                    .decorate(delegate -> new SimpleDecoratingRpcService(delegate) {
+                        @Override
+                        public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
+                            return RpcResponse.from(
+                                    ctx.makeContextAware(CompletableFuture.completedFuture(new Object()))
+                                       .thenCompose(userInfo -> {
+                                           try {
+                                               return unwrap().serve(ctx, req);
+                                           } catch (Exception e) {
+                                               return RpcResponse.ofFailure(e);
+                                           }
+                                       }));
+                        }
+                    })
+                    .build();
+
+            sb.service("/exception", httpService1);
+            sb.service("/rpc-exception", httpService2);
         }
     };
 
     @Test
     void exceptionHandler() throws TException {
-        final FooService.Iface client =
-                Clients.builder(server.uri(SessionProtocol.HTTP, BINARY)
-                                      .resolve("/exception"))
-                       .build(FooService.Iface.class);
+        final FooService.Iface client = Clients
+                .builder(server.uri(SessionProtocol.HTTP, BINARY).resolve("/exception"))
+                .build(FooService.Iface.class);
         final Throwable thrown = catchThrowable(client::bar1);
         assertThat(thrown).isInstanceOf(FooServiceException.class);
         assertThat(((FooServiceException) thrown).getStringVal()).isEqualTo("Illegal state!");
 
         assertThat(client.bar2()).isEqualTo("I'm generous");
+    }
+
+    @Test
+    void exceptionHandler_Test() throws TException {
+        final FooService.Iface client = Clients
+                .builder(server.uri(SessionProtocol.HTTP, BINARY).resolve("/rpc-exception"))
+                .build(FooService.Iface.class);
+        final Throwable thrown = catchThrowable(client::bar1);
+        assertThat(thrown).isInstanceOf(FooServiceException.class);
+        assertThat(((FooServiceException) thrown).getStringVal()).isEqualTo("Foo Bar Qux");
     }
 
     @Test

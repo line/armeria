@@ -462,6 +462,12 @@ public final class MediaType {
     public static final MediaType JSON_SEQ = createConstant(APPLICATION_TYPE, "json-seq");
 
     /**
+     * As described in <a href="https://jsonlines.org/">JSON Lines</a>,
+     * this constant is used for expressing JSON lines.
+     */
+    public static final MediaType JSON_LINES = createConstant(APPLICATION_TYPE, "x-ndjson");
+
+    /**
      * The <a href="http://www.w3.org/TR/appmanifest/">Manifest for a web application</a>.
      */
     public static final MediaType MANIFEST_JSON_UTF_8 =

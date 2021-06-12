@@ -4,12 +4,12 @@
 
 boms:
   - com.fasterxml.jackson:jackson-bom:2.12.3
-  - io.dropwizard.metrics:metrics-bom:4.1.20
+  - io.dropwizard.metrics:metrics-bom:4.1.21
   # Ensure that we use the same Protobuf version as what gRPC depends on.
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
   - io.grpc:grpc-bom:1.37.0
-  - io.micrometer:micrometer-bom:1.6.6
+  - io.micrometer:micrometer-bom:1.7.0
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.63.Final
   - io.zipkin.brave:brave-bom:5.13.3
@@ -31,7 +31,7 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.15.0'
+    version: '3.16.0'
     javadocs:
     - https://www.javadoc.io/doc/com.auth0/java-jwt/3.15.0/
 
@@ -46,13 +46,14 @@ com.fasterxml.jackson.core:
     javadocs:
     - https://fasterxml.github.io/jackson-databind/javadoc/2.12/
 
+# Don't upgrade Caffeine to 3.x that requires Java 11.
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.9.0'
+    version: '2.9.1'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.9.0/
+    - https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.9.1/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
@@ -64,14 +65,14 @@ com.github.node-gradle:
   gradle-node-plugin: { version: '3.0.1' }
 
 com.google.api:
-  gax-grpc: { version: '1.63.0' }
+  gax-grpc: { version: '1.64.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 # This is only used for examples/context-propagation/dagger
 com.google.dagger:
-  dagger: { version: &DAGGER_VERSION '2.35' }
+  dagger: { version: &DAGGER_VERSION '2.35.1' }
   dagger-compiler: { version: *DAGGER_VERSION }
   dagger-producers: { version: *DAGGER_VERSION }
 
@@ -174,7 +175,7 @@ com.typesafe.akka:
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
   finagle-serversets_2.13:
-    version: '21.3.0'
+    version: '21.4.0'
 
 cz.alenkacz:
   gradle-scalafmt: { version: '1.14.0' }
@@ -240,7 +241,7 @@ io.micrometer:
 
 # This is only used for ScalaPB test
 io.monix:
-  monix-reactive_2.12: { version: &MONIX_VERSION '3.3.0' }
+  monix-reactive_2.12: { version: &MONIX_VERSION '3.4.0' }
   monix-reactive_2.13: { version: *MONIX_VERSION }
 
 io.netty:
@@ -255,7 +256,7 @@ io.netty.incubator:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.4.5'
+    version: &REACTOR_VERSION '3.4.6'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -328,11 +329,8 @@ org.junit.jupiter:
 log4j:
   log4j: { version: '1.2.17' }
 
-me.champeau.gradle:
-  jmh-gradle-plugin: { version: '0.5.3' }
-
-net.javacrumbs.future-converter:
-  future-converter-rxjava2-java8: { version: 1.2.0 }
+me.champeau.jmh:
+  jmh-gradle-plugin: { version: '0.6.4' }
 
 net.javacrumbs.json-unit:
   json-unit: { version: &JSON_UNIT_VERSION '2.25.0' }
@@ -415,7 +413,7 @@ org.assertj:
   assertj-core: { version: '3.17.1' }
 
 org.awaitility:
-  awaitility: { version: '4.0.3' }
+  awaitility: { version: '4.1.0' }
 
 org.bouncycastle:
   bcprov-jdk15on:
@@ -489,14 +487,14 @@ org.jsoup:
   jsoup: { version: '1.13.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.9.0' }
+  mockito-core: { version: &MOCKITO_VERSION '3.10.0' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.10' }
 
 org.openjdk.jmh:
-  jmh-core: { version: &JMH_VERSION '1.29' }
+  jmh-core: { version: &JMH_VERSION '1.31' }
   jmh-generator-annprocess: { version: *JMH_VERSION }
 
 org.opensaml:
@@ -531,12 +529,12 @@ org.scala-lang:
   scala-library: { version: '2.13.5' }
 
 org.scala-lang.modules:
-  scala-collection-compat_2.12: { version: '2.4.3' }
-  scala-java8-compat_2.12: { version: &SCALA_JAVA8_COMPAT_VERSION '0.9.1' }
+  scala-collection-compat_2.12: { version: '2.4.4' }
+  scala-java8-compat_2.12: { version: &SCALA_JAVA8_COMPAT_VERSION '1.0.0' }
   scala-java8-compat_2.13: { version: *SCALA_JAVA8_COMPAT_VERSION }
 
 org.scalameta:
-  munit_2.12: { version: &MUNIT_VERSION '0.7.25' }
+  munit_2.12: { version: &MUNIT_VERSION '0.7.26' }
   munit_2.13: { version: *MUNIT_VERSION }
 
 org.slf4j:
@@ -550,7 +548,7 @@ org.slf4j:
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
-  spring-web: { version: '5.3.6' }
+  spring-web: { version: '5.3.7' }
 
 org.springframework.boot:
   spring-boot-starter:

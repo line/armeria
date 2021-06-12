@@ -29,24 +29,9 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.internal.common.util.StringUtil;
+
 final class GlobPathMapping extends AbstractPathMapping {
-
-    private static final String[] INT_TO_STRING;
-
-    static {
-        INT_TO_STRING = new String[64];
-        for (int i = 0; i < INT_TO_STRING.length; i++) {
-            INT_TO_STRING[i] = String.valueOf(i);
-        }
-    }
-
-    private static String int2str(int value) {
-        if (value < INT_TO_STRING.length) {
-            return INT_TO_STRING[value];
-        } else {
-            return Integer.toString(value);
-        }
-    }
 
     private final String glob;
     private final Pattern pattern;
@@ -65,7 +50,7 @@ final class GlobPathMapping extends AbstractPathMapping {
 
         final ImmutableSet.Builder<String> paramNames = ImmutableSet.builder();
         for (int i = 0; i < numParams; i++) {
-            paramNames.add(int2str(i));
+            paramNames.add(StringUtil.toString(i));
         }
         this.paramNames = paramNames.build();
 
@@ -91,7 +76,7 @@ final class GlobPathMapping extends AbstractPathMapping {
                                                           .query(routingCtx.query());
         for (int i = 1; i <= numParams; i++) {
             final String value = firstNonNull(m.group(i), "");
-            builder.rawParam(int2str(i - 1), value);
+            builder.rawParam(StringUtil.toString(i - 1), value);
         }
 
         return builder;

@@ -18,13 +18,16 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -54,6 +57,36 @@ class WebClientRequestPreparationTest {
             final ClientRequestContext ctx = captor.get();
             assertThat(ctx.ownAttr(foo)).isEqualTo("bar");
             assertThat(res.join().contentUtf8()).isEqualTo("pong");
+        }
+    }
+
+    @Test
+    void setResponseTimeout() {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final Duration timeout = Duration.ofSeconds(42);
+            // Set an empty EndpointGroup to prevent initializing CancellingScheduler
+            WebClient.of(SessionProtocol.H1C, EndpointGroup.of())
+                     .prepare()
+                     .get("/ping")
+                     .responseTimeout(timeout)
+                     .execute().aggregate();
+            final ClientRequestContext ctx = captor.get();
+            assertThat(ctx.responseTimeoutMillis()).isEqualTo(timeout.toMillis());
+        }
+    }
+
+    @Test
+    void setMaxResponseLength() {
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final int maxResponseLength = 4242;
+            WebClient.of(server.httpUri())
+                     .prepare()
+                     .get("/ping")
+                     .maxResponseLength(maxResponseLength)
+                     .execute()
+                     .aggregate();
+            final ClientRequestContext ctx = captor.get();
+            assertThat(ctx.maxResponseLength()).isEqualTo(maxResponseLength);
         }
     }
 }

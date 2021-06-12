@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
@@ -145,6 +144,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             // to other Publishers.
             invokedOnSubscribe = true;
             subscriber.onSubscribe(subscription);
+            if (!queue.isEmpty()) {
+                notifySubscriber0();
+            }
         } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
                 notifySubscriberOfCloseEvent(subscription, newCloseEvent(t));
@@ -362,17 +364,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
         final SubscriptionImpl subscription = this.subscription;
         if (!invokedOnSubscribe) {
-            final Executor executor = subscription.executor();
-
             // Subscriber.onSubscribe() was not invoked yet.
-            // Reschedule the notification so that onSubscribe() is invoked before other events.
-            //
-            // Note:
-            // The rescheduling will occur at most once because the invocation of onSubscribe() must have been
-            // scheduled already by subscribe(), given that this.subscription is not null at this point and
-            // subscribe() is the only place that sets this.subscription.
-
-            executor.execute(this::notifySubscriber0);
+            // The notification will be resumed after onSubscribe().
             return;
         }
 

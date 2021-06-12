@@ -141,13 +141,15 @@ final class DefaultContextAwareEventLoop
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(
             Runnable command, long initialDelay, long period, TimeUnit unit) {
-        return eventLoop.scheduleAtFixedRate(context().makeContextAware(command), initialDelay, period, unit);
+        return eventLoop.scheduleAtFixedRate(context().makeContextAware(command), initialDelay, period,
+                                             unit);
     }
 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(
             Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        return eventLoop.scheduleWithFixedDelay(context().makeContextAware(command), initialDelay, delay, unit);
+        return eventLoop.scheduleWithFixedDelay(context().makeContextAware(command), initialDelay, delay,
+                                                unit);
     }
 
     @Override
@@ -169,8 +171,8 @@ final class DefaultContextAwareEventLoop
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("eventLoop", eventLoop)
                           .add("context", context())
+                          .add("eventLoop", eventLoop)
                           .toString();
     }
 }

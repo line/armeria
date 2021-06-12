@@ -261,7 +261,12 @@ public final class CancellationScheduler {
             if (eventLoop.inEventLoop()) {
                 setTimeoutNanosFromNow0(timeoutNanos);
             } else {
-                eventLoop.execute(() -> setTimeoutNanosFromNow0(timeoutNanos));
+                final long startTimeNanos = System.nanoTime();
+                eventLoop.execute(() -> {
+                    final long passedTimeNanos0 = System.nanoTime() - startTimeNanos;
+                    final long timeoutNanos0 = Math.max(1, timeoutNanos - passedTimeNanos0);
+                    setTimeoutNanosFromNow0(timeoutNanos0);
+                });
             }
         } else {
             final long startTimeNanos = System.nanoTime();
@@ -275,17 +280,16 @@ public final class CancellationScheduler {
     }
 
     private void setTimeoutNanosFromNow0(long newTimeoutNanos) {
+        assert newTimeoutNanos > 0;
         assert eventLoop != null && eventLoop.inEventLoop() && task != null;
-        if (state == State.FINISHED || !task.canSchedule()) {
+        if (isFinishing() || !task.canSchedule()) {
             return;
         }
         // Cancel the previously scheduled timeout, if exists.
         clearTimeout0(true);
         final long passedTimeNanos = System.nanoTime() - startTimeNanos;
         timeoutNanos = LongMath.saturatedAdd(newTimeoutNanos, passedTimeNanos);
-        if (newTimeoutNanos <= 0) {
-            return;
-        }
+
         state = State.SCHEDULED;
         scheduledFuture = eventLoop.schedule(() -> invokeTask(null), newTimeoutNanos, NANOSECONDS);
     }
@@ -308,7 +312,7 @@ public final class CancellationScheduler {
 
     private void finishNow0(@Nullable Throwable cause) {
         assert eventLoop != null && eventLoop.inEventLoop() && task != null;
-        if (state == State.FINISHED || !task.canSchedule()) {
+        if (isFinishing() || !task.canSchedule()) {
             return;
         }
         if (state == State.SCHEDULED) {
@@ -322,6 +326,10 @@ public final class CancellationScheduler {
 
     public boolean isFinished() {
         return state == State.FINISHED;
+    }
+
+    private boolean isFinishing() {
+        return state == State.FINISHED || state == State.FINISHING;
     }
 
     @Nullable
@@ -460,12 +468,15 @@ public final class CancellationScheduler {
             }
         }
 
+        // Set FINISHING to preclude executing other timeout operations from the callbacks of `whenCancelling()`
+        state = State.FINISHING;
         if (task.canSchedule()) {
             ((CancellationFuture) whenCancelling()).doComplete(cause);
         }
         // Set state first to prevent duplicate execution
         state = State.FINISHED;
-        // The returned value of `canSchedule()` could've been changed by the callbacks of `whenCancelling`
+
+        // The returned value of `canSchedule()` could've been changed by the callbacks of `whenCancelling()`
         if (task.canSchedule()) {
             task.run(cause);
         }
@@ -482,6 +493,7 @@ public final class CancellationScheduler {
         INIT,
         INACTIVE,
         SCHEDULED,
+        FINISHING,
         FINISHED
     }
 

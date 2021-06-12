@@ -31,7 +31,7 @@ class DefaultHttpHeadersBuilderTest {
                                                .add("a", "b")
                                                .add("c", ImmutableList.of("d", "e"))
                                                .add("f", "g", "h")
-                                               .add(ImmutableMap.of("i", "j").entrySet())
+                                               .add(ImmutableMap.of("i", "j"))
                                                .build();
         assertThat(headers).containsExactly(
                 Maps.immutableEntry(HttpHeaderNames.of("a"), "b"),
@@ -48,11 +48,11 @@ class DefaultHttpHeadersBuilderTest {
                                                .add("a", "b")
                                                .add("c", ImmutableList.of("d", "e"))
                                                .add("f", "g", "h")
-                                               .add(ImmutableMap.of("i", "j").entrySet())
+                                               .add(ImmutableMap.of("i", "j"))
                                                .set("a", "B")
                                                .set("c", ImmutableList.of("D", "E"))
                                                .set("f", "G", "H")
-                                               .set(ImmutableMap.of("i", "J").entrySet())
+                                               .set(ImmutableMap.of("i", "J"))
                                                .build();
         assertThat(headers).containsExactly(
                 Maps.immutableEntry(HttpHeaderNames.of("a"), "B"),

@@ -32,7 +32,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
+import com.linecorp.armeria.spring.ArmeriaGracefulShutdownConfigurationTest.TestConfiguration;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.

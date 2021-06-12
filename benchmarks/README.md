@@ -13,7 +13,7 @@ $ ./gradlew --no-daemon :benchmarks:clean :benchmarks:jmh ...
 
 ## Options
 
-- `-Pjmh.include=<pattern>`
+- `-Pjmh.includes=<pattern>`
   - The benchmarks to run, in a comma-separated regular expression. All benchmarks if unspecified.
     - `grpc.downstream.DownstreamSimpleBenchmark`
     - `grpc.downstream.DownstreamSimpleBenchmark.empty$`
