@@ -177,10 +177,10 @@ public final class ChannelUtil {
     }
 
     public static Map<ChannelOption<?>, Object> applyDefaultChannelOptions(
-            TransportType transportType, Map<ChannelOption<?>, Object> channelOptions,
+            Map<ChannelOption<?>, Object> channelOptions,
             long idleTimeoutMillis, long pingIntervalMillis) {
         return applyDefaultChannelOptions(
-                Flags.useDefaultSocketChannelOptions(), transportType, channelOptions,
+                Flags.useDefaultSocketChannelOptions(), Flags.transportType(), channelOptions,
                 idleTimeoutMillis, pingIntervalMillis);
     }
 

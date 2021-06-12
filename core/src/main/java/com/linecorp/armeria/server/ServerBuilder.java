@@ -1606,7 +1606,7 @@ public final class ServerBuilder {
 
         final Map<ChannelOption<?>, Object> newChildChannelOptions =
                 ChannelUtil.applyDefaultChannelOptions(
-                        Flags.transportType(), childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
+                        childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,

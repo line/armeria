@@ -762,8 +762,7 @@ public final class ClientFactoryBuilder {
 
         final Map<ChannelOption<?>, Object> newChannelOptions =
                 ChannelUtil.applyDefaultChannelOptions(
-                        Flags.transportType(), newOptions.channelOptions(),
-                        idleTimeoutMillis, pingIntervalMillis);
+                        newOptions.channelOptions(), idleTimeoutMillis, pingIntervalMillis);
         adjustedOptionsBuilder.add(ClientFactoryOptions.CHANNEL_OPTIONS.newValue(newChannelOptions));
 
         final List<ClientFactoryOptionValue<?>> adjustedOptions = adjustedOptionsBuilder.build();
