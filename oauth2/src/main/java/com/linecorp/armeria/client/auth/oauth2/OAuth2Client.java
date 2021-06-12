@@ -60,8 +60,10 @@ public final class OAuth2Client extends SimpleDecoratingHttpClient {
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletionStage<HttpResponse> future =
-                authorizationGrant.withAuthorization(ctx, req).thenApply(ignored -> executeWithFallback(
-                        unwrap(), ctx, (context, cause) -> HttpResponse.ofFailure(cause)));
+                authorizationGrant.withAuthorization(req).thenApply(newReq -> {
+                    ctx.updateRequest(newReq);
+                    return executeWithFallback(unwrap(), ctx, (context, cause) -> HttpResponse.ofFailure(cause));
+                });
         return HttpResponse.from(future);
     }
 }

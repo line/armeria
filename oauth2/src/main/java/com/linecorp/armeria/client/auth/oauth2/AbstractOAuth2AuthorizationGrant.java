@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
@@ -84,7 +84,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * Validates access token and refreshes it if necessary.
      */
     @Override
-    public final CompletionStage<GrantedOAuth2AccessToken> getAccessToken(ClientRequestContext ctx) {
+    public final CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
         final CompletableFuture<GrantedOAuth2AccessToken> future = new CompletableFuture<>();
         final CompletableFuture<GrantedOAuth2AccessToken> tokenFuture = this.tokenFuture;
 
@@ -93,6 +93,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
                 future.complete(token);
                 return null;
             }
+
             final Supplier<CompletionStage<GrantedOAuth2AccessToken>> tokenIssuingFunc;
             if (tokenFutureUpdater.compareAndSet(this, tokenFuture, future)) {
                 tokenIssuingFunc = token != null && token.isRefreshable()
@@ -101,7 +102,10 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
             } else {
                 tokenIssuingFunc = () -> this.tokenFuture;
             }
-            tokenIssuingFunc.get().handle((newToken, cause) -> {
+
+            final CompletionStage<GrantedOAuth2AccessToken> tokenIssuingFuture = RequestContext.mapCurrent(
+                            ctx -> ctx.makeContextAware(tokenIssuingFunc.get()), tokenIssuingFunc);
+            tokenIssuingFuture.handle((newToken, cause) -> {
                 if (cause != null) {
                     future.completeExceptionally(cause);
                 } else {
@@ -123,7 +127,10 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
         refreshRequest.make(token).exceptionally(cause -> {
             if (cause instanceof TokenRequestException) {
                 // try to issue a new access token from scratch
-                obtainAccessToken(token).handle((newToken, cause0) -> {
+                final CompletableFuture<GrantedOAuth2AccessToken> tokenUpdateFuture =
+                        RequestContext.mapCurrent(ctx -> ctx.makeContextAware(obtainAccessToken(token)),
+                                                  () -> obtainAccessToken(token));
+                tokenUpdateFuture.handle((newToken, cause0) -> {
                     if (cause0 != null) {
                         future.completeExceptionally(cause0);
                     } else {
