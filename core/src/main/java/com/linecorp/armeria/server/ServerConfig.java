@@ -95,8 +95,8 @@ public final class ServerConfig {
 
     private final int proxyProtocolMaxTlvSize;
 
-    private final Map<ChannelOption<?>, Object> channelOptions;
-    private final Map<ChannelOption<?>, Object> childChannelOptions;
+    private final Map<ChannelOption<?>, ?> channelOptions;
+    private final Map<ChannelOption<?>, ?> childChannelOptions;
 
     private final List<ClientAddressSource> clientAddressSources;
     private final Predicate<? super InetAddress> clientAddressTrustedProxyFilter;
