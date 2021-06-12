@@ -230,7 +230,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             if (o instanceof CloseEvent) {
                 closeEvent = (CloseEvent) o;
                 final Throwable cause = closeEvent.cause;
-                if (cause != null) {
+                if (cause != null && closeCause == null) {
                     closeCause = cause;
                 }
                 continue;
@@ -592,6 +592,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                             collectingFuture.complete(drainAll(subscription.withPooledObjects(), false));
                             whenComplete().complete(null);
                         } catch (Throwable cause0) {
+                            // drainAll() only raises an exception after cleaning up objects.
                             collectingFuture.completeExceptionally(cause0);
                             whenComplete().completeExceptionally(cause0);
                         }

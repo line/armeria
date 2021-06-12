@@ -337,6 +337,15 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
+
+        if (downstreamSubscription != null) {
+            final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();
+            collectingFuture.completeExceptionally(
+                    new IllegalStateException("subscribed by other subscriber already"));
+            return collectingFuture;
+        }
+
+        // An atomic operation on multiple subscribers will be handled by upstream.collect()
         final StreamMessage<T> upstream = this.upstream;
         if (upstream != null) {
             return upstream.collect(executor, options);

@@ -276,7 +276,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Returns a aborted {@link StreamMessage} that terminates with the specified {@link Throwable}
+     * Returns an aborted {@link StreamMessage} that terminates with the specified {@link Throwable}
      * via {@link Subscriber#onError(Throwable)} immediately after being subscribed to.
      */
     static <T> StreamMessage<T> aborted(Throwable cause) {

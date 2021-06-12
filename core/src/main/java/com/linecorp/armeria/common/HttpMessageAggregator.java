@@ -262,20 +262,21 @@ final class HttpMessageAggregator {
         final int contentLength = data1Length + data2Length;
         if (alloc != null) {
             final ByteBuf merged = alloc.buffer(contentLength);
-            try (SafeCloseable ignore = data1) {
-                final ByteBuf buf1 = data1.byteBuf();
-                merged.writeBytes(buf1, buf1.readerIndex(), data1Length);
-            }
-            try (SafeCloseable ignore = data2) {
-                final ByteBuf buf2 = data2.byteBuf();
-                merged.writeBytes(buf2, buf2.readerIndex(), data2Length);
-            }
+            copyAndClose(merged, data1, data1Length);
+            copyAndClose(merged, data2, data2Length);
             return HttpData.wrap(merged);
         } else {
             final byte[] merged = new byte[contentLength];
             System.arraycopy(data1.array(), 0, merged, 0, data1Length);
             System.arraycopy(data2.array(), 0, merged, data1Length, data2Length);
             return HttpData.wrap(merged);
+        }
+    }
+
+    private static void copyAndClose(ByteBuf merged, HttpData data, int dataLength) {
+        try (SafeCloseable ignore = data) {
+            final ByteBuf buf = data.byteBuf();
+            merged.writeBytes(buf, buf.readerIndex(), dataLength);
         }
     }
 
