@@ -28,6 +28,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -58,6 +59,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.scheduler.Schedulers;
 
@@ -608,7 +610,9 @@ class ServerBuilderTest {
                               .idleTimeoutMillis(idleTimeoutMillis)
                               .childChannelOption(SO_LINGER, lingerMillis)
                               .build();
-        assertThat(server.config().childChannelOptions())
+        Map<ChannelOption<?>, Object> childChannelOptions =
+                (Map<ChannelOption<?>, Object>) server.config().childChannelOptions();
+        assertThat(childChannelOptions)
                 .containsExactly(entry(TCP_USER_TIMEOUT, idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS),
                                  entry(SO_LINGER, lingerMillis));
 
@@ -620,7 +624,8 @@ class ServerBuilderTest {
                        .childChannelOption(TCP_USER_TIMEOUT, userDefinedValue)
                        .childChannelOption(SO_LINGER, lingerMillis)
                        .build();
-        assertThat(server.config().childChannelOptions())
+        childChannelOptions = (Map<ChannelOption<?>, Object>) server.config().childChannelOptions();
+        assertThat(childChannelOptions)
                 .containsExactly(entry(TCP_USER_TIMEOUT, userDefinedValue),
                                  entry(SO_LINGER, lingerMillis));
     }

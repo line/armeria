@@ -1248,7 +1248,7 @@ public final class Flags {
     }
 
     /**
-     * Returns whether default socket options defined by armeria are enabled.
+     * Returns whether default socket options defined by Armeria are enabled.
      *
      * <p>This flag is enabled by default.
      * Specify the {@code -Dcom.linecorp.armeria.useDefaultSocketChannelOptions=false}

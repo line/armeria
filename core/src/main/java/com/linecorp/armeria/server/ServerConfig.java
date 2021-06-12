@@ -410,14 +410,14 @@ public final class ServerConfig {
     /**
      * Returns the {@link ChannelOption}s and their values of {@link Server}'s server sockets.
      */
-    public Map<ChannelOption<?>, Object> channelOptions() {
+    public Map<ChannelOption<?>, ?> channelOptions() {
         return channelOptions;
     }
 
     /**
      * Returns the {@link ChannelOption}s and their values of sockets accepted by {@link Server}.
      */
-    public Map<ChannelOption<?>, Object> childChannelOptions() {
+    public Map<ChannelOption<?>, ?> childChannelOptions() {
         return childChannelOptions;
     }
 
