@@ -78,7 +78,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
         do {
             //noinspection unchecked
-            source = ((NonOverridableStreamMessageWrapper<? extends T>) source).delegate();
+            source = ((NonOverridableStreamMessageWrapper<? extends T, ?>) source).delegate();
         } while (source instanceof NonOverridableStreamMessageWrapper);
 
         return source;

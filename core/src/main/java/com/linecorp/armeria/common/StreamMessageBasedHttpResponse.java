@@ -19,22 +19,10 @@ package com.linecorp.armeria.common;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
 
-import io.netty.util.concurrent.EventExecutor;
-
-final class StreamMessageBasedHttpResponse extends NonOverridableStreamMessageWrapper<HttpObject>
-        implements HttpResponse {
+final class StreamMessageBasedHttpResponse
+        extends NonOverridableStreamMessageWrapper<HttpObject, HttpResponseDuplicator> implements HttpResponse {
 
     StreamMessageBasedHttpResponse(StreamMessage<? extends HttpObject> delegate) {
         super(delegate);
-    }
-
-    @Override
-    public HttpResponseDuplicator toDuplicator() {
-        return toDuplicator(defaultSubscriberExecutor());
-    }
-
-    @Override
-    public HttpResponseDuplicator toDuplicator(EventExecutor executor) {
-        return HttpResponse.super.toDuplicator(executor);
     }
 }

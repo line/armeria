@@ -21,14 +21,15 @@ import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessageDuplicator;
 import com.linecorp.armeria.common.stream.StreamMessageWrapper;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public class NonOverridableStreamMessageWrapper<T> extends StreamMessageWrapper<T> {
+public class NonOverridableStreamMessageWrapper<T, D extends StreamMessageDuplicator<T>> extends StreamMessageWrapper<T> {
 
-    public NonOverridableStreamMessageWrapper(StreamMessage<? extends T> delegate) {
+    protected NonOverridableStreamMessageWrapper(StreamMessage<? extends T> delegate) {
         super(delegate);
     }
 
@@ -71,5 +72,17 @@ public class NonOverridableStreamMessageWrapper<T> extends StreamMessageWrapper<
     @Override
     public final void abort(Throwable cause) {
         super.abort(cause);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public final D toDuplicator() {
+        return (D) super.toDuplicator();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public final D toDuplicator(EventExecutor executor) {
+        return (D) super.toDuplicator(executor);
     }
 }

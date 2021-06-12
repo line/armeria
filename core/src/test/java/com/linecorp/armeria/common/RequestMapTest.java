@@ -119,8 +119,8 @@ class RequestMapTest {
         assertThat(response.headers().get("header2")).isEqualTo("2");
         assertThat(response.contentUtf8()).isEqualTo("foo!!");
         assertThat(response.trailers().get("status")).isEqualTo("0");
-        assertThat(response.trailers().get("trailer")).isEqualTo("1");
-        assertThat(response.trailers().get("trailer")).isEqualTo("1");
+        assertThat(response.trailers().get("trailer1")).isEqualTo("1");
+        assertThat(response.trailers().get("trailer2")).isEqualTo("2");
     }
 
     @Test
