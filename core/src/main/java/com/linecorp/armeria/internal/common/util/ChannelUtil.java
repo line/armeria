@@ -78,6 +78,7 @@ public final class ChannelUtil {
     @Nullable private static ChannelOption<?> ioUringTcpUserTimeout;
     @Nullable private static ChannelOption<?> ioUringTcpKeepidle;
     @Nullable private static ChannelOption<?> ioUringTcpKeepintvl;
+
     static {
         try {
             final Class<?> clazz = Class.forName(
