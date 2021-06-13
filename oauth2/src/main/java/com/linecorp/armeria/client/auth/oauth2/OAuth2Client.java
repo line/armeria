@@ -62,7 +62,8 @@ public final class OAuth2Client extends SimpleDecoratingHttpClient {
         final CompletionStage<HttpResponse> future =
                 authorizationGrant.withAuthorization(req).thenApply(newReq -> {
                     ctx.updateRequest(newReq);
-                    return executeWithFallback(unwrap(), ctx, (context, cause) -> HttpResponse.ofFailure(cause));
+                    return executeWithFallback(
+                            unwrap(), ctx, (context, cause) -> HttpResponse.ofFailure(cause));
                 });
         return HttpResponse.from(future);
     }

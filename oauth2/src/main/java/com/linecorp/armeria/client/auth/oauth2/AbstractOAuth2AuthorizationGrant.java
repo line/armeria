@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
 import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
 
 /**
@@ -50,12 +52,22 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     private final RefreshAccessTokenRequest refreshRequest;
     private final Duration refreshBefore;
 
+    @Nullable
+    private final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc;
+    @Nullable
+    private final Function<? super GrantedOAuth2AccessToken, CompletableFuture<Void>> saveTokenFunc;
+
     private volatile CompletableFuture<GrantedOAuth2AccessToken> tokenFuture =
             CompletableFuture.completedFuture(null);
 
-    AbstractOAuth2AuthorizationGrant(RefreshAccessTokenRequest refreshRequest, Duration refreshBefore) {
+    AbstractOAuth2AuthorizationGrant(
+            RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
+            @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc,
+            @Nullable Function<? super GrantedOAuth2AccessToken, CompletableFuture<Void>> saveTokenFunc) {
         this.refreshRequest = requireNonNull(refreshRequest, "refreshRequest");
         this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
+        this.loadTokenFunc = loadTokenFunc;
+        this.saveTokenFunc = saveTokenFunc;
     }
 
     /**
@@ -96,9 +108,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
 
             final Supplier<CompletionStage<GrantedOAuth2AccessToken>> tokenIssuingFunc;
             if (tokenFutureUpdater.compareAndSet(this, tokenFuture, future)) {
-                tokenIssuingFunc = token != null && token.isRefreshable()
-                                   ? () -> refreshAccessToken(token)
-                                   : () -> obtainAccessToken(token);
+                tokenIssuingFunc = token != null && token.isRefreshable() ? () -> refreshAccessToken(token)
+                                                                          : () -> issueAccessToken(token);
             } else {
                 tokenIssuingFunc = () -> this.tokenFuture;
             }
@@ -110,6 +121,10 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
                     future.completeExceptionally(cause);
                 } else {
                     future.complete(newToken);
+                    if (saveTokenFunc != null) {
+                        // suppress 'ReturnValueIgnored' warning
+                        final CompletableFuture<Void> unused = saveTokenFunc.apply(newToken);
+                    }
                 }
                 return null;
             });
@@ -122,25 +137,42 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
         return token != null && token.isValid(Instant.now().plus(refreshBefore));
     }
 
-    private CompletionStage<GrantedOAuth2AccessToken> refreshAccessToken(GrantedOAuth2AccessToken token) {
+    private CompletableFuture<GrantedOAuth2AccessToken> issueAccessToken(
+            @Nullable GrantedOAuth2AccessToken token) {
+        if (token == null && loadTokenFunc != null) {
+            return loadTokenFunc.get().thenCompose(storedToken -> {
+                if (storedToken.isValid()) {
+                    return UnmodifiableFuture.completedFuture(storedToken);
+                }
+                return obtainAccessToken(null);
+            });
+        }
+        return obtainAccessToken(token);
+    }
+
+    private CompletableFuture<GrantedOAuth2AccessToken> refreshAccessToken(GrantedOAuth2AccessToken token) {
         final CompletableFuture<GrantedOAuth2AccessToken> future = new CompletableFuture<>();
-        refreshRequest.make(token).exceptionally(cause -> {
-            if (cause instanceof TokenRequestException) {
-                // try to issue a new access token from scratch
-                final CompletableFuture<GrantedOAuth2AccessToken> tokenUpdateFuture =
-                        RequestContext.mapCurrent(ctx -> ctx.makeContextAware(obtainAccessToken(token)),
-                                                  () -> obtainAccessToken(token));
-                tokenUpdateFuture.handle((newToken, cause0) -> {
-                    if (cause0 != null) {
-                        future.completeExceptionally(cause0);
-                    } else {
-                        future.complete(newToken);
-                    }
-                    return null;
-                });
-                return null;
+        refreshRequest.make(token).handle((newToken, cause) -> {
+            if (cause != null) {
+                if (cause instanceof TokenRequestException) {
+                    // try to issue a new access token from scratch
+                    final CompletableFuture<GrantedOAuth2AccessToken> tokenUpdateFuture =
+                            RequestContext.mapCurrent(ctx -> ctx.makeContextAware(obtainAccessToken(token)),
+                                                      () -> issueAccessToken(token));
+                    tokenUpdateFuture.handle((newToken0, cause0) -> {
+                        if (cause0 != null) {
+                            future.completeExceptionally(cause0);
+                        } else {
+                            future.complete(newToken);
+                        }
+                        return null;
+                    });
+                } else {
+                    future.completeExceptionally(cause);
+                }
+            } else {
+                future.complete(newToken);
             }
-            future.completeExceptionally(cause);
             return null;
         });
         return future;

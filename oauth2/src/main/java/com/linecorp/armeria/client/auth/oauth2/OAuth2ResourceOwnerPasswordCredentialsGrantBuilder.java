@@ -76,6 +76,6 @@ public final class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
     public OAuth2ResourceOwnerPasswordCredentialsGrant build() {
         return new OAuth2ResourceOwnerPasswordCredentialsGrant(
                 (ResourceOwnerPasswordCredentialsTokenRequest) buildObtainRequest(),
-                buildRefreshRequest(), refreshBefore());
+                buildRefreshRequest(), refreshBefore(), loadTokenFunc(), saveTokenFunc());
     }
 }
