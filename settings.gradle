@@ -61,6 +61,7 @@ includeWithFlags ':javadoc',                             'java', 'publish', 'no_
 includeWithFlags ':benchmarks',                     'java'
 includeWithFlags ':it:builders',                    'java'
 includeWithFlags ':it:context-storage',             'java'
+includeWithFlags ':it:dgs',                         'java'
 includeWithFlags ':it:grpcweb',                     'java', 'akka-grpc_2.13'
 includeWithFlags ':it:grpc:kotlin',                 'java', 'relocate', 'kotlin-grpc'
 includeWithFlags ':it:grpc:scala',                  'java', 'relocate', 'scala-grpc_2.13'

@@ -1,0 +1,4 @@
+dependencies {
+    implementation project(':graphql')
+    testImplementation 'com.netflix.graphql.dgs:graphql-dgs-client'
+}
