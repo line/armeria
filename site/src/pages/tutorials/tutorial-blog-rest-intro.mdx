@@ -21,7 +21,7 @@ In particular, you will be using these Armeria features:
 - [Exception handler](/docs/server-annotated-service#handling-exceptions)
 - [Blocking](/docs/server-annotated-service/#specifying-a-blocking-task-executor)
 
-This tutorial is based on a [sample service](https://github.com/line/armeria-examples/tree/master/rest-api-annotated-service), a minimal blog service, with which you can create, read, update, and delete blog posts.
+This tutorial is based on a [sample service](https://github.com/line/armeria-examples/tree/master/tutorials/rest-api-annotated-service), a minimal blog service, with which you can create, read, update, and delete blog posts.
 To keep our focus on Armeria, this tutorial and the sample service use memory-based operations instead of database operations.
 
 [Try writing a service yourself](#try-writing-blog-service-yourself) by following this tutorial or have a go at [running the sample service](#run-sample-service) right away.
@@ -54,7 +54,7 @@ The sample service provides you implementations of CRUD operations as specified 
 
 ### Sample service structure
 
-The [sample service code](https://github.com/line/armeria-examples/tree/master/rest-api-annotated-service) consists of the following folders and files.
+The [sample service code](https://github.com/line/armeria-examples/tree/master/tutorials/rest-api-annotated-service) consists of the following folders and files.
 
 ```plantuml
 @startsalt
@@ -107,7 +107,7 @@ dependencies {
 Have a go at running the sample service and experience the outcome of this tutorial.
 Using Armeria's [Documentation Service](/docs/server-docservice), you can see a server running, receiving requests and providing responses.
 
-1. Download the code from [here](https://github.com/line/armeria-examples/tree/master/rest-api-annotated-service).
+1. Download the code from [here](https://github.com/line/armeria-examples/tree/master/tutorials/rest-api-annotated-service).
 2. Build the sample service using the Gradle Wrapper.
   ```bash
   $ ./gradlew build
