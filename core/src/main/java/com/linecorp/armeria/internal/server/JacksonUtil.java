@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.server.JacksonModuleProvider;
+import com.linecorp.armeria.common.JacksonModuleProvider;
 
 public final class JacksonUtil {
 
