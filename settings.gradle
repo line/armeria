@@ -103,6 +103,8 @@ project(':examples:context-propagation-rxjava-example').projectDir = file('examp
 // and project(':*'). See https://github.com/gradle/gradle/issues/847 for more information.
 includeWithFlags ':examples:dropwizard-example',                  'java'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
+includeWithFlags ':examples:graphql-example',                     'java'
+project(':examples:graphql-example').projectDir = file('examples/graphql')
 includeWithFlags ':examples:grpc-example',                        'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                         'java', 'kotlin-grpc'
