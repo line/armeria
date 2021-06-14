@@ -41,7 +41,7 @@ public final class BlogService {
 Let's start with [mapping the HTTP POST method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
 
 1. Declare a service method, `createBlogPost()`, in the class `BlogService`.
-2. Map this service method with the HTTP POST method by adding the <type://@Post> annotations.
+2. Map this service method with the HTTP POST method by adding the <type://@Post> annotation.
 3. Bind the endpoint `/blogs` to the method.
 
 ```java filename=BlogService.java highlight=1
@@ -52,12 +52,9 @@ public HttpResponse createBlogPost(BlogPost blogPost)
 
 ## 2. Handle parameters
 
-Let's take post information through a request body. Armeria's [request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) converts request parameters in HTTP messages into Java objects for you. In the request converter we define what keys of a JSON object to map with what properties of a Java object.
+Let's receive blog post information through a request body. Armeria's [request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) converts request parameters in HTTP messages into Java objects for you. In the request converter we define what keys of a JSON object to map with what properties of a Java object.
 
-To handle parameters received for creating a blog post, use <type://RequestConverter>, in these steps. The order may be changed.
-
-- [Write a request converter](#write-a-request-converter)
-- [Assign a request converter](#assign-a-request-converter)
+Let's first [write a request converter](#write-a-request-converter) and then [register the request converter](#register-a-request-converter) the service method.
 
 ### Write a request converter
 
@@ -100,7 +97,7 @@ We can use Armeria's default request converter as is, but here let's give a go a
     }
   ```
 
-### Assign a request converter
+### Register a request converter
 
 In this step, assign the [request converter we customized](#write-a-request-converter) to our service method. Annotate the service method with <type://@RequestConverter> and specify the <type://RequestConverterFunction> class as `BlogPostRequestConverter.class`.
 
@@ -117,9 +114,9 @@ public HttpResponse createBlogPost(BlogPost blogPost)
 
 When the request for creation is received, our request converter creates an instance of a blog post object for us. We want to save the blog post object in the map (`blogPosts`) created in the `BlogService` class.
 
-Let's store the blog post information in the map by adding line 4, in the `createBlogPost()` method.
+Let's store the blog post information in the map by adding line 5, in the `createBlogPost()` method.
 
-```java filename=BlogService.java highlight=5
+```java filename=BlogService.java highlight=5 showlineno=true
 @Post("/blogs")
 @RequestConverter(BlogPostRequestConverter.class)
 public HttpResponse createBlogPost(BlogPost blogPost)
@@ -130,7 +127,7 @@ public HttpResponse createBlogPost(BlogPost blogPost)
 
 ## 4. Return response
 
-Now, it's time to return a response to our client. As the response, on top of the information received, add the ID of the post, created time, plus modified time which would be identical to the created time.
+Now, it's time to return a response to our client. As the response, on top of the information received, add the ID of the post, created time, plus the modified time which would be identical to the created time.
 
 Let's return a response for blog post creation. Create and return an HTTP response using Armeria's <type://HttpResponse> and include the information of the post created in the `createBlogPost()` method.
   ```java filename=BlogService.java
