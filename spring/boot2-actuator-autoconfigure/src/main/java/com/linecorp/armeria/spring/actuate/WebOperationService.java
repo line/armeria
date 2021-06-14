@@ -30,6 +30,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -127,7 +128,11 @@ final class WebOperationService implements HttpService {
                 return null;
             }
             if (operation.isBlocking()) {
-                ctx.blockingTaskExecutor().execute(() -> invoke(ctx, aggregatedReq, resFuture));
+                try {
+                    ctx.blockingTaskExecutor().execute(() -> invoke(ctx, aggregatedReq, resFuture));
+                } catch (RejectedExecutionException ree) {
+                    resFuture.completeExceptionally(ree);
+                }
             } else {
                 invoke(ctx, aggregatedReq, resFuture);
             }
@@ -139,10 +144,9 @@ final class WebOperationService implements HttpService {
     private void invoke(ServiceRequestContext ctx,
                         AggregatedHttpRequest req,
                         CompletableFuture<HttpResponse> resFuture) {
-        final Map<String, Object> arguments = getArguments(ctx, req);
-        final Object result = operation.invoke(new InvocationContext(SecurityContext.NONE, arguments));
-
         try {
+            final Map<String, Object> arguments = getArguments(ctx, req);
+            final Object result = operation.invoke(new InvocationContext(SecurityContext.NONE, arguments));
             final HttpResponse res = handleResult(ctx, result, req.method());
             resFuture.complete(res);
         } catch (Throwable cause) {
