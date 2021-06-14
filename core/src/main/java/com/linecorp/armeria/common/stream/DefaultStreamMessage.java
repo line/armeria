@@ -179,9 +179,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             if (setState(State.CLOSED, State.CLEANUP)) {
                 final boolean withPooledObjects = subscription.withPooledObjects();
                 if (executor.inEventLoop()) {
-                    collectAll(collectingFuture, executor, withPooledObjects);
+                    collectAll(collectingFuture, executor, withPooledObjects, true);
                 } else {
-                    executor.execute(() -> collectAll(collectingFuture, executor, withPooledObjects));
+                    executor.execute(() -> collectAll(collectingFuture, executor, withPooledObjects, false));
                 }
             }
         } else {
@@ -198,11 +198,15 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private void collectAll(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
-                            boolean withPooledObjects) {
+                            boolean withPooledObjects, boolean directExecution) {
         try {
             collectingFuture.complete(drainAll(withPooledObjects, true));
             // whenComplete() should be completed after executing the callbacks of collect().
-            executor.execute(() -> whenComplete().complete(null));
+            if (directExecution) {
+                executor.execute(() -> whenComplete().complete(null));
+            } else {
+                whenComplete().complete(null);
+            }
         } catch (Throwable throwable) {
             collectingFuture.completeExceptionally(throwable);
             whenComplete().completeExceptionally(throwable);
@@ -588,10 +592,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             if (collectingFuture != null) {
                 if (setState(State.CLOSED, State.CLEANUP)) {
                     if (subscription.needsDirectInvocation()) {
-                        tryCollect0(cause, subscription, collectingFuture);
+                        tryCollect(cause, subscription, collectingFuture);
                     } else {
                         subscription.executor().execute(() -> {
-                            tryCollect0(cause, subscription, collectingFuture);
+                            tryCollect(cause, subscription, collectingFuture);
                         });
                     }
                     return true;
@@ -601,8 +605,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         return false;
     }
 
-    private void tryCollect0(@Nullable Throwable cause, SubscriptionImpl subscription,
-                             CompletableFuture<List<T>> collectingFuture) {
+    private void tryCollect(@Nullable Throwable cause, SubscriptionImpl subscription,
+                            CompletableFuture<List<T>> collectingFuture) {
         if (cause == null) {
             try {
                 collectingFuture.complete(drainAll(subscription.withPooledObjects(), false));

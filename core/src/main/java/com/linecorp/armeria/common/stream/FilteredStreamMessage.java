@@ -52,6 +52,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
 
+    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
     private final StreamMessage<T> upstream;
     private final boolean filterSupportsPooledObjects;
 
@@ -130,7 +131,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public final CompletableFuture<Void> whenComplete() {
-        return upstream.whenComplete();
+        return completionFuture;
     }
 
     @Override
@@ -145,6 +146,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
             beforeSubscribe(subscriberAndSubscription, subscriberAndSubscription);
             if (cause != null) {
                 beforeError(subscriberAndSubscription, cause);
+                completionFuture.completeExceptionally(cause);
                 return Exceptions.throwUnsafely(cause);
             } else {
                 Throwable abortCause = null;
@@ -189,10 +191,12 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                     for (U element : elements) {
                         StreamMessageUtil.closeOrAbort(element, abortCause);
                     }
+                    completionFuture.completeExceptionally(cause);
                     return Exceptions.throwUnsafely(abortCause);
                 }
 
                 beforeComplete(subscriberAndSubscription);
+                completionFuture.complete(null);
                 return elements;
             }
         });
@@ -300,6 +304,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         public void onError(Throwable t) {
             if (t instanceof CancelledSubscriptionException) {
                 onCancellation(delegate);
+                completionFuture.completeExceptionally(t);
                 if (!notifyCancellation) {
                     return;
                 }
@@ -312,12 +317,14 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
             final Throwable filteredCause = beforeError(delegate, t);
             if (filteredCause != null) {
                 delegate.onError(filteredCause);
+                completionFuture.completeExceptionally(filteredCause);
             } else {
                 if (logger.isWarnEnabled()) {
                     logger.warn("{}#beforeError() returned null. Using the original exception: {}",
                                 FilteredStreamMessage.this.getClass().getName(), t.toString());
                 }
                 delegate.onError(t);
+                completionFuture.completeExceptionally(t);
             }
         }
 
@@ -329,6 +336,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
             completed = true;
             beforeComplete(delegate);
             delegate.onComplete();
+            completionFuture.complete(null);
         }
     }
 
