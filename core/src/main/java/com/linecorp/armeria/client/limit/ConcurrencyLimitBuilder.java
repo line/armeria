@@ -32,7 +32,7 @@ public final class ConcurrencyLimitBuilder {
 
     private final int maxConcurrency;
     private long timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
-    private Predicate<? super ClientRequestContext> policy = requestContext -> true;
+    private Predicate<? super ClientRequestContext> predicate = requestContext -> true;
 
     ConcurrencyLimitBuilder(int maxConcurrency) {
         this.maxConcurrency = maxConcurrency;
@@ -61,8 +61,8 @@ public final class ConcurrencyLimitBuilder {
     /**
      * Sets the predicate for which to apply the concurrency limit.
      */
-    public ConcurrencyLimitBuilder policy(Predicate<? super ClientRequestContext> policy) {
-        this.policy = requireNonNull(policy, "policy");
+    public ConcurrencyLimitBuilder predicate(Predicate<? super ClientRequestContext> predicate) {
+        this.predicate = requireNonNull(predicate, "predicate");
         return this;
     }
 
@@ -70,6 +70,6 @@ public final class ConcurrencyLimitBuilder {
      * Returns a newly-created the {@link ConcurrencyLimit} based on the properties of this builder.
      */
     public ConcurrencyLimit build() {
-        return new ConcurrencyLimit(policy, maxConcurrency, timeoutMillis);
+        return new ConcurrencyLimit(predicate, maxConcurrency, timeoutMillis);
     }
 }

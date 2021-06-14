@@ -26,7 +26,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -35,6 +37,7 @@ import org.mockito.Mock;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -47,6 +50,9 @@ class ConcurrencyLimitingClientTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
+    static final BiConsumer<AggregatedHttpResponse, Throwable> NO_OP = (response, throwable) -> {
+
+    };
 
     @Mock
     private HttpClient delegate;
@@ -247,7 +253,7 @@ class ConcurrencyLimitingClientTest {
     void configuresClientWithConcurrencyLimit() {
         final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
                                                                   .timeout(Duration.of(10, SECONDS))
-                                                                  .policy(requestContext -> true)
+                                                                  .predicate(requestContext -> true)
                                                                   .build();
         final ConcurrencyLimitingClient client = newDecorator(concurrencyLimit).apply(delegate);
         assertThat(client.concurrencyLimit()).isEqualTo(concurrencyLimit);
@@ -266,7 +272,7 @@ class ConcurrencyLimitingClientTest {
         when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
 
         final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
-                                                                  .policy(requestContext -> false)
+                                                                  .predicate(requestContext -> false)
                                                                   .build();
 
         final ConcurrencyLimitingClient client =
@@ -303,7 +309,7 @@ class ConcurrencyLimitingClientTest {
 
         final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
                                                                   .timeoutMillis(500)
-                                                                  .policy(requestContext -> true)
+                                                                  .predicate(requestContext -> true)
                                                                   .build();
 
         final ConcurrencyLimitingClient clientOne =
@@ -313,21 +319,16 @@ class ConcurrencyLimitingClientTest {
                 newDecorator(concurrencyLimit).apply(delegate);
 
         // Send two requests, where only the first one is delegated.
-        final HttpResponse res1 = clientOne.execute(ctx1, req1);
-        final HttpResponse res2 = clientTwo.execute(ctx2, req2);
+        final CompletableFuture<AggregatedHttpResponse> res1 = clientOne.execute(ctx1, req1).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> res2 = clientTwo.execute(ctx2, req2).aggregate();
 
-        // Let req2 time out.
-        Thread.sleep(1000);
-        res2.subscribe(NoopSubscriber.get());
-        assertThatThrownBy(() -> res2.whenComplete().join())
-                .hasCauseInstanceOf(UnprocessedRequestException.class)
-                .hasRootCauseInstanceOf(RequestTimeoutException.class);
-        assertThat(res2.isOpen()).isFalse();
+        await().untilAsserted(() -> {
+            assertThatThrownBy(() -> res2.whenComplete(NO_OP).join())
+                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                    .hasRootCauseInstanceOf(RequestTimeoutException.class);
+            assertThat(res1.whenComplete(NO_OP)).isNotDone();
+        });
 
-        // req1 should not time out because it's been delegated already.
-        res1.subscribe(NoopSubscriber.get());
-        assertThat(res1.isOpen()).isTrue();
-        assertThat(res1.whenComplete()).isNotDone();
 
         actualRes1.close();
         await().untilAsserted(() -> assertThat(clientOne.numActiveRequests()).isZero());

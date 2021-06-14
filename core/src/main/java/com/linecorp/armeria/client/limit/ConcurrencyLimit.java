@@ -54,13 +54,14 @@ public final class ConcurrencyLimit {
         return builder(maxConcurrency);
     }
 
-    private final Predicate<? super ClientRequestContext> policy;
+    private final Predicate<? super ClientRequestContext> predicate;
     private final int maxConcurrency;
     private final long timeoutMillis;
     private final AtomicInteger numActiveRequests = new AtomicInteger();
 
-    ConcurrencyLimit(Predicate<? super ClientRequestContext> policy, int maxConcurrency, long timeoutMillis) {
-        this.policy = policy;
+    ConcurrencyLimit(Predicate<? super ClientRequestContext> predicate, int maxConcurrency,
+                     long timeoutMillis) {
+        this.predicate = predicate;
         this.maxConcurrency = maxConcurrency;
         this.timeoutMillis = timeoutMillis;
     }
@@ -84,7 +85,7 @@ public final class ConcurrencyLimit {
      */
     public boolean shouldLimit(ClientRequestContext requestContext) {
         requireNonNull(requestContext, "requestContext");
-        return maxConcurrency > 0 && policy.test(requestContext);
+        return maxConcurrency > 0 && predicate.test(requestContext);
     }
 
     AtomicInteger numActiveRequests() {
@@ -101,18 +102,18 @@ public final class ConcurrencyLimit {
         }
         final ConcurrencyLimit that = (ConcurrencyLimit) o;
         return maxConcurrency == that.maxConcurrency && timeoutMillis == that.timeoutMillis &&
-               policy.equals(that.policy);
+               predicate.equals(that.predicate);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(policy, maxConcurrency, timeoutMillis);
+        return Objects.hash(predicate, maxConcurrency, timeoutMillis);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("policy", policy)
+                          .add("predicate", predicate)
                           .add("maxConcurrency", maxConcurrency)
                           .add("timeoutMillis", timeoutMillis)
                           .toString();
