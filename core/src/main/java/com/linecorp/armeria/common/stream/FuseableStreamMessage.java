@@ -104,7 +104,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                     continue;
                 }
 
-                U result = null;
+                U result;
                 try {
                     result = function.apply(obj);
                     if (result != null) {

@@ -587,25 +587,36 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                     (CompletableFuture<List<T>>) subscription.collectingFuture();
             if (collectingFuture != null) {
                 if (setState(State.CLOSED, State.CLEANUP)) {
-                    if (cause == null) {
-                        try {
-                            collectingFuture.complete(drainAll(subscription.withPooledObjects(), false));
-                            whenComplete().complete(null);
-                        } catch (Throwable cause0) {
-                            // drainAll() only raises an exception after cleaning up objects.
-                            collectingFuture.completeExceptionally(cause0);
-                            whenComplete().completeExceptionally(cause0);
-                        }
+                    if (subscription.needsDirectInvocation()) {
+                        tryCollect0(cause, subscription, collectingFuture);
                     } else {
-                        cleanupObjects();
-                        collectingFuture.completeExceptionally(cause);
-                        whenComplete().completeExceptionally(cause);
+                        subscription.executor().execute(() -> {
+                            tryCollect0(cause, subscription, collectingFuture);
+                        });
                     }
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private void tryCollect0(@Nullable Throwable cause, SubscriptionImpl subscription,
+                             CompletableFuture<List<T>> collectingFuture) {
+        if (cause == null) {
+            try {
+                collectingFuture.complete(drainAll(subscription.withPooledObjects(), false));
+                whenComplete().complete(null);
+            } catch (Throwable cause0) {
+                // drainAll() only raises an exception after cleaning up objects.
+                collectingFuture.completeExceptionally(cause0);
+                whenComplete().completeExceptionally(cause0);
+            }
+        } else {
+            cleanupObjects();
+            collectingFuture.completeExceptionally(cause);
+            whenComplete().completeExceptionally(cause);
+        }
     }
 
     private boolean setState(State oldState, State newState) {
