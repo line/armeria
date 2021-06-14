@@ -393,7 +393,7 @@ There are three sections you need to write: `Motivation`, `Modifications`, and `
 
 ### Motivation
 
-Explain why you're sending the pull request (PR) and what's the problem you're trying to solve.
+Explain why you're sending the pull request (PR) and what problem you're trying to solve.
 You do not have to include all the detail but please include as much as the reviewers can get the background
 of this change.
 If there are related GitHub issues, please leave links to them.
@@ -405,7 +405,7 @@ These are good examples:
 
 ### Modifications
 
-Describe the list of modifications you've done.
+List the modifications you've made in detail.
 Again, you do not have to include all the modifications you made but modifications that you wish the
 readers notice.
 If the PR has a deprecation or breaking change, you need to describe it here. For example:
@@ -425,13 +425,9 @@ These are examples:
 - You no longer see a `NullPointerException` when a request times out.
 - You can now monitor the state of all live threads and heap using `ManagementService`.
 
-In case of introducing a new feature, you can insert code snippet.
+Add an example snippet if this PR introduces a new feature, so we can use it in
+our [release notes](https://armeria.dev/release-notes/), e.g.
 ```java
 Server.builder()
       .serviceUnder("/internal/management/", ManagementService.of());
 ```
-
-Please keep in mind that we publish our [release notes](https://armeria.dev/release-notes/) using the
-result section of each PR. That is why writing a good PR description is important.
-If this PR is something that we don't need to announce in the release notes such as cleaning up some logs,
-you can simply write it such as "Less verbose".
