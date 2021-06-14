@@ -13,13 +13,14 @@ level: basic
 # REST tutorial introduction
 
 Using Armeria's annotations, you can build RESTful services on the go.
-Through this tutorial, you will learn to build a RESTful service with Armeria.
-In particular, you will be using these Armeria features:
+Through this tutorial, you'll learn to build a RESTful service with Armeria.
+In particular, you'll be using these Armeria features:
 
 - [Service annotations](/docs/server-annotated-service)
-- [Request converter](/docs/server-annotated-service#injecting-value-of-parameters-and-http-headers-into-a-java-object)
+- [Request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object)
+- [Parameter injection](/docs/server-annotated-service#injecting-value-of-parameters-and-http-headers-into-a-java-object)
 - [Exception handler](/docs/server-annotated-service#handling-exceptions)
-- [Blocking](/docs/server-annotated-service/#specifying-a-blocking-task-executor)
+- [Blocking task executor](/docs/server-annotated-service/#specifying-a-blocking-task-executor)
 
 This tutorial is based on a [sample service](https://github.com/line/armeria-examples/tree/master/tutorials/rest-api-annotated-service), a minimal blog service, with which you can create, read, update, and delete blog posts.
 To keep our focus on Armeria, this tutorial and the sample service use memory-based operations instead of database operations.
