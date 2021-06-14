@@ -483,6 +483,5 @@ public final class MediaTypeNames {
      */
     public static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
-
     private MediaTypeNames() {}
 }
