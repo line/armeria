@@ -90,7 +90,7 @@ To update a blog post, copy the following code inside the `updateBlogPost()` met
 
 ## 4. Return response
 
-Two possibilities are available for the response. If the blog post to update exists, we respond to the client that the update has been successful. The other response is informing the client that the blog post doesn't exist.
+Two possibilities are available for the response. If the blog post to update exists, we respond to the client that the update has been successful. The other response informs the client that the blog post doesn't exist.
 
 ### Return error
 
@@ -109,7 +109,7 @@ public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPo
 
 ### Return success
 
-Let's return the information updated when the blog post exists. To return updated information, copy the code below to the `updateBlogPost()` method.
+Let's return the information updated when the blog post exists. To return the updated information, copy the code below to the `updateBlogPost()` method.
 
 ```java filename=BlogService.java
 public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost){
