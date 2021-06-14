@@ -17,8 +17,11 @@ package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.client.DefaultWebClient.pathWithQuery;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
@@ -48,6 +51,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -59,6 +63,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -404,9 +409,10 @@ public final class DefaultClientRequestContext
                                         RequestId id,
                                         @Nullable HttpRequest req,
                                         @Nullable RpcRequest rpcReq,
-                                        @Nullable Endpoint endpoint) {
-        super(ctx.meterRegistry(), ctx.sessionProtocol(), id, ctx.method(), ctx.path(), ctx.query(),
-              req, rpcReq, ctx.root());
+                                        @Nullable Endpoint endpoint, @Nullable EndpointGroup endpointGroup,
+                                        SessionProtocol sessionProtocol, HttpMethod method,
+                                        String path, @Nullable String query, @Nullable String fragment) {
+        super(ctx.meterRegistry(), sessionProtocol, id, method, path, query, req, rpcReq, ctx.root());
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -419,9 +425,9 @@ public final class DefaultClientRequestContext
 
         eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
-        endpointGroup = ctx.endpointGroup();
+        this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);
-        fragment = ctx.fragment();
+        this.fragment = fragment;
         root = ctx.root();
 
         log = RequestLog.builder(this);
@@ -463,7 +469,52 @@ public final class DefaultClientRequestContext
                                                   @Nullable HttpRequest req,
                                                   @Nullable RpcRequest rpcReq,
                                                   @Nullable Endpoint endpoint) {
-        return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint);
+        if (req != null) {
+            final RequestHeaders newHeaders = req.headers();
+            final String newPath = newHeaders.path();
+            if (!path().equals(newPath)) {
+                // path is changed.
+
+                if (isAbsoluteUri(newPath)) {
+                    final URI uri;
+                    try {
+                        uri = URI.create(req.path());
+                    } catch (Throwable t) {
+                        throw new IllegalArgumentException("failed to create a URI: " + req.path(), t);
+                    }
+                    final SessionProtocol protocol;
+                    try {
+                        protocol = Scheme.parse(uri.getScheme()).sessionProtocol();
+                    } catch (Exception e) {
+                        throw new IllegalArgumentException("failed to parse a scheme: " + uri.getScheme(), e);
+                    }
+                    final Endpoint newEndpoint = Endpoint.parse(uri.getAuthority());
+                    final String rawQuery = uri.getRawQuery();
+                    final String pathWithQuery = pathWithQuery(uri, rawQuery);
+                    final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(pathWithQuery));
+                    return newDerivedContext(id, newReq, rpcReq, newHeaders, protocol,
+                                             newEndpoint, pathWithQuery);
+                } else {
+                    return newDerivedContext(id, req, rpcReq, newHeaders, sessionProtocol(), endpoint, newPath);
+                }
+            }
+        }
+
+        return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, endpointGroup(),
+                                               sessionProtocol(), method(), path(), query(), fragment());
+    }
+
+    private ClientRequestContext newDerivedContext(RequestId id, HttpRequest req, @Nullable RpcRequest rpcReq,
+                                                   RequestHeaders newHeaders, SessionProtocol protocol,
+                                                   @Nullable Endpoint endpoint, String pathWithQuery) {
+        // Parse in order to do percent encoding.
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(pathWithQuery);
+        if (pathAndQuery == null) {
+            throw new IllegalArgumentException("invalid path: " + req.path());
+        }
+        return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, null,
+                                               protocol, newHeaders.method(), pathAndQuery.path(),
+                                               pathAndQuery.query(), null);
     }
 
     @Override

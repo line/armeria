@@ -72,6 +72,14 @@ public interface RetryRule {
     }
 
     /**
+     * Returns a rule for <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4.4">
+     * HTTP redirection</a>.
+     */
+    static RetryRule redirect() {
+        return RedirectRule.INSTANCE;
+    }
+
+    /**
      * Returns a newly created {@link RetryRule} that will retry with
      * the {@linkplain Backoff#ofDefault() default backoff} if the class of the response status is
      * the specified {@link HttpStatusClass}.

@@ -21,6 +21,8 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri
 
 import java.net.URI;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -71,12 +73,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
             final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final String query = uri.getRawQuery();
-            String path = uri.getRawPath();
-            if (Strings.isNullOrEmpty(path)) {
-                path = query == null ? "/" : "/?" + query;
-            } else if (query != null) {
-                path = path + '?' + query;
-            }
+            final String path = pathWithQuery(uri, query);
             final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(path));
             return execute(endpoint, newReq, protocol);
         }
@@ -123,5 +120,15 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     @Override
     public HttpClient unwrap() {
         return (HttpClient) super.unwrap();
+    }
+
+    static String pathWithQuery(URI uri, @Nullable String query) {
+        String path = uri.getRawPath();
+        if (Strings.isNullOrEmpty(path)) {
+            path = query == null ? "/" : "/?" + query;
+        } else if (query != null) {
+            path = path + '?' + query;
+        }
+        return path;
     }
 }

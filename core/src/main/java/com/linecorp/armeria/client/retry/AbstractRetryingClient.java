@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -65,7 +67,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     public static final AsciiString ARMERIA_RETRY_COUNT = HttpHeaderNames.of("armeria-retry-count");
 
-    private static final AttributeKey<State> STATE =
+    private static final AttributeKey<State<?>> STATE =
             AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
 
     private final RetryConfigMapping<O> mapping;
@@ -88,10 +90,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final RetryConfig<O> config = mapping.get(ctx, req);
         requireNonNull(config, "mapping.get() returned null");
 
-        final State state = new State(
-                config.maxTotalAttempts(),
-                config.responseTimeoutMillisForEachAttempt(),
-                ctx.responseTimeoutMillis());
+        final State<I> state = new State<>(config.maxTotalAttempts(),
+                                           config.responseTimeoutMillisForEachAttempt(),
+                                           ctx.responseTimeoutMillis(), req);
         ctx.setAttr(STATE, state);
         return doExecute(ctx, req);
     }
@@ -216,7 +217,8 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
         requireNonNull(ctx, "ctx");
         requireNonNull(backoff, "backoff");
-        final State state = ctx.attr(STATE);
+        //noinspection unchecked
+        final State<I> state = (State<I>) ctx.attr(STATE);
         final int currentAttemptNo = state.currentAttemptNoWith(backoff);
 
         if (currentAttemptNo < 0) {
@@ -243,12 +245,68 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * Returns the total number of attempts of the current request represented by the specified
      * {@link ClientRequestContext}.
      */
-    protected static int getTotalAttempts(ClientRequestContext ctx) {
-        final State state = ctx.attr(STATE);
+    protected static <I> int getTotalAttempts(ClientRequestContext ctx) {
+        //noinspection unchecked
+        final State<I> state = (State<I>) ctx.attr(STATE);
         if (state == null) {
             return 0;
         }
         return state.totalAttemptNo;
+    }
+
+    /**
+     * Resets the total attempts.
+     */
+    protected static <I> void resetTotalAttempts(ClientRequestContext ctx) {
+        //noinspection unchecked
+        final State<I> state = (State<I>) ctx.attr(STATE);
+        if (state == null) {
+            return;
+        }
+        state.lastBackoff = null;
+        state.totalAttemptNo = 1;
+        state.currentAttemptNoWithLastBackoff = 0;
+    }
+
+    /**
+     * Returns the original request.
+     */
+    @Nullable
+    protected I getOriginalRequest(ClientRequestContext ctx) {
+        //noinspection unchecked
+        final State<I> state = (State<I>) ctx.attr(STATE);
+        if (state == null) {
+            return null;
+        }
+        return state.originalReq;
+    }
+
+    /**
+     * Adds the path that the request is sent to. The added path is used to check
+     * <a href="https://en.wikipedia.org/wiki/URL_redirection#Redirect_loops">redirect loops</a>.
+     */
+    protected boolean addPath(ClientRequestContext ctx, String path) {
+        //noinspection unchecked
+        final State<I> state = (State<I>) ctx.attr(STATE);
+        if (state == null) {
+            return false;
+        }
+
+        return state.addPath(path);
+    }
+
+    /**
+     * Returns the set of paths that are added vid {@link #addPath(ClientRequestContext, String)}.
+     */
+    @Nullable
+    protected Set<String> paths(ClientRequestContext ctx) {
+        //noinspection unchecked
+        final State<I> state = (State<I>) ctx.attr(STATE);
+        if (state == null) {
+            return null;
+        }
+
+        return state.paths;
     }
 
     /**
@@ -310,13 +368,15 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                      .thenAccept(requestLog -> logBuilder.responseContentPreview(
                              requestLog.responseContentPreview()));
         }
+        ctx.logBuilder().addChild(derived.log());
         return derived;
     }
 
-    private static final class State {
+    private static final class State<I> {
 
         private final int maxTotalAttempts;
         private final long responseTimeoutMillisForEachAttempt;
+        private final I originalReq;
         private final long deadlineNanos;
         private final boolean isTimeoutEnabled;
 
@@ -324,10 +384,14 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         private Backoff lastBackoff;
         private int currentAttemptNoWithLastBackoff;
         private int totalAttemptNo;
+        @Nullable
+        private Set<String> paths;
 
-        State(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt, long responseTimeoutMillis) {
+        State(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt,
+              long responseTimeoutMillis, I originalReq) {
             this.maxTotalAttempts = maxTotalAttempts;
             this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
+            this.originalReq = originalReq;
 
             if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
                 deadlineNanos = 0;
@@ -382,6 +446,13 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                 currentAttemptNoWithLastBackoff = 1;
             }
             return currentAttemptNoWithLastBackoff++;
+        }
+
+        boolean addPath(String path) {
+            if (paths == null) {
+                paths = new HashSet<>();
+            }
+            return paths.add(path);
         }
     }
 }
