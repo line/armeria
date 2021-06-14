@@ -60,7 +60,7 @@ public interface RpcResponse extends Response, Future<Object>, CompletionStage<O
         final CompletableRpcResponse res = new CompletableRpcResponse();
         stage.handle((value, cause) -> {
             if (cause != null) {
-                res.completeExceptionally(cause);
+                res.completeExceptionally(Exceptions.peel(cause));
             } else if (value instanceof RpcResponse) {
                 ((RpcResponse) value).handle((rpcResponseResult, rpcResponseCause) -> {
                     if (rpcResponseCause != null) {

@@ -34,6 +34,3 @@
 *.woff2 binary
 *.xz binary
 *.zip binary
-
-# Collapse generated code in diffs
-public_suffixes.txt linguist-generated

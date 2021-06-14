@@ -4840,6 +4840,8 @@ media.aero
 media.hu
 media.museum
 media.pl
+mediatech.by
+mediatech.dev
 medical.museum
 medicina.bo
 medio-campidano.it
@@ -7264,6 +7266,7 @@ shonai.fukuoka.jp
 shonai.yamagata.jp
 shoo.okayama.jp
 shop
+shop.brendly.rs
 shop.ht
 shop.hu
 shop.pl
