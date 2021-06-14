@@ -130,8 +130,8 @@ final class WebOperationService implements HttpService {
             if (operation.isBlocking()) {
                 try {
                     ctx.blockingTaskExecutor().execute(() -> invoke(ctx, aggregatedReq, resFuture));
-                } catch (RejectedExecutionException ree) {
-                    resFuture.completeExceptionally(ree);
+                } catch (Throwable cause) {
+                    resFuture.completeExceptionally(cause);
                 }
             } else {
                 invoke(ctx, aggregatedReq, resFuture);
