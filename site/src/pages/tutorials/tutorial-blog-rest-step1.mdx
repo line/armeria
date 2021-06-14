@@ -23,7 +23,8 @@ Just check that you've prepared the [prerequisites](/tutorials/tutorial-blog-res
 
 Let's create a server instance using Armeria's <type://ServerBuilder>:
 
-1. Create a main class and add in import statements. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
+1. Create a main class and add import statements. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
+
   ```java filename=Main.java
   package example.armeria.server.blog;
 
@@ -38,7 +39,9 @@ Let's create a server instance using Armeria's <type://ServerBuilder>:
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
   }
   ```
+
 2. In the `Main` class, add the method, `newServer()`. Since a server instance requires at least one service to run with, let's add a dummy service returning `"Hello, Armeria!"` for now.
+
   ```java filename=Main.java highlight=4
   static Server newServer(int port) {
     ServerBuilder sb = Server.builder();
@@ -58,7 +61,7 @@ Now that we have a server, have a go at starting the server with the dummy servi
 2. Call the `newServer()` method we implemented in step 2. Let's set the port to `8080` as in line 2.
 3. Start the server as in line 9.
 
-```java filename=Main.java highlight=2,9
+```java filename=Main.java highlight=2,9 showlineno=true
 public static void main(String[] args) throws Exception {
   Server server = newServer(8080);
 
@@ -90,6 +93,6 @@ Open the URL `http://127.0.0.1:8080` on a web browser and check the message `Hel
 
 In this step, you've built a server, added a dummy service and launched a server.
 
-Next, at [Step 2. Prepare a data object](/tutorials/tutorial-blog-rest-step2), you will write a data object to specify and contain blog post information.
+Next, at [Step 2. Prepare a data object](/tutorials/tutorial-blog-rest-step2), you'll write a data object to specify and contain blog post information.
 
 <TutorialSteps current={1} />
