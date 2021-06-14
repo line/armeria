@@ -50,7 +50,7 @@ class GraphQLServiceSubscriptionTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final File graphqlSchemaFile =
-                    new File(ClassLoader.getSystemResource("subscription.graphqls").toURI());
+                    new File(getClass().getResource("/subscription.graphqls").toURI());
             final GraphQLService graphQLService =
                     GraphQLService.builder()
                                   .schemaFile(graphqlSchemaFile)

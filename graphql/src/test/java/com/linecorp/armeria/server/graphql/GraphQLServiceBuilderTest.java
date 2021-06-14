@@ -39,14 +39,15 @@ class GraphQLServiceBuilderTest {
 
     @Test
     void specifySchemaFile() throws Exception {
-        final File graphqlSchemaFile = new File(ClassLoader.getSystemResource("test.graphqls").toURI());
+        final File graphqlSchemaFile = new File(getClass().getResource("/test.graphqls").toURI());
         final GraphQLService service = new GraphQLServiceBuilder().schemaFile(graphqlSchemaFile).build();
         assertThat(service).isNotNull();
     }
 
     @Test
     void successful() throws Exception {
-        final File graphqlSchemaFile = new File(ClassLoader.getSystemResource("test.graphqls").toURI());
+        final File graphqlSchemaFile =
+                new File(getClass().getResource("/test.graphqls").toURI());
         final GraphQLServiceBuilder builder = new GraphQLServiceBuilder();
         final DataLoader<String, String> dataLoader =
                 DataLoader.newDataLoader(keys -> CompletableFuture.supplyAsync(() -> keys));

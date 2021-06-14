@@ -135,8 +135,10 @@ com.netflix.eureka:
   eureka-client: { version: &EUREKA_VERSION '1.10.13' }
   eureka-test-utils: {version: *EUREKA_VERSION }
 
+# DGS is used only for testing in it:dgs moulde.
 com.netflix.graphql.dgs:
   graphql-dgs-client: { version: '4.2.0' }
+
 com.pszymczyk.consul:
   embedded-consul: { version: '2.2.1' }
 

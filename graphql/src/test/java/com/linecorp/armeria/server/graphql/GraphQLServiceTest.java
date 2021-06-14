@@ -52,7 +52,8 @@ class GraphQLServiceTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final File graphqlSchemaFile = new File(ClassLoader.getSystemResource("test.graphqls").toURI());
+            final File graphqlSchemaFile =
+                    new File(getClass().getResource("/test.graphqls").toURI());
             final GraphQLService graphQLService =
                     GraphQLService.builder()
                                   .schemaFile(graphqlSchemaFile)
@@ -84,7 +85,7 @@ class GraphQLServiceTest {
                                                          .aggregate().get();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("{\"data\":{\"foo\":\"bar\"}}");
+        assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
     }
 
     @Test
@@ -109,7 +110,7 @@ class GraphQLServiceTest {
                                                          .aggregate().get();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("{\"data\":{\"foo\":\"bar\"}}");
+        assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
     }
 
     @Test
@@ -126,7 +127,7 @@ class GraphQLServiceTest {
                          .aggregate().get();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("{\"data\":{\"foo\":\"bar\"}}");
+        assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
     }
 
     @Test
@@ -142,7 +143,7 @@ class GraphQLServiceTest {
                          .aggregate().get();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("{\"data\":{\"foo\":\"bar\"}}");
+        assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
     }
 
     @Test
