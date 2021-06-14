@@ -4840,6 +4840,8 @@ media.aero
 media.hu
 media.museum
 media.pl
+mediatech.by
+mediatech.dev
 medical.museum
 medicina.bo
 medio-campidano.it
@@ -5006,6 +5008,7 @@ miners.museum
 mini
 mining.museum
 miniserver.com
+minisite.ms
 minnesota.museum
 mino.gifu.jp
 minobu.yamanashi.jp
@@ -5188,8 +5191,6 @@ muika.niigata.jp
 mukawa.hokkaido.jp
 muko.kyoto.jp
 mulhouse.museum
-multibaas.app
-multibaas.com
 munakata.fukuoka.jp
 muncie.museum
 muni.il
@@ -7265,6 +7266,7 @@ shonai.fukuoka.jp
 shonai.yamagata.jp
 shoo.okayama.jp
 shop
+shop.brendly.rs
 shop.ht
 shop.hu
 shop.pl
