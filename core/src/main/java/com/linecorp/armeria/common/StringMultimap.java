@@ -29,6 +29,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.common.util.StringUtil.toBoolean;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -260,7 +261,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     public Boolean getBoolean(IN_NAME name) {
         final String v = get(name);
-        return toBoolean(v);
+        return toBoolean(v, false);
     }
 
     @Override
@@ -273,7 +274,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     public Boolean getLastBoolean(IN_NAME name) {
         final String v = getLast(name);
-        return toBoolean(v);
+        return toBoolean(v, false);
     }
 
     @Override
@@ -987,20 +988,6 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     }
 
     // Conversion functions
-
-    @Nullable
-    private static Boolean toBoolean(@Nullable String v) {
-        if (v == null) {
-            return null;
-        }
-        if ("true".equalsIgnoreCase(v)) {
-            return true;
-        }
-        if ("false".equalsIgnoreCase(v)) {
-            return false;
-        }
-        return null;
-    }
 
     @Nullable
     private static Integer toInteger(@Nullable String v) {
