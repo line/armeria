@@ -173,28 +173,30 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
 
     private StreamMessage<HttpData> createBodyPartPublisher(BodyPart bodyPart) {
         // start boundary
-        final StringBuilder sb = TemporaryThreadLocals.get().stringBuilder();
-        sb.append("--").append(boundary).append("\r\n");
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder sb = tempThreadLocals.stringBuilder();
+            sb.append("--").append(boundary).append("\r\n");
 
-        // headers lines
-        for (Entry<AsciiString, String> header : bodyPart.headers()) {
-            final AsciiString headerName = header.getKey();
-            final String headerValue = header.getValue();
-            sb.append(headerName)
-              .append(':')
-              .append(headerValue)
-              .append("\r\n");
+            // headers lines
+            for (Entry<AsciiString, String> header : bodyPart.headers()) {
+                final AsciiString headerName = header.getKey();
+                final String headerValue = header.getValue();
+                sb.append(headerName)
+                  .append(':')
+                  .append(headerValue)
+                  .append("\r\n");
+            }
+
+            // end of headers empty line
+            sb.append("\r\n");
+            return StreamMessage.concat(
+                    // Part prefix
+                    StreamMessage.of(HttpData.ofUtf8(sb.toString())),
+                    // Part body
+                    bodyPart.content(),
+                    // Part postfix
+                    StreamMessage.of(CRLF));
         }
-
-        // end of headers empty line
-        sb.append("\r\n");
-        return StreamMessage.concat(
-                // Part prefix
-                StreamMessage.of(HttpData.ofUtf8(sb.toString())),
-                // Part body
-                bodyPart.content(),
-                // Part postfix
-                StreamMessage.of(CRLF));
     }
 
     private final class BodyPartSubscriber implements Subscriber<BodyPart> {

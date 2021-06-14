@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.common.util;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.MustBeClosed;
 
 import io.netty.util.internal.EmptyArrays;
 
@@ -26,34 +27,37 @@ import io.netty.util.internal.EmptyArrays;
  * behavior.
  *
  * <p>Most common mistake is to call or recurse info a method that uses the same thread-local variable.
- * For example, the following code will produce a garbled string:
+ * For example, the following code will throw an exception because {@link TemporaryThreadLocals#acquire()} is
+ * called twice before the first call is closed:
  * <pre>{@code
  * > class A {
  * >     @Override
  * >     public String toString() {
- * >         return TemporaryThreadLocals.get().append('"').append(new B()).append('"').toString();
+ * >         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+ * >             StringBuilder stringBuilder = tempThreadLocals.stringBuilder();
+ * >             return stringBuilder.append('"').append(new B()).append('"').toString();
+ * >         }
  * >     }
  * > }
  * > class B {
  * >     @Override
  * >     public String toString() {
- * >         return TemporaryThreadLocals.get().append("foo").toString();
+ * >         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+ * >             StringBuilder stringBuilder = tempThreadLocals.stringBuilder();
+ * >             return stringBuilder.append("foo").toString();
+ * >         }
  * >     }
  * > }
- * > // The following assertion fails, because A.toString() returns "foofoo\"".
- * > assert "\"foo\"".equals(new A().toString());
- * }</pre></p>
- *
- * <p>A general rule of thumb is not to call other methods while using the thread-local variables provided by
- * this class, unless you are sure the methods you're calling never uses the same thread-local variables.</p>
+ * }</pre>
+ * When trying to acquire this class in class B, an {@link IllegalStateException} occurs by a lock
+ * mechanism. It helps to prevent thread local variables from being corrupted. Also developers recognize
+ * the situation about nested use easily. Specifically, as this utility implements {@link AutoCloseable},
+ * the release method will be called successfully with try-with-resources statement.
  */
-public final class TemporaryThreadLocals {
+public final class TemporaryThreadLocals implements AutoCloseable {
 
     @VisibleForTesting
     static final int MAX_BYTE_ARRAY_CAPACITY = 4096;
-
-    @VisibleForTesting
-    static final int MAX_STRING_BUILDER_CAPACITY = 4096;
 
     @VisibleForTesting
     static final int MAX_CHAR_ARRAY_CAPACITY = 4096;
@@ -61,36 +65,51 @@ public final class TemporaryThreadLocals {
     @VisibleForTesting
     static final int MAX_INT_ARRAY_CAPACITY = 4096;
 
+    @VisibleForTesting
+    static final int MAX_STRING_BUILDER_CAPACITY = 4096;
+
     private static final ThreadLocal<TemporaryThreadLocals> fallback =
             ThreadLocal.withInitial(TemporaryThreadLocals::new);
 
     /**
-     * Returns the current {@link Thread}'s {@link TemporaryThreadLocals}.
+     * Acquire the current {@link Thread}'s {@link TemporaryThreadLocals} with lock. It should be used with
+     * try-with-resources statement.
      */
-    public static TemporaryThreadLocals get() {
+    @MustBeClosed
+    public static TemporaryThreadLocals acquire() {
         final Thread thread = Thread.currentThread();
+        final TemporaryThreadLocals tempThreadLocals;
         if (thread instanceof EventLoopThread) {
-            return ((EventLoopThread) thread).temporaryThreadLocals;
+            tempThreadLocals = ((EventLoopThread) thread).temporaryThreadLocals;
         } else {
-            return fallback.get();
+            tempThreadLocals = fallback.get();
         }
+        tempThreadLocals.lock();
+        return tempThreadLocals;
     }
 
+    private boolean lock;
     private byte[] byteArray;
-    private StringBuilder stringBuilder;
     private char[] charArray;
     private int[] intArray;
+    private StringBuilder stringBuilder;
 
     TemporaryThreadLocals() {
         clear();
     }
 
+    @Override
+    public void close() {
+        lock = false;
+    }
+
     @VisibleForTesting
     void clear() {
+        lock = false;
         byteArray = EmptyArrays.EMPTY_BYTES;
-        stringBuilder = inflate(new StringBuilder());
         charArray = EmptyArrays.EMPTY_CHARS;
         intArray = EmptyArrays.EMPTY_INTS;
+        stringBuilder = inflate(new StringBuilder());
     }
 
     /**
@@ -102,16 +121,7 @@ public final class TemporaryThreadLocals {
         if (byteArray.length >= minCapacity) {
             return byteArray;
         }
-
         return allocateByteArray(minCapacity);
-    }
-
-    private byte[] allocateByteArray(int minCapacity) {
-        final byte[] byteArray = new byte[minCapacity];
-        if (minCapacity <= MAX_BYTE_ARRAY_CAPACITY) {
-            this.byteArray = byteArray;
-        }
-        return byteArray;
     }
 
     /**
@@ -123,16 +133,19 @@ public final class TemporaryThreadLocals {
         if (charArray.length >= minCapacity) {
             return charArray;
         }
-
         return allocateCharArray(minCapacity);
     }
 
-    private char[] allocateCharArray(int minCapacity) {
-        final char[] charArray = new char[minCapacity];
-        if (minCapacity <= MAX_CHAR_ARRAY_CAPACITY) {
-            this.charArray = charArray;
+    /**
+     * Returns a thread-local integer array whose length is equal to or greater than the specified
+     * {@code minCapacity}.
+     */
+    public int[] intArray(int minCapacity) {
+        final int[] intArray = this.intArray;
+        if (intArray.length >= minCapacity) {
+            return intArray;
         }
-        return charArray;
+        return allocateIntArray(minCapacity);
     }
 
     /**
@@ -148,6 +161,35 @@ public final class TemporaryThreadLocals {
         }
     }
 
+    private void lock() {
+        assert !lock : "Cannot be acquired before releasing the resource";
+        lock = true;
+    }
+
+    private byte[] allocateByteArray(int minCapacity) {
+        final byte[] byteArray = new byte[minCapacity];
+        if (minCapacity <= MAX_BYTE_ARRAY_CAPACITY) {
+            this.byteArray = byteArray;
+        }
+        return byteArray;
+    }
+
+    private char[] allocateCharArray(int minCapacity) {
+        final char[] charArray = new char[minCapacity];
+        if (minCapacity <= MAX_CHAR_ARRAY_CAPACITY) {
+            this.charArray = charArray;
+        }
+        return charArray;
+    }
+
+    private int[] allocateIntArray(int minCapacity) {
+        final int[] intArray = new int[minCapacity];
+        if (minCapacity <= MAX_INT_ARRAY_CAPACITY) {
+            this.intArray = intArray;
+        }
+        return intArray;
+    }
+
     /**
      * Switches the internal representation of the specified {@link StringBuilder} from LATIN1 to UTF16,
      * so that character operations do not have performance penalty.
@@ -157,26 +199,5 @@ public final class TemporaryThreadLocals {
         stringBuilder.append('\u0100');
         stringBuilder.setLength(0);
         return stringBuilder;
-    }
-
-    /**
-     * Returns a thread-local integer array whose length is equal to or greater than the specified
-     * {@code minCapacity}.
-     */
-    public int[] intArray(int minCapacity) {
-        final int[] intArray = this.intArray;
-        if (intArray.length >= minCapacity) {
-            return intArray;
-        }
-
-        return allocateIntArray(minCapacity);
-    }
-
-    private int[] allocateIntArray(int minCapacity) {
-        final int[] intArray = new int[minCapacity];
-        if (minCapacity <= MAX_INT_ARRAY_CAPACITY) {
-            this.intArray = intArray;
-        }
-        return intArray;
     }
 }
