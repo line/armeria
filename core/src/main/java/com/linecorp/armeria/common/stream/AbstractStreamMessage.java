@@ -67,7 +67,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         final SubscriptionImpl actualSubscription = subscribe(subscription);
         if (actualSubscription != subscription) {
             // Failed to subscribe.
-            failLateSubscriber(actualSubscription, subscriber);
+            failLateSubscriber(actualSubscription, subscription);
         }
     }
 
@@ -103,14 +103,15 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      */
     protected void onRemoval(T obj) {}
 
-    static void failLateSubscriber(SubscriptionImpl subscription, Subscriber<?> lateSubscriber) {
-        final Subscriber<?> oldSubscriber = subscription.subscriber();
-        final Throwable cause = abortedOrLate(oldSubscriber);
+    static void failLateSubscriber(SubscriptionImpl actualSubscription, SubscriptionImpl lateSubscription) {
+        final Subscriber<?> actualSubscriber = actualSubscription.subscriber();
+        final Subscriber<?> lateSubscriber = lateSubscription.subscriber();
+        final Throwable cause = abortedOrLate(actualSubscriber);
 
-        if (subscription.needsDirectInvocation()) {
+        if (lateSubscription.needsDirectInvocation()) {
             handleLateSubscriber(lateSubscriber, cause);
         } else {
-            subscription.executor().execute(() -> {
+            lateSubscription.executor().execute(() -> {
                 handleLateSubscriber(lateSubscriber, cause);
             });
         }
