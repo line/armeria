@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.CANCELLATION_AND_POOLED_OPTIONS;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.CANCELLATION_OPTION;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.CANCELLATION_AND_POOLED_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.CANCELLATION_OPTION;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.POOLED_OBJECTS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
@@ -137,11 +137,14 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     public CompletableFuture<List<U>> collect(EventExecutor executor, SubscriptionOption... options) {
         final SubscriptionOption[] filterOptions = filterSupportsPooledObjects ? POOLED_OBJECTS : EMPTY_OPTIONS;
         return upstream.collect(executor, filterOptions).handle((result, cause) -> {
-            final CollectingSubscription subscription = new CollectingSubscription();
-            final CollectingSubscriber<U> subscriber = new CollectingSubscriber<>();
-            beforeSubscribe(subscriber, subscription);
+            // CollectingSubscriberAndSubscription just captures cancel(), onComplete(), and onError() signals
+            // from the sub class of FilteredStreamMessage. So we need to follow regular Reactive Streams
+            // specifications.
+            final CollectingSubscriberAndSubscription<U> subscriberAndSubscription =
+                    new CollectingSubscriberAndSubscription<>();
+            beforeSubscribe(subscriberAndSubscription, subscriberAndSubscription);
             if (cause != null) {
-                beforeError(subscriber, cause);
+                beforeError(subscriberAndSubscription, cause);
                 return Exceptions.throwUnsafely(cause);
             } else {
                 Throwable abortCause = null;
@@ -158,9 +161,13 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                     try {
                         U filtered = filter(t);
 
-                        if (subscriber.completed || subscriber.cause != null || subscription.cancelled) {
-                            abortCause = subscriber.cause != null ? cause
-                                                                  : CancelledSubscriptionException.get();
+                        if (subscriberAndSubscription.completed || subscriberAndSubscription.cause != null ||
+                            subscriberAndSubscription.cancelled) {
+                            if (subscriberAndSubscription.cause != null) {
+                                abortCause = cause;
+                            } else {
+                                abortCause = CancelledSubscriptionException.get();
+                            }
                             StreamMessageUtil.closeOrAbort(filtered, abortCause);
                         } else {
                             requireNonNull(filtered, "filter() returned null");
@@ -185,7 +192,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                     return Exceptions.throwUnsafely(abortCause);
                 }
 
-                beforeComplete(subscriber);
+                beforeComplete(subscriberAndSubscription);
                 return elements;
             }
         });
@@ -325,22 +332,10 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         }
     }
 
-    private static final class CollectingSubscription implements Subscription {
-
-        boolean cancelled;
-
-        @Override
-        public void request(long n) {}
-
-        @Override
-        public void cancel() {
-            cancelled = true;
-        }
-    }
-
-    private static final class CollectingSubscriber<T> implements Subscriber<T> {
+    private static final class CollectingSubscriberAndSubscription<T> implements Subscriber<T>, Subscription {
 
         private boolean completed;
+        private boolean cancelled;
         @Nullable
         private Throwable cause;
 
@@ -364,6 +359,14 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
             completed = true;
+        }
+
+        @Override
+        public void request(long n) {}
+
+        @Override
+        public void cancel() {
+            cancelled = true;
         }
     }
 }

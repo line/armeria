@@ -23,8 +23,10 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 public final class InternalStreamMessageUtil {
 
     public static final SubscriptionOption[] EMPTY_OPTIONS = {};
-
     public static final SubscriptionOption[] POOLED_OBJECTS = { SubscriptionOption.WITH_POOLED_OBJECTS };
+    public static final SubscriptionOption[] CANCELLATION_OPTION = { SubscriptionOption.NOTIFY_CANCELLATION };
+    public static final SubscriptionOption[] CANCELLATION_AND_POOLED_OPTIONS =
+            { SubscriptionOption.WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION };
 
     public static boolean containsWithPooledObjects(SubscriptionOption... options) {
         requireNonNull(options, "options");

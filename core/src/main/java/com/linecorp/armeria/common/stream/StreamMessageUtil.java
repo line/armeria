@@ -26,10 +26,6 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 
 final class StreamMessageUtil {
 
-    static final SubscriptionOption[] CANCELLATION_OPTION = { SubscriptionOption.NOTIFY_CANCELLATION };
-    static final SubscriptionOption[] CANCELLATION_AND_POOLED_OPTIONS =
-            { SubscriptionOption.WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION };
-
     static void closeOrAbort(Object obj, @Nullable Throwable cause) {
         if (obj instanceof StreamMessage) {
             final StreamMessage<?> streamMessage = (StreamMessage<?>) obj;

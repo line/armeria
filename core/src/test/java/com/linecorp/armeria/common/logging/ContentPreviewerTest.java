@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -48,15 +49,12 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.logging.ContentPreviewingService;
-import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ContentPreviewerTest {
 
     static class MyHttpClient {
         private final WebClient client;
-        @Nullable
-        private volatile CompletableFuture<RequestLog> waitingFuture;
 
         MyHttpClient(String uri, int maxLength) {
             final WebClientBuilder builder = WebClient.builder(serverExtension.httpUri().resolve(uri));
@@ -91,11 +89,10 @@ class ContentPreviewerTest {
         }
 
         RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
-            waitingFuture = new CompletableFuture<>();
-            postBody(path, content, contentType).aggregate().join();
-            final RequestLog log = waitingFuture.get();
-            waitingFuture = null;
-            return log;
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                postBody(path, content, contentType).aggregate();
+                return captor.get().log().whenComplete().join();
+            }
         }
 
         RequestLog post(String path, String content) throws Exception {
@@ -217,7 +214,7 @@ class ContentPreviewerTest {
         }
     };
 
-    @Test
+    @RepeatedTest(100000)
     void testClientLog() throws Exception {
         final MyHttpClient client = new MyHttpClient("/example", 10);
         assertThat(client.get("/get").responseContentPreview()).isEqualTo("test");
