@@ -65,8 +65,7 @@ final class FixedHttpRequest {
 
         private final RequestHeaders headers;
 
-        TwoElementFixedHttpRequest(
-                RequestHeaders headers, HttpObject obj1, HttpObject obj2) {
+        TwoElementFixedHttpRequest(RequestHeaders headers, HttpObject obj1, HttpObject obj2) {
             super(obj1, obj2);
             this.headers = headers;
         }

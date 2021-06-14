@@ -232,4 +232,34 @@ class DefaultStreamMessageTest {
         });
         await().untilTrue(completed);
     }
+
+    @Test
+    void closeWhileSubscribing() {
+        final AtomicBoolean completed = new AtomicBoolean();
+        final AtomicReference<DefaultStreamMessage<String>> streamMessageRef = new AtomicReference<>();
+        streamMessageRef.set(new DefaultStreamMessage<String>() {
+            @Override
+            protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {
+                streamMessageRef.get().close();
+            }
+        });
+        streamMessageRef.get().subscribe(new Subscriber<String>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(String serviceName) {}
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onComplete() {
+                completed.set(true);
+            }
+        }, ImmediateEventExecutor.INSTANCE);
+        await().untilTrue(completed);
+    }
 }

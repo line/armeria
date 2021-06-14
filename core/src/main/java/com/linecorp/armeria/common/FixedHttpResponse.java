@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.linecorp.armeria.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.common.stream.ThreeElementFixedStreamMessage;
 import com.linecorp.armeria.common.stream.TwoElementFixedStreamMessage;
 
 /**
@@ -41,6 +42,13 @@ final class FixedHttpResponse {
             extends TwoElementFixedStreamMessage<HttpObject> implements HttpResponse {
         TwoElementFixedHttpResponse(ResponseHeaders headers, HttpObject obj) {
             super(headers, obj);
+        }
+    }
+
+    static final class ThreeElementFixedHttpResponse
+            extends ThreeElementFixedStreamMessage<HttpObject> implements HttpResponse {
+        ThreeElementFixedHttpResponse(ResponseHeaders headers, HttpObject obj1, HttpObject obj2) {
+            super(headers, obj1, obj2);
         }
     }
 

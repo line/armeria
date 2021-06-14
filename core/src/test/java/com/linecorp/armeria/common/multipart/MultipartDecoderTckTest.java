@@ -16,7 +16,6 @@
 package com.linecorp.armeria.common.multipart;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.util.stream.LongStream;
 
@@ -88,10 +87,9 @@ public class MultipartDecoderTckTest extends StreamMessageVerification<BodyPart>
 
             // TODO(ikhoon): Gerneralize this test suit?
 
-            assertThat(stream.whenComplete()).isNotDone();
+            assertThat(stream.whenComplete()).isDone();
             sub.requestEndOfStream();
 
-            await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompleted());
             assertThat(stream.isOpen()).isFalse();
             assertThat(stream.isEmpty()).isTrue();
             sub.expectNone();

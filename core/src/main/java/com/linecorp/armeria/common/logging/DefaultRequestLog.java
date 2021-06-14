@@ -52,7 +52,6 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceNaming;
@@ -536,12 +535,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              .thenAccept(log -> {
                  final String serviceName = log.serviceName();
                  final String name = log.name();
-                 if (name != null) {
-                     if (serviceName != null) {
-                         name(serviceName, name);
-                     } else {
-                         name(name);
-                     }
+                 if (serviceName != null) {
+                     name(serviceName, name);
+                 } else {
+                     name(name);
                  }
              });
         child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
@@ -604,6 +601,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             lastChild.whenAvailable(RequestLogProperty.RESPONSE_HEADERS)
                      .thenAccept(log -> responseHeaders(log.responseHeaders()));
+        }
+
+        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
+            responseTrailers(lastChild.responseTrailers());
+        } else {
+            lastChild.whenAvailable(RequestLogProperty.RESPONSE_TRAILERS)
+                     .thenAccept(log -> responseTrailers(log.responseTrailers()));
         }
 
         if (lastChild.isComplete()) {
@@ -1054,14 +1058,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 if (config != null) {
                     newServiceName = ServiceNaming.fullTypeName().serviceName(sctx);
                 } else if (rpcReq != null) {
-                    newServiceName = ServiceNamingUtil.fullTypeRpcServiceName(rpcReq);
+                    newServiceName = rpcReq.serviceName();
                 }
             }
 
             if (newName == null) {
                 if (rpcReq != null) {
                     newName = rpcReq.method();
-                    newName = newName.substring(newName.lastIndexOf('/') + 1);
                 } else {
                     newName = ctx.method().name();
                 }

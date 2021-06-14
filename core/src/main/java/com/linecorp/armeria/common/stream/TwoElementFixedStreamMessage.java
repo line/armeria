@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
-
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link FixedStreamMessage} that publishes two objects.
@@ -34,6 +34,7 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     private T obj2;
 
     private boolean inOnNext;
+    private boolean requested;
 
     /**
      * Constructs a new {@link TwoElementFixedStreamMessage} for the given objects.
@@ -44,43 +45,46 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
+    public long demand() {
+        // Since the objects is drained as soon as it is requested, The demand will be zero in most cases.
+        // But the demand could be one if a subscriber calls `subscription.request(n)` while receiving a object
+        // via 'onNext(t)'
+        return requested ? 1 : 0;
+    }
+
+    @Override
     final void cleanupObjects(@Nullable Throwable cause) {
         if (obj1 != null) {
-            try {
-                onRemoval(obj1);
-            } finally {
-                StreamMessageUtil.closeOrAbort(obj1, cause);
-            }
+            StreamMessageUtil.closeOrAbort(obj1, cause);
             obj1 = null;
         }
         if (obj2 != null) {
-            try {
-                onRemoval(obj2);
-            } finally {
-                StreamMessageUtil.closeOrAbort(obj2, cause);
-            }
+            StreamMessageUtil.closeOrAbort(obj2, cause);
             obj2 = null;
         }
     }
 
     @Override
-    final void doRequest(SubscriptionImpl subscription, long n) {
-        final int oldDemand = requested();
-        if (oldDemand >= 2) {
-            // Already have demand, so don't need to do anything, the current demand will complete the
-            // stream.
+    public void request(long n) {
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            request0(n);
+        } else {
+            executor.execute(() -> request0(n));
+        }
+    }
+
+    private void request0(long n) {
+        if (obj2 == null) {
             return;
         }
-        setRequested(n >= 2 ? oldDemand + 2 : oldDemand + 1);
-        doNotify(subscription);
-    }
 
-    @Override
-    public final boolean isEmpty() {
-        return false;
-    }
+        if (n <= 0) {
+            onError(new IllegalArgumentException(
+                    "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+            return;
+        }
 
-    private void doNotify(SubscriptionImpl subscription) {
         if (inOnNext) {
             // Do not let Subscriber.onNext() reenter, because it can lead to weird-looking event ordering
             // for a Subscriber implemented like the following:
@@ -96,37 +100,65 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             //
             // We do not need to worry about synchronizing the access to 'inOnNext' because the subscriber
             // methods must be on the same thread, or synchronized, according to Reactive Streams spec.
+            requested = true;
             return;
         }
 
-        // Demand is always positive, so no need to check it.
-        if (obj1 != null) {
-            final T obj1 = this.obj1;
-            this.obj1 = null;
-            doNotifyObject(subscription, obj1);
-        }
+        if (n >= 2) {
+            // All elements will be consumed. No need to restore inOnNext
+            inOnNext = true;
+            if (obj1 != null) {
+                final T item = obj1;
+                obj1 = null;
+                onNext(item);
+            }
 
-        if (requested() >= 2 && obj2 != null) {
-            final T obj2 = this.obj2;
-            this.obj2 = null;
-            doNotifyObject(subscription, obj2);
-            notifySubscriberOfCloseEvent(subscription, SUCCESSFUL_CLOSE);
+            if (obj2 != null) {
+                final T item = obj2;
+                obj2 = null;
+                onNext(item);
+                onComplete();
+            }
+        } else {
+            if (obj1 != null) {
+                final T item = obj1;
+                obj1 = null;
+                inOnNext = true;
+                onNext(item);
+                inOnNext = false;
+                n--;
+            }
+
+            if ((n > 0 || requested) && obj2 != null) {
+                final T item = obj2;
+                obj2 = null;
+                onNext(item);
+                onComplete();
+            }
         }
     }
 
-    private void doNotifyObject(SubscriptionImpl subscription, T obj) {
-        final T published = prepareObjectForNotification(subscription, obj);
-        inOnNext = true;
-        try {
-            subscription.subscriber().onNext(published);
-        } catch (Throwable t) {
-            // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
-            abort(t);
-            throwIfFatal(t);
-            logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
-                        obj, subscription.subscriber(), t);
-        } finally {
-            inOnNext = false;
+    @Override
+    public void cancel() {
+        if (obj2 == null) {
+            return;
         }
+        super.cancel();
+    }
+
+    @Override
+    public void abort() {
+        if (obj2 == null) {
+            return;
+        }
+        super.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        if (obj2 == null) {
+            return;
+        }
+        super.abort(cause);
     }
 }

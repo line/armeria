@@ -23,6 +23,13 @@ sb.annotatedService(new Object() {
 });
 ```
 
+<Tip>
+
+For more information about using some well-known clients, please refer to
+[Client interoperability](/docs/advanced-client-interoperability#annotated-services).
+
+</Tip>
+
 ## Mapping HTTP service methods
 
 To map a service method in an annotated HTTP service class to an HTTP path, it has to be annotated with one of
@@ -1596,7 +1603,7 @@ import com.linecorp.armeria.server.kotlin.CoroutineContextService
 serverBuilder
     .annotatedService()
     .decorator(CoroutineContextService.newDecorator { ctx ->
-        CoroutineName(ctx.config().defaultServiceName() ?: "none")
+        CoroutineName(ctx.config().defaultServiceNaming().serviceName(ctx) ?: "name")
     })
     .build(MyAnnotatedService())
 ```

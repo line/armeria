@@ -191,9 +191,9 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     newDecorator(RetryRuleWithContent<HttpResponse> retryRuleWithContent, int maxTotalAttempts,
                  long responseTimeoutMillisForEachAttempt) {
         return builder(retryRuleWithContent)
-                       .maxTotalAttempts(maxTotalAttempts)
-                       .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
-                       .newDecorator();
+                .maxTotalAttempts(maxTotalAttempts)
+                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+                .newDecorator();
     }
 
     /**
@@ -326,7 +326,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                    truncatingHttpResponse.abort();
                                    return handleBackoff(
                                            ctx, derivedCtx, rootReqDuplicator, originalReq, returnedRes,
-                                           future,duplicated, duplicator::abort)
+                                           future, duplicated, duplicator::abort)
                                            .apply(decision, cause);
                                });
                     duplicator.close();

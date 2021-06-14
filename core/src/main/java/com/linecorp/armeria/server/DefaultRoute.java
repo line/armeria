@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.RoutingResult.HIGHEST_SCORE;
 import static java.util.Objects.requireNonNull;
 
@@ -44,6 +45,7 @@ final class DefaultRoute implements Route {
     private final List<RoutingPredicate<QueryParams>> paramPredicates;
     private final List<RoutingPredicate<HttpHeaders>> headerPredicates;
     private final boolean isFallback;
+    private final List<Route> excludedRoutes;
 
     private final int hashCode;
     private final int complexity;
@@ -52,7 +54,8 @@ final class DefaultRoute implements Route {
                  Set<MediaType> consumes, Set<MediaType> produces,
                  List<RoutingPredicate<QueryParams>> paramPredicates,
                  List<RoutingPredicate<HttpHeaders>> headerPredicates,
-                 boolean isFallback) {
+                 boolean isFallback,
+                 List<Route> excludedRoutes) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         checkArgument(!requireNonNull(methods, "methods").isEmpty(), "methods is empty.");
         this.methods = Sets.immutableEnumSet(methods);
@@ -61,9 +64,15 @@ final class DefaultRoute implements Route {
         this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
         this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
         this.isFallback = isFallback;
+        // Mark excluded routes as 'fallback' in order to avoid deferring an exception while checking
+        // whether a request is matched by 'excludedRoutes'.
+        this.excludedRoutes = requireNonNull(excludedRoutes, "excludedRoutes")
+                .stream().map(excludedRoute -> excludedRoute.toBuilder().fallback(true).build())
+                .collect(toImmutableList());
 
         hashCode = Objects.hash(this.pathMapping, this.methods, this.consumes, this.produces,
-                                this.paramPredicates, this.headerPredicates, this.isFallback);
+                                this.paramPredicates, this.headerPredicates, this.isFallback,
+                                this.excludedRoutes);
 
         int complexity = 0;
         if (!consumes.isEmpty()) {
@@ -77,6 +86,9 @@ final class DefaultRoute implements Route {
         }
         if (!headerPredicates.isEmpty()) {
             complexity += 1 << 3;
+        }
+        if (!excludedRoutes.isEmpty()) {
+            complexity += 1 << 4;
         }
         this.complexity = complexity;
     }
@@ -165,17 +177,34 @@ final class DefaultRoute implements Route {
         }
 
         if (routingCtx.requiresMatchingParamsPredicates()) {
-            if (!paramPredicates.isEmpty() &&
-                !paramPredicates.stream().allMatch(p -> p.test(routingCtx.params()))) {
-                return RoutingResult.empty();
+            if (!paramPredicates.isEmpty()) {
+                for (RoutingPredicate<QueryParams> p : paramPredicates) {
+                    if (!p.test(routingCtx.params())) {
+                        return RoutingResult.empty();
+                    }
+                }
             }
         }
         if (routingCtx.requiresMatchingHeadersPredicates()) {
-            if (!headerPredicates.isEmpty() &&
-                !headerPredicates.stream().allMatch(p -> p.test(routingCtx.headers()))) {
-                return RoutingResult.empty();
+            if (!headerPredicates.isEmpty()) {
+                for (RoutingPredicate<HttpHeaders> p : headerPredicates) {
+                    if (!p.test(routingCtx.headers())) {
+                        return RoutingResult.empty();
+                    }
+                }
             }
         }
+
+        // We assume that a user adds excluded routes as little as possible. It would be much better to split
+        // routes if there's many routes to be excluded.
+        if (!excludedRoutes.isEmpty()) {
+            for (Route r : excludedRoutes) {
+                if (r.apply(routingCtx, isRouteDecorator).isPresent()) {
+                    return RoutingResult.excluded();
+                }
+            }
+        }
+
         return builder.build();
     }
 
@@ -253,6 +282,11 @@ final class DefaultRoute implements Route {
     }
 
     @Override
+    public List<Route> excludedRoutes() {
+        return excludedRoutes;
+    }
+
+    @Override
     public RouteBuilder toBuilder() {
         return new RouteBuilder()
                 .pathMapping(pathMapping)
@@ -261,7 +295,8 @@ final class DefaultRoute implements Route {
                 .produces(produces)
                 .matchesParams(paramPredicates)
                 .matchesHeaders(headerPredicates)
-                .fallback(isFallback);
+                .fallback(isFallback)
+                .exclude(excludedRoutes);
     }
 
     @Override
@@ -286,7 +321,8 @@ final class DefaultRoute implements Route {
                produces.equals(that.produces) &&
                headerPredicates.equals(that.headerPredicates) &&
                paramPredicates.equals(that.paramPredicates) &&
-               isFallback == that.isFallback;
+               isFallback == that.isFallback &&
+               excludedRoutes.equals(that.excludedRoutes);
     }
 
     @Override

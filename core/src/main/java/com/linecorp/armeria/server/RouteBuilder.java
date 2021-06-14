@@ -38,6 +38,7 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -75,6 +76,8 @@ public final class RouteBuilder {
      * See {@link Route#isFallback()}.
      */
     private boolean isFallback;
+
+    private final List<Route> excludedRoutes = new ArrayList<>();
 
     RouteBuilder() {}
 
@@ -430,6 +433,34 @@ public final class RouteBuilder {
     }
 
     /**
+     * Adds a {@code pathPattern} that is supposed to be excluded from the {@link Route} built by this
+     * {@link RouteBuilder}.
+     */
+    RouteBuilder exclude(String pathPattern) {
+        requireNonNull(pathPattern, "pathPattern");
+        excludedRoutes.add(Route.builder().path(pathPattern).build());
+        return this;
+    }
+
+    /**
+     * Adds a {@link Route} that is supposed to be excluded from the {@link Route} built by this
+     * {@link RouteBuilder}.
+     */
+    RouteBuilder exclude(Route excludedRoute) {
+        excludedRoutes.add(requireNonNull(excludedRoute, "excludedRoute"));
+        return this;
+    }
+
+    /**
+     * Adds {@link Route}s that are supposed to be excluded from the {@link Route} built by this
+     * {@link RouteBuilder}.
+     */
+    RouteBuilder exclude(Iterable<? extends Route> excludedRoutes) {
+        Iterables.addAll(this.excludedRoutes, requireNonNull(excludedRoutes, "excludedRoutes"));
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Route} based on the properties of this builder.
      */
     public Route build() {
@@ -440,13 +471,13 @@ public final class RouteBuilder {
         }
         final Set<HttpMethod> pathMethods = methods.isEmpty() ? HttpMethod.knownMethods() : methods;
         return new DefaultRoute(pathMapping, pathMethods, consumes, produces,
-                                paramPredicates, headerPredicates, isFallback);
+                                paramPredicates, headerPredicates, isFallback, excludedRoutes);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(pathMapping, methods, consumes, produces,
-                            paramPredicates, headerPredicates, isFallback);
+                            paramPredicates, headerPredicates, isFallback, excludedRoutes);
     }
 
     @Override
@@ -466,7 +497,8 @@ public final class RouteBuilder {
                produces.equals(that.produces) &&
                paramPredicates.equals(that.paramPredicates) &&
                headerPredicates.equals(that.headerPredicates) &&
-               isFallback == that.isFallback;
+               isFallback == that.isFallback &&
+               excludedRoutes.equals(that.excludedRoutes);
     }
 
     @Override
@@ -479,6 +511,7 @@ public final class RouteBuilder {
                           .add("paramPredicates", paramPredicates)
                           .add("headerPredicates", headerPredicates)
                           .add("isFallback", isFallback)
+                          .add("excludedRoutes", excludedRoutes)
                           .toString();
     }
 

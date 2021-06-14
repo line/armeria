@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -557,7 +558,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                   @Nullable Throwable cause) {
         // No need to consume further since the response is ready.
         final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
-        req.close();
+        if (req instanceof HttpRequestWriter) {
+            ((HttpRequestWriter) req).close();
+        }
         final RequestLogBuilder logBuilder = reqCtx.logBuilder();
         if (cause == null) {
             logBuilder.endRequest();

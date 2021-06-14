@@ -22,6 +22,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.validation.annotation.Validated;
 
 import com.codahale.metrics.json.MetricsModule;
@@ -317,6 +318,7 @@ public class ArmeriaSettings {
      * SSL configuration that the {@link Server} uses.
      */
     @Nullable
+    @NestedConfigurationProperty
     private Ssl ssl;
 
     /**
