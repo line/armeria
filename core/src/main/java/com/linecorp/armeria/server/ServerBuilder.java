@@ -708,9 +708,9 @@ public final class ServerBuilder {
     }
 
     /**
-     * Uses a newly created {@link ScheduledExecutorService} with the specified number of threads dedicated to
+     * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
      * the execution of blocking tasks or invocations.
-     * The executor {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     * The {@link BlockingTaskExecutor} will be shut down when the {@link Server} stops.
      *
      * @param numThreads the number of threads in the executor
      */
