@@ -694,25 +694,27 @@ public final class DefaultClientRequestContext
         final String method = method().name();
 
         // Build the string representation.
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("[creqId=").append(creqId);
-        if (parent != null) {
-            buf.append(", preqId=").append(preqId);
-        }
-        if (sreqId != null) {
-            buf.append(", sreqId=").append(sreqId);
-        }
-        if (ch != null) {
-            buf.append(", chanId=").append(chanId)
-               .append(", laddr=");
-            TextFormatter.appendSocketAddress(buf, ch.localAddress());
-            buf.append(", raddr=");
-            TextFormatter.appendSocketAddress(buf, ch.remoteAddress());
-        }
-        buf.append("][")
-           .append(proto).append("://").append(authority).append(path).append('#').append(method)
-           .append(']');
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("[creqId=").append(creqId);
+            if (parent != null) {
+                buf.append(", preqId=").append(preqId);
+            }
+            if (sreqId != null) {
+                buf.append(", sreqId=").append(sreqId);
+            }
+            if (ch != null) {
+                buf.append(", chanId=").append(chanId)
+                   .append(", laddr=");
+                TextFormatter.appendSocketAddress(buf, ch.localAddress());
+                buf.append(", raddr=");
+                TextFormatter.appendSocketAddress(buf, ch.remoteAddress());
+            }
+            buf.append("][")
+               .append(proto).append("://").append(authority).append(path).append('#').append(method)
+               .append(']');
 
-        return buf.toString();
+            return buf.toString();
+        }
     }
 }

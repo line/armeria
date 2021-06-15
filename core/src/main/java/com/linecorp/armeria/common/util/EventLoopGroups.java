@@ -44,6 +44,7 @@ import io.netty.util.concurrent.Future;
 public final class EventLoopGroups {
 
     private static final EventLoop directEventLoop = new DirectEventLoop();
+    private static final Runnable NO_OP = () -> {};
 
     /**
      * Returns a newly-created {@link EventLoopGroup}.
@@ -106,6 +107,18 @@ public final class EventLoopGroups {
 
         final TransportType type = Flags.transportType();
         return type.newEventLoopGroup(numThreads, unused -> threadFactory);
+    }
+
+    /**
+     * Warms up all {@link EventLoop}s in the given {@code eventLoopGroup}
+     * by making sure all event loop threads are active.
+     */
+    public static EventLoopGroup warmUp(EventLoopGroup eventLoopGroup) {
+        requireNonNull(eventLoopGroup, "eventLoopGroup");
+
+        eventLoopGroup.forEach(executor -> executor.submit(NO_OP));
+
+        return eventLoopGroup;
     }
 
     /**

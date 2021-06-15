@@ -314,34 +314,36 @@ public final class ArmeriaHttpUtil {
         // Decode percent-encoded characters.
         // An invalid character is replaced with 0xFF, which will be replaced into '�' by UTF-8 decoder.
         final int len = path.length();
-        final byte[] buf = TemporaryThreadLocals.get().byteArray(len);
-        int dstLen = 0;
-        for (int i = 0; i < len; i++) {
-            final char ch = path.charAt(i);
-            if (ch != '%') {
-                buf[dstLen++] = (byte) ((ch & 0xFF80) == 0 ? ch : 0xFF);
-                continue;
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final byte[] buf = tempThreadLocals.byteArray(len);
+            int dstLen = 0;
+            for (int i = 0; i < len; i++) {
+                final char ch = path.charAt(i);
+                if (ch != '%') {
+                    buf[dstLen++] = (byte) ((ch & 0xFF80) == 0 ? ch : 0xFF);
+                    continue;
+                }
+
+                // Decode a percent-encoded character.
+                final int hexEnd = i + 3;
+                if (hexEnd > len) {
+                    // '%' or '%x' (must be followed by two hexadigits)
+                    buf[dstLen++] = (byte) 0xFF;
+                    break;
+                }
+
+                final int digit1 = decodeHexNibble(path.charAt(++i));
+                final int digit2 = decodeHexNibble(path.charAt(++i));
+                if (digit1 < 0 || digit2 < 0) {
+                    // The first or second digit is not hexadecimal.
+                    buf[dstLen++] = (byte) 0xFF;
+                } else {
+                    buf[dstLen++] = (byte) ((digit1 << 4) | digit2);
+                }
             }
 
-            // Decode a percent-encoded character.
-            final int hexEnd = i + 3;
-            if (hexEnd > len) {
-                // '%' or '%x' (must be followed by two hexadigits)
-                buf[dstLen++] = (byte) 0xFF;
-                break;
-            }
-
-            final int digit1 = decodeHexNibble(path.charAt(++i));
-            final int digit2 = decodeHexNibble(path.charAt(++i));
-            if (digit1 < 0 || digit2 < 0) {
-                // The first or second digit is not hexadecimal.
-                buf[dstLen++] = (byte) 0xFF;
-            } else {
-                buf[dstLen++] = (byte) ((digit1 << 4) | digit2);
-            }
+            return new String(buf, 0, dstLen, StandardCharsets.UTF_8);
         }
-
-        return new String(buf, 0, dstLen, StandardCharsets.UTF_8);
     }
 
     /**

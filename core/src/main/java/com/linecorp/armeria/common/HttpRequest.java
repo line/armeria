@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.FormatMethod;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.HttpDecoder;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
@@ -261,6 +263,10 @@ public interface HttpRequest extends Request, HttpMessage {
 
     /**
      * Creates a new instance from an existing {@link RequestHeaders} and {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpObject}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
      */
     static HttpRequest of(RequestHeaders headers, Publisher<? extends HttpObject> publisher) {
         requireNonNull(headers, "headers");
