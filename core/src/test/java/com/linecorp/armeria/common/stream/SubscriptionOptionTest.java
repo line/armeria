@@ -39,6 +39,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
+import reactor.core.publisher.Mono;
 
 class SubscriptionOptionTest {
 
@@ -100,11 +101,11 @@ class SubscriptionOptionTest {
 
     @ParameterizedTest
     @ArgumentsSource(PooledHttpDataStreamProvider.class)
-    void notifyCancellation(HttpData unused1, ByteBuf unused2, StreamMessage<HttpData> stream) {
-        notifyCancellation(stream);
+    void notifyCancellation(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
+        notifyCancellation(buf, stream);
     }
 
-    static void notifyCancellation(StreamMessage<HttpData> stream) {
+    static void notifyCancellation(ByteBuf buf, StreamMessage<HttpData> stream) {
         final AtomicBoolean completed = new AtomicBoolean();
         stream.subscribe(new Subscriber<HttpData>() {
             @Override
@@ -131,6 +132,7 @@ class SubscriptionOptionTest {
 
         await().untilAsserted(() -> assertThat(completed).isTrue());
         await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompletedExceptionally());
+        assertThat(buf.refCnt()).isZero();
     }
 
     static SubscriptionOption[] subscriptionOptions(boolean subscribedWithPooledObjects) {
@@ -145,7 +147,7 @@ class SubscriptionOptionTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
-            return Stream.of(defaultStream(), fixedStream(), deferredStream());
+            return Stream.of(defaultStream(), fixedStream(), deferredStream(), publisherBasedStream());
         }
 
         private static Arguments defaultStream() {
@@ -173,6 +175,15 @@ class SubscriptionOptionTest {
             d.write(data);
             d.close();
             return of(data, buf, deferredStream);
+        }
+
+        private static Arguments publisherBasedStream() {
+            final ByteBuf buf = newPooledBuffer();
+            final HttpData data = HttpData.wrap(buf).withEndOfStream();
+            final PublisherBasedStreamMessage<HttpData> publisherBasedStream =
+                    new PublisherBasedStreamMessage<>(Mono.just(data)
+                                                          .doOnDiscard(HttpData.class, HttpData::close));
+            return of(data, buf, publisherBasedStream);
         }
     }
 }
