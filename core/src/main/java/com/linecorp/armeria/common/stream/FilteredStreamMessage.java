@@ -191,7 +191,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                     for (U element : elements) {
                         StreamMessageUtil.closeOrAbort(element, abortCause);
                     }
-                    completionFuture.completeExceptionally(cause);
+                    completionFuture.completeExceptionally(abortCause);
                     return Exceptions.throwUnsafely(abortCause);
                 }
 
