@@ -261,6 +261,9 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     public Boolean getBoolean(IN_NAME name) {
         final String v = get(name);
+        if (v == null) {
+            return null;
+        }
         return toBoolean(v, false);
     }
 
@@ -274,6 +277,9 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     public Boolean getLastBoolean(IN_NAME name) {
         final String v = getLast(name);
+        if (v == null) {
+            return null;
+        }
         return toBoolean(v, false);
     }
 
@@ -460,7 +466,8 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean containsBoolean(IN_NAME name, boolean value) {
-        return contains(name, String.valueOf(value));
+        final Boolean v = getBoolean(name);
+        return v != null && v == value;
     }
 
     @Override
