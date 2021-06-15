@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -80,7 +81,7 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
         for (int i = 0; i < length; i++) {
             final T obj = objs[i];
             objs[i] = null;
-            builder.add(prepareObjectForNotification(obj, withPooledObjects));
+            builder.add(touchOrCopyAndClose(obj, withPooledObjects));
         }
         return builder.build();
     }

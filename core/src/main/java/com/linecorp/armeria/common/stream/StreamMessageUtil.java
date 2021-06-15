@@ -66,5 +66,6 @@ final class StreamMessageUtil {
             return PooledObjects.copyAndClose(obj);
         }
     }
+
     private StreamMessageUtil() {}
 }

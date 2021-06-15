@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
+
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -55,7 +57,7 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     final List<T> drainAll(boolean withPooledObjects) {
         assert obj != null;
-        final T item = prepareObjectForNotification(obj, withPooledObjects);
+        final T item = touchOrCopyAndClose(obj, withPooledObjects);
         obj = null;
         return ImmutableList.of(item);
     }

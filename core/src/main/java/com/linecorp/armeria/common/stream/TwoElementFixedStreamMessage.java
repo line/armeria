@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
+
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -71,8 +73,8 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     final List<T> drainAll(boolean withPooledObjects) {
         assert obj1 != null;
-        final List<T> objs = ImmutableList.of(prepareObjectForNotification(obj1, withPooledObjects),
-                                              prepareObjectForNotification(obj2, withPooledObjects));
+        final List<T> objs = ImmutableList.of(touchOrCopyAndClose(obj1, withPooledObjects),
+                                              touchOrCopyAndClose(obj2, withPooledObjects));
         obj1 = obj2 = null;
         return objs;
     }
