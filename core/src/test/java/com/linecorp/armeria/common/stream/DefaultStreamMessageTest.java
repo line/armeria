@@ -262,4 +262,32 @@ class DefaultStreamMessageTest {
         }, ImmediateEventExecutor.INSTANCE);
         await().untilTrue(completed);
     }
+
+    @Test
+    void testLateSubscriberEventLoop() {
+        final DefaultStreamMessage<String> streamMessage = new DefaultStreamMessage<>();
+        streamMessage.abort();
+
+        final AtomicBoolean onError = new AtomicBoolean();
+        final EventLoop executor = eventLoop.get();
+        streamMessage.subscribe(new Subscriber<String>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                assertThat(executor.inEventLoop()).isTrue();
+            }
+
+            @Override
+            public void onNext(String s) {}
+
+            @Override
+            public void onError(Throwable t) {
+                onError.set(true);
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        }, executor);
+        await().untilTrue(onError);
+    }
 }

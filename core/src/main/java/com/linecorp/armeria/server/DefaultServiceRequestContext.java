@@ -460,23 +460,25 @@ public final class DefaultServiceRequestContext
         final String method = method().name();
 
         // Build the string representation.
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("[sreqId=").append(sreqId)
-           .append(", chanId=").append(chanId);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("[sreqId=").append(sreqId)
+               .append(", chanId=").append(chanId);
 
-        if (!Objects.equals(caddr, raddr.getAddress())) {
-            buf.append(", caddr=");
-            TextFormatter.appendInetAddress(buf, caddr);
+            if (!Objects.equals(caddr, raddr.getAddress())) {
+                buf.append(", caddr=");
+                TextFormatter.appendInetAddress(buf, caddr);
+            }
+
+            buf.append(", raddr=");
+            TextFormatter.appendSocketAddress(buf, raddr);
+            buf.append(", laddr=");
+            TextFormatter.appendSocketAddress(buf, laddr);
+            buf.append("][")
+               .append(proto).append("://").append(authority).append(path).append('#').append(method)
+               .append(']');
+
+            return strVal = buf.toString();
         }
-
-        buf.append(", raddr=");
-        TextFormatter.appendSocketAddress(buf, raddr);
-        buf.append(", laddr=");
-        TextFormatter.appendSocketAddress(buf, laddr);
-        buf.append("][")
-           .append(proto).append("://").append(authority).append(path).append('#').append(method)
-           .append(']');
-
-        return strVal = buf.toString();
     }
 }
