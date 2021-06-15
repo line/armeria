@@ -385,7 +385,7 @@ public final class ServerBuilder {
      *
      * <pre>{@code
      * ServerBuilder sb = Server.builder();
-     * sb.localPort(8080, SessionProtocol.HTTP, SessionProtocol.HTTPS);
+     * sb.localPort(8080, Arrays.asList(SessionProtocol.HTTP, SessionProtocol.HTTPS));
      * }</pre>
      */
     public ServerBuilder localPort(int port, Iterable<SessionProtocol> protocols) {
