@@ -22,8 +22,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.module.kotlin.KotlinModule;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.JacksonModuleProvider;
-
 public final class CustomJacksonModuleProvider implements JacksonModuleProvider {
     @Override
     public List<Module> modules() {

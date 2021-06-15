@@ -52,12 +52,14 @@ public final class ClientUtil {
         requireNonNull(futureConverter, "futureConverter");
         requireNonNull(errorResponseFactory, "errorResponseFactory");
 
+        boolean initialized = false;
+        boolean success = false;
         try {
             endpointGroup = mapEndpoint(ctx, endpointGroup);
             final CompletableFuture<Boolean> initFuture = ctx.init(endpointGroup);
-            if (initFuture.isDone()) {
+            initialized = initFuture.isDone();
+            if (initialized) {
                 // Initialization has been done immediately.
-                final boolean success;
                 try {
                     success = initFuture.get();
                 } catch (Exception e) {
@@ -66,22 +68,28 @@ public final class ClientUtil {
 
                 return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success);
             } else {
-                return futureConverter.apply(initFuture.handle((success, cause) -> {
+                return futureConverter.apply(initFuture.handle((success0, cause) -> {
                     try {
                         if (cause != null) {
                             throw UnprocessedRequestException.of(Exceptions.peel(cause));
                         }
 
-                        return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success);
+                        return initContextAndExecuteWithFallback(delegate, ctx, errorResponseFactory, success0);
                     } catch (Throwable t) {
                         fail(ctx, t);
                         return errorResponseFactory.apply(ctx, t);
+                    } finally {
+                        ctx.whenInitialized(success0);
                     }
                 }));
             }
         } catch (Throwable cause) {
             fail(ctx, cause);
             return errorResponseFactory.apply(ctx, cause);
+        } finally {
+            if (initialized) {
+                ctx.whenInitialized(success);
+            }
         }
     }
 

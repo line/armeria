@@ -281,32 +281,13 @@ public final class DefaultClientRequestContext
         }).thenCompose(Function.identity());
     }
 
-    private CompletableFuture<Boolean> initFuture(boolean success, @Nullable EventLoop acquiredEventLoop) {
-        CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
-        if (whenInitialized == null) {
-            final CompletableFuture<Boolean> future;
-            if (acquiredEventLoop == null) {
-                future = UnmodifiableFuture.completedFuture(success);
-            } else {
-                future = CompletableFuture.supplyAsync(() -> success, acquiredEventLoop);
-            }
-            if (whenInitializedUpdater.compareAndSet(this, null, future)) {
-                return future;
-            }
-            whenInitialized = this.whenInitialized;
-        }
-
-        final CompletableFuture<Boolean> finalWhenInitialized = whenInitialized;
-        if (finalWhenInitialized.isDone()) {
-            return finalWhenInitialized;
-        }
-
+    private static CompletableFuture<Boolean> initFuture(boolean success,
+                                                         @Nullable EventLoop acquiredEventLoop) {
         if (acquiredEventLoop == null) {
-            finalWhenInitialized.complete(success);
+            return UnmodifiableFuture.completedFuture(success);
         } else {
-            acquiredEventLoop.execute(() -> finalWhenInitialized.complete(success));
+            return CompletableFuture.supplyAsync(() -> success, acquiredEventLoop);
         }
-        return finalWhenInitialized;
     }
 
     /**
@@ -325,6 +306,21 @@ public final class DefaultClientRequestContext
                 return whenInitialized;
             } else {
                 return this.whenInitialized;
+            }
+        }
+    }
+
+    /**
+     * Completes the {@link #whenInitialized()} with the specified value.
+     */
+    public void whenInitialized(boolean success) {
+        final CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
+        if (whenInitialized != null) {
+            whenInitialized.complete(success);
+        } else {
+            if (!whenInitializedUpdater.compareAndSet(this, null,
+                                                      UnmodifiableFuture.completedFuture(success))) {
+                this.whenInitialized.complete(success);
             }
         }
     }
