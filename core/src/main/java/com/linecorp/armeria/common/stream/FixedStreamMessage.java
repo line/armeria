@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.*;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
@@ -35,7 +36,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -176,19 +176,10 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         executor.execute(() -> whenComplete().complete(null));
     }
 
-    final T prepareObjectForNotification(T o, boolean withPooledObjects) {
-        if (withPooledObjects) {
-            return PooledObjects.touch(o);
-        } else {
-            return PooledObjects.copyAndClose(o);
-        }
-    }
-
     void onNext(T item) {
         assert subscriber != null;
         try {
-            final T published = prepareObjectForNotification(item, withPooledObjects);
-            subscriber.onNext(published);
+            subscriber.onNext(touchOrCopyAndClose(item, withPooledObjects));
         } catch (Throwable t) {
             // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
             abort0(t);

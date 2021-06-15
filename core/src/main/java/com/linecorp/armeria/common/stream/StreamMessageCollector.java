@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
@@ -29,8 +30,6 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.unsafe.PooledObjects;
-
 final class StreamMessageCollector<T> implements Subscriber<T> {
 
     private final CompletableFuture<List<T>> future = new CompletableFuture<>();
@@ -43,7 +42,7 @@ final class StreamMessageCollector<T> implements Subscriber<T> {
         withPooledObjects = containsWithPooledObjects(options);
     }
 
-    public CompletableFuture<List<T>> collect() {
+    CompletableFuture<List<T>> collect() {
         return future;
     }
 
@@ -56,13 +55,7 @@ final class StreamMessageCollector<T> implements Subscriber<T> {
     public void onNext(T o) {
         requireNonNull(o, "o");
 
-        final T published;
-        if (withPooledObjects) {
-            published = PooledObjects.touch(o);
-        } else {
-            published = PooledObjects.copyAndClose(o);
-        }
-        elementsBuilder.add(published);
+        elementsBuilder.add(touchOrCopyAndClose(o, withPooledObjects));
     }
 
     @Override

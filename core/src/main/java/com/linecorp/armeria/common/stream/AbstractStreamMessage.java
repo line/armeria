@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
@@ -37,7 +38,6 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -128,11 +128,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     final T prepareObjectForNotification(T o, boolean withPooledObjects) {
         onRemoval(o);
-        if (withPooledObjects) {
-            return PooledObjects.touch(o);
-        } else {
-            return PooledObjects.copyAndClose(o);
-        }
+        return touchOrCopyAndClose(o, withPooledObjects);
     }
 
     /**

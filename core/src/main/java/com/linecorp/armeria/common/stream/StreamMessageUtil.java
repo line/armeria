@@ -59,5 +59,12 @@ final class StreamMessageUtil {
         closeOrAbort(obj, null);
     }
 
+    static <T> T touchOrCopyAndClose(T obj, boolean withPooledObjects) {
+        if (withPooledObjects) {
+            return PooledObjects.touch(obj);
+        } else {
+            return PooledObjects.copyAndClose(obj);
+        }
+    }
     private StreamMessageUtil() {}
 }
