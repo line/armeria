@@ -195,11 +195,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
-        final HttpServerHandler httpServerHandler = new HttpServerHandler(configHolder,
-                                                                          gracefulShutdownSupport,
-                                                                          responseEncoder,
-                                                                          H1C, proxiedAddresses);
-        p.addLast(httpServerHandler);
+        p.addLast(new HttpServerHandler(configHolder,
+                gracefulShutdownSupport,
+                responseEncoder,
+                H1C, proxiedAddresses));
     }
 
     private Timer newKeepAliveTimer(SessionProtocol protocol) {
@@ -442,9 +441,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            final HttpServerHandler httpServerHandler = new HttpServerHandler(configHolder,
-                    gracefulShutdownSupport, null, H2, proxiedAddresses);
-            p.addLast(httpServerHandler);
+            p.addLast(new HttpServerHandler(configHolder,
+                    gracefulShutdownSupport, null, H2, proxiedAddresses));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
@@ -473,9 +471,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
-            final HttpServerHandler httpServerHandler = new HttpServerHandler(configHolder,
-                    gracefulShutdownSupport, writer, H1, proxiedAddresses);
-            p.addLast(httpServerHandler);
+            p.addLast(new HttpServerHandler(configHolder,
+                    gracefulShutdownSupport, writer, H1, proxiedAddresses));
         }
 
         @Override
