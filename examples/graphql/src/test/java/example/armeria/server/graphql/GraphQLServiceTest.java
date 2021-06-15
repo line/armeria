@@ -47,14 +47,14 @@ class GraphQLServiceTest {
             "{user(id: 2) {name}},human",
             "{user(id: 3) {name}},droid"
     })
-    void testUserDataFetch(String query, String expected) throws Exception {
+    void testUserDataFetch(String query, String expected) {
         final RequestHeaders headers = RequestHeaders.builder()
                                                      .path("/graphql")
                                                      .method(HttpMethod.POST)
                                                      .contentType(MediaType.GRAPHQL)
                                                      .build();
         final AggregatedHttpResponse response = client.execute(headers, query, Charsets.UTF_8)
-                                                      .aggregate().get();
+                                                      .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8()).node("data.user.name").isEqualTo(expected);

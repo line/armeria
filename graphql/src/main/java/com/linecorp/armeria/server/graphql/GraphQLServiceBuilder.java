@@ -53,8 +53,8 @@ public final class GraphQLServiceBuilder {
 
     private static final Logger logger = LoggerFactory.getLogger(GraphQLServiceBuilder.class);
 
-    private static final ImmutableList<String> DEFAULT_SCHEMA_FILE_NAMES = ImmutableList.of("schema.graphqls",
-                                                                                            "schema.graphql");
+    private static final List<String> DEFAULT_SCHEMA_FILE_NAMES = ImmutableList.of("schema.graphqls",
+                                                                                   "schema.graphql");
     private final ImmutableList.Builder<File> schemaFiles = ImmutableList.builder();
 
     private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators =

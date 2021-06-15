@@ -874,7 +874,7 @@ public final class MediaType {
     }
 
     /**
-     * Returns {@code true} when the subtype is {@link MediaType#JSON} or the end with {@code +json}.
+     * Returns {@code true} when the subtype is {@link MediaType#JSON} or ends with {@code +json}.
      * Otherwise {@code false}.
      *
      * <pre>{@code

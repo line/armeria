@@ -64,10 +64,10 @@ class GraphQLServiceBlockingTest {
     }
 
     @Test
-    void testBlocking() throws Exception {
+    void testBlocking() {
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
                                                          .get("/graphql?query={foo}")
-                                                         .aggregate().get();
+                                                         .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");

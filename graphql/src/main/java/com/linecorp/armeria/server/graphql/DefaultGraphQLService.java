@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 
 import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -48,6 +50,8 @@ import graphql.GraphqlErrorException;
 import graphql.com.google.common.collect.ImmutableMap;
 
 final class DefaultGraphQLService extends AbstractHttpService implements GraphQLService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DefaultGraphQLService.class);
 
     private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.newDefaultObjectMapper();
 
@@ -194,6 +198,8 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
     private static HttpResponse toHttpResponse(ExecutionResult executionResult) {
         // TODO: When WebSocket is implemented, it should be removed.
         if (executionResult.getData() instanceof Publisher) {
+            logger.warn("executionResult.getData() returns a {} that is not supported yet.",
+                        executionResult.getData().toString());
             final ExecutionResult error =
                     newExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
             return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));

@@ -71,7 +71,7 @@ class GraphQLServiceSubscriptionTest {
     }
 
     @Test
-    void testSubscription() throws Exception {
+    void testSubscription() {
         final RequestHeaders headers = RequestHeaders.builder()
                                                      .path("/graphql")
                                                      .method(HttpMethod.POST)
@@ -81,7 +81,7 @@ class GraphQLServiceSubscriptionTest {
                                                          .execute(headers,
                                                                   "subscription {hello}",
                                                                   Charsets.UTF_8)
-                                                         .aggregate().get();
+                                                         .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8())
