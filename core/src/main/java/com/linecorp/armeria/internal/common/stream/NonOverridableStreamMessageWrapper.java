@@ -27,7 +27,8 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public class NonOverridableStreamMessageWrapper<T, D extends StreamMessageDuplicator<T>> extends StreamMessageWrapper<T> {
+public class NonOverridableStreamMessageWrapper<T, D extends StreamMessageDuplicator<T>>
+        extends StreamMessageWrapper<T> {
 
     protected NonOverridableStreamMessageWrapper(StreamMessage<? extends T> delegate) {
         super(delegate);

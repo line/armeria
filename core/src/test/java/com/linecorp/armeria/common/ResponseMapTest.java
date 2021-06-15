@@ -40,14 +40,16 @@ class ResponseMapTest {
 
     @Test
     void mapData() {
-        final HttpResponse res = HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
+        final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.OK);
+        final HttpResponse res = HttpResponse.of(headers,
                                                  HttpData.ofUtf8("foo"),
                                                  HttpData.ofUtf8("bar"));
         final HttpResponse transformed = res.mapData(data -> HttpData.ofUtf8(data.toStringUtf8() + '\n'));
 
         final AggregatedHttpResponse aggregated = transformed.aggregate().join();
         assertThat(aggregated.contentUtf8()).isEqualTo("foo\nbar\n");
-        assertThat(aggregated.headers()).isEqualTo(res.aggregate().join().headers());
+        assertThat(aggregated.headers().toBuilder().removeAndThen(HttpHeaderNames.CONTENT_LENGTH).build())
+                .isEqualTo(headers);
     }
 
     @Test
