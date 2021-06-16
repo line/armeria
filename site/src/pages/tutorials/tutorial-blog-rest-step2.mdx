@@ -29,7 +29,7 @@ Let's define a `BlogPost` class containing the following information.
 ```java
 package example.armeria.server.blog;
 
-final class BlogPost {
+public final class BlogPost {
   private final int id;           // The post ID
   private final String title;     // The post title
   private final String content;   // The post content
@@ -65,7 +65,7 @@ BlogPost(int id, String title, String content, long createdAt, long modifiedAt) 
 Add the following block of code in the blog service.
 
 ```java
-final class BlogPost {
+public final class BlogPost {
   ...
 
   public int getId() { return id; }
