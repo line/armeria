@@ -164,6 +164,9 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
         return refreshBefore;
     }
 
+    /**
+     * An optional {@link Supplier} to load access token from a persistent storage asynchronously.
+     */
     @SuppressWarnings("unchecked")
     public final T loadTokenFunc(
             Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc) {
@@ -176,6 +179,9 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
         return loadTokenFunc;
     }
 
+    /**
+     * An optional {@link Function} to save newly issued access token in a persistent storage asynchronosly.
+     */
     @SuppressWarnings("unchecked")
     public final T saveTokenFunc(
             Function<? super GrantedOAuth2AccessToken, CompletableFuture<Void>> saveTokenFunc) {
@@ -186,34 +192,6 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     @Nullable
     public final Function<? super GrantedOAuth2AccessToken, CompletableFuture<Void>> saveTokenFunc() {
         return saveTokenFunc;
-    }
-
-    /**
-     * A {@link Supplier} to load Access Token from, to be able to restore the previous session. OPTIONAL.
-     */
-    @SuppressWarnings("unchecked")
-    public final T tokenPersistencySupplier(Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier) {
-        this.tokenSupplier = requireNonNull(tokenSupplier, "tokenSupplier");
-        return (T) this;
-    }
-
-    @Nullable
-    final Supplier<? extends GrantedOAuth2AccessToken> tokenPersistencySupplier() {
-        return tokenSupplier;
-    }
-
-    /**
-     * A {@link Consumer} to store Access Token to, to be able restore the previous session. OPTIONAL.
-     */
-    @SuppressWarnings("unchecked")
-    public final T tokenPersistencyConsumer(Consumer<? super GrantedOAuth2AccessToken> tokenConsumer) {
-        this.tokenConsumer = requireNonNull(tokenConsumer, "tokenConsumer");
-        return (T) this;
-    }
-
-    @Nullable
-    final Consumer<? super GrantedOAuth2AccessToken> tokenPersistencyConsumer() {
-        return tokenConsumer;
     }
 
     abstract AbstractAccessTokenRequest buildObtainRequest(
