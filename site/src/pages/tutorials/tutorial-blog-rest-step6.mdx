@@ -167,8 +167,7 @@ What if there is no such post to delete? We can check if the blog exists before 
   ```java filename=BlogService.java highlight=2
   @Delete("/blogs/:id")
   @ExceptionHandler(BadRequestExceptionHandler.class)
-  public void deleteBlogPost(@Param int id) {
-    ...
+  public void deleteBlogPost(@Param int id) { ... }
   ```
 
 ### Add blocking
