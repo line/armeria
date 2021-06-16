@@ -24,7 +24,6 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -214,8 +213,7 @@ class ContentPreviewerTest {
         }
     };
 
-    // TODO(ikhoon): Revert once CI builds pass
-    @RepeatedTest(10000)
+    @Test
     void testClientLog() throws Exception {
         final MyHttpClient client = new MyHttpClient("/example", 10);
         assertThat(client.get("/get").responseContentPreview()).isEqualTo("test");
