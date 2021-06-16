@@ -558,7 +558,7 @@ public interface HttpRequest extends Request, HttpMessage {
     default HttpRequest mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
         requireNonNull(function, "function");
         final StreamMessage<HttpObject> stream = map(obj -> {
-            if (obj instanceof HttpHeaders && !(obj instanceof RequestHeaders)) {
+            if (obj instanceof HttpHeaders) {
                 return function.apply((HttpHeaders) obj);
             }
             return obj;

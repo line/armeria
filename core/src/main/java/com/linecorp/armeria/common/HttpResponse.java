@@ -574,13 +574,40 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
-     * Transforms the {@link ResponseHeaders} emitted by {@link HttpResponse} by applying the specified
-     * {@link Function}.
+     * Transforms the
+     * <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#Information_responses">informational headers</a>
+     * emitted by {@link HttpResponse} by applying the specified {@link Function}.
+     */
+    default HttpResponse mapInformational(
+            Function<? super ResponseHeaders, ? extends ResponseHeaders> function) {
+        requireNonNull(function, "function");
+        final StreamMessage<HttpObject> stream = map(obj -> {
+            if (obj instanceof ResponseHeaders) {
+                final ResponseHeaders headers = (ResponseHeaders) obj;
+                if (headers.status().isInformational()) {
+                    return function.apply(headers);
+                }
+            }
+            return obj;
+        });
+        return of(stream);
+    }
+
+    /**
+     * Transforms the non-informational {@link ResponseHeaders} emitted by {@link HttpResponse} by applying
+     * the specified {@link Function}.
      */
     default HttpResponse mapHeaders(Function<? super ResponseHeaders, ? extends ResponseHeaders> function) {
         requireNonNull(function, "function");
-        final StreamMessage<HttpObject> stream =
-                map(obj -> obj instanceof ResponseHeaders ? function.apply((ResponseHeaders) obj) : obj);
+        final StreamMessage<HttpObject> stream = map(obj -> {
+            if (obj instanceof ResponseHeaders) {
+                final ResponseHeaders headers = (ResponseHeaders) obj;
+                if (!headers.status().isInformational()) {
+                    return function.apply(headers);
+                }
+            }
+            return obj;
+        });
         return of(stream);
     }
 

@@ -112,9 +112,6 @@ public final class CorsService extends SimpleDecoratingHttpService {
         }
 
         return unwrap().serve(ctx, req).mapHeaders(headers -> {
-            if (headers.status().isInformational()) {
-                return headers;
-            }
             final ResponseHeadersBuilder builder = headers.toBuilder();
             setCorsResponseHeaders(ctx, req, builder);
             return builder.build();

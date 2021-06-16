@@ -215,10 +215,8 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
 
                 // Record all the received headers as well.
                 ctx.setAttr(RECEIVED_INFORMATIONALS, new LinkedBlockingQueue<>());
-                return delegate.execute(ctx, req).mapHeaders(headers -> {
-                    if (headers.status().isInformational()) {
-                        ctx.attr(RECEIVED_INFORMATIONALS).add(headers);
-                    }
+                return delegate.execute(ctx, req).mapInformational(headers -> {
+                    ctx.attr(RECEIVED_INFORMATIONALS).add(headers);
                     return headers;
                 });
             });

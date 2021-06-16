@@ -80,10 +80,6 @@ public final class CookieClient extends SimpleDecoratingHttpClient {
             ctx.updateRequest(req);
         }
         return unwrap().execute(ctx, req).mapHeaders(headers -> {
-            if (headers.status().isInformational()) {
-                return headers;
-            }
-
             final List<String> setCookieHeaders = headers.getAll(HttpHeaderNames.SET_COOKIE);
             if (!setCookieHeaders.isEmpty()) {
                 cookieJar.set(uri, Cookie.fromSetCookieHeaders(setCookieHeaders));
