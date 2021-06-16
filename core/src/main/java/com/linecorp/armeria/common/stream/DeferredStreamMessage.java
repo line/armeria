@@ -289,7 +289,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     private void safeOnSubscribeToUpstream() {
         final StreamMessage<T> upstream = this.upstream;
         final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
-        if (upstream == null || downstreamSubscription == null) {
+        if (upstream == null || downstreamSubscription == null || downstreamSubscription == NOOP_SUBSCRIPTION) {
             return;
         }
 
