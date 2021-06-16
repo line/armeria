@@ -152,7 +152,7 @@ public HttpResponse getBlogPost(@Param int id)
 }
 ```
 
-We've already implemented returning multiple blog posts in the previous step. Here, annotate the method `getBlogPosts()` with <type://@ProducesJson>. This returns the response as a JSON object for you.
+We've already implemented returning multiple blog posts in the previous step. Here, annotate the method `getBlogPosts()` with <type://@ProducesJson>. This converts a list of `BlogPost` objects into a JSON response.
 
 ```java filename=BlogService.java highlight=2
 @Get("/blogs")
