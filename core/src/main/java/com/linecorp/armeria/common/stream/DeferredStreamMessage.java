@@ -73,6 +73,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private static final CompletableFuture<List<?>> NO_COLLECTING_FUTURE =
             CompletableFuture.completedFuture(null);
+    private static final SubscriptionImpl NOOP_SUBSCRIPTION = noopSubscription();
 
     @Nullable
     @SuppressWarnings("unused") // Updated only via upstreamUpdater
@@ -338,7 +339,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        if (downstreamSubscription != null) {
+        if (!downstreamSubscriptionUpdater.compareAndSet(this, null, NOOP_SUBSCRIPTION)) {
             final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();
             collectingFuture.completeExceptionally(
                     new IllegalStateException("subscribed by other subscriber already"));
@@ -361,6 +362,13 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             assert upstream0 != null;
             return upstream0.collect(executor, options);
         }
+    }
+
+    private static SubscriptionImpl noopSubscription() {
+        final DefaultStreamMessage<?> streamMessage = new DefaultStreamMessage<>();
+        streamMessage.close();
+        return new SubscriptionImpl(streamMessage, NoopSubscriber.get(), ImmediateEventExecutor.INSTANCE,
+                                    EMPTY_OPTIONS, null);
     }
 
     private final class ForwardingSubscriber implements Subscriber<T> {
