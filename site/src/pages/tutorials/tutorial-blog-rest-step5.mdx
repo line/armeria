@@ -138,6 +138,7 @@ import com.linecorp.armeria.common.HttpStatus;
 
 public final class BlogService {
   ...
+  @Put("/blogs/:id")
   public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost){
     ...
     if (oldBlogPost == null) {
