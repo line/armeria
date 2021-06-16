@@ -50,10 +50,12 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
                     AbstractOAuth2AuthorizationGrant.class, CompletableFuture.class, "tokenFuture");
 
     private final RefreshAccessTokenRequest refreshRequest;
+
     private final Duration refreshBefore;
 
     @Nullable
     private final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc;
+
     @Nullable
     private final Function<? super GrantedOAuth2AccessToken, CompletableFuture<Void>> saveTokenFunc;
 
