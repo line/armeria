@@ -178,8 +178,7 @@ With real services, accessing and operating on a database takes time. We need to
 @Blocking
 @Delete("/blogs/:id")
 @ExceptionHandler(BadRequestExceptionHandler.class)
-public void deleteBlogPost(@Param int id) {
-  ...
+public void deleteBlogPost(@Param int id) { ... }
 ```
 
 ## 4. Return response
