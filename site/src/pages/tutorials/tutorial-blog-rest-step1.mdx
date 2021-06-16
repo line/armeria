@@ -23,17 +23,13 @@ Just check that you've prepared the [prerequisites](/tutorials/tutorial-blog-res
 
 Let's create a server instance using Armeria's <type://ServerBuilder>:
 
-1. Create a main class and add import statements. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
+1. Create a main class. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
 
   ```java filename=Main.java
   package example.armeria.server.blog;
 
   import org.slf4j.Logger;
   import org.slf4j.LoggerFactory;
-
-  import com.linecorp.armeria.common.HttpResponse;
-  import com.linecorp.armeria.server.Server;
-  import com.linecorp.armeria.server.ServerBuilder;
 
   public final class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
@@ -42,13 +38,20 @@ Let's create a server instance using Armeria's <type://ServerBuilder>:
 
 2. In the `Main` class, add the method, `newServer()`. Since a server instance requires at least one service to run with, let's add a dummy service returning `"Hello, Armeria!"` for now.
 
-  ```java filename=Main.java highlight=4
-  static Server newServer(int port) {
-    ServerBuilder sb = Server.builder();
-    return sb.http(port)
-             .service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!"))
-             .build();
-  }
+  ```java filename=Main.java highlight=10
+  import com.linecorp.armeria.common.HttpResponse;
+  import com.linecorp.armeria.server.Server;
+  import com.linecorp.armeria.server.ServerBuilder;
+
+  public final class Main {
+    ...
+    static Server newServer(int port) {
+      ServerBuilder sb = Server.builder();
+      return sb.http(port)
+              .service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!"))
+              .build();
+    }
+    ...
   ```
 
 Later on, when we build our blog service, we'll come back to this part of the code to [add an actual service](/tutorials/tutorial-blog-rest-step7).
