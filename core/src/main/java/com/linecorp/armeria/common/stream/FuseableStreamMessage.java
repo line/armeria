@@ -29,6 +29,8 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
+
 import io.netty.util.concurrent.EventExecutor;
 
 final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
@@ -53,6 +55,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(source, "source");
         requireNonNull(function, "function");
 
+        source = peel(source);
         if (source instanceof FuseableStreamMessage) {
             // The second type parameter of FuseableStreamMessage is bound to StreamMessage.
             // (e.g., FuseableStreamMessage<T, U> is subtype of StreamMessage<U>.)
@@ -66,6 +69,19 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             this.source = (StreamMessage<Object>) source;
             this.function = (MapperFunction<Object, U>) function;
         }
+    }
+
+    private StreamMessage<? extends T> peel(StreamMessage<? extends T> source) {
+        if (!(source instanceof NonOverridableStreamMessageWrapper)) {
+            return source;
+        }
+
+        do {
+            //noinspection unchecked
+            source = ((NonOverridableStreamMessageWrapper<? extends T, ?>) source).delegate();
+        } while (source instanceof NonOverridableStreamMessageWrapper);
+
+        return source;
     }
 
     @VisibleForTesting

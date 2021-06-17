@@ -16,15 +16,13 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.List;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
 
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.module.kotlin.KotlinModule;
-import com.google.common.collect.ImmutableList;
+final class StreamMessageBasedHttpResponse
+        extends NonOverridableStreamMessageWrapper<HttpObject, HttpResponseDuplicator> implements HttpResponse {
 
-public final class CustomJacksonModuleProvider implements JacksonModuleProvider {
-    @Override
-    public List<Module> modules() {
-        return ImmutableList.of(new KotlinModule());
+    StreamMessageBasedHttpResponse(StreamMessage<? extends HttpObject> delegate) {
+        super(delegate);
     }
 }
