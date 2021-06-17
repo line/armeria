@@ -64,7 +64,6 @@ public class DefaultSplitHttpResponse implements StreamMessage<HttpData>, SplitH
 
     private static final ResponseHeaders HEADERS_WITH_UNKNOWN_STATUS = ResponseHeaders.of(HttpStatus.UNKNOWN);
     private static final HeadersFuture<HttpHeaders> EMPTY_TRAILERS;
-    private static final SubscriptionOption[] EMPTY_OPTIONS = {};
 
     static {
         EMPTY_TRAILERS = new HeadersFuture<>();

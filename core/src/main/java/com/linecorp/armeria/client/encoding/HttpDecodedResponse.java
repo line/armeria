@@ -41,7 +41,6 @@ import io.netty.buffer.ByteBufAllocator;
  */
 final class HttpDecodedResponse extends FilteredHttpResponse {
 
-    private final HttpResponse delegate;
     private final Map<String, StreamDecoderFactory> availableDecoders;
     private final ByteBufAllocator alloc;
     private final boolean strictContentEncoding;
@@ -54,7 +53,6 @@ final class HttpDecodedResponse extends FilteredHttpResponse {
     HttpDecodedResponse(HttpResponse delegate, Map<String, StreamDecoderFactory> availableDecoders,
                         ByteBufAllocator alloc, boolean strictContentEncoding) {
         super(delegate, true);
-        this.delegate = delegate;
         this.availableDecoders = availableDecoders;
         this.alloc = alloc;
         this.strictContentEncoding = strictContentEncoding;

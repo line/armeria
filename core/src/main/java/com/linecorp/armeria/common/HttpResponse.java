@@ -47,7 +47,6 @@ import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
@@ -486,10 +485,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * the trailers of the response are received fully.
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
-        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
-        final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
-        subscribe(aggregator, executor);
-        return future;
+        return HttpMessageAggregator.aggregateResponse(this, executor, null);
     }
 
     /**
@@ -515,10 +511,7 @@ public interface HttpResponse extends Response, HttpMessage {
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
-        final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
-        return future;
+        return HttpMessageAggregator.aggregateResponse(this, executor, alloc);
     }
 
     @Override

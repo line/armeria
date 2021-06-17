@@ -50,7 +50,7 @@ jmh {
     }
 
     if (rootProject.hasProperty('jmh.profilers')) {
-        profilers = String.valueOf(rootProject.findProperty('jmh.profilers')).split(',')
+        profilers = String.valueOf(rootProject.findProperty('jmh.profilers')).split(',').toList()
     }
 
     if (rootProject.hasProperty('jmh.threads')) {
