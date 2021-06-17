@@ -17,7 +17,6 @@
 package com.linecorp.armeria.spring.actuate;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.acceptHeadersResolver;
 
 import java.io.Closeable;
 import java.io.EOFException;
@@ -38,6 +37,8 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.endpoint.InvocationContext;
+import org.springframework.boot.actuate.endpoint.OperationArgumentResolver;
+import org.springframework.boot.actuate.endpoint.ProducibleOperationArgumentResolver;
 import org.springframework.boot.actuate.endpoint.SecurityContext;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
@@ -53,6 +54,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -183,6 +185,10 @@ final class WebOperationService implements HttpService {
         } else {
             return new InvocationContext(SecurityContext.NONE, arguments);
         }
+    }
+
+    private static OperationArgumentResolver acceptHeadersResolver(HttpHeaders headers) {
+        return new ProducibleOperationArgumentResolver(() -> headers.getAll(HttpHeaderNames.ACCEPT));
     }
 
     private HttpResponse handleResult(ServiceRequestContext ctx,
