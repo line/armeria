@@ -201,10 +201,13 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                             boolean withPooledObjects, boolean directExecution) {
         try {
             collectingFuture.complete(drainAll(withPooledObjects, true));
-            // whenComplete() should be completed after executing the callbacks of collect().
             if (directExecution) {
+                // The collectingFuture is not returned yet. We can guarantee that whenComplete() will be
+                // completed after executing the callbacks of collect() by rescheduling it.
                 executor.execute(() -> whenComplete().complete(null));
             } else {
+                // We don't know whether the collectingFuture is returned or not at the moment. Just complete
+                // whenComplete() immediately.
                 whenComplete().complete(null);
             }
         } catch (Throwable throwable) {

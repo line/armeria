@@ -157,9 +157,9 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
             }
 
             if (executor.inEventLoop()) {
-                collect0(collectingFuture, executor, options);
+                collect(collectingFuture, executor, options, true);
             } else {
-                executor.execute(() -> collect0(collectingFuture, executor, options));
+                executor.execute(() -> collect(collectingFuture, executor, options, false));
             }
         } else {
             collectingFuture.completeExceptionally(
@@ -168,12 +168,19 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         return collectingFuture;
     }
 
-    private void collect0(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
-                          SubscriptionOption... options) {
+    private void collect(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
+                         SubscriptionOption[] options, boolean directExecution) {
         final boolean withPooledObjects = containsWithPooledObjects(options);
         collectingFuture.complete(drainAll(withPooledObjects));
-        // whenComplete() should be completed after executing the callbacks of collect().
-        executor.execute(() -> whenComplete().complete(null));
+        if (directExecution) {
+            // The collectingFuture is not returned yet. We can guarantee that whenComplete() will be completed
+            // after executing the callbacks of collect() by rescheduling it.
+            executor.execute(() -> whenComplete().complete(null));
+        } else {
+            // We don't know whether the collectingFuture is returned or not at the moment. Just complete
+            // whenComplete() immediately.
+            whenComplete().complete(null);
+        }
     }
 
     void onNext(T item) {
