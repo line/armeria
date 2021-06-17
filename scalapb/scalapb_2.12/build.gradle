@@ -6,7 +6,7 @@ dependencies {
     implementation project(':grpc')
     implementation('org.scala-lang:scala-library') {
         version {
-            strictly '2.12.13'
+            strictly '2.12.14'
         }
     }
 
