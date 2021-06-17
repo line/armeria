@@ -79,7 +79,7 @@ public final class ClientUtil {
                         fail(ctx, t);
                         return errorResponseFactory.apply(ctx, t);
                     } finally {
-                        ctx.whenInitialized(success0);
+                        ctx.finishInitialization(success0);
                     }
                 }));
             }
@@ -88,7 +88,7 @@ public final class ClientUtil {
             return errorResponseFactory.apply(ctx, cause);
         } finally {
             if (initialized) {
-                ctx.whenInitialized(success);
+                ctx.finishInitialization(success);
             }
         }
     }

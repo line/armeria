@@ -313,7 +313,7 @@ public final class DefaultClientRequestContext
     /**
      * Completes the {@link #whenInitialized()} with the specified value.
      */
-    public void whenInitialized(boolean success) {
+    public void finishInitialization(boolean success) {
         final CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
         if (whenInitialized != null) {
             whenInitialized.complete(success);
