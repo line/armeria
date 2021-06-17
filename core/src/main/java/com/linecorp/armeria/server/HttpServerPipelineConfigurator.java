@@ -196,9 +196,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
         p.addLast(new HttpServerHandler(configHolder,
-                gracefulShutdownSupport,
-                responseEncoder,
-                H1C, proxiedAddresses));
+                                        gracefulShutdownSupport,
+                                        responseEncoder,
+                                        H1C, proxiedAddresses));
     }
 
     private Timer newKeepAliveTimer(SessionProtocol protocol) {
@@ -442,7 +442,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
             p.addLast(new HttpServerHandler(configHolder,
-                    gracefulShutdownSupport, null, H2, proxiedAddresses));
+                                            gracefulShutdownSupport,
+                                            null, H2, proxiedAddresses));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
@@ -472,7 +473,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.http1MaxChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
             p.addLast(new HttpServerHandler(configHolder,
-                    gracefulShutdownSupport, writer, H1, proxiedAddresses));
+                                            gracefulShutdownSupport,
+                                            writer, H1, proxiedAddresses));
         }
 
         @Override
