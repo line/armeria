@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
-class TestReconfigurableServer {
+class ReconfigurableServerTest {
 
     @Test
     void shouldBeAbleToReconfigureServer() throws Exception {
@@ -53,8 +53,6 @@ class TestReconfigurableServer {
         assertThat(response11.status()).isEqualTo(HttpStatus.OK);
         assertThat(response11.contentUtf8()).isEqualTo("Hello, WORLD");
 
-        Thread.sleep(1000); // Some time goes by now want to reconfigure new server
-        System.out.println("Configuring new server");
         server.reconfigure(serverBuilder -> {
             // Replace the entire routes with the following two services.
             serverBuilder.service("/test2", (ctx, req) -> HttpResponse.of("Hello, world!"));
@@ -72,7 +70,7 @@ class TestReconfigurableServer {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("Hello, world!");
 
-        //Open new connection to check if the newly reconfigured server is now operational
+        // Open new connection to check if the newly reconfigured server is now operational
         // and old service endpoints are no longer visible.
         final WebClient newClient = WebClient.of("http://localhost:" + server.activeLocalPort());
         final AggregatedHttpResponse rcsResponse = newClient.get("/test2/world").aggregate().get();
@@ -149,8 +147,6 @@ class TestReconfigurableServer {
         assertThat(response11.status()).isEqualTo(HttpStatus.OK);
         assertThat(response11.contentUtf8()).isEqualTo("Hello, WORLD");
 
-        Thread.sleep(1000); // Some time goes by now want to reconfigure new server
-        System.out.println("Configuring new server");
         server.reconfigure(serverBuilder -> {
             // Need to reconfigure ssl context.
             serverBuilder.tlsSelfSigned();
@@ -170,7 +166,7 @@ class TestReconfigurableServer {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("Hello, world!");
 
-        //Open new connection to check if the newly reconfigured server is now operational
+        // Open new connection to check if the newly reconfigured server is now operational
         // and old service endpoints are no longer visible.
         final WebClient newClient = WebClient.builder("https://localhost:" + server.activeLocalPort())
                 .factory(ClientFactory.insecure())
