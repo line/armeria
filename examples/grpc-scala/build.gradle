@@ -20,7 +20,7 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.grpc.scala.Main'
+    mainClass.set('example.armeria.grpc.scala.Main')
 }
 
 compileScala.targetCompatibility = 1.8

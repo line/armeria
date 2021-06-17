@@ -111,6 +111,11 @@ configure(projectsWithFlags('java')) {
                 if (processResourcesTask != null) {
                     processResourcesTask.dependsOn(task)
                 }
+                if (sourceSet.name == 'main') {
+                    // A workaround for 'sourcesJar' uses this output of task ':generateProto' without
+                    // declaring an explicit or implicit dependency.
+                    tasks.sourcesJar.dependsOn(task)
+                }
                 project.ext.getGenerateSourcesTask().dependsOn(task)
             }
         }

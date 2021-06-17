@@ -12,5 +12,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.proxy.Main'
+    mainClass.set('example.armeria.proxy.Main')
 }

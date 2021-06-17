@@ -1,12 +1,11 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 import java.util.concurrent.atomic.AtomicBoolean
 
 plugins {
     id 'com.google.osdetector' version '1.6.2' apply false
     // If you want to change `org.jetbrains.kotlin.jvm` version,
     // you also need to change `org.jetbrains.kotlin:kotlin-allopen` version in `dependencies.yml`.
-    id 'org.jetbrains.kotlin.jvm' version '1.5.0' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.5.10' apply false
+    id 'org.jlleitschuh.gradle.ktlint' version '10.1.0' apply false
 
     id 'net.ltgt.errorprone' version '1.2.1' apply false
 }
@@ -162,11 +161,13 @@ configure(projectsWithFlags('java')) {
         options.compilerArgs += ['--release', '8']
     }
 
-    tasks.withType(KotlinCompile) {
-        kotlinOptions {
-            jvmTarget = "1.8"
-            freeCompilerArgs = ["-Xjsr305=strict"]
-        }
+    // Configure default duplicates strategy for such as:
+    // - c.l.armeria.versions.properties
+    // - thrift/cassandra.json
+    // - and so on
+    tasks.sourcesJar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    tasks.withType(Copy) {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     }
 }
 

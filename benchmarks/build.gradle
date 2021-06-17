@@ -22,6 +22,8 @@ dependencies {
     implementation 'org.awaitility:awaitility'
 
     jmh "pl.project13.scala:sbt-jmh-extras:${managedVersions['pl.project13.scala:sbt-jmh-extras']}"
+
+    jmh project(':testing-internal')
 }
 
 jmh {

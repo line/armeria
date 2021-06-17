@@ -17,5 +17,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.grpc.reactor.Main'
+    mainClass.set('example.armeria.grpc.reactor.Main')
 }

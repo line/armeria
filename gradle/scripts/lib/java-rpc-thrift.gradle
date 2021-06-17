@@ -21,6 +21,9 @@ configure(projectsWithFlags('java')) {
                 group: 'Build',
                 description: "Compiles the ${sourceSet.name} .thrift files."
         ])
+        if (scope == 'main') {
+            project.sourcesJar.dependsOn(task)
+        }
 
         // Use afterEvaluate to give subprojects a chance to override the properties.
         project.afterEvaluate {
