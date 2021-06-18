@@ -63,8 +63,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
     private static final Logger logger = LoggerFactory.getLogger(RetryingClient.class);
 
-    private static final Runnable noOp = () -> {};
-
     /**
      * Returns a new {@link RetryingClientBuilder} with the specified {@link RetryConfig}.
      * The {@link RetryConfig} object encapsulates {@link RetryRule} or {@link RetryRuleWithContent},
@@ -303,17 +301,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final RetryConfig<HttpResponse> config = mapping().get(ctx, duplicateReq);
         if (config.requiresResponseTrailers()) {
             response.aggregate().handle((aggregated, cause) -> {
-                final HttpResponse response0;
-                final AggregatedHttpResponse aggregatedRes;
-                if (cause != null) {
-                    response0 = HttpResponse.ofFailure(cause);
-                    aggregatedRes = null;
-                } else {
-                    response0 = null;
-                    aggregatedRes = aggregated;
-                }
+                final HttpResponse response0 = cause != null ? HttpResponse.ofFailure(cause) : null;
+                // One of response0 of response0 is not null.
                 handleResponse(config, ctx, rootReqDuplicator, future, returnedResWhenComplete, derivedCtx,
-                               response0, aggregatedRes);
+                               response0, aggregated);
                 return null;
             });
         } else {
@@ -384,12 +375,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     }
                     assert retryRule != null;
 
-                    final HttpResponse response0;
-                    if (aggregatedRes != null) {
-                        response0 = aggregatedRes.toHttpResponse();
-                    } else {
-                        response0 = response;
-                    }
+                    final HttpResponse response0 = aggregatedRes != null ? aggregatedRes.toHttpResponse()
+                                                                         : response;
                     assert response0 != null;
                     final CompletionStage<RetryDecision> f = retryRule.shouldRetry(derivedCtx, responseCause);
                     f.handle(handleRetryDecision(ctx, derivedCtx, rootReqDuplicator,
@@ -455,8 +442,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         assert originalReq != null;
         final String originalPath = originalReq.path();
         final String newPath = newHeaders.path();
-        if (newPath.equals(originalPath) || !addPath(ctx, newPath)) {
-            final Set<String> paths = paths(ctx);
+        if (newPath.equals(originalPath) || !addRedirectPath(ctx, newPath)) {
+            final Set<String> paths = redirectPaths(ctx);
             assert paths != null;
             final RedirectLoopsException exception = new RedirectLoopsException(originalPath, paths);
             abortResponse(originalRes, derivedCtx, exception);

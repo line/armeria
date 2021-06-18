@@ -282,10 +282,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     }
 
     /**
-     * Adds the path that the request is sent to. The added path is used to check
+     * Adds the redirect path that the request is sent to. The path is used to check
      * <a href="https://en.wikipedia.org/wiki/URL_redirection#Redirect_loops">redirect loops</a>.
      */
-    protected boolean addPath(ClientRequestContext ctx, String path) {
+    protected boolean addRedirectPath(ClientRequestContext ctx, String path) {
         //noinspection unchecked
         final State<I> state = (State<I>) ctx.attr(STATE);
         if (state == null) {
@@ -296,10 +296,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     }
 
     /**
-     * Returns the set of paths that are added vid {@link #addPath(ClientRequestContext, String)}.
+     * Returns the set of paths that are added via {@link #addRedirectPath(ClientRequestContext, String)}.
      */
     @Nullable
-    protected Set<String> paths(ClientRequestContext ctx) {
+    protected Set<String> redirectPaths(ClientRequestContext ctx) {
         //noinspection unchecked
         final State<I> state = (State<I>) ctx.attr(STATE);
         if (state == null) {
