@@ -32,7 +32,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.util.Exceptions;
-
 import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
 
 import io.netty.util.concurrent.EventExecutor;
