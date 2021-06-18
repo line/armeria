@@ -389,6 +389,18 @@ public final class HttpHeaderNames {
     public static final AsciiString CONTENT_SECURITY_POLICY_REPORT_ONLY =
             create("Content-Security-Policy-Report-Only");
     /**
+     * The HTTP/MIME {@code "Content-ID"} header field name.
+     */
+    public static final AsciiString CONTENT_ID = create("Content-ID");
+    /**
+     * The HTTP/MIME {@code "Content-Transfer-Encoding"} header field name.
+     */
+    public static final AsciiString CONTENT_TRANSFER_ENCODING = create("Content-Transfer-Encoding");
+    /**
+     * The HTTP/MIME {@code "Content-Description"} header field name.
+     */
+    public static final AsciiString CONTENT_DESCRIPTION = create("Content-Description");
+    /**
      * The HTTP {@code "ETag"} header field name.
      */
     public static final AsciiString ETAG = create("ETag");

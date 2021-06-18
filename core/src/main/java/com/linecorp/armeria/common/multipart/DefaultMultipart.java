@@ -37,8 +37,11 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -50,6 +53,7 @@ import io.netty.util.concurrent.EventExecutor;
 final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
 
     private static final BaseEncoding base64 = BaseEncoding.base64().omitPadding();
+    private static final String BOUNDARY_PARAMETER = "boundary";
 
     /**
      * Returns a random boundary used for encoding multipart messages.
@@ -128,30 +132,36 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
 
     @Override
     public HttpRequest toHttpRequest(RequestHeaders requestHeaders) {
-        requireNonNull(requestHeaders, "requestHeaders");
-        MediaType contentType = requestHeaders.contentType();
-        if (contentType != null) {
-            checkArgument("multipart".equals(contentType.type()),
-                          "Content-Type: %s (expected: multipart content type)", contentType);
-            contentType = contentType.withParameter("boundary", boundary());
-        } else {
-            contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary());
-        }
-
-        final MediaType finalMediaType = contentType;
-        final RequestHeaders updated = requestHeaders.withMutations(builder -> {
-            builder.addObject(HttpHeaderNames.CONTENT_TYPE, finalMediaType);
-        });
-        return HttpRequest.of(updated, this);
+        final RequestHeaders requestHeadersWithBoundary = injectBoundary(boundary, requestHeaders);
+        return HttpRequest.of(requestHeadersWithBoundary, this);
     }
 
     @Override
     public HttpRequest toHttpRequest(String path) {
         requireNonNull(path, "path");
-        final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary());
-        return HttpRequest.of(
-                RequestHeaders.of(HttpMethod.POST, path,
-                                  HttpHeaderNames.CONTENT_TYPE, contentType.toString()), this);
+        final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter(BOUNDARY_PARAMETER,
+                                                                                  boundary());
+        final RequestHeaders requestHeaders = RequestHeaders.builder(HttpMethod.POST, path)
+                                                            .contentType(contentType)
+                                                            .build();
+        return HttpRequest.of(requestHeaders, this);
+    }
+
+    @Override
+    public HttpResponse toHttpResponse(ResponseHeaders responseHeaders) {
+        final ResponseHeaders responseHeadersWithBoundary = injectBoundary(boundary, responseHeaders);
+        return HttpResponse.of(responseHeadersWithBoundary, this);
+    }
+
+    @Override
+    public HttpResponse toHttpResponse(HttpStatus status) {
+        requireNonNull(status, "status");
+        final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter(BOUNDARY_PARAMETER,
+                                                                                  boundary());
+        final ResponseHeaders responseHeaders = ResponseHeaders.builder(status)
+                                                               .contentType(contentType)
+                                                               .build();
+        return HttpResponse.of(responseHeaders, this);
     }
 
     @Override
@@ -195,6 +205,25 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
                           .add("boundary", boundary)
                           .add("parts", parts)
                           .toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T extends HttpHeaders> T injectBoundary(String boundary, T headers) {
+        requireNonNull(headers, "headers");
+        @Nullable
+        MediaType contentType = headers.contentType();
+        if (contentType != null) {
+            checkArgument(Multipart.isMultipart(contentType),
+                          "Content-Type: %s (expected: multipart content type)", contentType);
+            contentType = contentType.withParameter(BOUNDARY_PARAMETER, boundary);
+        } else {
+            contentType = MediaType.MULTIPART_FORM_DATA
+                    .withParameter(BOUNDARY_PARAMETER, boundary);
+        }
+        final MediaType finalMediaType = contentType;
+        return (T) headers.withMutations(builder -> {
+            builder.setObject(HttpHeaderNames.CONTENT_TYPE, finalMediaType);
+        });
     }
 
     private static final class BodyPartAggregator implements Subscriber<BodyPart> {

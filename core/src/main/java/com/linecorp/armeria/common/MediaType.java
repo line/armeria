@@ -121,6 +121,7 @@ public final class MediaType {
     private static final String IMAGE_TYPE = "image";
     private static final String TEXT_TYPE = "text";
     private static final String VIDEO_TYPE = "video";
+    private static final String MULTIPART_TYPE = "multipart";
 
     private static final String WILDCARD = "*";
     private static final String Q = "q";
@@ -161,6 +162,7 @@ public final class MediaType {
     public static final MediaType ANY_AUDIO_TYPE = createConstant(AUDIO_TYPE, WILDCARD);
     public static final MediaType ANY_VIDEO_TYPE = createConstant(VIDEO_TYPE, WILDCARD);
     public static final MediaType ANY_APPLICATION_TYPE = createConstant(APPLICATION_TYPE, WILDCARD);
+    public static final MediaType ANY_MULTIPART_TYPE = createConstant(MULTIPART_TYPE, WILDCARD);
 
     /* text types */
     public static final MediaType CACHE_MANIFEST_UTF_8 =
@@ -391,8 +393,59 @@ public final class MediaType {
 
     /**
      * A {@link MediaType} constant representing {@code multipart/form-data} media type.
+     * As described in <a href="http://www.ietf.org/rfc/rfc1867.txt">RFC 1867:
+     * Form-based File Upload in HTML</a>
      */
-    public static final MediaType MULTIPART_FORM_DATA = createConstant("multipart", "form-data");
+    public static final MediaType MULTIPART_FORM_DATA = createConstant(MULTIPART_TYPE, "form-data");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/related} media type.
+     * As described in <a href="http://www.ietf.org/rfc/rfc2112.txt">RFC 2112:
+     * The MIME Multipart/Related Content-type</a>
+     */
+    public static final MediaType MULTIPART_RELATED = createConstant(MULTIPART_TYPE, "related");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/mixed} media type.
+     * As described in <a href="http://www.ietf.org/rfc/rfc1521.txt">RFC 1521:
+     * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
+     */
+    public static final MediaType MULTIPART_MIXED = createConstant(MULTIPART_TYPE, "mixed");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/alternative} media type.
+     * As described in <a href="http://www.ietf.org/rfc/rfc1521.txt">RFC 1521:
+     * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
+     */
+    public static final MediaType MULTIPART_ALTERNATIVE = createConstant(MULTIPART_TYPE, "alternative");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/parallel} media type.
+     * As described in <a href="http://www.ietf.org/rfc/rfc1521.txt">RFC 1521:
+     * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
+     */
+    public static final MediaType MULTIPART_PARALLEL = createConstant(MULTIPART_TYPE, "parallel");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/digest} media type.
+     * As described in <a href="http://www.ietf.org/rfc/rfc1521.txt">RFC 1521:
+     * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
+     */
+    public static final MediaType MULTIPART_DIGEST = createConstant(MULTIPART_TYPE, "digest");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/signed} media type.
+     * As described in <a href="http://www.ietf.org/rfc/rfc1847.txt">RFC 1847:
+     * Security Multiparts for MIME: Multipart/Signed and Multipart/Encrypted</a>
+     */
+    public static final MediaType MULTIPART_SIGNED = createConstant(MULTIPART_TYPE, "signed");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/encrypted} media type.
+     * As described in <a href="http://www.ietf.org/rfc/rfc1847.txt">RFC 1847:
+     * Security Multiparts for MIME: Multipart/Signed and Multipart/Encrypted</a>
+     */
+    public static final MediaType MULTIPART_ENCRYPTED = createConstant(MULTIPART_TYPE, "encrypted");
 
     /**
      * As described in <a href="https://www.rsa.com/rsalabs/node.asp?id=2138">PKCS #12: Personal
