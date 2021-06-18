@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -28,6 +29,10 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -53,6 +58,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(source, "source");
         requireNonNull(function, "function");
 
+        source = peel(source);
         if (source instanceof FuseableStreamMessage) {
             // The second type parameter of FuseableStreamMessage is bound to StreamMessage.
             // (e.g., FuseableStreamMessage<T, U> is subtype of StreamMessage<U>.)
@@ -66,6 +72,19 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             this.source = (StreamMessage<Object>) source;
             this.function = (MapperFunction<Object, U>) function;
         }
+    }
+
+    private StreamMessage<? extends T> peel(StreamMessage<? extends T> source) {
+        if (!(source instanceof NonOverridableStreamMessageWrapper)) {
+            return source;
+        }
+
+        do {
+            //noinspection unchecked
+            source = ((NonOverridableStreamMessageWrapper<? extends T, ?>) source).delegate();
+        } while (source instanceof NonOverridableStreamMessageWrapper);
+
+        return source;
     }
 
     @VisibleForTesting
@@ -86,6 +105,44 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
     @Override
     public long demand() {
         return source.demand();
+    }
+
+    @Override
+    public CompletableFuture<List<U>> collect(EventExecutor executor, SubscriptionOption... options) {
+        return source.collect(executor, options).thenApply(objs -> {
+            final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(objs.size());
+            Throwable cause = null;
+            for (Object obj : objs) {
+                if (cause != null) {
+                    // An error was raised. The remaing objects should be released.
+                    StreamMessageUtil.closeOrAbort(obj, cause);
+                    continue;
+                }
+
+                try {
+                    final U result = function.apply(obj);
+                    if (result != null) {
+                        builder.add(result);
+                    } else {
+                        StreamMessageUtil.closeOrAbort(obj);
+                    }
+                } catch (Throwable ex) {
+                    StreamMessageUtil.closeOrAbort(obj);
+                    cause = ex;
+                }
+            }
+
+            final List<U> elements = builder.build();
+            if (cause != null) {
+                // An error was raised. The transformed objects should be released.
+                for (U element: elements) {
+                    StreamMessageUtil.closeOrAbort(element, cause);
+                }
+                return Exceptions.throwUnsafely(cause);
+            } else {
+                return elements;
+            }
+        });
     }
 
     @Override

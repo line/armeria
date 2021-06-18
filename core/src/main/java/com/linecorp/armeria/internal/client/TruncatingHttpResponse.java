@@ -50,10 +50,10 @@ public final class TruncatingHttpResponse extends FilteredHttpResponse {
 
     @Override
     protected HttpObject filter(HttpObject obj) {
-        if (obj instanceof HttpData) {
+        if (!overflow && obj instanceof HttpData) {
             final int dataLength = ((HttpData) obj).length();
             contentLength += dataLength;
-            if (contentLength > maxContentLength && !overflow) {
+            if (contentLength > maxContentLength) {
                 overflow = true;
                 assert subscriber != null;
                 subscriber.onComplete();
