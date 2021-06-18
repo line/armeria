@@ -607,7 +607,7 @@ org.jboss.logging:
   jboss-logging:
     version: '3.4.2.Final'
     javadocs:
-    - https://javadoc.io/doc/org.jboss.logging/jboss-logging/3.4.1.Final/
+    - https://javadoc.io/doc/org.jboss.logging/jboss-logging/3.4.2.Final/
   jboss-logging-annotations:
     version: '2.2.1.Final'
     javadocs:
