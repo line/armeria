@@ -27,6 +27,11 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+/**
+ * Ensures that basic server/client functionality works correctly
+ * even if {@code netty-transport-native-epoll} or {@code netty-incubator-transport-native-io_uring}
+ * dependencies are excluded.
+ */
 public class NioServerTest {
 
     @RegisterExtension

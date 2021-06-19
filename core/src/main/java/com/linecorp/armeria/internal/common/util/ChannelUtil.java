@@ -181,7 +181,7 @@ public final class ChannelUtil {
             Map<ChannelOption<?>, Object> channelOptions,
             long idleTimeoutMillis, long pingIntervalMillis) {
         return applyDefaultChannelOptions(
-                Flags.useDefaultSocketChannelOptions(), Flags.transportType(), channelOptions,
+                Flags.useDefaultSocketOptions(), Flags.transportType(), channelOptions,
                 idleTimeoutMillis, pingIntervalMillis);
     }
 
