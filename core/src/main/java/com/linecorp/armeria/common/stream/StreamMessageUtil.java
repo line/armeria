@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static java.util.Objects.requireNonNull;
-
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
@@ -27,30 +25,6 @@ import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 final class StreamMessageUtil {
-
-    public static final SubscriptionOption[] EMPTY_OPTIONS = {};
-
-    static boolean containsWithPooledObjects(SubscriptionOption... options) {
-        requireNonNull(options, "options");
-        for (SubscriptionOption option : options) {
-            if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    static boolean containsNotifyCancellation(SubscriptionOption... options) {
-        requireNonNull(options, "options");
-        for (SubscriptionOption option : options) {
-            if (option == SubscriptionOption.NOTIFY_CANCELLATION) {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     static void closeOrAbort(Object obj, @Nullable Throwable cause) {
         if (obj instanceof StreamMessage) {
@@ -83,6 +57,14 @@ final class StreamMessageUtil {
 
     static void closeOrAbort(Object obj) {
         closeOrAbort(obj, null);
+    }
+
+    static <T> T touchOrCopyAndClose(T obj, boolean withPooledObjects) {
+        if (withPooledObjects) {
+            return PooledObjects.touch(obj);
+        } else {
+            return PooledObjects.copyAndClose(obj);
+        }
     }
 
     private StreamMessageUtil() {}

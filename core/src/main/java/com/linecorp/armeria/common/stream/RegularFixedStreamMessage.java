@@ -16,9 +16,14 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -66,6 +71,19 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
             objs[fulfilled++] = null;
             StreamMessageUtil.closeOrAbort(obj, cause);
         }
+    }
+
+    @Override
+    final List<T> drainAll(boolean withPooledObjects) {
+        assert objs[0] != null;
+        final int length = objs.length;
+        final ImmutableList.Builder<T> builder = ImmutableList.builderWithExpectedSize(length);
+        for (int i = 0; i < length; i++) {
+            final T obj = objs[i];
+            objs[i] = null;
+            builder.add(touchOrCopyAndClose(obj, withPooledObjects));
+        }
+        return builder.build();
     }
 
     @Override

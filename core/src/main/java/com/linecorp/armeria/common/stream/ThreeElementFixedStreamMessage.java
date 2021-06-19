@@ -16,7 +16,13 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
+
+import java.util.List;
+
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -66,6 +72,16 @@ public class ThreeElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
             StreamMessageUtil.closeOrAbort(obj3, cause);
             obj3 = null;
         }
+    }
+
+    @Override
+    final List<T> drainAll(boolean withPooledObjects) {
+        assert obj1 != null;
+        final List<T> objs = ImmutableList.of(touchOrCopyAndClose(obj1, withPooledObjects),
+                                              touchOrCopyAndClose(obj2, withPooledObjects),
+                                              touchOrCopyAndClose(obj3, withPooledObjects));
+        obj1 = obj2 = obj3 = null;
+        return objs;
     }
 
     @Override

@@ -281,32 +281,13 @@ public final class DefaultClientRequestContext
         }).thenCompose(Function.identity());
     }
 
-    private CompletableFuture<Boolean> initFuture(boolean success, @Nullable EventLoop acquiredEventLoop) {
-        CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
-        if (whenInitialized == null) {
-            final CompletableFuture<Boolean> future;
-            if (acquiredEventLoop == null) {
-                future = UnmodifiableFuture.completedFuture(success);
-            } else {
-                future = CompletableFuture.supplyAsync(() -> success, acquiredEventLoop);
-            }
-            if (whenInitializedUpdater.compareAndSet(this, null, future)) {
-                return future;
-            }
-            whenInitialized = this.whenInitialized;
-        }
-
-        final CompletableFuture<Boolean> finalWhenInitialized = whenInitialized;
-        if (finalWhenInitialized.isDone()) {
-            return finalWhenInitialized;
-        }
-
+    private static CompletableFuture<Boolean> initFuture(boolean success,
+                                                         @Nullable EventLoop acquiredEventLoop) {
         if (acquiredEventLoop == null) {
-            finalWhenInitialized.complete(success);
+            return UnmodifiableFuture.completedFuture(success);
         } else {
-            acquiredEventLoop.execute(() -> finalWhenInitialized.complete(success));
+            return CompletableFuture.supplyAsync(() -> success, acquiredEventLoop);
         }
-        return finalWhenInitialized;
     }
 
     /**
@@ -325,6 +306,21 @@ public final class DefaultClientRequestContext
                 return whenInitialized;
             } else {
                 return this.whenInitialized;
+            }
+        }
+    }
+
+    /**
+     * Completes the {@link #whenInitialized()} with the specified value.
+     */
+    public void finishInitialization(boolean success) {
+        final CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
+        if (whenInitialized != null) {
+            whenInitialized.complete(success);
+        } else {
+            if (!whenInitializedUpdater.compareAndSet(this, null,
+                                                      UnmodifiableFuture.completedFuture(success))) {
+                this.whenInitialized.complete(success);
             }
         }
     }
@@ -694,25 +690,27 @@ public final class DefaultClientRequestContext
         final String method = method().name();
 
         // Build the string representation.
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("[creqId=").append(creqId);
-        if (parent != null) {
-            buf.append(", preqId=").append(preqId);
-        }
-        if (sreqId != null) {
-            buf.append(", sreqId=").append(sreqId);
-        }
-        if (ch != null) {
-            buf.append(", chanId=").append(chanId)
-               .append(", laddr=");
-            TextFormatter.appendSocketAddress(buf, ch.localAddress());
-            buf.append(", raddr=");
-            TextFormatter.appendSocketAddress(buf, ch.remoteAddress());
-        }
-        buf.append("][")
-           .append(proto).append("://").append(authority).append(path).append('#').append(method)
-           .append(']');
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("[creqId=").append(creqId);
+            if (parent != null) {
+                buf.append(", preqId=").append(preqId);
+            }
+            if (sreqId != null) {
+                buf.append(", sreqId=").append(sreqId);
+            }
+            if (ch != null) {
+                buf.append(", chanId=").append(chanId)
+                   .append(", laddr=");
+                TextFormatter.appendSocketAddress(buf, ch.localAddress());
+                buf.append(", raddr=");
+                TextFormatter.appendSocketAddress(buf, ch.remoteAddress());
+            }
+            buf.append("][")
+               .append(proto).append("://").append(authority).append(path).append('#').append(method)
+               .append(']');
 
-        return buf.toString();
+            return buf.toString();
+        }
     }
 }

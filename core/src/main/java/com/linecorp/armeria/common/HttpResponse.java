@@ -32,6 +32,7 @@ import java.util.function.Function;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
@@ -43,9 +44,9 @@ import com.linecorp.armeria.common.FixedHttpResponse.ThreeElementFixedHttpRespon
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.HttpDecoder;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
@@ -387,11 +388,18 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Creates a new HTTP response whose stream is produced from an existing {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpObject}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
      */
     static HttpResponse of(Publisher<? extends HttpObject> publisher) {
         requireNonNull(publisher, "publisher");
         if (publisher instanceof HttpResponse) {
             return (HttpResponse) publisher;
+        } else if (publisher instanceof StreamMessage) {
+            //noinspection unchecked
+            return new StreamMessageBasedHttpResponse((StreamMessage<? extends HttpObject>) publisher);
         } else {
             return new PublisherBasedHttpResponse(publisher);
         }
@@ -400,6 +408,10 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Creates a new HTTP response with the specified headers whose stream is produced from an existing
      * {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpObject}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
      */
     static HttpResponse of(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
         requireNonNull(headers, "headers");
@@ -473,10 +485,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * the trailers of the response are received fully.
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
-        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
-        final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
-        subscribe(aggregator, executor);
-        return future;
+        return HttpMessageAggregator.aggregateResponse(this, executor, null);
     }
 
     /**
@@ -502,10 +511,7 @@ public interface HttpResponse extends Response, HttpMessage {
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpResponse> future = new EventLoopCheckingFuture<>();
-        final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
-        return future;
+        return HttpMessageAggregator.aggregateResponse(this, executor, alloc);
     }
 
     @Override
@@ -558,5 +564,69 @@ public interface HttpResponse extends Response, HttpMessage {
     default <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
                                         Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
         return new DecodedHttpStreamMessage<>(this, decoder, alloc, byteBufConverter);
+    }
+
+    /**
+     * Transforms the
+     * <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#Information_responses">informational headers</a>
+     * emitted by {@link HttpResponse} by applying the specified {@link Function}.
+     */
+    default HttpResponse mapInformational(
+            Function<? super ResponseHeaders, ? extends ResponseHeaders> function) {
+        requireNonNull(function, "function");
+        final StreamMessage<HttpObject> stream = map(obj -> {
+            if (obj instanceof ResponseHeaders) {
+                final ResponseHeaders headers = (ResponseHeaders) obj;
+                if (headers.status().isInformational()) {
+                    return function.apply(headers);
+                }
+            }
+            return obj;
+        });
+        return of(stream);
+    }
+
+    /**
+     * Transforms the non-informational {@link ResponseHeaders} emitted by {@link HttpResponse} by applying
+     * the specified {@link Function}.
+     */
+    default HttpResponse mapHeaders(Function<? super ResponseHeaders, ? extends ResponseHeaders> function) {
+        requireNonNull(function, "function");
+        final StreamMessage<HttpObject> stream = map(obj -> {
+            if (obj instanceof ResponseHeaders) {
+                final ResponseHeaders headers = (ResponseHeaders) obj;
+                if (!headers.status().isInformational()) {
+                    return function.apply(headers);
+                }
+            }
+            return obj;
+        });
+        return of(stream);
+    }
+
+    /**
+     * Transforms the {@link HttpData}s emitted by this {@link HttpRequest} by applying the specified
+     * {@link Function}.
+     */
+    default HttpResponse mapData(Function<? super HttpData, ? extends HttpData> function) {
+        requireNonNull(function, "function");
+        final StreamMessage<HttpObject> stream =
+                map(obj -> obj instanceof HttpData ? function.apply((HttpData) obj) : obj);
+        return of(stream);
+    }
+
+    /**
+     * Transforms the {@linkplain HttpHeaders trailers} emitted by this {@link HttpResponse} by applying the
+     * specified {@link Function}.
+     */
+    default HttpResponse mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
+        requireNonNull(function, "function");
+        final StreamMessage<HttpObject> stream = map(obj -> {
+            if (obj instanceof HttpHeaders && !(obj instanceof ResponseHeaders)) {
+                return function.apply((HttpHeaders) obj);
+            }
+            return obj;
+        });
+        return of(stream);
     }
 }
