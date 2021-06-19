@@ -29,7 +29,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 /**
  * Ensures that basic server/client functionality works correctly
- * even if {@code netty-transport-native-epoll} or {@code netty-incubator-transport-native-io_uring}
+ * even if {@code netty-transport-native-epoll} and {@code netty-incubator-transport-native-io_uring}
  * dependencies are excluded.
  */
 public class NioServerTest {
