@@ -29,9 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -113,24 +111,11 @@ public final class CorsService extends SimpleDecoratingHttpService {
             return forbidden();
         }
 
-        return new FilteredHttpResponse(unwrap().serve(ctx, req)) {
-            @Override
-            protected HttpObject filter(HttpObject obj) {
-                if (!(obj instanceof ResponseHeaders)) {
-                    return obj;
-                }
-
-                final ResponseHeaders headers = (ResponseHeaders) obj;
-                final HttpStatus status = headers.status();
-                if (status.isInformational()) {
-                    return headers;
-                }
-
-                final ResponseHeadersBuilder builder = headers.toBuilder();
-                setCorsResponseHeaders(ctx, req, builder);
-                return builder.build();
-            }
-        };
+        return unwrap().serve(ctx, req).mapHeaders(headers -> {
+            final ResponseHeadersBuilder builder = headers.toBuilder();
+            setCorsResponseHeaders(ctx, req, builder);
+            return builder.build();
+        });
     }
 
     /**

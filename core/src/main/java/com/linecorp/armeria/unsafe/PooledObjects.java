@@ -105,8 +105,8 @@ public final class PooledObjects {
      *
      * @param obj maybe a pooled {@link HttpData} to touch its underlying {@link ByteBuf}
      */
-    public static void touch(Object obj) {
-        touch(obj, obj);
+    public static <T> T touch(T obj) {
+        return touch(obj, obj);
     }
 
     /**
@@ -116,10 +116,11 @@ public final class PooledObjects {
      * @param obj maybe a pooled {@link HttpData} to touch its underlying {@link ByteBuf}
      * @param hint the hint to specify when calling {@link ByteBuf#touch(Object)}
      */
-    public static void touch(Object obj, @Nullable Object hint) {
+    public static <T> T touch(T obj, @Nullable Object hint) {
         if (obj instanceof HttpData) {
             ((HttpData) obj).touch(hint);
         }
+        return obj;
     }
 
     /**

@@ -16,41 +16,45 @@
 
 package com.linecorp.armeria.internal.server;
 
-import java.lang.reflect.InvocationTargetException;
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
+import java.util.ServiceLoader;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+
+import com.linecorp.armeria.common.JacksonModuleProvider;
 
 public final class JacksonUtil {
 
-    private static final List<Module> defaultModules;
+    private static final Logger logger = LoggerFactory.getLogger(JacksonUtil.class);
 
-    static {
-        final List<String> additionalModules = ImmutableList.of(
-                "com.fasterxml.jackson.module.scala.DefaultScalaModule",
-                "com.fasterxml.jackson.module.kotlin.KotlinModule");
-
-        // Add the additional modules if they are in the classpath
-        final ImmutableList.Builder<Module> moduleBuilder = ImmutableList.builderWithExpectedSize(2);
-        for (String moduleClassName : additionalModules) {
-            try {
-                final Class<?> moduleClass = Class.forName(moduleClassName);
-                final Module module = (Module) moduleClass.getDeclaredConstructor().newInstance();
-                moduleBuilder.add(module);
-            } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException |
-                    IllegalAccessException | InvocationTargetException ignored) {
-            }
-        }
-        defaultModules = moduleBuilder.build();
-    }
+    private static boolean noticed;
 
     public static ObjectMapper newDefaultObjectMapper() {
         final JsonMapper.Builder jsonMapperBuilder = JsonMapper.builder();
-        defaultModules.forEach(jsonMapperBuilder::addModule);
-        return jsonMapperBuilder.build();
+        final ServiceLoader<JacksonModuleProvider> providers = ServiceLoader.load(JacksonModuleProvider.class);
+        if (Iterables.isEmpty(providers)) {
+            jsonMapperBuilder.findAndAddModules();
+        } else {
+            for (JacksonModuleProvider provider : providers) {
+                final List<Module> modules = provider.modules();
+                requireNonNull(modules, "provider.modules() returned null");
+                jsonMapperBuilder.addModules(modules);
+            }
+        }
+        final JsonMapper mapper = jsonMapperBuilder.build();
+        if (!noticed) {
+            logger.debug("Available Jackson Modules: {}", mapper.getRegisteredModuleIds());
+            noticed = true;
+        }
+        return mapper;
     }
 
     private JacksonUtil() {}

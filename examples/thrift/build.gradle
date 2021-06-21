@@ -12,5 +12,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.thrift.Main'
+    mainClass.set('example.armeria.thrift.Main')
 }

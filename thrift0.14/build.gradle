@@ -27,6 +27,7 @@ task generateSources(type: Copy) {
     from "${thrift013ProjectDir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
     exclude '**/TByteBufTransport.java'
+    exclude '**/common/thrift/package-info.java'
 }
 
 task generateTestSources(type: Copy) {

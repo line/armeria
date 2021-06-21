@@ -28,6 +28,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,6 +46,7 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
+import reactor.test.StepVerifier;
 
 class StreamMessageTest {
 
@@ -265,6 +267,15 @@ class StreamMessageTest {
 
         await().untilAsserted(() -> assertThat(stream.isOpen()).isFalse());
         await().untilAsserted(() -> assertThat(buf.refCnt()).isZero());
+    }
+
+    @Test
+    void abortedStream() {
+        final Throwable cause = new IllegalStateException("oops");
+        final StreamMessage<Object> stream = StreamMessage.aborted(cause);
+        StepVerifier.create(stream)
+                    .expectErrorMatches(ex -> ex == cause)
+                    .verify();
     }
 
     private static class StreamProvider implements ArgumentsProvider {

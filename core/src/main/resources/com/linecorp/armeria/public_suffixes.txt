@@ -451,7 +451,6 @@ appspacehosted.com
 appspaceusercontent.com
 appspot.com
 appudo.net
-aprendemas.cl
 aq
 aq.it
 aquarelle
@@ -1816,6 +1815,7 @@ dclk
 dd-dns.de
 ddns.me
 ddns.net
+ddns5.com
 ddnsfree.com
 ddnsgeek.com
 ddnsking.com

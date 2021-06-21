@@ -101,7 +101,9 @@ public final class Server implements ListenableAsyncCloseable {
         return new ServerBuilder();
     }
 
-    private final ServerConfig config;
+    private ServerConfig config;
+    @Nullable
+    private HttpServerPipelineConfigurator pipelineConfigurator;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
 
@@ -114,9 +116,9 @@ public final class Server implements ListenableAsyncCloseable {
     @VisibleForTesting
     ServerBootstrap serverBootstrap;
 
-    Server(ServerConfig config, @Nullable Mapping<String, SslContext> sslContexts) {
+    Server(ServerConfig config) {
         this.config = requireNonNull(config, "config");
-        this.sslContexts = sslContexts;
+        sslContexts = config.sslContextMapping();
         startStop = new ServerStartStopSupport(config.startStopExecutor());
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 
@@ -397,6 +399,22 @@ public final class Server implements ListenableAsyncCloseable {
                           .toString();
     }
 
+    /**
+     * Reconfigure Server configuration. This feature is only available once a server is configured
+     * and started. We do not allow ports to be reconfigured.
+     */
+    public void reconfigure(ServerConfigurator serverConfigurator) {
+        requireNonNull(serverConfigurator, "serverConfigurator");
+        requireNonNull(pipelineConfigurator, "pipelineConfigurator");
+        final ServerBuilder sb = builder();
+        serverConfigurator.reconfigure(sb);
+        config = sb.buildServerConfig(config());
+        // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
+        // add a listener to it.
+        config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+        pipelineConfigurator.updateConfig(config);
+    }
+
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
 
         @Nullable
@@ -470,9 +488,12 @@ public final class Server implements ListenableAsyncCloseable {
             b.group(bossGroup, config.workerGroup());
             b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
-            b.childHandler(new HttpServerPipelineConfigurator(config, port, sslContexts,
-                                                              gracefulShutdownSupport));
+            pipelineConfigurator = new HttpServerPipelineConfigurator(
+                                       config,
+                                       port, sslContexts,
+                                       gracefulShutdownSupport);
 
+            b.childHandler(pipelineConfigurator);
             return b.bind(port.localAddress());
         }
 
