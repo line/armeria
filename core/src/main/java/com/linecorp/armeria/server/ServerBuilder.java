@@ -1556,6 +1556,16 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
+        final Server server = new Server(buildServerConfig(ports));
+        serverListeners.forEach(server::addListener);
+        return server;
+    }
+
+    ServerConfig buildServerConfig(ServerConfig existingConfig) {
+        return buildServerConfig(existingConfig.ports());
+    }
+
+    private ServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1567,11 +1577,9 @@ public final class ServerBuilder {
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate))
                                    .collect(toImmutableList());
-
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
-
         final Collection<ServerPort> ports;
 
         this.ports.forEach(
@@ -1581,8 +1589,8 @@ public final class ServerBuilder {
 
         if (defaultSslContext == null) {
             sslContexts = null;
-            if (!this.ports.isEmpty()) {
-                ports = resolveDistinctPorts(this.ports);
+            if (!serverPorts.isEmpty()) {
+                ports = resolveDistinctPorts(serverPorts);
                 for (final ServerPort p : ports) {
                     if (p.hasTls()) {
                         throw new IllegalArgumentException("TLS not configured; cannot serve HTTPS");
@@ -1601,8 +1609,8 @@ public final class ServerBuilder {
                         "at https://www.eclipse.org/jetty/documentation/9.4.x/alpn-chapter.html");
             }
 
-            if (!this.ports.isEmpty()) {
-                ports = resolveDistinctPorts(this.ports);
+            if (!serverPorts.isEmpty()) {
+                ports = resolveDistinctPorts(serverPorts);
             } else {
                 ports = ImmutableList.of(new ServerPort(0, HTTPS));
             }
@@ -1632,9 +1640,9 @@ public final class ServerBuilder {
             }
         }
 
-        final Server server = new Server(new ServerConfig(
-                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
-                workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
+        return new ServerConfig(
+                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
+                virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                 http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
@@ -1643,10 +1651,7 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler), sslContexts);
-
-        serverListeners.forEach(server::addListener);
-        return server;
+                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, sslContexts);
     }
 
     /**
