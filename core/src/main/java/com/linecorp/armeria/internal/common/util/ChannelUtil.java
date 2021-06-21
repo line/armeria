@@ -30,7 +30,6 @@ import javax.net.ssl.SSLSession;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
@@ -49,7 +48,7 @@ public final class ChannelUtil {
     private static final WriteBufferWaterMark DISABLED_WRITE_BUFFER_WATERMARK =
             new WriteBufferWaterMark(0, Integer.MAX_VALUE);
     @VisibleForTesting
-    public static final long TCP_USER_TIMEOUT_BUFFER_MILLIS = 5_000L;
+    static final long TCP_USER_TIMEOUT_BUFFER_MILLIS = 5_000L;
 
     static {
         // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
@@ -72,12 +71,18 @@ public final class ChannelUtil {
         PROHIBITED_OPTIONS = builder.build();
     }
 
-    @Nullable private static ChannelOption<?> epollTcpUserTimeout;
-    @Nullable private static ChannelOption<?> epollTcpKeepidle;
-    @Nullable private static ChannelOption<?> epollTcpKeepintvl;
-    @Nullable private static ChannelOption<?> ioUringTcpUserTimeout;
-    @Nullable private static ChannelOption<?> ioUringTcpKeepidle;
-    @Nullable private static ChannelOption<?> ioUringTcpKeepintvl;
+    @Nullable
+    private static ChannelOption<?> epollTcpUserTimeout;
+    @Nullable
+    private static ChannelOption<?> epollTcpKeepidle;
+    @Nullable
+    private static ChannelOption<?> epollTcpKeepintvl;
+    @Nullable
+    private static ChannelOption<?> ioUringTcpUserTimeout;
+    @Nullable
+    private static ChannelOption<?> ioUringTcpKeepidle;
+    @Nullable
+    private static ChannelOption<?> ioUringTcpKeepintvl;
 
     static {
         try {
@@ -104,9 +109,13 @@ public final class ChannelUtil {
 
     @Nullable
     private static ChannelOption<?> findChannelOption(Class<?> clazz, String fieldName) throws Throwable {
-        final MethodHandle methodHandle = MethodHandles.publicLookup().findStaticGetter(
-                clazz, fieldName, ChannelOption.class);
-        return (ChannelOption<?>) methodHandle.invokeExact();
+        try {
+            final MethodHandle methodHandle = MethodHandles.publicLookup().findStaticGetter(
+                    clazz, fieldName, ChannelOption.class);
+            return (ChannelOption<?>) methodHandle.invokeExact();
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     public static Set<ChannelOption<?>> prohibitedOptions() {
@@ -193,7 +202,7 @@ public final class ChannelUtil {
             return channelOptions;
         }
 
-        final Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
+        final ImmutableMap.Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
 
         if (idleTimeoutMillis > 0 && idleTimeoutMillis <= Integer.MAX_VALUE - TCP_USER_TIMEOUT_BUFFER_MILLIS) {
             if (transportType == TransportType.EPOLL &&

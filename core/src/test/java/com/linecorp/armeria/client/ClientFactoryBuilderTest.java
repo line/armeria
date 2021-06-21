@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.ClientFactoryBuilder.MIN_PING_INTERVAL_MILLIS;
+import static com.linecorp.armeria.internal.common.util.ChannelUtilTest.TCP_USER_TIMEOUT_BUFFER_MILLIS;
 import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
 import static io.netty.channel.ChannelOption.SO_LINGER;
 import static io.netty.channel.epoll.EpollChannelOption.TCP_USER_TIMEOUT;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.util.ChannelUtilTest;
 
 import io.netty.channel.ChannelOption;
 import io.netty.resolver.DefaultAddressResolverGroup;
@@ -269,7 +271,7 @@ class ClientFactoryBuilderTest {
                                                   .channelOption(SO_LINGER, lingerMillis)
                                                   .build()) {
             assertThat(factory.options().channelOptions()).containsOnly(
-                    entry(TCP_USER_TIMEOUT, idleTimeoutMillis + ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS),
+                    entry(TCP_USER_TIMEOUT, idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS),
                     entry(SO_LINGER, lingerMillis),
                     entry(CONNECT_TIMEOUT_MILLIS, (int) Flags.defaultConnectTimeoutMillis()));
         }

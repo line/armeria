@@ -35,7 +35,10 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.incubator.channel.uring.IOUringChannelOption;
 
-class ChannelUtilTest {
+public class ChannelUtilTest {
+
+    public static final long TCP_USER_TIMEOUT_BUFFER_MILLIS = ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS;
+
     @Test
     @SuppressWarnings("deprecation")
     void prohibitedOptions() {

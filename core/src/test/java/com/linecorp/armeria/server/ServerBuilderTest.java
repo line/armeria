@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.common.util.ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS;
+import static com.linecorp.armeria.internal.common.util.ChannelUtilTest.TCP_USER_TIMEOUT_BUFFER_MILLIS;
 import static com.linecorp.armeria.server.ServerBuilder.MIN_PING_INTERVAL_MILLIS;
 import static io.netty.channel.ChannelOption.SO_LINGER;
 import static io.netty.channel.epoll.EpollChannelOption.TCP_USER_TIMEOUT;
