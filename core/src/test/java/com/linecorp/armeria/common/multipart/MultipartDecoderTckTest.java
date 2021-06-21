@@ -15,14 +15,11 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.stream.LongStream;
 
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
-import org.reactivestreams.tck.TestEnvironment.ManualSubscriber;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
@@ -72,28 +69,6 @@ public class MultipartDecoderTckTest extends StreamMessageVerification<BodyPart>
     public StreamMessage<BodyPart> createAbortedPublisher(long elements) {
         // MultipartDecoder just delegates to upstream
         return null;
-    }
-
-    @Override
-    @Test
-    public void required_completionFutureMustCompleteOnTermination0() throws Throwable {
-        activePublisherTest(0, true, pub -> {
-            final ManualSubscriber<BodyPart> sub = env().newManualSubscriber(pub);
-            final StreamMessage<?> stream = (StreamMessage<?>) pub;
-
-            // Remove a validation whether a stream is closed on an empty stream from the original test case.
-            // Because a MultipartDecoder wraps an input source with DecodedHttpStreamMessage which don't know
-            // whether the input source is empty before receiving onComplete().
-
-            // TODO(ikhoon): Gerneralize this test suit?
-
-            assertThat(stream.whenComplete()).isDone();
-            sub.requestEndOfStream();
-
-            assertThat(stream.isOpen()).isFalse();
-            assertThat(stream.isEmpty()).isTrue();
-            sub.expectNone();
-        });
     }
 
     @Override
