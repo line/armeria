@@ -33,8 +33,10 @@ public final class Multiparts {
      * Extracts {@code boundary} parameter value from the multipart {@link MediaType}.
      * @param contentType {@link MediaType} that represents on of the multipart subtypes.
      * @return {@code boundary} parameter value extracted from the multipart {@link MediaType}.
+     * @throws IllegalArgumentException if the specified {@link MediaType} is not multipart
+     * @throws IllegalStateException if {@code boundary} parameter is missing on the specified {@link MediaType}
      */
-    static String getBoundary(MediaType contentType) {
+    public static String getBoundary(MediaType contentType) {
         requireNonNull(contentType, "contentType");
         checkArgument(contentType.isMultipart(),
                       "Content-Type: %s (expected: multipart content type)", contentType);
