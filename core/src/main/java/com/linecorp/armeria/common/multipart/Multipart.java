@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.common.multipart;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.multipart.DefaultMultipart.randomBoundary;
 import static java.util.Objects.requireNonNull;
@@ -132,7 +131,7 @@ public interface Multipart {
         @Nullable
         final MediaType mediaType = headers.contentType();
         checkState(mediaType != null, "Content-Type header is missing");
-        final String boundary = getBoundary(mediaType);
+        final String boundary = Multiparts.getBoundary(mediaType);
 
         @SuppressWarnings("unchecked")
         final StreamMessage<HttpData> cast =
@@ -151,8 +150,8 @@ public interface Multipart {
      * ResponseHeaders responseHeaders = splitResponse.headers().join();
      * StreamMessage<HttpData> responseContents = splitResponse.body();
      * MediaType contentType = responseHeaders.contentType();
-     * if (Multipart.isMultipart(contentType)) {
-     *     String boundary = Multipart.getBoundary(contentType);
+     * if (Multiparts.isMultipart(contentType)) {
+     *     String boundary = Multiparts.getBoundary(contentType);
      *     Multipart multipart = Multipart.from(boundary, responseContents)
      *     ...
      * } else {
@@ -174,32 +173,6 @@ public interface Multipart {
         requireNonNull(alloc, "alloc");
         final MultipartDecoder decoder = new MultipartDecoder(StreamMessage.of(contents), boundary, alloc);
         return of(boundary, decoder);
-    }
-
-    /**
-     * Checks whether provided {@link MediaType} is a multipart type.
-     * @param contentType {@link MediaType} to check against or {@code null} if undefined.
-     * @return true, only if provided {@link MediaType} is a multipart type.
-     */
-    static boolean isMultipart(@Nullable MediaType contentType) {
-        return contentType != null && MediaType.ANY_MULTIPART_TYPE.type().equals(contentType.type());
-    }
-
-    /**
-     * Extracts {@code boundary} parameter value from the multipart {@link MediaType}.
-     * @param contentType {@link MediaType} that represents on of the multipart subtypes.
-     * @return {@code boundary} parameter value extracted from the multipart {@link MediaType}.
-     */
-    static String getBoundary(MediaType contentType) {
-        requireNonNull(contentType, "contentType");
-        checkArgument(isMultipart(contentType),
-                      "Content-Type: %s (expected: multipart content type)", contentType);
-        @Nullable
-        final String boundary = Iterables.getFirst(contentType.parameters().get("boundary"), null);
-        if (boundary == null) {
-            throw new IllegalStateException("boundary parameter is missing on the Content-Type header");
-        }
-        return boundary;
     }
 
     /**

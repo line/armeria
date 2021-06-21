@@ -157,7 +157,7 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
     public HttpResponse toHttpResponse(HttpStatus status) {
         requireNonNull(status, "status");
         final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter(BOUNDARY_PARAMETER,
-                                                                                  boundary());
+                                                                                  boundary);
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(status)
                                                                .contentType(contentType)
                                                                .build();
@@ -213,7 +213,7 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
         @Nullable
         MediaType contentType = headers.contentType();
         if (contentType != null) {
-            checkArgument(Multipart.isMultipart(contentType),
+            checkArgument(Multiparts.isMultipart(contentType),
                           "Content-Type: %s (expected: multipart content type)", contentType);
             contentType = contentType.withParameter(BOUNDARY_PARAMETER, boundary);
         } else {

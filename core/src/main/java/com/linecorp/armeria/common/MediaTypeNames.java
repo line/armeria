@@ -481,44 +481,37 @@ public final class MediaTypeNames {
     public static final String ZIP = "application/zip";
 
     /**
-     * {@value #MULTIPART_FORM_DATA}.
-     */
-    public static final String MULTIPART_FORM_DATA = "multipart/form-data";
-
-    /**
-     * {@value #MULTIPART_RELATED}.
-     */
-    public static final String MULTIPART_RELATED = "multipart/related";
-
-    /**
-     * {@value #MULTIPART_MIXED}.
-     */
-    public static final String MULTIPART_MIXED = "multipart/mixed";
-
-    /**
      * {@value #MULTIPART_ALTERNATIVE}.
      */
     public static final String MULTIPART_ALTERNATIVE = "multipart/alternative";
-
-    /**
-     * {@value #MULTIPART_PARALLEL}.
-     */
-    public static final String MULTIPART_PARALLEL = "multipart/parallel";
-
     /**
      * {@value #MULTIPART_DIGEST}.
      */
     public static final String MULTIPART_DIGEST = "multipart/digest";
-
-    /**
-     * {@value #MULTIPART_SIGNED}.
-     */
-    public static final String MULTIPART_SIGNED = "multipart/signed";
-
     /**
      * {@value #MULTIPART_ENCRYPTED}.
      */
     public static final String MULTIPART_ENCRYPTED = "multipart/encrypted";
+    /**
+     * {@value #MULTIPART_FORM_DATA}.
+     */
+    public static final String MULTIPART_FORM_DATA = "multipart/form-data";
+    /**
+     * {@value #MULTIPART_MIXED}.
+     */
+    public static final String MULTIPART_MIXED = "multipart/mixed";
+    /**
+     * {@value #MULTIPART_PARALLEL}.
+     */
+    public static final String MULTIPART_PARALLEL = "multipart/parallel";
+    /**
+     * {@value #MULTIPART_RELATED}.
+     */
+    public static final String MULTIPART_RELATED = "multipart/related";
+    /**
+     * {@value #MULTIPART_SIGNED}.
+     */
+    public static final String MULTIPART_SIGNED = "multipart/signed";
 
     private MediaTypeNames() {}
 }
