@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentMap
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.google.common.collect.{ImmutableList, ImmutableMap, ImmutableSet, MapMaker}
 import com.google.protobuf.CodedInputStream
-import com.linecorp.armeria.common.{AggregatedHttpRequest}
+import com.linecorp.armeria.common.AggregatedHttpRequest
 import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.RequestConverterFunction

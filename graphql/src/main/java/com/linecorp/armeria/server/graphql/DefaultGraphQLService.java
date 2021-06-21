@@ -78,7 +78,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
         if (Strings.isNullOrEmpty(query)) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST,
                                    MediaType.PLAIN_TEXT,
-                                   "Query is required");
+                                   "Missing query");
         }
         final Map<String, Object> variables = toVariableMap(queryString.get("variables"));
         final String operationName = queryString.get("operationName");
@@ -101,12 +101,13 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                 }
                 final String body = req.contentUtf8();
                 if (Strings.isNullOrEmpty(body)) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Body is required");
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                           "Missing request body");
                 }
                 final Map<String, Object> requestMap = parseJsonString(body);
                 final String query = (String) requestMap.getOrDefault("query", "");
                 if (Strings.isNullOrEmpty(query)) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Query is required");
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
                 }
                 return execute(ctx, executionInput(query, ctx, dataLoaderRegistry,
                                                    toVariableMap(requestMap.get("variables")),
@@ -120,7 +121,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
                 }
                 final String query = req.contentUtf8();
                 if (Strings.isNullOrEmpty(query)) {
-                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Query is required");
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
                 }
                 return execute(ctx, executionInput(query, ctx, dataLoaderRegistry, null, null));
             }));

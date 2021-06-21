@@ -95,7 +95,7 @@ class GraphQLServiceTest {
                                                          .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.contentUtf8()).isEqualTo("Query is required");
+        assertThat(response.contentUtf8()).isEqualTo("Missing query");
     }
 
     @Test
@@ -159,7 +159,7 @@ class GraphQLServiceTest {
                          .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.contentUtf8()).isEqualTo("Body is required");
+        assertThat(response.contentUtf8()).isEqualTo("Missing request body");
     }
 
     @Test
