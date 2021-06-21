@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -67,5 +69,11 @@ public class JavaVersionSpecific {
      */
     public <T> CompletableFuture<T> newContextAwareFuture(RequestContext ctx) {
         return new ContextAwareFuture<>(requireNonNull(ctx, "ctx"));
+    }
+
+    long java9CurrentTimeMicros() {
+        final Instant now = Clock.systemUTC().instant();
+        return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) +
+               TimeUnit.NANOSECONDS.toMicros(now.getNano());
     }
 }

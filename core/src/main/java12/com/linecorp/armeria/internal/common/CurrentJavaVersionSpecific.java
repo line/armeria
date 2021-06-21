@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,29 +16,11 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static java.util.Objects.requireNonNull;
+final class CurrentJavaVersionSpecific {
 
-import java.util.concurrent.CompletableFuture;
-
-import com.linecorp.armeria.common.RequestContext;
-
-/**
- * Implementation of {@link JavaVersionSpecific} using Java 9 APIs.
- */
-class Java9VersionSpecific extends JavaVersionSpecific {
-
-    @Override
-    String name() {
-        return "Java 9+";
+    static JavaVersionSpecific get() {
+        return new Java12VersionSpecific();
     }
 
-    @Override
-    public long currentTimeMicros() {
-        return java9CurrentTimeMicros();
-    }
-
-    @Override
-    public <T> CompletableFuture<T> newContextAwareFuture(RequestContext ctx) {
-        return new Java9ContextAwareFuture<>(requireNonNull(ctx, "ctx"));
-    }
+    private CurrentJavaVersionSpecific() {}
 }
