@@ -161,13 +161,13 @@ configure(projectsWithFlags('java')) {
         options.compilerArgs += ['--release', '8']
     }
 
-    // Configure default duplicates strategy for such as:
+    // Configure the default DuplicatesStrategy for such as:
     // - c.l.armeria.versions.properties
     // - thrift/cassandra.json
     // - and so on
-    tasks.sourcesJar.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    tasks.sourcesJar.duplicatesStrategy = DuplicatesStrategy.INCLUDE
     tasks.withType(Copy) {
-        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 }
 
