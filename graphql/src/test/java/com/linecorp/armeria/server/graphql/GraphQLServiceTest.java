@@ -31,14 +31,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.google.common.base.Charsets;
-
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -100,13 +97,11 @@ class GraphQLServiceTest {
 
     @Test
     void shouldPostWhenMediaTypeIsGraphql() {
-        final RequestHeaders headers = RequestHeaders.builder()
-                                                     .path("/graphql")
-                                                     .method(HttpMethod.POST)
-                                                     .contentType(MediaType.GRAPHQL)
-                                                     .build();
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(MediaType.GRAPHQL, "{foo}")
+                                               .build();
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(headers, "{foo}", Charsets.UTF_8)
+                                                         .execute(request)
                                                          .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
@@ -116,15 +111,12 @@ class GraphQLServiceTest {
     @Test
     void shouldPostWhenMediaTypeIsGraphqlPlusJson() {
         final MediaType graphqlPlusJson = MediaType.create("application", "graphql+json");
-        final RequestHeaders headers = RequestHeaders.builder()
-                                                     .path("/graphql")
-                                                     .method(HttpMethod.POST)
-                                                     .contentType(graphqlPlusJson)
-                                                     .build();
-        final AggregatedHttpResponse response =
-                WebClient.of(server.httpUri())
-                         .execute(headers, "{\"query\": \"{foo}\"}", Charsets.UTF_8)
-                         .aggregate().join();
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(graphqlPlusJson, "{\"query\": \"{foo}\"}")
+                                               .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .execute(request)
+                                                         .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
@@ -132,15 +124,12 @@ class GraphQLServiceTest {
 
     @Test
     void shouldPostWhenMediaTypeIsJson() {
-        final RequestHeaders headers = RequestHeaders.builder()
-                                                     .path("/graphql")
-                                                     .method(HttpMethod.POST)
-                                                     .contentType(MediaType.JSON)
-                                                     .build();
-        final AggregatedHttpResponse response =
-                WebClient.of(server.httpUri())
-                         .execute(headers, "{\"query\": \"{foo}\"}", Charsets.UTF_8)
-                         .aggregate().join();
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(MediaType.JSON, "{\"query\": \"{foo}\"}")
+                                               .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .execute(request)
+                                                         .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
@@ -148,15 +137,12 @@ class GraphQLServiceTest {
 
     @Test
     void shouldPostWhenBodyIsEmpty() {
-        final RequestHeaders headers = RequestHeaders.builder()
-                                                     .path("/graphql")
-                                                     .method(HttpMethod.POST)
-                                                     .contentType(MediaType.JSON)
-                                                     .build();
-        final AggregatedHttpResponse response =
-                WebClient.of(server.httpUri())
-                         .execute(headers, "", Charsets.UTF_8)
-                         .aggregate().join();
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(MediaType.JSON, "")
+                                               .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .execute(request)
+                                                         .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.contentUtf8()).isEqualTo("Missing request body");
@@ -164,14 +150,11 @@ class GraphQLServiceTest {
 
     @Test
     void shouldPostWhenMediaTypeIsEmpty() {
-        final RequestHeaders headers = RequestHeaders.builder()
-                                                     .path("/graphql")
-                                                     .method(HttpMethod.POST)
-                                                     .build();
-        final AggregatedHttpResponse response =
-                WebClient.of(server.httpUri())
-                         .execute(headers, "{\"query\": \"{foo}\"}", Charsets.UTF_8)
-                         .aggregate().join();
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .execute(request)
+                                                         .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         assertThat(response.contentUtf8()).isEqualTo("Unsupported media type. Only JSON compatible types and " +
@@ -181,15 +164,12 @@ class GraphQLServiceTest {
     @ParameterizedTest
     @MethodSource("provideMediaTypeArguments")
     void shouldPostWhenMediaTypeIsNotSupported(MediaType mediaType) {
-        final RequestHeaders headers = RequestHeaders.builder()
-                                                     .path("/graphql")
-                                                     .method(HttpMethod.POST)
-                                                     .contentType(mediaType)
-                                                     .build();
-        final AggregatedHttpResponse response =
-                WebClient.of(server.httpUri())
-                         .execute(headers, "{\"query\": \"{foo}\"}", Charsets.UTF_8)
-                         .aggregate().join();
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(mediaType, "{\"query\": \"{foo}\"}")
+                                               .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .execute(request)
+                                                         .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         assertThat(response.contentUtf8()).isEqualTo("Unsupported media type. Only JSON compatible types and " +
@@ -211,15 +191,12 @@ class GraphQLServiceTest {
 
     @Test
     void shouldPostWhenError() {
-        final RequestHeaders headers = RequestHeaders.builder()
-                                                     .path("/graphql")
-                                                     .method(HttpMethod.POST)
-                                                     .contentType(MediaType.GRAPHQL)
-                                                     .build();
-        final AggregatedHttpResponse response =
-                WebClient.of(server.httpUri())
-                         .execute(headers, "{error}", Charsets.UTF_8)
-                         .aggregate().join();
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(MediaType.GRAPHQL, "{error}")
+                                               .build();
+        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
+                                                         .execute(request)
+                                                         .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8())

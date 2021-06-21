@@ -33,6 +33,7 @@ import com.google.common.base.Charsets;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -72,15 +73,11 @@ class GraphQLServiceSubscriptionTest {
 
     @Test
     void testSubscription() {
-        final RequestHeaders headers = RequestHeaders.builder()
-                                                     .path("/graphql")
-                                                     .method(HttpMethod.POST)
-                                                     .contentType(MediaType.GRAPHQL)
-                                                     .build();
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(MediaType.GRAPHQL, "subscription {hello}")
+                                               .build();
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(headers,
-                                                                  "subscription {hello}",
-                                                                  Charsets.UTF_8)
+                                                         .execute(request)
                                                          .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);

@@ -9,14 +9,11 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.google.common.base.Charsets;
-
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.Server;
 
 class GraphQLServiceTest {
@@ -48,12 +45,10 @@ class GraphQLServiceTest {
             "{user(id: 3) {name}},droid"
     })
     void testUserDataFetch(String query, String expected) {
-        final RequestHeaders headers = RequestHeaders.builder()
-                                                     .path("/graphql")
-                                                     .method(HttpMethod.POST)
-                                                     .contentType(MediaType.GRAPHQL)
-                                                     .build();
-        final AggregatedHttpResponse response = client.execute(headers, query, Charsets.UTF_8)
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(MediaType.GRAPHQL, query)
+                                               .build();
+        final AggregatedHttpResponse response = client.execute(request)
                                                       .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
