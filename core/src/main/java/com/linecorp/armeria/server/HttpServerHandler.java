@@ -228,7 +228,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // endOfStream set.
                 cleanup();
         }
-        //Clean up the listener from ServerConfigHolder once the channel becomes inactive.
+        // Clean up the listener from ServerConfigHolder once the channel becomes inactive.
         configHolder.removeListener(configUpdateListener);
     }
 
