@@ -72,9 +72,10 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
 
             if (stream instanceof PublisherBasedStreamMessage ||
                 stream instanceof SplitHttpResponse ||
-                stream instanceof PathStreamMessage) {
-                // It's impossible for PublisherBasedStreamMessage to tell if the stream is
-                // closed or empty yet because Publisher doesn't have enough information.
+                stream instanceof PathStreamMessage ||
+                "com.linecorp.armeria.common.multipart.MultipartDecoder".equals(stream.getClass().getName())) {
+                // It's impossible for the above StreamMessages to tell if the streams are
+                // closed or empty yet because the data could be created when the first request is made.
             } else {
                 assertThat(stream.isOpen()).isFalse();
                 assertThat(stream.isEmpty()).isTrue();
