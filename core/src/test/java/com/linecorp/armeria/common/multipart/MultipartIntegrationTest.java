@@ -271,7 +271,8 @@ class MultipartIntegrationTest {
         final StreamMessage<HttpData> responseContents = splitResponse.body();
         @Nullable
         final MediaType contentType = responseHeaders.contentType();
-        assertThat(Multiparts.isMultipart(contentType)).isTrue();
+        assertThat(contentType).isNotNull();
+        assertThat(contentType.isMultipart()).isTrue();
         final String boundary = Multiparts.getBoundary(contentType);
         assertThat(boundary).isEqualTo(requestMultipart.boundary());
 
@@ -294,7 +295,8 @@ class MultipartIntegrationTest {
         final StreamMessage<HttpData> responseContents = splitResponse.body();
         @Nullable
         final MediaType contentType = responseHeaders.contentType();
-        assertThat(Multiparts.isMultipart(contentType)).isTrue();
+        assertThat(contentType).isNotNull();
+        assertThat(contentType.isMultipart()).isTrue();
         final String boundary = Multiparts.getBoundary(contentType);
         assertThat(boundary).isEqualTo("multipart-response-simple");
 

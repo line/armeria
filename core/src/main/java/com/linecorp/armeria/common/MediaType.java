@@ -887,6 +887,15 @@ public final class MediaType {
     }
 
     /**
+     * Returns {@code true} if the type is multipart.
+     * Otherwise {@code false}.
+     * @see #ANY_MULTIPART_TYPE
+     */
+    public boolean isMultipart() {
+        return ANY_MULTIPART_TYPE.type().equals(type());
+    }
+
+    /**
      * Returns {@code true} if this instance falls within the range (as defined by <a
      * href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.1">the HTTP Accept header</a>) given
      * by the argument according to three criteria:

@@ -54,6 +54,7 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
 
     private static final BaseEncoding base64 = BaseEncoding.base64().omitPadding();
     private static final String BOUNDARY_PARAMETER = "boundary";
+    private static final MediaType DEFAULT_MULTIPART_TYPE = MediaType.MULTIPART_FORM_DATA;
 
     /**
      * Returns a random boundary used for encoding multipart messages.
@@ -139,8 +140,7 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
     @Override
     public HttpRequest toHttpRequest(String path) {
         requireNonNull(path, "path");
-        final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter(BOUNDARY_PARAMETER,
-                                                                                  boundary());
+        final MediaType contentType = DEFAULT_MULTIPART_TYPE.withParameter(BOUNDARY_PARAMETER, boundary);
         final RequestHeaders requestHeaders = RequestHeaders.builder(HttpMethod.POST, path)
                                                             .contentType(contentType)
                                                             .build();
@@ -156,8 +156,7 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
     @Override
     public HttpResponse toHttpResponse(HttpStatus status) {
         requireNonNull(status, "status");
-        final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter(BOUNDARY_PARAMETER,
-                                                                                  boundary);
+        final MediaType contentType = DEFAULT_MULTIPART_TYPE.withParameter(BOUNDARY_PARAMETER, boundary);
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(status)
                                                                .contentType(contentType)
                                                                .build();
@@ -213,12 +212,11 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
         @Nullable
         MediaType contentType = headers.contentType();
         if (contentType != null) {
-            checkArgument(Multiparts.isMultipart(contentType),
+            checkArgument(contentType.isMultipart(),
                           "Content-Type: %s (expected: multipart content type)", contentType);
             contentType = contentType.withParameter(BOUNDARY_PARAMETER, boundary);
         } else {
-            contentType = MediaType.MULTIPART_FORM_DATA
-                    .withParameter(BOUNDARY_PARAMETER, boundary);
+            contentType = DEFAULT_MULTIPART_TYPE.withParameter(BOUNDARY_PARAMETER, boundary);
         }
         final MediaType finalMediaType = contentType;
         return (T) headers.withMutations(builder -> {

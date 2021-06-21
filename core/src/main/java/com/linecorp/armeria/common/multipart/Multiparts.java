@@ -30,22 +30,13 @@ import com.linecorp.armeria.common.MediaType;
 public final class Multiparts {
 
     /**
-     * Checks whether provided {@link MediaType} is a multipart type.
-     * @param contentType {@link MediaType} to check against or {@code null} if undefined.
-     * @return true, only if provided {@link MediaType} is a multipart type.
-     */
-    static boolean isMultipart(@Nullable MediaType contentType) {
-        return contentType != null && MediaType.ANY_MULTIPART_TYPE.type().equals(contentType.type());
-    }
-
-    /**
      * Extracts {@code boundary} parameter value from the multipart {@link MediaType}.
      * @param contentType {@link MediaType} that represents on of the multipart subtypes.
      * @return {@code boundary} parameter value extracted from the multipart {@link MediaType}.
      */
     static String getBoundary(MediaType contentType) {
         requireNonNull(contentType, "contentType");
-        checkArgument(isMultipart(contentType),
+        checkArgument(contentType.isMultipart(),
                       "Content-Type: %s (expected: multipart content type)", contentType);
         @Nullable
         final String boundary = Iterables.getFirst(contentType.parameters().get("boundary"), null);

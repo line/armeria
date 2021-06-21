@@ -150,7 +150,7 @@ public interface Multipart {
      * ResponseHeaders responseHeaders = splitResponse.headers().join();
      * StreamMessage<HttpData> responseContents = splitResponse.body();
      * MediaType contentType = responseHeaders.contentType();
-     * if (Multiparts.isMultipart(contentType)) {
+     * if (contentType != null && contentType.isMultipart()) {
      *     String boundary = Multiparts.getBoundary(contentType);
      *     Multipart multipart = Multipart.from(boundary, responseContents)
      *     ...
