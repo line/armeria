@@ -16,19 +16,31 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import org.dataloader.DataLoaderRegistry;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.HttpService;
 
 import graphql.GraphQL;
 
 /**
- * Interface used to configure the {@link GraphQL}.
+ * An {@link HttpService} that implements the <a href="https://www.graphql-java.com/">GraphQL</a>.
  */
 @UnstableApi
 @FunctionalInterface
-public interface GraphQLConfigurator {
+public interface GraphqlService extends HttpService {
 
     /**
-     * Configures the {@link GraphQL} using the specified {@link GraphQL.Builder}.
+     * Returns a new {@link GraphqlServiceBuilder}.
      */
-    void configure(GraphQL.Builder builder);
+    static GraphqlServiceBuilder builder() {
+        return new GraphqlServiceBuilder();
+    }
+
+    /**
+     * Returns a new {@link GraphqlService}.
+     */
+    static GraphqlService of(GraphQL graphQL) {
+        return new DefaultGraphqlService(graphQL, new DataLoaderRegistry(), false);
+    }
 }

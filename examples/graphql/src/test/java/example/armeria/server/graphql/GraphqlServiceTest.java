@@ -16,7 +16,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Server;
 
-class GraphQLServiceTest {
+class GraphqlServiceTest {
 
     private static Server server;
     private static WebClient client;

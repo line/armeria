@@ -20,56 +20,72 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
+import java.util.List;
+import java.util.Map;
 
+import org.hamcrest.CustomTypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.schema.DataFetcher;
+import graphql.schema.StaticDataFetcher;
 
-class GraphQLServiceBlockingTest {
+class GraphqlServiceSubscriptionTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final File graphqlSchemaFile =
-                    new File(getClass().getResource("/test.graphqls").toURI());
-            final GraphQLService graphQLService =
-                    GraphQLService.builder()
+                    new File(getClass().getResource("/subscription.graphqls").toURI());
+            final GraphqlService service =
+                    GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
-                                  .useBlockingTaskExecutor(true)
                                   .runtimeWiring(c -> {
-                                      final DataFetcher<String> bar = dataFetcher("bar");
+                                      final StaticDataFetcher bar = new StaticDataFetcher("bar");
                                       c.type("Query",
                                              typeWiring -> typeWiring.dataFetcher("foo", bar));
+                                      c.type("Subscription",
+                                             typeWiring -> typeWiring.dataFetcher("hello", dataFetcher()));
                                   })
                                   .build();
-            sb.service("/graphql", graphQLService);
+            sb.service("/graphql", service);
         }
     };
 
-    private static DataFetcher<String> dataFetcher(String value) {
-        return environment -> {
-            final ServiceRequestContext ctx = environment.getContext();
-            assertThat(ctx.eventLoop().inEventLoop()).isFalse();
-            return value;
-        };
+    private static DataFetcher<Publisher<String>> dataFetcher() {
+        return environment -> StreamMessage.of("Armeria");
     }
 
     @Test
-    void testBlocking() {
+    void testSubscription() {
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(MediaType.GRAPHQL, "subscription {hello}")
+                                               .build();
         final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .get("/graphql?query={foo}")
+                                                         .execute(request)
                                                          .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
+        assertThatJson(response.contentUtf8())
+                .withMatcher("errors",
+                             new CustomTypeSafeMatcher<List<Map<String, String>>>("errors") {
+                                 @Override
+                                 protected boolean matchesSafely(List<Map<String, String>> item) {
+                                     final Map<String, String> error = item.get(0);
+                                     final String message = "WebSocket is not implemented";
+                                     return message.equals(error.get("message"));
+                                 }
+                             });
     }
 }

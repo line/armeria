@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.graphql.GraphQLService;
+import com.linecorp.armeria.server.graphql.GraphqlService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.schema.DataFetcher;
@@ -50,8 +50,8 @@ class GraphQLTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final File graphqlSchemaFile = new File(ClassLoader.getSystemResource("test.graphqls").toURI());
-            final GraphQLService graphQLService =
-                    GraphQLService.builder()
+            final GraphqlService service =
+                    GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {
                                       final StaticDataFetcher bar = new StaticDataFetcher("bar");
@@ -62,7 +62,7 @@ class GraphQLTest {
                                              typeWiring -> typeWiring.dataFetcher("error", error));
                                   })
                                   .build();
-            sb.service("/graphql", graphQLService);
+            sb.service("/graphql", service);
         }
     };
 

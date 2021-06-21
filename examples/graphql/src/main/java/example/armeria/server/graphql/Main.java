@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.graphql.GraphQLService;
+import com.linecorp.armeria.server.graphql.GraphqlService;
 
 public class Main {
 
@@ -30,7 +30,7 @@ public class Main {
     static Server newServer(int port) {
         final ServerBuilder sb = Server.builder();
         return sb.http(port)
-                 .service("/graphql", GraphQLService.builder().runtimeWiring(c -> {
+                 .service("/graphql", GraphqlService.builder().runtimeWiring(c -> {
                      c.type("Query",
                             typeWiring -> typeWiring.dataFetcher("user", new UserDataFetcher()));
                  }).build())

@@ -49,9 +49,9 @@ import graphql.GraphQL;
 import graphql.GraphqlErrorException;
 import graphql.com.google.common.collect.ImmutableMap;
 
-final class DefaultGraphQLService extends AbstractHttpService implements GraphQLService {
+final class DefaultGraphqlService extends AbstractHttpService implements GraphqlService {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultGraphQLService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultGraphqlService.class);
 
     private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.newDefaultObjectMapper();
 
@@ -64,7 +64,7 @@ final class DefaultGraphQLService extends AbstractHttpService implements GraphQL
 
     private final boolean useBlockingTaskExecutor;
 
-    DefaultGraphQLService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
+    DefaultGraphqlService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
                           boolean useBlockingTaskExecutor) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");

@@ -43,7 +43,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import graphql.schema.DataFetcher;
 import graphql.schema.StaticDataFetcher;
 
-class GraphQLServiceTest {
+class GraphqlServiceTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -51,8 +51,8 @@ class GraphQLServiceTest {
         protected void configure(ServerBuilder sb) throws Exception {
             final File graphqlSchemaFile =
                     new File(getClass().getResource("/test.graphqls").toURI());
-            final GraphQLService graphQLService =
-                    GraphQLService.builder()
+            final GraphqlService service =
+                    GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {
                                       final StaticDataFetcher bar = new StaticDataFetcher("bar");
@@ -63,7 +63,7 @@ class GraphQLServiceTest {
                                              typeWiring -> typeWiring.dataFetcher("error", error));
                                   })
                                   .build();
-            sb.service("/graphql", graphQLService);
+            sb.service("/graphql", service);
         }
     };
 

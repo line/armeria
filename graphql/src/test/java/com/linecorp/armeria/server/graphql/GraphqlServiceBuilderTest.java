@@ -28,19 +28,19 @@ import org.junit.jupiter.api.Test;
 import graphql.execution.instrumentation.SimpleInstrumentation;
 import graphql.schema.GraphQLTypeVisitorStub;
 
-class GraphQLServiceBuilderTest {
+class GraphqlServiceBuilderTest {
 
     @Test
     void notFoundDefaultSchemaFile() {
         assertThatThrownBy(() -> {
-            new GraphQLServiceBuilder().build();
+            new GraphqlServiceBuilder().build();
         }).isInstanceOf(IllegalStateException.class).hasMessage("Not found schema file(s)");
     }
 
     @Test
     void specifySchemaFile() throws Exception {
         final File graphqlSchemaFile = new File(getClass().getResource("/test.graphqls").toURI());
-        final GraphQLService service = new GraphQLServiceBuilder().schemaFile(graphqlSchemaFile).build();
+        final GraphqlService service = new GraphqlServiceBuilder().schemaFile(graphqlSchemaFile).build();
         assertThat(service).isNotNull();
     }
 
@@ -48,10 +48,10 @@ class GraphQLServiceBuilderTest {
     void successful() throws Exception {
         final File graphqlSchemaFile =
                 new File(getClass().getResource("/test.graphqls").toURI());
-        final GraphQLServiceBuilder builder = new GraphQLServiceBuilder();
+        final GraphqlServiceBuilder builder = new GraphqlServiceBuilder();
         final DataLoader<String, String> dataLoader =
                 DataLoader.newDataLoader(keys -> CompletableFuture.supplyAsync(() -> keys));
-        final GraphQLService service = builder.schemaFile(graphqlSchemaFile)
+        final GraphqlService service = builder.schemaFile(graphqlSchemaFile)
                                               .instrumentation(SimpleInstrumentation.INSTANCE)
                                               .configureDataLoaderRegistry(dlr -> {
                                                   dlr.register("dummy1", dataLoader);
@@ -59,7 +59,7 @@ class GraphQLServiceBuilderTest {
                                               .runtimeWiring(it -> {
                                                   // noop
                                               }).typeVisitors(new GraphQLTypeVisitorStub())
-                                              .configureGraphQL(it -> {
+                                              .configureGraphql(it -> {
                                                   // noop
                                               }).build();
         assertThat(service).isNotNull();
