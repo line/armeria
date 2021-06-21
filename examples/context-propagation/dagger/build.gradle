@@ -13,5 +13,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.contextpropagation.dagger.Main'
+    mainClass.set('example.armeria.contextpropagation.dagger.Main')
 }
