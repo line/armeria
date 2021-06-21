@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,13 +23,13 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.common.RequestContext;
 
 /**
- * Implementation of {@link JavaVersionSpecific} using Java 9 APIs.
+ * Implementation of {@link JavaVersionSpecific} using Java 12 APIs.
  */
-class Java9VersionSpecific extends JavaVersionSpecific {
+class Java12VersionSpecific extends JavaVersionSpecific {
 
     @Override
     String name() {
-        return "Java 9+";
+        return "Java 12+";
     }
 
     @Override
@@ -39,6 +39,6 @@ class Java9VersionSpecific extends JavaVersionSpecific {
 
     @Override
     public <T> CompletableFuture<T> newContextAwareFuture(RequestContext ctx) {
-        return new Java9ContextAwareFuture<>(requireNonNull(ctx, "ctx"));
+        return new Java12ContextAwareFuture<>(requireNonNull(ctx, "ctx"));
     }
 }
