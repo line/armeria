@@ -26,8 +26,8 @@ import io.netty.util.AttributeKey;
 
 final class DefaultRequestOptions implements RequestOptions {
 
-    static final DefaultRequestOptions EMPTY = new DefaultRequestOptions(-1, -1,
-                                                                         -1, ImmutableMap.of());
+    static final DefaultRequestOptions EMPTY =
+            new DefaultRequestOptions(-1, -1, -1, ImmutableMap.of());
 
     private final long responseTimeoutMillis;
     private final long writeTimeoutMillis;

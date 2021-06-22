@@ -109,8 +109,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
      * Returns a newly created {@link RequestOptions} with the properties specified so far.
      */
     public RequestOptions build() {
-        if (responseTimeoutMillis == -1 && writeTimeoutMillis == -1 &&
-            maxResponseLength == -1 && attributes == null) {
+        if (responseTimeoutMillis < 0 && writeTimeoutMillis < 0 &&
+            maxResponseLength < 0 && attributes == null) {
             return EMPTY;
         } else {
             final Map<AttributeKey<?>, Object> attributes;

@@ -76,17 +76,17 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
         requireNonNull(requestOptions, "requestOptions");
 
         final long maxResponseLength = requestOptions.maxResponseLength();
-        if (maxResponseLength != -1) {
+        if (maxResponseLength >= 0) {
             maxResponseLength(maxResponseLength);
         }
 
         final long responseTimeoutMillis = requestOptions.responseTimeoutMillis();
-        if (responseTimeoutMillis != -1) {
+        if (responseTimeoutMillis >= 0) {
             responseTimeoutMillis(responseTimeoutMillis);
         }
 
         final long writeTimeoutMillis = requestOptions.writeTimeoutMillis();
-        if (writeTimeoutMillis != -1) {
+        if (writeTimeoutMillis >= 0) {
             writeTimeoutMillis(writeTimeoutMillis);
         }
 
