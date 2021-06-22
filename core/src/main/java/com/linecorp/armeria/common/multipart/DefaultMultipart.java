@@ -33,7 +33,6 @@ import com.google.common.io.BaseEncoding;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -218,10 +217,8 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
         } else {
             contentType = DEFAULT_MULTIPART_TYPE.withParameter(BOUNDARY_PARAMETER, boundary);
         }
-        final MediaType finalMediaType = contentType;
-        return (T) headers.withMutations(builder -> {
-            builder.setObject(HttpHeaderNames.CONTENT_TYPE, finalMediaType);
-        });
+        final MediaType contentTypeWithBoundary = contentType;
+        return (T) headers.withMutations(builder -> builder.contentType(contentTypeWithBoundary));
     }
 
     private static final class BodyPartAggregator implements Subscriber<BodyPart> {

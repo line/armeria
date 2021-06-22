@@ -152,10 +152,10 @@ public interface Multipart {
      * MediaType contentType = responseHeaders.contentType();
      * if (contentType != null && contentType.isMultipart()) {
      *     String boundary = Multiparts.getBoundary(contentType);
-     *     Multipart multipart = Multipart.from(boundary, responseContents)
+     *     Multipart multipart = Multipart.from(boundary, responseContents);
      *     ...
      * } else {
-     *     handleNonMultipartResponse(response);
+     *     handleNonMultipartResponse(responseHeaders, responseContents);
      * }
      * }</pre>
      */
