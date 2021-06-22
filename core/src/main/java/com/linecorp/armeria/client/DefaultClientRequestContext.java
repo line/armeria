@@ -507,7 +507,6 @@ public final class DefaultClientRequestContext
     private ClientRequestContext newDerivedContext(RequestId id, HttpRequest req, @Nullable RpcRequest rpcReq,
                                                    RequestHeaders newHeaders, SessionProtocol protocol,
                                                    @Nullable Endpoint endpoint, String pathWithQuery) {
-        // Parse in order to do percent encoding.
         final PathAndQuery pathAndQuery = PathAndQuery.parse(pathWithQuery);
         if (pathAndQuery == null) {
             throw new IllegalArgumentException("invalid path: " + req.path());

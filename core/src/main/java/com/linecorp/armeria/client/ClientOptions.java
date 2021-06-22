@@ -68,6 +68,12 @@ public final class ClientOptions
             ClientOption.define("MAX_RESPONSE_LENGTH", Flags.defaultMaxResponseLength());
 
     /**
+     * The redirect configuration.
+     */
+    public static final ClientOption<RedirectConfig> REDIRECT_CONFIG =
+            ClientOption.define("REDIRECT_CONFIG", RedirectConfig.disabled());
+
+    /**
      * The {@link Function} that decorates the client components.
      */
     public static final ClientOption<ClientDecoration> DECORATION =
@@ -242,6 +248,13 @@ public final class ClientOptions
      */
     public long maxResponseLength() {
         return get(MAX_RESPONSE_LENGTH);
+    }
+
+    /**
+     * Returns the {@link RedirectConfig}.
+     */
+    public RedirectConfig redirectConfig() {
+        return get(REDIRECT_CONFIG);
     }
 
     /**

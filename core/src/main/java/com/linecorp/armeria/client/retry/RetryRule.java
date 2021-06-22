@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Determines whether a failed request should be retried.
@@ -70,15 +69,6 @@ public interface RetryRule {
     static RetryRule failsafe() {
         return of(builder(HttpMethod.idempotentMethods()).onServerErrorStatus().onException().thenBackoff(),
                   onUnprocessed());
-    }
-
-    /**
-     * Returns a rule for <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4.4">
-     * HTTP redirection</a>.
-     */
-    @UnstableApi
-    static RetryRule redirect() {
-        return RedirectRule.INSTANCE;
     }
 
     /**

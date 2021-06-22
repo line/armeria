@@ -20,17 +20,15 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.RequestHeaders;
-
 /**
  * A {@link RetryDecision} that determines whether a {@link RetryRule} retries with a {@link Backoff},
  * skips the current {@link RetryRule} or no retries.
  */
 public final class RetryDecision {
 
-    private static final RetryDecision NO_RETRY = new RetryDecision(null, null);
-    private static final RetryDecision NEXT = new RetryDecision(null, null);
-    static final RetryDecision DEFAULT = new RetryDecision(Backoff.ofDefault(), null);
+    private static final RetryDecision NO_RETRY = new RetryDecision(null);
+    private static final RetryDecision NEXT = new RetryDecision(null);
+    static final RetryDecision DEFAULT = new RetryDecision(Backoff.ofDefault());
 
     /**
      * Returns a {@link RetryDecision} that retries with the specified {@link Backoff}.
@@ -39,11 +37,7 @@ public final class RetryDecision {
         if (backoff == Backoff.ofDefault()) {
             return DEFAULT;
         }
-        return new RetryDecision(requireNonNull(backoff, "backoff"), null);
-    }
-
-    static RetryDecision retry(Backoff backoff, RequestHeaders headers) {
-        return new RetryDecision(requireNonNull(backoff, "backoff"), requireNonNull(headers, "headers"));
+        return new RetryDecision(requireNonNull(backoff, "backoff"));
     }
 
     /**
@@ -63,22 +57,14 @@ public final class RetryDecision {
 
     @Nullable
     private final Backoff backoff;
-    @Nullable
-    private final RequestHeaders headers;
 
-    private RetryDecision(@Nullable Backoff backoff, @Nullable RequestHeaders headers) {
+    private RetryDecision(@Nullable Backoff backoff) {
         this.backoff = backoff;
-        this.headers = headers;
     }
 
     @Nullable
     Backoff backoff() {
         return backoff;
-    }
-
-    @Nullable
-    RequestHeaders requestHeaders() {
-        return headers;
     }
 
     @Override

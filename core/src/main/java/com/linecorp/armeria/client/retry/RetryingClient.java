@@ -45,7 +45,6 @@ import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -302,7 +301,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         if (config.requiresResponseTrailers()) {
             response.aggregate().handle((aggregated, cause) -> {
                 final HttpResponse response0 = cause != null ? HttpResponse.ofFailure(cause) : null;
-                // One of response0 of response0 is not null.
+                assert response0 != null || aggregated != null;
                 handleResponse(config, ctx, rootReqDuplicator, future, returnedResWhenComplete, derivedCtx,
                                response0, aggregated);
                 return null;
@@ -409,12 +408,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         return (decision, unused) -> {
             final Backoff backoff = decision != null ? decision.backoff() : null;
             if (backoff != null) {
-                final RequestHeaders newHeaders = decision.requestHeaders();
-                if (newHeaders != null && !newHeaders.path().equals(rootReqDuplicator.headers().path())) {
-                    redirect(ctx, derivedCtx, rootReqDuplicator, future, returnedResWhenComplete, originalRes,
-                             backoff, newHeaders);
-                    return null;
-                }
                 final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
                 final long nextDelay = getNextDelay(ctx, backoff, millisAfter);
 
@@ -432,40 +425,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             rootReqDuplicator.close();
             return null;
         };
-    }
-
-    private void redirect(ClientRequestContext ctx, ClientRequestContext derivedCtx,
-                          HttpRequestDuplicator rootReqDuplicator, CompletableFuture<HttpResponse> future,
-                          CompletableFuture<Void> returnedResWhenComplete, HttpResponse originalRes,
-                          Backoff backoff, RequestHeaders newHeaders) {
-        final HttpRequest originalReq = getOriginalRequest(ctx);
-        assert originalReq != null;
-        final String originalPath = originalReq.path();
-        final String newPath = newHeaders.path();
-        if (newPath.equals(originalPath) || !addRedirectPath(ctx, newPath)) {
-            final Set<String> paths = redirectPaths(ctx);
-            assert paths != null;
-            final RedirectLoopsException exception = new RedirectLoopsException(originalPath, paths);
-            abortResponse(originalRes, derivedCtx, exception);
-            handleException(ctx, rootReqDuplicator, future, exception, false);
-            return;
-        }
-        abortResponse(originalRes, derivedCtx, null);
-        resetTotalAttempts(ctx);
-        final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx)
-                                               : 0; // nextDelay will be at least 0.
-        final long nextDelay = Math.max(backoff.nextDelayMillis(1), millisAfter);
-        final HttpRequestDuplicator newReqDuplicator;
-        if (rootReqDuplicator.headers().method() != newHeaders.method()) {
-            rootReqDuplicator.abort();
-            // TODO(minwoox): Add EmptyBodyHttpRequestRequestDuplicator.
-            newReqDuplicator = HttpRequest.of(newHeaders).toDuplicator();
-        } else {
-            newReqDuplicator = new HttpRequestDuplicatorWrapper(rootReqDuplicator, newHeaders);
-        }
-        scheduleNextRetry(ctx, cause -> handleException(ctx, newReqDuplicator, future, cause, false),
-                          () -> doExecute0(ctx, newReqDuplicator, future, returnedResWhenComplete),
-                          nextDelay);
     }
 
     private static long getRetryAfterMillis(ClientRequestContext ctx) {
