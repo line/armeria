@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
+import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
@@ -44,6 +45,9 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     @Override
     public HttpResponse execute(HttpRequest req, RequestOptions requestOptions) {
+        requireNonNull(req, "req");
+        requireNonNull(requestOptions, "requestOptions");
+
         if (Clients.isUndefinedUri(uri())) {
             final URI uri;
             if (isAbsoluteUri(req.path())) {
