@@ -458,6 +458,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final HttpRequestDuplicator newReqDuplicator;
         if (rootReqDuplicator.headers().method() != newHeaders.method()) {
             rootReqDuplicator.abort();
+            // TODO(minwoox): Add EmptyBodyHttpRequestRequestDuplicator.
             newReqDuplicator = HttpRequest.of(newHeaders).toDuplicator();
         } else {
             newReqDuplicator = new HttpRequestDuplicatorWrapper(rootReqDuplicator, newHeaders);
@@ -533,7 +534,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         private static final Joiner joiner = Joiner.on(';');
 
         RedirectLoopsException(String originalPath, Set<String> paths) {
-            super("originalPath: " + originalPath + ", redirect paths: " + joiner.join(paths));
+            super("The initial request: " + originalPath + ", redirects: " + joiner.join(paths));
         }
     }
 }

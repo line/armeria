@@ -135,7 +135,7 @@ class RedirectRuleTest {
     void httpsRedirect() {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(ClientFactory.insecure())
-                                          .decorator(RetryingClient.newDecorator(RetryRule.redirect()))
+                                          .decorator(RedirectingClient.newDecorator())
                                           .build();
         final AggregatedHttpResponse join = client.get("/https").aggregate().join();
         assertThat(join.contentUtf8()).contains("httpsRedirection");
@@ -144,7 +144,7 @@ class RedirectRuleTest {
     @Test
     void seeOtherHttpMethodChangedToGet() {
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(RetryingClient.newDecorator(RetryRule.redirect()))
+                                          .decorator(RedirectingClient.newDecorator())
                                           .build();
         final AggregatedHttpResponse join = client.post("/seeOther", "hello!").aggregate().join();
         assertThat(join.contentUtf8()).contains("seeOtherRedirection");
@@ -153,9 +153,9 @@ class RedirectRuleTest {
     @Test
     void redirectLoopsException() {
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(RetryingClient.newDecorator(RetryRule.redirect()))
+                                          .decorator(RedirectingClient.newDecorator())
                                           .build();
         assertThatThrownBy(() -> client.get("/loop").aggregate().join())
-                .hasMessageContainingAll("originalPath: /loop, redirect paths:", "loop1", "loop2");
+                .hasMessageContainingAll("The initial request: /loop, redirects:", "/loop1", "/loop2");
     }
 }
