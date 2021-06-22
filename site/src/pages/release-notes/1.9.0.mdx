@@ -1,0 +1,237 @@
+---
+date: 2021-06-23
+---
+
+## 🌟 New features
+
+- You can now bind [GraphQL Java](https://www.graphql-java.com/) with <type://ServerBuilder> 
+  using <type://GraphqlService>. #3318 #3373
+  ```java
+  ServerBuilder sb = ...;
+  sb.service("/graphql", GraphqlService.builder()
+                                       .schemaFile(schemaFiles)
+                                       .runtimeWiring(w -> ...)
+                                       .configureDataLoaderRegistry(registery -> ...)
+                                       ...
+                                       .build());
+  ```
+  <Tip>
+
+  `armeria-graphql` is currently experimental, so you should be careful using the feature.
+
+  </Tip>
+- You can now transform the objects of <type://HttpRequest> and <type://HttpResponse> using a function.
+  #3606 #3624
+  ```java
+  HttpRequest req1 = ...;
+  HttpRequest req2 = req1.mapHeaders(headers -> ...)
+                         .mapData(data -> ...)
+                         .mapTrailers(trailers -> ...);
+  
+  HttpResponse res1 = ...;
+  HttpResponse res2 = res1.mapHeaders(headers -> ...)
+                          .mapInformational(informational -> ...)
+                          .mapData(data -> ...)
+                          .mapTrailers(trailers -> ...);
+  ```
+- You can now collect the all elements of a <type://StreamMessage> with <type://StreamMessage#collect()>. #3603
+  ```java
+  StreamMessage<MyObject> stream = ...;
+  CompletableFuture<List<MyObject>> collected = stream.collect();
+  ```
+- You can exclude a <type://Route> from another <type://Route> when configuring their services. #2737 #3562
+  ```java
+  ServerBuilder sb = ...;
+  sb.route()
+    .pathPrefix("/api")
+    .exclude("/api/admin")
+    .exclude(Route.builder()...build())
+    .build(apiService);
+
+  sb.routeDecorator()
+    .pathPrefix("/api")
+    .exclude("/api/admin")
+    .build(MetricCollectingService.newDecorator());
+  ```
+- You can now update the service bindings without restarting a <type://Server> using
+  <type://Server#reconfigure(ServerConfigurator)>. #3041 #3362 Note that there are some limitations on 
+  the <type://Server> reconfiguration. Please check out #3041 for details.
+  ```java
+  Server server = ...;
+  server.reconfigure(sb -> {
+     sb.service("/dynamic", new LazyService());
+  });
+  ```
+- You can now use <type://RequestOptions> to configure various options at request level. #3593
+  ```java
+  HttpRequest req = ...;
+  WebClient client = ...;
+  RequestOptions options = RequestOptions.builder()
+                                         .responseTimeout(Duration.ofSeconds(20))
+                                         .writeTimeout(Duration.ofSeconds(5))
+                                         .maxResponseLength(2048)
+                                         .attr(foo, "bar")
+                                         .build();
+  // Specify RequestOptions when sending a request.
+  client.execute(req, options);
+  
+  // Specify the options when building a request using WebClientRequestPreparation.
+  client.prepare()
+        .get("/some/path")
+        .responseTimeout(Duration.ofSeconds(20))
+        .writeTimeout(Duration.ofSeconds(5))
+        .maxResponseLength(2048)
+        .attr(foo, "bar")
+        .execute();
+  ```
+- You can now fluently build a <type://BlockingTaskExecutor> using <type://BlockingTaskExecutorBuilder>.
+  #3315 #3389
+  ```java
+  BlockingTaskExecutor.builder()
+                      .daemon(true)
+                      .numThreads(500)
+                      .threadNamePrefix("my-blocking-task-executor")
+                      .build();
+  ```
+- You can now easily get a boolean value from <type://QueryParams> and <type://HttpHeaders>. #3600
+  ```java
+  HttpHeaders headers = HttpHeaders.of("checked", "true", "valid", "1");
+  assert headers.getBoolean("checked");
+  assert headers.getBoolean("valid");
+  QueryParams params = QueryParams.of("checked", "false", "valid", "0");
+  assert !params.getBoolean("checked");
+  assert !params.getBoolean("valid");
+  ```
+- You can now conveniently configure a loopback port with
+  <type://ServerBuilder#localPort(int,Iterable)>. #3599 #3601
+  ```java
+  Server.builder()
+        .localPort(8080)
+        .localPort(9090, SessionProtocol.HTTP, SessionProtocol.HTTPS)
+  ```
+- You can now specify the default Jackson modules with <type://JacksonModuleProvider>. #3594 #3625
+  - All available Jackson modules are automatically loaded through Jackson's
+    [built-in SPI](https://fasterxml.github.io/jackson-databind/javadoc/2.11/com/fasterxml/jackson/databind/cfg/MapperBuilder.html#findAndAddModules--)
+    by default.
+- [TCP User Timeout Option](https://datatracker.ietf.org/doc/html/rfc5482) is enabled by default when an idle
+  timeout is enabled. #3509
+  - `TCP_KEEPIDLE` and `TCP_KEEPINTVL` options are enabled when a PING interval is greater than 0.
+- You can now get the last value of a header name or a query param using
+  <type://HttpHeaders#getLast(CharSequence)> and <type://QueryParams#getLast(String)>. #3438 #3568
+  ```java
+  HttpHeaders headers = ...;
+  headers.getLast(HttpHeaderNames.X_FORWARDED_FOR);
+  
+  QueryParams params = ...;
+  params.getLast("items");
+  ```
+- You can now specify a current and max content length when creating <type://ContentTooLargeException>.
+  #3520 #3616
+- You can now convert a <type://Multipart> into an <type://HttpResponse>. #3642
+- You can now warm up an `EventLoopGroup` using <type://EventLoopGroups#warmUp(EventLoopGroup)>. #3363 #3610
+- You can now figure out how many connections it is managing using <type://ClientFactory#numConnections()>.
+  #3596 #3613
+- You can now specify the number of event loop threads and blocking task threads using a number. #3597 #3602
+  ```java
+  Server.builder()
+        .workerGroup(3)
+        .blockingTaskExecutor(10)
+        ...
+        .build()
+  
+  ClientFactory.builder()
+               .workerGroup(3)
+               .build()
+  ```
+- You can now clear the mocking state of a <type://MockWebServerExtension> using
+  <type://MockWebServerExtension#reset()>. #3629
+
+## 📈 Improvements
+
+- Various optimizations for <type://StreamMessage> implementations. #3585 #3584
+- `TemporaryThreadLocals` throws an `IllegalStateException` if it was not properly released before using it.
+  #3505
+- You can now use optimized a context-aware `CompletableFuture` for Java 12 and above. #2119 #3615
+- Various multipart mime types are added to <type://MediaType>. #3642
+
+## 🛠️ Bug fixes
+
+- `ByteBuf`s are no longer leaked when using:
+  - Spring WebFlux integration with compression #3608 #3617
+  - <type://StreamMessageDuplicator> #3476 #3583
+- You no longer see a <type://ResponseTimeoutException> with <type://CircuitBreakerClient> when a large number
+  of messages are received from a response. #3631
+- You can now set the service name of an annotated service using
+  the <type://ServerBuilder#defaultServiceNaming(ServiceNaming)>. #3589
+- You no longer see a <type://ClosedStreamException> when an <type://EndpointGroup> is empty. #3381 #3636
+- Late `Subscriber`s correctly run on the specified executor. #3623 #3632
+- An exception raised in <type://THttpService> is now properly peeled using
+  <type://Exceptions#peel(Throwable)>. #3588
+- You no longer see an `UnsatisfiedLinkError` when a Netty JAR without native libraries is included. #3485 #3607
+- Additional headers are now correctly updated to <type://RequestOnlyLog#requestHeaders()>. #3579 #3581
+- `CancellationScheduler` provides more accurate timeout nanoseconds. #3570
+- You no longer see a duplicate `Content-Type` header when using <type://Multipart>. #3642
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- Bouncy Castle 1.68 → 1.69
+- Dropwizard 2.0.21 → 2.0.23
+- Dropwizard Metrics 4.1.21 → 4.2.2
+- Eureka 1.10.13 → 1.10.15
+- fastutil 8.4.4 → 8.5.4
+- gRPC-Java 1.37.0 → 1.38.1
+- gRPC-Kotlin 1.0.0 → 1.1.0
+- JBoss logging 3.4.1 → 3.4.2
+- Jetty 9.4.39 → 9.4.42
+- Kotlin 1.5.0 → 1.5.10
+- Kotlin Coroutines 1.4.3 → 1.5.0
+- Micrometer 1.3.18 → 1.3.20
+- Netty 4.1.63 → 4.1.65
+- netty-tcnative-boringssl-static 2.0.38 → 2.0.39
+- Prometheus 0.10.0 → 0.11.0
+- Reactor 3.4.6 → 3.4.7
+- RESTEasy 4.6.0 → 4.6.1
+- RxJava 3.0.12 → 3.0.13
+- Scala
+  - 2.12.13 → 2.12.14
+  - 2.13.5 → 2.13.6
+- ScalaPB runtime 0.11.2 → 0.11.3
+- ScalaPB json4s 0.11.0 → 0.11.1
+- SLF4J 1.7.30 → 1.7.31
+- Spring 5.3.7 → 5.3.8
+- Spring Boot 2.4.5 → 2.5.1
+- Tomcat
+  - 8.5.64 → 8.5.68
+  - 9.0.44 → 9.0.46
+- Thrift 0.14.1 → 0.14.2
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'amitvc',
+  'anuraaga',
+  'haithamgabr',
+  'heowc',
+  'hexoul',
+  'hyangtack',
+  'ikhoon',
+  'jrhee17',
+  'JunoJunho',
+  'KarboniteKream',
+  'kezhenxu94',
+  'kojilin',
+  'mauhiz',
+  'max904-github',
+  'minwoox',
+  'nirvanarsc',
+  'serajin00',
+  'trustin'
+]} />
