@@ -20,7 +20,7 @@ HelloService.Iface client =
            .build(HelloService.Iface.class);
 ```
 
-## Using <type://RequestOptions>
+## Using <type://WebClientRequestPreparation>
 
 You can override the properties defined in <type://RequestOptions> at request level
 using <type://WebClient#prepare()>.
@@ -37,8 +37,12 @@ client.prepare()
       .execute();
 ```
 
-Otherwise, you can create a <type://RequestOptions> and pass it
-to <type://WebClient#execute(HttpRequest,RequestOptions)?full> with an <type://HttpRequest>.
+## Using <type://RequestOptions>
+
+You can also create a <type://RequestOptions> to override the properties at request level. The
+created <type://RequestOptions> could be passed to <type://WebClient#execute(HttpRequest,RequestOptions)?full>
+with an <type://HttpRequest>.
+
 ```java
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.common.HttpRequest;

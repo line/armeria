@@ -37,7 +37,7 @@ ctx.attrs().forEachRemaining(e -> {
 });
 ```
 
-## Setting attributes using <type://RequestOptions>
+## Setting attributes using <type://WebClientRequestPreparation>
 
 You can set attributes when building a request using <type://WebClient#prepare()>.
 
@@ -55,8 +55,11 @@ client.prepare()
       .execute();
 ```
 
-Otherwise, you can create a <type://RequestOptions> and pass it
+## Setting attributes using <type://RequestOptions>
+
+You can also create a <type://RequestOptions> and pass it
 to <type://WebClient#execute(HttpRequest,RequestOptions)?full> with an <type://HttpRequest>.
+
 ```java
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.common.HttpRequest;
