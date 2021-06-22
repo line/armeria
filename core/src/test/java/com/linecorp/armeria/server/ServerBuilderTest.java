@@ -15,14 +15,20 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.util.ChannelUtilTest.TCP_USER_TIMEOUT_BUFFER_MILLIS;
 import static com.linecorp.armeria.server.ServerBuilder.MIN_PING_INTERVAL_MILLIS;
+import static io.netty.channel.ChannelOption.SO_LINGER;
+import static io.netty.channel.epoll.EpollChannelOption.TCP_USER_TIMEOUT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -40,10 +46,12 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
@@ -51,6 +59,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.netty.channel.ChannelOption;
 import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.scheduler.Schedulers;
 
@@ -587,5 +596,37 @@ class ServerBuilderTest {
         assertThatThrownBy(() -> Server.builder().maxConnectionAgeMillis(100))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("expected: >= 1000 or == 0");
+    }
+
+    @Test
+    void defaultTcpUserTimeoutApplied() {
+        assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
+
+        // default tcp user timeout applied
+        final int lingerMillis = 1000;
+        final int idleTimeoutMillis = 12_000;
+        Server server = Server.builder()
+                              .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                              .idleTimeoutMillis(idleTimeoutMillis)
+                              .childChannelOption(SO_LINGER, lingerMillis)
+                              .build();
+        Map<ChannelOption<?>, Object> childChannelOptions =
+                (Map<ChannelOption<?>, Object>) server.config().childChannelOptions();
+        assertThat(childChannelOptions)
+                .containsExactly(entry(TCP_USER_TIMEOUT, idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS),
+                                 entry(SO_LINGER, lingerMillis));
+
+        // user defined value is respected
+        final int userDefinedValue = 30_000;
+        server = Server.builder()
+                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                       .idleTimeoutMillis(idleTimeoutMillis)
+                       .childChannelOption(TCP_USER_TIMEOUT, userDefinedValue)
+                       .childChannelOption(SO_LINGER, lingerMillis)
+                       .build();
+        childChannelOptions = (Map<ChannelOption<?>, Object>) server.config().childChannelOptions();
+        assertThat(childChannelOptions)
+                .containsExactly(entry(TCP_USER_TIMEOUT, userDefinedValue),
+                                 entry(SO_LINGER, lingerMillis));
     }
 }
