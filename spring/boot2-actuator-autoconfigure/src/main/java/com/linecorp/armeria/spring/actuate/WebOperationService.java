@@ -127,7 +127,11 @@ final class WebOperationService implements HttpService {
                 return null;
             }
             if (operation.isBlocking()) {
-                ctx.blockingTaskExecutor().execute(() -> invoke(ctx, aggregatedReq, resFuture));
+                try {
+                    ctx.blockingTaskExecutor().execute(() -> invoke(ctx, aggregatedReq, resFuture));
+                } catch (Throwable cause) {
+                    resFuture.completeExceptionally(cause);
+                }
             } else {
                 invoke(ctx, aggregatedReq, resFuture);
             }
@@ -139,10 +143,9 @@ final class WebOperationService implements HttpService {
     private void invoke(ServiceRequestContext ctx,
                         AggregatedHttpRequest req,
                         CompletableFuture<HttpResponse> resFuture) {
-        final Map<String, Object> arguments = getArguments(ctx, req);
-        final Object result = operation.invoke(new InvocationContext(SecurityContext.NONE, arguments));
-
         try {
+            final Map<String, Object> arguments = getArguments(ctx, req);
+            final Object result = operation.invoke(new InvocationContext(SecurityContext.NONE, arguments));
             final HttpResponse res = handleResult(ctx, result, req.method());
             resFuture.complete(res);
         } catch (Throwable cause) {

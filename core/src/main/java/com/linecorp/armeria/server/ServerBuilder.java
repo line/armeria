@@ -66,6 +66,8 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -82,6 +84,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -365,6 +368,33 @@ public final class ServerBuilder {
     }
 
     /**
+     * Adds a new {@link ServerPort} that listens to the loopback {@code localAddress} using the specified
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = Server.builder();
+     * sb.localPort(8080, SessionProtocol.HTTP, SessionProtocol.HTTPS);
+     * }</pre>
+     */
+    public ServerBuilder localPort(int port, SessionProtocol... protocols) {
+        requireNonNull(protocols, "protocols");
+        return localPort(port, ImmutableList.copyOf(protocols));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the loopback {@code localAddress} using the specified
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = Server.builder();
+     * sb.localPort(8080, Arrays.asList(SessionProtocol.HTTP, SessionProtocol.HTTPS));
+     * }</pre>
+     */
+    public ServerBuilder localPort(int port, Iterable<SessionProtocol> protocols) {
+        return port(new InetSocketAddress(NetUtil.LOCALHOST, port), protocols);
+    }
+
+    /**
      * Sets the {@link ChannelOption} of the server socket bound by {@link Server}.
      * Note that the previously added option will be overridden if the same option is set again.
      *
@@ -414,6 +444,19 @@ public final class ServerBuilder {
     public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop) {
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
         shutdownWorkerGroupOnStop = shutdownOnStop;
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * performing socket I/O and running {@link Service#serve(ServiceRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    public ServerBuilder workerGroup(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
         return this;
     }
 
@@ -689,6 +732,21 @@ public final class ServerBuilder {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
         return this;
+    }
+
+    /**
+     * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
+     * the execution of blocking tasks or invocations.
+     * The {@link BlockingTaskExecutor} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of threads in the executor
+     */
+    public ServerBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
     }
 
     /**
@@ -1528,6 +1586,16 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
+        final Server server = new Server(buildServerConfig(ports));
+        serverListeners.forEach(server::addListener);
+        return server;
+    }
+
+    ServerConfig buildServerConfig(ServerConfig existingConfig) {
+        return buildServerConfig(existingConfig.ports());
+    }
+
+    private ServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1539,11 +1607,9 @@ public final class ServerBuilder {
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate))
                                    .collect(toImmutableList());
-
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
-
         final Collection<ServerPort> ports;
 
         this.ports.forEach(
@@ -1553,8 +1619,8 @@ public final class ServerBuilder {
 
         if (defaultSslContext == null) {
             sslContexts = null;
-            if (!this.ports.isEmpty()) {
-                ports = resolveDistinctPorts(this.ports);
+            if (!serverPorts.isEmpty()) {
+                ports = resolveDistinctPorts(serverPorts);
                 for (final ServerPort p : ports) {
                     if (p.hasTls()) {
                         throw new IllegalArgumentException("TLS not configured; cannot serve HTTPS");
@@ -1573,8 +1639,8 @@ public final class ServerBuilder {
                         "at https://www.eclipse.org/jetty/documentation/9.4.x/alpn-chapter.html");
             }
 
-            if (!this.ports.isEmpty()) {
-                ports = resolveDistinctPorts(this.ports);
+            if (!serverPorts.isEmpty()) {
+                ports = resolveDistinctPorts(serverPorts);
             } else {
                 ports = ImmutableList.of(new ServerPort(0, HTTPS));
             }
@@ -1604,9 +1670,9 @@ public final class ServerBuilder {
             }
         }
 
-        final Server server = new Server(new ServerConfig(
-                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
-                workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
+        return new ServerConfig(
+                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
+                virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                 http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
@@ -1615,10 +1681,7 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler), sslContexts);
-
-        serverListeners.forEach(server::addListener);
-        return server;
+                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, sslContexts);
     }
 
     /**

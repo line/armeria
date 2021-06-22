@@ -98,12 +98,14 @@ final class DefaultRequestId implements RequestId {
 
     @SuppressWarnings("deprecation")
     private static String newTextSlow(long value, int digits) {
-        final byte[] bytes = TemporaryThreadLocals.get().byteArray(digits);
-        for (int i = digits - 1; i >= 0; i--) {
-            bytes[i] = HEXDIGITS[(int) value & 0x0F];
-            value >>>= 4;
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final byte[] bytes = tempThreadLocals.byteArray(digits);
+            for (int i = digits - 1; i >= 0; i--) {
+                bytes[i] = HEXDIGITS[(int) value & 0x0F];
+                value >>>= 4;
+            }
+            return new String(bytes, 0, 0, digits);
         }
-        return new String(bytes, 0, 0, digits);
     }
 
     @Override

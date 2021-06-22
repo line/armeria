@@ -13,5 +13,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.server.saml.sp.Main'
+    mainClass.set('example.armeria.server.saml.sp.Main')
 }

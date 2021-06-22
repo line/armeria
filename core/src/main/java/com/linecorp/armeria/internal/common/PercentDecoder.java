@@ -64,7 +64,9 @@ public final class PercentDecoder {
      * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-2.1">Percent-Encoded</a>.
      */
     public static String decodeComponent(String s) {
-        return decodeComponent(TemporaryThreadLocals.get(), s, 0, s.length());
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            return decodeComponent(tempThreadLocals, s, 0, s.length());
+        }
     }
 
     /**

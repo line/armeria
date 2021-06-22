@@ -33,7 +33,7 @@ fun newServer(port: Int): Server {
         .pathPrefix("/contextAware")
         .decorator(
             CoroutineContextService.newDecorator { ctx ->
-                CoroutineName(ctx.config().defaultServiceName() ?: "name")
+                CoroutineName(ctx.config().defaultServiceNaming().serviceName(ctx) ?: "name")
             }
         )
         .applyCommonDecorator()

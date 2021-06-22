@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ConnectionLimitingHandlerIntegrationTest {
@@ -39,7 +38,7 @@ class ConnectionLimitingHandlerIntegrationTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.workerGroup(1);
             sb.maxNumConnections(2);
             sb.serviceUnder("/", new AbstractHttpService() {});
         }

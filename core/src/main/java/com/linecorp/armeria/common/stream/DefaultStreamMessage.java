@@ -16,13 +16,13 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
@@ -31,6 +31,8 @@ import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -145,6 +147,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             // to other Publishers.
             invokedOnSubscribe = true;
             subscriber.onSubscribe(subscription);
+            if (!queue.isEmpty()) {
+                notifySubscriber0();
+            }
         } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
                 notifySubscriberOfCloseEvent(subscription, newCloseEvent(t));
@@ -161,6 +166,112 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      * Invoked when a subscriber subscribes.
      */
     protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {}
+
+    @Override
+    public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+
+        final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();
+        final SubscriptionImpl subscription =
+                new SubscriptionImpl(this, NoopSubscriber.get(), executor, options, collectingFuture);
+        if (subscriptionUpdater.compareAndSet(this, null, subscription)) {
+            if (setState(State.CLOSED, State.CLEANUP)) {
+                final boolean withPooledObjects = subscription.withPooledObjects();
+                if (executor.inEventLoop()) {
+                    collectAll(collectingFuture, executor, withPooledObjects, true);
+                } else {
+                    executor.execute(() -> collectAll(collectingFuture, executor, withPooledObjects, false));
+                }
+            }
+        } else {
+            final Subscriber<Object> subscriber = this.subscription.subscriber();
+            final Throwable cause;
+            if (subscriber instanceof AbortingSubscriber) {
+                cause = ((AbortingSubscriber<Object>) subscriber).cause();
+            } else {
+                cause = new IllegalStateException("subscribed by other subscriber already");
+            }
+            collectingFuture.completeExceptionally(cause);
+        }
+        return collectingFuture;
+    }
+
+    private void collectAll(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
+                            boolean withPooledObjects, boolean directExecution) {
+        try {
+            collectingFuture.complete(drainAll(withPooledObjects, true));
+            if (directExecution) {
+                // The collectingFuture is not returned yet. We can guarantee that whenComplete() will be
+                // completed after executing the callbacks of collect() by rescheduling it.
+                executor.execute(() -> whenComplete().complete(null));
+            } else {
+                // We don't know whether the collectingFuture is returned or not at the moment. Just complete
+                // whenComplete() immediately.
+                whenComplete().complete(null);
+            }
+        } catch (Throwable throwable) {
+            collectingFuture.completeExceptionally(throwable);
+            whenComplete().completeExceptionally(throwable);
+        }
+    }
+
+    private List<T> drainAll(boolean withPooledObjects, boolean wasClosed) throws Throwable {
+        final int estimatedSize;
+        if (wasClosed) {
+            // ClosedEvent was added to the queue
+            estimatedSize = queue.size() - 1;
+        } else {
+            estimatedSize = queue.size();
+        }
+
+        final ImmutableList.Builder<T> builder = ImmutableList.builderWithExpectedSize(estimatedSize);
+        CloseEvent closeEvent = null;
+        Throwable closeCause = null;
+        for (;;) {
+            final Object o = queue.poll();
+            if (o == null) {
+                break;
+            }
+
+            if (o instanceof CloseEvent) {
+                closeEvent = (CloseEvent) o;
+                final Throwable cause = closeEvent.cause;
+                if (cause != null && closeCause == null) {
+                    closeCause = cause;
+                }
+                continue;
+            }
+
+            if (o instanceof AwaitDemandFuture) {
+                final AwaitDemandFuture future = (AwaitDemandFuture) o;
+                if (closeEvent == null) {
+                    future.complete(null);
+                } else {
+                    if (closeCause == null) {
+                        closeCause = ClosedStreamException.get();
+                    }
+                    future.completeExceptionally(closeCause);
+                }
+                continue;
+            }
+
+            @SuppressWarnings("unchecked")
+            T t = (T) o;
+            t = prepareObjectForNotification(t, withPooledObjects);
+            builder.add(t);
+        }
+
+        final List<T> objs = builder.build();
+        if (closeEvent == null || closeEvent == SUCCESSFUL_CLOSE) {
+            return objs;
+        } else {
+            for (T obj: objs) {
+                StreamMessageUtil.closeOrAbort(obj, closeCause);
+            }
+            throw closeCause;
+        }
+    }
 
     /**
      * Invoked whenever a new demand is requested.
@@ -182,7 +293,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         SubscriptionImpl subscription = this.subscription;
         if (subscription == null) {
             final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                    this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
+                    this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS, null);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
                 // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
                 invokedOnSubscribe = true;
@@ -362,17 +473,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
         final SubscriptionImpl subscription = this.subscription;
         if (!invokedOnSubscribe) {
-            final Executor executor = subscription.executor();
-
             // Subscriber.onSubscribe() was not invoked yet.
-            // Reschedule the notification so that onSubscribe() is invoked before other events.
-            //
-            // Note:
-            // The rescheduling will occur at most once because the invocation of onSubscribe() must have been
-            // scheduled already by subscribe(), given that this.subscription is not null at this point and
-            // subscribe() is the only place that sets this.subscription.
-
-            executor.execute(this::notifySubscriber0);
+            // The notification will be resumed after onSubscribe().
             return;
         }
 
@@ -418,7 +520,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         T o = (T) queue.remove();
         inOnNext = true;
         try {
-            o = prepareObjectForNotification(subscription, o);
+            o = prepareObjectForNotification(o, subscription.withPooledObjects());
             subscriber.onNext(o);
         } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {
@@ -452,7 +554,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     @Override
     public final void close() {
         if (setState(State.OPEN, State.CLOSED)) {
-            addObjectOrEvent(SUCCESSFUL_CLOSE);
+            if (!tryCollect(null)) {
+                addObjectOrEvent(SUCCESSFUL_CLOSE);
+            }
         }
     }
 
@@ -474,10 +578,52 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      */
     protected final boolean tryClose(Throwable cause) {
         if (setState(State.OPEN, State.CLOSED)) {
-            addObjectOrEvent(new CloseEvent(cause));
+            if (!tryCollect(cause)) {
+                addObjectOrEvent(new CloseEvent(cause));
+            }
             return true;
         }
         return false;
+    }
+
+    private boolean tryCollect(@Nullable Throwable cause) {
+        final SubscriptionImpl subscription = this.subscription;
+        if (subscription != null) {
+            @SuppressWarnings("unchecked")
+            final CompletableFuture<List<T>> collectingFuture =
+                    (CompletableFuture<List<T>>) subscription.collectingFuture();
+            if (collectingFuture != null) {
+                if (setState(State.CLOSED, State.CLEANUP)) {
+                    if (subscription.needsDirectInvocation()) {
+                        tryCollect(cause, subscription, collectingFuture);
+                    } else {
+                        subscription.executor().execute(() -> {
+                            tryCollect(cause, subscription, collectingFuture);
+                        });
+                    }
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void tryCollect(@Nullable Throwable cause, SubscriptionImpl subscription,
+                            CompletableFuture<List<T>> collectingFuture) {
+        if (cause == null) {
+            try {
+                collectingFuture.complete(drainAll(subscription.withPooledObjects(), false));
+                whenComplete().complete(null);
+            } catch (Throwable cause0) {
+                // drainAll() only raises an exception after cleaning up objects.
+                collectingFuture.completeExceptionally(cause0);
+                whenComplete().completeExceptionally(cause0);
+            }
+        } else {
+            cleanupObjects();
+            collectingFuture.completeExceptionally(cause);
+            whenComplete().completeExceptionally(cause);
+        }
     }
 
     private boolean setState(State oldState, State newState) {

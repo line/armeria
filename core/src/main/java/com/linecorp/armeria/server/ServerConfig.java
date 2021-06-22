@@ -45,6 +45,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -108,6 +109,9 @@ public final class ServerConfig {
     private final ExceptionHandler exceptionHandler;
 
     @Nullable
+    private final Mapping<String, SslContext> sslContexts;
+
+    @Nullable
     private String strVal;
 
     ServerConfig(
@@ -130,7 +134,8 @@ public final class ServerConfig {
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
             Supplier<? extends RequestId> requestIdGenerator,
-            ExceptionHandler exceptionHandler) {
+            ExceptionHandler exceptionHandler,
+            @Nullable Mapping<String, SslContext> sslContexts) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -247,6 +252,7 @@ public final class ServerConfig {
                 (Supplier<RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
         this.requestIdGenerator = castRequestIdGenerator;
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+        this.sslContexts = sslContexts;
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -618,6 +624,14 @@ public final class ServerConfig {
      */
     public ExceptionHandler exceptionHandler() {
         return exceptionHandler;
+    }
+
+    /**
+     * Returns a map of SslContexts {@link SslContext}.
+     */
+    @Nullable
+    Mapping<String, SslContext> sslContextMapping() {
+        return sslContexts;
     }
 
     @Override

@@ -21,7 +21,6 @@ import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -52,10 +51,10 @@ class ScheduledHealthCheckerTest {
         assertThat(invokedCount.get()).isZero();
 
         server.start().join();
-        assertThat(invokedCount.get()).isOne();
+        await().untilAsserted(() -> assertThat(invokedCount.get()).isOne());
 
         holder.get().complete(new HealthCheckStatus(true, 100));
-        await().atMost(1, TimeUnit.SECONDS).untilAsserted(() -> assertThat(invokedCount.get()).isEqualTo(2));
+        await().untilAsserted(() -> assertThat(invokedCount.get()).isEqualTo(2));
 
         server.stop().join();
         holder.get().complete(new HealthCheckStatus(true, 100));
