@@ -5,7 +5,8 @@
 
 <suppressions>
   <!-- Suppress Javadoc-related checks in non-public code. -->
-  <suppress checks="JavadocPackage|MissingJavadocPackage|MissingJavadocType|MissingJavadocMethod" files="[\\/](examples|internal|it|jmh|test)[\\/]" />
+  <suppress checks="MissingJavadocPackage|MissingJavadocType|MissingJavadocMethod" files="[\\/](examples|internal|it|jmh|test)[\\/]" />
+  <suppress checks="JavadocPackage" files="[\\/](examples|it|jmh|test)[\\/]" />
   <!-- Suppress JavadocPackage for tomcat8.0. -->
   <suppress checks="MissingJavadocPackage" files="tomcat[0-9]" />
   <!-- Suppress all checks in generated sources. -->

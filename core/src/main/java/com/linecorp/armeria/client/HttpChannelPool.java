@@ -418,6 +418,13 @@ final class HttpChannelPool implements AsyncCloseable {
         });
     }
 
+    /**
+     * Returns the number of open connections on this {@link HttpChannelPool}.
+     */
+    int numConnections() {
+        return allChannels.size();
+    }
+
     void invokeProxyConnectFailed(SessionProtocol protocol, PoolKey poolKey, Throwable cause) {
         try {
             final ProxyConfig proxyConfig = poolKey.proxyConfig;

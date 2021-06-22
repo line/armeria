@@ -74,6 +74,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     @Nullable
     private Endpoint endpoint;
     private ClientOptions options = ClientOptions.of();
+    private RequestOptions requestOptions = RequestOptions.of();
     @Nullable
     private ClientConnectionTimings connectionTimings;
 
@@ -118,6 +119,14 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     /**
+     * Sets the {@link RequestOptions}. If not set, {@link RequestOptions#of()} is used.
+     */
+    public ClientRequestContextBuilder requestOptions(RequestOptions requestOptions) {
+        this.requestOptions = requireNonNull(requestOptions, "requestOptions");
+        return this;
+    }
+
+    /**
      * Returns a new {@link ClientRequestContext} created with the properties of this builder.
      */
     public ClientRequestContext build() {
@@ -148,7 +157,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
                 id(), method(), path(), query(), fragment, options, request(), rpcRequest(),
-                responseCancellationScheduler,
+                requestOptions, responseCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 

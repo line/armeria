@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -189,6 +190,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 options(),
                 req,
                 null,
+                RequestOptions.of(),
                 System.nanoTime(),
                 SystemInfo.currentTimeMicros());
     }

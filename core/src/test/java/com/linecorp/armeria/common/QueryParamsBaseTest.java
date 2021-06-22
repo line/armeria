@@ -66,6 +66,58 @@ class QueryParamsBaseTest {
         assertThat(p1).isEqualTo(p2);
     }
 
+    @Test
+    void testGetLastOperations() {
+        final QueryParamsBase params = newEmptyParams();
+        params.add("Foo", "1");
+
+        assertThat(params.getLast("Foo")).isEqualTo("1");
+    }
+
+    @Test
+    void testGetLastOperationsWithEmptyParams() {
+        final QueryParamsBase params = newEmptyParams();
+        assertThat(params.getLast("Foo")).isNull();
+    }
+
+    @Test
+    void testGetLastOperationsWithMultipleValues() {
+        final QueryParamsBase params = newEmptyParams();
+        params.add("Foo", "1");
+        params.add("Foo", "2");
+
+        assertThat(params.getLast("Foo")).isEqualTo("2");
+    }
+
+    @Test
+    void testGetBooleanOperation() {
+        final QueryParamsBase params = newEmptyParams();
+        params.add("foo", "100");
+        assertThat(params.getBoolean("foo")).isNull();
+        assertThat(params.getBoolean("foo", true)).isTrue();
+
+        params.add("foo_true", "1");
+        assertThat(params.getBoolean("foo_true")).isTrue();
+        assertThat(params.containsBoolean("foo_true", true)).isTrue();
+        assertThat(params.containsBoolean("foo_true", false)).isFalse();
+
+        params.add("foo_false", "0");
+        assertThat(params.getBoolean("foo_false")).isFalse();
+        assertThat(params.containsBoolean("foo_false", false)).isTrue();
+        assertThat(params.containsBoolean("foo_false", true)).isFalse();
+
+        params.add("bar", "true");
+        params.add("bar", "false");
+        assertThat(params.getBoolean("bar")).isTrue();
+        assertThat(params.getLastBoolean("bar")).isFalse();
+        assertThat(params.getLastBoolean("baz", false)).isFalse();
+        assertThat(params.containsBoolean("baz", true)).isFalse();
+
+        params.add("baz", "false");
+        assertThat(params.containsBoolean("baz", false)).isTrue();
+        assertThat(params.containsBoolean("baz", true)).isFalse();
+    }
+
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
 
     @Test

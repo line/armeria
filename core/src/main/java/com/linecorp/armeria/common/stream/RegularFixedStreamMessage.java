@@ -16,14 +16,18 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static java.util.Objects.requireNonNull;
+
+import java.util.List;
 
 import javax.annotation.Nullable;
 
-import org.reactivestreams.Subscriber;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link FixedStreamMessage} that publishes an arbitrary number of objects. It is recommended to use
@@ -36,8 +40,10 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     private final T[] objs;
 
     private int fulfilled;
-
     private boolean inOnNext;
+    private boolean cancelled;
+
+    private volatile int demand;
 
     /**
      * Creates a new instance with the specified elements.
@@ -54,102 +60,135 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
+    public long demand() {
+        return demand;
+    }
+
+    @Override
     final void cleanupObjects(@Nullable Throwable cause) {
         while (fulfilled < objs.length) {
             final T obj = objs[fulfilled];
             objs[fulfilled++] = null;
-            try {
-                onRemoval(obj);
-            } finally {
-                StreamMessageUtil.closeOrAbort(obj, cause);
-            }
+            StreamMessageUtil.closeOrAbort(obj, cause);
         }
     }
 
     @Override
-    final void doRequest(SubscriptionImpl subscription, long n) {
-        final int oldDemand = requested();
+    final List<T> drainAll(boolean withPooledObjects) {
+        assert objs[0] != null;
+        final int length = objs.length;
+        final ImmutableList.Builder<T> builder = ImmutableList.builderWithExpectedSize(length);
+        for (int i = 0; i < length; i++) {
+            final T obj = objs[i];
+            objs[i] = null;
+            builder.add(touchOrCopyAndClose(obj, withPooledObjects));
+        }
+        return builder.build();
+    }
+
+    @Override
+    public void request(long n) {
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            request0(n);
+        } else {
+            executor.execute(() -> request0(n));
+        }
+    }
+
+    private void request0(long n) {
+        if (cancelled) {
+            // The subscription has been closed. An additional request should be ignored.
+            // https://github.com/reactive-streams/reactive-streams-jvm#3.6
+            return;
+        }
+
+        if (n <= 0) {
+            onError(new IllegalArgumentException(
+                    "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+            return;
+        }
+
+        if (fulfilled == objs.length) {
+            return;
+        }
+
+        final int oldDemand = demand;
         if (oldDemand >= objs.length) {
             // Already enough demand to finish the stream so don't need to do anything.
             return;
         }
+
         // As objs.length is fixed, we can safely cap the demand to it here.
-        if (n >= objs.length) {
-            setRequested(objs.length);
+        final int remaining = objs.length - fulfilled;
+        if (n >= remaining) {
+            demand = remaining;
         } else {
             // As objs.length is an int, large demand will always fall into the above branch and there is no
             // chance of overflow, so just simply add the demand.
-            setRequested((int) Math.min(oldDemand + n, objs.length));
+            demand = (int) Math.min(oldDemand + n, remaining);
         }
-        if (requested() > oldDemand) {
-            doNotify(subscription);
-        }
-    }
 
-    private void doNotify(SubscriptionImpl subscription) {
         if (inOnNext) {
-            // Do not let Subscriber.onNext() reenter, because it can lead to weird-looking event ordering
-            // for a Subscriber implemented like the following:
-            //
-            //   public void onNext(Object e) {
-            //       subscription.request(1);
-            //       ... Handle 'e' ...
-            //   }
-            //
-            // Note that we do not call this method again, because we are already in the notification loop
-            // and it will consume the element we've just added in addObjectOrEvent() from the queue as
-            // expected.
-            //
-            // We do not need to worry about synchronizing the access to 'inOnNext' because the subscriber
-            // methods must be on the same thread, or synchronized, according to Reactive Streams spec.
             return;
         }
 
-        final Subscriber<Object> subscriber = subscription.subscriber();
         for (;;) {
-            if (closeEvent() != null) {
-                cleanup(subscription);
+            if (cancelled) {
                 return;
             }
 
-            if (fulfilled == objs.length) {
-                notifySubscriberOfCloseEvent(subscription, SUCCESSFUL_CLOSE);
-                return;
-            }
-
-            final int requested = requested();
-
-            if (fulfilled == requested) {
-                break;
-            }
-
-            while (fulfilled < requested) {
-                if (closeEvent() != null) {
-                    cleanup(subscription);
+            while (demand > 0 && fulfilled < objs.length) {
+                if (cancelled) {
                     return;
                 }
 
-                T o = objs[fulfilled];
+                final T o = objs[fulfilled];
                 objs[fulfilled++] = null;
-                o = prepareObjectForNotification(subscription, o);
                 inOnNext = true;
+                demand--;
                 try {
-                    subscriber.onNext(o);
-                } catch (Throwable t) {
-                    // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
-                    abort(t);
-                    throwIfFatal(t);
-                    logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
-                                o, subscriber, t);
+                    onNext(o);
                 } finally {
                     inOnNext = false;
                 }
+            }
+
+            if (fulfilled == objs.length) {
+                onComplete();
+                return;
+            }
+
+            if (demand == 0) {
+                return;
             }
         }
     }
 
     @Override
-    public final boolean isEmpty() {
-        return false;
+    public void cancel() {
+        if (cancelled) {
+            return;
+        }
+        cancelled = true;
+        super.cancel();
+    }
+
+    @Override
+    public void abort() {
+        if (cancelled) {
+            return;
+        }
+        cancelled = true;
+        super.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        if (cancelled) {
+            return;
+        }
+        cancelled = true;
+        super.abort(cause);
     }
 }

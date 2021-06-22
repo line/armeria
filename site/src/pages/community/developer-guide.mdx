@@ -386,3 +386,55 @@ try {
     assertTrue(e.getMessage().contains("bad method"));
 }
 ```
+
+## How to write pull request description
+
+Writing a good pull request description is important to both contributors and reviewers because:
+- it enables a contributor to communicate the intention and context of a pull request more clearly with reviewers.
+- it helps the developers write good [release notes](/release-notes/).
+
+How much detail should a pull request description have? The general rule of thumb is
+to put all *notable* changes in detail. It doesn't have to contain every single tiny
+detail of the changes.
+Usually, you need to fill the following 3 sections: Motivation, Modifications and Result.
+
+### Motivation
+
+Explain why you're sending the pull request and what problem you're trying to solve.
+You do not have to include all the detail but please include as much as the reviewers can get the background
+of this change.
+If there are related GitHub issues, please leave links to them.
+If you referred other resources (e.g. RFCs) for making this change, please leave links to them as well.
+
+These are good examples:
+- https://github.com/line/armeria/pull/3479#issue-621862219
+- https://github.com/line/armeria/pull/3331#issue-567485208
+
+### Modifications
+
+List the modifications you've made in detail.
+Again, you do not have to include all the modifications you made but *notable* changes that you wish the
+readers know.
+If the pull request has a deprecation or breaking change, you need to describe it here. For example:
+```
+- (Deprecated) Foo.bar() is deprecated.
+  - Use Baz.bar() instead.
+```
+
+### Result
+
+Specify `- Closes #<GitHub issue number>` if this resolves the issue.
+Describe the consequences that a user will face after this pull request is merged.
+
+For example, if the pull request fixes a bug, you can write: `You no longer see a Foo exception when using Bar.`
+If you introduce a new feature, you can write: `You can now do A using B.`
+These are examples:
+- You no longer see a `NullPointerException` when a request times out.
+- You can now monitor the state of all live threads and heap using `ManagementService`.
+
+Add an example snippet if this pull request introduces a new feature, so we can use it in
+our [release notes](https://armeria.dev/release-notes/), e.g.
+```java
+Server.builder()
+      .serviceUnder("/internal/management/", ManagementService.of());
+```

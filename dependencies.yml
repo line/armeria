@@ -178,7 +178,7 @@ com.twitter:
     version: '21.4.0'
 
 cz.alenkacz:
-  gradle-scalafmt: { version: '1.14.0' }
+  gradle-scalafmt: { version: '1.16.2' }
 
 gradle.plugin.net.davidecavestro:
   gradle-jxr-plugin: { version: '0.2.1' }
@@ -451,7 +451,7 @@ org.eclipse.jetty.alpn:
 # Groovy is only used for testing consul
 # The version is aligned with the Groovy version of Gradle to avoid additional downloads
 org.codehaus.groovy:
-  groovy-xml: { version: '2.5.12' }
+  groovy-xml: { version: '3.0.5' }
 
 org.hamcrest:
   hamcrest: { version: &HAMCREST_VERSION '2.2' }

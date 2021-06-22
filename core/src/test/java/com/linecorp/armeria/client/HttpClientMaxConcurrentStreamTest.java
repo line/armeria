@@ -44,7 +44,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -122,7 +121,7 @@ public class HttpClientMaxConcurrentStreamTest {
     @BeforeEach
     void setUp() {
         clientFactory = ClientFactory.builder()
-                                     .workerGroup(EventLoopGroups.newEventLoopGroup(1), true)
+                                     .workerGroup(1)
                                      .connectionPoolListener(connectionPoolListenerWrapper)
                                      .build();
     }

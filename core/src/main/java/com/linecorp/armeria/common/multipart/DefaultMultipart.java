@@ -16,7 +16,6 @@
 package com.linecorp.armeria.common.multipart;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.multipart.MultipartEncoder.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -78,11 +77,6 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
     @Override
     public StreamMessage<BodyPart> bodyParts() {
         return parts;
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, EMPTY_OPTIONS);
     }
 
     @Override

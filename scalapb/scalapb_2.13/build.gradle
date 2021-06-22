@@ -3,7 +3,7 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath "cz.alenkacz:gradle-scalafmt:${managedVersions['cz.alenkacz:gradle-scalafmt']}"
+        classpath "gradle.plugin.cz.alenkacz:gradle-scalafmt:${managedVersions['cz.alenkacz:gradle-scalafmt']}"
     }
 }
 

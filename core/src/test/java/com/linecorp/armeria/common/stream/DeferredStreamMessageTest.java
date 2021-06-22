@@ -181,7 +181,7 @@ class DeferredStreamMessageTest {
     private static void assertFailedSubscription(StreamMessage<?> m, Class<? extends Throwable> causeType) {
         @SuppressWarnings("unchecked")
         final Subscriber<Object> subscriber = mock(Subscriber.class);
-        m.subscribe(subscriber);
+        m.subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
         verify(subscriber, times(1)).onError(isA(causeType));
     }
 

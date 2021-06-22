@@ -22,6 +22,11 @@ configure(projectsWithFlags('java')) {
                 description: "Compiles the ${sourceSet.name} .thrift files."
         ])
 
+        def sourcesJarTask = project.tasks.findByName(sourceSet.getTaskName('sources', 'jar'))
+        if (sourcesJarTask) {
+            sourcesJarTask.dependsOn(task)
+        }
+
         // Use afterEvaluate to give subprojects a chance to override the properties.
         project.afterEvaluate {
             def srcDirs = project.findProperty(sourceSet.getTaskName('', 'thriftSrcDirs'))

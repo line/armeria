@@ -32,14 +32,14 @@ import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import reactor.test.StepVerifier;
 
-public class DecodedHttpRequestTest {
+public class DefaultDecodedHttpRequestTest {
 
     @ClassRule
     public static final EventLoopRule eventLoop = new EventLoopRule();
 
     @Test
     public void dataOnly() throws Exception {
-        final DecodedHttpRequest req = decodedHttpRequest();
+        final DefaultDecodedHttpRequest req = decodedHttpRequest();
         assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
         req.close();
 
@@ -51,7 +51,7 @@ public class DecodedHttpRequestTest {
 
     @Test
     public void trailersOnly() throws Exception {
-        final DecodedHttpRequest req = decodedHttpRequest();
+        final DefaultDecodedHttpRequest req = decodedHttpRequest();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         req.close();
 
@@ -63,7 +63,7 @@ public class DecodedHttpRequestTest {
 
     @Test
     public void dataIsIgnoreAfterTrailers() throws Exception {
-        final DecodedHttpRequest req = decodedHttpRequest();
+        final DefaultDecodedHttpRequest req = decodedHttpRequest();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isFalse();
         req.close();
@@ -76,7 +76,7 @@ public class DecodedHttpRequestTest {
 
     @Test
     public void splitTrailersIsIgnored() throws Exception {
-        final DecodedHttpRequest req = decodedHttpRequest();
+        final DefaultDecodedHttpRequest req = decodedHttpRequest();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         req.close();
@@ -89,7 +89,7 @@ public class DecodedHttpRequestTest {
 
     @Test
     public void splitTrailersAfterDataIsIgnored() throws Exception {
-        final DecodedHttpRequest req = decodedHttpRequest();
+        final DefaultDecodedHttpRequest req = decodedHttpRequest();
         assertThat(req.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         assertThat(req.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
@@ -102,16 +102,18 @@ public class DecodedHttpRequestTest {
                     .verify();
     }
 
-    private static DecodedHttpRequest decodedHttpRequest() {
+    private static DefaultDecodedHttpRequest decodedHttpRequest() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final ServiceRequestContext sctx = ServiceRequestContext.of(HttpRequest.of(headers));
         return decodedHttpRequest(headers, sctx);
     }
 
-    private static DecodedHttpRequest decodedHttpRequest(RequestHeaders headers, ServiceRequestContext sctx) {
-        final DecodedHttpRequest request = new DecodedHttpRequest(sctx.eventLoop(), 1, 1, headers, true,
-                                                                  InboundTrafficController.disabled(),
-                                                                  sctx.maxRequestLength());
+    private static DefaultDecodedHttpRequest decodedHttpRequest(RequestHeaders headers,
+                                                                ServiceRequestContext sctx) {
+        final DefaultDecodedHttpRequest
+                request = new DefaultDecodedHttpRequest(sctx.eventLoop(), 1, 1, headers, true,
+                                                        InboundTrafficController.disabled(),
+                                                        sctx.maxRequestLength());
         request.init(sctx);
         return request;
     }

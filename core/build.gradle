@@ -11,7 +11,7 @@ String releaseFlagFromVersion(String src) {
     }
 }
 
-def mrJarVersions = [9]
+def mrJarVersions = [9,12]
 
 mrJarVersions.each { version->
     sourceSets {
@@ -240,5 +240,3 @@ class PublicSuffixesTask extends DefaultTask {
 }
 
 task publicSuffixes(type: PublicSuffixesTask)
-tasks.processResources.dependsOn publicSuffixes
-tasks.classes.dependsOn publicSuffixes

@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -94,7 +95,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                             framed,
                             trailers.build());
                 }).exceptionally(t -> {
-                    final HttpHeadersBuilder trailers = RESPONSE_HEADERS.toBuilder();
+                    final ResponseHeadersBuilder trailers = RESPONSE_HEADERS.toBuilder();
                     if (t instanceof ArmeriaStatusException) {
                         final ArmeriaStatusException statusException = (ArmeriaStatusException) t;
                         GrpcTrailersUtil.addStatusMessageToTrailers(

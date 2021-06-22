@@ -3,7 +3,7 @@ plugins {
 }
 
 application {
-    mainClassName = 'example.dropwizard.DropwizardArmeriaApplication'
+    mainClass.set('example.dropwizard.DropwizardArmeriaApplication')
 }
 
 dependencies {
@@ -15,6 +15,6 @@ dependencies {
 
 task runDropwizardExample(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = application.mainClassName
+    main = application.mainClass.get()
     args = ['server', 'server.yaml']
 }

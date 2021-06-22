@@ -57,6 +57,12 @@ configure(projectsWithFlags('java')) {
         sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/java")
         sourceSet.resources.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/resources")
     }
+    afterEvaluate {
+        Task generateSourcesTask = project.tasks.findByName('generateSources')
+        if (generateSourcesTask != null) {
+            tasks.sourcesJar.dependsOn(generateSourcesTask)
+        }
+    }
 
     java {
         withJavadocJar()
