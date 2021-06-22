@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
+import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
@@ -43,7 +44,10 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     }
 
     @Override
-    public HttpResponse execute(HttpRequest req) {
+    public HttpResponse execute(HttpRequest req, RequestOptions requestOptions) {
+        requireNonNull(req, "req");
+        requireNonNull(requestOptions, "requestOptions");
+
         if (Clients.isUndefinedUri(uri())) {
             final URI uri;
             if (isAbsoluteUri(req.path())) {
@@ -78,7 +82,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
                 path = path + '?' + query;
             }
             final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(path));
-            return execute(endpoint, newReq, protocol);
+            return execute(endpoint, newReq, protocol, requestOptions);
         }
 
         if (isAbsoluteUri(req.path())) {
@@ -96,17 +100,18 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         } else {
             newReq = req;
         }
-        return execute(endpointGroup(), newReq, scheme().sessionProtocol());
+        return execute(endpointGroup(), newReq, scheme().sessionProtocol(), requestOptions);
     }
 
-    private HttpResponse execute(EndpointGroup endpointGroup, HttpRequest req, SessionProtocol protocol) {
+    private HttpResponse execute(EndpointGroup endpointGroup, HttpRequest req, SessionProtocol protocol,
+                                 RequestOptions requestOptions) {
         final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
         if (pathAndQuery == null) {
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
             return abortRequestAndReturnFailureResponse(req, cause);
         }
         return execute(protocol, endpointGroup, req.method(),
-                       pathAndQuery.path(), pathAndQuery.query(), null, req);
+                       pathAndQuery.path(), pathAndQuery.query(), null, req, requestOptions);
     }
 
     @Override

@@ -283,13 +283,13 @@ public interface ClientRequestContext extends RequestContext {
     long writeTimeoutMillis();
 
     /**
-     * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
+     * Sets the amount of time allowed until the initial write attempt of the current {@link Request}
      * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeoutMillis(long writeTimeoutMillis);
 
     /**
-     * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
+     * Sets the amount of time allowed until the initial write attempt of the current {@link Request}
      * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeout(Duration writeTimeout);
