@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.DefaultRequestOptions.EMPTY;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
@@ -44,7 +45,15 @@ public interface RequestOptions {
      * Returns a newly created {@link RequestOptionsBuilder}.
      */
     static RequestOptionsBuilder builder() {
-        return new RequestOptionsBuilder();
+        return new RequestOptionsBuilder(null);
+    }
+
+    /**
+     * Returns a newly created {@link RequestOptionsBuilder} with the specified {@link RequestOptions}.
+     */
+    static RequestOptionsBuilder builder(RequestOptions requestOptions) {
+        requireNonNull(requestOptions, "requestOptions");
+        return new RequestOptionsBuilder(requestOptions);
     }
 
     /**

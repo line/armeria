@@ -42,7 +42,17 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     @Nullable
     private Map<AttributeKey<?>, Object> attributes;
 
-    RequestOptionsBuilder() {}
+    RequestOptionsBuilder(@Nullable RequestOptions options) {
+        if (options != null) {
+            responseTimeoutMillis = options.responseTimeoutMillis();
+            writeTimeoutMillis = options.writeTimeoutMillis();
+            maxResponseLength = options.maxResponseLength();
+            final Map<AttributeKey<?>, Object> attrs = options.attrs();
+            if (!attrs.isEmpty()) {
+                attributes = new HashMap<>(attrs);
+            }
+        }
+    }
 
     @Override
     public RequestOptionsBuilder responseTimeout(Duration responseTimeout) {
