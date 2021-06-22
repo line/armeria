@@ -43,6 +43,13 @@ tasks.scaladoc.source "${scalapb213ProjectDir}/src/main/scala"
 compileScala.targetCompatibility = 1.8
 ScalaCompileOptions.metaClass.useAnt = false
 
+tasks.withType(ScalaCompile) {
+    scalaCompileOptions.with {
+        // Disable incremental compilation to avoid intermittent compile errors.
+        force = true
+    }
+}
+
 tasks.withType(Test) {
     useJUnitPlatform {
         // A workaround for 'java.lang.InternalError: Malformed class name'
