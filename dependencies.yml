@@ -124,6 +124,9 @@ com.google.protobuf:
   protobuf-gradle-plugin: { version: '0.8.13' }
   protoc: { version: *PROTOBUF_VERSION }
 
+com.graphql-java:
+  graphql-java: { version: '16.2' }
+
 # Akka is used only for testing in it:grpcweb module.
 com.lightbend.akka.grpc:
   akka-grpc-runtime_2.13: { version: '1.0.3' }
@@ -132,6 +135,10 @@ com.lightbend.akka.grpc:
 com.netflix.eureka:
   eureka-client: { version: &EUREKA_VERSION '1.10.13' }
   eureka-test-utils: {version: *EUREKA_VERSION }
+
+# DGS is used only for testing in it:dgs moulde.
+com.netflix.graphql.dgs:
+  graphql-dgs-client: { version: '4.2.0' }
 
 com.pszymczyk.consul:
   embedded-consul: { version: '2.2.1' }

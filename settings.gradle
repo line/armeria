@@ -12,6 +12,7 @@ includeWithFlags ':core',                                'java', 'publish', 'sha
 includeWithFlags ':eureka',                              'java', 'publish', 'relocate'
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate'
 includeWithFlags ':grpc-protocol',                       'java', 'publish', 'relocate'
+includeWithFlags ':graphql',                             'java', 'publish', 'relocate'
 includeWithFlags ':jetty9',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
@@ -60,6 +61,7 @@ includeWithFlags ':javadoc',                             'java', 'publish', 'no_
 includeWithFlags ':benchmarks',                     'java'
 includeWithFlags ':it:builders',                    'java'
 includeWithFlags ':it:context-storage',             'java'
+includeWithFlags ':it:dgs',                         'java'
 includeWithFlags ':it:grpcweb',                     'java', 'akka-grpc_2.13'
 includeWithFlags ':it:grpc:kotlin',                 'java', 'relocate', 'kotlin-grpc', 'kotlin'
 includeWithFlags ':it:grpc:scala',                  'java', 'relocate', 'scala-grpc_2.13'
@@ -103,6 +105,8 @@ project(':examples:context-propagation-rxjava-example').projectDir = file('examp
 // and project(':*'). See https://github.com/gradle/gradle/issues/847 for more information.
 includeWithFlags ':examples:dropwizard-example',                  'java'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
+includeWithFlags ':examples:graphql-example',                     'java'
+project(':examples:graphql-example').projectDir = file('examples/graphql')
 includeWithFlags ':examples:grpc-example',                        'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                         'java', 'kotlin-grpc', 'kotlin'

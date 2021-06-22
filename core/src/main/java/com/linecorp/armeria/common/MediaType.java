@@ -622,6 +622,11 @@ public final class MediaType {
 
     public static final MediaType ZIP = createConstant(APPLICATION_TYPE, "zip");
 
+    /**
+     * <a href="https://graphql.org/learn/serving-over-http">GraphQL</a>
+     */
+    public static final MediaType GRAPHQL = createConstant(APPLICATION_TYPE, "graphql");
+
     private static final Charset NO_CHARSET = new Charset("NO_CHARSET", null) {
         @Override
         public boolean contains(Charset cs) {
@@ -866,6 +871,21 @@ public final class MediaType {
         return (mediaTypeRange.type.equals(WILDCARD) || mediaTypeRange.type.equals(type)) &&
                (mediaTypeRange.subtype.equals(WILDCARD) || mediaTypeRange.subtype.equals(subtype)) &&
                parameters.entries().containsAll(mediaTypeRange.parameters.entries());
+    }
+
+    /**
+     * Returns {@code true} when the subtype is {@link MediaType#JSON} or ends with {@code +json}.
+     * Otherwise {@code false}.
+     *
+     * <pre>{@code
+     * JSON.isJson() // true
+     * JSON_UTF_8.isJson() // true
+     * PLAIN_TEXT_UTF_8.isJson() // false
+     * MediaType.parse("application/graphql+json").isJson() // true
+     * }</pre>
+     */
+    public boolean isJson() {
+        return is(JSON) || subtype().endsWith("+json");
     }
 
     /**
