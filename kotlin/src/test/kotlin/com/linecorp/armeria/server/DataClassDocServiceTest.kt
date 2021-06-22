@@ -58,7 +58,7 @@ class DataClassDocServiceTest {
 
 class MyKotlinService {
     @Get("/example")
-    fun getId(queries: ExampleQueries): String {
+    fun getId(@Suppress("UNUSED_PARAMETER") queries: ExampleQueries): String {
         return "example"
     }
 }

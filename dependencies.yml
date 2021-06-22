@@ -4,11 +4,11 @@
 
 boms:
   - com.fasterxml.jackson:jackson-bom:2.12.3
-  - io.dropwizard.metrics:metrics-bom:4.2.0
+  - io.dropwizard.metrics:metrics-bom:4.2.2
   # Ensure that we use the same Protobuf version as what gRPC depends on.
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
-  - io.grpc:grpc-bom:1.38.0
+  - io.grpc:grpc-bom:1.38.1
   - io.micrometer:micrometer-bom:1.7.0
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.65.Final
@@ -178,16 +178,16 @@ com.twitter:
     version: '21.5.0'
 
 cz.alenkacz:
-  gradle-scalafmt: { version: '1.14.0' }
+  gradle-scalafmt: { version: '1.16.2' }
 
 gradle.plugin.net.davidecavestro:
   gradle-jxr-plugin: { version: '0.2.1' }
 
 io.dropwizard:
   dropwizard-core:
-    version: &DROPWIZARD_VERSION '2.0.22'
+    version: &DROPWIZARD_VERSION '2.0.23'
     javadocs:
-    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.21/
+    - https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.0.23/
   dropwizard-jackson: { version: *DROPWIZARD_VERSION }
   dropwizard-lifecycle: { version: *DROPWIZARD_VERSION }
   dropwizard-jersey: { version: *DROPWIZARD_VERSION }
@@ -256,7 +256,7 @@ io.netty.incubator:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.4.6'
+    version: &REACTOR_VERSION '3.4.7'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -338,7 +338,7 @@ me.champeau.jmh:
   jmh-gradle-plugin: { version: '0.6.5' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.26.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.27.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 com.guardsquare:
@@ -387,9 +387,9 @@ org.apache.kafka:
 
 org.apache.thrift:
   libthrift:
-    version: '0.14.1'
+    version: '0.14.2'
     javadocs:
-    - https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.14.1/
+    - https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.14.2/
     exclusions:
     - javax.annotation:javax.annotation-api
     - org.apache.httpcomponents:httpcore
@@ -456,7 +456,7 @@ org.eclipse.jetty.alpn:
 # Groovy is only used for testing consul
 # The version is aligned with the Groovy version of Gradle to avoid additional downloads
 org.codehaus.groovy:
-  groovy-xml: { version: '2.5.12' }
+  groovy-xml: { version: '3.0.5' }
 
 org.hamcrest:
   hamcrest: { version: &HAMCREST_VERSION '2.2' }
@@ -492,7 +492,7 @@ org.jsoup:
   jsoup: { version: '1.13.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.11.1' }
+  mockito-core: { version: &MOCKITO_VERSION '3.11.2' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -544,13 +544,13 @@ org.scalameta:
   munit_2.13: { version: *MUNIT_VERSION }
 
 org.slf4j:
-  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.30' }
+  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.31' }
   jul-to-slf4j: { version: *SLF4J_VERSION }
   log4j-over-slf4j: { version: *SLF4J_VERSION }
   slf4j-api:
     version: *SLF4J_VERSION
     javadocs:
-    - https://www.javadoc.io/doc/org.slf4j/slf4j-api/1.7.30/
+    - https://www.javadoc.io/doc/org.slf4j/slf4j-api/1.7.31/
   slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework:
@@ -595,9 +595,9 @@ com.github.vladimir-bukhtoyarov:
 
 org.jboss.resteasy:
   resteasy-core-spi:
-    version: &RESTEASY_VERSION '4.6.0.Final'
+    version: &RESTEASY_VERSION '4.6.1.Final'
     javadocs:
-    - https://docs.jboss.org/resteasy/docs/4.6.0.Final/javadocs/
+    - https://docs.jboss.org/resteasy/docs/4.6.1.Final/javadocs/
   resteasy-core: { version: *RESTEASY_VERSION }
   resteasy-client: { version: *RESTEASY_VERSION }
   resteasy-jackson2-provider: { version: *RESTEASY_VERSION }

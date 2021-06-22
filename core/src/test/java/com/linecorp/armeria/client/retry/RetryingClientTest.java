@@ -75,7 +75,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -94,7 +93,7 @@ class RetryingClientTest {
     @BeforeAll
     static void beforeAll() {
         // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
-        clientFactory = ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+        clientFactory = ClientFactory.builder().workerGroup(2).build();
     }
 
     @AfterAll
@@ -525,7 +524,7 @@ class RetryingClientTest {
 
         try (ClientFactory clientFactory = ClientFactory.builder()
                                                         .options(RetryingClientTest.clientFactory.options())
-                                                        .workerGroup(EventLoopGroups.newEventLoopGroup(2), true)
+                                                        .workerGroup(2)
                                                         .connectTimeoutMillis(Long.MAX_VALUE)
                                                         .build()) {
             final WebClient client = WebClient.builder("http://127.0.0.1:1")
@@ -573,7 +572,7 @@ class RetryingClientTest {
     @Test
     void shouldGetExceptionWhenFactoryIsClosed() {
         final ClientFactory factory =
-                ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+                ClientFactory.builder().workerGroup(2).build();
 
         // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
         final Function<? super HttpClient, RetryingClient> retryingDecorator =

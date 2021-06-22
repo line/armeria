@@ -29,6 +29,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.common.util.StringUtil.toBoolean;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -256,6 +257,38 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         return builder.build();
     }
 
+    @Nullable
+    @Override
+    public Boolean getBoolean(IN_NAME name) {
+        final String v = get(name);
+        if (v == null) {
+            return null;
+        }
+        return toBoolean(v, false);
+    }
+
+    @Override
+    public boolean getBoolean(IN_NAME name, boolean defaultValue) {
+        final Boolean v = getBoolean(name);
+        return v != null ? v : defaultValue;
+    }
+
+    @Nullable
+    @Override
+    public Boolean getLastBoolean(IN_NAME name) {
+        final String v = getLast(name);
+        if (v == null) {
+            return null;
+        }
+        return toBoolean(v, false);
+    }
+
+    @Override
+    public boolean getLastBoolean(IN_NAME name, boolean defaultValue) {
+        final Boolean v = getLastBoolean(name);
+        return v != null ? v : defaultValue;
+    }
+
     @Override
     @Nullable
     public final Integer getInt(IN_NAME name) {
@@ -429,6 +462,12 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     public final boolean containsObject(IN_NAME name, Object value) {
         requireNonNull(value, "value");
         return contains(name, fromObject(value));
+    }
+
+    @Override
+    public final boolean containsBoolean(IN_NAME name, boolean value) {
+        final Boolean v = getBoolean(name);
+        return v != null && v == value;
     }
 
     @Override

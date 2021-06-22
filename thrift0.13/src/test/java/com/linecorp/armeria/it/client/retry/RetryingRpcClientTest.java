@@ -54,7 +54,6 @@ import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
@@ -242,7 +241,7 @@ class RetryingRpcClientTest {
     @Test
     void shouldGetExceptionWhenFactoryIsClosed() throws Exception {
         final ClientFactory factory =
-                ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+                ClientFactory.builder().workerGroup(2).build();
 
         final RetryRuleWithContent<RpcResponse> ruleWithContent =
                 (ctx, response, cause) -> {

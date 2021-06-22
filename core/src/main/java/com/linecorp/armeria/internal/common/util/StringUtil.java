@@ -16,10 +16,23 @@
 
 package com.linecorp.armeria.internal.common.util;
 
+import java.util.Map;
+
+import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableMap;
+
 public final class StringUtil {
     private static final int MAX_NUM = 1000;
     private static final int MIN_NUM = -MAX_NUM;
     private static final String[] intToString = new String[MAX_NUM * 2 + 1];
+
+    private static final Map<String, Boolean> stringToBoolean =
+            ImmutableMap.<String, Boolean>builder()
+                        .put("true", true)
+                        .put("1", true)
+                        .put("false", false)
+                        .put("0", false)
+                        .build();
 
     static {
         for (int i = MIN_NUM; i <= MAX_NUM; i++) {
@@ -33,6 +46,17 @@ public final class StringUtil {
             return intToString[num + MAX_NUM];
         }
         return Integer.toString(num);
+    }
+
+    public static Boolean toBoolean(String s, boolean errorOnFailure) {
+        final Boolean result = stringToBoolean.get(Ascii.toLowerCase(s));
+        if (result != null) {
+            return result;
+        }
+        if (errorOnFailure) {
+            throw new IllegalArgumentException("must be one of " + stringToBoolean.keySet() + ": " + s);
+        }
+        return null;
     }
 
     private StringUtil() {}

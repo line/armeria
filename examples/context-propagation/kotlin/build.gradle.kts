@@ -1,6 +1,5 @@
 plugins {
     application
-    kotlin("jvm")
 }
 
 dependencies {
@@ -13,5 +12,5 @@ dependencies {
 }
 
 application {
-    mainClassName = "example.armeria.contextpropagation.kotlin.MainKt"
+    mainClass.set("example.armeria.contextpropagation.kotlin.MainKt")
 }
