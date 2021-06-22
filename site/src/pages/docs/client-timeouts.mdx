@@ -20,9 +20,10 @@ HelloService.Iface client =
            .build(HelloService.Iface.class);
 ```
 
-## Using <type://WebClientRequestPreparation>
+## Using <type://RequestOptions>
 
-You can override response timeout and max response length at request level using <type://WebClient#prepare()>.
+You can override the properties defined in <type://RequestOptions> at request level
+using <type://WebClient#prepare()>.
 
 ```java
 import com.linecopr.armeria.client.WebClient;
@@ -31,8 +32,25 @@ WebClient client = WebClient.of("http://example.com");
 client.prepare()
       .get("/hello")
       .responseTimeout(Duration.ofSeconds(30))
+      .writeTimeout(Duration.ofSeconds(10)
       .maxResponseLength(1024)
       .execute();
+```
+
+Otherwise, you can create a <type://RequestOptions> and pass it
+to <type://WebClient#execute(HttpRequest,RequestOptions)?full> with an <type://HttpRequest>.
+```java
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.common.HttpRequest;
+
+HttpRequest req = HttpRequest.of(HttpMethod.GET, "/hello");
+RequestOptions options = 
+    RequestOptions.builder()
+                  .responseTimeout(Duration.ofSeconds(30))
+                  .writeTimeout(Duration.ofSeconds(10)
+                  .maxResponseLength(1024)
+                  .build();
+client.execute(req, options);
 ```
 
 <Tip>
