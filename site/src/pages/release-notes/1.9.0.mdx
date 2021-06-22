@@ -4,7 +4,7 @@ date: 2021-06-23
 
 ## 🌟 New features
 
-- You can now bind [GraphQL Java](https://www.graphql-java.com/) with <type://ServerBuilder> 
+- You can now bind [GraphQL Java](https://www.graphql-java.com/) to <type://ServerBuilder> 
   using <type://GraphqlService>. #3318 #3373
   ```java
   ServerBuilder sb = ...;
@@ -125,7 +125,7 @@ date: 2021-06-23
   QueryParams params = ...;
   params.getLast("items");
   ```
-- You can now specify a current and max content length when creating <type://ContentTooLargeException>.
+- You can now specify the current and max content length when creating <type://ContentTooLargeException>.
   #3520 #3616
 - You can now convert a <type://Multipart> into an <type://HttpResponse>. #3642
 - You can now warm up an `EventLoopGroup` using <type://EventLoopGroups#warmUp(EventLoopGroup)>. #3363 #3610
