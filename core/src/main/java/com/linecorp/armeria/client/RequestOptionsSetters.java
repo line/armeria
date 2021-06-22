@@ -43,13 +43,13 @@ interface RequestOptionsSetters {
 
     /**
      * Sets the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. {@code 0} disables the limit.
+     * succeeds. {@link Duration#ZERO} disables the limit.
      */
     RequestOptionsSetters writeTimeout(Duration writeTimeout);
 
     /**
      * Sets the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. {@link Duration#ZERO} disables the limit.
+     * succeeds. {@code 0} disables the limit.
      */
     RequestOptionsSetters writeTimeoutMillis(long writeTimeoutMillis);
 

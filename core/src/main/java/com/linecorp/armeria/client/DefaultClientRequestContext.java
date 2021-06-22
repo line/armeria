@@ -194,7 +194,7 @@ public final class DefaultClientRequestContext
 
         if (responseCancellationScheduler == null) {
             long responseTimeoutMillis = requestOptions.responseTimeoutMillis();
-            if (responseTimeoutMillis == -1) {
+            if (responseTimeoutMillis < 0) {
                 responseTimeoutMillis = options().responseTimeoutMillis();
             }
             this.responseCancellationScheduler =
@@ -204,13 +204,13 @@ public final class DefaultClientRequestContext
         }
 
         long writeTimeoutMillis = requestOptions.writeTimeoutMillis();
-        if (writeTimeoutMillis == -1) {
+        if (writeTimeoutMillis < 0) {
             writeTimeoutMillis = options.writeTimeoutMillis();
         }
         this.writeTimeoutMillis = writeTimeoutMillis;
 
         long maxResponseLength = requestOptions.maxResponseLength();
-        if (maxResponseLength == -1) {
+        if (maxResponseLength < 0) {
             maxResponseLength = options.maxResponseLength();
         }
         this.maxResponseLength = maxResponseLength;
