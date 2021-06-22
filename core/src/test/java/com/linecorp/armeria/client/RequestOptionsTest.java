@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 
@@ -38,6 +39,9 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.netty.util.AttributeKey;
 
 class RequestOptionsTest {
+
+    final AttributeKey<String> foo = AttributeKey.valueOf("foo");
+    final AttributeKey<String> bar = AttributeKey.valueOf("bar");
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -150,8 +154,6 @@ class RequestOptionsTest {
 
     @Test
     void overwriteTest() {
-        final AttributeKey<String> foo = AttributeKey.valueOf("foo");
-        final AttributeKey<String> bar = AttributeKey.valueOf("foo");
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final RequestOptions requestOptions = RequestOptions.builder()
                                                                 .responseTimeoutMillis(2000)
@@ -181,5 +183,31 @@ class RequestOptionsTest {
             }
             assertThat(res.join().contentUtf8()).isEqualTo("pong");
         }
+    }
+
+    @Test
+    void copyFromOtherOptions() {
+        final AttributeKey<String> quz = AttributeKey.valueOf("quz");
+        final RequestOptions requestOptions1 = RequestOptions.builder()
+                                                             .responseTimeoutMillis(2000)
+                                                             .writeTimeoutMillis(1000)
+                                                             .maxResponseLength(1028)
+                                                             .attr(foo, "hello")
+                                                             .attr(bar, "options")
+                                                             .build();
+
+        final RequestOptions requestOptions2 = RequestOptions.builder(requestOptions1)
+                                                             .maxResponseLength(3000)
+                                                             .attr(foo, "world")
+                                                             .attr(quz, "Armeria")
+                                                             .build();
+
+        assertThat(requestOptions2.responseTimeoutMillis()).isEqualTo(requestOptions1.responseTimeoutMillis());
+        assertThat(requestOptions2.writeTimeoutMillis()).isEqualTo(requestOptions1.writeTimeoutMillis());
+        assertThat(requestOptions2.maxResponseLength()).isEqualTo(3000);
+        final Map<AttributeKey<?>, Object> attrs = requestOptions2.attrs();
+        assertThat(attrs.get(foo)).isEqualTo("world");
+        assertThat(attrs.get(bar)).isEqualTo("options");
+        assertThat(attrs.get(quz)).isEqualTo("Armeria");
     }
 }
