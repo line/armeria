@@ -67,9 +67,9 @@ jobs:
           ~/.gradle/caches/modules-2
           ~/.gradle/caches/package-lists
           ~/.gradle/caches/embedded-consul
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-v1
+        key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
         restore-keys: |
-          ${{ runner.os }}-gradle-
+          ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-
 
     - name: Build with Gradle
       run: |
@@ -138,9 +138,9 @@ jobs:
             ~/.gradle/caches/jars-3
             ~/.gradle/caches/modules-2
             ~/.gradle/caches/package-lists
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
-            ${{ runner.os }}-gradle-
+            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-
 
       - name: Check code style
         run: |
@@ -173,9 +173,9 @@ jobs:
             ~/.gradle/caches/jars-3
             ~/.gradle/caches/modules-2
             ~/.gradle/caches/package-lists
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
-            ${{ runner.os }}-gradle-
+            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-
 
       - name: Run Flaky tests
         run: |
