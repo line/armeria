@@ -67,7 +67,7 @@ jobs:
           ~/.gradle/caches/modules-2
           ~/.gradle/caches/package-lists
           ~/.gradle/caches/embedded-consul
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}-v1
         restore-keys: |
           ${{ runner.os }}-gradle-
 
