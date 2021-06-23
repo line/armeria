@@ -21,10 +21,13 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ProtocolViolationException;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -58,7 +61,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         DISCARD
     }
 
-    /** The request being decoded currently. */
+    /** The response being decoded currently. */
     @Nullable
     private HttpResponseWrapper res;
     private KeepAliveHandler keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
@@ -175,6 +178,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
                         res.logResponseFirstBytesTransferred();
 
+                        final ResponseHeaders resHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                         if (nettyRes.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;
                         } else {
@@ -182,7 +186,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         res.initTimeout();
-                        if (!res.tryWrite(ArmeriaHttpUtil.toArmeria(nettyRes))) {
+                        if (!res.tryWrite(resHeaders)) {
                             fail(ctx, ClosedStreamException.get());
                             return;
                         }
@@ -211,12 +215,13 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         if (dataLength > 0) {
                             assert res != null;
                             final long maxContentLength = res.maxContentLength();
-                            final long transferredLength = res.writtenBytes();
-                            if (maxContentLength > 0 && transferredLength > maxContentLength - dataLength) {
+                            final long writtenBytes = res.writtenBytes();
+                            if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {
+                                final long transferred = LongMath.saturatedAdd(writtenBytes, dataLength);
                                 fail(ctx, ContentTooLargeException.builder()
-                                                                  .limit(maxContentLength)
-                                                                  .delta(dataLength)
-                                                                  .transferred(transferredLength)
+                                                                  .maxContentLength(maxContentLength)
+                                                                  .contentLength(res.headers())
+                                                                  .transferred(transferred)
                                                                   .build());
                                 return;
                             } else if (!res.tryWrite(HttpData.wrap(data.retain()))) {

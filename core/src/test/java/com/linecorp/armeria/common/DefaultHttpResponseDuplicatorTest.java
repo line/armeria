@@ -72,8 +72,7 @@ class DefaultHttpResponseDuplicatorTest {
         assertThatThrownBy(resDuplicator.duplicate().aggregate()::join)
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ContentTooLargeException.class)
-                .hasMessageContaining(
-                        "content length too large: transferred(0) + delta(1000) > limit(100)");
+                .hasMessageContaining("maxContentLength: 100, transferred: 1000");
         assertThat(byteBuf.refCnt()).isZero();
     }
 }

@@ -24,7 +24,10 @@ import java.nio.charset.StandardCharsets;
 
 import javax.annotation.Nullable;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ContentTooLargeExceptionBuilder;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -246,9 +249,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 writer.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.voidPromise());
                 if (decodedReq.isOpen()) {
                     decodedReq.close(ContentTooLargeException.builder()
+                                                             .maxContentLength(maxContentLength)
+                                                             .contentLength(req.headers())
                                                              .transferred(transferredLength)
-                                                             .delta(dataLength)
-                                                             .limit(maxContentLength)
                                                              .build());
                 }
             } else {

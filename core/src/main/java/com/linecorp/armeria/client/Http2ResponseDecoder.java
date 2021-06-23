@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -245,17 +247,18 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         final long maxContentLength = res.maxContentLength();
-        final long transferredLength = res.writtenBytes();
-        if (maxContentLength > 0 && transferredLength > maxContentLength - dataLength) {
+        final long writtenBytes = res.writtenBytes();
+        if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {
+            final long transferred = LongMath.saturatedAdd(writtenBytes, dataLength);
             res.close(ContentTooLargeException.builder()
-                                              .limit(maxContentLength)
-                                              .delta(dataLength)
-                                              .transferred(transferredLength)
+                                              .maxContentLength(maxContentLength)
+                                              .contentLength(res.headers())
+                                              .transferred(transferred)
                                               .build());
             throw connectionError(
                     INTERNAL_ERROR,
-                    "content length too large: transferred(%d) + delta(%d) > limit(%d) (stream: %d)",
-                    transferredLength, dataLength, maxContentLength, streamId);
+                    "content too large: transferred(%d) + delta(%d) > limit(%d) (stream: %d)",
+                    writtenBytes, dataLength, maxContentLength, streamId);
         }
 
         try {

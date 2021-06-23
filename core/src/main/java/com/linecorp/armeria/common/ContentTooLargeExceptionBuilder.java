@@ -17,16 +17,51 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builds a new {@link ContentTooLargeException}.
  */
 public final class ContentTooLargeExceptionBuilder {
-    private long transferred = -1;
-    private long delta = -1;
-    private long limit = -1;
 
-    ContentTooLargeExceptionBuilder() {
+    private long maxContentLength = -1;
+    private long contentLength = -1;
+    private long transferred = -1;
+
+    ContentTooLargeExceptionBuilder() {}
+
+    /**
+     * Sets the maximum allowed content length in bytes.
+     */
+    public ContentTooLargeExceptionBuilder maxContentLength(long maxContentLength) {
+        checkArgument(maxContentLength >= 0, "maxContentLength: %s (expected: >= 0)", maxContentLength);
+        this.maxContentLength = maxContentLength;
+        return this;
+    }
+
+    /**
+     * Sets the actual content length in bytes, as specified in the {@code content-length} header.
+     */
+    public ContentTooLargeExceptionBuilder contentLength(long contentLength) {
+        checkArgument(contentLength >= 0, "contentLength: %s (expected: >= 0)", contentLength);
+        this.contentLength = contentLength;
+        return this;
+    }
+
+    /**
+     * Sets the actual content length in bytes, as specified in the {@code content-length} header,
+     * from the specified {@link HttpHeaders}. If the {@code content-length} header is missing or
+     * its value is not valid, {@code -1} (unknown) will be set instead.
+     */
+    public ContentTooLargeExceptionBuilder contentLength(HttpHeaders headers) {
+        requireNonNull(headers, "headers");
+        final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1);
+        if (contentLength >= 0) {
+            this.contentLength = contentLength;
+        } else {
+            this.contentLength = -1;
+        }
+        return this;
     }
 
     /**
@@ -39,30 +74,12 @@ public final class ContentTooLargeExceptionBuilder {
     }
 
     /**
-     * Sets the number of bytes that were being transferred additionally.
-     */
-    public ContentTooLargeExceptionBuilder delta(long delta) {
-        checkArgument(delta >= 0, "delta: %s (expected: >= 0)", delta);
-        this.delta = delta;
-        return this;
-    }
-
-    /**
-     * Sets the maximum allowed content length in bytes.
-     */
-    public ContentTooLargeExceptionBuilder limit(long limit) {
-        checkArgument(limit >= 0, "limit: %s (expected: >= 0)", limit);
-        this.limit = limit;
-        return this;
-    }
-
-    /**
      * Returns a new instance of {@link ContentTooLargeException}.
      */
     public ContentTooLargeException build() {
-        if (transferred < 0 && delta < 0 && limit < 0) {
+        if (maxContentLength < 0 && contentLength < 0 && transferred < 0) {
             return ContentTooLargeException.get();
         }
-        return new ContentTooLargeException(transferred, delta, limit);
+        return new ContentTooLargeException(maxContentLength, contentLength, transferred);
     }
 }

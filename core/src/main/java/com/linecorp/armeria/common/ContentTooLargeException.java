@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.common;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+
 /**
  * A {@link RuntimeException} raised when the length of request or response content exceeds its limit.
  */
@@ -44,9 +48,9 @@ public final class ContentTooLargeException extends RuntimeException {
     }
 
     private final boolean neverSample;
+    private final long maxContentLength;
+    private final long contentLength;
     private final long transferred;
-    private final long delta;
-    private final long limit;
 
     private ContentTooLargeException() {
         this(false);
@@ -54,43 +58,42 @@ public final class ContentTooLargeException extends RuntimeException {
 
     private ContentTooLargeException(boolean neverSample) {
         super(null, null, !neverSample, !neverSample);
+
         this.neverSample = neverSample;
-        limit = -1;
+        maxContentLength = -1;
         transferred = -1;
-        delta = -1;
+        contentLength = -1;
     }
 
-    ContentTooLargeException(long transferred, long delta, long limit) {
-        super(String.format("content length too large: transferred(%d) + delta(%d) > limit(%d)",
-                            transferred, delta, limit));
+    ContentTooLargeException(long maxContentLength, long contentLength, long transferred) {
+        super(toString(maxContentLength, contentLength, transferred));
+
         neverSample = false;
         this.transferred = transferred;
-        this.delta = delta;
-        this.limit = limit;
+        this.contentLength = contentLength;
+        this.maxContentLength = maxContentLength;
     }
 
     /**
-     * Returns the number of bytes transferred so far,
-     * or {@code -1} if this value is not known.
+     * Returns the number of bytes transferred so far, or {@code -1} if this value is not known.
      */
     public long transferred() {
         return transferred;
     }
 
     /**
-     * Returns the number of bytes that were being transferred additionally,
+     * Returns the actual content length in bytes, as specified in the {@code content-length} header,
      * or {@code -1} if this value is not known.
      */
-    public long delta() {
-        return delta;
+    public long contentLength() {
+        return contentLength;
     }
 
     /**
-     * Returns the maximum allowed content length in bytes,
-     * or {@code -1} if this value is not known.
+     * Returns the maximum allowed content length in bytes, or {@code -1} if this value is not known.
      */
-    public long limit() {
-        return limit;
+    public long maxContentLength() {
+        return maxContentLength;
     }
 
     @Override
@@ -99,5 +102,22 @@ public final class ContentTooLargeException extends RuntimeException {
             super.fillInStackTrace();
         }
         return this;
+    }
+
+    @Nullable
+    private static String toString(long maxContentLength, long contentLength, long transferred) {
+        try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = ttl.stringBuilder();
+            if (maxContentLength >= 0) {
+                buf.append(", maxContentLength: ").append(maxContentLength);
+            }
+            if (contentLength >= 0) {
+                buf.append(", contentLength: ").append(contentLength);
+            }
+            if (transferred >= 0) {
+                buf.append(", transferred: ").append(transferred);
+            }
+            return buf.length() != 0 ? buf.substring(2) : null;
+        }
     }
 }
