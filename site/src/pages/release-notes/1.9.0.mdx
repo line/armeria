@@ -156,8 +156,8 @@ date: 2021-06-23
                  .build();
   assert params.getLastInt("items").equals(3);
   ```
-- <type://ContentTooLargeException> now provides you the three following properties about why
-    the exception was raised. #3520, #3616
+- <type://ContentTooLargeException> now provides you the following 3 properties about why
+  the exception was raised. #3520, #3616
   - The maximum allowed content length
   - The content length specified in the `content-length` header
   - The number of bytes transferred so far
