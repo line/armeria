@@ -86,6 +86,8 @@ jobs:
         -PtestJavaVersion=${{ matrix.java }} \
         -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }}
       shell: bash
+      env:
+        RUN_CONSUL_TESTS: false
 
     - name: Cleanup Gradle Cache
       # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
@@ -116,3 +118,40 @@ jobs:
         name: reports-JVM-${{ matrix.java }}
         path: reports-JVM-${{ matrix.java }}.tar
         retention-days: 3
+
+  consul-test:
+    runs-on: self-hosted
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v2
+
+      - id: setup-jdk-15
+        name: Set up JDK 15
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '15'
+
+      - name: Restore Gradle Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/wrapper/dists
+            ~/.gradle/caches/jars-3
+            ~/.gradle/caches/modules-2
+            ~/.gradle/caches/package-lists
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Run Consul tests
+        run: |
+          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -PnoWeb -PnoLint :consul:build
+
+      - name: Cleanup Gradle Cache
+        # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
+        # Restoring these files from a GitHub Actions cache might cause problems for future builds.
+        run: |
+          rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
+          rm -f ~/.gradle/caches/modules-2/gc.properties || true
+        shell: bash

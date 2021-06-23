@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.consul;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
@@ -79,6 +80,11 @@ public abstract class ConsulTestBase {
 
     @BeforeAll
     static void start() throws Throwable {
+        // An embedded Consul frequently fails to start in CI environment.
+        // See https://github.com/line/armeria/issues/3514 for details.
+        // Selectively disable Consul tests to suppress the stressful flakiness.
+        assumeThat(System.getenv("RUN_CONSUL_TESTS")).isNotEqualTo("false");
+
         // Initialize Consul embedded server for testing
         // This EmbeddedConsul tested with Consul version above 1.4.0
         final ConsulStarterBuilder builder =
