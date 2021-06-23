@@ -24,10 +24,7 @@ import java.nio.charset.StandardCharsets;
 
 import javax.annotation.Nullable;
 
-import com.google.common.math.LongMath;
-
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.ContentTooLargeExceptionBuilder;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
