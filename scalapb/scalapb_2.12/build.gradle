@@ -6,7 +6,7 @@ dependencies {
     implementation project(':grpc')
     implementation('org.scala-lang:scala-library') {
         version {
-            strictly '2.12.13'
+            strictly '2.12.14'
         }
     }
 
@@ -42,6 +42,13 @@ tasks.scaladoc.source "${scalapb213ProjectDir}/src/main/scala"
 
 compileScala.targetCompatibility = 1.8
 ScalaCompileOptions.metaClass.useAnt = false
+
+tasks.withType(ScalaCompile) {
+    scalaCompileOptions.with {
+        // Disable incremental compilation to avoid intermittent compile errors.
+        force = true
+    }
+}
 
 tasks.withType(Test) {
     useJUnitPlatform {

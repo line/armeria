@@ -28,6 +28,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -155,7 +156,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private final ServerConfig config;
+    private final ServerConfigHolder configHolder;
+    private ServerConfig config;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
@@ -169,10 +171,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private final ProxiedAddresses proxiedAddresses;
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
+    private final Consumer<ServerConfig> configUpdateListener = this::swapServerConfig;
     private boolean isReading;
     private boolean handledLastRequest;
 
-    HttpServerHandler(ServerConfig config,
+    HttpServerHandler(ServerConfigHolder configHolder,
                       GracefulShutdownSupport gracefulShutdownSupport,
                       @Nullable ServerHttpObjectEncoder responseEncoder,
                       SessionProtocol protocol,
@@ -180,14 +183,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         assert protocol == H1 || protocol == H1C || protocol == H2;
 
-        this.config = requireNonNull(config, "config");
+        this.configHolder = requireNonNull(configHolder, "configHolder");
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
 
         this.protocol = requireNonNull(protocol, "protocol");
         this.responseEncoder = responseEncoder;
         this.proxiedAddresses = proxiedAddresses;
-
+        config = requireNonNull(configHolder.getConfig(), "config");
         unfinishedRequests = new IdentityHashMap<>();
+        configHolder.addListener(configUpdateListener);
     }
 
     @Override
@@ -224,6 +228,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // endOfStream set.
                 cleanup();
         }
+        // Clean up the listener from ServerConfigHolder once the channel becomes inactive.
+        configHolder.removeListener(configUpdateListener);
     }
 
     private void cleanup() {
@@ -286,8 +292,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                                                  Http2ServerConnectionHandler handler) {
         return new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
                                             config.isDateHeaderEnabled(),
-                                            config.isServerHeaderEnabled()
-        );
+                                            config.isServerHeaderEnabled());
     }
 
     private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {
@@ -694,5 +699,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         } else {
             return id;
         }
+    }
+
+    void swapServerConfig(ServerConfig config) {
+        requireNonNull(config, "config");
+        this.config = config;
     }
 }

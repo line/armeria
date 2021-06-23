@@ -9,5 +9,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.contextpropagation.reactor.Main'
+    mainClass.set('example.armeria.contextpropagation.reactor.Main')
 }

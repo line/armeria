@@ -12,5 +12,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.server.files.Main'
+    mainClass.set('example.armeria.server.files.Main')
 }

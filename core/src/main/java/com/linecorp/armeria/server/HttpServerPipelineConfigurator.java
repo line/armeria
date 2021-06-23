@@ -106,8 +106,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             (byte) 0x51, (byte) 0x55, (byte) 0x49, (byte) 0x54, (byte) 0x0A
     };
 
-    private final ServerConfig config;
     private final ServerPort port;
+    private final ServerConfigHolder configHolder;
+    private volatile ServerConfig config;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
     private final GracefulShutdownSupport gracefulShutdownSupport;
@@ -120,7 +121,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             @Nullable Mapping<String, SslContext> sslContexts,
             GracefulShutdownSupport gracefulShutdownSupport) {
 
-        this.config = requireNonNull(config, "config");
+        configHolder = new ServerConfigHolder(requireNonNull(config, "config"));
+        this.config = config;
         this.port = requireNonNull(port, "port");
         this.sslContexts = sslContexts;
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
@@ -193,7 +195,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
-        p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, responseEncoder,
+        p.addLast(new HttpServerHandler(configHolder,
+                                        gracefulShutdownSupport,
+                                        responseEncoder,
                                         H1C, proxiedAddresses));
     }
 
@@ -240,6 +244,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         settings.put((char) 0x8, (Long) 1L);
 
         return settings;
+    }
+
+    void updateConfig(ServerConfig config) {
+        requireNonNull(config, "config");
+        configHolder.replace(config);
     }
 
     private final class ProtocolDetectionHandler extends ByteToMessageDecoder {
@@ -432,7 +441,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, null, H2, proxiedAddresses));
+            p.addLast(new HttpServerHandler(configHolder,
+                                            gracefulShutdownSupport,
+                                            null, H2, proxiedAddresses));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
@@ -461,7 +472,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
             p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
-            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, writer, H1, proxiedAddresses));
+            p.addLast(new HttpServerHandler(configHolder,
+                                            gracefulShutdownSupport,
+                                            writer, H1, proxiedAddresses));
         }
 
         @Override

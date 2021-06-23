@@ -143,10 +143,10 @@ public final class DefaultClientRequestContext
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            CancellationScheduler responseCancellationScheduler,
+            RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq, serviceRequestContext(),
+             id, method, path, query, fragment, options, req, rpcReq, requestOptions, serviceRequestContext(),
              responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
     }
 
@@ -167,9 +167,10 @@ public final class DefaultClientRequestContext
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+            RequestOptions requestOptions,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
-             id, method, path, query, fragment, options, req, rpcReq,
+             id, method, path, query, fragment, options, req, rpcReq, requestOptions,
              serviceRequestContext(), /* responseCancellationScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros);
     }
@@ -178,7 +179,7 @@ public final class DefaultClientRequestContext
             @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
             SessionProtocol sessionProtocol, RequestId id, HttpMethod method, String path,
             @Nullable String query, @Nullable String fragment, ClientOptions options,
-            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
@@ -192,13 +193,32 @@ public final class DefaultClientRequestContext
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
 
         if (responseCancellationScheduler == null) {
+            long responseTimeoutMillis = requestOptions.responseTimeoutMillis();
+            if (responseTimeoutMillis < 0) {
+                responseTimeoutMillis = options().responseTimeoutMillis();
+            }
             this.responseCancellationScheduler =
-                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(options.responseTimeoutMillis()));
+                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
-        writeTimeoutMillis = options.writeTimeoutMillis();
-        maxResponseLength = options.maxResponseLength();
+
+        long writeTimeoutMillis = requestOptions.writeTimeoutMillis();
+        if (writeTimeoutMillis < 0) {
+            writeTimeoutMillis = options.writeTimeoutMillis();
+        }
+        this.writeTimeoutMillis = writeTimeoutMillis;
+
+        long maxResponseLength = requestOptions.maxResponseLength();
+        if (maxResponseLength < 0) {
+            maxResponseLength = options.maxResponseLength();
+        }
+        this.maxResponseLength = maxResponseLength;
+        for (Entry<AttributeKey<?>, Object> attr : requestOptions.attrs().entrySet()) {
+            //noinspection unchecked
+            setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
+        }
+
         additionalRequestHeaders = options.get(ClientOptions.HEADERS);
         customizers = copyThreadLocalCustomizers();
     }

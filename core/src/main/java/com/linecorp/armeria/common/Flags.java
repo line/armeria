@@ -430,6 +430,10 @@ public final class Flags {
     private static final boolean
             DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING = getBoolean("useLegacyRouteDecoratorOrdering", false);
 
+    private static final boolean DEFAULT_USE_DEFAULT_SOCKET_OPTIONS = true;
+    private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
+            getBoolean("useDefaultSocketOptions", DEFAULT_USE_DEFAULT_SOCKET_OPTIONS);
+
     static {
         TransportType type = null;
         switch (TRANSPORT_TYPE_NAME) {
@@ -1241,6 +1245,24 @@ public final class Flags {
      */
     public static Set<TransientServiceOption> transientServiceOptions() {
         return TRANSIENT_SERVICE_OPTIONS;
+    }
+
+    /**
+     * Returns whether default socket options defined by Armeria are enabled.
+     * If enabled, the following socket options are set automatically when
+     * {@code /dev/epoll} or {@code io_uring} is in use:
+     * <ul>
+     *   <li>TCP_USER_TIMEOUT</li>
+     *   <li>TCP_KEEPIDLE</li>
+     *   <li>TCP_KEEPINTVL</li>
+     * </ul>
+     *
+     * <p>This flag is enabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.useDefaultSocketOptions=false}
+     * JVM option to disable it.</p>
+     */
+    public static boolean useDefaultSocketOptions() {
+        return USE_DEFAULT_SOCKET_OPTIONS;
     }
 
     /**

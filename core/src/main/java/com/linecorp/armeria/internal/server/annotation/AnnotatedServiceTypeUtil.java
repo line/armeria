@@ -38,10 +38,10 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 
 import io.netty.util.AsciiString;
 
@@ -56,8 +56,8 @@ final class AnnotatedServiceTypeUtil {
                     .put(Byte.class, Byte::valueOf)
                     .put(Short.TYPE, Short::valueOf)
                     .put(Short.class, Short::valueOf)
-                    .put(Boolean.TYPE, AnnotatedServiceTypeUtil::parseBoolean)
-                    .put(Boolean.class, AnnotatedServiceTypeUtil::parseBoolean)
+                    .put(Boolean.TYPE, s -> StringUtil.toBoolean(s, true))
+                    .put(Boolean.class, s -> StringUtil.toBoolean(s, true))
                     .put(Integer.TYPE, Integer::valueOf)
                     .put(Integer.class, Integer::valueOf)
                     .put(Long.TYPE, Long::valueOf)
@@ -95,14 +95,6 @@ final class AnnotatedServiceTypeUtil {
                     return getCreatorMethod(type);
                 }
             };
-
-    private static final Map<String, Boolean> stringToBooleanMap =
-            ImmutableMap.<String, Boolean>builder()
-                    .put("true", true)
-                    .put("1", true)
-                    .put("false", false)
-                    .put("0", false)
-                    .build();
 
     /**
      * Try to get a public static method {@link MethodHandle} with a single {@link String} argument
@@ -194,14 +186,6 @@ final class AnnotatedServiceTypeUtil {
 
         throw new IllegalArgumentException(
                 "Can't convert '" + str + "' to type '" + clazz.getSimpleName() + "'.");
-    }
-
-    private static Boolean parseBoolean(String s) {
-        final Boolean result = stringToBooleanMap.get(Ascii.toLowerCase(s));
-        if (result == null) {
-            throw new IllegalArgumentException("must be one of " + stringToBooleanMap.keySet() + ": " + s);
-        }
-        return result;
     }
 
     private AnnotatedServiceTypeUtil() {}

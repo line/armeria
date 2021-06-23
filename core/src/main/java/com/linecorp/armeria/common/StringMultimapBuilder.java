@@ -164,6 +164,28 @@ abstract class StringMultimapBuilder<
     }
 
     @Nullable
+    public final Boolean getBoolean(IN_NAME name) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getBoolean(name) : null;
+    }
+
+    public final boolean getBoolean(IN_NAME name, boolean defaultValue) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getBoolean(name, defaultValue) : defaultValue;
+    }
+
+    @Nullable
+    public final Boolean getLastBoolean(IN_NAME name) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastBoolean(name) : null;
+    }
+
+    public final boolean getLastBoolean(IN_NAME name, boolean defaultValue) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.getLastBoolean(name, defaultValue) : defaultValue;
+    }
+
+    @Nullable
     public final Integer getInt(IN_NAME name) {
         final CONTAINER getters = getters();
         return getters != null ? getters.getInt(name) : null;
@@ -286,6 +308,11 @@ abstract class StringMultimapBuilder<
     public final boolean containsObject(IN_NAME name, Object value) {
         final CONTAINER getters = getters();
         return getters != null ? getters.containsObject(name, value) : false;
+    }
+
+    public final boolean containsBoolean(IN_NAME name, boolean value) {
+        final CONTAINER getters = getters();
+        return getters != null ? getters.containsBoolean(name, value) : false;
     }
 
     public final boolean containsInt(IN_NAME name, int value) {

@@ -16,8 +16,14 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.ClientFactoryBuilder.MIN_PING_INTERVAL_MILLIS;
+import static com.linecorp.armeria.internal.common.util.ChannelUtilTest.TCP_USER_TIMEOUT_BUFFER_MILLIS;
+import static io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS;
+import static io.netty.channel.ChannelOption.SO_LINGER;
+import static io.netty.channel.epoll.EpollChannelOption.TCP_USER_TIMEOUT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.entry;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.Map;
@@ -29,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
 
 import io.netty.channel.ChannelOption;
@@ -248,6 +255,35 @@ class ClientFactoryBuilderTest {
             assertThat(factory.options().idleTimeoutMillis()).isEqualTo(maxConnectionAgeMillis);
             // pingInterval should be disabled because idleTimeout will work first.
             assertThat(factory.options().pingIntervalMillis()).isEqualTo(0);
+        }
+    }
+
+    @Test
+    void defaultTcpUserTimeoutSet() {
+        assumeThat(Flags.transportType()).isEqualTo(TransportType.EPOLL);
+
+        final int lingerMillis = 100;
+        final int idleTimeoutMillis = 10_000;
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .idleTimeoutMillis(idleTimeoutMillis)
+                                                  .channelOption(SO_LINGER, lingerMillis)
+                                                  .build()) {
+            assertThat(factory.options().channelOptions()).containsOnly(
+                    entry(TCP_USER_TIMEOUT, idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS),
+                    entry(SO_LINGER, lingerMillis),
+                    entry(CONNECT_TIMEOUT_MILLIS, (int) Flags.defaultConnectTimeoutMillis()));
+        }
+
+        // user defined value is respected
+        final int userDefinedValue = 3000;
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .idleTimeoutMillis(idleTimeoutMillis)
+                                                  .channelOption(SO_LINGER, lingerMillis)
+                                                  .channelOption(TCP_USER_TIMEOUT, userDefinedValue)
+                                                  .build()) {
+            assertThat(factory.options().channelOptions()).containsOnly(
+                    entry(TCP_USER_TIMEOUT, userDefinedValue), entry(SO_LINGER, lingerMillis),
+                    entry(CONNECT_TIMEOUT_MILLIS, (int) Flags.defaultConnectTimeoutMillis()));
         }
     }
 }

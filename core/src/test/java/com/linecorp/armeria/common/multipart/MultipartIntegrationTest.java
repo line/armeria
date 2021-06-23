@@ -15,12 +15,16 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.Nullable;
+
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -31,12 +35,18 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SplitHttpResponse;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -181,6 +191,19 @@ class MultipartIntegrationTest {
                          });
                 return writer;
             });
+
+            sb.service("/echo", (ctx, req) -> {
+                return HttpResponse.from(req.aggregate().thenApply(r -> HttpResponse
+                    .of(HttpStatus.OK, requireNonNull(r.contentType(), "contentType"), r.content()))
+                    .exceptionally(HttpResponse::ofFailure));
+            });
+
+            sb.service("/multipart/response/simple", (ctx, req) -> {
+                final HttpHeaders headers = HttpHeaders.builder().build();
+                final BodyPart bodyPart = BodyPart.of(headers, "hello");
+                final Multipart multipart = Multipart.of("multipart-response-simple", bodyPart);
+                return multipart.toHttpResponse(HttpStatus.OK);
+            });
         }
     };
 
@@ -230,5 +253,85 @@ class MultipartIntegrationTest {
         final AggregatedHttpResponse response =
                 client.execute(multipart.toHttpRequest(path)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void pingPong() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final HttpHeaders headers = HttpHeaders.builder().build();
+        final BodyPart bodyPart = BodyPart.of(headers, "hello");
+
+        final Multipart requestMultipart = Multipart.of(bodyPart);
+
+        final HttpResponse response = client.execute(requestMultipart.toHttpRequest("/echo"));
+
+        final SplitHttpResponse splitResponse = response.split();
+        final ResponseHeaders responseHeaders = splitResponse.headers().join();
+        assertThat(responseHeaders.status()).isEqualTo(HttpStatus.OK);
+        final StreamMessage<HttpData> responseContents = splitResponse.body();
+        @Nullable
+        final MediaType contentType = responseHeaders.contentType();
+        assertThat(contentType).isNotNull();
+        assertThat(contentType.isMultipart()).isTrue();
+        final String boundary = Multiparts.getBoundary(contentType);
+        assertThat(boundary).isEqualTo(requestMultipart.boundary());
+
+        final Multipart responseMultipart = Multipart.from(boundary, responseContents);
+        assertThat(responseMultipart.boundary()).isEqualTo(boundary);
+        final AggregatedMultipart aggregatedMultipart = responseMultipart.aggregate().join();
+        assertThat(aggregatedMultipart.bodyParts()).hasSize(1);
+        assertThat(aggregatedMultipart.bodyParts().get(0).contentUtf8()).isEqualTo("hello");
+    }
+
+    @Test
+    void multipartSimpleResponse() {
+        final WebClient client = WebClient.of(server.httpUri());
+
+        final HttpResponse response = client.get("/multipart/response/simple");
+
+        final SplitHttpResponse splitResponse = response.split();
+        final ResponseHeaders responseHeaders = splitResponse.headers().join();
+        assertThat(responseHeaders.status()).isEqualTo(HttpStatus.OK);
+        final StreamMessage<HttpData> responseContents = splitResponse.body();
+        @Nullable
+        final MediaType contentType = responseHeaders.contentType();
+        assertThat(contentType).isNotNull();
+        assertThat(contentType.isMultipart()).isTrue();
+        final String boundary = Multiparts.getBoundary(contentType);
+        assertThat(boundary).isEqualTo("multipart-response-simple");
+
+        final Multipart responseMultipart = Multipart.from(boundary, responseContents);
+        assertThat(responseMultipart.boundary()).isEqualTo(boundary);
+        final AggregatedMultipart aggregatedMultipart = responseMultipart.aggregate().join();
+        assertThat(aggregatedMultipart.bodyParts()).hasSize(1);
+        assertThat(aggregatedMultipart.bodyParts().get(0).contentUtf8()).isEqualTo("hello");
+    }
+
+    @Test
+    void requestContentType() {
+        // this tests the situation when Content-Type header already present at RequestHeaders
+        final HttpHeaders bodyPartHeaders = HttpHeaders.builder().build();
+        final BodyPart bodyPart = BodyPart.of(bodyPartHeaders, "hello");
+
+        final Multipart multipart = Multipart.of(bodyPart);
+        final RequestHeaders requestHeaders = RequestHeaders.builder(HttpMethod.POST, "/simple")
+                                                            .contentType(MediaType.MULTIPART_FORM_DATA)
+                                                            .build();
+        final HttpRequest request = multipart.toHttpRequest(requestHeaders);
+        assertThat(request.headers().getAll(HttpHeaderNames.CONTENT_TYPE)).hasSize(1);
+    }
+
+    @Test
+    void responseContentType() {
+        // this tests the situation when Content-Type header already present at ResponseHeaders
+        final HttpHeaders bodyPartHeaders = HttpHeaders.builder().build();
+        final BodyPart bodyPart = BodyPart.of(bodyPartHeaders, "hello");
+
+        final Multipart multipart = Multipart.of(bodyPart);
+        final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
+                                                               .contentType(MediaType.MULTIPART_FORM_DATA)
+                                                               .build();
+        final HttpResponse response = multipart.toHttpResponse(responseHeaders);
+        assertThat(response.aggregate().join().headers().getAll(HttpHeaderNames.CONTENT_TYPE)).hasSize(1);
     }
 }

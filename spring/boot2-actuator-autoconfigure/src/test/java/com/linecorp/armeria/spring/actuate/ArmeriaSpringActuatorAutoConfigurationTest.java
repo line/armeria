@@ -187,7 +187,7 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
     void testPrometheus() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator/prometheus").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType()).isEqualTo(MediaType.parse(TextFormat.CONTENT_TYPE_004));
+        assertThat(res.contentType()).isEqualTo(MediaType.parse(TextFormat.CONTENT_TYPE_OPENMETRICS_100));
         assertThat(res.contentAscii()).startsWith("# HELP ");
     }
 
