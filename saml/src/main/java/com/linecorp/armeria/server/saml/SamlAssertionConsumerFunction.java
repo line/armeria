@@ -21,6 +21,7 @@ import static com.linecorp.armeria.server.saml.SamlMessageUtil.validateSignature
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -29,6 +30,7 @@ import org.joda.time.DateTime;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.common.messaging.context.SAMLBindingContext;
 import org.opensaml.saml.saml2.core.Assertion;
+import org.opensaml.saml.saml2.core.Audience;
 import org.opensaml.saml.saml2.core.AuthnStatement;
 import org.opensaml.saml.saml2.core.Conditions;
 import org.opensaml.saml.saml2.core.EncryptedAssertion;
@@ -250,12 +252,15 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                 //   conditions MUST be understood by and accepted by the service provider in order for
                 //   the assertion to be considered valid.) The identity provider is NOT obligated to honor
                 //   the requested set of <Conditions> in the <AuthnRequest>, if any.
-                conditions.getAudienceRestrictions().stream()
-                          .flatMap(r -> r.getAudiences().stream())
-                          .filter(audience -> entityId.equals(audience.getAudienceURI()))
-                          .findAny()
-                          .orElseThrow(() -> new InvalidSamlRequestException(
-                                  "no audience found from the assertion"));
+                final Optional<Audience> audience =
+                        conditions.getAudienceRestrictions().stream()
+                                  .flatMap(r -> r.getAudiences().stream())
+                                  .filter(audience0 -> entityId
+                                          .equals(audience0.getAudienceURI()))
+                                  .findAny();
+                if (!audience.isPresent()) {
+                    throw new InvalidSamlRequestException("no audience found from the assertion");
+                }
 
                 return assertion;
             }

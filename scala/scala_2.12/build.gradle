@@ -5,7 +5,7 @@ plugins {
 dependencies {
     implementation('org.scala-lang:scala-library') {
         version {
-            strictly '2.12.13'
+            strictly '2.12.14'
         }
     }
     implementation 'org.scala-lang.modules:scala-collection-compat_2.12'

@@ -37,8 +37,6 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.internal.common.util.ChannelUtilTest;
 
 import io.netty.channel.ChannelOption;
 import io.netty.resolver.DefaultAddressResolverGroup;

@@ -813,6 +813,7 @@ class HttpHeadersBaseTest {
         headers.authority("netty.io");
         headers.add("name3", "value4");
         headers.scheme("https");
+        headers.add(HttpHeaderNames.PROTOCOL, "websocket");
         return headers;
     }
 }

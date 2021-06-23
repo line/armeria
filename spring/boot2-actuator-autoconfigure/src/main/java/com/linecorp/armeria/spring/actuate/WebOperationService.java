@@ -29,7 +29,7 @@ import java.nio.channels.ScatteringByteChannel;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -37,6 +37,8 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.actuate.endpoint.InvocationContext;
+import org.springframework.boot.actuate.endpoint.OperationArgumentResolver;
+import org.springframework.boot.actuate.endpoint.ProducibleOperationArgumentResolver;
 import org.springframework.boot.actuate.endpoint.SecurityContext;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
@@ -52,6 +54,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -61,6 +64,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -84,6 +88,7 @@ final class WebOperationService implements HttpService {
     private static final Class<?> healthComponentClass;
     @Nullable
     private static final MethodHandle getStatusMethodHandle;
+    private static final boolean hasProducibleOperationArgumentResolver;
 
     static {
         final String healthComponentClassName = "org.springframework.boot.actuate.health.HealthComponent";
@@ -107,6 +112,19 @@ final class WebOperationService implements HttpService {
             healthComponentClass = null;
             getStatusMethodHandle = null;
         }
+
+        // ProducibleOperationArgumentResolver has been added in Spring Boot 2.5.0
+        final String producibleOperationArgumentResolverClassName =
+                "org.springframework.boot.actuate.endpoint.ProducibleOperationArgumentResolver";
+        boolean hasArgumentResolver;
+        try {
+            Class.forName(producibleOperationArgumentResolverClassName, false,
+                          WebOperationService.class.getClassLoader());
+            hasArgumentResolver = true;
+        } catch (ClassNotFoundException e) {
+            hasArgumentResolver = false;
+        }
+        hasProducibleOperationArgumentResolver = hasArgumentResolver;
     }
 
     private final WebOperation operation;
@@ -120,37 +138,23 @@ final class WebOperationService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-        final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
-        req.aggregate().handle((aggregatedReq, t) -> {
-            if (t != null) {
-                resFuture.completeExceptionally(t);
-                return null;
-            }
-            if (operation.isBlocking()) {
-                try {
-                    ctx.blockingTaskExecutor().execute(() -> invoke(ctx, aggregatedReq, resFuture));
-                } catch (Throwable cause) {
-                    resFuture.completeExceptionally(cause);
-                }
-            } else {
-                invoke(ctx, aggregatedReq, resFuture);
-            }
-            return null;
-        });
-        return HttpResponse.from(resFuture);
+        if (operation.isBlocking()) {
+            return HttpResponse.from(req.aggregate().thenApplyAsync(invoke(ctx), ctx.blockingTaskExecutor()));
+        } else {
+            return HttpResponse.from(req.aggregate().thenApply(invoke(ctx)));
+        }
     }
 
-    private void invoke(ServiceRequestContext ctx,
-                        AggregatedHttpRequest req,
-                        CompletableFuture<HttpResponse> resFuture) {
-        try {
+    private Function<AggregatedHttpRequest, HttpResponse> invoke(ServiceRequestContext ctx) {
+        return req -> {
             final Map<String, Object> arguments = getArguments(ctx, req);
-            final Object result = operation.invoke(new InvocationContext(SecurityContext.NONE, arguments));
-            final HttpResponse res = handleResult(ctx, result, req.method());
-            resFuture.complete(res);
-        } catch (Throwable cause) {
-            resFuture.completeExceptionally(cause);
-        }
+            final Object result = operation.invoke(newInvocationContext(req, arguments));
+            try {
+                return handleResult(ctx, result, req.method());
+            } catch (Throwable throwable) {
+                return Exceptions.throwUnsafely(throwable);
+            }
+        };
     }
 
     private static Map<String, Object> getArguments(ServiceRequestContext ctx, AggregatedHttpRequest req) {
@@ -172,6 +176,19 @@ final class WebOperationService implements HttpService {
         }
 
         return ImmutableMap.copyOf(arguments);
+    }
+
+    private static InvocationContext newInvocationContext(AggregatedHttpRequest req,
+                                                          Map<String, Object> arguments) {
+        if (hasProducibleOperationArgumentResolver) {
+            return new InvocationContext(SecurityContext.NONE, arguments, acceptHeadersResolver(req.headers()));
+        } else {
+            return new InvocationContext(SecurityContext.NONE, arguments);
+        }
+    }
+
+    private static OperationArgumentResolver acceptHeadersResolver(HttpHeaders headers) {
+        return new ProducibleOperationArgumentResolver(() -> headers.getAll(HttpHeaderNames.ACCEPT));
     }
 
     private HttpResponse handleResult(ServiceRequestContext ctx,
