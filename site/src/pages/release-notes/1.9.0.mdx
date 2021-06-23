@@ -4,8 +4,8 @@ date: 2021-06-23
 
 ## 🌟 New features
 
-- You can now bind [GraphQL Java](https://www.graphql-java.com/) to <type://ServerBuilder> 
-  using <type://GraphqlService>. #3318 #3373
+- A new module armeria-graphql integrates with [GraphQL Java](https://www.graphql-java.com/) to let you serve
+  GraphQL requests. #3318 #3373
   ```java
   ServerBuilder sb = ...;
   sb.service("/graphql",
@@ -18,40 +18,59 @@ date: 2021-06-23
   ```
   <Tip>
 
-  `armeria-graphql` is currently experimental, so you should be careful using the feature.
+  `armeria-graphql` is currently experimental. We're looking forward to your feedback.
 
   </Tip>
 - You can now transform the objects of <type://HttpRequest> and <type://HttpResponse> using a function.
   #3606 #3624
   ```java
   HttpRequest req1 = ...;
-  HttpRequest req2 = req1.mapHeaders(headers -> ...)
-                         .mapData(data -> ...)
-                         .mapTrailers(trailers -> ...);
+  HttpRequest req2 = 
+      req1.mapHeaders(headers -> headers.toBuilder()
+                                        .add("TraceId", "1")
+                                        .build())
+          .mapData(data -> HttpData.ofUtf8(data.toStringUtf8() + '\n'))
+          .mapTrailers(trailers -> trailers.toBuilder()
+                                           .add("trailer-key", "val")
+                                           .build())
   
   HttpResponse res1 = ...;
-  HttpResponse res2 = res1.mapHeaders(headers -> ...)
-                          .mapInformational(informational -> ...)
-                          .mapData(data -> ...)
-                          .mapTrailers(trailers -> ...);
+  HttpResponse res2 = 
+      res1.mapHeaders(headers -> headers.toBuilder()
+                                        .add("SessionId", "123")
+                                        .build())
+          .mapInformational(informational -> {
+              return informational.withMutations(builder -> {
+                  builder.add(HttpHeaderNames.USER_AGENT, "Armeria");
+              });
+          })
+          .mapData(data -> HttpData.ofUtf8(data.toStringUtf8()
+                                   .replaceAll("\n", "<br/>")))
+          .mapTrailers(trailers -> trailers.toBuilder()
+                                           .add("result", "0")
+                                           .build());
   ```
 - You can now collect the all elements of a <type://StreamMessage> with <type://StreamMessage#collect()>. #3603
   ```java
-  StreamMessage<MyObject> stream = ...;
-  CompletableFuture<List<MyObject>> collected = stream.collect();
+  StreamMessage<Integer> stream = StreamMessage.of(1, 2, 3);
+  CompletableFuture<List<Integer>> collected = stream.collect();
+  assert collected.join().equals(List.of(1, 2, 3));
   ```
-- You can exclude a <type://Route> from another <type://Route> when configuring their services. #2737 #3562
+- You can exclude a <type://Route> from another <type://Route> when configuring a service. #2737 #3562
   ```java
   ServerBuilder sb = ...;
   sb.route()
     .pathPrefix("/api")
-    .exclude("/api/admin")
-    .exclude(Route.builder()...build())
+    .exclude("prefix:/api/admin")
+    .exclude(Route.builder()
+                  .pathPrefix("/api/v1")
+                  .consumes(MediaType.JSON)
+                  .build())
     .build(apiService);
 
   sb.routeDecorator()
     .pathPrefix("/api")
-    .exclude("/api/admin")
+    .exclude("prefix:/api/admin")
     .build(MetricCollectingService.newDecorator());
   ```
 - You can now update the service bindings without restarting a <type://Server> using
@@ -77,7 +96,7 @@ date: 2021-06-23
   // Specify RequestOptions when sending a request.
   client.execute(req, options);
   
-  // Specify the options when building a request
+  // You can also specify the options when building a request
   // using WebClientRequestPreparation.
   client.prepare()
         .get("/some/path")
@@ -112,28 +131,41 @@ date: 2021-06-23
         .localPort(8080)
         .localPort(9090, SessionProtocol.HTTP, SessionProtocol.HTTPS);
   ```
-- You can now specify the default Jackson modules with <type://JacksonModuleProvider>. #3594 #3625
-  - All available Jackson modules are automatically loaded through Jackson's
-    [built-in SPI](https://fasterxml.github.io/jackson-databind/javadoc/2.11/com/fasterxml/jackson/databind/cfg/MapperBuilder.html#findAndAddModules--)
-    by default.
-- [TCP User Timeout Option](https://datatracker.ietf.org/doc/html/rfc5482) is enabled by default when an idle
-  timeout is enabled. #3509
+- All Jackson modules in the class loader are registered automatically by default via Jackson's
+  [built-in SPI machanism](https://fasterxml.github.io/jackson-databind/javadoc/2.11/com/fasterxml/jackson/databind/cfg/MapperBuilder.html#findAndAddModules--)
+  for your convenience.
+  - You can override this behavior by registering your <type://JacksonModuleProvider> implementation
+    via Java SPI. #3594 #3625
+- [TCP user timeout option](https://datatracker.ietf.org/doc/html/rfc5482) is now enabled by default when an
+  idle timeout is enabled. #3509
   - `TCP_KEEPIDLE` and `TCP_KEEPINTVL` options are enabled when a PING interval is greater than 0.
-- You can now get the last value of a header name or a query param using
+- You can now get the last value of a header or a query parameter using
   <type://HttpHeaders#getLast(CharSequence)> and <type://QueryParams#getLast(String)>. #3438 #3568
   ```java
-  HttpHeaders headers = ...;
-  headers.getLast(HttpHeaderNames.X_FORWARDED_FOR);
+  HttpHeaders headers =
+      HttpHeaders.builder()
+                 .add(HttpHeaderNames.X_FORWARDED_FOR,
+                     List.of("203.0.113.195", "150.172.238.178"))
+                 .build();
+  assert headers.getLast(HttpHeaderNames.X_FORWARDED_FOR)
+                .equals("150.172.238.178");
   
-  QueryParams params = ...;
-  params.getLast("items");
+  QueryParams params = 
+      QueryParams.builder()
+                 .add("items", List.of("1", "2", "3"))
+                 .build();
+  assert params.getLastInt("items").equals(1);
   ```
-- You can now see detailed content length information from a <type://ContentTooLargeException>. #3520 #3616
+- <type://ContentTooLargeException> now provides you the three following properties about why
+    the exception was raised. #3520, #3616
+  - The maximum allowed content length
+  - The content length specified in the `content-length` header
+  - The number of bytes transferred so far
 - You can now convert a <type://Multipart> into an <type://HttpResponse>. #3642
 - You can now warm up an `EventLoopGroup` using <type://EventLoopGroups#warmUp(EventLoopGroup)>. #3363 #3610
-- You can now figure out how many connections that a <type://ClientFactory> is managing
-  using <type://ClientFactory#numConnections()>. #3596 #3613
-- You can now specify the number of event loop threads and blocking task threads. #3597 #3602
+- You can now figure out the number of connections managed by a <type://ClientFactory> with
+  <type://ClientFactory#numConnections()>. #3596 #3613
+- You can now specify the number of event loop threads and blocking task threads more conveniently. #3597 #3602
   ```java
   Server.builder()
         .workerGroup(3)
@@ -152,14 +184,12 @@ date: 2021-06-23
 
 - Various optimizations for <type://StreamMessage> implementations. #3585 #3584
 - You can now use an optimized context-aware `CompletableFuture` for Java 12 and above. #2119 #3615
-- Various multipart mime types are added to <type://MediaType>. #3642
-- `TemporaryThreadLocals` throws an `IllegalStateException` if it was not properly released before using it.
-  #3505
+- Various multipart MIME types were added to <type://MediaType>. #3642
 
 ## 🛠️ Bug fixes
 
 - `ByteBuf`s are no longer leaked when using:
-  - Spring WebFlux integration with compression #3608 #3617
+  - Spring WebFlux integration with compression #3608 #3617; or
   - <type://StreamMessageDuplicator> #3476 #3583
 - You no longer see a <type://ResponseTimeoutException> with <type://CircuitBreakerClient> when a large number
   of messages are received from a response. #3631
@@ -171,7 +201,7 @@ date: 2021-06-23
   <type://Exceptions#peel(Throwable)>. #3588
 - You no longer see an `UnsatisfiedLinkError` when a Netty JAR without native libraries is included. #3485 #3607
 - Additional headers are now correctly updated to <type://RequestOnlyLog#requestHeaders()>. #3579 #3581
-- `CancellationScheduler` provides more accurate timeout nanoseconds. #3570
+- A timeout is more precisely scheduled for a request or a response. #3570
 - You no longer see a duplicate `Content-Type` header when using <type://Multipart>. #3642
 
 ## 🏚️ Deprecations
