@@ -1,12 +1,11 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 import java.util.concurrent.atomic.AtomicBoolean
 
 plugins {
     id 'com.google.osdetector' version '1.6.2' apply false
     // If you want to change `org.jetbrains.kotlin.jvm` version,
     // you also need to change `org.jetbrains.kotlin:kotlin-allopen` version in `dependencies.yml`.
-    id 'org.jetbrains.kotlin.jvm' version '1.4.20' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.5.10' apply false
+    id 'org.jlleitschuh.gradle.ktlint' version '10.1.0' apply false
 
     id 'net.ltgt.errorprone' version '1.2.1' apply false
 }
@@ -23,11 +22,6 @@ ext {
 }
 
 apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
-
-def javaTestHome = System.env.JAVA_TEST_HOME
-if (javaTestHome) {
-    logger.quiet("Overriding JVM for tests with ${javaTestHome}")
-}
 
 // Fail the build if the console contains 'LEAK:'.
 def hasLeak = new AtomicBoolean()
@@ -62,10 +56,7 @@ allprojects {
         if (project.hasFlags('coverage')) {
             systemProperty 'com.linecorp.armeria.testing.coverage', 'true'
         }
-        // Use a different JRE for testing if necessary.
-        if (javaTestHome) {
-            executable "${javaTestHome}/bin/java"
-        }
+
         // Parallelize if --parallel is on.
         if (gradle.startParameter.parallelProjectExecutionEnabled) {
             maxParallelForks = gradle.startParameter.maxWorkerCount
@@ -79,16 +70,6 @@ allprojects {
                     hasLeak.set(true)
                 }
             })
-        }
-    }
-}
-
-task checkJavaVersion {
-    doLast {
-        if (JavaVersion.current().majorVersion.toInteger() < 12) {
-            throw new GradleException("The Java version used (${JavaVersion.current()}) is too old to " +
-                    "build Armeria. Please use at least JDK 12. You can download a compatible JDK from " +
-                    "https://adoptopenjdk.net/")
         }
     }
 }
@@ -124,9 +105,11 @@ configure(projectsWithFlags('java')) {
 
         // Errorprone
         compileOnly 'com.google.errorprone:error_prone_annotations'
+        testImplementation 'com.google.errorprone:error_prone_annotations'
 
         // FastUtil
-        implementation 'it.unimi.dsi:fastutil'
+        implementation 'it.unimi.dsi:fastutil-core'
+        implementation 'it.unimi.dsi:fastutil-extra'
 
         // Guava
         implementation 'com.google.guava:guava'
@@ -177,15 +160,15 @@ configure(projectsWithFlags('java')) {
     // Target Java 8.
     tasks.withType(JavaCompile) {
         options.compilerArgs += ['--release', '8']
-
-        dependsOn checkJavaVersion
     }
 
-    tasks.withType(KotlinCompile) {
-        kotlinOptions {
-            jvmTarget = "1.8"
-            freeCompilerArgs = ["-Xjsr305=strict"]
-        }
+    // Configure the default DuplicatesStrategy for such as:
+    // - c.l.armeria.versions.properties
+    // - thrift/cassandra.json
+    // - and so on
+    tasks.sourcesJar.duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    tasks.withType(Copy) {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 }
 
@@ -207,9 +190,9 @@ allprojects {
     }
 }
 
-// Require to use JDK 14 when releasing.
+// Require to use JDK 15 when releasing.
 tasks.release.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_14) {
-        throw new IllegalStateException("You must release using JDK 14.");
+    if (JavaVersion.current() != JavaVersion.VERSION_15) {
+        throw new IllegalStateException("You must release using JDK 15.");
     }
 }

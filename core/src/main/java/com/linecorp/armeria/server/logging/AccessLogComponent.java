@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.logging;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.util.ServiceNamingUtil.GRPC_SERVICE_NAME;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getFields;
 
@@ -297,8 +298,7 @@ interface AccessLogComponent {
                     final String name = log.name();
                     final RpcRequest rpcRequest = log.context().rpcRequest();
                     final boolean isGrpc = rpcRequest != null &&
-                                           "com.linecorp.armeria.internal.common.grpc.GrpcLogUtil".equals(
-                                                   rpcRequest.serviceType().getName());
+                                           GRPC_SERVICE_NAME.equals(rpcRequest.serviceType().getName());
 
                     final String logName;
                     if (name != null && !isGrpc) {
@@ -322,16 +322,16 @@ interface AccessLogComponent {
                     final String protocol = firstNonNull(log.sessionProtocol(),
                                                          log.context().sessionProtocol()).uriText();
 
-                    final StringBuilder requestLine = TemporaryThreadLocals.get().stringBuilder();
-                    requestLine.append(httpMethodName).append(' ').append(path);
+                    try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+                        final StringBuilder requestLine = tempThreadLocals.stringBuilder();
+                        requestLine.append(httpMethodName).append(' ').append(path);
 
-                    if (logName != null) {
-                        requestLine.append('#')
-                                   .append(UrlEscapers.urlFragmentEscaper().escape(logName));
+                        if (logName != null) {
+                            requestLine.append('#')
+                                       .append(UrlEscapers.urlFragmentEscaper().escape(logName));
+                        }
+                        return requestLine.append(' ').append(protocol).toString();
                     }
-                    requestLine.append(' ').append(protocol);
-                    return requestLine.toString();
-
                 case RESPONSE_STATUS_CODE:
                     return log.responseHeaders().status().code();
                 case RESPONSE_LENGTH:

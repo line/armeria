@@ -166,6 +166,10 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         final HttpResponseWrapper res = getResponse(resId);
+                        if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
+                            close(ctx);
+                            return;
+                        }
                         assert res != null;
                         this.res = res;
 
@@ -250,16 +254,18 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     }
 
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("unexpected message type: " + msg.getClass().getName() +
-                   " (expected: " + expected.getName() + ", channel: " + ctx.channel() +
-                   ", resId: " + resId);
-        if (lastPingReqId == -1) {
-            buf.append(')');
-        } else {
-            buf.append(", lastPingReqId: " + lastPingReqId + ')');
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("unexpected message type: " + msg.getClass().getName() +
+                       " (expected: " + expected.getName() + ", channel: " + ctx.channel() +
+                       ", resId: " + resId);
+            if (lastPingReqId == -1) {
+                buf.append(')');
+            } else {
+                buf.append(", lastPingReqId: " + lastPingReqId + ')');
+            }
+            fail(ctx, new ProtocolViolationException(buf.toString()));
         }
-        fail(ctx, new ProtocolViolationException(buf.toString()));
     }
 
     private void fail(ChannelHandlerContext ctx, Throwable cause) {
@@ -274,6 +280,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
             logger.warn("Unexpected exception:", cause);
         }
 
+        ctx.close();
+    }
+
+    private void close(ChannelHandlerContext ctx) {
+        state = State.DISCARD;
         ctx.close();
     }
 

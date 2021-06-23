@@ -24,7 +24,7 @@ import org.reactivestreams.Publisher
 import scala.concurrent.Future
 import scalapb.descriptors.{Descriptor, FieldDescriptor, PValue, Reads}
 import scalapb.json4s.Printer
-import scalapb.{GeneratedEnumCompanion, GeneratedMessage, GeneratedMessageCompanion}
+import scalapb.{GeneratedEnumCompanion, GeneratedMessage, GeneratedMessageCompanion, GeneratedSealedOneof}
 
 private[scalapb] object ScalaPbConverterUtil {
 
@@ -35,9 +35,6 @@ private[scalapb] object ScalaPbConverterUtil {
 
   val X_PROTOBUF: MediaType = MediaType.create("application", "x-protobuf")
   val defaultJsonPrinter: Printer = new Printer().includingDefaultValueFields
-
-  def isJson(contentType: MediaType): Boolean =
-    contentType.is(MediaType.JSON) || contentType.subtype.endsWith("+json")
 
   def isProtobuf(contentType: MediaType): Boolean =
     contentType.is(MediaType.PROTOBUF) || contentType.is(X_PROTOBUF) || contentType.is(MediaType.OCTET_STREAM)
@@ -98,10 +95,13 @@ private[scalapb] object ScalaPbConverterUtil {
     }
 
   private[scalapb] def isProtobufMessage(clazz: Class[_]): Boolean =
-    classOf[GeneratedMessage].isAssignableFrom(clazz)
+    classOf[GeneratedMessage].isAssignableFrom(clazz) || classOf[GeneratedSealedOneof].isAssignableFrom(clazz)
 
   private[scalapb] val unknownGeneratedMessageCompanion: GeneratedMessageCompanion[GeneratedMessage] =
     new GeneratedMessageCompanion[GeneratedMessage] {
+
+      override def parseFrom(input: CodedInputStream): GeneratedMessage = ???
+
       override def merge(a: GeneratedMessage, input: CodedInputStream): GeneratedMessage = ???
 
       override def javaDescriptor: Descriptors.Descriptor = ???
@@ -120,6 +120,13 @@ private[scalapb] object ScalaPbConverterUtil {
     }
 
   private[scalapb] val unknownGeneratedMessage: GeneratedMessage = new GeneratedMessage {
+
+    override def productArity: Int = ???
+
+    override def productElement(n: Int): Any = ???
+
+    override def canEqual(that: Any): Boolean = ???
+
     override def writeTo(output: CodedOutputStream): Unit = ???
 
     override def getFieldByNumber(fieldNumber: Int): Any = ???

@@ -130,14 +130,19 @@ class GracefulShutdownIntegrationTest {
         }
 
         // Measure the baseline time taken for stopping the server without handling any requests.
-        server.start();
-        final long startTime = System.nanoTime();
-        server.stop().join();
-        final long stopTime = System.nanoTime();
+        long totalNanos = 0;
+        final int iteration = 2;
+        for (int i = 0; i < iteration; i++) {
+            server.start();
+            final long startTime = System.nanoTime();
+            server.stop().join();
+            final long stopTime = System.nanoTime();
+            totalNanos += stopTime - startTime;
+        }
 
-        assertThat(accessLogWriterCounter1.get()).isOne();
-        assertThat(accessLogWriterCounter2.get()).isOne();
-        return baselineNanos = stopTime - startTime;
+        assertThat(accessLogWriterCounter1).hasValue(iteration);
+        assertThat(accessLogWriterCounter2).hasValue(iteration);
+        return baselineNanos = totalNanos / iteration;
     }
 
     @Test
@@ -154,7 +159,7 @@ class GracefulShutdownIntegrationTest {
 
         // .. which should be on par with the baseline.
         assertThat(stopTime - startTime).isBetween(baselineNanos - MILLISECONDS.toNanos(400),
-                                                   baselineNanos + MILLISECONDS.toNanos(400));
+                                                   baselineNanos + MILLISECONDS.toNanos(1000));
     }
 
     @Test
@@ -181,7 +186,7 @@ class GracefulShutdownIntegrationTest {
         assertThat(completed.get()).isTrue();
 
         // Should take 500 more milliseconds than the baseline.
-        assertThat(stopTime - startTime).isBetween(baselineNanos + MILLISECONDS.toNanos(100),
+        assertThat(stopTime - startTime).isBetween(baselineNanos - MILLISECONDS.toNanos(100),
                                                    baselineNanos + MILLISECONDS.toNanos(900));
     }
 
@@ -219,7 +224,7 @@ class GracefulShutdownIntegrationTest {
         // Should take 1 more second than the baseline, because the long sleep will trigger shutdown timeout.
         final long stopTime = System.nanoTime();
         assertThat(stopTime - startTime).isBetween(baselineNanos + MILLISECONDS.toNanos(600),
-                                                   baselineNanos + MILLISECONDS.toNanos(1400));
+                                                   baselineNanos + MILLISECONDS.toNanos(1800));
     }
 
     @Test

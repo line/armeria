@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.reactor3.RequestContextHooks.ContextAwareMono;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
@@ -54,15 +55,14 @@ class ContextAwareFluxTest {
 
     @Test
     void fluxJust() {
-        final ClientRequestContext ctx = newContext();
-        final Flux<String> flux;
-        try (SafeCloseable ignored = ctx.push()) {
-            flux = addCallbacks(Flux.just("foo").publishOn(Schedulers.single()), ctx);
-        }
-        StepVerifier.create(flux)
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
-                    .verifyComplete();
+        // FluxJust and FluxEmpty are a scalar type and could be subscribed by multiple requests.
+        // Therefore, Flux.just(...), Flux.empty() and Flux.error(ex) should not return a ContextAwareFlux.
+        final Flux<String> just = Flux.just("foo");
+        final Flux<String> empty = Flux.empty();
+        final Flux<String> error = Flux.error(new IllegalStateException("boom"));
+        assertThat(just).isNotExactlyInstanceOf(ContextAwareMono.class);
+        assertThat(empty).isNotExactlyInstanceOf(ContextAwareMono.class);
+        assertThat(error).isNotExactlyInstanceOf(ContextAwareMono.class);
     }
 
     @Test

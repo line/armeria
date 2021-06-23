@@ -90,6 +90,7 @@ public final class DnsResolverGroupBuilder {
     private DnsServerAddressStreamProvider dnsServerAddressStreamProvider;
     @Nullable
     private DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory;
+    private boolean dnsQueryMetricsDisabled;
     @Nullable
     private List<String> searchDomains;
     @Nullable
@@ -262,6 +263,15 @@ public final class DnsResolverGroupBuilder {
     }
 
     /**
+     * Disables the default {@link DnsQueryLifecycleObserverFactory} that collects DNS query metrics through
+     * {@link MeterRegistry}.
+     */
+    public DnsResolverGroupBuilder disableDnsQueryMetrics() {
+        dnsQueryMetricsDisabled = true;
+        return this;
+    }
+
+    /**
      * Sets the list of search domains of the resolver.
      *
      * @see DnsNameResolverBuilder#searchDomains(Iterable)
@@ -293,7 +303,7 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets if the domain and host names should be decoded to unicode when received.
-     * See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>. This flag is enabled by default.
+     * See <a href="https://datatracker.ietf.org/doc/rfc3492/">rfc3492</a>. This flag is enabled by default.
      *
      * @see DnsNameResolverBuilder#decodeIdn(boolean)
      */
@@ -357,17 +367,23 @@ public final class DnsResolverGroupBuilder {
                 builder.nameServerProvider(dnsServerAddressStreamProvider);
             }
             assert meterRegistry != null;
-            final DnsQueryLifecycleObserverFactory observerFactory =
-                    new DefaultDnsQueryLifecycleObserverFactory(
-                            meterRegistry,
-                            new MeterIdPrefix("armeria.client.dns.queries"));
-            if (dnsQueryLifecycleObserverFactory == null) {
-                builder.dnsQueryLifecycleObserverFactory(observerFactory);
-            } else {
-                builder.dnsQueryLifecycleObserverFactory(
-                        new BiDnsQueryLifecycleObserverFactory(observerFactory,
-                                                               dnsQueryLifecycleObserverFactory));
+
+            DnsQueryLifecycleObserverFactory observerFactory = dnsQueryLifecycleObserverFactory;
+            if (!dnsQueryMetricsDisabled) {
+                final DefaultDnsQueryLifecycleObserverFactory defaultObserverFactory =
+                        new DefaultDnsQueryLifecycleObserverFactory(
+                                meterRegistry, new MeterIdPrefix("armeria.client.dns.queries"));
+                if (observerFactory == null) {
+                    observerFactory = defaultObserverFactory;
+                } else {
+                    observerFactory = new BiDnsQueryLifecycleObserverFactory(
+                            observerFactory, defaultObserverFactory);
+                }
             }
+            if (observerFactory != null) {
+                builder.dnsQueryLifecycleObserverFactory(observerFactory);
+            }
+
             if (searchDomains != null) {
                 builder.searchDomains(searchDomains);
             }

@@ -1,0 +1,31 @@
+plugins {
+    id 'scala'
+}
+
+dependencies {
+    implementation 'org.scala-lang:scala-library'
+    testImplementation project(':core')
+    testImplementation project(':grpc')
+    testImplementation project(':scalapb_2.13')
+    testImplementation 'com.thesamet.scalapb:scalapb-runtime_2.13'
+    testImplementation 'com.thesamet.scalapb:scalapb-runtime-grpc_2.13'
+    testImplementation 'com.thesamet.scalapb:scalapb-json4s_2.13'
+}
+
+compileScala.targetCompatibility = 1.8
+ScalaCompileOptions.metaClass.useAnt = false
+
+tasks.withType(ScalaCompile) {
+    scalaCompileOptions.with {
+        // Disable incremental compilation to avoid intermittent compile errors.
+        force = true
+    }
+}
+
+sourceSets {
+    test {
+        scala {
+            srcDirs "${protobuf.generatedFilesBaseDir}/test/scalapb"
+        }
+    }
+}

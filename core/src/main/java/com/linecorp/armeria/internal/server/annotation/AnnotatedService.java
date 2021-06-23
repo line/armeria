@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
@@ -98,6 +101,8 @@ public final class AnnotatedService implements HttpService {
                              new ByteArrayResponseConverterFunction(),
                              new HttpFileResponseConverterFunction());
 
+    private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
+
     static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
                                                     AnnotatedService.class.getClassLoader()));
@@ -111,6 +116,7 @@ public final class AnnotatedService implements HttpService {
 
     private final Object object;
     private final Method method;
+    private final MethodHandle methodHandle;
     @Nullable
     private final MethodHandle callKotlinSuspendingMethod;
     private final boolean isKotlinSuspendingMethod;
@@ -126,7 +132,8 @@ public final class AnnotatedService implements HttpService {
 
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
-    private final String defaultServiceName;
+    private final String serviceName;
+    private final boolean serviceNameSetByAnnotation;
 
     AnnotatedService(Object object, Method method,
                      List<AnnotatedValueResolver> resolvers,
@@ -138,6 +145,8 @@ public final class AnnotatedService implements HttpService {
                      boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
+        checkArgument(!method.isVarArgs(), "%s#%s declared to take a variable number of arguments",
+                      method.getDeclaringClass().getSimpleName(), method.getName());
         isKotlinSuspendingMethod = KotlinUtil.isSuspendingFunction(method);
         this.resolvers = requireNonNull(resolvers, "resolvers");
         exceptionHandler =
@@ -170,12 +179,16 @@ public final class AnnotatedService implements HttpService {
             serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
         }
         if (serviceName != null) {
-            defaultServiceName = serviceName.value();
+            this.serviceName = serviceName.value();
+            serviceNameSetByAnnotation = true;
         } else {
-            defaultServiceName = getUserClass(object.getClass()).getName();
+            this.serviceName = getUserClass(object.getClass()).getName();
+            serviceNameSetByAnnotation = false;
         }
 
         this.method.setAccessible(true);
+        // following must be called only after method.setAccessible(true)
+        methodHandle = asMethodHandle(method, object);
     }
 
     private static ResponseConverterFunction responseConverter(
@@ -234,7 +247,11 @@ public final class AnnotatedService implements HttpService {
     }
 
     public String serviceName() {
-        return defaultServiceName;
+        return serviceName;
+    }
+
+    public boolean serviceNameSetByAnnotation() {
+        return serviceNameSetByAnnotation;
     }
 
     public String methodName() {
@@ -335,7 +352,7 @@ public final class AnnotatedService implements HttpService {
                         useBlockingTaskExecutor ? ctx.blockingTaskExecutor() : ctx.eventLoop(),
                         ctx);
             } else {
-                return method.invoke(object, arguments);
+                return methodHandle.invoke(arguments);
             }
         } catch (Throwable cause) {
             return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
@@ -617,5 +634,33 @@ public final class AnnotatedService implements HttpService {
      */
     private enum ResponseType {
         HTTP_RESPONSE, COMPLETION_STAGE, KOTLIN_COROUTINES, SCALA_FUTURE, OTHER_OBJECTS
+    }
+
+    /**
+     * Converts {@link Method} to {@link MethodHandle}, optionally accepting {@code object} instance of the
+     * declaring class in case of non-static methods. Result {@link MethodHandle} must be assigned to
+     * a {@code final} field in order to enable Java compiler optimizations.
+     * @param method the {@link Method} to be converted to a {@link MethodHandle}
+     * @param object an instance of declaring class for non-static methods, or {@link null} for static methods
+     * @return a {@link MethodHandle} corresponding to the supplied {@link Method}
+     */
+    private static MethodHandle asMethodHandle(Method method, @Nullable Object object) {
+        MethodHandle methodHandle;
+        try {
+            // an investigation showed no difference in performance between the MethodHandle
+            // obtained via either MethodHandles.Lookup#unreflect or MethodHandles.Lookup#findVirtual
+            methodHandle = lookup.unreflect(method);
+        } catch (IllegalAccessException e) {
+            // this is extremely unlikely considering that we've already executed method.setAccessible(true)
+            throw new RuntimeException(e);
+        }
+        if (!Modifier.isStatic(method.getModifiers())) {
+            // bind non-static methods to an instance of the declaring class
+            methodHandle = methodHandle.bindTo(requireNonNull(object, "object"));
+        }
+        final int parameterCount = method.getParameterCount();
+        // allows MethodHandle accepting an Object[] argument and
+        // spreading its elements as positional arguments
+        return methodHandle.asSpreader(Object[].class, parameterCount);
     }
 }

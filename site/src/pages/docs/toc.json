@@ -23,6 +23,7 @@
     "client-http",
     "client-thrift",
     "client-grpc",
+    "client-factory",
     "client-decorator",
     "client-retrofit",
     "client-custom-http-headers",
@@ -43,6 +44,8 @@
     "advanced-saml",
     "advanced-spring-webflux-integration",
     "advanced-dropwizard-integration",
-    "advanced-scalapb"
+    "advanced-scala",
+    "advanced-scalapb",
+    "advanced-client-interoperability"
   ]
 }

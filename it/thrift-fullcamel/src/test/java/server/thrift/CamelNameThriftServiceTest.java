@@ -19,13 +19,13 @@ package server.thrift;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.apache.thrift.TException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.SayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SayHelloService.Iface;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -38,8 +38,22 @@ class CamelNameThriftServiceTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/hello", THttpService.of((SayHelloService.Iface) name
-                    -> "Hello, " + name + '!'));
+            sb.service("/hello", THttpService.of(new Iface() {
+                @Override
+                public String sayHello(String name) throws TException {
+                    return "Hello, " + name + '!';
+                }
+
+                @Override
+                public String sayHelloNow(String name) throws TException {
+                    return "Hello, " + name + '!';
+                }
+
+                @Override
+                public String sayHelloWorld(String name) throws TException {
+                    return "Hello, " + name + '!';
+                }
+            }));
         }
     };
 
@@ -49,5 +63,11 @@ class CamelNameThriftServiceTest {
         final Iface client = Clients.newClient(server.httpUri(BINARY) + "/hello", Iface.class);
         assertThat(client.sayHello("Armeria")).isEqualTo("Hello, Armeria!");
         assertThat(client.sayHello(null)).isEqualTo("Hello, null!");
+
+        assertThat(client.sayHelloNow("Armeria")).isEqualTo("Hello, Armeria!");
+        assertThat(client.sayHelloNow(null)).isEqualTo("Hello, null!");
+
+        assertThat(client.sayHelloWorld("Armeria")).isEqualTo("Hello, Armeria!");
+        assertThat(client.sayHelloWorld(null)).isEqualTo("Hello, null!");
     }
 }

@@ -713,17 +713,19 @@ final class TTextProtocol extends TProtocol {
             return;
         }
         final ByteArrayOutputStream content = new ByteArrayOutputStream();
-        final byte[] buffer = TemporaryThreadLocals.get().byteArray(READ_BUFFER_SIZE);
-        try {
-            while (trans_.read(buffer, 0, READ_BUFFER_SIZE) > 0) {
-                content.write(buffer);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final byte[] buffer = tempThreadLocals.byteArray(READ_BUFFER_SIZE);
+            try {
+                while (trans_.read(buffer, 0, READ_BUFFER_SIZE) > 0) {
+                    content.write(buffer);
+                }
+            } catch (TTransportException e) {
+                if (TTransportException.END_OF_FILE != e.getType()) {
+                    throw new IOException(e);
+                }
             }
-        } catch (TTransportException e) {
-            if (TTransportException.END_OF_FILE != e.getType()) {
-                throw new IOException(e);
-            }
+            root = OBJECT_MAPPER.readTree(content.toByteArray());
         }
-        root = OBJECT_MAPPER.readTree(content.toByteArray());
     }
 
     /**
@@ -829,6 +831,46 @@ final class TTextProtocol extends TProtocol {
 
     private void popWriter() {
         writers.pop();
+    }
+
+    /**
+     * Returns the minimum number of bytes a type will consume on the wire.
+     *
+     * <p>This API is added to TProtocol in Thrift 0.14.0.
+     * Forked from https://github.com/apache/thrift/blob/7054b315f4fc84d95461268a5e47b67f4ff6801d/lib/java/src/org/apache/thrift/protocol/TJSONProtocol.java#L989
+     */
+    @SuppressWarnings("unused")
+    public int getMinSerializedSize(byte type) throws TException {
+        switch (type) {
+            case 0:
+                return 0; // Stop
+            case 1:
+                return 0; // Void
+            case 2:
+                return 1; // Bool
+            case 3:
+                return 1; // Byte
+            case 4:
+                return 1; // Double
+            case 6:
+                return 1; // I16
+            case 8:
+                return 1; // I32
+            case 10:
+                return 1;// I64
+            case 11:
+                return 2;  // string length
+            case 12:
+                return 2;  // empty struct
+            case 13:
+                return 2;  // element count Map
+            case 14:
+                return 2;  // element count Set
+            case 15:
+                return 2;  // element count List
+            default:
+                throw new TTransportException(TTransportException.UNKNOWN, "unrecognized type code");
+        }
     }
 
     private static final class WriterByteArrayOutputStream {

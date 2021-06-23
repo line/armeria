@@ -451,7 +451,6 @@ appspacehosted.com
 appspaceusercontent.com
 appspot.com
 appudo.net
-aprendemas.cl
 aq
 aq.it
 aquarelle
@@ -1816,6 +1815,7 @@ dclk
 dd-dns.de
 ddns.me
 ddns.net
+ddns5.com
 ddnsfree.com
 ddnsgeek.com
 ddnsking.com
@@ -4840,6 +4840,8 @@ media.aero
 media.hu
 media.museum
 media.pl
+mediatech.by
+mediatech.dev
 medical.museum
 medicina.bo
 medio-campidano.it
@@ -7264,6 +7266,7 @@ shonai.fukuoka.jp
 shonai.yamagata.jp
 shoo.okayama.jp
 shop
+shop.brendly.rs
 shop.ht
 shop.hu
 shop.pl

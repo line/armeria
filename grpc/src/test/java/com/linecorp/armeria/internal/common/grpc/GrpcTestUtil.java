@@ -50,15 +50,19 @@ public final class GrpcTestUtil {
                           .build();
 
     public static byte[] uncompressedResponseBytes() {
-        return uncompressedFrame(protoByteBuf(RESPONSE_MESSAGE));
+        return uncompressedFrame(responseByteBuf());
     }
 
     public static byte[] compressedResponseBytes() {
-        return compressedFrame(protoByteBuf(RESPONSE_MESSAGE));
+        return compressedFrame(responseByteBuf());
     }
 
     public static ByteBuf requestByteBuf() {
         return protoByteBuf(REQUEST_MESSAGE);
+    }
+
+    public static ByteBuf responseByteBuf() {
+        return protoByteBuf(RESPONSE_MESSAGE);
     }
 
     public static ByteBuf protoByteBuf(MessageLite msg) {

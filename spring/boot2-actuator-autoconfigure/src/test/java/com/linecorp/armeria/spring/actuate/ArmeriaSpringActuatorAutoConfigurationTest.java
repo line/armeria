@@ -187,7 +187,7 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
     void testPrometheus() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator/prometheus").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType()).isEqualTo(MediaType.parse(TextFormat.CONTENT_TYPE_004));
+        assertThat(res.contentType()).isEqualTo(MediaType.parse(TextFormat.CONTENT_TYPE_OPENMETRICS_100));
         assertThat(res.contentAscii()).startsWith("# HELP ");
     }
 
@@ -251,17 +251,17 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Nested
-    @SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
+    @SpringBootTest(classes = ArmeriaSpringActuatorAutoConfigurationCorsTest.TestConfiguration.class)
     @ActiveProfiles({ "local", "autoConfTest", "autoConfTestCors" })
     @DirtiesContext
     @AutoConfigureMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     @Timeout(10)
-    class ArmeriaSpringActuatorAutoConfigurationCorsTest {
+    static class ArmeriaSpringActuatorAutoConfigurationCorsTest {
 
         @SpringBootApplication
-        class TestConfiguration {}
+        static class TestConfiguration {}
 
         @Inject
         private Server server;

@@ -13,7 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
+import JSONbig from 'json-bigint';
+import jsonPrettify from '../json-prettify';
 import { docServiceDebug, providers } from '../header-provider';
 
 import { Endpoint, Method } from '../specification';
@@ -48,7 +49,33 @@ export default abstract class Transport {
       ...filledHeaders,
       ...headers,
     };
-    return this.doSend(method, filledHeaders, bodyJson, endpointPath, queries);
+
+    const httpResponse = await this.doSend(
+      method,
+      filledHeaders,
+      bodyJson,
+      endpointPath,
+      queries,
+    );
+    const responseText = await httpResponse.text();
+    const applicationType = httpResponse.headers.get('content-type') || '';
+    if (applicationType.indexOf('json') >= 0) {
+      try {
+        const json = JSONbig.parse(responseText);
+        const prettified = jsonPrettify(JSONbig.stringify(json));
+        if (prettified.length > 0) {
+          return prettified;
+        }
+      } catch (e) {
+        return responseText;
+      }
+    }
+
+    if (responseText.length > 0) {
+      return responseText;
+    }
+
+    return '<zero-length response>';
   }
 
   public findDebugMimeTypeEndpoint(
@@ -129,5 +156,5 @@ export default abstract class Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<string>;
+  ): Promise<Response>;
 }

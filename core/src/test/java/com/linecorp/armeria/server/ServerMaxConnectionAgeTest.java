@@ -147,7 +147,9 @@ class ServerMaxConnectionAgeTest {
                                           .build();
 
         while (closed.get() < maxClosedConnection) {
-            assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
+            final HttpResponse response = client.get("/");
+            assertThat(response.aggregate().join().status()).isEqualTo(OK);
+            response.whenComplete().join();
             final int closed = this.closed.get();
             assertThat(opened).hasValueBetween(closed, closed + 1);
         }

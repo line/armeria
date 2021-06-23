@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -133,7 +134,9 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeFoo.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeFoo.verboseResponses()).isTrue();
-        assertThat(homeFoo.defaultServiceName()).isEqualTo(defaultServiceName);
+        final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                                .build();
+        assertThat(homeFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(homeFoo.defaultLogName()).isEqualTo(defaultLogName);
         final ServiceConfig homeBar = server.config().serviceConfigs().get(1);
         assertThat(homeBar.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
@@ -141,7 +144,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeBar.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeBar.verboseResponses()).isTrue();
-        assertThat(homeBar.defaultServiceName()).isEqualTo(defaultServiceName);
+        assertThat(homeBar.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(homeBar.defaultLogName()).isEqualTo(defaultLogName);
     }
 

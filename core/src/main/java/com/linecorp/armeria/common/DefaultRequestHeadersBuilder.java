@@ -29,6 +29,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<RequestHeadersBuilder>
         implements RequestHeadersBuilder {
@@ -152,5 +153,38 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     public Locale selectLocale(Iterable<Locale> supportedLocales) {
         final HttpHeadersBase getters = getters();
         return getters != null ? getters.selectLocale(supportedLocales) : null;
+    }
+
+    @Override
+    public RequestHeadersBuilder cookie(Cookie cookie) {
+        requireNonNull(cookie, "cookie");
+        return cookies(ImmutableList.of(cookie));
+    }
+
+    @Override
+    public Cookies cookies() {
+        final HttpHeadersBase getters = getters();
+        if (getters == null) {
+            return Cookies.of();
+        }
+        return getters.cookie();
+    }
+
+    @Override
+    public RequestHeadersBuilder cookies(Iterable<? extends Cookie> cookies) {
+        requireNonNull(cookies, "cookie");
+        final ImmutableSet.Builder<Cookie> builder = ImmutableSet.builder();
+        for (String cookieHeader : getAll(HttpHeaderNames.COOKIE)) {
+            builder.addAll(Cookie.fromCookieHeader(cookieHeader));
+        }
+        builder.addAll(cookies);
+        set(HttpHeaderNames.COOKIE, Cookie.toCookieHeader(builder.build()));
+        return this;
+    }
+
+    @Override
+    public RequestHeadersBuilder cookies(Cookie... cookies) {
+        requireNonNull(cookies, "cookie");
+        return cookies(ImmutableList.copyOf(cookies));
     }
 }

@@ -21,9 +21,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -31,12 +33,15 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -81,6 +86,20 @@ public class HttpRequestSubscriberTest {
         f.get();
         assertThat(f.isCompletedExceptionally()).isFalse();
         assertThat(f.isCancelled()).isFalse();
+    }
+
+    @Test
+    void logBuilderShouldContainsAdditionalHeader() {
+        final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
+        final WebClient client = WebClient.builder(rule.httpUri()).decorator((delegate, ctx, req) -> {
+            requestLogAtomicReference.set(ctx.log());
+            return delegate.execute(ctx, req);
+        }).build();
+        try (SafeCloseable ignored = Clients.withHeaders(headers -> headers.set("x-foo", "bar"))) {
+            client.get("/ok").aggregate().join();
+        }
+        assertThat(requestLogAtomicReference.get().ensureRequestComplete().requestHeaders().get("x-foo"))
+                .isEqualTo("bar");
     }
 
     private static final class HttpDataPublisher extends RegularFixedStreamMessage<HttpData> {

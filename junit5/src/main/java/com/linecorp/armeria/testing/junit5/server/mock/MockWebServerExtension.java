@@ -159,6 +159,14 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
 
     @Override
     public final void beforeTestExecution(ExtensionContext context) {
+        reset();
+    }
+
+    /**
+     * Resets the mocking state of this extension. This only needs to be called if using this class without
+     * JUnit 5.
+     */
+    public void reset() {
         mockResponses.clear();
         recordedRequests.clear();
     }

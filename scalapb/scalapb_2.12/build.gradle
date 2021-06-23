@@ -4,7 +4,11 @@ plugins {
 
 dependencies {
     implementation project(':grpc')
-    implementation 'org.scala-lang:scala-library:2.12.12'
+    implementation('org.scala-lang:scala-library') {
+        version {
+            strictly '2.12.14'
+        }
+    }
 
     // ScalaPB
     api "com.thesamet.scalapb:scalapb-json4s_2.12"
@@ -18,21 +22,45 @@ dependencies {
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
-def scalapbProject = "${rootProject.projectDir}/scalapb/scalapb_2.13"
-tasks.compileScala.source "${scalapbProject}/src/main/scala"
-tasks.processResources.from "${scalapbProject}/src/main/resources"
+def scalapb213ProjectDir = "${rootProject.projectDir}/scalapb/scalapb_2.13"
+tasks.compileScala.source "${scalapb213ProjectDir}/src/main/scala"
+tasks.processResources.from "${scalapb213ProjectDir}/src/main/resources"
+// Uncomment the following three lines once we have src/main/proto in :scalapb_2.13.
+//// Use the source code generated from :scalapb_2.13/src/main/proto/*.proto.
+// tasks.compileScala.dependsOn(":scalapb_2.13:generateProto")
+// tasks.compileScala.source "${scalapb213ProjectDir}/gen-src/main/scalapb"
 
-tasks.compileTestScala.dependsOn(":scalapb_2.13:compileTestScala")
-tasks.compileTestScala.source "${scalapbProject}/src/test/scala"
-tasks.compileTestScala.source "${scalapbProject}/gen-src/test/scalapb"
-tasks.processTestResources.from "${scalapbProject}/src/test/proto"
+tasks.compileTestScala.source "${scalapb213ProjectDir}/src/test/scala"
+tasks.processTestResources.from "${scalapb213ProjectDir}/src/test/resources"
+// Use the source code generated from :scalapb_2.13/src/test/proto/*.proto.
+tasks.compileTestScala.dependsOn(":scalapb_2.13:generateTestProto")
+tasks.compileTestScala.source "${scalapb213ProjectDir}/gen-src/test/scalapb"
 
-tasks.sourcesJar.from "${scalapbProject}/src/main/scala"
-tasks.sourcesJar.from "${scalapbProject}/src/main/resources"
-tasks.scaladoc.source "${scalapbProject}/src/main/scala"
+tasks.sourcesJar.from "${scalapb213ProjectDir}/src/main/scala"
+tasks.sourcesJar.from "${scalapb213ProjectDir}/src/main/resources"
+tasks.scaladoc.source "${scalapb213ProjectDir}/src/main/scala"
 
 compileScala.targetCompatibility = 1.8
 ScalaCompileOptions.metaClass.useAnt = false
+
+tasks.withType(ScalaCompile) {
+    scalaCompileOptions.with {
+        // Disable incremental compilation to avoid intermittent compile errors.
+        force = true
+    }
+}
+
+tasks.withType(Test) {
+    useJUnitPlatform {
+        // A workaround for 'java.lang.InternalError: Malformed class name'
+        // when testing scalapb module with Java 8. This bug was fixed in Java 9.
+        // - https://github.com/gradle/gradle/issues/8432
+        // - https://bugs.openjdk.java.net/browse/JDK-8057919
+        if (rootProject.findProperty('testJavaVersion') == '8') {
+            exclude("**/*\$*\$*.class")
+        }
+    }
+}
 
 task aggregatedScaladocs(
         type: ScalaDoc,

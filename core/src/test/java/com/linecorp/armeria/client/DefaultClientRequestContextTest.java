@@ -217,7 +217,8 @@ class DefaultClientRequestContextTest {
                         HttpMethod.POST, "/foo",
                         HttpHeaderNames.SCHEME, "http",
                         HttpHeaderNames.AUTHORITY, "example.com:8080")),
-                null, new CancellationScheduler(0), System.nanoTime(), SystemInfo.currentTimeMicros());
+                null, RequestOptions.of(), new CancellationScheduler(0), System.nanoTime(),
+                SystemInfo.currentTimeMicros());
         ctx.init(Endpoint.of("example.com", 8080));
         return ctx;
     }

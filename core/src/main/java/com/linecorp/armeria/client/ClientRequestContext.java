@@ -269,7 +269,7 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Returns the fragment part of the URI of the current {@link Request}, as defined in
-     * <a href="https://tools.ietf.org/html/rfc3986#section-3.5">the section 3.5 of RFC3986</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.5">the section 3.5 of RFC3986</a>.
      *
      * @return the fragment part of the request URI, or {@code null} if no fragment was specified
      */
@@ -283,13 +283,13 @@ public interface ClientRequestContext extends RequestContext {
     long writeTimeoutMillis();
 
     /**
-     * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
+     * Sets the amount of time allowed until the initial write attempt of the current {@link Request}
      * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeoutMillis(long writeTimeoutMillis);
 
     /**
-     * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
+     * Sets the amount of time allowed until the initial write attempt of the current {@link Request}
      * succeeds. This value is initially set from {@link ClientOptions#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeout(Duration writeTimeout);

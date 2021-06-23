@@ -61,15 +61,17 @@ public final class PercentDecoder {
 
     /**
      * Decodes the specified string if it's
-     * <a href="https://tools.ietf.org/html/rfc3986#section-2.1">Percent-Encoded</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-2.1">Percent-Encoded</a>.
      */
     public static String decodeComponent(String s) {
-        return decodeComponent(TemporaryThreadLocals.get(), s, 0, s.length());
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            return decodeComponent(tempThreadLocals, s, 0, s.length());
+        }
     }
 
     /**
      * Decodes the specified string from the index of {@code from} to the index of {@code toExcluded} if it's
-     * <a href="https://tools.ietf.org/html/rfc3986#section-2.1">Percent-Encoded</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-2.1">Percent-Encoded</a>.
      */
     public static String decodeComponent(TemporaryThreadLocals tempThreadLocals,
                                          String s, int from, int toExcluded) {

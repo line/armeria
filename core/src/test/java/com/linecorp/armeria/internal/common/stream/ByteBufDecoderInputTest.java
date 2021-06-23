@@ -25,6 +25,8 @@ import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -86,7 +88,7 @@ class ByteBufDecoderInputTest {
     }
 
     @Test
-    void readableBytes() {
+    void readableBytes_readByte() {
         assertThat(input.readableBytes()).isEqualTo(9);
         for (int i = 1; i < 10; i++) {
             assertThat(input.readByte()).isEqualTo((byte) i);
@@ -95,6 +97,28 @@ class ByteBufDecoderInputTest {
 
         final ByteBufDecoderInput empty = new ByteBufDecoderInput(UnpooledByteBufAllocator.DEFAULT);
         assertThat(empty.readableBytes()).isEqualTo(0);
+    }
+
+    @Test
+    void readableBytes_readInt() {
+        assertThat(input.readableBytes()).isEqualTo(9);
+        input.readInt();
+        assertThat(input.readableBytes()).isEqualTo(5);
+        input.readInt();
+        assertThat(input.readableBytes()).isEqualTo(1);
+    }
+
+    @ValueSource(ints = { 1, 2, 3, 4, 5, 6, 7, 8, 9 })
+    @ParameterizedTest
+    void readableBytes_readBytes(int size) {
+        int remaining = 9;
+        assertThat(input.readableBytes()).isEqualTo(remaining);
+        while (size > 0) {
+            input.readBytes(size).release();
+            remaining -= size;
+            assertThat(input.readableBytes()).isEqualTo(remaining);
+            size = Math.max(0, remaining);
+        }
     }
 
     @Test
@@ -178,6 +202,26 @@ class ByteBufDecoderInputTest {
         assertThat(byteBuf2.refCnt()).isZero();
         assertThat(byteBuf3.refCnt()).isZero();
         assertThat(byteBuf4.refCnt()).isZero();
+    }
+
+    @Test
+    void skipBytes() {
+        // fast
+        input.skipBytes(2);
+        assertThat(input.readByte()).isEqualTo((byte) 3);
+
+        // slow
+        input.skipBytes(5);
+        assertThat(input.readByte()).isEqualTo((byte) 9);
+    }
+
+    @Test
+    void getByte() {
+        // fast
+        assertThat(input.getByte(1)).isEqualTo((byte) 2);
+
+        // slow
+        assertThat(input.getByte(8)).isEqualTo((byte) 9);
     }
 
     @Test

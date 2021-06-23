@@ -29,6 +29,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.common.util.StringUtil.toBoolean;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -52,6 +53,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
+
+import com.linecorp.armeria.internal.common.util.StringUtil;
 
 import io.netty.handler.codec.DateFormatter;
 import io.netty.util.AsciiString;
@@ -200,6 +203,32 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         return value != null ? value : defaultValue;
     }
 
+    @Nullable
+    @Override
+    public String getLast(IN_NAME name) {
+        requireNonNull(name, "name");
+        final int h = hashName(name);
+        final int i = index(h);
+        Entry e = entries[i];
+        while (e != null) {
+            if (e.hash == h) {
+                final NAME currentName = e.key;
+                if (currentName != null && nameEquals(currentName, name)) {
+                    return e.value;
+                }
+            }
+            e = e.next;
+        }
+        return null;
+    }
+
+    @Override
+    public final String getLast(IN_NAME name, String defaultValue) {
+        requireNonNull(defaultValue, "defaultValue");
+        final String value = getLast(name);
+        return value != null ? value : defaultValue;
+    }
+
     @Override
     public final List<String> getAll(IN_NAME name) {
         requireNonNull(name, "name");
@@ -228,6 +257,38 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         return builder.build();
     }
 
+    @Nullable
+    @Override
+    public Boolean getBoolean(IN_NAME name) {
+        final String v = get(name);
+        if (v == null) {
+            return null;
+        }
+        return toBoolean(v, false);
+    }
+
+    @Override
+    public boolean getBoolean(IN_NAME name, boolean defaultValue) {
+        final Boolean v = getBoolean(name);
+        return v != null ? v : defaultValue;
+    }
+
+    @Nullable
+    @Override
+    public Boolean getLastBoolean(IN_NAME name) {
+        final String v = getLast(name);
+        if (v == null) {
+            return null;
+        }
+        return toBoolean(v, false);
+    }
+
+    @Override
+    public boolean getLastBoolean(IN_NAME name, boolean defaultValue) {
+        final Boolean v = getLastBoolean(name);
+        return v != null ? v : defaultValue;
+    }
+
     @Override
     @Nullable
     public final Integer getInt(IN_NAME name) {
@@ -238,6 +299,19 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     public final int getInt(IN_NAME name, int defaultValue) {
         final Integer v = getInt(name);
+        return v != null ? v : defaultValue;
+    }
+
+    @Override
+    @Nullable
+    public final Integer getLastInt(IN_NAME name) {
+        final String v = getLast(name);
+        return toInteger(v);
+    }
+
+    @Override
+    public final int getLastInt(IN_NAME name, int defaultValue) {
+        final Integer v = getLastInt(name);
         return v != null ? v : defaultValue;
     }
 
@@ -256,6 +330,19 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     @Nullable
+    public final Long getLastLong(IN_NAME name) {
+        final String v = getLast(name);
+        return toLong(v);
+    }
+
+    @Override
+    public final long getLastLong(IN_NAME name, long defaultValue) {
+        final Long v = getLastLong(name);
+        return v != null ? v : defaultValue;
+    }
+
+    @Override
+    @Nullable
     public final Float getFloat(IN_NAME name) {
         final String v = get(name);
         return toFloat(v);
@@ -264,6 +351,19 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     public final float getFloat(IN_NAME name, float defaultValue) {
         final Float v = getFloat(name);
+        return v != null ? v : defaultValue;
+    }
+
+    @Override
+    @Nullable
+    public final Float getLastFloat(IN_NAME name) {
+        final String v = getLast(name);
+        return toFloat(v);
+    }
+
+    @Override
+    public final float getLastFloat(IN_NAME name, float defaultValue) {
+        final Float v = getLastFloat(name);
         return v != null ? v : defaultValue;
     }
 
@@ -282,6 +382,19 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     @Nullable
+    public final Double getLastDouble(IN_NAME name) {
+        final String v = getLast(name);
+        return toDouble(v);
+    }
+
+    @Override
+    public final double getLastDouble(IN_NAME name, double defaultValue) {
+        final Double v = getLastDouble(name);
+        return v != null ? v : defaultValue;
+    }
+
+    @Override
+    @Nullable
     public final Long getTimeMillis(IN_NAME name) {
         final String v = get(name);
         return toTimeMillis(v);
@@ -290,6 +403,19 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     @Override
     public final long getTimeMillis(IN_NAME name, long defaultValue) {
         final Long v = getTimeMillis(name);
+        return v != null ? v : defaultValue;
+    }
+
+    @Override
+    @Nullable
+    public final Long getLastTimeMillis(IN_NAME name) {
+        final String v = getLast(name);
+        return toTimeMillis(v);
+    }
+
+    @Override
+    public final long getLastTimeMillis(IN_NAME name, long defaultValue) {
+        final Long v = getLastTimeMillis(name);
         return v != null ? v : defaultValue;
     }
 
@@ -336,6 +462,12 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     public final boolean containsObject(IN_NAME name, Object value) {
         requireNonNull(value, "value");
         return contains(name, fromObject(value));
+    }
+
+    @Override
+    public final boolean containsBoolean(IN_NAME name, boolean value) {
+        final Boolean v = getBoolean(name);
+        return v != null && v == value;
     }
 
     @Override
@@ -696,7 +828,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int i = index(h);
 
         remove0(h, i, normalizedName);
-        for (Object v: values) {
+        for (Object v : values) {
             requireNonNullElement(values, v);
             add0(h, i, normalizedName, fromObject(v));
         }
@@ -710,7 +842,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         final int i = index(h);
 
         remove0(h, i, normalizedName);
-        for (Object v: values) {
+        for (Object v : values) {
             requireNonNullElement(values, v);
             add0(h, i, normalizedName, fromObject(v));
         }
@@ -732,7 +864,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     }
 
     final void setInt(IN_NAME name, int value) {
-        set(name, String.valueOf(value));
+        set(name, StringUtil.toString(value));
     }
 
     final void setLong(IN_NAME name, long value) {

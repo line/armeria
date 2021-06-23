@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.common.util.StringUtil;
+
 /**
  * HTTP response code and its description.
  */
@@ -214,7 +216,8 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     /**
      * 421 Misdirected Request.
      *
-     * @see <a href="https://tools.ietf.org/html/draft-ietf-httpbis-http2-15#section-9.1.2">421 Status Code</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.1.2">421 (Misdirected Request)
+     *      Status Code</a>
      */
     public static final HttpStatus MISDIRECTED_REQUEST = newConstant(421, "Misdirected Request");
 
@@ -430,7 +433,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
         }
 
         code = statusCode;
-        codeAsText = Integer.toString(statusCode);
+        codeAsText = StringUtil.toString(statusCode);
         codeClass = HttpStatusClass.valueOf(statusCode);
         this.reasonPhrase = reasonPhrase;
 

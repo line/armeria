@@ -22,6 +22,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.ContextHolder;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
@@ -29,6 +31,8 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 
 import reactor.core.CoreSubscriber;
 import reactor.core.Disposable;
+import reactor.core.Fuseable;
+import reactor.core.Fuseable.ScalarCallable;
 import reactor.core.Scannable;
 import reactor.core.Scannable.Attr;
 import reactor.core.publisher.ConnectableFlux;
@@ -56,6 +60,9 @@ public final class RequestContextHooks {
 
     private static boolean enabled;
 
+    private static final String FLUX_ERROR_SUPPLIED = "reactor.core.publisher.FluxErrorSupplied";
+    private static final String MONO_ERROR_SUPPLIED = "reactor.core.publisher.MonoErrorSupplied";
+
     /**
      * Enables {@link RequestContext} during Reactor operations.
      * The reactor {@link Publisher}s such as {@link Mono} and {@link Flux} will have the
@@ -73,7 +80,7 @@ public final class RequestContextHooks {
             return;
         }
         Hooks.onEachOperator(ON_EACH_OPERATOR_HOOK_KEY, source -> {
-            if (source instanceof ContextHolder) {
+            if (source instanceof ContextHolder || isReproducibleScalarType(source)) {
                 return source;
             }
 
@@ -88,7 +95,7 @@ public final class RequestContextHooks {
         });
 
         Hooks.onLastOperator(ON_LAST_OPERATOR_HOOK_KEY, source -> {
-            if (source instanceof ContextHolder) {
+            if (source instanceof ContextHolder || isReproducibleScalarType(source)) {
                 return source;
             }
 
@@ -116,6 +123,19 @@ public final class RequestContextHooks {
         enabled = false;
     }
 
+    /**
+     * Returns whether the specified {@link Publisher} is reproducible {@link Fuseable.ScalarCallable} such as
+     * {@link Flux#empty()}, {@link Flux#just(Object)}, {@link Flux#error(Throwable)},
+     * {@link Mono#empty()}, {@link Mono#just(Object)} and {@link Mono#error(Throwable)}.
+     */
+    private static boolean isReproducibleScalarType(Publisher<Object> publisher) {
+        if (publisher instanceof ScalarCallable) {
+            final String className = publisher.getClass().getName();
+            return !className.equals(FLUX_ERROR_SUPPLIED) && !className.equals(MONO_ERROR_SUPPLIED);
+        }
+        return false;
+    }
+
     private static Publisher<Object> makeContextAware(Publisher<Object> source, RequestContext ctx) {
         if (source instanceof Mono) {
             return new ContextAwareMono((Mono<Object>) source, ctx);
@@ -140,7 +160,8 @@ public final class RequestContextHooks {
 
     private RequestContextHooks() {}
 
-    private static final class ContextAwareMono extends Mono<Object> implements ContextHolder {
+    @VisibleForTesting
+    static final class ContextAwareMono extends Mono<Object> implements ContextHolder {
 
         private final Mono<Object> source;
         private final RequestContext ctx;
@@ -167,7 +188,8 @@ public final class RequestContextHooks {
         }
     }
 
-    private static final class ContextAwareFlux extends Flux<Object> implements ContextHolder {
+    @VisibleForTesting
+    static final class ContextAwareFlux extends Flux<Object> implements ContextHolder {
 
         private final Flux<Object> source;
         private final RequestContext ctx;

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.core;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -24,12 +25,14 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.infra.Blackhole;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.Server;
@@ -66,8 +69,11 @@ public class HttpServerBenchmark {
 
     @Setup
     public void startServer() throws Exception {
+        final byte[] PLAINTEXT = "Hello, World!".getBytes(StandardCharsets.UTF_8);
         server = Server.builder()
                        .service("/empty", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                       .service("/plaintext", (ctx, req) -> HttpResponse
+                               .of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, PLAINTEXT))
                        .requestTimeout(Duration.ZERO)
                        .meterRegistry(NoopMeterRegistry.get())
                        .build();
@@ -100,5 +106,17 @@ public class HttpServerBenchmark {
                              }
                              return null;
                          }));
+    }
+
+    /**
+     * A benchmark for a test designed to demonstrate the capacity about {@code MediaType.PLAIN_TEXT_UTF_8}.
+     *
+     * @see <a href="https://github.com/TechEmpower/FrameworkBenchmarks/wiki/Project-Information-Framework-Tests-Overview#plaintext">Plaintext test</a>
+     * @see <a href="https://github.com/TechEmpower/FrameworkBenchmarks/blob/master/frameworks/Java/armeria/src/main/java/hello/services/HelloService.java">Reference</a>
+     */
+    @Threads(Threads.MAX)
+    @Benchmark
+    public void plainText(Blackhole bh) throws Exception {
+        bh.consume(webClient.get("/plaintext").aggregate().join());
     }
 }

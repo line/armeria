@@ -284,6 +284,10 @@ public final class HealthCheckService implements TransientHttpService {
                         c.addListener(healthCheckerListener);
                     });
                 }
+                healthCheckers.stream()
+                              .filter(ScheduledHealthChecker.class::isInstance)
+                              .map(ScheduledHealthChecker.class::cast)
+                              .forEach(ScheduledHealthChecker::startHealthChecker);
             }
 
             @Override
@@ -306,6 +310,10 @@ public final class HealthCheckService implements TransientHttpService {
                         c.removeListener(healthCheckerListener);
                     });
                 }
+                healthCheckers.stream()
+                              .filter(ScheduledHealthChecker.class::isInstance)
+                              .map(ScheduledHealthChecker.class::cast)
+                              .forEach(ScheduledHealthChecker::stopHealthChecker);
             }
         });
     }

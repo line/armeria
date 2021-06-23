@@ -55,7 +55,9 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -129,6 +131,17 @@ public final class ClientFactoryBuilder {
         option(ClientFactoryOptions.WORKER_GROUP, requireNonNull(workerGroup, "workerGroup"));
         option(ClientFactoryOptions.SHUTDOWN_WORKER_GROUP_ON_CLOSE, shutdownOnClose);
         return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * performing socket I/O and running {@link Client#execute(ClientRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link ClientFactory} is closed.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    public ClientFactoryBuilder workerGroup(int numThreads) {
+        return workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
     }
 
     /**
@@ -306,12 +319,12 @@ public final class ClientFactoryBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
@@ -324,12 +337,12 @@ public final class ClientFactoryBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
@@ -379,7 +392,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection flow-control
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
      * window size</a>. The HTTP/2 connection is first established with
      * {@value Http2CodecUtil#DEFAULT_WINDOW_SIZE} bytes of connection flow-control window size,
      * and it is changed if and only if {@code http2InitialConnectionWindowSize} is set.
@@ -396,7 +409,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
      * for HTTP/2 stream-level flow control. Note that this setting affects the window size of all streams,
      * not the connection-level window size.
      *
@@ -411,7 +424,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public ClientFactoryBuilder http2MaxFrameSize(int http2MaxFrameSize) {
@@ -424,7 +437,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      * that indicates the maximum size of header list that the client is prepared to accept, in octets.
      */
     public ClientFactoryBuilder http2MaxHeaderListSize(long http2MaxHeaderListSize) {
@@ -494,9 +507,9 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the PING interval in milliseconds.
      * When neither read nor write was performed for the given {@code pingIntervalMillis},
-     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
-     * is sent for HTTP/1.
+     * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
+     * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * an asterisk ("*") is sent for HTTP/1.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -518,9 +531,9 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the PING interval.
      * When neither read nor write was performed for the given {@code pingInterval},
-     * a <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame is sent for HTTP/2 or
-     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
-     * is sent for HTTP/1.
+     * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
+     * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * an asterisk ("*") is sent for HTTP/1.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -736,7 +749,7 @@ public final class ClientFactoryBuilder {
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());
         final long maxConnectionAgeMillis = newOptions.maxConnectionAgeMillis();
         long idleTimeoutMillis = newOptions.idleTimeoutMillis();
-        final long pingIntervalMillis = newOptions.pingIntervalMillis();
+        long pingIntervalMillis = newOptions.pingIntervalMillis();
         final ImmutableList.Builder<ClientFactoryOptionValue<?>> adjustedOptionsBuilder =
                 ImmutableList.builderWithExpectedSize(2);
 
@@ -750,12 +763,19 @@ public final class ClientFactoryBuilder {
             final long clampedPingIntervalMillis = Math.max(pingIntervalMillis, MIN_PING_INTERVAL_MILLIS);
             if (clampedPingIntervalMillis >= idleTimeoutMillis) {
                 adjustedOptionsBuilder.add(ZERO_PING_INTERVAL);
+                pingIntervalMillis = 0;
             } else if (pingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
                 // no-op, clampedPingIntervalMillis is equal to pingIntervalMillis
             } else if (clampedPingIntervalMillis == MIN_PING_INTERVAL_MILLIS) {
                 adjustedOptionsBuilder.add(MIN_PING_INTERVAL);
+                pingIntervalMillis = MIN_PING_INTERVAL_MILLIS;
             }
         }
+
+        final Map<ChannelOption<?>, Object> newChannelOptions =
+                ChannelUtil.applyDefaultChannelOptions(
+                        newOptions.channelOptions(), idleTimeoutMillis, pingIntervalMillis);
+        adjustedOptionsBuilder.add(ClientFactoryOptions.CHANNEL_OPTIONS.newValue(newChannelOptions));
 
         final List<ClientFactoryOptionValue<?>> adjustedOptions = adjustedOptionsBuilder.build();
         if (!adjustedOptions.isEmpty()) {

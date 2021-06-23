@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -39,12 +41,20 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Adapts a {@link Publisher} into a {@link StreamMessage}.
+ *
+ * <p>Note that the elements in the {@link Publisher} are not released when {@link Subscription#cancel()} or
+ * {@link #abort()} is called. So you should add a hook in order to release the elements. You can use
+ * <a href="https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#doOnDiscard-java.lang.Class-java.util.function.Consumer-">doOnDiscard</a>
+ * if you are using Reactor, or you can use
+ * <a href="http://reactivex.io/RxJava/3.x/javadoc/io/reactivex/rxjava3/core/Observable.html#doOnDispose-io.reactivex.rxjava3.functions.Action-">doOnDispose</a>
+ * if you are using RxJava.
  *
  * @param <T> the type of element signaled
  */
@@ -97,24 +107,24 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
-        subscribe0(subscriber, executor, false);
+        subscribe0(subscriber, executor, false, false);
     }
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                                 SubscriptionOption... options) {
         requireNonNull(options, "options");
-
+        final boolean withPooledObjects = containsWithPooledObjects(options);
         final boolean notifyCancellation = containsNotifyCancellation(options);
-        subscribe0(subscriber, executor, notifyCancellation);
+        subscribe0(subscriber, executor, withPooledObjects, notifyCancellation);
     }
 
     private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
-                            boolean notifyCancellation) {
+                            boolean withPooledObjects, boolean notifyCancellation) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
 
-        if (!subscribe1(subscriber, executor, notifyCancellation)) {
+        if (!subscribe1(subscriber, executor, withPooledObjects, notifyCancellation)) {
             final AbortableSubscriber oldSubscriber = this.subscriber;
             assert oldSubscriber != null;
             failLateSubscriber(executor, subscriber, oldSubscriber.subscriber);
@@ -122,13 +132,19 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     private boolean subscribe1(Subscriber<? super T> subscriber, EventExecutor executor,
-                               boolean notifyCancellation) {
-        final AbortableSubscriber s = new AbortableSubscriber(this, subscriber, executor, notifyCancellation);
+                               boolean withPooledObjects, boolean notifyCancellation) {
+        final AbortableSubscriber s =
+                new AbortableSubscriber(this, subscriber, executor, withPooledObjects, notifyCancellation);
         if (!subscriberUpdater.compareAndSet(this, null, s)) {
             return false;
         }
 
-        publisher.subscribe(s);
+        if (publisher instanceof StreamMessage) {
+            //noinspection unchecked
+            ((StreamMessage<? extends T>) publisher).subscribe(s, executor);
+        } else {
+            publisher.subscribe(s);
+        }
 
         return true;
     }
@@ -168,7 +184,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         final AbortableSubscriber abortable = new AbortableSubscriber(this, AbortingSubscriber.get(cause),
                                                                       ImmediateEventExecutor.INSTANCE,
-                                                                      false);
+                                                                      false, false);
         if (!subscriberUpdater.compareAndSet(this, null, abortable)) {
             this.subscriber.abort(cause);
             return;
@@ -176,6 +192,16 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         abortable.abort(cause);
         publisher.subscribe(abortable);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        if (publisher instanceof StreamMessage) {
+            //noinspection unchecked
+            return ((StreamMessage<T>) publisher).collect(executor, options);
+        } else {
+            return StreamMessage.super.collect(executor, options);
+        }
     }
 
     @Override
@@ -187,6 +213,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     static final class AbortableSubscriber implements Subscriber<Object>, Subscription {
         private final PublisherBasedStreamMessage<?> parent;
         private final EventExecutor executor;
+        private boolean withPooledObjects;
         private final boolean notifyCancellation;
         private Subscriber<Object> subscriber;
         @Nullable
@@ -196,10 +223,11 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         @SuppressWarnings("unchecked")
         AbortableSubscriber(PublisherBasedStreamMessage<?> parent, Subscriber<?> subscriber,
-                            EventExecutor executor, boolean notifyCancellation) {
+                            EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation) {
             this.parent = parent;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
+            this.withPooledObjects = withPooledObjects;
             this.notifyCancellation = notifyCancellation;
         }
 
@@ -319,6 +347,9 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 parent.demand--;
             }
             try {
+                if (!withPooledObjects) {
+                    obj = PooledObjects.copyAndClose(obj);
+                }
                 subscriber.onNext(obj);
             } catch (Throwable t) {
                 abort(t);

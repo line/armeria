@@ -59,7 +59,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  * @author Juergen Hoeller
  * @author Rossen Stoyanchev
  * @author Sergey Tsypanov
- * @see <a href="https://tools.ietf.org/html/rfc6266">RFC 6266</a>
+ * @see <a href="https://datatracker.ietf.org/doc/rfc6266/">RFC 6266</a>
  */
 public final class ContentDisposition {
 
@@ -277,7 +277,7 @@ public final class ContentDisposition {
      * @param charset the charset for the filename
      * @return the encoded header field param
      *
-     * @see <a href="https://tools.ietf.org/html/rfc5987">RFC 5987</a>
+     * @see <a href="https://datatracker.ietf.org/doc/rfc5987/">RFC 5987</a>
      */
     private static String decodeFilename(String filename, Charset charset) {
         final byte[] value = filename.getBytes(charset);
@@ -342,10 +342,11 @@ public final class ContentDisposition {
 
     /**
      * Encodes the given header field param as describe in RFC 5987.
+     *
      * @param input the header field param
      * @param charset the charset of the header field param string,
      *                only the US-ASCII, UTF-8 and ISO-8859-1 charsets are supported
-     * @see <a href="https://tools.ietf.org/html/rfc5987">RFC 5987</a>
+     * @see <a href="https://datatracker.ietf.org/doc/rfc5987/">RFC 5987</a>
      */
     private static void encodeFilename(StringBuilder sb, String input, Charset charset) {
         final byte[] source = input.getBytes(charset);
@@ -386,6 +387,7 @@ public final class ContentDisposition {
 
     /**
      * Returns the header value for this content disposition as defined in RFC 6266.
+     *
      * @see #parse(String)
      */
     public String asHeaderValue() {
@@ -393,24 +395,26 @@ public final class ContentDisposition {
             return strVal;
         }
 
-        final StringBuilder sb = TemporaryThreadLocals.get().stringBuilder();
-        sb.append(type);
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder sb = tempThreadLocals.stringBuilder();
+            sb.append(type);
 
-        if (name != null) {
-            sb.append("; name=\"");
-            sb.append(name).append('\"');
-        }
-        if (filename != null) {
-            if (charset == null || StandardCharsets.US_ASCII.equals(charset)) {
-                sb.append("; filename=\"");
-                escapeQuotationsInFilename(sb, filename);
-                sb.append('\"');
-            } else {
-                sb.append("; filename*=");
-                encodeFilename(sb, filename, charset);
+            if (name != null) {
+                sb.append("; name=\"");
+                sb.append(name).append('\"');
             }
+            if (filename != null) {
+                if (charset == null || StandardCharsets.US_ASCII.equals(charset)) {
+                    sb.append("; filename=\"");
+                    escapeQuotationsInFilename(sb, filename);
+                    sb.append('\"');
+                } else {
+                    sb.append("; filename*=");
+                    encodeFilename(sb, filename, charset);
+                }
+            }
+            return strVal = sb.toString();
         }
-        return strVal = sb.toString();
     }
 
     /**

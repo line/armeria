@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc.protocol;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -29,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -36,6 +38,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -67,7 +70,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
      * expected that the implementation has the logic to know how to parse the request and serialize a response
      * into {@link ByteBuf}. The returned {@link ByteBuf} will be framed and returned to the client.
      */
-    protected abstract CompletableFuture<ByteBuf> handleMessage(ByteBuf message);
+    protected abstract CompletionStage<ByteBuf> handleMessage(ServiceRequestContext ctx, ByteBuf message);
 
     @Override
     protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
@@ -77,30 +80,32 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
            .subscribe(singleSubscriber(deframed), ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
 
         final CompletableFuture<HttpResponse> responseFuture =
-                deframed.thenCompose(this::handleMessage)
-                        .thenApply(responseMessage -> {
-                            final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
-                                    ctx.alloc(), Integer.MAX_VALUE, false);
-                            final HttpData framed = framer.writePayload(responseMessage);
-                            final HttpHeadersBuilder trailers = HttpHeaders.builder();
-                            GrpcTrailersUtil.addStatusMessageToTrailers(trailers, StatusCodes.OK, null);
-                            return HttpResponse.of(
-                                    RESPONSE_HEADERS,
-                                    framed,
-                                    trailers.build());
-                        })
-                        .exceptionally(t -> {
-                            final HttpHeadersBuilder trailers = RESPONSE_HEADERS.toBuilder();
-                            if (t instanceof ArmeriaStatusException) {
-                                final ArmeriaStatusException statusException = (ArmeriaStatusException) t;
-                                GrpcTrailersUtil.addStatusMessageToTrailers(
-                                        trailers, statusException.getCode(), statusException.getMessage());
-                            } else {
-                                GrpcTrailersUtil.addStatusMessageToTrailers(
-                                        trailers, StatusCodes.INTERNAL, t.getMessage());
-                            }
-                            return HttpResponse.of(trailers.build());
-                        });
+                deframed.thenCompose(requestMessage -> {
+                    try (SafeCloseable ignored = ctx.push()) {
+                        return handleMessage(ctx, requestMessage);
+                    }
+                }).thenApply(responseMessage -> {
+                    final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
+                            ctx.alloc(), Integer.MAX_VALUE, false);
+                    final HttpData framed = framer.writePayload(responseMessage);
+                    final HttpHeadersBuilder trailers = HttpHeaders.builder();
+                    GrpcTrailersUtil.addStatusMessageToTrailers(trailers, StatusCodes.OK, null);
+                    return HttpResponse.of(
+                            RESPONSE_HEADERS,
+                            framed,
+                            trailers.build());
+                }).exceptionally(t -> {
+                    final ResponseHeadersBuilder trailers = RESPONSE_HEADERS.toBuilder();
+                    if (t instanceof ArmeriaStatusException) {
+                        final ArmeriaStatusException statusException = (ArmeriaStatusException) t;
+                        GrpcTrailersUtil.addStatusMessageToTrailers(
+                                trailers, statusException.getCode(), statusException.getMessage());
+                    } else {
+                        GrpcTrailersUtil.addStatusMessageToTrailers(
+                                trailers, StatusCodes.INTERNAL, t.getMessage());
+                    }
+                    return HttpResponse.of(trailers.build());
+                });
 
         return HttpResponse.from(responseFuture);
     }

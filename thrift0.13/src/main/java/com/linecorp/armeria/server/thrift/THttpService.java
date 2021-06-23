@@ -21,11 +21,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -43,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
@@ -94,8 +93,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             "Thrift protocol specified in Accept header must match " +
             "the one specified in the content-type header";
 
-    private static final SerializationFormat[] EMPTY_FORMATS = new SerializationFormat[0];
-
     /**
      * Creates a new instance of {@link THttpServiceBuilder} which can build an instance of {@link THttpService}
      * fluently.
@@ -144,9 +141,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      */
     public static THttpService of(Object implementation,
                                   SerializationFormat defaultSerializationFormat) {
-        return new THttpService(ThriftCallService.of(implementation),
-                                newSupportedSerializationFormats(defaultSerializationFormat,
-                                                                 ThriftSerializationFormats.values()));
+        return builder().addService(implementation)
+                        .defaultSerializationFormat(defaultSerializationFormat)
+                        .build();
     }
 
     /**
@@ -194,10 +191,10 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             Object implementation,
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherSupportedSerializationFormats) {
-
-        return new THttpService(ThriftCallService.of(implementation),
-                                newSupportedSerializationFormats(defaultSerializationFormat,
-                                                                 otherSupportedSerializationFormats));
+        return builder().addService(implementation)
+                        .defaultSerializationFormat(defaultSerializationFormat)
+                        .otherSerializationFormats(otherSupportedSerializationFormats)
+                        .build();
     }
 
     /**
@@ -224,12 +221,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      */
     public static Function<? super RpcService, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat) {
-
-        final SerializationFormat[] supportedSerializationFormatArray = newSupportedSerializationFormats(
-                defaultSerializationFormat,
-                ThriftSerializationFormats.values());
-
-        return delegate -> new THttpService(delegate, supportedSerializationFormatArray);
+        return builder().defaultSerializationFormat(defaultSerializationFormat).newDecorator();
     }
 
     /**
@@ -246,9 +238,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     public static Function<? super RpcService, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat,
             SerializationFormat... otherSupportedSerializationFormats) {
-
         requireNonNull(otherSupportedSerializationFormats, "otherSupportedSerializationFormats");
-        return newDecorator(defaultSerializationFormat, Arrays.asList(otherSupportedSerializationFormats));
+        return newDecorator(defaultSerializationFormat,
+                            ImmutableSet.copyOf(otherSupportedSerializationFormats));
     }
 
     /**
@@ -266,36 +258,26 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     public static Function<? super RpcService, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherSupportedSerializationFormats) {
-
-        final SerializationFormat[] supportedSerializationFormatArray = newSupportedSerializationFormats(
-                defaultSerializationFormat, otherSupportedSerializationFormats);
-
-        return delegate -> new THttpService(delegate, supportedSerializationFormatArray);
+        return builder().defaultSerializationFormat(defaultSerializationFormat)
+                        .otherSerializationFormats(otherSupportedSerializationFormats)
+                        .newDecorator();
     }
 
-    private static SerializationFormat[] newSupportedSerializationFormats(
-            SerializationFormat defaultSerializationFormat,
-            Iterable<SerializationFormat> otherSupportedSerializationFormats) {
-
-        requireNonNull(defaultSerializationFormat, "defaultSerializationFormat");
-        requireNonNull(otherSupportedSerializationFormats, "otherSupportedSerializationFormats");
-
-        final Set<SerializationFormat> set = new LinkedHashSet<>();
-        set.add(defaultSerializationFormat);
-        Iterables.addAll(set, otherSupportedSerializationFormats);
-        return set.toArray(EMPTY_FORMATS);
-    }
-
-    private final SerializationFormat[] supportedSerializationFormatArray;
-    private final Set<SerializationFormat> supportedSerializationFormats;
     private final ThriftCallService thriftService;
+    private final SerializationFormat defaultSerializationFormat;
+    private final Set<SerializationFormat> supportedSerializationFormats;
+    private final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+            exceptionHandler;
 
-    THttpService(RpcService delegate, SerializationFormat[] supportedSerializationFormatArray) {
+    THttpService(RpcService delegate, SerializationFormat defaultSerializationFormat,
+                 Set<SerializationFormat> supportedSerializationFormats,
+                 BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+                         exceptionHandler) {
         super(delegate);
         thriftService = findThriftService(delegate);
-
-        this.supportedSerializationFormatArray = supportedSerializationFormatArray;
-        supportedSerializationFormats = ImmutableSet.copyOf(supportedSerializationFormatArray);
+        this.defaultSerializationFormat = defaultSerializationFormat;
+        this.supportedSerializationFormats = ImmutableSet.copyOf(supportedSerializationFormats);
+        this.exceptionHandler = exceptionHandler;
     }
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
@@ -326,7 +308,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      * Returns the default {@link SerializationFormat} of this service.
      */
     public SerializationFormat defaultSerializationFormat() {
-        return supportedSerializationFormatArray[0];
+        return defaultSerializationFormat;
     }
 
     @Override
@@ -404,7 +386,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
     @Nullable
     private SerializationFormat findSerializationFormat(MediaType contentType) {
-        for (SerializationFormat format : supportedSerializationFormatArray) {
+        for (SerializationFormat format : supportedSerializationFormats) {
             if (format.isAccepted(contentType)) {
                 return format;
             }
@@ -532,7 +514,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         try (SafeCloseable ignored = ctx.push()) {
             reply = unwrap().serve(ctx, call);
         } catch (Throwable cause) {
-            handleException(ctx, RpcResponse.ofFailure(cause), res, serializationFormat, seqId, func, cause);
+            handleException(ctx, res, serializationFormat, seqId, func, cause);
             return;
         }
 
@@ -543,14 +525,15 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             }
 
             if (cause != null) {
-                handleException(ctx, reply, res, serializationFormat, seqId, func, cause);
+                handleException(ctx, res, serializationFormat, seqId, func, cause);
                 return null;
             }
 
             try {
                 handleSuccess(ctx, reply, res, serializationFormat, seqId, func, result);
             } catch (Throwable t) {
-                handleException(ctx, RpcResponse.ofFailure(t), res, serializationFormat, seqId, func, t);
+                handleException(ctx, res, serializationFormat, seqId, func, t);
+                return null;
             }
 
             return null;
@@ -600,6 +583,29 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             SerializationFormat serializationFormat) {
         ctx.logBuilder().responseContent(rpcRes, null);
         respond(serializationFormat, HttpData.empty(), httpRes);
+    }
+
+    private void handleException(ServiceRequestContext ctx, CompletableFuture<HttpResponse> res,
+                                 SerializationFormat serializationFormat, int seqId,
+                                 ThriftFunction func, Throwable cause) {
+        final RpcResponse response = handleException(ctx, Exceptions.peel(cause));
+        response.handle((result, convertedCause) -> {
+            if (convertedCause != null) {
+                handleException(ctx, response, res, serializationFormat, seqId, func, convertedCause);
+            } else {
+                handleSuccess(ctx, response, res, serializationFormat, seqId, func, result);
+            }
+            return null;
+        });
+    }
+
+    private RpcResponse handleException(ServiceRequestContext ctx, Throwable cause) {
+        final RpcResponse res = exceptionHandler.apply(ctx, cause);
+        if (res == null) {
+            logger.warn("exceptionHandler.apply() returned null.");
+            return RpcResponse.ofFailure(cause);
+        }
+        return res;
     }
 
     private static void handleException(

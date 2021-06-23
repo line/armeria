@@ -43,7 +43,7 @@ import io.netty.handler.codec.DateFormatter;
 import io.netty.handler.codec.http.cookie.CookieHeaderNames;
 
 /**
- * A <a href="http://tools.ietf.org/html/rfc6265">RFC 6265</a> compliant cookie decoder for client side.
+ * A <a href="https://datatracker.ietf.org/doc/rfc6265/">RFC 6265</a> compliant cookie decoder for client side.
  *
  * <p>It will store the way the raw value was wrapped in {@link Cookie#isValueQuoted()} so it can be sent back
  * to the origin server as is.</p>

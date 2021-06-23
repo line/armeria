@@ -184,8 +184,23 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder exclude(String pathPattern) {
+        return (ServiceBindingBuilder) super.exclude(pathPattern);
+    }
+
+    @Override
+    public ServiceBindingBuilder exclude(Route excludedRoute) {
+        return (ServiceBindingBuilder) super.exclude(excludedRoute);
+    }
+
+    @Override
     public ServiceBindingBuilder defaultServiceName(String defaultServiceName) {
         return (ServiceBindingBuilder) super.defaultServiceName(defaultServiceName);
+    }
+
+    @Override
+    public ServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        return (ServiceBindingBuilder) super.defaultServiceNaming(defaultServiceNaming);
     }
 
     @Override

@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
     implementation project(':core')
-    implementation project(':thrift0.13')
+    implementation project(':thrift0.14')
     runtimeOnly 'org.slf4j:slf4j-simple'
 
     testImplementation 'org.assertj:assertj-core'
@@ -12,5 +12,5 @@ dependencies {
 }
 
 application {
-    mainClassName = 'example.armeria.thrift.Main'
+    mainClass.set('example.armeria.thrift.Main')
 }

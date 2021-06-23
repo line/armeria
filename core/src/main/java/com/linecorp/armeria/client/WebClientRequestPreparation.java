@@ -16,7 +16,14 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
+import java.time.Duration;
 import java.util.Map;
+
+import javax.annotation.Nullable;
+
+import org.reactivestreams.Publisher;
 
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
@@ -29,12 +36,18 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 
+import io.netty.util.AttributeKey;
+
 /**
  * Prepares and executes a new {@link HttpRequest} for {@link WebClient}.
  */
-public final class WebClientRequestPreparation extends AbstractHttpRequestBuilder {
+public final class WebClientRequestPreparation extends AbstractHttpRequestBuilder
+        implements RequestOptionsSetters {
 
     private final WebClient client;
+
+    @Nullable
+    private RequestOptionsBuilder requestOptionsBuilder;
 
     WebClientRequestPreparation(WebClient client) {
         this.client = client;
@@ -44,7 +57,92 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
      * Builds and executes the request.
      */
     public HttpResponse execute() {
-        return client.execute(buildRequest());
+        final HttpRequest httpRequest = buildRequest();
+        final RequestOptions requestOptions;
+        if (requestOptionsBuilder != null) {
+            requestOptions = requestOptionsBuilder.build();
+        } else {
+            requestOptions = RequestOptions.of();
+        }
+        return client.execute(httpRequest, requestOptions);
+    }
+
+    /**
+     * Sets the specified {@link RequestOptions} that could overwrite the previously configured values such as
+     * {@link #responseTimeout(Duration)}, {@link #writeTimeout(Duration)}, {@link #maxResponseLength(long)}
+     * and {@link #attr(AttributeKey, Object)}.
+     */
+    public WebClientRequestPreparation requestOptions(RequestOptions requestOptions) {
+        requireNonNull(requestOptions, "requestOptions");
+
+        final long maxResponseLength = requestOptions.maxResponseLength();
+        if (maxResponseLength >= 0) {
+            maxResponseLength(maxResponseLength);
+        }
+
+        final long responseTimeoutMillis = requestOptions.responseTimeoutMillis();
+        if (responseTimeoutMillis >= 0) {
+            responseTimeoutMillis(responseTimeoutMillis);
+        }
+
+        final long writeTimeoutMillis = requestOptions.writeTimeoutMillis();
+        if (writeTimeoutMillis >= 0) {
+            writeTimeoutMillis(writeTimeoutMillis);
+        }
+
+        final Map<AttributeKey<?>, Object> attrs = requestOptions.attrs();
+        if (!attrs.isEmpty()) {
+            //noinspection unchecked
+            attrs.forEach((key, value) -> attr((AttributeKey<Object>) key, value));
+        }
+
+        return this;
+    }
+
+    @Override
+    public WebClientRequestPreparation responseTimeout(Duration responseTimeout) {
+        return responseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
+
+    @Override
+    public WebClientRequestPreparation responseTimeoutMillis(long responseTimeoutMillis) {
+        if (requestOptionsBuilder == null) {
+            requestOptionsBuilder = RequestOptions.builder();
+        }
+        requestOptionsBuilder.responseTimeoutMillis(responseTimeoutMillis);
+        return this;
+    }
+
+    @Override
+    public WebClientRequestPreparation writeTimeout(Duration writeTimeout) {
+        return writeTimeoutMillis(requireNonNull(writeTimeout, "writeTimeout").toMillis());
+    }
+
+    @Override
+    public WebClientRequestPreparation writeTimeoutMillis(long writeTimeoutMillis) {
+        if (requestOptionsBuilder == null) {
+            requestOptionsBuilder = RequestOptions.builder();
+        }
+        requestOptionsBuilder.writeTimeoutMillis(writeTimeoutMillis);
+        return this;
+    }
+
+    @Override
+    public WebClientRequestPreparation maxResponseLength(long maxResponseLength) {
+        if (requestOptionsBuilder == null) {
+            requestOptionsBuilder = RequestOptions.builder();
+        }
+        requestOptionsBuilder.maxResponseLength(maxResponseLength);
+        return this;
+    }
+
+    @Override
+    public <V> WebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
+        if (requestOptionsBuilder == null) {
+            requestOptionsBuilder = RequestOptions.builder();
+        }
+        requestOptionsBuilder.attr(key, value);
+        return this;
     }
 
     // Override the return types of the chaining methods in the superclass.
@@ -124,6 +222,11 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     @Override
     public WebClientRequestPreparation content(MediaType contentType, HttpData content) {
         return (WebClientRequestPreparation) super.content(contentType, content);
+    }
+
+    @Override
+    public WebClientRequestPreparation content(MediaType contentType, Publisher<? extends HttpData> publisher) {
+        return (WebClientRequestPreparation) super.content(contentType, publisher);
     }
 
     @Override

@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
@@ -25,7 +26,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.ContextFutureCallbackArgumentsProvider.CallbackResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import ch.qos.logback.classic.Level;
@@ -60,7 +61,7 @@ import ch.qos.logback.core.Appender;
 
 class Java9ContextAwareFutureTest {
 
-    // TODO(minwoox) Make an extesion which a user can easily check the logs.
+    // TODO(minwoox) Make an extension which a user can easily check the logs.
     @Mock
     private Appender<ILoggingEvent> appender;
     @Captor
@@ -153,19 +154,19 @@ class Java9ContextAwareFutureTest {
     @ParameterizedTest
     @ArgumentsSource(Java9CallbackArgumentsProvider.class)
     void makeContextAwareCompletableFutureWithDifferentContext(
-            BiConsumer<CompletableFuture<?>, AtomicBoolean> callback) {
+            BiConsumer<CompletableFuture<?>, CallbackResult> callback) {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ServiceRequestContext ctx1 = ServiceRequestContext.builder(req).build();
         final ServiceRequestContext ctx2 = ServiceRequestContext.builder(req).build();
         try (SafeCloseable ignored = ctx1.push()) {
             final CompletableFuture<Object> future = new CompletableFuture<>();
             final CompletableFuture<Object> contextAwareFuture = ctx2.makeContextAware(future);
-            final AtomicBoolean callbackCalled = new AtomicBoolean();
+            final CallbackResult callbackCalled = new CallbackResult();
             callback.accept(contextAwareFuture, callbackCalled);
 
             future.complete(null);
 
-            assertThat(callbackCalled.get()).isFalse();
+            assertThat(callbackCalled.called.get()).isFalse();
             verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
             assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
                 assertThat(event.getLevel()).isEqualTo(Level.WARN);
@@ -174,16 +175,67 @@ class Java9ContextAwareFutureTest {
         }
     }
 
+    @ParameterizedTest
+    @ArgumentsSource(Java9CallbackArgumentsProvider.class)
+    void makeContextAwareCompletableFutureShouldPropagateContext(
+            BiConsumer<CompletableFuture<?>, CallbackResult> callback) {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext ctx1 = ServiceRequestContext.builder(req).build();
+        try (SafeCloseable ignored = ctx1.push()) {
+            final CompletableFuture<Object> future = new CompletableFuture<>();
+            final CompletableFuture<Object> contextAwareFuture = ctx1.makeContextAware(future);
+            final CallbackResult callbackCalled = new CallbackResult();
+            callback.accept(contextAwareFuture, callbackCalled);
+
+            future.complete("");
+
+            assertThat(callbackCalled.called.get()).isTrue();
+            verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
+            assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
+                assertThat(event.getLevel()).isEqualTo(Level.DEBUG);
+                assertThat(event.getMessage()).startsWith("Router created for");
+            });
+
+            assertThat(callbackCalled.context.get()).isEqualTo(ctx1);
+        }
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(Java9CallbackArgumentsProvider.class)
+    void makeContextAwareCompletableFutureShouldPropagateContextOnException(
+            BiConsumer<CompletableFuture<?>, CallbackResult> callback) {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ServiceRequestContext ctx1 = ServiceRequestContext.builder(req).build();
+        try (SafeCloseable ignored = ctx1.push()) {
+            final CompletableFuture<Object> future = new CompletableFuture<>();
+            final CompletableFuture<Object> contextAwareFuture = ctx1.makeContextAware(future);
+            final CallbackResult callbackCalled = new CallbackResult();
+            callback.accept(contextAwareFuture, callbackCalled);
+
+            future.completeExceptionally(new RuntimeException());
+
+            assertThat(callbackCalled.called.get()).isTrue();
+            verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
+            await().untilAsserted(() -> {
+                assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
+                    assertThat(event.getLevel()).isEqualTo(Level.DEBUG);
+                    assertThat(event.getMessage()).startsWith("Router created for");
+                });
+            });
+            assertThat(callbackCalled.context.get()).isEqualTo(ctx1);
+        }
+    }
+
     private static final class Java9CallbackArgumentsProvider extends ContextFutureCallbackArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
             final Arguments completeAsync = Arguments.of(
-                    (BiConsumer<CompletableFuture<?>, AtomicBoolean>) (future, called) -> {
+                    (BiConsumer<CompletableFuture<?>, CallbackResult>) (future, result) -> {
                         future.completeAsync(() -> {
-                            called.set(true);
+                            fn().apply(result);
                             return null;
                         }, MoreExecutors.directExecutor()).exceptionally(cause -> {
-                            called.set(true);
+                            fn().apply(result);
                             return null;
                         });
                     });

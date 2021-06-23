@@ -35,7 +35,6 @@ import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessageType;
 
-import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -349,9 +348,7 @@ public final class ThriftFunction {
             final Class<?> ifaceType = Class.forName(ifaceTypeName, false, funcClass.getClassLoader());
 
             // Check and convert to camel, thrift java compiler only support underscored to camel
-            final String methodNameCamel = methodName.indexOf('_') >= 0 ?
-                                           CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, methodName)
-                                                                        : methodName;
+            final String methodNameCamel = getCamelMethodName(methodName);
             for (Method m : ifaceType.getDeclaredMethods()) {
                 if (m.getName().equals(methodName) || m.getName().equals(methodNameCamel)) {
                     return m.getExceptionTypes();
@@ -374,5 +371,32 @@ public final class ThriftFunction {
         }
 
         return funcClassName.substring(0, serviceClassEndPos) + '$' + toAppend;
+    }
+
+    /**
+     * Convert method name to LowCamel by algorithm in thrift java compiler.
+     * See: https://github.com/apache/thrift/blob/master/compiler/cpp/src/thrift/generate/t_java_generator.cc#L4608.
+     */
+    static String getCamelMethodName(String name) {
+        final StringBuilder builder = new StringBuilder();
+        int i = 0;
+        for (i = 0; i < name.length(); i++) {
+            if (name.charAt(i) != '_') {
+                break;
+            }
+        }
+        builder.append(Character.toLowerCase(name.charAt(i++)));
+
+        for (; i < name.length(); i++) {
+            if (name.charAt(i) == '_') {
+                if (i < name.length() - 1) {
+                    i++;
+                    builder.append(Character.toUpperCase(name.charAt(i)));
+                }
+            } else {
+                builder.append(name.charAt(i));
+            }
+        }
+        return builder.toString();
     }
 }

@@ -57,12 +57,17 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -79,6 +84,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
+import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -178,6 +184,7 @@ public final class ServerBuilder {
     private ScheduledExecutorService blockingTaskExecutor = CommonPools.blockingTaskExecutor();
     private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
+    private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -191,6 +198,7 @@ public final class ServerBuilder {
         // Set the default host-level properties.
         virtualHostTemplate.accessLogWriter(AccessLogWriter.disabled(), true);
         virtualHostTemplate.rejectedRouteHandler(RejectedRouteHandler.WARN);
+        virtualHostTemplate.defaultServiceNaming(ServiceNaming.fullTypeName());
         virtualHostTemplate.requestTimeoutMillis(Flags.defaultRequestTimeoutMillis());
         virtualHostTemplate.maxRequestLength(Flags.defaultMaxRequestLength());
         virtualHostTemplate.verboseResponses(Flags.verboseResponses());
@@ -360,6 +368,33 @@ public final class ServerBuilder {
     }
 
     /**
+     * Adds a new {@link ServerPort} that listens to the loopback {@code localAddress} using the specified
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = Server.builder();
+     * sb.localPort(8080, SessionProtocol.HTTP, SessionProtocol.HTTPS);
+     * }</pre>
+     */
+    public ServerBuilder localPort(int port, SessionProtocol... protocols) {
+        requireNonNull(protocols, "protocols");
+        return localPort(port, ImmutableList.copyOf(protocols));
+    }
+
+    /**
+     * Adds a new {@link ServerPort} that listens to the loopback {@code localAddress} using the specified
+     * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
+     *
+     * <pre>{@code
+     * ServerBuilder sb = Server.builder();
+     * sb.localPort(8080, Arrays.asList(SessionProtocol.HTTP, SessionProtocol.HTTPS));
+     * }</pre>
+     */
+    public ServerBuilder localPort(int port, Iterable<SessionProtocol> protocols) {
+        return port(new InetSocketAddress(NetUtil.LOCALHOST, port), protocols);
+    }
+
+    /**
      * Sets the {@link ChannelOption} of the server socket bound by {@link Server}.
      * Note that the previously added option will be overridden if the same option is set again.
      *
@@ -413,6 +448,19 @@ public final class ServerBuilder {
     }
 
     /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * performing socket I/O and running {@link Service#serve(ServiceRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    public ServerBuilder workerGroup(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
+        return this;
+    }
+
+    /**
      * Sets the {@link Executor} which will invoke the callbacks of {@link Server#start()},
      * {@link Server#stop()} and {@link ServerListener}. If not set, {@link GlobalEventExecutor} will be used
      * by default.
@@ -456,7 +504,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> interval.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -476,7 +524,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> interval.
+     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> interval.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -589,7 +637,7 @@ public final class ServerBuilder {
     public ServerBuilder http2MaxFrameSize(int http2MaxFrameSize) {
         checkArgument(http2MaxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND &&
                       http2MaxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND,
-                      "http2MaxFramSize: %s (expected: >= %s and <= %s)",
+                      "http2MaxFrameSize: %s (expected: >= %s and <= %s)",
                       http2MaxFrameSize, MAX_FRAME_SIZE_LOWER_BOUND, MAX_FRAME_SIZE_UPPER_BOUND);
         this.http2MaxFrameSize = http2MaxFrameSize;
         return this;
@@ -687,10 +735,37 @@ public final class ServerBuilder {
     }
 
     /**
+     * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
+     * the execution of blocking tasks or invocations.
+     * The {@link BlockingTaskExecutor} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of threads in the executor
+     */
+    public ServerBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
+    }
+
+    /**
      * Sets the {@link MeterRegistry} that collects various stats.
      */
     public ServerBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return this;
+    }
+
+    /**
+     * Sets a global naming rule for the name of services. This property can be overridden via
+     * {@link VirtualHostBuilder#defaultServiceNaming(ServiceNaming)}. The overriding is also possible if
+     * service-level naming rule is set via {@link ServiceBindingBuilder#defaultServiceNaming(ServiceNaming)}.
+     *
+     * @see RequestOnlyLog#serviceName()
+     */
+    public ServerBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        virtualHostTemplate.defaultServiceNaming(defaultServiceNaming);
         return this;
     }
 
@@ -862,12 +937,12 @@ public final class ServerBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
@@ -881,12 +956,12 @@ public final class ServerBuilder {
 
     /**
      * Allows the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      *
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://tools.ietf.org/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
@@ -1319,6 +1394,18 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link ExceptionHandler} that converts a {@link Throwable} to an {@link AggregatedHttpResponse}.
+     *
+     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ExceptionHandler}
+     * but the {@link HttpResponseException#httpResponse()} is sent as-is.
+     */
+    @UnstableApi
+    public ServerBuilder exceptionHandler(ExceptionHandler exceptionHandler) {
+        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+        return this;
+    }
+
+    /**
      * Sets a list of {@link ClientAddressSource}s which are used to determine where to look for the
      * client address, in the order of preference. {@code Forwarded} header, {@code X-Forwarded-For} header
      * and the source address of a PROXY protocol header will be used by default.
@@ -1499,6 +1586,16 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
+        final Server server = new Server(buildServerConfig(ports));
+        serverListeners.forEach(server::addListener);
+        return server;
+    }
+
+    ServerConfig buildServerConfig(ServerConfig existingConfig) {
+        return buildServerConfig(existingConfig.ports());
+    }
+
+    private ServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1510,11 +1607,9 @@ public final class ServerBuilder {
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate))
                                    .collect(toImmutableList());
-
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
-
         final Collection<ServerPort> ports;
 
         this.ports.forEach(
@@ -1524,8 +1619,8 @@ public final class ServerBuilder {
 
         if (defaultSslContext == null) {
             sslContexts = null;
-            if (!this.ports.isEmpty()) {
-                ports = resolveDistinctPorts(this.ports);
+            if (!serverPorts.isEmpty()) {
+                ports = resolveDistinctPorts(serverPorts);
                 for (final ServerPort p : ports) {
                     if (p.hasTls()) {
                         throw new IllegalArgumentException("TLS not configured; cannot serve HTTPS");
@@ -1544,8 +1639,8 @@ public final class ServerBuilder {
                         "at https://www.eclipse.org/jetty/documentation/9.4.x/alpn-chapter.html");
             }
 
-            if (!this.ports.isEmpty()) {
-                ports = resolveDistinctPorts(this.ports);
+            if (!serverPorts.isEmpty()) {
+                ports = resolveDistinctPorts(serverPorts);
             } else {
                 ports = ImmutableList.of(new ServerPort(0, HTTPS));
             }
@@ -1575,21 +1670,22 @@ public final class ServerBuilder {
             }
         }
 
-        final Server server = new Server(new ServerConfig(
-                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
-                workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
+        final Map<ChannelOption<?>, Object> newChildChannelOptions =
+                ChannelUtil.applyDefaultChannelOptions(
+                        childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
+
+        return new ServerConfig(
+                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
+                virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                 http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                meterRegistry, proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
+                meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
-
-        serverListeners.forEach(server::addListener);
-        return server;
+                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, sslContexts);
     }
 
     /**

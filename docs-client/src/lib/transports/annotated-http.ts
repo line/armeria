@@ -13,9 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 import { Endpoint, Method } from '../specification';
-import prettify from '../json-prettify';
 
 import Transport from './transport';
 
@@ -88,7 +86,7 @@ export default class AnnotatedHttpTransport extends Transport {
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
-  ): Promise<string> {
+  ): Promise<Response> {
     const endpoint = this.getDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
@@ -106,23 +104,10 @@ export default class AnnotatedHttpTransport extends Transport {
           : `${newPath}?${queries}`;
     }
 
-    const httpResponse = await fetch(encodeURI(newPath), {
+    return fetch(encodeURI(newPath), {
       headers: hdrs,
       method: method.httpMethod,
       body: bodyJson,
     });
-    const applicationType = httpResponse.headers.get('content-type') || '';
-    const response = await httpResponse.text();
-    if (response.length > 0) {
-      if (applicationType.indexOf('json') > -1) {
-        const prettified = prettify(response);
-        if (prettified.length === 0) {
-          return response;
-        }
-        return prettified;
-      }
-      return response;
-    }
-    return '<zero-length response>';
   }
 }

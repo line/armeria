@@ -430,6 +430,10 @@ public final class Flags {
     private static final boolean
             DEFAULT_USE_LEGACY_ROUTE_DECORATOR_ORDERING = getBoolean("useLegacyRouteDecoratorOrdering", false);
 
+    private static final boolean DEFAULT_USE_DEFAULT_SOCKET_OPTIONS = true;
+    private static final boolean USE_DEFAULT_SOCKET_OPTIONS =
+            getBoolean("useDefaultSocketOptions", DEFAULT_USE_DEFAULT_SOCKET_OPTIONS);
+
     static {
         TransportType type = null;
         switch (TRANSPORT_TYPE_NAME) {
@@ -855,10 +859,10 @@ public final class Flags {
 
     /**
      * Returns the default value for the PING interval.
-     * A <a href="https://httpwg.org/specs/rfc7540.html#PING">PING</a> frame
+     * A <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame
      * is sent for HTTP/2 server and client or
-     * an <a href="https://tools.ietf.org/html/rfc7231#section-4.3.7">OPTIONS</a> request with an asterisk ("*")
-     * is sent for HTTP/1 client.
+     * an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * an asterisk ("*") is sent for HTTP/1 client.
      *
      * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and
      * {@link #defaultClientIdleTimeoutMillis()} for client are greater than the value of this flag.
@@ -1157,7 +1161,7 @@ public final class Flags {
      * <p>The default value of this flag is {@code null}, which means all valid IPv4 addresses are
      * preferred. Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=<csv>} JVM option
      * to override the default value. The {@code csv} should be
-     * <a href="https://tools.ietf.org/html/rfc4632">Classless Inter-domain Routing(CIDR)</a>s or
+     * <a href="https://datatracker.ietf.org/doc/rfc4632/">Classless Inter-domain Routing(CIDR)</a>s or
      * exact IP addresses separated by commas. For example,
      * {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=211.111.111.111,10.0.0.0/8,192.168.1.0/24}.
      */
@@ -1218,7 +1222,7 @@ public final class Flags {
 
     /**
      * Returns whether to allow the bad cipher suites listed in
-     * <a href="https://tools.ietf.org/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#tlsAllowUnsafeCiphers(boolean)}.
      *
@@ -1241,6 +1245,24 @@ public final class Flags {
      */
     public static Set<TransientServiceOption> transientServiceOptions() {
         return TRANSIENT_SERVICE_OPTIONS;
+    }
+
+    /**
+     * Returns whether default socket options defined by Armeria are enabled.
+     * If enabled, the following socket options are set automatically when
+     * {@code /dev/epoll} or {@code io_uring} is in use:
+     * <ul>
+     *   <li>TCP_USER_TIMEOUT</li>
+     *   <li>TCP_KEEPIDLE</li>
+     *   <li>TCP_KEEPINTVL</li>
+     * </ul>
+     *
+     * <p>This flag is enabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.useDefaultSocketOptions=false}
+     * JVM option to disable it.</p>
+     */
+    public static boolean useDefaultSocketOptions() {
+        return USE_DEFAULT_SOCKET_OPTIONS;
     }
 
     /**
