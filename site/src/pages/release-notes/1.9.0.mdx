@@ -107,7 +107,7 @@ date: 2021-06-23
   ```java
   Server.builder()
         .localPort(8080)
-        .localPort(9090, SessionProtocol.HTTP, SessionProtocol.HTTPS)
+        .localPort(9090, SessionProtocol.HTTP, SessionProtocol.HTTPS);
   ```
 - You can now specify the default Jackson modules with <type://JacksonModuleProvider>. #3594 #3625
   - All available Jackson modules are automatically loaded through Jackson's
@@ -125,23 +125,23 @@ date: 2021-06-23
   QueryParams params = ...;
   params.getLast("items");
   ```
-- You can now specify the current and max content length when creating <type://ContentTooLargeException>.
-  #3520 #3616
+- You can now see the specific information such as the length of transferred, delta, and limit
+  from a <type://ContentTooLargeException>. #3520 #3616
 - You can now convert a <type://Multipart> into an <type://HttpResponse>. #3642
 - You can now warm up an `EventLoopGroup` using <type://EventLoopGroups#warmUp(EventLoopGroup)>. #3363 #3610
-- You can now figure out how many connections it is managing using <type://ClientFactory#numConnections()>.
-  #3596 #3613
-- You can now specify the number of event loop threads and blocking task threads using a number. #3597 #3602
+- You can now figure out how many connections that a <type://ClientFactory> is managing
+  using <type://ClientFactory#numConnections()>. #3596 #3613
+- You can now specify the number of event loop threads and blocking task threads. #3597 #3602
   ```java
   Server.builder()
         .workerGroup(3)
         .blockingTaskExecutor(10)
         ...
-        .build()
+        .build();
   
   ClientFactory.builder()
                .workerGroup(3)
-               .build()
+               .build();
   ```
 - You can now clear the mocking state of a <type://MockWebServerExtension> using
   <type://MockWebServerExtension#reset()>. #3629
@@ -149,10 +149,10 @@ date: 2021-06-23
 ## 📈 Improvements
 
 - Various optimizations for <type://StreamMessage> implementations. #3585 #3584
+- You can now use an optimized context-aware `CompletableFuture` for Java 12 and above. #2119 #3615
+- Various multipart mime types are added to <type://MediaType>. #3642
 - `TemporaryThreadLocals` throws an `IllegalStateException` if it was not properly released before using it.
   #3505
-- You can now use optimized a context-aware `CompletableFuture` for Java 12 and above. #2119 #3615
-- Various multipart mime types are added to <type://MediaType>. #3642
 
 ## 🛠️ Bug fixes
 
