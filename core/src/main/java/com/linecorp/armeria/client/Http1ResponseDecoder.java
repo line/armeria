@@ -178,7 +178,6 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
                         res.logResponseFirstBytesTransferred();
 
-                        final ResponseHeaders resHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                         if (nettyRes.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;
                         } else {
@@ -186,7 +185,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         res.initTimeout();
-                        if (!res.tryWrite(resHeaders)) {
+                        if (!res.tryWrite(ArmeriaHttpUtil.toArmeria(nettyRes))) {
                             fail(ctx, ClosedStreamException.get());
                             return;
                         }
