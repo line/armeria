@@ -6,7 +6,9 @@ on:
   pull_request:
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number }}
+  # Cancel the previous builds in the same PR.
+  # Allow running concurrently for all non-PR commits.
+  group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
