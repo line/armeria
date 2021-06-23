@@ -83,7 +83,7 @@ public abstract class ConsulTestBase {
         // An embedded Consul frequently fails to start in CI environment.
         // See https://github.com/line/armeria/issues/3514 for details.
         // Selectively disable Consul tests to suppress the stressful flakiness.
-        assumeThat(System.getenv("RUN_CONSUL_TESTS")).isNotEqualTo("false");
+        assumeThat(System.getenv("FLAKY_TESTS")).isNotEqualTo("false");
 
         // Initialize Consul embedded server for testing
         // This EmbeddedConsul tested with Consul version above 1.4.0

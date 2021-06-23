@@ -87,7 +87,7 @@ jobs:
         -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }}
       shell: bash
       env:
-        RUN_CONSUL_TESTS: false
+        FLAKY_TESTS: false
 
     - name: Cleanup Gradle Cache
       # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
@@ -119,7 +119,7 @@ jobs:
         path: reports-JVM-${{ matrix.java }}.tar
         retention-days: 3
 
-  consul-test:
+  flaky-tests:
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
@@ -144,9 +144,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Run Consul tests
+      - name: Run Flaky tests
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -PnoWeb -PnoLint :consul:build
+          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -PnoWeb -PnoLint \
+          :consul:build \
+          :zookeeper3:build
 
       - name: Cleanup Gradle Cache
         # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
