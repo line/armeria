@@ -154,7 +154,7 @@ date: 2021-06-23
       QueryParams.builder()
                  .add("items", List.of("1", "2", "3"))
                  .build();
-  assert params.getLastInt("items").equals(1);
+  assert params.getLastInt("items").equals(3);
   ```
 - <type://ContentTooLargeException> now provides you the three following properties about why
     the exception was raised. #3520, #3616
