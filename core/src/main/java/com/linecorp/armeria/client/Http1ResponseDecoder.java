@@ -21,6 +21,8 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
@@ -58,7 +60,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
         DISCARD
     }
 
-    /** The request being decoded currently. */
+    /** The response being decoded currently. */
     @Nullable
     private HttpResponseWrapper res;
     private KeepAliveHandler keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
@@ -211,8 +213,14 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         if (dataLength > 0) {
                             assert res != null;
                             final long maxContentLength = res.maxContentLength();
-                            if (maxContentLength > 0 && res.writtenBytes() > maxContentLength - dataLength) {
-                                fail(ctx, ContentTooLargeException.get());
+                            final long writtenBytes = res.writtenBytes();
+                            if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {
+                                final long transferred = LongMath.saturatedAdd(writtenBytes, dataLength);
+                                fail(ctx, ContentTooLargeException.builder()
+                                                                  .maxContentLength(maxContentLength)
+                                                                  .contentLength(res.headers())
+                                                                  .transferred(transferred)
+                                                                  .build());
                                 return;
                             } else if (!res.tryWrite(HttpData.wrap(data.retain()))) {
                                 fail(ctx, ClosedStreamException.get());

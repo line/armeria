@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.math.LongMath;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.ByteBufAccessMode;
@@ -242,7 +243,12 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 if (dataLength > 0) {
                     final int allowedMaxSignalLength = maxSignalLength - signalLength;
                     if (dataLength > allowedMaxSignalLength) {
-                        final ContentTooLargeException cause = ContentTooLargeException.get();
+                        final long transferred = LongMath.saturatedAdd(signalLength, dataLength);
+                        final ContentTooLargeException cause =
+                                ContentTooLargeException.builder()
+                                                        .maxContentLength(maxSignalLength)
+                                                        .transferred(transferred)
+                                                        .build();
                         StreamMessageUtil.closeOrAbort(obj, cause);
                         upstream.abort(cause);
                         return;

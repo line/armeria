@@ -245,10 +245,15 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 if (dataLength != 0) {
                     decodedReq.increaseTransferredBytes(dataLength);
                     final long maxContentLength = decodedReq.maxRequestLength();
-                    if (maxContentLength > 0 && decodedReq.transferredBytes() > maxContentLength) {
+                    final long transferredLength = decodedReq.transferredBytes();
+                    if (maxContentLength > 0 && transferredLength > maxContentLength) {
                         fail(id, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, null,
                              Http2Error.CANCEL);
-                        decodedReq.close(ContentTooLargeException.get());
+                        decodedReq.close(ContentTooLargeException.builder()
+                                                                 .maxContentLength(maxContentLength)
+                                                                 .contentLength(req.headers())
+                                                                 .transferred(transferredLength)
+                                                                 .build());
                         return;
                     }
 

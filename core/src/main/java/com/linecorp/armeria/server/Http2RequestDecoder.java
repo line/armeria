@@ -24,7 +24,10 @@ import java.nio.charset.StandardCharsets;
 
 import javax.annotation.Nullable;
 
+import com.google.common.math.LongMath;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ContentTooLargeExceptionBuilder;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -238,13 +241,18 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         decodedReq.increaseTransferredBytes(dataLength);
 
         final long maxContentLength = decodedReq.maxRequestLength();
-        if (maxContentLength > 0 && decodedReq.transferredBytes() > maxContentLength) {
+        final long transferredLength = decodedReq.transferredBytes();
+        if (maxContentLength > 0 && transferredLength > maxContentLength) {
             final Http2Stream stream = writer.connection().stream(streamId);
             if (isWritable(stream)) {
                 writeErrorResponse(ctx, streamId, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, null);
                 writer.writeRstStream(ctx, streamId, Http2Error.CANCEL.code(), ctx.voidPromise());
                 if (decodedReq.isOpen()) {
-                    decodedReq.close(ContentTooLargeException.get());
+                    decodedReq.close(ContentTooLargeException.builder()
+                                                             .maxContentLength(maxContentLength)
+                                                             .contentLength(req.headers())
+                                                             .transferred(transferredLength)
+                                                             .build());
                 }
             } else {
                 // The response has been started already. Abort the request and let the response continue.

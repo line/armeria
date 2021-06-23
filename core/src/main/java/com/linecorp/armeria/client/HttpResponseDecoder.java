@@ -164,6 +164,8 @@ abstract class HttpResponseDecoder {
         private boolean loggedResponseFirstBytesTransferred;
 
         private State state = State.WAIT_NON_INFORMATIONAL;
+        @Nullable
+        private ResponseHeaders headers;
 
         HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
                             long responseTimeoutMillis, long maxContentLength) {
@@ -183,6 +185,11 @@ abstract class HttpResponseDecoder {
 
         long writtenBytes() {
             return delegate.writtenBytes();
+        }
+
+        ResponseHeaders headers() {
+            assert headers != null;
+            return headers;
         }
 
         void logResponseFirstBytesTransferred() {
@@ -241,6 +248,7 @@ abstract class HttpResponseDecoder {
                 final ResponseHeaders headers = (ResponseHeaders) o;
                 final HttpStatus status = headers.status();
                 if (!status.isInformational()) {
+                    this.headers = headers;
                     state = State.WAIT_DATA_OR_TRAILERS;
                     if (ctx != null) {
                         ctx.logBuilder().defer(RequestLogProperty.RESPONSE_HEADERS);
