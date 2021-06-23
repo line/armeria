@@ -257,7 +257,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
                                               .build());
             throw connectionError(
                     INTERNAL_ERROR,
-                    "content too large: transferred(%d) + delta(%d) > limit(%d) (stream: %d)",
+                    "content too large: transferred(%d + %d) > limit(%d) (stream: %d)",
                     writtenBytes, dataLength, maxContentLength, streamId);
         }
 
