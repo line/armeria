@@ -83,27 +83,27 @@ The [sample service code](https://github.com/line/armeria-examples/tree/master/t
 
 ### build.gradle
 
-Besides Armeria, the sample service uses [Guava](https://github.com/google/guava) and [Jackson](https://github.com/FasterXML/jackson). Let's add them in the build.gradle file.
+Here is a part of the build.gradle file for the sample service. If you are trying the tutorial from scratch, base your file on the sample service's.
 
-```groovy filename=build.gradle highlight=9,10
+```groovy filename=build.gradle
 apply plugin: 'java'
 apply plugin: 'idea'
-apply plugin: 'eclipse'\n
+apply plugin: 'eclipse'
+
 repositories {
     mavenCentral()
-}\n
+}
+
 dependencies {
-  implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
-  implementation "com.google.guava:guava:${versions['com.google.guava:guava']}"\n
-  implementation "com.fasterxml.jackson.core:jackson-core:${versions['com.fasterxml.jackson.core:jackson-core']}"\n
+  implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"
+
   // Logging
   runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'
   runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'
 }
-`}
 ```
 
-## Run sample service
+## Build and run sample service
 
 Have a go at running the sample service and experience the outcome of this tutorial.
 Using Armeria's [Documentation Service](/docs/server-docservice), you can see a server running, receiving requests and sending responses.
