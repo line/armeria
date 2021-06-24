@@ -31,6 +31,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -211,7 +212,7 @@ public final class ChannelUtil {
         final ImmutableMap.Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
 
         if (idleTimeoutMillis > 0) {
-            final int tcpUserTimeout = saturated(idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+            final int tcpUserTimeout = Ints.saturatedCast(idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
             if (transportType == TransportType.EPOLL &&
                 canAddChannelOption(epollTcpUserTimeout, channelOptions)) {
                 putChannelOption(newChannelOptionsBuilder, epollTcpUserTimeout, tcpUserTimeout);
@@ -222,7 +223,7 @@ public final class ChannelUtil {
         }
 
         if (pingIntervalMillis > 0) {
-            final int intPingIntervalMillis = saturated(pingIntervalMillis);
+            final int intPingIntervalMillis = Ints.saturatedCast(pingIntervalMillis);
             if (transportType == TransportType.EPOLL &&
                 canAddChannelOption(epollTcpKeepidle, channelOptions) &&
                 canAddChannelOption(epollTcpKeepintvl, channelOptions) &&
@@ -247,10 +248,6 @@ public final class ChannelUtil {
             ImmutableMap.Builder<ChannelOption<?>, Object> newChannelOptionsBuilder,
             ChannelOption<T> channelOption, T value) {
         newChannelOptionsBuilder.put(channelOption, value);
-    }
-
-    private static int saturated(long value) {
-        return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
     }
 
     private ChannelUtil() {}
