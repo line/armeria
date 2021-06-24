@@ -205,32 +205,32 @@ public final class ChannelUtil {
         final ImmutableMap.Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
 
         if (idleTimeoutMillis > 0 && idleTimeoutMillis <= Integer.MAX_VALUE - TCP_USER_TIMEOUT_BUFFER_MILLIS) {
+            final int tcpUserTimeout = (int) (idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
             if (transportType == TransportType.EPOLL &&
                 canAddChannelOption(epollTcpUserTimeout, channelOptions)) {
-                newChannelOptionsBuilder.put(epollTcpUserTimeout,
-                                             idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+                newChannelOptionsBuilder.put(epollTcpUserTimeout, tcpUserTimeout);
             } else if (transportType == TransportType.IO_URING &&
                        canAddChannelOption(ioUringTcpUserTimeout, channelOptions)) {
-                newChannelOptionsBuilder.put(ioUringTcpUserTimeout,
-                                             idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+                newChannelOptionsBuilder.put(ioUringTcpUserTimeout, tcpUserTimeout);
             }
         }
 
         if (pingIntervalMillis > 0 && pingIntervalMillis <= Integer.MAX_VALUE) {
+            final int intPingIntervalMillis = (int) pingIntervalMillis;
             if (transportType == TransportType.EPOLL &&
                 canAddChannelOption(epollTcpKeepidle, channelOptions) &&
                 canAddChannelOption(epollTcpKeepintvl, channelOptions) &&
                 canAddChannelOption(ChannelOption.SO_KEEPALIVE, channelOptions)) {
                 newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
-                newChannelOptionsBuilder.put(epollTcpKeepidle, pingIntervalMillis);
-                newChannelOptionsBuilder.put(epollTcpKeepintvl, pingIntervalMillis);
+                newChannelOptionsBuilder.put(epollTcpKeepidle, intPingIntervalMillis);
+                newChannelOptionsBuilder.put(epollTcpKeepintvl, intPingIntervalMillis);
             } else if (transportType == TransportType.IO_URING &&
                        canAddChannelOption(ioUringTcpKeepidle, channelOptions) &&
                        canAddChannelOption(ioUringTcpKeepintvl, channelOptions) &&
                        canAddChannelOption(ChannelOption.SO_KEEPALIVE, channelOptions)) {
                 newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
-                newChannelOptionsBuilder.put(ioUringTcpKeepidle, pingIntervalMillis);
-                newChannelOptionsBuilder.put(ioUringTcpKeepintvl, pingIntervalMillis);
+                newChannelOptionsBuilder.put(ioUringTcpKeepidle, intPingIntervalMillis);
+                newChannelOptionsBuilder.put(ioUringTcpKeepintvl, intPingIntervalMillis);
             }
         }
         newChannelOptionsBuilder.putAll(channelOptions);
