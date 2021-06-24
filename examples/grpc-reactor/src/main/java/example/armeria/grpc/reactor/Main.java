@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -32,7 +33,16 @@ public final class Main {
                     server.activeLocalPort());
     }
 
-    static Server newServer(int httpPort, int httpsPort) throws Exception {
+    private static Server newServer(int httpPort, int httpsPort) throws Exception {
+        final ServerBuilder sb = Server.builder();
+        sb.http(httpPort)
+          .https(httpsPort)
+          .tlsSelfSigned();
+        configureServices(sb);
+        return sb.build();
+    }
+
+    static void configureServices(ServerBuilder sb) {
         final HelloRequest exampleRequest = HelloRequest.newBuilder().setName("Armeria").build();
         final HttpServiceWithRoutes grpcService =
                 GrpcService.builder()
@@ -45,28 +55,23 @@ public final class Main {
                            // methods in the blockingTaskExecutor thread pool.
                            // .useBlockingTaskExecutor(true)
                            .build();
-        return Server.builder()
-                     .http(httpPort)
-                     .https(httpsPort)
-                     .tlsSelfSigned()
-                     .service(grpcService)
-                     // You can access the documentation service at http://127.0.0.1:8080/docs.
-                     // See https://armeria.dev/docs/server-docservice for more information.
-                     .serviceUnder("/docs",
-                             DocService.builder()
-                                       .exampleRequests(
-                                               HelloServiceGrpc.SERVICE_NAME,
-                                               "Hello", exampleRequest)
-                                       .exampleRequests(
-                                               HelloServiceGrpc.SERVICE_NAME,
-                                               "LazyHello", exampleRequest)
-                                       .exampleRequests(
-                                               HelloServiceGrpc.SERVICE_NAME,
-                                               "BlockingHello", exampleRequest)
-                                       .exclude(DocServiceFilter.ofServiceName(
-                                               ServerReflectionGrpc.SERVICE_NAME))
-                                       .build())
-                     .build();
+        sb.service(grpcService)
+          // You can access the documentation service at http://127.0.0.1:8080/docs.
+          // See https://armeria.dev/docs/server-docservice for more information.
+          .serviceUnder("/docs",
+                        DocService.builder()
+                                  .exampleRequests(
+                                          HelloServiceGrpc.SERVICE_NAME,
+                                          "Hello", exampleRequest)
+                                  .exampleRequests(
+                                          HelloServiceGrpc.SERVICE_NAME,
+                                          "LazyHello", exampleRequest)
+                                  .exampleRequests(
+                                          HelloServiceGrpc.SERVICE_NAME,
+                                          "BlockingHello", exampleRequest)
+                                  .exclude(DocServiceFilter.ofServiceName(
+                                          ServerReflectionGrpc.SERVICE_NAME))
+                                  .build());
     }
 
     private Main() {}

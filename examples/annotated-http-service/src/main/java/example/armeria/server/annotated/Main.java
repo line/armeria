@@ -30,28 +30,32 @@ public class Main {
      *
      * @param port the port that the server is to be bound to
      */
-    static Server newServer(int port) {
+    private static Server newServer(int port) {
         final ServerBuilder sb = Server.builder();
-        return sb.http(port)
-                 .annotatedService("/pathPattern", new PathPatternService())
-                 .annotatedService("/injection", new InjectionService())
-                 .annotatedService("/messageConverter", new MessageConverterService())
-                 .annotatedService("/exception", new ExceptionHandlerService())
-                 .serviceUnder("/docs",
-                               DocService.builder()
-                                         .examplePaths(PathPatternService.class,
-                                                       "pathsVar",
-                                                       "/pathPattern/paths/first/foo",
-                                                       "/pathPattern/paths/second/bar")
-                                         .examplePaths(PathPatternService.class,
-                                                       "pathVar",
-                                                       "/pathPattern/path/foo",
-                                                       "/pathPattern/path/bar")
-                                         .exampleRequests(MessageConverterService.class,
-                                                          "json1",
-                                                          "{\"name\":\"bar\"}"
-                                         )
-                                         .build())
-                 .build();
+        sb.http(port);
+        configureServices(sb);
+        return sb.build();
+    }
+
+    static void configureServices(ServerBuilder sb) {
+        sb.annotatedService("/pathPattern", new PathPatternService())
+          .annotatedService("/injection", new InjectionService())
+          .annotatedService("/messageConverter", new MessageConverterService())
+          .annotatedService("/exception", new ExceptionHandlerService())
+          .serviceUnder("/docs",
+                        DocService.builder()
+                                  .examplePaths(PathPatternService.class,
+                                                "pathsVar",
+                                                "/pathPattern/paths/first/foo",
+                                                "/pathPattern/paths/second/bar")
+                                  .examplePaths(PathPatternService.class,
+                                                "pathVar",
+                                                "/pathPattern/path/foo",
+                                                "/pathPattern/path/bar")
+                                  .exampleRequests(MessageConverterService.class,
+                                                   "json1",
+                                                   "{\"name\":\"bar\"}"
+                                  )
+                                  .build());
     }
 }

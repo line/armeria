@@ -19,6 +19,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("io.grpc:grpc-kotlin-stub")
 
+    testImplementation(project(":junit5"))
     testImplementation("javax.annotation:javax.annotation-api")
     testImplementation("net.javacrumbs.json-unit:json-unit-fluent")
     testImplementation("org.assertj:assertj-core")

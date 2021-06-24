@@ -1,5 +1,6 @@
 package example.armeria.server.sse;
 
+import static example.armeria.server.sse.Main.configureServices;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
@@ -8,10 +9,9 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.Nullable;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -24,7 +24,8 @@ import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.HttpDecoderInput;
 import com.linecorp.armeria.common.stream.HttpDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
@@ -32,29 +33,15 @@ import reactor.test.StepVerifier;
 
 class MainTest {
 
-    private static Server server;
-    private static WebClient client;
-
     private static final AtomicLong sequence = new AtomicLong();
 
-    @BeforeAll
-    static void beforeClass() throws Exception {
-        // The server emits only 5 events here because this test is to show how the events are encoded.
-        server = Main.newServer(0, 0,
-                                Duration.ofMillis(200), 5, () -> Long.toString(sequence.getAndIncrement()));
-        server.start().join();
-        client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
-    }
-
-    @AfterAll
-    static void afterClass() {
-        if (server != null) {
-            server.stop().join();
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            configureServices(sb, Duration.ofMillis(200), 5, () -> Long.toString(sequence.getAndIncrement()));
         }
-        if (client != null) {
-            client.options().factory().close();
-        }
-    }
+    };
 
     @AfterEach
     void afterEach() {
@@ -63,7 +50,7 @@ class MainTest {
 
     @Test
     void testServerSentEventsLong() {
-        final HttpResponse response = client.get("/long");
+        final HttpResponse response = client().get("/long");
         final StreamMessage<String> decoded = response.decode(new SimpleServerSentMessageDecoder());
         StepVerifier.create(Flux.from(decoded).log())
                     .expectNext("data:0")
@@ -77,7 +64,7 @@ class MainTest {
 
     @Test
     void testServerSentEventsShort() {
-        final HttpResponse response = client.get("/short");
+        final HttpResponse response = client().get("/short");
         final StreamMessage<String> decoded = response.decode(new SimpleServerSentMessageDecoder());
         StepVerifier.create(Flux.from(decoded).log())
                     .expectNext("id:0\ndata:0\nretry:5000")
@@ -126,5 +113,9 @@ class MainTest {
                 }
             }
         }
+    }
+
+    private static WebClient client() {
+        return WebClient.of(server.httpUri());
     }
 }

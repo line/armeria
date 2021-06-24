@@ -3,6 +3,7 @@ package example.armeria.server.annotated.kotlin
 import com.linecorp.armeria.common.logging.LogLevel
 import com.linecorp.armeria.server.AnnotatedServiceBindingBuilder
 import com.linecorp.armeria.server.Server
+import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.docs.DocService
 import com.linecorp.armeria.server.kotlin.CoroutineContextService
 import com.linecorp.armeria.server.logging.LoggingService
@@ -25,11 +26,15 @@ fun main() {
     log.info("Doc service at http://127.0.0.1:8080/docs")
 }
 
-fun newServer(port: Int): Server {
-    return Server.builder()
-        .http(port)
-        // ContextAwareService
-        .annotatedService()
+private fun newServer(port: Int): Server {
+    val sb = Server.builder()
+    sb.http(port)
+    configureServices(sb)
+    return sb.build()
+}
+
+fun configureServices(sb: ServerBuilder) {
+    sb.annotatedService()
         .pathPrefix("/contextAware")
         .decorator(
             CoroutineContextService.newDecorator { ctx ->
@@ -45,7 +50,6 @@ fun newServer(port: Int): Server {
         .build(DecoratingService())
         // DocService
         .serviceUnder("/docs", DocService())
-        .build()
 }
 
 private fun AnnotatedServiceBindingBuilder.applyCommonDecorator(): AnnotatedServiceBindingBuilder {

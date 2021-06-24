@@ -27,13 +27,17 @@ public class Main {
      *
      * @param port the port that the server is to be bound to
      */
-    static Server newServer(int port) {
+    private static Server newServer(int port) {
         final ServerBuilder sb = Server.builder();
-        return sb.http(port)
-                 .service("/graphql", GraphqlService.builder().runtimeWiring(c -> {
-                     c.type("Query",
-                            typeWiring -> typeWiring.dataFetcher("user", new UserDataFetcher()));
-                 }).build())
-                 .build();
+        sb.http(port);
+        configureService(sb);
+        return sb.build();
+    }
+
+    static void configureService(ServerBuilder sb) {
+        sb.service("/graphql", GraphqlService.builder().runtimeWiring(c -> {
+            c.type("Query",
+                   typeWiring -> typeWiring.dataFetcher("user", new UserDataFetcher()));
+        }).build());
     }
 }
