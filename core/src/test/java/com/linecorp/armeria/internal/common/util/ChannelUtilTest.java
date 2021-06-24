@@ -37,7 +37,7 @@ import io.netty.incubator.channel.uring.IOUringChannelOption;
 
 public class ChannelUtilTest {
 
-    public static final long TCP_USER_TIMEOUT_BUFFER_MILLIS = ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS;
+    public static final int TCP_USER_TIMEOUT_BUFFER_MILLIS = ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS;
 
     @Test
     @SuppressWarnings("deprecation")
@@ -85,8 +85,7 @@ public class ChannelUtilTest {
 
         // ignore if idle timeout is out of bounds
         newOptions = ChannelUtil.applyDefaultChannelOptions(
-                true, transportType, options,
-                Integer.MAX_VALUE - ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS + 1, 0);
+                true, transportType, options, -1, 0);
         assertThat(options).containsExactlyEntriesOf(newOptions);
 
         // apply idle timeout if possible
@@ -98,7 +97,7 @@ public class ChannelUtilTest {
                 entry(option, idleTimeoutMillis + ChannelUtil.TCP_USER_TIMEOUT_BUFFER_MILLIS));
 
         // user defined options are respected
-        final long userDefinedTcpUserTimeoutMillis = 10_000;
+        final int userDefinedTcpUserTimeoutMillis = 10_000;
         final Map<ChannelOption<?>, Object> userDefinedOptions = ImmutableMap.of(
                 ChannelOption.SO_LINGER, lingerMillis, option, userDefinedTcpUserTimeoutMillis);
         newOptions = ChannelUtil.applyDefaultChannelOptions(
@@ -131,10 +130,10 @@ public class ChannelUtilTest {
 
         // ignore if parameters are out of bounds
         newOptions = ChannelUtil.applyDefaultChannelOptions(
-                true, type, options, 0, Long.MAX_VALUE);
+                true, type, options, 0, -1);
         assertThat(newOptions).containsExactlyEntriesOf(options);
 
-        final long pingIntervalMillis = 3000;
+        final int pingIntervalMillis = 3000;
         newOptions = ChannelUtil.applyDefaultChannelOptions(
                 true, type, options, 0, pingIntervalMillis);
         if (type == TransportType.EPOLL) {

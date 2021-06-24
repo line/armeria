@@ -122,7 +122,7 @@ class ClientFactoryBuilderTest {
                                                   .build()) {
             final Map<ChannelOption<?>, Object> channelOptions =
                     factory.options().get(ClientFactoryOptions.CHANNEL_OPTIONS);
-            final int connectTimeoutMillis = (int) channelOptions.get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+            final int connectTimeoutMillis = (int) channelOptions.get(CONNECT_TIMEOUT_MILLIS);
             assertThat(connectTimeoutMillis).isEqualTo(Flags.defaultConnectTimeoutMillis());
         }
     }
