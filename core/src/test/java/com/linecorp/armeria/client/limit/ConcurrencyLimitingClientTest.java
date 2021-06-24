@@ -71,6 +71,7 @@ class ConcurrencyLimitingClientTest {
         actualRes.close();
         deferredRes.subscribe(NoopSubscriber.get());
         deferredRes.whenComplete().join();
+        System.out.println("close");
         waitForEventLoop();
     }
 
@@ -99,7 +100,7 @@ class ConcurrencyLimitingClientTest {
 
         final HttpResponse res = client.execute(ctx, req);
         assertThat(res.isOpen()).isTrue();
-        assertThat(client.numActiveRequests()).isEqualTo(1);
+        await().untilAsserted(() -> assertThat(client.numActiveRequests()).isEqualTo(1));
 
         closeAndDrain(actualRes, res);
 
@@ -137,7 +138,9 @@ class ConcurrencyLimitingClientTest {
         assertThat(client.numActiveRequests()).isEqualTo(1); // Only req1 is active.
 
         // Complete res1.
+        System.out.println("closeAndDrain");
         closeAndDrain(actualRes1, res1);
+        System.out.println("complete closeAndDrain");
 
         // Once res1 is complete, req2 should be delegated.
         await().untilAsserted(() -> verify(delegate).execute(ctx2, req2));
@@ -219,11 +222,11 @@ class ConcurrencyLimitingClientTest {
         when(delegate.execute(ctx, req)).thenReturn(actualRes);
 
         final ConcurrencyLimitingClient client =
-                newDecorator(0).apply(delegate);
+                newDecorator(Integer.MAX_VALUE).apply(delegate);
 
         // A request should be delegated immediately, creating no deferred response.
         final HttpResponse res = client.execute(ctx, req);
-        verify(delegate).execute(ctx, req);
+        await().untilAsserted(() -> verify(delegate).execute(ctx, req));
         assertThat(res.isOpen()).isTrue();
         assertThat(client.numActiveRequests()).isEqualTo(1);
 
@@ -239,10 +242,9 @@ class ConcurrencyLimitingClientTest {
 
         when(delegate.execute(ctx, req)).thenThrow(Exception.class);
 
-        final ConcurrencyLimitingClient client = newDecorator(0).apply(delegate);
-
+        final ConcurrencyLimitingClient client = newDecorator(10).apply(delegate);
         // A request should be delegated immediately, rethrowing the exception from the delegate.
-        assertThatThrownBy(() -> client.execute(ctx, req)).isInstanceOf(Exception.class);
+        assertThatThrownBy(() -> client.execute(ctx, req).aggregate().join()).isInstanceOf(Exception.class);
         verify(delegate).execute(ctx, req);
 
         // The number of active requests should increase and then immediately decrease. i.e. stay back at 0.
@@ -251,10 +253,12 @@ class ConcurrencyLimitingClientTest {
 
     @Test
     void configuresClientWithConcurrencyLimit() {
-        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
-                                                                  .timeout(Duration.of(10, SECONDS))
-                                                                  .predicate(requestContext -> true)
-                                                                  .build();
+        final DefaultConcurrencyLimit concurrencyLimit = DefaultConcurrencyLimit.builder(1)
+                                                                                .timeout(Duration.of(10,
+                                                                                                     SECONDS))
+                                                                                .predicate(
+                                                                                        requestContext -> true)
+                                                                                .build();
         final ConcurrencyLimitingClient client = newDecorator(concurrencyLimit).apply(delegate);
         assertThat(client.concurrencyLimit()).isEqualTo(concurrencyLimit);
     }
@@ -271,9 +275,11 @@ class ConcurrencyLimitingClientTest {
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
         when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
 
-        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
-                                                                  .predicate(requestContext -> false)
-                                                                  .build();
+
+        final ConcurrencyLimit concurrencyLimit = new ConditionalConcurrencyLimit(
+                requestContext -> false,
+                new ConcurrencyLimitImpl(500, 2, 100)
+        );
 
         final ConcurrencyLimitingClient client =
                 newDecorator(concurrencyLimit).apply(delegate);
@@ -282,13 +288,13 @@ class ConcurrencyLimitingClientTest {
         final HttpResponse res1 = client.execute(ctx1, req1);
         final HttpResponse res2 = client.execute(ctx2, req2);
 
+        await().untilAsserted(() -> assertThat(client.numActiveRequests()).isEqualTo(2));
+
         verify(delegate).execute(ctx1, req1);
         assertThat(res1.isOpen()).isTrue();
-        assertThat(client.numActiveRequests()).isEqualTo(2);
 
         verify(delegate).execute(ctx2, req2);
         assertThat(res2.isOpen()).isTrue();
-        assertThat(client.numActiveRequests()).isEqualTo(2);
 
         // Complete the response, leaving no active requests.
         closeAndDrain(actualRes1, res1);
@@ -307,10 +313,8 @@ class ConcurrencyLimitingClientTest {
 
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
 
-        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
-                                                                  .timeoutMillis(500)
-                                                                  .predicate(requestContext -> true)
-                                                                  .build();
+        final ConcurrencyLimit concurrencyLimit = new ConcurrencyLimitImpl(
+                500, 1, 100);
 
         final ConcurrencyLimitingClient clientOne =
                 newDecorator(concurrencyLimit).apply(delegate);
@@ -328,7 +332,6 @@ class ConcurrencyLimitingClientTest {
                     .hasRootCauseInstanceOf(RequestTimeoutException.class);
             assertThat(res1.whenComplete(NO_OP)).isNotDone();
         });
-
 
         actualRes1.close();
         await().untilAsserted(() -> assertThat(clientOne.numActiveRequests()).isZero());

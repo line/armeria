@@ -25,7 +25,7 @@ import java.util.function.Predicate;
 import com.linecorp.armeria.client.ClientRequestContext;
 
 /**
- * Builds a {@link ConcurrencyLimit} instance using builder pattern.
+ * Builds a {@link DefaultConcurrencyLimit} instance using builder pattern.
  */
 public final class ConcurrencyLimitBuilder {
     static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
@@ -67,9 +67,9 @@ public final class ConcurrencyLimitBuilder {
     }
 
     /**
-     * Returns a newly-created the {@link ConcurrencyLimit} based on the properties of this builder.
+     * Returns a newly-created the {@link DefaultConcurrencyLimit} based on the properties of this builder.
      */
-    public ConcurrencyLimit build() {
-        return new ConcurrencyLimit(predicate, maxConcurrency, timeoutMillis);
+    public DefaultConcurrencyLimit build() {
+        return new DefaultConcurrencyLimit(predicate, maxConcurrency, timeoutMillis);
     }
 }
