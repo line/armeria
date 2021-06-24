@@ -2,7 +2,6 @@ package example.armeria.server.blog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.MoreObjects;
 
 public final class BlogPost {
     private final int id;
@@ -47,16 +46,5 @@ public final class BlogPost {
 
     public long getModifiedAt() {
         return modifiedAt;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("id", id)
-                          .add("title", title)
-                          .add("content", content)
-                          .add("createdAt", createdAt)
-                          .add("modifiedAt", modifiedAt)
-                          .toString();
     }
 }

@@ -1,12 +1,11 @@
 package example.armeria.server.blog;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -69,9 +68,9 @@ public final class BlogService {
             return blogPosts.entrySet()
                             .stream()
                             .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
-                            .map(Entry::getValue).collect(toImmutableList());
+                            .map(Entry::getValue).collect(Collectors.toList());
         }
-        return blogPosts.values().stream().collect(toImmutableList());
+        return blogPosts.values().stream().collect(Collectors.toList());
     }
 
     /**

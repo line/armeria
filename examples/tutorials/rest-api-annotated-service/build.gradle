@@ -4,13 +4,12 @@ plugins {
 
 dependencies {
     implementation project(':core')
-    implementation 'com.google.guava:guava'
-    implementation 'com.fasterxml.jackson.core:jackson-core'
     runtimeOnly 'org.slf4j:slf4j-simple'
 
+    testImplementation project(':junit5')
     testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
     testImplementation 'org.assertj:assertj-core'
-    testImplementation project(':junit5')
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
 }
 
 application {
