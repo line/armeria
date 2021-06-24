@@ -48,8 +48,8 @@ Let's create a server instance using Armeria's <type://ServerBuilder>:
     static Server newServer(int port) {
       ServerBuilder sb = Server.builder();
       return sb.http(port)
-              .service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!"))
-              .build();
+               .service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!"))
+               .build();
     }
     ...
   ```
