@@ -119,7 +119,7 @@ jobs:
         path: reports-JVM-${{ matrix.java }}.tar
         retention-days: 3
 
-  checkstyle:
+  lint:
     runs-on: self-hosted
     timeout-minutes: 60
     steps:
@@ -144,7 +144,7 @@ jobs:
           restore-keys: |
             ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-
 
-      - name: Check code style
+      - name: Linting
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel lint
 
