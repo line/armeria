@@ -129,6 +129,8 @@ public abstract class TomcatService implements HttpService {
     private static final HttpData INVALID_AUTHORITY_DATA =
             HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nInvalid authority");
 
+    private static final byte[] HOST_BYTES = { 'h', 'o', 's', 't' };
+
     /**
      * Creates a new {@link TomcatService} with the web application at the specified document base, which can
      * be a directory or a JAR/WAR file.
@@ -492,13 +494,20 @@ public abstract class TomcatService implements HttpService {
             final AsciiString k = e.getKey();
             final String v = e.getValue();
 
-            if (k.isEmpty() || k.byteAt(0) == ':') {
+            if (k.isEmpty()) {
                 continue;
             }
 
-            final MessageBytes cValue = cHeaders.addValue(k.array(), k.arrayOffset(), k.length());
-            final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
-            cValue.setBytes(valueBytes, 0, valueBytes.length);
+            if (k.byteAt(0) != ':') {
+                final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
+                cHeaders.addValue(k.array(), k.arrayOffset(), k.length())
+                        .setBytes(valueBytes, 0, valueBytes.length);
+            } else if (HttpHeaderNames.AUTHORITY.equals(k) && cHeaders.getValue("host") == null) {
+                // Convert `:authority` to `host`.
+                final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
+                cHeaders.addValue(HOST_BYTES, 0, HOST_BYTES.length)
+                        .setBytes(valueBytes, 0, valueBytes.length);
+            }
         }
     }
 

@@ -17,13 +17,11 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.common.SessionProtocol.H1;
-import static com.linecorp.armeria.common.SessionProtocol.H1C;
-import static com.linecorp.armeria.common.SessionProtocol.H2;
-import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
+import static com.linecorp.armeria.common.SessionProtocol.httpValues;
+import static com.linecorp.armeria.common.SessionProtocol.httpsValues;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -133,7 +131,7 @@ public final class ServerPort implements Comparable<ServerPort> {
      * {@link SessionProtocol#H2C} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasHttp() {
-        return hasProtocol(HTTP) || hasProtocol(H1C) || hasProtocol(H2C);
+        return httpValues().stream().anyMatch(this::hasExactProtocol);
     }
 
     /**
@@ -141,20 +139,34 @@ public final class ServerPort implements Comparable<ServerPort> {
      * {@link SessionProtocol#H2} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasHttps() {
-        return hasProtocol(HTTPS) || hasProtocol(H1) || hasProtocol(H2);
+        return httpsValues().stream().anyMatch(this::hasExactProtocol);
     }
 
     /**
      * Returns whether the {@link SessionProtocol#PROXY} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasProxyProtocol() {
-        return hasProtocol(PROXY);
+        return hasExactProtocol(PROXY);
     }
 
     /**
      * Returns whether the specified {@code protocol} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasProtocol(SessionProtocol protocol) {
+        requireNonNull(protocol, "protocol");
+
+        if (httpValues().contains(protocol)) {
+            return hasHttp();
+        }
+
+        if (httpsValues().contains(protocol)) {
+            return hasHttps();
+        }
+
+        return hasExactProtocol(protocol);
+    }
+
+    private boolean hasExactProtocol(SessionProtocol protocol) {
         return protocols.contains(requireNonNull(protocol, "protocol"));
     }
 

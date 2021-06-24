@@ -333,8 +333,15 @@ public final class JettyService implements HttpService {
         final HttpFields jHeaders = new HttpFields(aHeaders.size());
         aHeaders.forEach(e -> {
             final AsciiString key = e.getKey();
-            if (!key.isEmpty() && key.byteAt(0) != ':') {
+            if (key.isEmpty()) {
+                return;
+            }
+
+            if (key.byteAt(0) != ':') {
                 jHeaders.add(key.toString(), e.getValue());
+            } else if (HttpHeaderNames.AUTHORITY.equals(key) && !jHeaders.containsKey("host")) {
+                // Convert `:authority` to `host`.
+                jHeaders.add("host", e.getValue());
             }
         });
 
