@@ -31,6 +31,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -48,7 +49,7 @@ public final class ChannelUtil {
     private static final WriteBufferWaterMark DISABLED_WRITE_BUFFER_WATERMARK =
             new WriteBufferWaterMark(0, Integer.MAX_VALUE);
     @VisibleForTesting
-    static final long TCP_USER_TIMEOUT_BUFFER_MILLIS = 5_000L;
+    static final int TCP_USER_TIMEOUT_BUFFER_MILLIS = 5_000;
 
     static {
         // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
@@ -72,26 +73,29 @@ public final class ChannelUtil {
     }
 
     @Nullable
-    private static ChannelOption<?> epollTcpUserTimeout;
+    private static ChannelOption<Integer> epollTcpUserTimeout;
     @Nullable
-    private static ChannelOption<?> epollTcpKeepidle;
+    private static ChannelOption<Integer> epollTcpKeepidle;
     @Nullable
-    private static ChannelOption<?> epollTcpKeepintvl;
+    private static ChannelOption<Integer> epollTcpKeepintvl;
     @Nullable
-    private static ChannelOption<?> ioUringTcpUserTimeout;
+    private static ChannelOption<Integer> ioUringTcpUserTimeout;
     @Nullable
-    private static ChannelOption<?> ioUringTcpKeepidle;
+    private static ChannelOption<Integer> ioUringTcpKeepidle;
     @Nullable
-    private static ChannelOption<?> ioUringTcpKeepintvl;
+    private static ChannelOption<Integer> ioUringTcpKeepintvl;
 
     static {
         try {
             final Class<?> clazz = Class.forName(
                     "io.netty.channel.epoll.EpollChannelOption", false,
                     ChannelUtil.class.getClassLoader());
-            epollTcpUserTimeout = findChannelOption(clazz, "TCP_USER_TIMEOUT");
-            epollTcpKeepidle = findChannelOption(clazz, "TCP_KEEPIDLE");
-            epollTcpKeepintvl = findChannelOption(clazz, "TCP_KEEPINTVL");
+            //noinspection unchecked
+            epollTcpUserTimeout = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_USER_TIMEOUT");
+            //noinspection unchecked
+            epollTcpKeepidle = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPIDLE");
+            //noinspection unchecked
+            epollTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
         } catch (Throwable throwable) {
             // Ignore
         }
@@ -99,9 +103,12 @@ public final class ChannelUtil {
             final Class<?> clazz = Class.forName(
                     "io.netty.incubator.channel.uring.IOUringChannelOption", false,
                     ChannelUtil.class.getClassLoader());
-            ioUringTcpUserTimeout = findChannelOption(clazz, "TCP_USER_TIMEOUT");
-            ioUringTcpKeepidle = findChannelOption(clazz, "TCP_KEEPIDLE");
-            ioUringTcpKeepintvl = findChannelOption(clazz, "TCP_KEEPINTVL");
+            //noinspection unchecked
+            ioUringTcpUserTimeout = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_USER_TIMEOUT");
+            //noinspection unchecked
+            ioUringTcpKeepidle = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPIDLE");
+            //noinspection unchecked
+            ioUringTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
         } catch (Throwable throwable) {
             // Ignore
         }
@@ -204,37 +211,43 @@ public final class ChannelUtil {
 
         final ImmutableMap.Builder<ChannelOption<?>, Object> newChannelOptionsBuilder = ImmutableMap.builder();
 
-        if (idleTimeoutMillis > 0 && idleTimeoutMillis <= Integer.MAX_VALUE - TCP_USER_TIMEOUT_BUFFER_MILLIS) {
+        if (idleTimeoutMillis > 0) {
+            final int tcpUserTimeout = Ints.saturatedCast(idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
             if (transportType == TransportType.EPOLL &&
                 canAddChannelOption(epollTcpUserTimeout, channelOptions)) {
-                newChannelOptionsBuilder.put(epollTcpUserTimeout,
-                                             idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+                putChannelOption(newChannelOptionsBuilder, epollTcpUserTimeout, tcpUserTimeout);
             } else if (transportType == TransportType.IO_URING &&
                        canAddChannelOption(ioUringTcpUserTimeout, channelOptions)) {
-                newChannelOptionsBuilder.put(ioUringTcpUserTimeout,
-                                             idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
+                putChannelOption(newChannelOptionsBuilder, ioUringTcpUserTimeout, tcpUserTimeout);
             }
         }
 
-        if (pingIntervalMillis > 0 && pingIntervalMillis <= Integer.MAX_VALUE) {
+        if (pingIntervalMillis > 0) {
+            final int intPingIntervalMillis = Ints.saturatedCast(pingIntervalMillis);
             if (transportType == TransportType.EPOLL &&
                 canAddChannelOption(epollTcpKeepidle, channelOptions) &&
                 canAddChannelOption(epollTcpKeepintvl, channelOptions) &&
                 canAddChannelOption(ChannelOption.SO_KEEPALIVE, channelOptions)) {
-                newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
-                newChannelOptionsBuilder.put(epollTcpKeepidle, pingIntervalMillis);
-                newChannelOptionsBuilder.put(epollTcpKeepintvl, pingIntervalMillis);
+                putChannelOption(newChannelOptionsBuilder, ChannelOption.SO_KEEPALIVE, true);
+                putChannelOption(newChannelOptionsBuilder, epollTcpKeepidle, intPingIntervalMillis);
+                putChannelOption(newChannelOptionsBuilder, epollTcpKeepintvl, intPingIntervalMillis);
             } else if (transportType == TransportType.IO_URING &&
                        canAddChannelOption(ioUringTcpKeepidle, channelOptions) &&
                        canAddChannelOption(ioUringTcpKeepintvl, channelOptions) &&
                        canAddChannelOption(ChannelOption.SO_KEEPALIVE, channelOptions)) {
-                newChannelOptionsBuilder.put(ChannelOption.SO_KEEPALIVE, true);
-                newChannelOptionsBuilder.put(ioUringTcpKeepidle, pingIntervalMillis);
-                newChannelOptionsBuilder.put(ioUringTcpKeepintvl, pingIntervalMillis);
+                putChannelOption(newChannelOptionsBuilder, ChannelOption.SO_KEEPALIVE, true);
+                putChannelOption(newChannelOptionsBuilder, ioUringTcpKeepidle, intPingIntervalMillis);
+                putChannelOption(newChannelOptionsBuilder, ioUringTcpKeepintvl, intPingIntervalMillis);
             }
         }
         newChannelOptionsBuilder.putAll(channelOptions);
         return newChannelOptionsBuilder.build();
+    }
+
+    private static <T> void putChannelOption(
+            ImmutableMap.Builder<ChannelOption<?>, Object> newChannelOptionsBuilder,
+            ChannelOption<T> channelOption, T value) {
+        newChannelOptionsBuilder.put(channelOption, value);
     }
 
     private ChannelUtil() {}
