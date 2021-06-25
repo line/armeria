@@ -127,19 +127,17 @@ public final class ServerPort implements Comparable<ServerPort> {
     }
 
     /**
-     * Returns whether the {@link SessionProtocol#HTTP}, {@link SessionProtocol#H1C} or
-     * {@link SessionProtocol#H2C} is in the list of {@link SessionProtocol}s.
+     * Returns whether {@link SessionProtocol#HTTP} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasHttp() {
-        return httpValues().stream().anyMatch(this::hasExactProtocol);
+        return hasExactProtocol(HTTP);
     }
 
     /**
-     * Returns whether the {@link SessionProtocol#HTTPS}, {@link SessionProtocol#H1} or
-     * {@link SessionProtocol#H2} is in the list of {@link SessionProtocol}s.
+     * Returns whether {@link SessionProtocol#HTTPS} is in the list of {@link SessionProtocol}s.
      */
     public boolean hasHttps() {
-        return httpsValues().stream().anyMatch(this::hasExactProtocol);
+        return hasExactProtocol(HTTPS);
     }
 
     /**
