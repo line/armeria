@@ -339,9 +339,9 @@ public final class JettyService implements HttpService {
 
             if (key.byteAt(0) != ':') {
                 jHeaders.add(key.toString(), e.getValue());
-            } else if (HttpHeaderNames.AUTHORITY.equals(key) && !jHeaders.containsKey("host")) {
+            } else if (HttpHeaderNames.AUTHORITY.equals(key) && !aHeaders.contains(HttpHeaderNames.HOST)) {
                 // Convert `:authority` to `host`.
-                jHeaders.add("host", e.getValue());
+                jHeaders.add(HttpHeaderNames.HOST.toString(), e.getValue());
             }
         });
 

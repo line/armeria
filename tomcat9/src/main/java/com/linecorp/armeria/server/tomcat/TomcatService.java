@@ -502,7 +502,7 @@ public abstract class TomcatService implements HttpService {
                 final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
                 cHeaders.addValue(k.array(), k.arrayOffset(), k.length())
                         .setBytes(valueBytes, 0, valueBytes.length);
-            } else if (HttpHeaderNames.AUTHORITY.equals(k) && cHeaders.getValue("host") == null) {
+            } else if (HttpHeaderNames.AUTHORITY.equals(k) && !headers.contains(HttpHeaderNames.HOST)) {
                 // Convert `:authority` to `host`.
                 final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
                 cHeaders.addValue(HOST_BYTES, 0, HOST_BYTES.length)
