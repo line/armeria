@@ -98,7 +98,7 @@ public final class HttpDocServicePlugin extends AbstractDocServicePlugin {
                 if (!filter.test(name(), className, methodName)) {
                     continue;
                 }
-                addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), sc.service(), sc.route(),
+                addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), service, sc.route(),
                               method);
             }
         }
@@ -111,7 +111,7 @@ public final class HttpDocServicePlugin extends AbstractDocServicePlugin {
     }
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos, String hostnamePattern,
-                                      HttpService service, Route route, HttpMethod httpMethod) {
+                                      AbstractHttpService service, Route route, HttpMethod httpMethod) {
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         final Class<?> clazz = service.getClass();
         final String methodName = METHOD_NAMES.get(httpMethod);
