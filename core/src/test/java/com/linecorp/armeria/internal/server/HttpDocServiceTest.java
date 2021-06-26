@@ -109,7 +109,8 @@ class HttpDocServiceTest {
         addParamServiceInfo(methodInfos);
         addUnderServiceInfo(methodInfos);
 
-        final JsonNode expectedJson = mapper.valueToTree(HttpDocServicePlugin.generate(ImmutableMap.of(), methodInfos));
+        final JsonNode expectedJson = mapper.valueToTree(HttpDocServicePlugin.generate(ImmutableMap.of(),
+                                                                                       methodInfos));
         addExamples(expectedJson);
 
         final WebClient client = WebClient.of(server.httpUri());
@@ -130,8 +131,8 @@ class HttpDocServiceTest {
                                                                         .contains(entry.getKey()))
                                          .forEach(entry -> {
             final MethodInfo methodInfo = new MethodInfo(
-                    entry.getValue(), TypeSignature.ofBase(HttpResponse.class.getSimpleName()), ImmutableList.of(),
-                    ImmutableList.of(), ImmutableList.of(endpoint), entry.getKey(), null);
+                    entry.getValue(), TypeSignature.ofBase(HttpResponse.class.getSimpleName()),
+                    ImmutableList.of(), ImmutableList.of(), ImmutableList.of(endpoint), entry.getKey(), null);
             methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
         });
     }
