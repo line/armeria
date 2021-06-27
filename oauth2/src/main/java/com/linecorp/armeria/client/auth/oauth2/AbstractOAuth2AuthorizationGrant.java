@@ -24,17 +24,15 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.Function;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
 import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
 
 /**
@@ -57,7 +55,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     private final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc;
 
     @Nullable
-    private final Function<? super GrantedOAuth2AccessToken, CompletableFuture<Void>> saveTokenFunc;
+    private final Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc;
 
     private volatile CompletableFuture<GrantedOAuth2AccessToken> tokenFuture =
             CompletableFuture.completedFuture(null);
@@ -65,7 +63,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     AbstractOAuth2AuthorizationGrant(
             RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
             @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc,
-            @Nullable Function<? super GrantedOAuth2AccessToken, CompletableFuture<Void>> saveTokenFunc) {
+            @Nullable Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc) {
         this.refreshRequest = requireNonNull(refreshRequest, "refreshRequest");
         this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
         this.loadTokenFunc = loadTokenFunc;
@@ -107,26 +105,30 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
                 future.complete(token);
                 return null;
             }
-
-            final Supplier<CompletionStage<GrantedOAuth2AccessToken>> tokenIssuingFunc;
             if (tokenFutureUpdater.compareAndSet(this, tokenFuture, future)) {
-                tokenIssuingFunc = token != null && token.isRefreshable() ? () -> refreshAccessToken(token)
-                                                                          : () -> issueAccessToken(token);
-            } else {
-                tokenIssuingFunc = () -> this.tokenFuture;
+                if (token == null && loadTokenFunc != null) {
+                    loadTokenFunc.get().handle((storedToken, unused) -> {
+                        if (isValidToken(storedToken)) {
+                            future.complete(storedToken);
+                            return null;
+                        }
+                        issueAccessToken(token, future);
+                        return null;
+                    });
+                    return null;
+                }
+                if (token != null && token.isRefreshable()) {
+                    refreshAccessToken(token, future);
+                    return null;
+                }
+                issueAccessToken(token, future);
+                return null;
             }
-
-            final CompletionStage<GrantedOAuth2AccessToken> tokenIssuingFuture = RequestContext.mapCurrent(
-                            ctx -> ctx.makeContextAware(tokenIssuingFunc.get()), tokenIssuingFunc);
-            tokenIssuingFuture.handle((newToken, cause) -> {
+            this.tokenFuture.handle((newToken, cause) -> {
                 if (cause != null) {
                     future.completeExceptionally(cause);
                 } else {
                     future.complete(newToken);
-                    if (saveTokenFunc != null) {
-                        // suppress 'ReturnValueIgnored' warning
-                        final CompletableFuture<Void> unused = saveTokenFunc.apply(newToken);
-                    }
                 }
                 return null;
             });
@@ -139,44 +141,37 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
         return token != null && token.isValid(Instant.now().plus(refreshBefore));
     }
 
-    private CompletableFuture<GrantedOAuth2AccessToken> issueAccessToken(
-            @Nullable GrantedOAuth2AccessToken token) {
-        if (token == null && loadTokenFunc != null) {
-            return loadTokenFunc.get().thenCompose(storedToken -> {
-                if (storedToken.isValid()) {
-                    return UnmodifiableFuture.completedFuture(storedToken);
-                }
-                return obtainAccessToken(null);
-            });
-        }
-        return obtainAccessToken(token);
-    }
-
-    private CompletableFuture<GrantedOAuth2AccessToken> refreshAccessToken(GrantedOAuth2AccessToken token) {
-        final CompletableFuture<GrantedOAuth2AccessToken> future = new CompletableFuture<>();
-        refreshRequest.make(token).handle((newToken, cause) -> {
+    private void issueAccessToken(@Nullable GrantedOAuth2AccessToken token,
+                                  CompletableFuture<GrantedOAuth2AccessToken> future) {
+        obtainAccessToken(token).handle((newToken, cause) -> {
             if (cause != null) {
-                if (cause instanceof TokenRequestException) {
-                    // try to issue a new access token from scratch
-                    final CompletableFuture<GrantedOAuth2AccessToken> tokenUpdateFuture =
-                            RequestContext.mapCurrent(ctx -> ctx.makeContextAware(obtainAccessToken(token)),
-                                                      () -> issueAccessToken(token));
-                    tokenUpdateFuture.handle((newToken0, cause0) -> {
-                        if (cause0 != null) {
-                            future.completeExceptionally(cause0);
-                        } else {
-                            future.complete(newToken);
-                        }
-                        return null;
-                    });
-                } else {
-                    future.completeExceptionally(cause);
-                }
+                future.completeExceptionally(cause);
             } else {
+                if (saveTokenFunc != null) {
+                    saveTokenFunc.accept(newToken);
+                }
                 future.complete(newToken);
             }
             return null;
         });
-        return future;
+    }
+
+    private void refreshAccessToken(GrantedOAuth2AccessToken token,
+                                    CompletableFuture<GrantedOAuth2AccessToken> future) {
+        refreshRequest.make(token).handle((newToken, cause) -> {
+            if (cause instanceof TokenRequestException) {
+                issueAccessToken(token, future);
+                return null;
+            }
+            if (cause != null) {
+                future.completeExceptionally(cause);
+                return null;
+            }
+            if (saveTokenFunc != null) {
+                saveTokenFunc.accept(newToken);
+            }
+            future.complete(newToken);
+            return null;
+        });
     }
 }

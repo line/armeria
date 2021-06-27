@@ -22,7 +22,6 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -53,7 +52,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     private Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc;
 
     @Nullable
-    private Function<? super GrantedOAuth2AccessToken, CompletableFuture<Void>> saveTokenFunc;
+    private Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc;
 
     @Nullable
     private Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier;
@@ -180,17 +179,16 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     }
 
     /**
-     * An optional {@link Function} to save newly issued access token in a persistent storage asynchronosly.
+     * An optional {@link Consumer} to save newly issued access token in a persistent storage asynchronously.
      */
     @SuppressWarnings("unchecked")
-    public final T saveTokenFunc(
-            Function<? super GrantedOAuth2AccessToken, CompletableFuture<Void>> saveTokenFunc) {
+    public final T saveTokenFunc(Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc) {
         this.saveTokenFunc = requireNonNull(saveTokenFunc, "saveTokenFunc");
         return (T) this;
     }
 
     @Nullable
-    public final Function<? super GrantedOAuth2AccessToken, CompletableFuture<Void>> saveTokenFunc() {
+    public final Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc() {
         return saveTokenFunc;
     }
 
