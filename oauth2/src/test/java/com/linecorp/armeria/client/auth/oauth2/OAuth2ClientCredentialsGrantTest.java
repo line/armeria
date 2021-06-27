@@ -208,6 +208,35 @@ class OAuth2ClientCredentialsGrantTest {
         }
     }
 
+    @Test
+    void testConcurrent_refresh() throws Exception {
+        final WebClient authClient = WebClient.of(authServer.httpUri());
+        final OAuth2ClientCredentialsGrant grant = spy(
+                OAuth2ClientCredentialsGrant
+                        .builder(authClient, "/token/client/")
+                        .clientBasicAuthorization(() -> CLIENT_CREDENTIALS)
+                        // Token is considered expired after 3 seconds
+                        .refreshBefore(Duration.ofSeconds(EXPIRES_IN_HOURS * 3600 - 3))
+                        .build());
+
+        try (Server ignored = resourceServer.start()) {
+            final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                              .decorator(OAuth2Client.newDecorator(grant))
+                                              .build();
+            final AggregatedHttpResponse response = client.get("/resource-read/").aggregate().join();
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            verify(grant, times(1)).obtainAccessToken(any());
+            verify(grant, times(0)).refreshAccessToken(any(), any());
+
+            Thread.sleep(3000L); // Wait until token expires.
+            final List<AggregatedHttpResponse> responses =
+                    getConcurrently(client, "/resource-read/", 10).join();
+            validateResponses(responses, HttpStatus.OK);
+            verify(grant, times(1)).obtainAccessToken(any());
+            verify(grant, times(1)).refreshAccessToken(any(), any());
+        }
+    }
+
     private static CompletableFuture<List<AggregatedHttpResponse>> getConcurrently(
             WebClient client, String resource, int count) {
         final List<CompletableFuture<AggregatedHttpResponse>> futures = new ArrayList<>(count);
