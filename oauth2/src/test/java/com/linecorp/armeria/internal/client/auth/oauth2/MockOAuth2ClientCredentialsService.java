@@ -20,12 +20,15 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
 import com.linecorp.armeria.internal.common.auth.oauth2.MockOAuth2Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
@@ -37,11 +40,19 @@ public class MockOAuth2ClientCredentialsService extends MockOAuth2Service {
 
     @Post("/client/")
     @Consumes("application/x-www-form-urlencoded")
-    public HttpResponse handleTokenGet(
-            @Header("Authorization") Optional<String> auth,
-            @Param("grant_type") Optional<String> grantType,
-            @Param("scope") Optional<String> scope) {
+    public HttpResponse handleTokenGet(ServiceRequestContext ctx,
+                                       @Header("Authorization") Optional<String> auth,
+                                       @Param("grant_type") Optional<String> grantType,
+                                       @Param("scope") Optional<String> scope) {
+        final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+        // Intentionally delay execution to test concurrent token update scenario.
+        ctx.eventLoop().schedule(() -> future.complete(handleTokenGet(auth, grantType, scope)),
+                                 100L, TimeUnit.MILLISECONDS);
+        return HttpResponse.from(future);
+    }
 
+    private HttpResponse handleTokenGet(Optional<String> auth, Optional<String> grantType,
+                                        Optional<String> scope) {
         // first, check "Authorization"
         final HttpResponse response = verifyClientCredentials(auth, "token grant");
         if (response != null) {
@@ -54,7 +65,8 @@ public class MockOAuth2ClientCredentialsService extends MockOAuth2Service {
         if (!grantType.isPresent()) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, INVALID_REQUEST);
         }
-        if (!"client_credentials".equals(grantType.get())) {
+        if (!("client_credentials".equals(grantType.orElse(null)) ||
+              "refresh_token".equals(grantType.orElse(null)))) {
             // in case the authenticated client is not authorized to use this authorization grant type
             //return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.JSON_UTF_8, UNAUTHORIZED_CLIENT);
 

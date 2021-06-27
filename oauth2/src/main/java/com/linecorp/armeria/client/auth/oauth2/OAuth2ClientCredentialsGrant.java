@@ -37,7 +37,7 @@ import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenReques
  * Implements Access Token loading, storing, obtaining and refreshing.
  */
 @UnstableApi
-public final class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGrant {
+public class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGrant {
 
     /**
      * Creates a new builder for {@link OAuth2ClientCredentialsGrant}.

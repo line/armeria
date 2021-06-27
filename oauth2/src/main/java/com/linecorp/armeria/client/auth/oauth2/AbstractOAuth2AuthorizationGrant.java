@@ -29,6 +29,8 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
@@ -96,7 +98,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * Validates access token and refreshes it if necessary.
      */
     @Override
-    public final CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
+    public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
         final CompletableFuture<GrantedOAuth2AccessToken> future = new CompletableFuture<>();
         final CompletableFuture<GrantedOAuth2AccessToken> tokenFuture = this.tokenFuture;
 
@@ -156,8 +158,9 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
         });
     }
 
-    private void refreshAccessToken(GrantedOAuth2AccessToken token,
-                                    CompletableFuture<GrantedOAuth2AccessToken> future) {
+    @VisibleForTesting
+    void refreshAccessToken(GrantedOAuth2AccessToken token,
+                            CompletableFuture<GrantedOAuth2AccessToken> future) {
         refreshRequest.make(token).handle((newToken, cause) -> {
             if (cause instanceof TokenRequestException) {
                 issueAccessToken(token, future);

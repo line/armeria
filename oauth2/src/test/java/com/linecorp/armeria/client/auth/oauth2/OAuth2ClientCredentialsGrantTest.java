@@ -18,23 +18,22 @@ package com.linecorp.armeria.client.auth.oauth2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableMap;
+import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -55,13 +54,14 @@ import com.linecorp.armeria.server.auth.AuthService;
 import com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class OAuth2ClientCredentialsGrantTest {
+class OAuth2ClientCredentialsGrantTest {
 
     static final String CLIENT_CREDENTIALS = "dGVzdF9jbGllbnQ6Y2xpZW50X3NlY3JldA=="; //test_client:client_secret
     static final String SERVER_CREDENTIALS = "dGVzdF9zZXJ2ZXI6c2VydmVyX3NlY3JldA=="; //test_server:server_secret
+    static final long EXPIRES_IN_HOURS = 3L;
 
     static final MockOAuth2AccessToken TOKEN =
-        MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(3L),
+        MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(EXPIRES_IN_HOURS),
                                        ImmutableMap.of("extension_field", "twenty-seven"), "read", "write");
 
     static final HttpService SERVICE = new AbstractHttpService() {
@@ -125,7 +125,7 @@ public class OAuth2ClientCredentialsGrantTest {
     };
 
     @Test
-    public void testOk() throws Exception {
+    void testOk() throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
         final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
@@ -149,7 +149,7 @@ public class OAuth2ClientCredentialsGrantTest {
     }
 
     @Test
-    public void testWithAuthorization() throws Exception {
+    void testWithAuthorization() throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
         final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
                 .builder(authClient, "/token/client/")
@@ -174,63 +174,57 @@ public class OAuth2ClientCredentialsGrantTest {
     }
 
     @Test
-    public void testConcurrent() throws Exception {
+    void testConcurrent() throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
+        final OAuth2ClientCredentialsGrant grant = spy(
+                OAuth2ClientCredentialsGrant
+                        .builder(authClient, "/token/client/")
+                        .clientBasicAuthorization(() -> CLIENT_CREDENTIALS)
+                        .build());
 
-        final ExecutorService executor = Executors.newWorkStealingPool();
-        final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
-                .builder(authClient, "/token/client/")
-                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS)
-                .build();
         try (Server ignored = resourceServer.start()) {
             final WebClient client = WebClient.builder(resourceServer.httpUri())
                                               .decorator(OAuth2Client.newDecorator(grant))
                                               .build();
 
             final int count = 10;
-            final ForkJoinPool pool = new ForkJoinPool(count);
-
-            final List<HttpResponse> responses1 = makeGetRequests(client,
-                                                                  "/resource-read-write/", count, pool);
+            final List<AggregatedHttpResponse> responses1 =
+                    getConcurrently(client, "/resource-read-write/", count).join();
             validateResponses(responses1, HttpStatus.OK);
+            verify(grant, times(1)).obtainAccessToken(any());
+            verify(grant, times(0)).refreshAccessToken(any(), any());
 
-            final List<HttpResponse> responses2 = makeGetRequests(client,
-                                                                  "/resource-read/", count, pool);
+            final List<AggregatedHttpResponse> responses2 =
+                    getConcurrently(client, "/resource-read/", count).join();
             validateResponses(responses2, HttpStatus.OK);
+            verify(grant, times(1)).obtainAccessToken(any());
+            verify(grant, times(0)).refreshAccessToken(any(), any());
 
-            final List<HttpResponse> responses3 = makeGetRequests(client,
-                                                                  "/resource-read-write-update/", count, pool);
+            final List<AggregatedHttpResponse> responses3 =
+                    getConcurrently(client, "/resource-read-write-update/", count).join();
             validateResponses(responses3, HttpStatus.FORBIDDEN);
-        } finally {
-            executor.shutdownNow();
+            verify(grant, times(1)).obtainAccessToken(any());
+            verify(grant, times(0)).refreshAccessToken(any(), any());
         }
     }
 
-    private static List<HttpResponse> makeGetRequests(WebClient client, String resource, int count,
-                                                      ForkJoinPool pool) {
-        final Callable<HttpResponse> task = () -> client.get(resource);
-        final List<Callable<HttpResponse>> tasks = new ArrayList<>(count);
+    private static CompletableFuture<List<AggregatedHttpResponse>> getConcurrently(
+            WebClient client, String resource, int count) {
+        final List<CompletableFuture<AggregatedHttpResponse>> futures = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
-            tasks.add(task);
+            futures.add(client.get(resource).aggregate());
         }
-        return pool.invokeAll(tasks).parallelStream().map(f -> {
-            try {
-                return f.get();
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        }).collect(Collectors.toList());
+        return CompletableFutures.allAsList(futures);
     }
 
-    private static void validateResponses(List<HttpResponse> responses, HttpStatus status) {
-        for (HttpResponse response : responses) {
-            final AggregatedHttpResponse aggregate = response.aggregate().join();
-            assertThat(aggregate.status()).isEqualTo(status);
+    private static void validateResponses(List<AggregatedHttpResponse> responses, HttpStatus status) {
+        for (AggregatedHttpResponse response : responses) {
+            assertThat(response.status()).isEqualTo(status);
         }
     }
 
     @Test
-    public void testUnauthorized() {
+    void testUnauthorized() {
         final WebClient authClient = WebClient.of(authServer.httpUri());
 
         final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
