@@ -54,7 +54,7 @@ enum ThreadDumpService implements HttpService {
                 ManagementFactory.getThreadMXBean().dumpAllThreads(true, true);
 
         if (acceptJson) {
-            return HttpResponse.of(HttpStatus.OK, MediaType.JSON, mapper.writeValueAsBytes(threadInfos));
+            return HttpResponse.ofJson(threadInfos);
         } else {
             final String threadDump = Arrays.stream(threadInfos)
                                             .map(ThreadInfo::toString)

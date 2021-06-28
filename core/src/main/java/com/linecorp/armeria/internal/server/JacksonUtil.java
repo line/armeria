@@ -37,6 +37,12 @@ public final class JacksonUtil {
 
     private static boolean noticed;
 
+    private static final ObjectMapper INSTANCE = newDefaultObjectMapper();
+
+    public static ObjectMapper getDefaultObjectMapper() {
+        return INSTANCE;
+    }
+
     public static ObjectMapper newDefaultObjectMapper() {
         final JsonMapper.Builder jsonMapperBuilder = JsonMapper.builder();
         final ServiceLoader<JacksonModuleProvider> providers = ServiceLoader.load(JacksonModuleProvider.class);

@@ -172,25 +172,16 @@ final class DefaultGraphqlService extends AbstractHttpService implements Graphql
     }
 
     private HttpResponse execute(ServiceRequestContext ctx, ExecutionInput input) {
+        final CompletableFuture<ExecutionResult> future;
         if (useBlockingTaskExecutor) {
-            final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-            ctx.blockingTaskExecutor().execute(() -> {
-                try {
-                    final ExecutionResult executionResult = graphQL.execute(input);
-                    future.complete(toHttpResponse(executionResult));
-                } catch (Throwable e) {
-                    final ExecutionResult error = newExecutionResult(e);
-                    future.complete(HttpResponse.of(MediaType.JSON_UTF_8,
-                                                    toJsonString(error.toSpecification())));
-                }
-            });
-            return HttpResponse.from(future);
+            future = CompletableFuture.supplyAsync(() -> graphQL.execute(input), ctx.blockingTaskExecutor());
+        } else {
+            future = graphQL.executeAsync(input);
         }
-
-        return HttpResponse.from(graphQL.executeAsync(input).handle((executionResult, cause) -> {
+        return HttpResponse.from(future.handle((executionResult, cause) -> {
             if (cause != null) {
                 final ExecutionResult error = newExecutionResult(cause);
-                return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
+                return HttpResponse.ofJson(error.toSpecification());
             }
             return toHttpResponse(executionResult);
         }));
@@ -203,9 +194,9 @@ final class DefaultGraphqlService extends AbstractHttpService implements Graphql
                         executionResult.getData().toString());
             final ExecutionResult error =
                     newExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
-            return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(error.toSpecification()));
+            return HttpResponse.ofJson(error.toSpecification());
         }
-        return HttpResponse.of(MediaType.JSON_UTF_8, toJsonString(executionResult.toSpecification()));
+        return HttpResponse.ofJson(executionResult.toSpecification());
     }
 
     private static ExecutionResult newExecutionResult(Throwable cause) {
@@ -220,14 +211,6 @@ final class DefaultGraphqlService extends AbstractHttpService implements Graphql
             return OBJECT_MAPPER.readValue(content, JSON_MAP);
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("failed to parse a JSON document: " + content, e);
-        }
-    }
-
-    private static String toJsonString(Map<String, Object> result) {
-        try {
-            return OBJECT_MAPPER.writeValueAsString(result);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("failed to write a JSON document: " + result, e);
         }
     }
 }

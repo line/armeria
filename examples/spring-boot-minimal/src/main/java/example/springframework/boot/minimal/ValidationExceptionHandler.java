@@ -8,13 +8,10 @@ import javax.validation.ValidationException;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 
@@ -23,23 +20,15 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
  */
 public class ValidationExceptionHandler implements ExceptionHandlerFunction {
 
-    private final ObjectMapper mapper = new ObjectMapper();
-
     @Override
     public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
         if (cause instanceof ValidationException) {
-            try {
-                final HttpStatus status = HttpStatus.BAD_REQUEST;
-                return HttpResponse.of(status, MediaType.JSON_UTF_8, mapper.writeValueAsBytes(
-                        new ErrorResponse(status.reasonPhrase(),
-                                          cause.getMessage(),
-                                          req.path(),
-                                          status.code(),
-                                          Instant.now().toString())));
-            } catch (JsonProcessingException e) {
-                return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
-                                       cause.getMessage());
-            }
+            final HttpStatus status = HttpStatus.BAD_REQUEST;
+            return HttpResponse.ofJson(status, new ErrorResponse(status.reasonPhrase(),
+                                                                 cause.getMessage(),
+                                                                 req.path(),
+                                                                 status.code(),
+                                                                 Instant.now().toString()));
         }
         return ExceptionHandlerFunction.fallthrough();
     }
