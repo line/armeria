@@ -11,21 +11,26 @@ level: basic
 
 # Implementing UPDATE operation
 
-In this step, we'll write a method for updating a blog post. The HTTP method we map with this method is GET.
+In this step, you'll write a method for updating a blog post. By completing this step, you'll learn to map your service with the HTTP PUT (<type://@Put>) method, use parameter injection, and convert request body into a Java object using a request object (<type://@RequestObject>).
 
 <TutorialSteps current={5} />
 
-By completing this step, you'll learn to map your service with the HTTP PUT (<type://@Put>) method, use parameter injection, and convert request body into a Java object using a request object (<type://@RequestObject>).
-
-Note that import statements in the code snippets may have been added already in other steps.
-
 ## What you need
 
-You need to have BlogPost.java from the [Preparing a data object](/tutorials/tutorial-blog-rest-step2) step.
+You must have the following files ready to try creating a blog post. You can always [download](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
+
+- Main.java: See [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1)
+- BlogPost.java: See [Step 2. Prepare a data object](/tutorials/tutorial-blog-rest-step2)
 
 ## 0. Create a service file
 
 Create a service file, BlogService.java, if you don't have one yet. Skip this step if you've already made one in earlier steps. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogService.java).
+
+<Warning>
+
+To test retrieving a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 3. Implement CREATE](/tutorials/tutorial-blog-rest-step3) for instructions.
+
+</Warning>
 
 ```java filename=BlogService.java
 package example.armeria.server.blog;
@@ -44,7 +49,7 @@ public final class BlogService {
 
 ## 1. Map HTTP method
 
-Let's start with [mapping the HTTP PUT method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
+Let's start [mapping the HTTP PUT method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
 
 1. Declare a service method, `updateBlogPost()`, in the class `BlogService`.
 2. Map this service method with the HTTP PUT method by adding the <type://@Put> annotation.
@@ -172,6 +177,84 @@ public final class BlogService {
   }
 }
 ```
+
+## 5. Test updating a blog post
+
+Let's test updating a blog post.
+
+1. Add our blog service to the server, by removing the dummy service we added in [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1#1-create-a-server-instance) and adding line 6. Skip this process if you've done it already from other steps.
+
+  ```java filename="Main.java" highlight=6 showlineno=true
+  public final class Main {
+    ...
+    static Server newServer(int port) {
+      ServerBuilder sb = Server.builder();
+      return sb.http(port)
+               .annotatedService(new BlogService())
+               .build();
+  }
+  ...
+  ```
+
+2. Run the server like we did in [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1) by running the `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing service methods.
+3. Create a couple of blog posts to test updating a blog post and get the ID value returned. Enter the cURL commands below.
+
+  ```bash
+  $ curl --request POST 'localhost:8080/blogs' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Test blog for retrieving", "content":"Create to read."}'
+  ```
+
+  ```bash
+  $ curl --request POST 'localhost:8080/blogs' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Second blog for test retrieving", "content":"Create to read for the second time"}'
+  ```
+
+  For each command, you'll get a response similar to the following.
+
+  ```bash
+  {"id":0,"title":"Test blog for retrieving","content":"Create to read.","createdAt":1624856923175,"modifiedAt":1624856923175}
+
+  {"id":1,"title":"Second blog for test retrieving","content":"Create to read for the second time","createdAt":1624864060343,"modifiedAt":1624864060343}
+  ```
+
+4. Let's update the second blog with the ID, `1`. Change the value for the `"title"` and `"content"` properties.
+
+  ```bash
+  $ curl --request PUT 'localhost:8080/blogs/1' \
+  -H 'Content-Type: application/json' \
+  -d '{
+      "title": "Update title to this title",
+      "content": "Update blog content with this content."
+  }'
+  ```
+
+  You'll get a response similar to this. Not only the title and content are changed, but the last updated time (`modifiedAt`) is changed, too.
+
+  ```bash
+  {"id":1,"title":"Update title to this title","content":"Update blog content with this content.","createdAt":1624864060343,"modifiedAt":1624869413163}
+  ```
+
+5. Let's retrieve the same blog post to see if the change has been applied successfully.
+
+  ```bash
+  $ curl --request GET 'localhost:8080/blogs/1'
+  ```
+
+  The response we get confirms that the change is applied.
+
+  ```bash
+  {
+    "id": 1,
+    "title": "Update title to this title",
+    "content": "Update blog content with this content.",
+    "createdAt": 1624864060343,
+    "modifiedAt": 1624869413163
+  }
+  ```
+
+You can test this also with Armeria's [Documentation service](/docs/server-docservice), which we'll cover at [Step 7. Add services to server](/tutorials/tutorial-blog-rest-step7).
 
 ## Next step
 

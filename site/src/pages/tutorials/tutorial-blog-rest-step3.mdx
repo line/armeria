@@ -11,21 +11,20 @@ level: basic
 
 # Implementing CREATE operation
 
-Now that we've prepared minimal files for the tutorial in [step 2](/tutorials/tutorial-blog-rest-step2), it's time to start writing the core of the service.
+In this step, you'll write a service method for creating a blog post. By completing this step, you'll learn to map your service with the HTTP POST (<type://@Post>) method and make your own request converter (<type://@RequestConverter>).
 
 <TutorialSteps current={3} />
 
-In this step, you'll create a file to contain service methods. The first service method to write is for creating a blog post. The HTTP method to map with is POST.
-
-By completing this step, you'll learn to map your service with the HTTP POST (<type://@Post>) method and make your own request converter (<type://@RequestConverter>).
-
 ## What you need
 
-You need the BlogPost.java file, created from [step 2](/tutorials/tutorial-blog-rest-step2). You can always [download](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogPost.java) the full version of this file, instead of creating one yourself.
+You must have the following files ready to try creating a blog post. You can always [download](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
+
+- Main.java: See [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1)
+- BlogPost.java: See [Step 2. Prepare a data object](/tutorials/tutorial-blog-rest-step2)
 
 ## 0. Create a service file
 
-Create a service file, BlogService.java. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogService.java).
+Create a service file, BlogService.java, if you don't have it. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogService.java).
 
 ```java filename=BlogService.java
 package example.armeria.server.blog;
@@ -44,7 +43,7 @@ public final class BlogService {
 
 ## 1. Map HTTP method
 
-Let's start with [mapping the HTTP POST method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
+Let's start [mapping the HTTP POST method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
 
 1. Declare a service method, `createBlogPost()`, in the class `BlogService`.
 2. Map this service method with the HTTP POST method by adding the <type://@Post> annotation.
@@ -186,6 +185,40 @@ Let's return a response for blog post creation:
                               mapper.writeValueAsBytes(blogPost));
   }
   ```
+
+## 5. Test creating a blog post
+
+1. Add our blog service to the server, by removing the dummy service we added in [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1#1-create-a-server-instance) and adding line 6.
+
+  ```java filename="Main.java" highlight=6 showlineno=true
+  public final class Main {
+    ...
+    static Server newServer(int port) {
+      ServerBuilder sb = Server.builder();
+      return sb.http(port)
+               .annotatedService(new BlogService())
+               .build();
+  }
+  ...
+  ```
+
+2. Run the server like we did in [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1) by running the `main()` method or using Gradle.
+When you see the message, "Server has been started", you can try testing service methods.
+3. Call the service method for creating a blog post. Here, we'll use the cURL command.
+
+  ```bash
+  $ curl --location --request POST 'localhost:8080/blogs' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"My first blog", "content":"Hello Armeria!"}'
+  ```
+
+4. Check the return value.
+
+  ```bash
+  {"id":0,"title":"My first blog","content":"Hello Armeria!","createdAt":1624489646371,"modifiedAt":1624489646371}
+  ```
+
+You can test this also with Armeria's [Documentation service](/docs/server-docservice), which we'll cover at [Step 7. Add services to server](/tutorials/tutorial-blog-rest-step7).
 
 ## Next step
 

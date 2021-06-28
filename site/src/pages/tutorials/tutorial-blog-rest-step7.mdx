@@ -14,11 +14,9 @@ In this step, we go back to the [Step 1. Create a server](/tutorials/tutorial-bl
 
 <TutorialSteps current={7} />
 
-Note that import statements in the code snippets may have been added already in other steps.
-
 ## What you need
 
-You need to have these files obtained from previous steps.
+You need to have these files obtained from earlier steps.
 
 - BadRequestExceptionHandler.java
 - BlogPost.java
@@ -28,7 +26,7 @@ You need to have these files obtained from previous steps.
 
 ## 1. Add blog service
 
-In [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1), you've added a dummy service just to check that a server is launched. Now, let's remove the dummy service and add our blog service.
+In [Step 1. Create a server](/tutorials/tutorial-blog-rest-step1), you've added a dummy service just to check that a server is launched. Now, let's remove the dummy service and add our blog service. If you've added the blog service already in earlier steps, skip to [2. Add Documentation service](#2-add-documentation-service).
 
 1. From Main.java, remove the dummy service at line 4.
   ```java filename=Main.java highlight=4 showlineno=true
@@ -86,7 +84,7 @@ Let's add Armeria's Documentation service:
 
 ## 3. Run the server and service
 
-Like we did in [Step 1. Create a server](/tutorial-blog-rest-step1#4-run-the-server-and-service), build and run the service by running the `main()` or using Gradle.
+Like we did in [Step 1. Create a server](/tutorial-blog-rest-step1#4-run-the-server-and-service), build and run the service by running the `main()` method or using Gradle.
 
 The server and services are launched successfully if you see this message.
 
@@ -109,12 +107,12 @@ Let's test and call our service operations, using Armeria's Documentation servic
   static Server newServer(int port) {
     ServerBuilder sb = Server.builder();
     DocService docService =
-            DocService.builder()
-                      .exampleRequests(
-                        BlogService.class,
-                        "createBlogPost",
-                        "{\"title\":\"My first blog\",\"content\":\"Hello Armeria!\"}")
-                      .build();
+      DocService.builder()
+                .exampleRequests(
+                  BlogService.class,
+                  "createBlogPost",
+                  "{\"title\":\"My first blog\",\"content\":\"Hello Armeria!\"}")
+                .build();
   ```
 3. Click the **SUBMIT** button, and you'll see the blog post information returned in the right panel.
 
