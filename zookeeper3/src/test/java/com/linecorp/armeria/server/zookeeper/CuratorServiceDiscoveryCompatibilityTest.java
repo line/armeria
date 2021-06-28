@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.zookeeper;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
@@ -52,6 +53,8 @@ class CuratorServiceDiscoveryCompatibilityTest {
 
     @Test
     void registeredInstancesAreSameWhenUsingServiceDiscoveryImplAndUpdatingListener() throws Throwable {
+        assumeThat(System.getenv("FLAKY_TESTS")).isNotEqualTo("false");
+
         final AtomicReference<ServiceInstance<Void>> registeredRef = new AtomicReference<>();
         final AtomicReference<Server> serverRef = new AtomicReference<>();
         final AtomicReference<CuratorFramework> clientRef = new AtomicReference<>();
