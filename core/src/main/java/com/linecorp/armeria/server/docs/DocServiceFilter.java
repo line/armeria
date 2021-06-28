@@ -70,7 +70,7 @@ public interface DocServiceFilter {
 
     /**
      * Returns a {@link DocServiceFilter} which returns {@code true} only for the services detected by the
-     * annotated service plugin.
+     * abstract http service plugin.
      */
     static DocServiceFilter ofHttp() {
         return ofPluginName("http");
