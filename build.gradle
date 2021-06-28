@@ -158,18 +158,12 @@ configure(projectsWithFlags('java')) {
     }
 
     tasks.withType(JavaCompile) { task ->
-
         if (task.path.startsWith(':examples:')) {
             // Target Java 11 for examples.
-            options.compilerArgs += ['--release', '11']
-            if (rootProject.ext.testJavaVersion != null &&
-                    Integer.parseInt(rootProject.ext.testJavaVersion) < 11 &&
-                    task.path.startsWith(':examples:')) {
-                task.enabled = false
-            }
+            options.release.set(11)
         } else {
             // Target Java 8 for the rest of them.
-            options.compilerArgs += ['--release', '8']
+            options.release.set(8)
         }
     }
 
@@ -183,8 +177,17 @@ configure(projectsWithFlags('java')) {
     }
 }
 
-// Configure the Javadoc tasks of all projects.
 allprojects {
+
+    tasks.all { task ->
+        // Disables all tasks in examples when we use a JDK version under 11.
+        if (Integer.parseInt(rootProject.ext.testJavaVersion) < 11 &&
+                task.path.startsWith(':examples:')) {
+            task.enabled = false
+        }
+    }
+
+    // Configure the Javadoc tasks of all projects.
     tasks.withType(Javadoc) {
         options {
             // Groups
