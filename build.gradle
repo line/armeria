@@ -164,7 +164,7 @@ configure(projectsWithFlags('java')) {
             options.compilerArgs += ['--release', '11']
             if (rootProject.ext.testJavaVersion != null &&
                     Integer.parseInt(rootProject.ext.testJavaVersion) < 11 &&
-                    task.path.startsWith(':examples:') && task.path.endsWith(':compileTestJava')) {
+                    task.path.startsWith(':examples:')) {
                 task.enabled = false
             }
         } else {
