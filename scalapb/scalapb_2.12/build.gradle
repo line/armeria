@@ -56,7 +56,7 @@ tasks.withType(Test) {
         // when testing scalapb module with Java 8. This bug was fixed in Java 9.
         // - https://github.com/gradle/gradle/issues/8432
         // - https://bugs.openjdk.java.net/browse/JDK-8057919
-        if (rootProject.findProperty('testJavaVersion') == '8') {
+        if (rootProject.ext.testJavaVersion == '8') {
             exclude("**/*\$*\$*.class")
         }
     }

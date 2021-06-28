@@ -157,9 +157,20 @@ configure(projectsWithFlags('java')) {
         testImplementation 'org.hamcrest:hamcrest-library'
     }
 
-    // Target Java 8.
-    tasks.withType(JavaCompile) {
-        options.compilerArgs += ['--release', '8']
+    tasks.withType(JavaCompile) { task ->
+
+        if (task.path.startsWith(':examples:')) {
+            // Target Java 11 for examples.
+            options.compilerArgs += ['--release', '11']
+            if (rootProject.ext.testJavaVersion != null &&
+                    Integer.parseInt(rootProject.ext.testJavaVersion) < 11 &&
+                    task.path.startsWith(':examples:') && task.path.endsWith(':compileTestJava')) {
+                task.enabled = false
+            }
+        } else {
+            // Target Java 8 for the rest of them.
+            options.compilerArgs += ['--release', '8']
+        }
     }
 
     // Configure the default DuplicatesStrategy for such as:
