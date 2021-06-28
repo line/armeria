@@ -7,6 +7,7 @@
 <%-- Attempt to access the class that exists in the system class path --%>
 <p>Have you heard about the class '<%= Logger.class.getName() %>'?</p>
 <%-- Print some request properties for testing purpose. --%>
+<p>Host: <%= request.getHeader("Host") %></p>
 <p>Context path: <%= request.getContextPath() %></p>
 <p>Request URI: <%= request.getRequestURI() %></p>
 <p>Scheme: <%= request.getScheme() %></p>
