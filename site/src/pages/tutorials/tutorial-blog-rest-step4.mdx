@@ -34,14 +34,10 @@ To test retrieving a blog post, you need to have blog posts created, which requi
 ```java filename=BlogService.java
 package example.armeria.server.blog;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class BlogService {
-  // Used for serializing and deserializing JSON
-  private static final ObjectMapper mapper = new ObjectMapper();
-
   private Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
 }
 ```
@@ -168,13 +164,13 @@ To return a response for getting a single post:
 1. Replace the return type of the `getBlogPost()` method from `void` to `HttpResponse`.
 2. Return a response using Armeria's <type://HttpResponse> containing the content of the blog post retrieved.
 
-```java filename=BlogService.java highlight=2,5-6
+```java filename=BlogService.java highlight=2,6
 @Get("/blogs/:id")
 public HttpResponse getBlogPost(@Param int id)
     throws JsonProcessingException {
   ...
-  byte[] content = mapper.writeValueAsBytes(blogPost);
-  return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, content);
+
+  return HttpResponse.ofJson(blogPost);
 }
 ```
 

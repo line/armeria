@@ -39,14 +39,10 @@ To test retrieving a blog post, you need to have blog posts created, which requi
 ```java filename=BlogService.java
 package example.armeria.server.blog;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class BlogService {
-  // Used for serializing and deserializing JSON
-  private static final ObjectMapper mapper = new ObjectMapper();
-
   private Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
 }
 ```
@@ -140,11 +136,10 @@ What if there is no such post to delete? We can check if the blog exists before 
 
 3. Implement your own exception handler by overriding the default `handleException()` method. Add a code block for handling the `IllegalArgumentException` thrown. For this tutorial, return a BAD REQUEST as the response.
 
-  ```java filename=BadRequesExceptionHandler.java highlight=12,17-20,23
+  ```java filename=BadRequesExceptionHandler.java highlight=11,15,17
   import com.fasterxml.jackson.databind.node.ObjectNode;
   import com.linecorp.armeria.common.HttpResponse;
   import com.linecorp.armeria.common.HttpStatus;
-  import com.linecorp.armeria.common.MediaType;
   import com.linecorp.armeria.server.ServiceRequestContext;
 
   public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
@@ -156,12 +151,7 @@ What if there is no such post to delete? We can check if the blog exists before 
           String message = cause.getMessage();
           ObjectNode objectNode = mapper.createObjectNode();
           objectNode.put("error", message);
-          try {
-              return HttpResponse.of(HttpStatus.BAD_REQUEST,
-                                      MediaType.JSON_UTF_8, mapper.writeValueAsString(objectNode));
-          } catch (JsonProcessingException e) {
-              return HttpResponse.of(HttpStatus.BAD_REQUEST);
-          }
+          return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, objectNode);
       }
       return ExceptionHandlerFunction.fallthrough();
     }

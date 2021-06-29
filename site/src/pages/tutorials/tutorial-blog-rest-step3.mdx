@@ -29,14 +29,10 @@ Create a service file, BlogService.java, if you don't have it. You can see the f
 ```java filename=BlogService.java
 package example.armeria.server.blog;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class BlogService {
-  // Used for serializing and deserializing JSON
-  private static final ObjectMapper mapper = new ObjectMapper();
-
   private Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
 }
 ```
@@ -171,18 +167,16 @@ Now, it's time to return a response to our client. As the response, on top of th
 Let's return a response for blog post creation:
 
 1. Replace the return type of the `createBlogPost()` method from `void` to `HttpResponse`.
-2. Create and return an HTTP response using Armeria's <type://HttpResponse> and include the information of the post created.
+2. Create and return an HTTP response using Armeria's <type://HttpResponse> with the information of the post created.
 
-  ```java filename=BlogService.java
+  ```java filename=BlogService.java highlight=4,7
   import com.linecorp.armeria.common.HttpResponse;
   import com.linecorp.armeria.common.HttpStatus;
-  import com.linecorp.armeria.common.MediaType;
 
   public HttpResponse createBlogPost(BlogPost blogPost)
       throws JsonProcessingException {
     ...
-    return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                              mapper.writeValueAsBytes(blogPost));
+    return HttpResponse.ofJson(blogPost);
   }
   ```
 

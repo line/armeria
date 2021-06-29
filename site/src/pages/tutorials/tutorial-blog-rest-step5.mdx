@@ -35,14 +35,10 @@ To test retrieving a blog post, you need to have blog posts created, which requi
 ```java filename=BlogService.java
 package example.armeria.server.blog;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class BlogService {
-  // Used for serializing and deserializing JSON
-  private static final ObjectMapper mapper = new ObjectMapper();
-
   private Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
 }
 ```
@@ -137,7 +133,7 @@ Let's return an error for the request to update a blog post that doesn't exist.
 1. Replace the return type of the `updateBlogPost()` method from `void` to `HttpResponse`.
 2. Return a response using Armeria's <type://HTTPResponse> containing `HttpStatus.NOT_FOUND`.
 
-```java filename=BlogService.java highlight=6,9
+```java filename=BlogService.java highlight=6,10
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 
@@ -161,10 +157,9 @@ Let's return the information updated when the target blog post exists:
 1. Replace the return type of the `updateBlogPost()` method from `void` to `HttpResponse`.
 2. Return a response using Armeria's <type://HttpResponse> containing the updated information of the post.
 
-```java filename=BlogService.java highlight=9,11,12
+```java filename=BlogService.java highlight=8,10
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 
 public final class BlogService {
   ...
@@ -172,8 +167,7 @@ public final class BlogService {
   @Put("/blogs/:id")
   public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost){
     ...
-    byte[] bytes = mapper.writeValueAsBytes(newBlogPost);
-    return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, bytes);
+    return HttpResponse.ofJson(newBlogPost);
   }
 }
 ```
