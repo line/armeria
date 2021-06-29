@@ -527,4 +527,16 @@ public interface StreamMessage<T> extends Publisher<T> {
 
         return FuseableStreamMessage.of(this, function);
     }
+
+    /**
+     * Transforms an error emitted by this {@link StreamMessage} by applying the specified {@link Function}.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value.
+     */
+    default StreamMessage<T> mapError(Function<? super Throwable, ? extends Throwable> function) {
+        requireNonNull(function, "function");
+        return FuseableStreamMessage.error(this, function);
+    }
 }

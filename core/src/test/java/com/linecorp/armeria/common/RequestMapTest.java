@@ -17,7 +17,9 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
@@ -121,6 +123,22 @@ class RequestMapTest {
         assertThat(response.trailers().get("status")).isEqualTo("0");
         assertThat(response.trailers().get("trailer1")).isEqualTo("1");
         assertThat(response.trailers().get("trailer2")).isEqualTo("2");
+    }
+
+    @Test
+    void mapError() {
+        final IllegalStateException first = new IllegalStateException("1");
+        final IllegalStateException second = new IllegalStateException("2");
+        final HttpRequestWriter requestWriter = HttpRequest.streaming(HttpMethod.GET, "/foo");
+        requestWriter.write(HttpData.ofUtf8("body"));
+        requestWriter.close(first);
+        final HttpRequest transformed = requestWriter.mapError(error -> {
+            assertThat(error).isSameAs(first);
+            return second;
+        });
+        assertThatThrownBy(() -> transformed.aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCause(second);
     }
 
     @Test

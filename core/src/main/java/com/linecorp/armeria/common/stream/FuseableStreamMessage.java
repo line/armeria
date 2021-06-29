@@ -31,6 +31,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
 
@@ -40,23 +41,32 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
     static <T> FuseableStreamMessage<T, T> of(StreamMessage<? extends T> source,
                                               Predicate<? super T> predicate) {
-        return new FuseableStreamMessage<>(source, MapperFunction.of(predicate));
+        return new FuseableStreamMessage<>(source, MapperFunction.of(predicate), null);
     }
 
     static <T, R> FuseableStreamMessage<T, R> of(StreamMessage<? extends T> source,
                                                  Function<? super T, ? extends R> function) {
-        return new FuseableStreamMessage<>(source, MapperFunction.of(function));
+        return new FuseableStreamMessage<>(source, MapperFunction.of(function), null);
+    }
+
+    static <T> FuseableStreamMessage<T, T> error(
+            StreamMessage<? extends T> source, Function<? super Throwable, ? extends Throwable> errorFunction) {
+        return new FuseableStreamMessage<>(source, null, errorFunction);
     }
 
     // The `source` might not produce `T` and the emitted objects will be transformed to `U` by the `function`.
     private final StreamMessage<Object> source;
+    @Nullable
     private final MapperFunction<Object, U> function;
+    @Nullable
+    private final Function<Throwable, Throwable> errorFunction;
 
     @SuppressWarnings("unchecked")
     private FuseableStreamMessage(StreamMessage<? extends T> source,
-                                  MapperFunction<T, U> function) {
+                                  @Nullable MapperFunction<T, U> function,
+                                  @Nullable Function<? super Throwable, ? extends Throwable> errorFunction) {
         requireNonNull(source, "source");
-        requireNonNull(function, "function");
+        assert function != null || errorFunction != null;
 
         source = peel(source);
         if (source instanceof FuseableStreamMessage) {
@@ -67,10 +77,25 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
             this.source = cast.source;
 
             // Extract source function and fuse it with the function
-            this.function = cast.function.and(function);
+            if (function != null) {
+                if (cast.function != null) {
+                    this.function = cast.function.and(function);
+                } else {
+                    this.function = (MapperFunction<Object, U>) function;
+                }
+                this.errorFunction = cast.errorFunction;
+            } else {
+                if (cast.errorFunction != null) {
+                    this.errorFunction = cast.errorFunction.andThen(errorFunction);
+                } else {
+                    this.errorFunction = (Function<Throwable, Throwable>) errorFunction;
+                }
+                this.function = (MapperFunction<Object, U>) cast.function;
+            }
         } else {
             this.source = (StreamMessage<Object>) source;
             this.function = (MapperFunction<Object, U>) function;
+            this.errorFunction = (Function<Throwable, Throwable>) errorFunction;
         }
     }
 
@@ -109,13 +134,25 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public CompletableFuture<List<U>> collect(EventExecutor executor, SubscriptionOption... options) {
-        return source.collect(executor, options).thenApply(objs -> {
+        return source.collect(executor, options).handle((objs, cause) -> {
+            if (cause != null) {
+                if (errorFunction != null) {
+                    try {
+                        cause = errorFunction.apply(cause);
+                        requireNonNull(cause, "errorFunction.apply() returned null");
+                    } catch (Throwable t) {
+                        cause = new CompositeException(t, cause);
+                    }
+                }
+                return Exceptions.throwUnsafely(cause);
+            }
+
             final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(objs.size());
-            Throwable cause = null;
+            Throwable cause0 = null;
             for (Object obj : objs) {
-                if (cause != null) {
+                if (cause0 != null) {
                     // An error was raised. The remaing objects should be released.
-                    StreamMessageUtil.closeOrAbort(obj, cause);
+                    StreamMessageUtil.closeOrAbort(obj, cause0);
                     continue;
                 }
 
@@ -127,18 +164,26 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                         StreamMessageUtil.closeOrAbort(obj);
                     }
                 } catch (Throwable ex) {
-                    StreamMessageUtil.closeOrAbort(obj);
-                    cause = ex;
+                    if (errorFunction != null) {
+                        try {
+                            ex = errorFunction.apply(ex);
+                            requireNonNull(ex, "errorFunction.apply() returned null");
+                        } catch (Throwable t) {
+                            ex = new CompositeException(t, ex);
+                        }
+                    }
+                    StreamMessageUtil.closeOrAbort(obj, ex);
+                    cause0 = ex;
                 }
             }
 
             final List<U> elements = builder.build();
-            if (cause != null) {
+            if (cause0 != null) {
                 // An error was raised. The transformed objects should be released.
-                for (U element: elements) {
-                    StreamMessageUtil.closeOrAbort(element, cause);
+                for (U element : elements) {
+                    StreamMessageUtil.closeOrAbort(element, cause0);
                 }
-                return Exceptions.throwUnsafely(cause);
+                return Exceptions.throwUnsafely(cause0);
             } else {
                 return elements;
             }
@@ -157,7 +202,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        source.subscribe(new FuseableSubscriber<>(subscriber, function), executor, options);
+        source.subscribe(new FuseableSubscriber<>(subscriber, function, errorFunction), executor, options);
     }
 
     @Override
@@ -174,16 +219,21 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
     private static final class FuseableSubscriber<U> implements Subscriber<Object>, Subscription {
 
         private final Subscriber<? super U> downstream;
+        @Nullable
         private final MapperFunction<Object, U> function;
+        @Nullable
+        private final Function<Throwable, Throwable> errorFunction;
 
         @Nullable
         private volatile Subscription upstream;
         private volatile boolean canceled;
 
-        FuseableSubscriber(Subscriber<? super U> downstream, MapperFunction<Object, U> function) {
+        FuseableSubscriber(Subscriber<? super U> downstream, @Nullable MapperFunction<Object, U> function,
+                           @Nullable Function<Throwable, Throwable> errorFunction) {
             requireNonNull(downstream, "downstream");
             this.downstream = downstream;
             this.function = function;
+            this.errorFunction = errorFunction;
         }
 
         @Override
@@ -204,7 +254,12 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
             U result = null;
             try {
-                result = function.apply(item);
+                if (function != null) {
+                    result = function.apply(item);
+                } else {
+                    //noinspection unchecked
+                    result = (U) item;
+                }
                 if (result != null) {
                     downstream.onNext(result);
                 } else {
@@ -222,8 +277,22 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         @Override
-        public void onError(Throwable throwable) {
-            downstream.onError(throwable);
+        public void onError(Throwable cause) {
+            requireNonNull(cause, "cause");
+            if (canceled) {
+                return;
+            }
+            canceled = true;
+            if (errorFunction != null) {
+                Throwable transformed;
+                try {
+                    transformed = errorFunction.apply(cause);
+                    requireNonNull(transformed, "errorFunction.apply() returned null");
+                } catch (Throwable t) {
+                    transformed = new CompositeException(t, cause);
+                }
+                downstream.onError(transformed);
+            }
         }
 
         @Override

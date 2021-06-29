@@ -557,4 +557,13 @@ public interface HttpRequest extends Request, HttpMessage {
         });
         return of(headers(), stream);
     }
+
+    /**
+     * Transforms an error emitted by this {@link HttpRequest} by applying the specified {@link Function}.
+     */
+    @Override
+    default HttpRequest mapError(Function<? super Throwable, ? extends Throwable> function) {
+        requireNonNull(function, "function");
+        return of(headers(), HttpMessage.super.mapError(function));
+    }
 }

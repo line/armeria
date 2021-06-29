@@ -629,4 +629,13 @@ public interface HttpResponse extends Response, HttpMessage {
         });
         return of(stream);
     }
+
+    /**
+     * Transforms an error emitted by this {@link HttpResponse} by applying the specified {@link Function}.
+     */
+    @Override
+    default HttpResponse mapError(Function<? super Throwable, ? extends Throwable> function) {
+        requireNonNull(function, "function");
+        return of(HttpMessage.super.mapError(function));
+    }
 }
