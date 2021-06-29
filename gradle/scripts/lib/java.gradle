@@ -12,7 +12,7 @@ def testJavaVersion = buildJdkVersion
 if (rootProject.hasProperty('testJavaVersion')) {
     def testVersion = rootProject.findProperty('testJavaVersion')
     if (buildJdkVersion != testVersion) {
-        testJavaVersion = testVersion
+        testJavaVersion = Integer.parseInt(testVersion)
         logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
     }
 }
