@@ -1,5 +1,5 @@
 // JDK 9 or above does not require Jetty ALPN agent at all.
-if (JavaVersion.current() >= JavaVersion.VERSION_1_9 && rootProject.findProperty('testJavaVersion') != '8') {
+if (JavaVersion.current() >= JavaVersion.VERSION_1_9 && rootProject.ext.testJavaVersion != 8) {
     return
 }
 
