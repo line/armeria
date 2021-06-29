@@ -1,8 +1,8 @@
 def buildJdkVersion = 15
 if (rootProject.hasProperty('buildJdkVersion')) {
-    def jdkVersion = rootProject.findProperty('buildJdkVersion')
+    def jdkVersion = Integer.parseInt(rootProject.findProperty('buildJdkVersion'))
     if (buildJdkVersion != jdkVersion) {
-        buildJdkVersion = Integer.parseInt(jdkVersion)
+        buildJdkVersion = jdkVersion
         logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
     }
 }
@@ -10,9 +10,9 @@ rootProject.ext.set("buildJdkVersion", buildJdkVersion)
 
 def testJavaVersion = buildJdkVersion
 if (rootProject.hasProperty('testJavaVersion')) {
-    def testVersion = rootProject.findProperty('testJavaVersion')
+    def testVersion = Integer.parseInt(rootProject.findProperty('testJavaVersion'))
     if (buildJdkVersion != testVersion) {
-        testJavaVersion = Integer.parseInt(testVersion)
+        testJavaVersion = testVersion
         logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
     }
 }
