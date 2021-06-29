@@ -14,8 +14,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -42,13 +40,13 @@ class BlogServiceTest {
     @Order(1)
     void createBlogPost() throws JsonProcessingException {
         final WebClient client = WebClient.of(server.httpUri());
-        final HttpRequest request = createBlogPostRequest(ImmutableMap.of("title", "My first blog",
-                                                                          "content", "Hello Armeria!"));
+        final HttpRequest request = createBlogPostRequest(Map.of("title", "My first blog",
+                                                                 "content", "Hello Armeria!"));
         final AggregatedHttpResponse res = client.execute(request).aggregate().join();
 
-        final Map<String, Object> expected = ImmutableMap.of("id", 0,
-                                                             "title", "My first blog",
-                                                             "content", "Hello Armeria!");
+        final Map<String, Object> expected = Map.of("id", 0,
+                                                    "title", "My first blog",
+                                                    "content", "Hello Armeria!");
 
         assertThatJson(res.contentUtf8()).whenIgnoringPaths("createdAt", "modifiedAt")
                                          .isEqualTo(mapper.writeValueAsString(expected));
@@ -59,9 +57,9 @@ class BlogServiceTest {
     void getBlogPost() throws JsonProcessingException {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/blogs/0").aggregate().join();
-        final Map<String, Object> expected = ImmutableMap.of("id", 0,
-                                                             "title", "My first blog",
-                                                             "content", "Hello Armeria!");
+        final Map<String, Object> expected = Map.of("id", 0,
+                                                    "title", "My first blog",
+                                                    "content", "Hello Armeria!");
 
         assertThatJson(res.contentUtf8()).whenIgnoringPaths("createdAt", "modifiedAt")
                                          .isEqualTo(mapper.writeValueAsString(expected));
@@ -71,17 +69,17 @@ class BlogServiceTest {
     @Order(3)
     void getBlogPosts() throws JsonProcessingException {
         final WebClient client = WebClient.of(server.httpUri());
-        final HttpRequest request = createBlogPostRequest(ImmutableMap.of("title", "My second blog",
-                                                                          "content", "Armeria is awesome!"));
+        final HttpRequest request = createBlogPostRequest(Map.of("title", "My second blog",
+                                                                 "content", "Armeria is awesome!"));
         client.execute(request).aggregate().join();
         final AggregatedHttpResponse res = client.get("/blogs").aggregate().join();
-        final List<Map<String, Object>> expected = ImmutableList.of(
-                ImmutableMap.of("id", 1,
-                                "title", "My second blog",
-                                "content", "Armeria is awesome!"),
-                ImmutableMap.of("id", 0,
-                                "title", "My first blog",
-                                "content", "Hello Armeria!"));
+        final List<Map<String, Object>> expected = List.of(
+                Map.of("id", 1,
+                       "title", "My second blog",
+                       "content", "Armeria is awesome!"),
+                Map.of("id", 0,
+                       "title", "My first blog",
+                       "content", "Hello Armeria!"));
         assertThatJson(res.contentUtf8()).whenIgnoringPaths("[*].createdAt", "[*].modifiedAt")
                                          .isEqualTo(mapper.writeValueAsString(expected));
     }
@@ -90,9 +88,9 @@ class BlogServiceTest {
     @Order(4)
     void updateBlogPosts() throws JsonProcessingException {
         final WebClient client = WebClient.of(server.httpUri());
-        final Map<String, Object> updatedContent = ImmutableMap.of("id", 0,
-                                                                   "title", "My first blog",
-                                                                   "content", "Hello awesome Armeria!");
+        final Map<String, Object> updatedContent = Map.of("id", 0,
+                                                          "title", "My first blog",
+                                                          "content", "Hello awesome Armeria!");
         final HttpRequest updateBlogPostRequest =
                 HttpRequest.builder()
                            .put("/blogs/0")
@@ -100,9 +98,9 @@ class BlogServiceTest {
                            .build();
         client.execute(updateBlogPostRequest).aggregate().join();
         final AggregatedHttpResponse res = client.get("/blogs/0").aggregate().join();
-        final Map<String, Object> expected = ImmutableMap.of("id", 0,
-                                                             "title", "My first blog",
-                                                             "content", "Hello awesome Armeria!");
+        final Map<String, Object> expected = Map.of("id", 0,
+                                                    "title", "My first blog",
+                                                    "content", "Hello awesome Armeria!");
 
         assertThatJson(res.contentUtf8()).whenIgnoringPaths("createdAt", "modifiedAt")
                                          .isEqualTo(mapper.writeValueAsString(expected));
@@ -117,7 +115,7 @@ class BlogServiceTest {
         assertThatJson(res.contentUtf8()).isEqualTo("{\"error\":\"The blog post does not exist. id: 100\"}");
     }
 
-    private static HttpRequest createBlogPostRequest(ImmutableMap<String, String> content)
+    private static HttpRequest createBlogPostRequest(Map<String, String> content)
             throws JsonProcessingException {
         return HttpRequest.builder()
                           .post("/blogs")
