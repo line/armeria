@@ -12,7 +12,7 @@ date: 2021-06-23
       GraphqlService.builder()
                     .schemaFile(schemaFiles)
                     .runtimeWiring(w -> ...)
-                    .configureDataLoaderRegistry(registery -> ...)
+                    .configureDataLoaderRegistry(registry -> ...)
                     ...
                     .build());
   ```
@@ -132,7 +132,7 @@ date: 2021-06-23
         .localPort(9090, SessionProtocol.HTTP, SessionProtocol.HTTPS);
   ```
 - All Jackson modules in the class loader are registered automatically by default via Jackson's
-  [built-in SPI machanism](https://fasterxml.github.io/jackson-databind/javadoc/2.11/com/fasterxml/jackson/databind/cfg/MapperBuilder.html#findAndAddModules--)
+  [built-in SPI mechanism](https://fasterxml.github.io/jackson-databind/javadoc/2.11/com/fasterxml/jackson/databind/cfg/MapperBuilder.html#findAndAddModules--)
   for your convenience.
   - You can override this behavior by registering your <type://JacksonModuleProvider> implementation
     via Java SPI. #3594 #3625
