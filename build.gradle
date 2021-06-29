@@ -181,8 +181,7 @@ allprojects {
 
     tasks.all { task ->
         // Disables all tasks in examples when we use a JDK version under 11.
-        if (Integer.parseInt(rootProject.ext.testJavaVersion) < 11 &&
-                task.path.startsWith(':examples:')) {
+        if (rootProject.ext.testJavaVersion < 11 && task.path.startsWith(':examples:')) {
             task.enabled = false
         }
     }

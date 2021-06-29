@@ -1,28 +1,22 @@
-rootProject.ext {
-    if (rootProject.hasProperty('buildJdkVersion')) {
-        def jdkVersion = rootProject.findProperty('buildJdkVersion')
-        if (buildJdkVersion != jdkVersion) {
-            buildJdkVersion = jdkVersion
-            logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
-        } else {
-            buildJdkVersion = '15'
-        }
-    } else {
-        buildJdkVersion = '15'
-    }
-
-    if (rootProject.hasProperty('testJavaVersion')) {
-        def testVersion = rootProject.findProperty('testJavaVersion')
-        if (buildJdkVersion != testVersion) {
-            testJavaVersion = testVersion
-            logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
-        } else {
-            testJavaVersion = buildJdkVersion
-        }
-    } else {
-        testJavaVersion = buildJdkVersion
+def buildJdkVersion = 15
+if (rootProject.hasProperty('buildJdkVersion')) {
+    def jdkVersion = rootProject.findProperty('buildJdkVersion')
+    if (buildJdkVersion != jdkVersion) {
+        buildJdkVersion = Integer.parseInt(jdkVersion)
+        logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
     }
 }
+rootProject.ext.set("buildJdkVersion", buildJdkVersion)
+
+def testJavaVersion = buildJdkVersion
+if (rootProject.hasProperty('testJavaVersion')) {
+    def testVersion = rootProject.findProperty('testJavaVersion')
+    if (buildJdkVersion != testVersion) {
+        testJavaVersion = testVersion
+        logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
+    }
+}
+rootProject.ext.set("testJavaVersion", testJavaVersion)
 
 // Enable checkstyle if the rule file exists.
 def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
