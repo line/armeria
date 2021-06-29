@@ -171,7 +171,45 @@ For <type://RetryingClient>, please check out
 
 ## Modifying responses
 
-We can modify the responses in a decorator via wrapping the <type://HttpResponse> with <type://FilteredHttpResponse>:
+We can modify the responses in a decorator via the `HttpResponse.mapHeaders(...)`, `HttpResponse.mapData(...)`,
+`HttpResponse.mapInformational(...)` or `HttpResponse.mapTrailers(...)` methods, or, if more advanced/stateful
+processing is necessary, by wrapping the <type://HttpResponse> in a <type://FilteredHttpResponse>.
+
+### Using `.mapXXX(...)` methods
+
+```java
+import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.HttpData;
+import java.nio.charset.StandardCharsets;
+
+ClientBuilder cb = Clients.builder("http");
+cb.decorator((delegate, ctx, req) -> {
+    final MutableBoolean initialHttpData = new MutableBoolean(true);
+    return delegate
+        .execute(ctx, req)
+        .mapHeaders(headers -> headers.toBuilder().add("x-foo", "foobar").build())
+        .mapTrailers(trailers -> ...)
+        .mapInformational(informationalHeader -> ...)
+        .mapData((httpData) -> {
+            HttpData result = httpData;
+            if (initialHttpData.isTrue()) {
+                initialHttpData.setValue(false);
+                byte[] ascii = "{\"foo\": \"foobar\",".getBytes(StandardCharsets.US_ASCII);
+                byte[] combined = Arrays.copyOf(ascii, ascii.length + httpData.length() - 1);
+                System.arraycopy(httpData.array(), 1, combined, ascii.length, httpData.length());
+                result = HttpData.wrap(combined);
+            }
+            return result;
+        });
+});
+```
+
+### Using FilteredHttpResponse:
+
+A couple of caveats to note here.
+* Informational response headers may occur zero or more times.
+* <type://HttpData> will almost always just be a part of the whole response data unless the response has been passed through `HttpResponse.aggregate()`.
 
 ```java
 import com.linecorp.armeria.client.ClientBuilder;
