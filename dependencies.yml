@@ -604,7 +604,7 @@ org.jboss.resteasy:
   resteasy-core-spi:
     version: &RESTEASY_VERSION '4.6.1.Final'
     javadocs:
-    - https://docs.jboss.org/resteasy/docs/4.6.1.Final/javadocs/
+    - https://docs.jboss.org/resteasy/docs/4.6.0.Final/javadocs/
   resteasy-core: { version: *RESTEASY_VERSION }
   resteasy-client: { version: *RESTEASY_VERSION }
   resteasy-jackson2-provider: { version: *RESTEASY_VERSION }
