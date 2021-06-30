@@ -45,6 +45,9 @@ import io.netty.handler.ssl.SslHandler;
 
 public final class ChannelUtil {
 
+    private static final String CHANNEL_PACKAGE_NAME;
+    @Nullable
+    private static final String INCUBATOR_CHANNEL_PACKAGE_NAME;
     private static final Set<ChannelOption<?>> PROHIBITED_OPTIONS;
     private static final WriteBufferWaterMark DISABLED_WRITE_BUFFER_WATERMARK =
             new WriteBufferWaterMark(0, Integer.MAX_VALUE);
@@ -52,6 +55,17 @@ public final class ChannelUtil {
     static final int TCP_USER_TIMEOUT_BUFFER_MILLIS = 5_000;
 
     static {
+        // Determine the names of the Netty packages.
+        CHANNEL_PACKAGE_NAME = Channel.class.getPackage().getName();
+        final int lastDotIndex = CHANNEL_PACKAGE_NAME.lastIndexOf('.');
+        if (lastDotIndex >= 0) {
+            // "shaded.io.netty.incubator.channel"
+            INCUBATOR_CHANNEL_PACKAGE_NAME =
+                    CHANNEL_PACKAGE_NAME.substring(0, lastDotIndex) + ".incubator.channel";
+        } else {
+            INCUBATOR_CHANNEL_PACKAGE_NAME = null;
+        }
+
         // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
         final ImmutableSet.Builder<ChannelOption<?>> builder = ImmutableSet.builder();
         //noinspection deprecation
@@ -63,9 +77,9 @@ public final class ChannelUtil {
         try {
             // Use reflection, just in case a user excluded netty-transport-native-epoll from the dependencies.
             builder.add((ChannelOption<?>) Class.forName(
-                    "io.netty.channel.epoll.EpollChannelOption", false,
+                    CHANNEL_PACKAGE_NAME + ".epoll.EpollChannelOption", false,
                     ChannelUtil.class.getClassLoader()).getField("EPOLL_MODE").get(null));
-        } catch (Exception e) {
+        } catch (Throwable ignored) {
             // Ignore
         }
 
@@ -88,7 +102,7 @@ public final class ChannelUtil {
     static {
         try {
             final Class<?> clazz = Class.forName(
-                    "io.netty.channel.epoll.EpollChannelOption", false,
+                    CHANNEL_PACKAGE_NAME + ".epoll.EpollChannelOption", false,
                     ChannelUtil.class.getClassLoader());
             //noinspection unchecked
             epollTcpUserTimeout = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_USER_TIMEOUT");
@@ -96,21 +110,24 @@ public final class ChannelUtil {
             epollTcpKeepidle = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPIDLE");
             //noinspection unchecked
             epollTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
-        } catch (Throwable throwable) {
+        } catch (Throwable ignored) {
             // Ignore
         }
-        try {
-            final Class<?> clazz = Class.forName(
-                    "io.netty.incubator.channel.uring.IOUringChannelOption", false,
-                    ChannelUtil.class.getClassLoader());
-            //noinspection unchecked
-            ioUringTcpUserTimeout = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_USER_TIMEOUT");
-            //noinspection unchecked
-            ioUringTcpKeepidle = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPIDLE");
-            //noinspection unchecked
-            ioUringTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
-        } catch (Throwable throwable) {
-            // Ignore
+
+        if (INCUBATOR_CHANNEL_PACKAGE_NAME != null) {
+            try {
+                final Class<?> clazz = Class.forName(
+                        INCUBATOR_CHANNEL_PACKAGE_NAME + ".uring.IOUringChannelOption", false,
+                        ChannelUtil.class.getClassLoader());
+                //noinspection unchecked
+                ioUringTcpUserTimeout = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_USER_TIMEOUT");
+                //noinspection unchecked
+                ioUringTcpKeepidle = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPIDLE");
+                //noinspection unchecked
+                ioUringTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
+            } catch (Throwable ignored) {
+                // Ignore
+            }
         }
     }
 
@@ -248,6 +265,15 @@ public final class ChannelUtil {
             ImmutableMap.Builder<ChannelOption<?>, Object> newChannelOptionsBuilder,
             ChannelOption<T> channelOption, T value) {
         newChannelOptionsBuilder.put(channelOption, value);
+    }
+
+    public static String channelPackageName() {
+        return CHANNEL_PACKAGE_NAME;
+    }
+
+    @Nullable
+    public static String incubatorChannelPackageName() {
+        return INCUBATOR_CHANNEL_PACKAGE_NAME;
     }
 
     private ChannelUtil() {}
