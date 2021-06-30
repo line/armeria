@@ -236,6 +236,10 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             return collectingFuture;
         }
 
+        boolean isCollecting() {
+            return collectingFuture != null;
+        }
+
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(Subscription.class)

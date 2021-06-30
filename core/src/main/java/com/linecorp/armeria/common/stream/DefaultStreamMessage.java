@@ -20,6 +20,8 @@ import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -83,7 +85,11 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, State> stateUpdater =
             AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, State.class, "state");
 
+    private static final int INITIAL_CAPACITY = 32;
+
     private final Queue<Object> queue;
+    @Nullable
+    private List<T> collector;
 
     @Nullable
     private Throwable cleanupCause;
@@ -106,7 +112,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      * Creates a new instance.
      */
     public DefaultStreamMessage() {
-        queue = new MpscChunkedArrayQueue<>(32, 1 << 30);
+        queue = new MpscChunkedArrayQueue<>(INITIAL_CAPACITY, 1 << 30);
     }
 
     @Override
@@ -183,6 +189,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 } else {
                     executor.execute(() -> collectAll(collectingFuture, executor, withPooledObjects, false));
                 }
+            } else {
+                // We don't need to invoke onSubscribe() for NoopSubscriber.
+                invokedOnSubscribe = true;
+                notifySubscriber();
             }
         } else {
             final Subscriber<Object> subscriber = this.subscription.subscriber();
@@ -200,7 +210,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     private void collectAll(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
                             boolean withPooledObjects, boolean directExecution) {
         try {
-            collectingFuture.complete(drainAll(withPooledObjects, true));
+            collectingFuture.complete(drainAll(withPooledObjects));
             if (directExecution) {
                 // The collectingFuture is not returned yet. We can guarantee that whenComplete() will be
                 // completed after executing the callbacks of collect() by rescheduling it.
@@ -216,14 +226,9 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         }
     }
 
-    private List<T> drainAll(boolean withPooledObjects, boolean wasClosed) throws Throwable {
-        final int estimatedSize;
-        if (wasClosed) {
-            // ClosedEvent was added to the queue
-            estimatedSize = queue.size() - 1;
-        } else {
-            estimatedSize = queue.size();
-        }
+    private List<T> drainAll(boolean withPooledObjects) throws Throwable {
+        // ClosedEvent was added to the queue
+        final int estimatedSize = queue.size() - 1;
 
         final ImmutableList.Builder<T> builder = ImmutableList.builderWithExpectedSize(estimatedSize);
         CloseEvent closeEvent = null;
@@ -507,6 +512,12 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private boolean notifySubscriberWithElements(SubscriptionImpl subscription) {
+        if (subscription.isCollecting()) {
+            // collect() was called. Should drain queued elements in order to invoke onRemoval() immediately.
+            collectElements(subscription);
+            return true;
+        }
+
         final Subscriber<Object> subscriber = subscription.subscriber();
         if (demand == 0) {
             return false;
@@ -537,6 +548,16 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             inOnNext = false;
         }
         return true;
+    }
+
+    private void collectElements(SubscriptionImpl subscription) {
+        if (collector == null) {
+            collector = new ArrayList<>(INITIAL_CAPACITY);
+        }
+
+        @SuppressWarnings("unchecked")
+        final T o = (T) queue.remove();
+        collector.add(prepareObjectForNotification(o, subscription.withPooledObjects()));
     }
 
     private void notifyAwaitDemandFuture() {
@@ -593,34 +614,33 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             final CompletableFuture<List<T>> collectingFuture =
                     (CompletableFuture<List<T>>) subscription.collectingFuture();
             if (collectingFuture != null) {
-                if (setState(State.CLOSED, State.CLEANUP)) {
-                    if (subscription.needsDirectInvocation()) {
-                        tryCollect(cause, subscription, collectingFuture);
-                    } else {
-                        subscription.executor().execute(() -> {
-                            tryCollect(cause, subscription, collectingFuture);
-                        });
-                    }
-                    return true;
+                if (subscription.needsDirectInvocation()) {
+                    tryCollect(cause, collectingFuture);
+                } else {
+                    subscription.executor().execute(() -> {
+                        tryCollect(cause, collectingFuture);
+                    });
                 }
+                return true;
             }
         }
         return false;
     }
 
-    private void tryCollect(@Nullable Throwable cause, SubscriptionImpl subscription,
-                            CompletableFuture<List<T>> collectingFuture) {
+    private void tryCollect(@Nullable Throwable cause, CompletableFuture<List<T>> collectingFuture) {
         if (cause == null) {
-            try {
-                collectingFuture.complete(drainAll(subscription.withPooledObjects(), false));
-                whenComplete().complete(null);
-            } catch (Throwable cause0) {
-                // drainAll() only raises an exception after cleaning up objects.
-                collectingFuture.completeExceptionally(cause0);
-                whenComplete().completeExceptionally(cause0);
+            notifySubscriber0();
+            if (collector == null) {
+                // No data was produced.
+                collectingFuture.complete(ImmutableList.of());
+            } else {
+                collectingFuture.complete(Collections.unmodifiableList(collector));
             }
+            whenComplete().complete(null);
         } else {
-            cleanupObjects();
+            if (setState(State.CLOSED, State.CLEANUP)) {
+                cleanupObjects();
+            }
             collectingFuture.completeExceptionally(cause);
             whenComplete().completeExceptionally(cause);
         }
