@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class BlogService {
-  private Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
+  private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
 }
 ```
 
@@ -45,16 +45,14 @@ Let's start [mapping the HTTP POST method](/docs/server-annotated-service#mappin
 2. Map this service method with the HTTP POST method by adding the <type://@Post> annotation.
 3. Bind the endpoint `/blogs` to the method.
 
-```java filename=BlogService.java highlight=7
-import com.fasterxml.jackson.core.JsonProcessingException;
+```java filename=BlogService.java highlight=6
 import com.linecorp.armeria.server.annotation.*;
 
 public final class BlogService {
   ...
 
   @Post("/blogs")
-  public void createBlogPost(BlogPost blogPost)
-      throws JsonProcessingException {}
+  public void createBlogPost(BlogPost blogPost) {}
 }
 ```
 
@@ -139,8 +137,7 @@ In this step, assign the [request converter we customized](#write-a-request-conv
 ```java filename=BlogService.java highlight=2
 @Post("/blogs")
 @RequestConverter(BlogPostRequestConverter.class)
-public void createBlogPost(BlogPost blogPost)
-    throws JsonProcessingException {
+public void createBlogPost(BlogPost blogPost) {
   // Implement blog service
 }
 ```
@@ -151,11 +148,10 @@ When the request for creation is received, our request converter creates an inst
 
 Let's store the blog post information in the map by adding line 5, in the `createBlogPost()` method.
 
-```java filename=BlogService.java highlight=5 showlineno=true
+```java filename=BlogService.java highlight=4 showlineno=true
 @Post("/blogs")
 @RequestConverter(BlogPostRequestConverter.class)
-public void createBlogPost(BlogPost blogPost)
-    throws JsonProcessingException {
+public void createBlogPost(BlogPost blogPost) {
   blogPosts.put(blogPost.getId(), blogPost);
 }
 ```
@@ -169,12 +165,11 @@ Let's return a response for blog post creation:
 1. Replace the return type of the `createBlogPost()` method from `void` to `HttpResponse`.
 2. Create and return an HTTP response using Armeria's <type://HttpResponse> with the information of the post created.
 
-  ```java filename=BlogService.java highlight=4,7
+  ```java filename=BlogService.java highlight=4,6
   import com.linecorp.armeria.common.HttpResponse;
   import com.linecorp.armeria.common.HttpStatus;
 
-  public HttpResponse createBlogPost(BlogPost blogPost)
-      throws JsonProcessingException {
+  public HttpResponse createBlogPost(BlogPost blogPost) {
     ...
     return HttpResponse.ofJson(blogPost);
   }
