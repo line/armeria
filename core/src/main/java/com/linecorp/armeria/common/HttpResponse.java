@@ -489,7 +489,6 @@ public interface HttpResponse extends Response, HttpMessage {
             return of(headers, httpData);
         } else {
             final ResponseHeaders newHeaders = headers.toBuilder()
-                                                      .removeAndThen(HttpHeaderNames.CONTENT_TYPE)
                                                       .contentType(MediaType.JSON)
                                                       .build();
             return of(newHeaders, httpData);
