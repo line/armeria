@@ -48,6 +48,20 @@ public final class ChannelUtil {
     private static final String CHANNEL_PACKAGE_NAME;
     @Nullable
     private static final String INCUBATOR_CHANNEL_PACKAGE_NAME;
+
+    static {
+        // Determine the names of the Netty packages.
+        CHANNEL_PACKAGE_NAME = Channel.class.getPackage().getName();
+        final int lastDotIndex = CHANNEL_PACKAGE_NAME.lastIndexOf('.');
+        if (lastDotIndex > 0) {
+            // "shaded.io.netty.incubator.channel"
+            INCUBATOR_CHANNEL_PACKAGE_NAME =
+                    CHANNEL_PACKAGE_NAME.substring(0, lastDotIndex) + ".incubator.channel";
+        } else {
+            INCUBATOR_CHANNEL_PACKAGE_NAME = null;
+        }
+    }
+
     private static final Set<ChannelOption<?>> PROHIBITED_OPTIONS;
     private static final WriteBufferWaterMark DISABLED_WRITE_BUFFER_WATERMARK =
             new WriteBufferWaterMark(0, Integer.MAX_VALUE);
@@ -55,17 +69,6 @@ public final class ChannelUtil {
     static final int TCP_USER_TIMEOUT_BUFFER_MILLIS = 5_000;
 
     static {
-        // Determine the names of the Netty packages.
-        CHANNEL_PACKAGE_NAME = Channel.class.getPackage().getName();
-        final int lastDotIndex = CHANNEL_PACKAGE_NAME.lastIndexOf('.');
-        if (lastDotIndex >= 0) {
-            // "shaded.io.netty.incubator.channel"
-            INCUBATOR_CHANNEL_PACKAGE_NAME =
-                    CHANNEL_PACKAGE_NAME.substring(0, lastDotIndex) + ".incubator.channel";
-        } else {
-            INCUBATOR_CHANNEL_PACKAGE_NAME = null;
-        }
-
         // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
         final ImmutableSet.Builder<ChannelOption<?>> builder = ImmutableSet.builder();
         //noinspection deprecation
