@@ -335,12 +335,6 @@ org.junit.jupiter:
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     - https://junit.org/junit5/docs/5.5.2/api/
 
-# We do not depend on log4j. We just need this to stop dependency-management-plugin from
-# complaining about its bad POM.
-# See: https://github.com/spring-gradle-plugins/dependency-management-plugin/issues/59
-log4j:
-  log4j: { version: '1.2.17' }
-
 me.champeau.jmh:
   jmh-gradle-plugin: { version: '0.6.5' }
 
