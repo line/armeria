@@ -10,6 +10,8 @@ tags:
 level: basic
 ---
 
+import versions from '../../../gen-src/versions.json';
+
 # REST tutorial introduction
 
 Using Armeria's annotations, you can build RESTful services on the go.
@@ -85,23 +87,20 @@ The [sample service code](https://github.com/line/armeria-examples/tree/master/t
 
 Here is a part of the build.gradle file for the sample service. If you are trying the tutorial from scratch, base your file on the sample service's.
 
-```groovy filename=build.gradle
-apply plugin: 'java'
-apply plugin: 'idea'
-apply plugin: 'eclipse'
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-  implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"
-
-  // Logging
-  runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'
-  runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'
-}
-```
+<CodeBlock language="groovy" filename="build.gradle">{`
+  apply plugin: 'java'
+  apply plugin: 'idea'
+  apply plugin: 'eclipse'\n
+  repositories {
+      mavenCentral()
+  }\n
+  dependencies {
+      implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
+      // Logging
+      runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'
+      runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'
+  }
+`}</CodeBlock>
 
 ## Build and run sample service
 
