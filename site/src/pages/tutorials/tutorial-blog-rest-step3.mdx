@@ -195,7 +195,7 @@ When you see the message, "Server has been started", you can try testing service
 3. Call the service method for creating a blog post. Here, we'll use the cURL command.
 
   ```bash
-  $ curl --location --request POST 'localhost:8080/blogs' \
+  $ curl --request POST 'localhost:8080/blogs' \
   -H 'Content-Type: application/json' \
   -d '{"title":"My first blog", "content":"Hello Armeria!"}'
   ```
@@ -203,7 +203,7 @@ When you see the message, "Server has been started", you can try testing service
 4. Check the return value.
 
   ```bash
-  {"id":0,"title":"My first blog","content":"Hello Armeria!","createdAt":1624489646371,"modifiedAt":1624489646371}
+  {"id":0,"title":"My first blog","content":"Hello Armeria!","createdAt":...,"modifiedAt":...}
   ```
 
 You can test this also with Armeria's [Documentation service](/docs/server-docservice), which we'll cover at [Step 7. Add services to server](/tutorials/tutorial-blog-rest-step7).
