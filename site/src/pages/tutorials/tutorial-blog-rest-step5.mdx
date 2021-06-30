@@ -28,7 +28,7 @@ Create a service file, BlogService.java, if you don't have one yet. Skip this st
 
 <Warning>
 
-To test retrieving a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 3. Implement CREATE](/tutorials/tutorial-blog-rest-step3) for instructions.
+To test updating a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 3. Implement CREATE](/tutorials/tutorial-blog-rest-step3) for instructions.
 
 </Warning>
 
@@ -51,16 +51,14 @@ Let's start [mapping the HTTP PUT method](/docs/server-annotated-service#mapping
 2. Map this service method with the HTTP PUT method by adding the <type://@Put> annotation.
 3. Bind the endpoint `/blogs` to the method.
 
-```java filename=BlogService.java highlight=7
-import com.fasterxml.jackson.core.JsonProcessingException;
+```java filename=BlogService.java highlight=6
 import com.linecorp.armeria.server.annotation.*;
 
 public final class BlogService {
   ...
 
   @Put("/blogs")
-  public void updateBlogPost(int id, BlogPost blogPost)
-          throws JsonProcessingException {
+  public void updateBlogPost(int id, BlogPost blogPost) {
     // Update a blog post
   }
 }
@@ -77,8 +75,7 @@ For updating a blog post, let's take a blog post ID (`id`) and new blog post inf
   ```java filename=BlogService.java
   // Instructions 1 to 3
   @Put("/blogs/:id")
-  public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost)
-      throws JsonProcessingException {
+  public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
       // Update a blog post
   }
   ```
@@ -88,7 +85,7 @@ For updating a blog post, let's take a blog post ID (`id`) and new blog post inf
   import com.fasterxml.jackson.annotation.JsonCreator;
   import com.fasterxml.jackson.annotation.JsonProperty;
 
-  final class BlogPost {
+  public final class BlogPost {
     ...
 
     @JsonCreator
@@ -107,7 +104,7 @@ To update a blog post, copy the following code inside the `updateBlogPost()` met
 
 ```java filename=BlogService.java
   @Put("/blogs/:id")
-  public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost){
+  public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
     BlogPost oldBlogPost = blogPosts.get(id);
     // Check if the given blog post exists
     if (oldBlogPost == null) {
@@ -131,16 +128,16 @@ Two possibilities are available for the response. If the blog post to update exi
 Let's return an error for the request to update a blog post that doesn't exist.
 
 1. Replace the return type of the `updateBlogPost()` method from `void` to `HttpResponse`.
-2. Return a response using Armeria's <type://HTTPResponse> containing `HttpStatus.NOT_FOUND`.
+2. Return a response using Armeria's <type://HttpResponse> containing `HttpStatus.NOT_FOUND`.
 
-```java filename=BlogService.java highlight=6,10
+```java filename=BlogService.java highlight=7,10
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 
 public final class BlogService {
   ...
   @Put("/blogs/:id")
-  public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost){
+  public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
     ...
     if (oldBlogPost == null) {
       return HttpResponse.of(HttpStatus.NOT_FOUND);
@@ -157,15 +154,14 @@ Let's return the information updated when the target blog post exists:
 1. Replace the return type of the `updateBlogPost()` method from `void` to `HttpResponse`.
 2. Return a response using Armeria's <type://HttpResponse> containing the updated information of the post.
 
-```java filename=BlogService.java highlight=8,10
+```java filename=BlogService.java highlight=7,9
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 
 public final class BlogService {
   ...
 
   @Put("/blogs/:id")
-  public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost){
+  public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
     ...
     return HttpResponse.ofJson(newBlogPost);
   }
