@@ -82,12 +82,11 @@ jobs:
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
         -PnoLint \
+        -PflakyTest=off \
         -PbuildJdkVersion=15 \
         -PtestJavaVersion=${{ matrix.java }} \
         -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }}
       shell: bash
-      env:
-        FLAKY_TESTS: false
 
     - name: Cleanup Gradle Cache
       # Remove some files from the Gradle cache, so they aren't cached by GitHub Actions.
@@ -181,9 +180,7 @@ jobs:
 
       - name: Run Flaky tests
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -PnoWeb -PnoLint \
-          :consul:build \
-          :zookeeper3:build
+          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel build -PnoWeb -PnoLint -PflakyTest=on
 
       - name: Cleanup Gradle Cache
         run: |

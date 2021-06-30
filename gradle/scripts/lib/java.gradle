@@ -92,7 +92,18 @@ configure(projectsWithFlags('java')) {
         testLogging.exceptionFormat = 'full'
 
         // Use JUnit platform.
-        useJUnitPlatform()
+        def flakyTest = rootProject.findProperty('flakyTest')
+        if (flakyTest == "on") {
+            useJUnitPlatform {
+                includeTags "FLAKY_TEST"
+            }
+        } else if (flakyTest == "off") {
+            useJUnitPlatform {
+                excludeTags "FLAKY_TEST"
+            }
+        } else {
+            useJUnitPlatform()
+        }
 
         // Use a different JRE for testing if necessary.
         if (rootProject.ext.buildJdkVersion != rootProject.ext.testJavaVersion) {
