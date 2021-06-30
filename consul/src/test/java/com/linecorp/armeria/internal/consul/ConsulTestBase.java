@@ -52,6 +52,12 @@ import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+/**
+ * A helper class for testing with an embedded Consul.
+ * Unfortunately, an embedded Consul frequently fails to start in CI environment.
+ * See https://github.com/line/armeria/issues/3514 for details.
+ * Selectively disable Consul tests to suppress the stressful flakiness.
+ */
 @FlakyTest
 public abstract class ConsulTestBase {
 
@@ -81,10 +87,6 @@ public abstract class ConsulTestBase {
 
     @BeforeAll
     static void start() throws Throwable {
-        // An embedded Consul frequently fails to start in CI environment.
-        // See https://github.com/line/armeria/issues/3514 for details.
-        // Selectively disable Consul tests to suppress the stressful flakiness.
-
         // Initialize Consul embedded server for testing
         // This EmbeddedConsul tested with Consul version above 1.4.0
         final ConsulStarterBuilder builder =
