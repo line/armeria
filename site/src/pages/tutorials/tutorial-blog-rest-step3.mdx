@@ -165,9 +165,8 @@ Let's return a response for blog post creation:
 1. Replace the return type of the `createBlogPost()` method from `void` to `HttpResponse`.
 2. Create and return an HTTP response using Armeria's <type://HttpResponse> with the information of the post created.
 
-  ```java filename=BlogService.java highlight=4,6
+  ```java filename=BlogService.java highlight=3,5
   import com.linecorp.armeria.common.HttpResponse;
-  import com.linecorp.armeria.common.HttpStatus;
 
   public HttpResponse createBlogPost(BlogPost blogPost) {
     ...
