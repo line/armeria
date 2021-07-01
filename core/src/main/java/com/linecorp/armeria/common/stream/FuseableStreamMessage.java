@@ -267,9 +267,9 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                     upstream.request(1);
                 }
             } catch (Throwable ex) {
-                StreamMessageUtil.closeOrAbort(item);
+                StreamMessageUtil.closeOrAbort(item, ex);
                 if (result != null && item != result) {
-                    StreamMessageUtil.closeOrAbort(result);
+                    StreamMessageUtil.closeOrAbort(result, ex);
                 }
                 upstream.cancel();
                 onError(ex);
@@ -283,6 +283,7 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
             canceled = true;
+
             if (errorFunction != null) {
                 Throwable transformed;
                 try {
@@ -292,6 +293,8 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                     transformed = new CompositeException(t, cause);
                 }
                 downstream.onError(transformed);
+            } else {
+                downstream.onError(cause);
             }
         }
 
