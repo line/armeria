@@ -82,7 +82,7 @@ jobs:
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
         -PnoLint \
-        -PflakyTest=off \
+        -PflakyTest=false \
         -PbuildJdkVersion=15 \
         -PtestJavaVersion=${{ matrix.java }} \
         -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }}
@@ -180,7 +180,7 @@ jobs:
 
       - name: Run Flaky tests
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel build -PnoWeb -PnoLint -PflakyTest=on
+          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel build -PnoWeb -PnoLint -PflakyTest=true
 
       - name: Cleanup Gradle Cache
         run: |

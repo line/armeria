@@ -169,7 +169,7 @@ task testStreaming(type: Test,
 tasks.shadedTest.finalizedBy tasks.testStreaming
 tasks.check.dependsOn tasks.testStreaming
 
-if (rootProject.findProperty('flakyTest') != 'on') {
+if (rootProject.findProperty('flakyTest') != 'true') {
     // Run the test cases based on reactive-streams-tck only with non-flaky mode
     task testNg(type: Test,
             group: 'Verification',
