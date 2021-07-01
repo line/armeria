@@ -182,6 +182,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         final SubscriptionImpl subscription =
                 new SubscriptionImpl(this, NoopSubscriber.get(), executor, options, collectingFuture);
         if (subscriptionUpdater.compareAndSet(this, null, subscription)) {
+            // We don't need to invoke onSubscribe() for NoopSubscriber.
+            invokedOnSubscribe = true;
             if (setState(State.CLOSED, State.CLEANUP)) {
                 final boolean withPooledObjects = subscription.withPooledObjects();
                 if (executor.inEventLoop()) {
@@ -190,8 +192,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                     executor.execute(() -> collectAll(collectingFuture, executor, withPooledObjects, false));
                 }
             } else {
-                // We don't need to invoke onSubscribe() for NoopSubscriber.
-                invokedOnSubscribe = true;
                 notifySubscriber();
             }
         } else {
@@ -629,6 +629,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     private void tryCollect(@Nullable Throwable cause, CompletableFuture<List<T>> collectingFuture) {
         if (cause == null) {
+            // We don't need to invoke onSubscribe() for collect().
+            invokedOnSubscribe = true;
             notifySubscriber0();
             if (collector == null) {
                 // No data was produced.
