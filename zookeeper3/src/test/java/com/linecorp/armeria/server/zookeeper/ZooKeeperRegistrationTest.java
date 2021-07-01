@@ -151,8 +151,6 @@ class ZooKeeperRegistrationTest {
 
     @Test
     void curatorRegistrationSpec() throws Throwable {
-        assumeThat(System.getenv("FLAKY_TESTS")).isNotEqualTo("false");
-
         final List<Server> servers = startServersWithRetry(false);
         // all servers start and with znode created
         await().untilAsserted(() -> {

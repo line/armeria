@@ -53,8 +53,6 @@ class CuratorServiceDiscoveryCompatibilityTest {
 
     @Test
     void registeredInstancesAreSameWhenUsingServiceDiscoveryImplAndUpdatingListener() throws Throwable {
-        assumeThat(System.getenv("FLAKY_TESTS")).isNotEqualTo("false");
-
         final AtomicReference<ServiceInstance<Void>> registeredRef = new AtomicReference<>();
         final AtomicReference<Server> serverRef = new AtomicReference<>();
         final AtomicReference<CuratorFramework> clientRef = new AtomicReference<>();
