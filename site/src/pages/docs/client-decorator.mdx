@@ -179,14 +179,17 @@ processing is necessary, by wrapping the <type://HttpResponse> in a <type://Filt
 ### Using transforming methods
 
 ```java
+
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.HttpData;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 ClientBuilder cb = Clients.builder("http");
 cb.decorator((delegate, ctx, req) -> {
-    final MutableBoolean initialHttpData = new MutableBoolean(true);
+    final AtomicBoolean initialHttpData = new AtomicBoolean(true);
     return delegate
         .execute(ctx, req)
         .mapHeaders(headers -> headers.toBuilder().add("x-foo", "foobar").build())
@@ -194,8 +197,8 @@ cb.decorator((delegate, ctx, req) -> {
         .mapInformational(informationalHeader -> ...)
         .mapData((httpData) -> {
             HttpData result = httpData;
-            if (initialHttpData.isTrue()) {
-                initialHttpData.setValue(false);
+            if (initialHttpData.get()) {
+                initialHttpData.set(false);
                 byte[] ascii = "{\"foo\": \"foobar\",".getBytes(StandardCharsets.US_ASCII);
                 byte[] combined = Arrays.copyOf(ascii, ascii.length + httpData.length() - 1);
                 System.arraycopy(httpData.array(), 1, combined, ascii.length, httpData.length());
@@ -210,7 +213,7 @@ cb.decorator((delegate, ctx, req) -> {
 
 A couple of caveats to note here.
 * Informational response headers may occur zero or more times.
-* <type://HttpData> will almost always just be a part of the whole response data 
+* <type://HttpData> will almost always just be a part of the whole response data
   unless the response has been passed through <type://HttpResponse#aggregate()>.
 
 ```java
@@ -223,6 +226,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 ClientBuilder cb = Clients.builder(...);
 cb.decorator((delegate, ctx, req) -> {
