@@ -54,7 +54,10 @@ public final class ChannelUtil {
         CHANNEL_PACKAGE_NAME = Channel.class.getPackage().getName();
         final int lastDotIndex = CHANNEL_PACKAGE_NAME.lastIndexOf('.');
         if (lastDotIndex > 0) {
-            // "shaded.io.netty.incubator.channel"
+            // CHANNEL_PACKAGE_NAME => INCUBATOR_CHANNEL_PACKAGE_NAME
+            // ----------------------+-------------------------------
+            // io.netty.channel      | io.netty.incubator.channel
+            // shaded.netty.channel  | shaded.netty.incubator.channel
             INCUBATOR_CHANNEL_PACKAGE_NAME =
                     CHANNEL_PACKAGE_NAME.substring(0, lastDotIndex) + ".incubator.channel";
         } else {
