@@ -22,7 +22,6 @@ import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallbac
 
 import java.time.Duration;
 import java.util.Date;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
@@ -32,8 +31,6 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Joiner;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -484,16 +481,6 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             }
         } else {
             originalRes.abort();
-        }
-    }
-
-    private static class RedirectLoopsException extends RuntimeException {
-        private static final long serialVersionUID = -2969770339558298361L;
-
-        private static final Joiner joiner = Joiner.on(';');
-
-        RedirectLoopsException(String originalPath, Set<String> paths) {
-            super("The initial request: " + originalPath + ", redirects: " + joiner.join(paths));
         }
     }
 }

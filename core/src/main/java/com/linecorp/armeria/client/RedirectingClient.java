@@ -29,8 +29,6 @@ import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Joiner;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -187,8 +185,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             // Redirect loop!
             final Set<String> redirectPaths = redirectCtx.redirectPaths();
             assert redirectPaths != null;
-            final RedirectLoopsException exception =
-                    new RedirectLoopsException(originalPath, redirectPaths);
+            final RedirectLoopsException exception = new RedirectLoopsException(originalPath, redirectPaths);
             abortResponse(response, derivedCtx, exception);
             handleException(ctx, reqDuplicator, responseFuture, exception, false);
             return;
@@ -245,20 +242,6 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             originalRes.abort(cause);
         } else {
             originalRes.abort();
-        }
-    }
-
-    private static class RedirectLoopsException extends RuntimeException {
-        private static final long serialVersionUID = -2969770339558298361L;
-
-        private static final Joiner joiner = Joiner.on(';');
-
-        RedirectLoopsException(String originalPath) {
-            super("The request path: " + originalPath);
-        }
-
-        RedirectLoopsException(String originalPath, Set<String> paths) {
-            super("The initial request path: " + originalPath + ", redirect paths: " + joiner.join(paths));
         }
     }
 

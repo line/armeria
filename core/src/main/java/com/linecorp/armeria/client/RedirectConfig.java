@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
+
 import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
@@ -87,5 +89,13 @@ public final class RedirectConfig {
     @Nullable
     public BiPredicate<ClientRequestContext, String> domainFilter() {
         return predicate;
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper(this).add("redirectRule", redirectRule)
+                                   .add("maxRedirects", maxRedirects)
+                                   .add("predicate", predicate)
+                                   .toString();
     }
 }
