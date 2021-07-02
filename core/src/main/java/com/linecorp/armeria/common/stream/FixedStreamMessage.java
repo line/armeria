@@ -59,6 +59,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     private boolean withPooledObjects;
     private boolean notifyCancellation;
     private boolean completed;
+    private boolean errorProduced;
 
     @Nullable
     private volatile EventExecutor executor;
@@ -130,14 +131,13 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
             final Throwable abortCause = this.abortCause;
             if (abortCause != null) {
-                onError0(abortCause);
+                onError(abortCause);
             } else if (isEmpty()) {
                 onComplete();
             }
         } catch (Throwable t) {
-            completed = true;
             cleanupObjects(t);
-            onError0(t);
+            onError(t);
             throwIfFatal(t);
             logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
                         subscriber, t);
@@ -289,7 +289,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
         if (completed) {
             return;
         }
-        completed = true;
 
         if (cause == null) {
             cause = AbortedStreamException.get();
@@ -302,7 +301,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
             completionFuture.completeExceptionally(cause);
         } else {
             // Subscribed already
-            onError0(cause);
+            onError(cause);
         }
     }
 }

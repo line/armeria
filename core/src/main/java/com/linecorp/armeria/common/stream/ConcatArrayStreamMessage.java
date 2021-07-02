@@ -45,6 +45,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.internal.common.stream.SubscriptionArbiter;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -219,10 +220,11 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
         public void cancel() {
             if (cancelledUpdater.compareAndSet(this, 0, 1)) {
                 super.cancel();
-                abortUnsubscribedSources(CancelledSubscriptionException.get());
+                final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
+                abortUnsubscribedSources(cause);
 
                 if (containsNotifyCancellation(options)) {
-                    downstream.onError(CancelledSubscriptionException.get());
+                    downstream.onError(cause);
                 }
                 downstream = NoopSubscriber.get();
             }

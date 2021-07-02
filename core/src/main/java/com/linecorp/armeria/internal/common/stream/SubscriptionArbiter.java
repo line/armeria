@@ -30,7 +30,7 @@
  *
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.internal.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
@@ -43,8 +43,6 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscription;
 
 import com.google.common.math.LongMath;
-
-import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 /**
  * Allows changing the subscription, tracking requests and item
@@ -60,7 +58,7 @@ import com.linecorp.armeria.internal.common.stream.NoopSubscription;
  *     and when to signal it.
  * </p>
  */
-class SubscriptionArbiter implements Subscription {
+public class SubscriptionArbiter implements Subscription {
 
     // Forked from https://github.com/oracle/helidon/blob/b64be21a5f5c7bbdecd6acf35339c6ee15da0af6/common/reactive/src/main/java/io/helidon/common/reactive/SubscriptionArbiter.java
 
@@ -154,7 +152,7 @@ class SubscriptionArbiter implements Subscription {
      * Set the new subscription to resume with.
      * @param subscription the new subscription
      */
-    final void setUpstreamSubscription(Subscription subscription) {
+    public final void setUpstreamSubscription(Subscription subscription) {
         requireNonNull(subscription, "subscription");
         for (;;) {
             final Subscription previous = newSubscription;
@@ -176,12 +174,12 @@ class SubscriptionArbiter implements Subscription {
      * before switching to the next subscription.
      * @param n the number of items produced, positive
      */
-    final void produced(long n) {
+    public final void produced(long n) {
         addRequest(newProducedUpdater, n);
         drain();
     }
 
-    final void drain() {
+    private void drain() {
         if (wipUpdater.getAndIncrement(this) != 0) {
             return;
         }

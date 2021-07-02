@@ -29,6 +29,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.internal.common.stream.SubscriptionArbiter;
 
 import io.netty.util.concurrent.EventExecutor;
 

@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
+import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -464,9 +465,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Creates a new failed HTTP response.
      */
     static HttpResponse ofFailure(Throwable cause) {
-        final HttpResponseWriter res = streaming();
-        res.close(cause);
-        return res;
+        return new AbortedHttpResponse(cause);
     }
 
     @Override
@@ -628,5 +627,33 @@ public interface HttpResponse extends Response, HttpMessage {
             return obj;
         });
         return of(stream);
+    }
+
+    /**
+     * Recovers a failed {@link HttpResponse} by switching to a returned fallback {@link StreamMessage}
+     * when any error occurs before an {@link HttpHeaders} is written.
+     * Note that the failed {@link HttpResponse} cannot be recovered from an error if an {@link HttpHeaders}
+     * was written already.
+     *
+     * Example: <pre>{@code
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
+     * // The failed HttpResponse will be recovered by the fallback function.
+     * HttpResponse recovered = response.recover(cause -> HttpResponse.of("Fallback"));
+     * assert recovered.aggregate().join().contentUtf8().equals("Fallback");
+     *
+     * HttpResponseWriter response = HttpResponse.streaming();
+     * response.write(ResponseHeaders.of(HttpStatus.OK));
+     * response.write(HttpData.ofUtf8("Hello"));
+     * // HTTP headers and body were written already before an error occurred.
+     * response.close(new IllegalStateException("Oops..."));
+     * // The fallback function will not be applied for the failed HttpResponse.
+     * HttpResponse notRecovered = response.recover(cause-> HttpResponse.of("Fallback"));
+     * // The IllegalStateException closing the original HttpResponse will be raised.
+     * notRecovered.aggregate().join();
+     * }</pre>
+     */
+    default HttpResponse recover(Function<? super Throwable, ? extends HttpResponse> function) {
+        requireNonNull(function, "function");
+        return of(new RecoverableStreamMessage<>(this, function, /* allowResuming */ false));
     }
 }

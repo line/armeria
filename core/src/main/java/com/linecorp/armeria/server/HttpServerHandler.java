@@ -37,7 +37,6 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -386,6 +385,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
+            final ExceptionHandler exceptionHandler = config.exceptionHandler();
             HttpResponse serviceResponse;
             Throwable raisedException = null;
             try {
@@ -395,16 +395,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 if (cause instanceof HttpResponseException) {
                     serviceResponse = ((HttpResponseException) cause).httpResponse();
                 } else {
-                    final AggregatedHttpResponse convertedResponse =
-                            config.exceptionHandler().convert(reqCtx, cause);
-                    if (convertedResponse != null) {
-                        serviceResponse = convertedResponse.toHttpResponse();
-                    } else {
-                        final AggregatedHttpResponse defaultResponse =
-                                ExceptionHandler.ofDefault().convert(reqCtx, cause);
-                        assert defaultResponse != null;
-                        serviceResponse = defaultResponse.toHttpResponse();
-                    }
+                    serviceResponse = exceptionHandler.convert(reqCtx, cause);
                     if (!(cause instanceof HttpStatusException)) {
                         // Do not set HttpStatusException to the raisedException because we don't want to log it
                         // as a cause.
@@ -419,6 +410,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     req.close();
                 }
             }
+
+            serviceResponse = serviceResponse.recover(cause -> {
+                // Recover a failed response with an exception handler.
+                if (cause instanceof HttpResponseException) {
+                    final HttpResponse httpResponse = ((HttpResponseException) cause).httpResponse();
+                    return httpResponse.recover(cause0 -> exceptionHandler.convert(reqCtx, cause));
+                } else {
+                    return exceptionHandler.convert(reqCtx, cause);
+                }
+            });
             final HttpResponse res = serviceResponse;
             final Throwable primaryCause = raisedException;
             final EventLoop eventLoop = channel.eventLoop();
