@@ -33,8 +33,8 @@ final class RedirectRuleUtil {
                     // https://datatracker.ietf.org/doc/html/rfc7231#section-6.4.4
                     //
                     // However, I(minwoox) didn't put this logic into RedirectingClient but here in the default
-                    // redirect rule so that a user can send the request what he/she wants by implementing
-                    // his/her own RedirectRule.
+                    // redirect rule so that users can send the request what they want by implementing
+                    // their own RedirectRule.
                     // curl also allows it. https://curl.se/docs/manpage.html#--post303
                     builder.method(HttpMethod.GET);
                 }

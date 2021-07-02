@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -41,76 +40,45 @@ class RedirectingClientTest {
             sb.tlsSelfSigned();
             sb.http(0);
             sb.https(0);
-            sb.service("/foo", (ctx, req) -> {
-                final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.MOVED_PERMANENTLY,
-                                                                   HttpHeaderNames.LOCATION, "/fooRedirect1");
-                return HttpResponse.of(headers);
-            }).service("/fooRedirect1", (ctx, req) -> {
-                final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.MOVED_PERMANENTLY,
-                                                                   HttpHeaderNames.LOCATION, "/fooRedirect2");
-                return HttpResponse.of(headers);
-            }).service("/fooRedirect2", (ctx, req) -> HttpResponse.of("fooRedirect2"));
+            sb.service("/foo", (ctx, req) -> HttpResponse.ofRedirect("/fooRedirect1"))
+              .service("/fooRedirect1", (ctx, req) -> HttpResponse.ofRedirect("/fooRedirect2"))
+              .service("/fooRedirect2", (ctx, req) -> HttpResponse.of("fooRedirection2"));
 
-            sb.service("/https", (ctx, req) -> {
-                final ResponseHeaders headers =
-                        ResponseHeaders.of(HttpStatus.MOVED_PERMANENTLY,
-                                           HttpHeaderNames.LOCATION,
-                                           "https://127.0.0.1:" + server.httpsPort() + "/httpsRedirect");
-                return HttpResponse.of(headers);
-            }).service("/httpsRedirect", (ctx, req) -> {
-                assertThat(ctx.sessionProtocol()).isSameAs(SessionProtocol.H2);
-                return HttpResponse.of("httpsRedirection");
-            });
+            sb.service("/https", (ctx, req) -> HttpResponse.ofRedirect(
+                    "https://127.0.0.1:" + server.httpsPort() + "/httpsRedirect"))
+              .service("/httpsRedirect", (ctx, req) -> {
+                  assertThat(ctx.sessionProtocol()).isSameAs(SessionProtocol.H2);
+                  return HttpResponse.of("httpsRedirection");
+              });
 
             sb.service("/seeOther", (ctx, req) -> HttpResponse.from(
                     req.aggregate().thenApply(aggregatedReq -> {
                         assertThat(aggregatedReq.contentUtf8()).isEqualTo("hello!");
-                        final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.SEE_OTHER,
-                                                                           HttpHeaderNames.LOCATION,
-                                                                           "/seeOtherRedirect");
-                        return HttpResponse.of(headers);
+                        return HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, "/seeOtherRedirect");
                     })))
               .service("/seeOtherRedirect", (ctx, req) -> {
                   assertThat(ctx.method()).isSameAs(HttpMethod.GET);
                   return HttpResponse.of("seeOtherRedirection");
               });
 
-            sb.service("/anotherDomain", (ctx, req) -> {
-                final ResponseHeaders headers =
-                        ResponseHeaders.of(HttpStatus.MOVED_PERMANENTLY, HttpHeaderNames.LOCATION,
-                                           "http://foo.com:" + server.httpPort() + "/anotherDomainRedirect");
-                return HttpResponse.of(headers);
-            });
+            sb.service("/anotherDomain", (ctx, req) -> HttpResponse.ofRedirect(
+                    "http://foo.com:" + server.httpPort() + "/anotherDomainRedirect"));
             sb.virtualHost("foo.com").service("/anotherDomainRedirect",
                                               (ctx, req) -> HttpResponse.of("anotherDomainRedirection"));
 
-            sb.service("/removeDotSegments/foo", (ctx, req) -> {
-                final ResponseHeaders headers =
-                        ResponseHeaders.of(HttpStatus.MOVED_PERMANENTLY,
-                                           HttpHeaderNames.LOCATION, "./bar");
-                return HttpResponse.of(headers);
-            }).service("/removeDotSegments/bar", (ctx, req) -> HttpResponse.of("removeDotSegmentsRedirection"));
+            sb.service("/removeDotSegments/foo", (ctx, req) -> HttpResponse.ofRedirect("./bar"))
+              .service("/removeDotSegments/bar", (ctx, req) -> HttpResponse.of("removeDotSegmentsRedirection"));
 
-            sb.service("/loop", (ctx, req) -> {
-                final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.MULTIPLE_CHOICES,
-                                                                   HttpHeaderNames.LOCATION, "/loop1");
-                return HttpResponse.of(headers);
-            }).service("/loop1", (ctx, req) -> {
-                final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.FOUND,
-                                                                   HttpHeaderNames.LOCATION, "/loop2");
-                return HttpResponse.of(headers);
-            }).service("/loop2", (ctx, req) -> {
-                final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.TEMPORARY_REDIRECT,
-                                                                   HttpHeaderNames.LOCATION, "/loop");
-                return HttpResponse.of(headers);
-            });
+            sb.service("/loop", (ctx, req) -> HttpResponse.ofRedirect("loop1"))
+              .service("/loop1", (ctx, req) -> HttpResponse.ofRedirect("loop2"))
+              .service("/loop2", (ctx, req) -> HttpResponse.ofRedirect("loop"));
         }
     };
 
     @Test
     void redirect_successWithRetry() {
         final AggregatedHttpResponse res = sendRequest(2);
-        assertThat(res.contentUtf8()).contains("fooRedirect2");
+        assertThat(res.contentUtf8()).isEqualTo("fooRedirection2");
     }
 
     private static AggregatedHttpResponse sendRequest(int maxRedirects) {
@@ -125,7 +93,8 @@ class RedirectingClientTest {
     @Test
     void redirect_failExceedingTotalAttempts() {
         final AggregatedHttpResponse res = sendRequest(1);
-        assertThat(res.status()).isSameAs(HttpStatus.MOVED_PERMANENTLY);
+        assertThat(res.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
+        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/fooRedirect2");
     }
 
     @Test
@@ -135,7 +104,7 @@ class RedirectingClientTest {
                                           .enableRedirect()
                                           .build();
         final AggregatedHttpResponse join = client.get("/https").aggregate().join();
-        assertThat(join.contentUtf8()).contains("httpsRedirection");
+        assertThat(join.contentUtf8()).isEqualTo("httpsRedirection");
     }
 
     @Test
@@ -144,7 +113,7 @@ class RedirectingClientTest {
                                           .enableRedirect()
                                           .build();
         final AggregatedHttpResponse join = client.post("/seeOther", "hello!").aggregate().join();
-        assertThat(join.contentUtf8()).contains("seeOtherRedirection");
+        assertThat(join.contentUtf8()).isEqualTo("seeOtherRedirection");
     }
 
     @Test
@@ -154,7 +123,7 @@ class RedirectingClientTest {
                                     .enableRedirect()
                                     .build();
         AggregatedHttpResponse join = client.get("/anotherDomain").aggregate().join();
-        assertThat(join.status()).isSameAs(HttpStatus.MOVED_PERMANENTLY);
+        assertThat(join.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
         assertThat(join.headers().get(HttpHeaderNames.LOCATION)).contains("/anotherDomainRedirect");
 
         client = WebClient.builder(server.httpUri())
@@ -185,7 +154,7 @@ class RedirectingClientTest {
                                           .enableRedirect()
                                           .build();
         final AggregatedHttpResponse join = client.get("/removeDotSegments/foo").aggregate().join();
-        assertThat(join.contentUtf8()).contains("removeDotSegmentsRedirection");
+        assertThat(join.contentUtf8()).isEqualTo("removeDotSegmentsRedirection");
     }
 
     @Test
