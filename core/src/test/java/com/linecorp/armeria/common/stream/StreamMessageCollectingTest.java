@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 
 class StreamMessageCollectingTest {
 
@@ -330,6 +331,29 @@ class StreamMessageCollectingTest {
           .hasCause(cause);
 
         assertRefCount(data, 0);
+    }
+
+    @Test
+    void shouldCallOnRemovalImmediately() {
+        final AtomicInteger removed = new AtomicInteger();
+        final DefaultStreamMessage<Integer> streamMessage = new DefaultStreamMessage<Integer>() {
+            @Override
+            protected void onRemoval(Integer obj) {
+                removed.addAndGet(obj);
+            }
+        };
+
+        streamMessage.write(1);
+        assertThat(removed).hasValue(0);
+        streamMessage.write(2);
+        assertThat(removed).hasValue(0);
+        final CompletableFuture<List<Integer>> collected =
+                streamMessage.collect(ImmediateEventExecutor.INSTANCE);
+        assertThat(removed).hasValue(3);
+        streamMessage.write(3);
+        assertThat(removed).hasValue(6);
+        streamMessage.close();
+        assertThat(collected.join()).containsExactly(1, 2, 3);
     }
 
     private static StreamMessage<HttpData> newStreamMessage(HttpData[] httpData, boolean fixedStream) {
