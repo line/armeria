@@ -99,43 +99,38 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      */
     @Override
     public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
-        final CompletableFuture<GrantedOAuth2AccessToken> future = new CompletableFuture<>();
         final CompletableFuture<GrantedOAuth2AccessToken> tokenFuture = this.tokenFuture;
-
-        tokenFuture.handle((token, ignored) -> {
+        GrantedOAuth2AccessToken token = null;
+        if (!tokenFuture.isDone()) {
+            return tokenFuture;
+        }
+        if (!tokenFuture.isCompletedExceptionally()) {
+            token = tokenFuture.join();
             if (isValidToken(token)) {
-                future.complete(token);
-                return null;
+                return tokenFuture;
             }
-            if (tokenFutureUpdater.compareAndSet(this, tokenFuture, future)) {
-                if (token == null && loadTokenFunc != null) {
-                    loadTokenFunc.get().handle((storedToken, unused) -> {
-                        if (isValidToken(storedToken)) {
-                            future.complete(storedToken);
-                            return null;
-                        }
-                        issueAccessToken(token, future);
-                        return null;
-                    });
+        }
+
+        final CompletableFuture<GrantedOAuth2AccessToken> future = new CompletableFuture<>();
+        if (!tokenFutureUpdater.compareAndSet(this, tokenFuture, future)) {
+            return this.tokenFuture;
+        }
+        if (token == null && loadTokenFunc != null) {
+            loadTokenFunc.get().handle((storedToken, unused) -> {
+                if (isValidToken(storedToken)) {
+                    future.complete(storedToken);
                     return null;
                 }
-                if (token != null && token.isRefreshable()) {
-                    refreshAccessToken(token, future);
-                    return null;
-                }
-                issueAccessToken(token, future);
-                return null;
-            }
-            this.tokenFuture.handle((newToken, cause) -> {
-                if (cause != null) {
-                    future.completeExceptionally(cause);
-                } else {
-                    future.complete(newToken);
-                }
+                issueAccessToken(null, future);
                 return null;
             });
-            return null;
-        });
+            return future;
+        }
+        if (token != null && token.isRefreshable()) {
+            refreshAccessToken(token, future);
+            return future;
+        }
+        issueAccessToken(token, future);
         return future;
     }
 
