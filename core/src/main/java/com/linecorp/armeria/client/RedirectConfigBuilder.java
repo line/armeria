@@ -77,7 +77,7 @@ public final class RedirectConfigBuilder {
     }
 
     /**
-     * Sets the domains that a {@link WebClient} executes automatic redirection.
+     * Sets the domains that are allowed for automatic redirection.
      * If the {@link WebClient} is created without a base URI, the {@link WebClient} executes
      * automatic redirection for all domains by default. If the {@link WebClient} is created with a base URI,
      * automatic redirection is executed for the domain of the base URI by default.
@@ -87,7 +87,7 @@ public final class RedirectConfigBuilder {
     }
 
     /**
-     * Sets the domains that a {@link WebClient} executes automatic redirection.
+     * Sets the domains that are allowed for automatic redirection.
      * If the {@link WebClient} is created without a base URI, the {@link WebClient} executes
      * automatic redirection for all domains by default. If the {@link WebClient} is created with a base URI,
      * automatic redirection is executed for the domain of the base URI by default.
@@ -105,7 +105,7 @@ public final class RedirectConfigBuilder {
     }
 
     /**
-     * Sets the {@link BiPredicate} that returns {@code true} if the redirect URI is allowed for
+     * Sets the {@link BiPredicate} that returns {@code true} if the given redirect URI is allowed for
      * automatic redirection.
      * If the {@link WebClient} is created without a base URI, the {@link WebClient} executes
      * automatic redirection for all domains by default. If the {@link WebClient} is created with a base URI,
