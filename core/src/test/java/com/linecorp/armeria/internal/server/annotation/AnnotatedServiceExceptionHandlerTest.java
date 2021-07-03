@@ -84,9 +84,7 @@ class AnnotatedServiceExceptionHandlerTest {
     @BeforeEach
     void setUp() {
         sctx = null;
-        client = WebClient.builder(server.httpUri())
-                          .responseTimeoutMillis(0)
-                          .build();
+        client = WebClient.of(server.httpUri());
     }
 
     @Test

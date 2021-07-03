@@ -185,7 +185,7 @@ class RecoverableStreamMessageTest {
     @Test
     void disallowResuming_nonEmtpyStream() {
         // Resume is disabled.
-        // The fallback function should be not invoked if some items has been written before an error is raised.
+        // The fallback function should be not invoked if some items are written before an error occurs.
         final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
         stream.write(1);
         stream.write(2);

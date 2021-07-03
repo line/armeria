@@ -641,14 +641,14 @@ public interface HttpResponse extends Response, HttpMessage {
      * HttpResponse recovered = response.recover(cause -> HttpResponse.of("Fallback"));
      * assert recovered.aggregate().join().contentUtf8().equals("Fallback");
      *
+     * // As HTTP headers and body were written already before an error occurred,
+     * // the fallback function could not be applied for the failed HttpResponse.
      * HttpResponseWriter response = HttpResponse.streaming();
      * response.write(ResponseHeaders.of(HttpStatus.OK));
      * response.write(HttpData.ofUtf8("Hello"));
-     * // HTTP headers and body were written already before an error occurred.
      * response.close(new IllegalStateException("Oops..."));
-     * // The fallback function will not be applied for the failed HttpResponse.
      * HttpResponse notRecovered = response.recover(cause-> HttpResponse.of("Fallback"));
-     * // The IllegalStateException will be raised.
+     * // The IllegalStateException will be raised even though a fallback function was added.
      * notRecovered.aggregate().join();
      * }</pre>
      */

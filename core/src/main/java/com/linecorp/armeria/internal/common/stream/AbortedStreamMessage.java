@@ -26,6 +26,7 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -35,7 +36,7 @@ public class AbortedStreamMessage<T> implements StreamMessage<T>, Subscription {
     private static final AtomicIntegerFieldUpdater<AbortedStreamMessage> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AbortedStreamMessage.class, "subscribed");
 
-    private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
     private final Throwable cause;
     private volatile int subscribed;
 
