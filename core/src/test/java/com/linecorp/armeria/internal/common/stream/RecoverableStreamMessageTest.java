@@ -74,7 +74,6 @@ class RecoverableStreamMessageTest {
         assertThat(recoverable.collect().join()).contains(1, 2, 3, 4, 5, 6);
     }
 
-
     @CsvSource({ "true", "false" })
     @ParameterizedTest
     void shouldNotResumeOnAbortion(boolean abort) {
@@ -255,7 +254,9 @@ class RecoverableStreamMessageTest {
         final HttpResponseWriter failedResponse2 = HttpResponse.streaming();
         failedResponse2.write(ResponseHeaders.of(HttpStatus.OK));
         final HttpResponse transformed =
-                failedResponse2.mapHeaders(headers -> { throw ClosedStreamException.get(); });
+                failedResponse2.mapHeaders(headers -> {
+                    throw ClosedStreamException.get();
+                });
         final HttpResponse recovered2 = transformed.recover(cause -> HttpResponse.of("fallback"));
         final AggregatedHttpResponse response2 = recovered2.aggregate().join();
         assertThat(response2.headers().status()).isEqualTo(HttpStatus.OK);

@@ -385,5 +385,4 @@ class AnnotatedServiceExceptionHandlerTest {
             return response;
         }
     }
-
 }

@@ -635,7 +635,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Note that the failed {@link HttpResponse} cannot be recovered from an error if an {@link HttpHeaders}
      * was written already.
      *
-     * Example: <pre>{@code
+     * <p>Example: <pre>{@code
      * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
      * // The failed HttpResponse will be recovered by the fallback function.
      * HttpResponse recovered = response.recover(cause -> HttpResponse.of("Fallback"));
@@ -648,7 +648,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * response.close(new IllegalStateException("Oops..."));
      * // The fallback function will not be applied for the failed HttpResponse.
      * HttpResponse notRecovered = response.recover(cause-> HttpResponse.of("Fallback"));
-     * // The IllegalStateException closing the original HttpResponse will be raised.
+     * // The IllegalStateException will be raised.
      * notRecovered.aggregate().join();
      * }</pre>
      */

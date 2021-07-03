@@ -412,7 +412,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }
 
             serviceResponse = serviceResponse.recover(cause -> {
-                // Recover a failed response with an exception handler.
+                // Recover a failed response with the default exception handler.
                 if (cause instanceof HttpResponseException) {
                     final HttpResponse httpResponse = ((HttpResponseException) cause).httpResponse();
                     return httpResponse.recover(cause0 -> exceptionHandler.convert(reqCtx, cause));

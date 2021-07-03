@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public class RecoverableStreamMessage<T> implements StreamMessage<T> {
+public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(RecoverableStreamMessage.class);
 

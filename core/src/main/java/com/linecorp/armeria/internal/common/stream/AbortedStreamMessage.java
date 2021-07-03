@@ -80,7 +80,6 @@ public class AbortedStreamMessage<T> implements StreamMessage<T>, Subscription {
         } else {
             executor.execute(() -> subscribe0(subscriber));
         }
-
     }
 
     private void subscribe0(Subscriber<? super T> subscriber) {
