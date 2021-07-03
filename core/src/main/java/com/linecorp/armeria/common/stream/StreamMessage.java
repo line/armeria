@@ -532,7 +532,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Resumes a failed {@link StreamMessage} by subscribing to a returned fallback {@link StreamMessage}
      * when any error occurs.
      *
-     * <p>Example: <pre>{@code
+     * <p>Example:<pre>{@code
      * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
      * stream.write(1);
      * stream.write(2);

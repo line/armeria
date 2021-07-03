@@ -26,8 +26,6 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
@@ -41,8 +39,6 @@ import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import io.netty.util.concurrent.EventExecutor;
 
 public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
-
-    private static final Logger logger = LoggerFactory.getLogger(RecoverableStreamMessage.class);
 
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
@@ -118,17 +114,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
     private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
                             SubscriptionOption[] options) {
-        final StreamMessage<T> publisher;
-        final StreamMessage<T> fallbackStream = this.fallbackStream;
-        if (fallbackStream != null) {
-            // upstream was aborted already.
-            publisher = fallbackStream;
-        } else {
-            publisher = upstream;
-        }
-
-        logger.info("publisher.subscribe: publisher: {}, subscriber: {}", publisher, subscriber);
-        publisher.subscribe(new RecoverableSubscriber(subscriber, executor, options), executor, options);
+        upstream.subscribe(new RecoverableSubscriber(subscriber, executor, options), executor, options);
     }
 
     @Override

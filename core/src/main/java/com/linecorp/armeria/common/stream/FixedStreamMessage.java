@@ -59,7 +59,6 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
     private boolean withPooledObjects;
     private boolean notifyCancellation;
     private boolean completed;
-    private boolean errorProduced;
 
     @Nullable
     private volatile EventExecutor executor;
