@@ -119,16 +119,13 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public void abort() {
-        final EventExecutor executor = this.executor;
-        if (executor == null || executor.inEventLoop()) {
-            abort0(AbortedStreamException.get());
-        } else {
-            executor.execute(() -> abort0(AbortedStreamException.get()));
-        }
+        abort(AbortedStreamException.get());
     }
 
     @Override
     public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+
         final EventExecutor executor = this.executor;
         if (executor == null || executor.inEventLoop()) {
             abort0(cause);
@@ -240,15 +237,26 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void cancel() {
-            if (!whenComplete().isDone()) {
-                super.cancel();
-                final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
-                whenComplete().completeExceptionally(cause);
-                if (containsNotifyCancellation(options)) {
-                    downstream.onError(cause);
-                }
-                downstream = NoopSubscriber.get();
+            if (executor.inEventLoop()) {
+                cancel0();
+            } else {
+                executor.execute(this::cancel0);
             }
+        }
+
+        private void cancel0() {
+            if (complete) {
+                return;
+            }
+            complete = true;
+
+            super.cancel();
+            final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
+            if (containsNotifyCancellation(options)) {
+                downstream.onError(cause);
+            }
+            downstream = NoopSubscriber.get();
+            completionFuture.completeExceptionally(cause);
         }
     }
 }

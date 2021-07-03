@@ -221,12 +221,11 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
             if (cancelledUpdater.compareAndSet(this, 0, 1)) {
                 super.cancel();
                 final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
-                abortUnsubscribedSources(cause);
-
                 if (containsNotifyCancellation(options)) {
                     downstream.onError(cause);
                 }
                 downstream = NoopSubscriber.get();
+                abortUnsubscribedSources(cause);
             }
         }
 
