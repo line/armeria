@@ -39,7 +39,8 @@ import io.netty.channel.EventLoop;
 /**
  * Microbenchmarks of {@link StreamMessage Stream Messages}.
  */
-@Fork(jvmArgsAppend = { EventLoopJmhExecutor.JVM_ARG_1, EventLoopJmhExecutor.JVM_ARG_2 })
+@Fork(jvmArgsAppend = { EventLoopJmhExecutor.JVM_ARG_1, EventLoopJmhExecutor.JVM_ARG_2,
+                        "-Dcom.linecorp.armeria.reportBlockedEventLoop=false"})
 @State(Scope.Benchmark)
 public class StreamMessageBenchmark {
 
