@@ -54,22 +54,22 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
     private final Duration refreshBefore;
 
     @Nullable
-    private final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc;
+    private final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider;
 
     @Nullable
-    private final Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc;
+    private final Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer;
 
     private volatile CompletableFuture<GrantedOAuth2AccessToken> tokenFuture =
             CompletableFuture.completedFuture(null);
 
     AbstractOAuth2AuthorizationGrant(
             RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
-            @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc,
-            @Nullable Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc) {
+            @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider,
+            @Nullable Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {
         this.refreshRequest = requireNonNull(refreshRequest, "refreshRequest");
         this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
-        this.loadTokenFunc = loadTokenFunc;
-        this.saveTokenFunc = saveTokenFunc;
+        this.fallbackTokenProvider = fallbackTokenProvider;
+        this.newTokenConsumer = newTokenConsumer;
     }
 
     /**
@@ -115,8 +115,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
         if (!tokenFutureUpdater.compareAndSet(this, tokenFuture, future)) {
             return this.tokenFuture;
         }
-        if (token == null && loadTokenFunc != null) {
-            loadTokenFunc.get().handle((storedToken, unused) -> {
+        if (token == null && fallbackTokenProvider != null) {
+            fallbackTokenProvider.get().handle((storedToken, unused) -> {
                 if (isValidToken(storedToken)) {
                     future.complete(storedToken);
                     return null;
@@ -144,8 +144,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
             if (cause != null) {
                 future.completeExceptionally(cause);
             } else {
-                if (saveTokenFunc != null) {
-                    saveTokenFunc.accept(newToken);
+                if (newTokenConsumer != null) {
+                    newTokenConsumer.accept(newToken);
                 }
                 future.complete(newToken);
             }
@@ -165,8 +165,8 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
                 future.completeExceptionally(cause);
                 return null;
             }
-            if (saveTokenFunc != null) {
-                saveTokenFunc.accept(newToken);
+            if (newTokenConsumer != null) {
+                newTokenConsumer.accept(newToken);
             }
             future.complete(newToken);
             return null;

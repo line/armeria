@@ -49,16 +49,10 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     private Duration refreshBefore = DEFAULT_REFRESH_BEFORE;
 
     @Nullable
-    private Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc;
+    private Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider;
 
     @Nullable
-    private Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc;
-
-    @Nullable
-    private Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier;
-
-    @Nullable
-    private Consumer<? super GrantedOAuth2AccessToken> tokenConsumer;
+    private Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer;
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
@@ -164,32 +158,44 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     }
 
     /**
-     * An optional {@link Supplier} to load access token from a persistent storage asynchronously.
+     * An optional {@link Supplier} to acquire an access token before requesting it to the authorization server.
+     * If the provided {@link GrantedOAuth2AccessToken} is valid the client doesn't request a new token.
+     * <p>
+     * This is supposed to be used with {@link #newTokenConsumer(Consumer)} and gets executed
+     * in the following cases:
+     * <ul>
+     *     <li>Before the first attempt to acquire an access token.
+     *     <li>Before a subsequent attempt after token issue or refresh failure.
+     * </ul>
+     * @see #newTokenConsumer(Consumer)
      */
     @SuppressWarnings("unchecked")
-    public final T loadTokenFunc(
-            Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc) {
-        this.loadTokenFunc = requireNonNull(loadTokenFunc, "loadTokenFunc");
+    public final T fallbackTokenProvider(
+            Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider) {
+        this.fallbackTokenProvider = requireNonNull(fallbackTokenProvider, "fallbackTokenProvider");
         return (T) this;
     }
 
     @Nullable
-    public final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc() {
-        return loadTokenFunc;
+    public final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider() {
+        return fallbackTokenProvider;
     }
 
     /**
-     * An optional {@link Consumer} to save newly issued access token in a persistent storage asynchronously.
+     * An optional hook which gets executed whenever a new token is issued.
+     * <p>
+     * This can be used in combination with {@link #fallbackTokenProvider(Supplier)} to store a newly issued
+     * access token which will then be retrieved by invoking {@link #fallbackTokenProvider}.
      */
     @SuppressWarnings("unchecked")
-    public final T saveTokenFunc(Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc) {
-        this.saveTokenFunc = requireNonNull(saveTokenFunc, "saveTokenFunc");
+    public final T newTokenConsumer(Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {
+        this.newTokenConsumer = requireNonNull(newTokenConsumer, "newTokenConsumer");
         return (T) this;
     }
 
     @Nullable
-    public final Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc() {
-        return saveTokenFunc;
+    public final Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer() {
+        return newTokenConsumer;
     }
 
     abstract AbstractAccessTokenRequest buildObtainRequest(

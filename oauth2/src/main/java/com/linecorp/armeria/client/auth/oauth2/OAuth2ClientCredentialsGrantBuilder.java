@@ -59,6 +59,6 @@ public final class OAuth2ClientCredentialsGrantBuilder
     public OAuth2ClientCredentialsGrant build() {
         return new OAuth2ClientCredentialsGrant((ClientCredentialsTokenRequest) buildObtainRequest(),
                                                 buildRefreshRequest(), refreshBefore(),
-                                                loadTokenFunc(), saveTokenFunc());
+                                                fallbackTokenProvider(), newTokenConsumer());
     }
 }

@@ -56,9 +56,9 @@ public final class OAuth2ResourceOwnerPasswordCredentialsGrant extends AbstractO
     OAuth2ResourceOwnerPasswordCredentialsGrant(
             ResourceOwnerPasswordCredentialsTokenRequest obtainRequest,
             RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
-            @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> loadTokenFunc,
-            @Nullable Consumer<? super GrantedOAuth2AccessToken> saveTokenFunc) {
-        super(refreshRequest, refreshBefore, loadTokenFunc, saveTokenFunc);
+            @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider,
+            @Nullable Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {
+        super(refreshRequest, refreshBefore, fallbackTokenProvider, newTokenConsumer);
         this.obtainRequest = requireNonNull(obtainRequest);
     }
 
