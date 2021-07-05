@@ -90,7 +90,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        final InnerSubscriber<T> innerSubscriber = new InnerSubscriber<>(subscriber, options, this);
+        final InnerSubscriber<T> innerSubscriber = new InnerSubscriber<>(subscriber, options, executor, this);
         final OuterSubscriber<T> outerSubscriber = new OuterSubscriber<>(innerSubscriber, executor);
         if (outerSubscriberUpdater.compareAndSet(this, null, outerSubscriber)) {
             subscriber.onSubscribe(innerSubscriber);
@@ -210,8 +210,9 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         // Happen-Before is guaranteed in cancel() because 'cancelled' was written before.
         private boolean error;
 
-        InnerSubscriber(Subscriber<? super T> downstream, SubscriptionOption[] options,
+        InnerSubscriber(Subscriber<? super T> downstream, SubscriptionOption[] options, EventExecutor executor,
                         ConcatPublisherStreamMessage<T> publisher) {
+            super(executor);
             this.downstream = downstream;
             this.options = options;
             this.publisher = publisher;

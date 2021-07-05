@@ -155,6 +155,7 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
 
         ConcatArraySubscriber(Subscriber<? super T> downstream, List<StreamMessage<? extends T>> sources,
                               EventExecutor executor, SubscriptionOption... options) {
+            super(executor);
             this.downstream = downstream;
             this.sources = sources;
             this.executor = executor;

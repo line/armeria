@@ -155,6 +155,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
         private RecoverableSubscriber(Subscriber<? super T> downstream, EventExecutor executor,
                                       SubscriptionOption[] options) {
+            super(executor);
             //noinspection unchecked
             this.downstream = (Subscriber<T>) downstream;
             this.executor = executor;
