@@ -116,13 +116,13 @@ public class SubscriptionArbiter implements Subscription {
     @Override
     public void cancel() {
         if (executor.inEventLoop()) {
-            cancel0();
+            doCancel();
         } else {
             executor.execute(this::cancel);
         }
     }
 
-    private void cancel0() {
+    final void doCancel() {
         final NoopSubscription noopSubscription = NoopSubscription.get();
         if (newSubscription == null) {
             newSubscription = noopSubscription;

@@ -251,7 +251,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
             }
             complete = true;
 
-            super.cancel();
+            doCancel();
             final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
             if (containsNotifyCancellation(options)) {
                 downstream.onError(cause);
