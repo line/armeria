@@ -67,8 +67,7 @@ Let's retrieve a single post:
 
 ```java filename=BlogService.java showlineno=true
 @Get("/blogs/:id")
-public void getBlogPost(@Param int id)
-    throws JsonProcessingException {
+public void getBlogPost(@Param int id) {
   // Retrieve a single post
 }
 ```
