@@ -7,8 +7,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -34,7 +32,7 @@ public final class BlogService {
      */
     @Post("/blogs")
     @RequestConverter(BlogPostRequestConverter.class)
-    public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingException {
+    public HttpResponse createBlogPost(BlogPost blogPost) {
         // Use a map to store the blog. In real world, you should use a database.
         blogPosts.put(blogPost.getId(), blogPost);
 
@@ -48,7 +46,7 @@ public final class BlogService {
      * Retrieves a {@link BlogPost} whose {@link BlogPost#getId()} is the {@code :id} in the path parameter.
      */
     @Get("/blogs/:id")
-    public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
+    public HttpResponse getBlogPost(@Param int id) {
         final BlogPost blogPost = blogPosts.get(id);
         return HttpResponse.ofJson(blogPost);
     }
@@ -72,8 +70,7 @@ public final class BlogService {
      * Updates the {@link BlogPost} whose {@link BlogPost#getId()} is the {@code :id} in the path parameter.
      */
     @Put("/blogs/:id")
-    public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost)
-            throws JsonProcessingException {
+    public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
         final BlogPost oldBlogPost = blogPosts.get(id);
         if (oldBlogPost == null) {
             return HttpResponse.of(HttpStatus.NOT_FOUND);

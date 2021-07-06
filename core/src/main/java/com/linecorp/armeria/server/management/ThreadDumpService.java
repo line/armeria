@@ -21,8 +21,6 @@ import java.lang.management.ThreadInfo;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Streams;
 
@@ -38,7 +36,6 @@ enum ThreadDumpService implements HttpService {
 
     INSTANCE;
 
-    private static final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
     private static final Splitter ACCEPT_SPLITTER = Splitter.on(',').trimResults();
 
     @Override
