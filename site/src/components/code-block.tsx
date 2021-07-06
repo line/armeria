@@ -70,11 +70,10 @@ function filterLanguage(language?: string) {
   return isSupported ? language : 'none';
 }
 
-function getLineStyle(show?: any){
-  if(show === 1 || show === 'true')
-    return {marginRight: '0.5em', minWidth: '1.4em'};
-  else
-    return {display: 'none'};
+function getLineStyle(show?: any) {
+  if (show === 1 || show === 'true')
+    return { marginRight: '0.5em', minWidth: '1.4em' };
+  return { display: 'none' };
 }
 
 // Override some CSS properties from the Prism style.
@@ -102,26 +101,26 @@ const newPrismTheme = Object.entries(prismTheme).reduce(
 );
 
 const lineHighlights = {
-    backgroundColor: '#616161',
-    display: "block",
-    width:"760px"
-}
+  backgroundColor: '#616161',
+  display: 'block',
+  width: '760px',
+};
 
 function getTargetLines(lines: string): string[] {
-  const range = (start, end, length = end-start+1 ) =>
+  const range = (start, end, length = end - start + 1) =>
     Array.from({ length }, (_, i) => start + i);
 
-  let targetLines = lines.split(',').reduce((acc, cur) => {
-      if (!cur.includes('-')) {
-        acc.push(parseInt(cur));
-        return acc;
-      }
-      const [start, end] = cur.split('-');
-      acc.push(...range(parseInt(start),parseInt(end)));
+  const targetLines = lines.split(',').reduce((acc, cur) => {
+    if (!cur.includes('-')) {
+      acc.push(parseInt(cur));
       return acc;
-    }, []);
+    }
+    const [start, end] = cur.split('-');
+    acc.push(...range(parseInt(start), parseInt(end)));
+    return acc;
+  }, []);
 
- return targetLines;
+  return targetLines;
 }
 
 interface CodeBlockProps extends SyntaxHighlighterProps {
@@ -148,11 +147,10 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
     return null;
   }
   const applyHighlightStyle = (lineNumber) => {
-    if(lineNumber != 0 && targetLines.includes(lineNumber)){
-      return { style: lineHighlights }
+    if (lineNumber != 0 && targetLines.includes(lineNumber)) {
+      return { style: lineHighlights };
     }
-    else
-      return {};
+    return {};
   };
 
   return (
@@ -180,7 +178,7 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
         language={filterLanguage(props.language)}
         showLineNumbers={targetLines.length > 0 ? true : props.showlineno}
         lineNumberStyle={getLineStyle(props.showlineno)}
-        lineProps={lineNumber => applyHighlightStyle(lineNumber)}
+        lineProps={(lineNumber) => applyHighlightStyle(lineNumber)}
       >
         {code}
       </Prism>

@@ -89,10 +89,12 @@ const mdxComponents: any = {
     const language =
       props.children.props.className?.replace(/language-/, '') || 'none';
     return (
-      <CodeBlock language={language}
+      <CodeBlock
+        language={language}
         filename={props.children.props.filename}
         highlight={props.children.props.highlight}
-        showlineno={props.children.props.showlineno}>
+        showlineno={props.children.props.showlineno}
+      >
         {props.children.props.children}
       </CodeBlock>
     );
@@ -333,13 +335,15 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
               (tocItem: any, i: number) => {
                 const href = `${mdxNode.href}${i !== 0 ? tocItem.url : ''}`;
 
-                const menuName = `${props.menuTitle && mdxNode.frontmatter !== undefined
-                                    ? mdxNode.frontmatter.menuTitle !== null
-                                      ? (mdxNode.frontmatter.order !== null 
-                                        ? mdxNode.frontmatter.order + '. ':'')
-                                          + mdxNode.frontmatter.menuTitle
-                                      : tocItem.title
-                                    : tocItem.title}`
+                const menuName = `${
+                  props.menuTitle && mdxNode.frontmatter !== undefined
+                    ? mdxNode.frontmatter.menuTitle !== null
+                      ? (mdxNode.frontmatter.order !== null
+                          ? `${mdxNode.frontmatter.order}. `
+                          : '') + mdxNode.frontmatter.menuTitle
+                      : tocItem.title
+                    : tocItem.title
+                }`;
                 return (
                   <li
                     key={href}

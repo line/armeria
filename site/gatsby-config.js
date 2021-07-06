@@ -122,8 +122,8 @@ module.exports = {
           {
             resolve: 'gatsby-remark-plantuml-lite',
             options: {
-              imageType: 'svg'
-            }
+              imageType: 'svg',
+            },
           },
           {
             resolve: require.resolve(
@@ -177,10 +177,10 @@ module.exports = {
     {
       resolve: `gatsby-source-filesystem`,
       options: {
-          name: 'tutorials',
-          path: path.resolve(__dirname, 'src', 'pages', 'tutorials'),
+        name: 'tutorials',
+        path: path.resolve(__dirname, 'src', 'pages', 'tutorials'),
       },
-  },
+    },
     {
       resolve: `gatsby-source-filesystem`,
       options: {

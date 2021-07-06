@@ -15,7 +15,9 @@ const TutorialLayout: React.FC<TutorialLayoutProps> = (props) => {
     allMdx: { nodes: candidateMdxNodes },
   } = useStaticQuery(graphql`
     query {
-      allMdx(filter: { fileAbsolutePath: { glob: "**/src/pages/tutorials/**" } }) {
+      allMdx(
+        filter: { fileAbsolutePath: { glob: "**/src/pages/tutorials/**" } }
+      ) {
         nodes {
           tableOfContents(maxDepth: 1)
           excerpt(pruneLength: 256, truncate: true)
@@ -26,8 +28,8 @@ const TutorialLayout: React.FC<TutorialLayoutProps> = (props) => {
             }
           }
           frontmatter {
-             menuTitle
-             order
+            menuTitle
+            order
           }
         }
       }
