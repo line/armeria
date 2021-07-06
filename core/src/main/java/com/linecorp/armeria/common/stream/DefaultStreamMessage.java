@@ -184,16 +184,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         if (subscriptionUpdater.compareAndSet(this, null, subscription)) {
             // We don't need to invoke onSubscribe() for NoopSubscriber.
             invokedOnSubscribe = true;
-            if (setState(State.CLOSED, State.CLEANUP)) {
-                final boolean withPooledObjects = subscription.withPooledObjects();
-                if (executor.inEventLoop()) {
-                    collectAll(collectingFuture, executor, withPooledObjects, true);
-                } else {
-                    executor.execute(() -> collectAll(collectingFuture, executor, withPooledObjects, false));
-                }
-            } else {
-                notifySubscriber();
-            }
+            notifySubscriber();
         } else {
             final Subscriber<Object> subscriber = this.subscription.subscriber();
             final Throwable cause;
@@ -205,77 +196,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             collectingFuture.completeExceptionally(cause);
         }
         return collectingFuture;
-    }
-
-    private void collectAll(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
-                            boolean withPooledObjects, boolean directExecution) {
-        try {
-            collectingFuture.complete(drainAll(withPooledObjects));
-            if (directExecution) {
-                // The collectingFuture is not returned yet. We can guarantee that whenComplete() will be
-                // completed after executing the callbacks of collect() by rescheduling it.
-                executor.execute(() -> whenComplete().complete(null));
-            } else {
-                // We don't know whether the collectingFuture is returned or not at the moment. Just complete
-                // whenComplete() immediately.
-                whenComplete().complete(null);
-            }
-        } catch (Throwable throwable) {
-            collectingFuture.completeExceptionally(throwable);
-            whenComplete().completeExceptionally(throwable);
-        }
-    }
-
-    private List<T> drainAll(boolean withPooledObjects) throws Throwable {
-        // ClosedEvent was added to the queue
-        final int estimatedSize = queue.size() - 1;
-
-        final ImmutableList.Builder<T> builder = ImmutableList.builderWithExpectedSize(estimatedSize);
-        CloseEvent closeEvent = null;
-        Throwable closeCause = null;
-        for (;;) {
-            final Object o = queue.poll();
-            if (o == null) {
-                break;
-            }
-
-            if (o instanceof CloseEvent) {
-                closeEvent = (CloseEvent) o;
-                final Throwable cause = closeEvent.cause;
-                if (cause != null && closeCause == null) {
-                    closeCause = cause;
-                }
-                continue;
-            }
-
-            if (o instanceof AwaitDemandFuture) {
-                final AwaitDemandFuture future = (AwaitDemandFuture) o;
-                if (closeEvent == null) {
-                    future.complete(null);
-                } else {
-                    if (closeCause == null) {
-                        closeCause = ClosedStreamException.get();
-                    }
-                    future.completeExceptionally(closeCause);
-                }
-                continue;
-            }
-
-            @SuppressWarnings("unchecked")
-            T t = (T) o;
-            t = prepareObjectForNotification(t, withPooledObjects);
-            builder.add(t);
-        }
-
-        final List<T> objs = builder.build();
-        if (closeEvent == null || closeEvent == SUCCESSFUL_CLOSE) {
-            return objs;
-        } else {
-            for (T obj: objs) {
-                StreamMessageUtil.closeOrAbort(obj, closeCause);
-            }
-            throw closeCause;
-        }
     }
 
     /**
@@ -397,7 +317,11 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     private void notifySubscriberOfCloseEvent0(SubscriptionImpl subscription, CloseEvent event) {
         try {
-            event.notifySubscriber(subscription, whenComplete());
+            if (subscription.isCollecting()) {
+                finishCollecting(event.cause, subscription);
+            } else {
+                event.notifySubscriber(subscription, whenComplete());
+            }
         } finally {
             subscription.clearSubscriber();
             Throwable cause = event.cause;
@@ -550,6 +474,24 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         return true;
     }
 
+    private void finishCollecting(@Nullable Throwable cause, SubscriptionImpl subscription) {
+        @SuppressWarnings("unchecked")
+        final CompletableFuture<List<T>> collectingFuture =
+                (CompletableFuture<List<T>>) subscription.collectingFuture();
+        if (cause == null) {
+            if (collector == null) {
+                // No data was produced.
+                collectingFuture.complete(ImmutableList.of());
+            } else {
+                collectingFuture.complete(Collections.unmodifiableList(collector));
+            }
+            whenComplete().complete(null);
+        } else {
+            collectingFuture.completeExceptionally(cause);
+            whenComplete().completeExceptionally(cause);
+        }
+    }
+
     private void collectElements(SubscriptionImpl subscription) {
         if (collector == null) {
             collector = new ArrayList<>(INITIAL_CAPACITY);
@@ -575,9 +517,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     @Override
     public final void close() {
         if (setState(State.OPEN, State.CLOSED)) {
-            if (!tryCollect(null)) {
-                addObjectOrEvent(SUCCESSFUL_CLOSE);
-            }
+            addObjectOrEvent(SUCCESSFUL_CLOSE);
         }
     }
 
@@ -599,53 +539,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      */
     protected final boolean tryClose(Throwable cause) {
         if (setState(State.OPEN, State.CLOSED)) {
-            if (!tryCollect(cause)) {
-                addObjectOrEvent(new CloseEvent(cause));
-            }
+            addObjectOrEvent(new CloseEvent(cause));
             return true;
         }
         return false;
-    }
-
-    private boolean tryCollect(@Nullable Throwable cause) {
-        final SubscriptionImpl subscription = this.subscription;
-        if (subscription != null) {
-            @SuppressWarnings("unchecked")
-            final CompletableFuture<List<T>> collectingFuture =
-                    (CompletableFuture<List<T>>) subscription.collectingFuture();
-            if (collectingFuture != null) {
-                if (subscription.needsDirectInvocation()) {
-                    tryCollect(cause, collectingFuture);
-                } else {
-                    subscription.executor().execute(() -> {
-                        tryCollect(cause, collectingFuture);
-                    });
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void tryCollect(@Nullable Throwable cause, CompletableFuture<List<T>> collectingFuture) {
-        if (cause == null) {
-            // We don't need to invoke onSubscribe() for collect().
-            invokedOnSubscribe = true;
-            notifySubscriber0();
-            if (collector == null) {
-                // No data was produced.
-                collectingFuture.complete(ImmutableList.of());
-            } else {
-                collectingFuture.complete(Collections.unmodifiableList(collector));
-            }
-            whenComplete().complete(null);
-        } else {
-            if (setState(State.CLOSED, State.CLEANUP)) {
-                cleanupObjects();
-            }
-            collectingFuture.completeExceptionally(cause);
-            whenComplete().completeExceptionally(cause);
-        }
     }
 
     private boolean setState(State oldState, State newState) {
