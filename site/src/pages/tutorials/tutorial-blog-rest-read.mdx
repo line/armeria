@@ -153,8 +153,7 @@ To return a response for getting a single post:
 
 ```java filename=BlogService.java highlight=2,6
 @Get("/blogs/:id")
-public HttpResponse getBlogPost(@Param int id)
-    throws JsonProcessingException {
+public HttpResponse getBlogPost(@Param int id) {
   ...
 
   return HttpResponse.ofJson(blogPost);
