@@ -167,7 +167,7 @@ public void deleteBlogPost(@Param int id) { ... }
 We've already handled returning the not found error in the [exception handling section](#handle-exceptions). Here, we'll return a response for successful deletion.
 
 1. Replace the return type of the `deleteBlogPost()` method from `void` to `HttpResponse`.
-2. Return a response using Armeria's <type://HttpResponse>, containing `HttpStatus.NO_CONTENT`.
+2. Return a response using Armeria's <type://HttpResponse>, containing <type://HttpStatus#NO_CONTENT>.
 
 ```java filename=BlogService.java highlight=9,11
 import com.linecorp.armeria.common.HttpResponse;
