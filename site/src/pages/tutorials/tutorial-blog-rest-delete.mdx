@@ -41,7 +41,7 @@ Let's start [mapping the HTTP DELETE method](/docs/server-annotated-service#mapp
 3. Bind the endpoint `/blogs` to the method.
 
 ```java filename=BlogService.java highlight=6
-import com.linecorp.armeria.server.annotation.*;
+import com.linecorp.armeria.server.annotation.Delete;
 
 public final class BlogService {
   ...
@@ -60,10 +60,16 @@ Let's take the blog post ID (`id`) as a path parameter for identifying the post 
 1. Take in the ID value as a path parameter by adding `/blogs/:id` to the <type://@Delete> annotation.
 2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method by annotating the parameter with <type://@Param>.
 
-  ```java filename=BlogService.java
-  @Delete("/blogs/:id")
-  public void deleteBlogPost(@Param int id) {
-    // Delete a blog post
+  ```java filename=BlogService.java highlight=6-7
+  import com.linecorp.armeria.server.annotation.Param;
+
+  public final class BlogService {
+    ...
+
+    @Delete("/blogs/:id")
+    public void deleteBlogPost(@Param int id) {
+      // Delete a blog post
+    }
   }
   ```
 
@@ -106,18 +112,19 @@ What if there is no such post to delete? We can check if the blog exists before 
   ```
 
 2. Create an exception handler for the blog service:
-    1. Create a file, BadRequestExceptionHandler.java.
-    2. In the file, declare a custom exception handler implementing Armeria's <type://ExceptionHandlerFunction> interface.
-    ```java filename=BadRequestExceptionHandler.java
-    package example.armeria.server.blog;
+   1. Create a file, BadRequestExceptionHandler.java.
+   2. In the file, declare a custom exception handler implementing Armeria's <type://ExceptionHandlerFunction> interface.
 
-    import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-    import com.fasterxml.jackson.databind.ObjectMapper;
-
-    public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
-      private static final ObjectMapper mapper = new ObjectMapper();
-    }
-    ```
+   ```java filename=BadRequestExceptionHandler.java
+   package example.armeria.server.blog;
+   
+   import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
+   import com.fasterxml.jackson.databind.ObjectMapper;
+   
+   public class BadRequestExceptionHandler implements ExceptionHandlerFunction {
+   private static final ObjectMapper mapper = new ObjectMapper();
+   }
+   ```
 
 3. Implement your own exception handler by overriding the default `handleException()` method. Add a code block for handling the `IllegalArgumentException` thrown. For this tutorial, return a BAD REQUEST as the response.
 
@@ -155,11 +162,17 @@ What if there is no such post to delete? We can check if the blog exists before 
 
 With real services, accessing and operating on a database takes time. We need to hand over such blocking tasks to [blocking task executor](/docs/server-annotated-service#specifying-a-blocking-task-executor) so that the EventLoop isn't blocked. There are a few options to implement this; we'll annotate our service method with the <type://@Blocking>.
 
-```java filename=BlogService.java highlight=1
-@Blocking
-@Delete("/blogs/:id")
-@ExceptionHandler(BadRequestExceptionHandler.class)
-public void deleteBlogPost(@Param int id) { ... }
+```java filename=BlogService.java highlight=6
+import com.linecorp.armeria.server.annotation.Blocking;
+
+public final class BlogService {
+  ...
+
+  @Blocking
+  @Delete("/blogs/:id")
+  @ExceptionHandler(BadRequestExceptionHandler.class)
+  public void deleteBlogPost(@Param int id) { ... }
+}
 ```
 
 ## 4. Return response
@@ -195,22 +208,21 @@ Let's test deleting a blog post.
   ```bash
   $ curl --request POST 'localhost:8080/blogs' \
   -H 'Content-Type: application/json' \
-  -d '{"title":"Test blog for retrieving", "content":"Create to read."}'
+  -d '{"title":"First post for testing", "content":"Test deletion."}'
   ```
 
   ```bash
   $ curl --request POST 'localhost:8080/blogs' \
   -H 'Content-Type: application/json' \
-  -d '{"title":"Second blog for test retrieving", "content":"Create to read for the second time"}'
+  -d '{"title":"Second post for testing", "content":"Test deleting a post."}'
   ```
 
   For each command, you'll get a response similar to the following.
 
   ```bash
-  {"id":0,"title":"Test blog for retrieving","content":"Create to read.","createdAt":...,"modifiedAt":...}
+  {"id":0,"title":"First post for testing","content":"Test deletion.","createdAt":...,"modifiedAt":...}
 
-  {"id":1,"title":"Second blog for test retrieving","content":"Create to read for the second time","createdAt":...,
-  "modifiedAt":...}
+  {"id":1,"title":"Second post for testing","content":"Test deleting a post.","createdAt":...,"modifiedAt":...}
   ```
 
 3. Let's delete the second blog with the ID, `0`. Since our service method doesn't return anything, you won't see any response.
@@ -228,7 +240,7 @@ Let's test deleting a blog post.
   The response contains only one blog post. We can tell that the blog post with the ID `0` has been removed.
 
   ```bash
-  {"id":1,"title":"Second blog for test retrieving","content":"Create to read for the second time","createdAt":...,"modifiedAt":...}
+  {"id":1,"title":"Second post for testing","content":"Test deleting a post.","createdAt":...,"modifiedAt":...}
   ```
 You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/tutorial-blog-rest-add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
 

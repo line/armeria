@@ -32,7 +32,7 @@ Let's start [mapping the HTTP POST method](/docs/server-annotated-service#mappin
 3. Bind the endpoint `/blogs` to the method.
 
 ```java filename=BlogService.java highlight=6
-import com.linecorp.armeria.server.annotation.*;
+import com.linecorp.armeria.server.annotation.Post;
 
 public final class BlogService {
   ...
@@ -44,8 +44,7 @@ public final class BlogService {
 
 ## 2. Handle parameters
 
-Let's receive blog post information through a request body. Armeria's [request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object)
-converts request parameters in HTTP messages into Java objects for you. In the request converter, we define what keys of a JSON object to map with what properties of a Java object.
+Let's receive blog post information through a request body. Armeria's [request converter](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) converts request parameters in HTTP messages into Java objects for you. In the request converter, we define what keys of a JSON object to map with what properties of a Java object.
 
 Let's first [write a request converter](#write-a-request-converter) and then [register the request converter](#register-a-request-converter) to the service method.
 
@@ -98,6 +97,7 @@ We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but
 
   final class BlogPostRequestConverter implements RequestConverterFunction {
     ...
+
     @Override
     public Object convertRequest(ServiceRequestContext ctx,
       AggregatedHttpRequest request, Class<?> expectedResultType,
@@ -120,11 +120,17 @@ We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but
 
 In this step, assign the [request converter we customized](#write-a-request-converter) to our service method. Annotate the service method with <type://@RequestConverter> and specify the <type://RequestConverterFunction> class as `BlogPostRequestConverter.class`.
 
-```java filename=BlogService.java highlight=2
-@Post("/blogs")
-@RequestConverter(BlogPostRequestConverter.class)
-public void createBlogPost(BlogPost blogPost) {
-  // Implement blog service
+```java filename=BlogService.java highlight=7
+import com.linecorp.armeria.server.annotation.RequestConverter;
+
+public final class BlogService {
+   ...
+   
+   @Post("/blogs")
+   @RequestConverter(BlogPostRequestConverter.class)
+   public void createBlogPost(BlogPost blogPost) {
+     // Implement blog service
+   }
 }
 ```
 
@@ -152,12 +158,14 @@ Let's return a response for blog post creation:
 1. Replace the return type of the `createBlogPost()` method from `void` to `HttpResponse`.
 2. Create and return an HTTP response using Armeria's <type://HttpResponse> with the information of the post created.
 
-  ```java filename=BlogService.java highlight=3,5
+  ```java filename=BlogService.java highlight=5,7
   import com.linecorp.armeria.common.HttpResponse;
 
-  public HttpResponse createBlogPost(BlogPost blogPost) {
+  public final class BlogService {
     ...
-    return HttpResponse.ofJson(blogPost);
+    public HttpResponse createBlogPost(BlogPost blogPost) {
+    ...
+      return HttpResponse.ofJson(blogPost);
   }
   ```
 

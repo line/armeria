@@ -35,23 +35,52 @@ instructions.
 
 Let's start [mapping the HTTP GET method](/docs/server-annotated-service#mapping-http-service-methods) with our service method:
 
+<Tabs>
+<TabPane tab="Single post" key="1">
+
+Map the HTTP GET method for retrieving a single post:
+
 1. Declare a service method `getBlogPost()` in the class `BlogService`.
 2. Map this service method with the HTTP GET method by adding the <type://@Get> annotation as follows.
 3. Bind the endpoint `/blogs` to the method.
 
-```java filename=BlogService.java highlight=7
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.linecorp.armeria.server.annotation.*;
+  ```java filename=BlogService.java highlight=6
+  import com.linecorp.armeria.server.annotation.Get;
 
-public final class BlogService {
-  ...
+  public final class BlogService {
+    ...
 
-  @Get("/blogs")
-  public void getBlogPost(int id) {
-    // Retrieve a single post
+    @Get("/blogs")
+    public void getBlogPost(int id) {
+      // Retrieve a single post
+    }
   }
-}
-```
+  ```
+
+</TabPane>
+<TabPane tab="Multiple posts" key="2">
+
+Map the HTTP GET method for retrieving multiple posts:
+
+1. Declare a service method `getBlogPosts()` in the class `BlogService`.
+2. Map this service method with the HTTP GET method by adding the <type://@Get> annotation as follows.
+3. Bind the endpoint `/blogs` to the method.
+
+  ```java filename=BlogService.java highlight=6
+  import com.linecorp.armeria.server.annotation.Get;
+
+  public final class BlogService {
+    ...
+
+    @Get("/blogs")
+    public void getBlogPosts(boolean descending) {
+      // Retrieve multiple posts
+    }
+  }
+  ```
+
+</TabPane>
+</Tabs>
 
 ## 2. Handle parameters
 
@@ -60,38 +89,49 @@ Take in information through _path_ and _query_ parameters for retrieving blog po
 <Tabs defaultActiveKey="1">
 <TabPane tab="Single post" key="1">
 
-Let's retrieve a single post:
+Let's handle parameters for retrieving a single post:
 
-1. To take in a path parameter, add `/:id` to the <type://@Get> annotation's parameter as in line 1.
-2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method, annotate the parameter with <type://@Param> as in line 2.
+1. To take in a path parameter, add `/:id` to the <type://@Get> annotation's parameter as in line 6.
+2. [Inject the path parameter](/docs/server-annotated-service#parameter-injection) to the service method, annotate the parameter with <type://@Param> as in line 7.
 
 ```java filename=BlogService.java showlineno=true
-@Get("/blogs/:id")
-public void getBlogPost(@Param int id) {
-  // Retrieve a single post
+import com.linecorp.armeria.server.annotation.Param;
+
+public final class BlogService {
+ ...
+
+ @Get("/blogs/:id")
+ public void getBlogPost(@Param int id) {
+   // Retrieve a single post
+ }
 }
 ```
 
 </TabPane>
 <TabPane tab="Multiple posts" key="2">
 
-Let's retrieve multiple blog posts:
+Let's handle parameters for retrieving multiple posts:
 
 1. Specify the endpoint for the service using the <type://@Get> annotation.
-2. [Inject the parameter](/docs/server-annotated-service#parameter-injection) by annotating the parameter `descending` with <type://@Param> as in line 2.
+2. [Inject the parameter](/docs/server-annotated-service#parameter-injection) by annotating the parameter `descending` with <type://@Param> as in line 8.
 3. Set the default sorting order to descending by annotating the parameter `descending` with <type://@Default>, with its parameter as `"true"`.
 
-```java filename=BlogService.java showlineno=true
-@Get("/blogs")
-public void getBlogPosts(@Param @Default("true") boolean descending) {
-  // Retrieve multiple posts
-}
-```
+  ```java filename=BlogService.java showlineno=true
+  import com.linecorp.armeria.server.annotation.Param;
+  import com.linecorp.armeria.server.annotation.Default;
+
+  public final class BlogService {
+    ...
+
+    @Get("/blogs")
+    public void getBlogPosts(@Param @Default("true") boolean descending) {
+      // Retrieve multiple posts
+    }
+  }
+  ```
 
 </TabPane>
-
 </Tabs>
-
 
 ## 3. Implement service code
 
@@ -102,10 +142,9 @@ In this step, write the code required for service itself.
 
 To retrieve a single blog post information, copy the following code inside the `getBlogPost()` method.
 
-```java filename=BlogService.java highlight=4
+```java filename=BlogService.java highlight=3
 @Get("/blogs")
-public void getBlogPost(@Param int id)
-    throws JsonProcessingException {
+public void getBlogPost(@Param int id) {
   BlogPost blogPost = blogPosts.get(id);
 }
 ```
@@ -151,12 +190,16 @@ To return a response for getting a single post:
 1. Replace the return type of the `getBlogPost()` method from `void` to `HttpResponse`.
 2. Return a response using Armeria's <type://HttpResponse> containing the content of the blog post retrieved.
 
-```java filename=BlogService.java highlight=2,6
-@Get("/blogs/:id")
-public HttpResponse getBlogPost(@Param int id) {
-  ...
+```java filename=BlogService.java highlight=5,8
+import com.linecorp.armeria.common.HttpResponse;
 
-  return HttpResponse.ofJson(blogPost);
+public final class BlogService {
+  @Get("/blogs/:id")
+  public HttpResponse getBlogPost(@Param int id) {
+    ...
+
+    return HttpResponse.ofJson(blogPost);
+  }
 }
 ```
 
@@ -165,7 +208,9 @@ public HttpResponse getBlogPost(@Param int id) {
 
 We've already implemented returning multiple blog posts in the previous step. Here, annotate the method `getBlogPosts()` with <type://@ProducesJson>. This converts a list of `BlogPost` objects into a JSON response.
 
-```java filename=BlogService.java highlight=2
+```java filename=BlogService.java highlight=4
+import com.linecorp.armeria.server.annotation.ProducesJson;
+
 @Get("/blogs")
 @ProducesJson
 public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descending) {
@@ -187,21 +232,21 @@ Let's test retrieving a single and multiple posts.
   ```bash
   $ curl --request POST 'localhost:8080/blogs' \
   -H 'Content-Type: application/json' \
-  -d '{"title":"Test blog for retrieving", "content":"Create to read."}'
+  -d '{"title":"First post for testing", "content":"Test reading."}'
   ```
 
   ```bash
   $ curl --request POST 'localhost:8080/blogs' \
   -H 'Content-Type: application/json' \
-  -d '{"title":"Second blog for test retrieving", "content":"Create to read for the second time"}'
+  -d '{"title":"Second post for testing", "content":"Test reading a post."}'
   ```
 
   For each command, you'll get a response similar to the following.
 
   ```bash
-  {"id":0,"title":"Test blog for retrieving","content":"Create to read.","createdAt":...,"modifiedAt":...}
+  {"id":0,"title":"First post for testing","content":"Test reading.","createdAt":...,"modifiedAt":...}
 
-  {"id":1,"title":"Second blog for test retrieving","content":"Create to read for the second time","createdAt":...,"modifiedAt":...}
+  {"id":1,"title":"Second post for testing","content":"Test reading a post.","createdAt":...,"modifiedAt":...}
   ```
 
 3. Try retrieving blog posts we just created:
@@ -220,8 +265,8 @@ Let's test retrieving a single and multiple posts.
     ```bash
     {
       "id":1,
-      "title":"Second blog for test retrieving",
-      "content":"Create to read for the second time",
+      "title":"Second post for testing",
+      "content":"Test reading a post.",
       "createdAt":...,
       "modifiedAt":...
     }
@@ -242,15 +287,15 @@ Let's test retrieving a single and multiple posts.
     [
       {
         "id":1,
-        "title":"Second blog for test retrieving",
-        "content":"Create to read for the second time",
+        "title":"Second post for testing",
+        "content":"Test reading a post.",
         "createdAt":...,
         "modifiedAt":...
       },
       {
         "id":0,
-        "title":"Test blog for retrieving",
-        "content":"Create to read.",
+        "title":"First post for testing",
+        "content":"Test reading.",
         "createdAt":...,
         "modifiedAt":...
       }

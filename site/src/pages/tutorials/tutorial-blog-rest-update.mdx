@@ -38,7 +38,7 @@ Let's start [mapping the HTTP PUT method](/docs/server-annotated-service#mapping
 3. Bind the endpoint `/blogs` to the method.
 
 ```java filename=BlogService.java highlight=6
-import com.linecorp.armeria.server.annotation.*;
+import com.linecorp.armeria.server.annotation.Put;
 
 public final class BlogService {
   ...
@@ -59,10 +59,17 @@ For updating a blog post, let's take a blog post ID (`id`) and new blog post inf
 3. [Convert request body](/docs/server-annotated-service#converting-an-http-request-to-a-java-object) into a Java object by annotating the `BlogPost` parameter with <type://@RequestObject>.
 
   ```java filename=BlogService.java
-  // Instructions 1 to 3
-  @Put("/blogs/:id")
-  public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
+  import com.linecorp.armeria.server.annotation.Param;
+  import com.linecorp.armeria.server.annotation.RequestObject;
+
+  public final class BlogService {
+    ...
+
+    // Instructions 1 to 3
+    @Put("/blogs/:id")
+    public void updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
       // Update a blog post
+    }
   }
   ```
 4. For conversion, annotate blog post constructor to map JSON object keys to blog post object members. You can find more information on `@JsonCreator` [here](https://www.baeldung.com/jackson-annotations#1-jsoncreator).
@@ -113,15 +120,16 @@ Two possibilities are available for the response. If the blog post to update exi
 
 Let's return an error for the request to update a blog post that doesn't exist.
 
-1. Replace the return type of the `updateBlogPost()` method from `void` to `HttpResponse`.
-2. Return a response using Armeria's <type://HttpResponse> containing `HttpStatus.NOT_FOUND`.
+1. Replace the return type of the `updateBlogPost()` method from `void` to <type://HttpResponse>.
+2. Return a response using Armeria's <type://HttpResponse> containing <type://HttpStatus#NOT_FOUND>.
 
-```java filename=BlogService.java highlight=7,10
+```java filename=BlogService.java highlight=8,11
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 
 public final class BlogService {
   ...
+
   @Put("/blogs/:id")
   public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
     ...
@@ -137,7 +145,7 @@ public final class BlogService {
 
 Let's return the information updated when the target blog post exists:
 
-1. Replace the return type of the `updateBlogPost()` method from `void` to `HttpResponse`.
+1. Replace the return type of the `updateBlogPost()` method from `void` to <type://HttpResponse>.
 2. Return a response using Armeria's <type://HttpResponse> containing the updated information of the post.
 
 ```java filename=BlogService.java highlight=7,9
@@ -164,21 +172,21 @@ Let's test updating a blog post.
   ```bash
   $ curl --request POST 'localhost:8080/blogs' \
   -H 'Content-Type: application/json' \
-  -d '{"title":"Test blog for retrieving", "content":"Create to read."}'
+  -d '{"title":"First post for testing", "content":"Test updating."}'
   ```
 
   ```bash
   $ curl --request POST 'localhost:8080/blogs' \
   -H 'Content-Type: application/json' \
-  -d '{"title":"Second blog for test retrieving", "content":"Create to read for the second time"}'
+  -d '{"title":"Second post for testing", "content":"Test updating a post."}'
   ```
 
   For each command, you'll get a response similar to the following.
 
   ```bash
-  {"id":0,"title":"Test blog for retrieving","content":"Create to read.","createdAt":...,"modifiedAt":...}
+  {"id":0,"title":"First post for testing","content":"Test updating.","createdAt":...,"modifiedAt":...}
 
-  {"id":1,"title":"Second blog for test retrieving","content":"Create to read for the second time","createdAt":...,"modifiedAt":...}
+  {"id":1,"title":"Second post for testing","content":"Test updating a post.","createdAt":...,"modifiedAt":...}
   ```
 
 3. Let's update the second blog with the ID, `1`. Change the value for the `"title"` and `"content"` properties.
