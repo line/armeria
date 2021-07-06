@@ -99,7 +99,6 @@ We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but
   final class BlogPostRequestConverter implements RequestConverterFunction {
     ...
     @Override
-
     public Object convertRequest(ServiceRequestContext ctx,
       AggregatedHttpRequest request, Class<?> expectedResultType,
       @Nullable ParameterizedType expectedParameterizedResultType)
