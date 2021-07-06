@@ -60,7 +60,7 @@ In [Step 1. Create a server](/tutorials/tutorial-blog-rest-create-server), we ad
 This time, we'll add Armeria's [Documentation service](/docs/server-docservice):
 
 1. In the `newServer()` method, add a <type://DocService> and a request example for [creating blog posts](/tutorials/tutorial-blog-rest-create), 
-   using <type://DocService.exampleRequests>. Feel free to add more examples for other service methods.
+   using <type://DocServiceBuilder#exampleRequests(Class,String,Iterable)>. Feel free to add more examples for other service methods.
 
   ```java filename=Main.java highlight=1,6-13
   import com.linecorp.armeria.server.docs.DocService;
