@@ -66,19 +66,21 @@ task develop(type: NpmTask) {
 }
 
 
- task eslint(type: NpmTask) {
-     dependsOn tasks.generateSiteSources
-     args = ['run', 'lint']
-     inputs.dir('src')
-     inputs.file('.eslintrc.js')
-     inputs.file('package.json')
-     inputs.file('package-lock.json')
- }
+task eslint(type: NpmTask) {
+    dependsOn tasks.generateSiteSources
+    args = ['run', 'lint']
+    inputs.dir('src')
+    inputs.file('.eslintrc.js')
+    inputs.file('package.json')
+    inputs.file('package-lock.json')
+}
 
 // 'siteLint' could run separately regardless of '-PnoLint' option
- task siteLint {
-     dependsOn tasks.eslint
- }
+task siteLint {
+    dependsOn tasks.eslint
+}
+Task lintTask = project.ext.getLintTask()
+lintTask.dependsOn(tasks.siteLint)
 
 // Note that this task is not triggered by the 'build' task
 // because it takes long to build a site.
