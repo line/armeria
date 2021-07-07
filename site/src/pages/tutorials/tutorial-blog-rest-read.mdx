@@ -187,7 +187,7 @@ Let's return a response for the service call.
 
 To return a response for getting a single post:
 
-1. Replace the return type of the `getBlogPost()` method from `void` to `HttpResponse`.
+1. Replace the return type of the `getBlogPost()` method from `void` to <type://HttpResponse>.
 2. Return a response using Armeria's <type://HttpResponse> containing the content of the blog post retrieved.
 
 ```java filename=BlogService.java highlight=5,8
