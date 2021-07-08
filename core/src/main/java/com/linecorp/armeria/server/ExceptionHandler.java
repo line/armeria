@@ -64,8 +64,12 @@ public interface ExceptionHandler {
             if (cause instanceof HttpStatusException) {
                 return HttpResponse.of(((HttpStatusException) cause).httpStatus());
             }
+            if (cause instanceof RequestCancellationException) {
+                // A stream has been cancelled. No need to send a response with a status.
+                return HttpResponse.ofFailure(cause);
+            }
 
-            if (cause instanceof RequestTimeoutException || cause instanceof RequestCancellationException) {
+            if (cause instanceof RequestTimeoutException) {
                 return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE, cause));
             }
 
