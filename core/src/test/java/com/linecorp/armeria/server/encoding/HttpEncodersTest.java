@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 
 public class HttpEncodersTest {
-
     @Rule public MockitoRule mocks = MockitoJUnit.rule();
 
     @Mock private HttpRequest request;
@@ -54,6 +53,21 @@ public class HttpEncodersTest {
         when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
                                                              HttpHeaderNames.ACCEPT_ENCODING, "deflate"));
         assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.DEFLATE);
+    }
+
+    @Test
+    public void acceptEncodingBrotli() {
+        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
+                                                             HttpHeaderNames.ACCEPT_ENCODING, "br"));
+        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.BR);
+    }
+
+    @Test
+    public void acceptEncodingAllOfThree() {
+        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
+                                                             HttpHeaderNames.ACCEPT_ENCODING,
+                                                             "gzip, deflate, br"));
+        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.BR);
     }
 
     @Test
