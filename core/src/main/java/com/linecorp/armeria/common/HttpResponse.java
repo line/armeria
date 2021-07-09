@@ -479,9 +479,9 @@ public interface HttpResponse extends Response, HttpMessage {
 
         final HttpData httpData;
         try {
-            httpData = HttpData.wrap(JacksonUtil.getDefaultObjectMapper().writeValueAsBytes(content));
+            httpData = HttpData.wrap(JacksonUtil.writeValueAsBytes(content));
         } catch (JsonProcessingException e) {
-            throw new IllegalArgumentException(e);
+            throw new IllegalArgumentException(e.toString(), e);
         }
 
         final MediaType contentType = headers.contentType();
