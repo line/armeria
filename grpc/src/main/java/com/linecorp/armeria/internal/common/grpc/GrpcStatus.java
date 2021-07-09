@@ -175,7 +175,8 @@ public final class GrpcStatus {
 
     /**
      * Maps GRPC status codes to http status, as defined in upstream Google APIs
-     * <a href="https://github.com/googleapis/googleapis/blob/master/google/rpc/code.proto">code.proto</a>.
+     * <a href="https://github.com/googleapis/googleapis/blob/b2a7d2709887e38bcd3b5142424e563b0b386b6f/google/rpc/code.proto">
+     * code.proto</a>.
      */
     public static HttpStatus grpcCodeToHttpStatus(Status.Code grpcStatusCode) {
         switch (grpcStatusCode) {
