@@ -214,7 +214,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     contexts.put(e, ctx);
                 }
                 if (!willRemove.isEmpty()) {
-                    // Remove old endpoints after finish initial health check of `newSelectedEndpoints`.
+                    // Remove old endpoints after finishing the initial health check of `newSelectedEndpoints`.
                     CompletableFuture.allOf(initialFutures.toArray(new CompletableFuture<?>[0]))
                                      .handle((unused, ex) -> {
                                          willRemove.forEach(DefaultHealthCheckerContext::destroy);
