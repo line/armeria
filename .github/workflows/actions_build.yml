@@ -53,12 +53,6 @@ jobs:
         distribution: 'adopt'
         java-version: '15'
 
-    - name: Install svgbob_cli
-      if: ${{ matrix.site }}
-      run: |
-        sudo yum -y install cargo && cargo install svgbob_cli
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
     - name: Cache
       uses: actions/cache@v2
       with:
@@ -157,6 +151,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v2
+
+      - name: Install svgbob_cli
+        run: |
+          sudo yum -y install cargo && cargo install svgbob_cli
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - id: setup-jdk-15
         name: Set up JDK 15
