@@ -79,8 +79,6 @@ task eslint(type: NpmTask) {
 task siteLint {
     dependsOn tasks.eslint
 }
-Task lintTask = project.ext.getLintTask()
-lintTask.dependsOn(tasks.siteLint)
 
 // Note that this task is not triggered by the 'build' task
 // because it takes long to build a site.
