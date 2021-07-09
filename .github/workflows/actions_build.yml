@@ -177,7 +177,7 @@ jobs:
           restore-keys: |
             ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-
 
-      - name: Linting
+      - name: Building site
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel site
 
