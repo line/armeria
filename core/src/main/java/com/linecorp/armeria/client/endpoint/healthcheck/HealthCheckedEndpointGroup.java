@@ -215,11 +215,11 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
                 if (!willRemove.isEmpty()) {
                     // Remove old endpoints after finish initial health check of `newSelectedEndpoints`.
-                    CompletableFutures.allAsList(initialFutures)
-                                      .handle((unused, ex) -> {
-                                          willRemove.forEach(DefaultHealthCheckerContext::destroy);
-                                          return null;
-                                      });
+                    CompletableFuture.allOf(initialFutures.toArray(new CompletableFuture<?>[0]))
+                                     .handle((unused, ex) -> {
+                                         willRemove.forEach(DefaultHealthCheckerContext::destroy);
+                                         return null;
+                                     });
                 }
             }
         } finally {
