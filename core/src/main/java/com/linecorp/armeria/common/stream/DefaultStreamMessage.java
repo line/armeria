@@ -20,9 +20,6 @@ import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -33,8 +30,6 @@ import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -88,8 +83,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     private static final int INITIAL_CAPACITY = 32;
 
     private final Queue<Object> queue;
-    @Nullable
-    private List<T> collector;
 
     @Nullable
     private Throwable cleanupCause;
@@ -173,31 +166,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      */
     protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {}
 
-    @Override
-    public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
-        requireNonNull(executor, "executor");
-        requireNonNull(options, "options");
-
-        final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();
-        final SubscriptionImpl subscription =
-                new SubscriptionImpl(this, NoopSubscriber.get(), executor, options, collectingFuture);
-        if (subscriptionUpdater.compareAndSet(this, null, subscription)) {
-            // We don't need to invoke onSubscribe() for NoopSubscriber.
-            invokedOnSubscribe = true;
-            notifySubscriber();
-        } else {
-            final Subscriber<Object> subscriber = this.subscription.subscriber();
-            final Throwable cause;
-            if (subscriber instanceof AbortingSubscriber) {
-                cause = ((AbortingSubscriber<Object>) subscriber).cause();
-            } else {
-                cause = new IllegalStateException("subscribed by other subscriber already");
-            }
-            collectingFuture.completeExceptionally(cause);
-        }
-        return collectingFuture;
-    }
-
     /**
      * Invoked whenever a new demand is requested.
      */
@@ -218,7 +186,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         SubscriptionImpl subscription = this.subscription;
         if (subscription == null) {
             final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                    this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS, null);
+                    this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
                 // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
                 invokedOnSubscribe = true;
@@ -317,11 +285,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     private void notifySubscriberOfCloseEvent0(SubscriptionImpl subscription, CloseEvent event) {
         try {
-            if (subscription.isCollecting()) {
-                finishCollecting(event.cause, subscription);
-            } else {
-                event.notifySubscriber(subscription, whenComplete());
-            }
+            event.notifySubscriber(subscription, whenComplete());
         } finally {
             subscription.clearSubscriber();
             Throwable cause = event.cause;
@@ -436,12 +400,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     private boolean notifySubscriberWithElements(SubscriptionImpl subscription) {
-        if (subscription.isCollecting()) {
-            // collect() was called. Should drain queued elements in order to invoke onRemoval() immediately.
-            collectElements(subscription);
-            return true;
-        }
-
         final Subscriber<Object> subscriber = subscription.subscriber();
         if (demand == 0) {
             return false;
@@ -472,34 +430,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
             inOnNext = false;
         }
         return true;
-    }
-
-    private void finishCollecting(@Nullable Throwable cause, SubscriptionImpl subscription) {
-        @SuppressWarnings("unchecked")
-        final CompletableFuture<List<T>> collectingFuture =
-                (CompletableFuture<List<T>>) subscription.collectingFuture();
-        if (cause == null) {
-            if (collector == null) {
-                // No data was produced.
-                collectingFuture.complete(ImmutableList.of());
-            } else {
-                collectingFuture.complete(Collections.unmodifiableList(collector));
-            }
-            whenComplete().complete(null);
-        } else {
-            collectingFuture.completeExceptionally(cause);
-            whenComplete().completeExceptionally(cause);
-        }
-    }
-
-    private void collectElements(SubscriptionImpl subscription) {
-        if (collector == null) {
-            collector = new ArrayList<>(INITIAL_CAPACITY);
-        }
-
-        @SuppressWarnings("unchecked")
-        final T o = (T) queue.remove();
-        collector.add(prepareObjectForNotification(o, subscription.withPooledObjects()));
     }
 
     private void notifyAwaitDemandFuture() {
