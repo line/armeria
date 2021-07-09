@@ -192,7 +192,7 @@ class HealthCheckedEndpointGroupTest {
             // 'foo' did not disappear yet, so the task must be accepted and run.
             final AtomicBoolean taskRun = new AtomicBoolean();
             ctx.executor().execute(() -> taskRun.set(true));
-            await().untilAsserted(() -> assertThat(taskRun).isTrue());
+            await().untilTrue(taskRun);
 
             // Make 'foo' disappear and populate new endpoint ('bar').
             delegate.set(endpoint2);
