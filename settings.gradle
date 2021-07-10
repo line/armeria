@@ -90,10 +90,10 @@ includeWithFlags ':site'
 
 // Examples
 includeWithFlags ':examples:annotated-http-service',               'java'
-includeWithFlags ':examples:annotated-http-service-kotlin',        'java'
+includeWithFlags ':examples:annotated-http-service-kotlin',        'java', 'kotlin'
 includeWithFlags ':examples:context-propagation-dagger-example',   'java'
 project(':examples:context-propagation-dagger-example').projectDir = file('examples/context-propagation/dagger')
-includeWithFlags ':examples:context-propagation-kotlin-example',   'java'
+includeWithFlags ':examples:context-propagation-kotlin-example',   'java', 'kotlin'
 project(':examples:context-propagation-kotlin-example').projectDir = file('examples/context-propagation/kotlin')
 includeWithFlags ':examples:context-propagation-manual-example',   'java'
 project(':examples:context-propagation-manual-example').projectDir = file('examples/context-propagation/manual')
