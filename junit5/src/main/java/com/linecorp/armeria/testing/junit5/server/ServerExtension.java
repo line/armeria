@@ -31,6 +31,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
+import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 /**
  * An {@link Extension} that allows easy set-up and tear-down of a {@link Server}.
@@ -58,7 +59,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
         delegate = new ServerRuleDelegate(autoStart) {
             @Override
             public void configure(ServerBuilder sb) throws Exception {
-                sb.decorator(contextCaptor.decorator());
+                sb.decorator(contextCaptor.decorator(ServerExtension.this::shouldCapture));
                 ServerExtension.this.configure(sb);
             }
         };
@@ -291,5 +292,12 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      */
     public ServiceRequestContextCaptor requestContextCaptor() {
         return contextCaptor;
+    }
+
+    /**
+     * A predicate that determines whether the {@link ServiceRequestContext} should be captured or not.
+     */
+    protected boolean shouldCapture(ServiceRequestContext ctx) {
+        return true;
     }
 }
