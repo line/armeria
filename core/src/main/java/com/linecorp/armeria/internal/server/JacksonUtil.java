@@ -24,6 +24,7 @@ import java.util.ServiceLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -36,6 +37,8 @@ public final class JacksonUtil {
     private static final Logger logger = LoggerFactory.getLogger(JacksonUtil.class);
 
     private static boolean noticed;
+
+    private static final ObjectMapper INSTANCE = newDefaultObjectMapper();
 
     public static ObjectMapper newDefaultObjectMapper() {
         final JsonMapper.Builder jsonMapperBuilder = JsonMapper.builder();
@@ -55,6 +58,10 @@ public final class JacksonUtil {
             noticed = true;
         }
         return mapper;
+    }
+
+    public static byte[] writeValueAsBytes(Object value) throws JsonProcessingException {
+        return INSTANCE.writeValueAsBytes(value);
     }
 
     private JacksonUtil() {}
