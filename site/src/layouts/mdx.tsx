@@ -326,6 +326,19 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     return undefined;
   }
 
+  function getMenuName(mdxNode: any, tocItem: any): string {
+    if (props.menuTitle && mdxNode.frontmatter !== undefined) {
+      if (mdxNode.frontmatter.menuTitle !== null) {
+        if (mdxNode.frontmatter.order !== null) {
+          return `${mdxNode.frontmatter.order}. ${mdxNode.frontmatter.menuTitle}`;
+        }
+        return `${mdxNode.frontmatter.menuTitle}`;
+      }
+    }
+
+    return tocItem.title;
+  }
+
   const globalToc = (
     <ol>
       {Object.entries(groupToMdxNodes).map(([group, groupedMdxNodes]) => {
@@ -334,16 +347,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
             return mdxNode.tableOfContents.items.map(
               (tocItem: any, i: number) => {
                 const href = `${mdxNode.href}${i !== 0 ? tocItem.url : ''}`;
-
-                const menuName = `${
-                  props.menuTitle && mdxNode.frontmatter !== undefined
-                    ? mdxNode.frontmatter.menuTitle !== null
-                      ? (mdxNode.frontmatter.order !== null
-                          ? `${mdxNode.frontmatter.order}. `
-                          : '') + mdxNode.frontmatter.menuTitle
-                      : tocItem.title
-                    : tocItem.title
-                }`;
+                const menuName = getMenuName(mdxNode, tocItem);
                 return (
                   <li
                     key={href}

@@ -114,11 +114,11 @@ function getTargetLines(lines: string): string[] {
 
   const targetLines = lines.split(',').reduce((acc, cur) => {
     if (!cur.includes('-')) {
-      acc.push(parseInt(cur));
+      acc.push(parseInt(cur, 10));
       return acc;
     }
     const [start, end] = cur.split('-');
-    acc.push(...range(parseInt(start), parseInt(end)));
+    acc.push(...range(parseInt(start, 10), parseInt(end, 10)));
     return acc;
   }, []);
 
@@ -148,8 +148,8 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
   if (code.length === 0) {
     return null;
   }
-  const applyHighlightStyle = (lineNumber) => {
-    if (lineNumber != 0 && targetLines.includes(lineNumber)) {
+  const applyHighlightStyle = (lineNumber: number) => {
+    if (lineNumber !== 0 && targetLines.includes(`${lineNumber}`)) {
       return { style: lineHighlights };
     }
     return {};
