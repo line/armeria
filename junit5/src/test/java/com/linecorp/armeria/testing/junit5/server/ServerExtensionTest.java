@@ -3,6 +3,7 @@ package com.linecorp.armeria.testing.junit5.server;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
