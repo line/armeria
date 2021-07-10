@@ -97,11 +97,6 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, HttpDecoder<Bod
     }
 
     @Override
-    public void subscribe(Subscriber<? super BodyPart> subscriber, EventExecutor executor) {
-        decoded.subscribe(subscriber, executor);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super BodyPart> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         decoded.subscribe(subscriber, executor, options);

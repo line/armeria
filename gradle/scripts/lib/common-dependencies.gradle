@@ -3,13 +3,13 @@ import org.yaml.snakeyaml.Yaml
 buildscript {
     repositories {
         mavenCentral()
-        jcenter()
+        gradlePluginPortal()
     }
 
     dependencies {
         // These should be the only dependencies that need hard-coded versions.
-        classpath 'com.github.ben-manes:gradle-versions-plugin:0.27.0'
-        classpath 'org.yaml:snakeyaml:1.25'
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.39.0'
+        classpath 'org.yaml:snakeyaml:1.29'
     }
 }
 
@@ -76,7 +76,7 @@ configure(dependencyManagementProject) {
     apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
 
     repositories {
-        jcenter()
+        google()
         // Since we manage plugin versions here too.
         gradlePluginPortal()
         mavenCentral()

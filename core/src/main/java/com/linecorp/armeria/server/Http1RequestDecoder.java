@@ -29,9 +29,11 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -43,6 +45,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpContent;
@@ -121,9 +124,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     @Override
     public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
         super.channelUnregistered(ctx);
-        if (req != null) {
+        if (req instanceof HttpRequestWriter) {
             // Ignored if the stream has already been closed.
-            req.close(ClosedSessionException.get());
+            ((HttpRequestWriter) req).close(ClosedSessionException.get());
         }
 
         destroyKeepAliveHandler();
@@ -200,19 +203,20 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     nettyHeaders.set(ExtensionHeaderNames.SCHEME.text(), scheme);
 
-                    this.req = req = new DecodedHttpRequest(
-                            ctx.channel().eventLoop(),
-                            id, 1,
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg),
-                            HttpUtil.isKeepAlive(nettyReq),
-                            inboundTrafficController,
-                            // FIXME(trustin): Use a different maxRequestLength for a different virtual host.
-                            cfg.defaultVirtualHost().maxRequestLength());
-
                     // Close the request early when it is sure that there will be
                     // neither content nor trailers.
+                    final EventLoop eventLoop = ctx.channel().eventLoop();
+                    final RequestHeaders armeriaRequestHeaders = ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg);
+                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     if (contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq)) {
-                        req.close();
+                        this.req = req = new EmptyContentDecodedHttpRequest(
+                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive);
+                    } else {
+                        this.req = req = new DefaultDecodedHttpRequest(
+                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive, inboundTrafficController,
+                                // FIXME(trustin): Use a different maxRequestLength for a different virtual
+                                //                 host.
+                                cfg.defaultVirtualHost().maxRequestLength());
                     }
 
                     ctx.fireChannelRead(req);
@@ -223,40 +227,49 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             }
 
             // req is not null.
-            if (msg instanceof HttpContent) {
+            if (msg instanceof LastHttpContent && req instanceof EmptyContentDecodedHttpRequest) {
+                this.req = null;
+            } else if (msg instanceof HttpContent) {
+                assert req instanceof DefaultDecodedHttpRequest;
+                final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
                     fail(id, HttpResponseStatus.BAD_REQUEST, DATA_DECODER_FAILURE, Http2Error.PROTOCOL_ERROR);
-                    req.close(new ProtocolViolationException(decoderResult.cause()));
+                    decodedReq.close(new ProtocolViolationException(decoderResult.cause()));
                     return;
                 }
 
                 final ByteBuf data = content.content();
                 final int dataLength = data.readableBytes();
                 if (dataLength != 0) {
-                    req.increaseTransferredBytes(dataLength);
-                    final long maxContentLength = req.maxRequestLength();
-                    if (maxContentLength > 0 && req.transferredBytes() > maxContentLength) {
+                    decodedReq.increaseTransferredBytes(dataLength);
+                    final long maxContentLength = decodedReq.maxRequestLength();
+                    final long transferredLength = decodedReq.transferredBytes();
+                    if (maxContentLength > 0 && transferredLength > maxContentLength) {
                         fail(id, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, null,
                              Http2Error.CANCEL);
-                        req.close(ContentTooLargeException.get());
+                        decodedReq.close(ContentTooLargeException.builder()
+                                                                 .maxContentLength(maxContentLength)
+                                                                 .contentLength(req.headers())
+                                                                 .transferred(transferredLength)
+                                                                 .build());
                         return;
                     }
 
-                    if (req.isOpen()) {
-                        req.write(HttpData.wrap(data.retain()));
+                    if (decodedReq.isOpen()) {
+                        decodedReq.write(HttpData.wrap(data.retain()));
                     }
                 }
 
                 if (msg instanceof LastHttpContent) {
                     final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
                     if (!trailingHeaders.isEmpty()) {
-                        req.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
+                        decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                     }
 
-                    req.close();
-                    this.req = req = null;
+                    decodedReq.close();
+                    this.req = null;
                 }
             }
         } catch (URISyntaxException e) {

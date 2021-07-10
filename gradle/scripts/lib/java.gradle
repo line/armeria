@@ -1,27 +1,29 @@
+def buildJdkVersion = 15
+if (rootProject.hasProperty('buildJdkVersion')) {
+    def jdkVersion = Integer.parseInt(rootProject.findProperty('buildJdkVersion'))
+    if (buildJdkVersion != jdkVersion) {
+        buildJdkVersion = jdkVersion
+        logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
+    }
+}
+rootProject.ext.set("buildJdkVersion", buildJdkVersion)
+
+def testJavaVersion = buildJdkVersion
+if (rootProject.hasProperty('testJavaVersion')) {
+    def testVersion = Integer.parseInt(rootProject.findProperty('testJavaVersion'))
+    if (buildJdkVersion != testVersion) {
+        testJavaVersion = testVersion
+        logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
+    }
+}
+rootProject.ext.set("testJavaVersion", testJavaVersion)
+
 // Enable checkstyle if the rule file exists.
 def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
 def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle') &&
         !rootProject.hasProperty('noLint') &&
         new File(checkstyleConfigDir).isDirectory() &&
         new File("${checkstyleConfigDir}/checkstyle.xml").isFile()
-
-def buildJdkVersion = 15
-if (rootProject.hasProperty('buildJdkVersion')) {
-    def jdkVersion = rootProject.findProperty('buildJdkVersion')
-    if (buildJdkVersion != jdkVersion) {
-        buildJdkVersion = jdkVersion
-        logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
-    }
-}
-
-def testJavaVersion
-if (rootProject.hasProperty('testJavaVersion')) {
-    def testVersion = rootProject.findProperty('testJavaVersion')
-    if (buildJdkVersion != testVersion) {
-        testJavaVersion = testVersion
-        logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
-    }
-}
 
 configure(rootProject) {
     apply plugin: 'eclipse'
@@ -46,7 +48,7 @@ configure(projectsWithFlags('java')) {
 
     java {
         toolchain {
-            languageVersion = JavaLanguageVersion.of(buildJdkVersion)
+            languageVersion = JavaLanguageVersion.of(rootProject.ext.buildJdkVersion)
             vendor = JvmVendorSpec.ADOPTOPENJDK
             implementation = JvmImplementation.VENDOR_SPECIFIC
         }
@@ -56,6 +58,12 @@ configure(projectsWithFlags('java')) {
     project.sourceSets.all { sourceSet ->
         sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/java")
         sourceSet.resources.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/resources")
+    }
+    afterEvaluate {
+        Task generateSourcesTask = project.tasks.findByName('generateSources')
+        if (generateSourcesTask != null) {
+            tasks.sourcesJar.dependsOn(generateSourcesTask)
+        }
     }
 
     java {
@@ -87,9 +95,9 @@ configure(projectsWithFlags('java')) {
         useJUnitPlatform()
 
         // Use a different JRE for testing if necessary.
-        if (testJavaVersion != null) {
+        if (rootProject.ext.buildJdkVersion != rootProject.ext.testJavaVersion) {
             javaLauncher = javaToolchains.launcherFor {
-                languageVersion = JavaLanguageVersion.of(testJavaVersion)
+                languageVersion = JavaLanguageVersion.of(rootProject.ext.testJavaVersion)
             }
         }
     }

@@ -22,7 +22,6 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.AfterEach;
@@ -39,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.ContextFutureCallbackArgumentsProvider.CallbackResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import ch.qos.logback.classic.Level;
@@ -68,19 +68,19 @@ class ContextAwareFutureTest {
     @ParameterizedTest
     @ArgumentsSource(ContextFutureCallbackArgumentsProvider.class)
     void makeContextAwareCompletableFutureWithDifferentContext(
-            BiConsumer<CompletableFuture<?>, AtomicBoolean> callback) {
+            BiConsumer<CompletableFuture<?>, CallbackResult> callback) {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ServiceRequestContext ctx1 = ServiceRequestContext.builder(req).build();
         final ServiceRequestContext ctx2 = ServiceRequestContext.builder(req).build();
         try (SafeCloseable ignored = ctx1.push()) {
             final CompletableFuture<Object> future = new CompletableFuture<>();
             final CompletableFuture<Object> contextAwareFuture = ctx2.makeContextAware(future);
-            final AtomicBoolean callbackCalled = new AtomicBoolean();
+            final CallbackResult callbackCalled = new CallbackResult();
             callback.accept(contextAwareFuture, callbackCalled);
 
             future.complete(null);
 
-            assertThat(callbackCalled.get()).isFalse();
+            assertThat(callbackCalled.called.get()).isFalse();
             verify(appender, atLeast(0)).doAppend(eventCaptor.capture());
             assertThat(eventCaptor.getAllValues()).anySatisfy(event -> {
                 assertThat(event.getLevel()).isEqualTo(Level.WARN);

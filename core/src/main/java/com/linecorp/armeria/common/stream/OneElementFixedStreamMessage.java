@@ -16,11 +16,17 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
+
+import java.util.List;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link FixedStreamMessage} that only publishes one object.
@@ -36,50 +42,74 @@ public class OneElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
+    public long demand() {
+        return 0;
+    }
+
+    @Override
     final void cleanupObjects(@Nullable Throwable cause) {
         if (obj != null) {
-            try {
-                onRemoval(obj);
-            } finally {
-                StreamMessageUtil.closeOrAbort(obj, cause);
-            }
+            StreamMessageUtil.closeOrAbort(obj, cause);
             obj = null;
         }
     }
 
     @Override
-    final void doRequest(SubscriptionImpl subscription, long unused) {
-        if (requested() != 0) {
-            // Already have demand, so don't need to do anything, the current demand will complete the
-            // stream.
-            return;
-        }
-        setRequested(1);
-        doNotify(subscription);
+    final List<T> drainAll(boolean withPooledObjects) {
+        assert obj != null;
+        final T item = touchOrCopyAndClose(obj, withPooledObjects);
+        obj = null;
+        return ImmutableList.of(item);
     }
 
     @Override
-    public final boolean isEmpty() {
-        return false;
+    public void request(long n) {
+        final EventExecutor executor = executor();
+        if (executor.inEventLoop()) {
+            request0(n);
+        } else {
+            executor.execute(() -> request0(n));
+        }
     }
 
-    private void doNotify(SubscriptionImpl subscription) {
-        // Only called with correct demand, so no need to even check it.
-        assert obj != null;
-        final T published = prepareObjectForNotification(subscription, obj);
-        obj = null;
-        // Not possible to have re-entrant onNext with only one item, so no need to keep track of it.
-
-        try {
-            subscription.subscriber().onNext(published);
-        } catch (Throwable t) {
-            // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
-            abort(t);
-            throwIfFatal(t);
-            logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
-                        published, subscription.subscriber(), t);
+    private void request0(long n) {
+        if (obj == null) {
             return;
         }
-        notifySubscriberOfCloseEvent(subscription, SUCCESSFUL_CLOSE);
+
+        if (n <= 0) {
+            onError(new IllegalArgumentException(
+                    "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+            return;
+        }
+
+        final T item = obj;
+        obj = null;
+        onNext(item);
+        onComplete();
+    }
+
+    @Override
+    public void cancel() {
+        if (obj == null) {
+            return;
+        }
+        super.cancel();
+    }
+
+    @Override
+    public void abort() {
+        if (obj == null) {
+            return;
+        }
+        super.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        if (obj == null) {
+            return;
+        }
+        super.abort(cause);
     }
 }

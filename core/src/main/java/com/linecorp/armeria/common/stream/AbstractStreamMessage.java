@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.touchOrCopyAndClose;
 import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -37,7 +38,6 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -63,11 +63,11 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        final SubscriptionImpl subscription = new SubscriptionImpl(this, subscriber, executor, options);
+        final SubscriptionImpl subscription = new SubscriptionImpl(this, subscriber, executor, options, null);
         final SubscriptionImpl actualSubscription = subscribe(subscription);
         if (actualSubscription != subscription) {
             // Failed to subscribe.
-            failLateSubscriber(actualSubscription, subscriber);
+            failLateSubscriber(actualSubscription, subscription);
         }
     }
 
@@ -103,14 +103,15 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      */
     protected void onRemoval(T obj) {}
 
-    static void failLateSubscriber(SubscriptionImpl subscription, Subscriber<?> lateSubscriber) {
-        final Subscriber<?> oldSubscriber = subscription.subscriber();
-        final Throwable cause = abortedOrLate(oldSubscriber);
+    static void failLateSubscriber(SubscriptionImpl actualSubscription, SubscriptionImpl lateSubscription) {
+        final Subscriber<?> actualSubscriber = actualSubscription.subscriber();
+        final Subscriber<?> lateSubscriber = lateSubscription.subscriber();
+        final Throwable cause = abortedOrLate(actualSubscriber);
 
-        if (subscription.needsDirectInvocation()) {
+        if (lateSubscription.needsDirectInvocation()) {
             handleLateSubscriber(lateSubscriber, cause);
         } else {
-            subscription.executor().execute(() -> {
+            lateSubscription.executor().execute(() -> {
                 handleLateSubscriber(lateSubscriber, cause);
             });
         }
@@ -126,14 +127,9 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         }
     }
 
-    final T prepareObjectForNotification(SubscriptionImpl subscription, T o) {
+    final T prepareObjectForNotification(T o, boolean withPooledObjects) {
         onRemoval(o);
-        if (!subscription.withPooledObjects()) {
-            o = PooledObjects.copyAndClose(o);
-        } else {
-            PooledObjects.touch(o);
-        }
-        return o;
+        return touchOrCopyAndClose(o, withPooledObjects);
     }
 
     /**
@@ -159,17 +155,22 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         private final boolean withPooledObjects;
         private final boolean notifyCancellation;
 
+        @Nullable
+        private final CompletableFuture<?> collectingFuture;
+
         private volatile boolean cancelRequested;
 
         @SuppressWarnings("unchecked")
         SubscriptionImpl(AbstractStreamMessage<?> publisher, Subscriber<?> subscriber,
-                         EventExecutor executor, SubscriptionOption[] options) {
+                         EventExecutor executor, SubscriptionOption[] options,
+                         @Nullable CompletableFuture<?> collectingFuture) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
             this.options = options;
             withPooledObjects = containsWithPooledObjects(options);
             notifyCancellation = containsNotifyCancellation(options);
+            this.collectingFuture = collectingFuture;
         }
 
         Subscriber<Object> subscriber() {
@@ -230,6 +231,15 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             return executor.inEventLoop();
         }
 
+        @Nullable
+        CompletableFuture<?> collectingFuture() {
+            return collectingFuture;
+        }
+
+        boolean isCollecting() {
+            return collectingFuture != null;
+        }
+
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(Subscription.class)
@@ -274,6 +284,10 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
                 try {
                     if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
                         subscriber.onError(cause);
+                    }
+                    final CompletableFuture<?> collectingFuture = subscription.collectingFuture();
+                    if (collectingFuture != null) {
+                        collectingFuture.completeExceptionally(cause);
                     }
                     completionFuture.completeExceptionally(cause);
                 } catch (Throwable t) {

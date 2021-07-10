@@ -16,6 +16,7 @@ import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash';
 import groovy from 'react-syntax-highlighter/dist/esm/languages/prism/groovy';
 import http from 'react-syntax-highlighter/dist/esm/languages/prism/http';
 import java from 'react-syntax-highlighter/dist/esm/languages/prism/java';
+import javascript from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
 import json from 'react-syntax-highlighter/dist/esm/languages/prism/json';
 import kotlin from 'react-syntax-highlighter/dist/esm/languages/prism/kotlin';
 import markup from 'react-syntax-highlighter/dist/esm/languages/prism/markup';
@@ -41,6 +42,7 @@ const supportedLanguages = {
   groovy,
   http,
   java,
+  javascript,
   json,
   kotlin,
   markup,

@@ -64,12 +64,10 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -82,7 +80,6 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -395,7 +392,7 @@ class GrpcServiceServerTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.workerGroup(1);
             sb.maxRequestLength(0);
 
             sb.service(
@@ -447,7 +444,7 @@ class GrpcServiceServerTest {
     static final ServerExtension serverWithBlockingExecutor = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.workerGroup(1);
             sb.maxRequestLength(0);
 
             sb.serviceUnder("/",
@@ -473,7 +470,7 @@ class GrpcServiceServerTest {
     static final ServerExtension serverWithNoMaxMessageSize = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.workerGroup(1);
             sb.maxRequestLength(0);
 
             sb.serviceUnder("/",
@@ -492,7 +489,7 @@ class GrpcServiceServerTest {
     static final ServerExtension serverWithLongMaxRequestLimit = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
+            sb.workerGroup(1);
             sb.maxRequestLength(Long.MAX_VALUE);
 
             sb.serviceUnder("/",
@@ -1025,23 +1022,16 @@ class GrpcServiceServerTest {
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc-web-text"),
                 Base64.getEncoder().encode(body));
-        final AggregatedHttpResponse response = new FilteredHttpResponse(httpResponse) {
-            @Override
-            protected HttpObject filter(HttpObject obj) {
-                if (obj instanceof HttpData) {
-                    final HttpData data = (HttpData) obj;
-                    final ByteBuf buf = data.byteBuf();
-                    final ByteBuf decoded = Unpooled.wrappedBuffer(
-                            Base64.getDecoder().decode(buf.nioBuffer()));
-                    buf.release();
-                    return HttpData.wrap(decoded);
-                }
-                return obj;
-            }
-        }.aggregate().join();
+        final AggregatedHttpResponse response = httpResponse.mapData(data -> {
+            final ByteBuf buf = data.byteBuf();
+            final ByteBuf decoded = Unpooled.wrappedBuffer(
+                    Base64.getDecoder().decode(buf.nioBuffer()));
+            buf.release();
+            return HttpData.wrap(decoded);
+        }).aggregate().join();
         final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
         final byte[] serializedTrailers = Bytes.concat(
-                new byte[] { TRAILERS_FRAME_HEADER },
+                new byte[]{ TRAILERS_FRAME_HEADER },
                 Ints.toByteArray(serializedStatusHeader.length),
                 serializedStatusHeader);
         assertThat(response.content().array()).containsExactly(
@@ -1080,15 +1070,10 @@ class GrpcServiceServerTest {
                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                    throws Exception {
                                requestHeaders.set(req.headers());
-                               return new FilteredHttpResponse(unwrap().execute(ctx, req)) {
-                                   @Override
-                                   protected HttpObject filter(HttpObject obj) {
-                                       if (obj instanceof HttpData) {
-                                           payload.set(((HttpData) obj).array());
-                                       }
-                                       return obj;
-                                   }
-                               };
+                               return unwrap().execute(ctx, req).mapData(data -> {
+                                   payload.set(data.array());
+                                   return data;
+                               });
                            }
                        })
                        .build(UnitTestServiceBlockingStub.class);
@@ -1127,15 +1112,10 @@ class GrpcServiceServerTest {
                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                    throws Exception {
                                requestHeaders.set(req.headers());
-                               return new FilteredHttpResponse(unwrap().execute(ctx, req)) {
-                                   @Override
-                                   protected HttpObject filter(HttpObject obj) {
-                                       if (obj instanceof HttpData) {
-                                           payload.set(((HttpData) obj).array());
-                                       }
-                                       return obj;
-                                   }
-                               };
+                               return unwrap().execute(ctx, req).mapData(data -> {
+                                   payload.set(data.array());
+                                   return data;
+                               });
                            }
                        })
                        .build(UnitTestServiceBlockingStub.class);

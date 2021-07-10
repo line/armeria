@@ -39,7 +39,8 @@ import io.netty.util.internal.ThreadLocalRandom;
 
 /**
  * A {@link SamlRequestIdManager} implementation based on JSON Web Tokens specification.
- * See <a href="https://jwt.io/">JSON Web Tokens</a> for more information.
+ *
+ * @see <a href="https://jwt.io/">JSON Web Tokens</a>
  */
 final class JwtBasedSamlRequestIdManager implements SamlRequestIdManager {
     private static final Logger logger = LoggerFactory.getLogger(JwtBasedSamlRequestIdManager.class);
@@ -114,11 +115,13 @@ final class JwtBasedSamlRequestIdManager implements SamlRequestIdManager {
     private static String getUniquifierPrefix() {
         // To make a request ID globally unique, we will add MAC-based machine ID and a random number.
         // The random number tries to make this instance unique in the same machine and process.
-        final byte[] r = TemporaryThreadLocals.get().byteArray(6);
-        ThreadLocalRandom.current().nextBytes(r);
-        final Encoder encoder = Base64.getEncoder();
-        return new StringBuilder().append(encoder.encodeToString(defaultMachineId()))
-                                  .append(encoder.encodeToString(r))
-                                  .toString();
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final byte[] r = tempThreadLocals.byteArray(6);
+            ThreadLocalRandom.current().nextBytes(r);
+            final Encoder encoder = Base64.getEncoder();
+            return new StringBuilder().append(encoder.encodeToString(defaultMachineId()))
+                                      .append(encoder.encodeToString(r))
+                                      .toString();
+        }
     }
 }

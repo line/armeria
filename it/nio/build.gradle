@@ -1,0 +1,4 @@
+configurations {
+    runtime.exclude group: 'io.netty', module: 'netty-transport-native-epoll'
+    runtime.exclude group: 'io.netty.incubator', module: 'netty-incubator-transport-native-io_uring'
+}

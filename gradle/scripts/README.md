@@ -79,14 +79,8 @@ sensible defaults. By applying them, you can:
 3. Add `build.gradle`:
 
    ```groovy
-   buildscript {
-       repositories {
-           mavenCentral()
-       }
-       dependencies {
-           classpath 'com.google.gradle:osdetector-gradle-plugin:1.6.2'
-           classpath 'io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE'
-       }
+   plugins {
+       id 'com.google.osdetector' version '1.6.2' apply false
    }
 
    apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
@@ -161,20 +155,13 @@ com.fasterxml.jackson.core:
       - https://fasterxml.github.io/jackson-databind/javadoc/2.12/
 ```
 
-`dependencies.yml` will be parsed at project evaluation time and be fed into
-[gradle-dependency-management plugin](https://github.com/spring-gradle-plugins/dependency-management-plugin).
-
-In `build.gradle`, you can specify these dependencies without version numbers:
+Gradle's dependency resolution strategy will be automatically configured as
+specified in `dependencies.yml`, so you don't have to specify version numbers
+in `build.gradle`:
 
 ```groovy
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath "com.google.gradle:osdetector-gradle-plugin:1.6.2"
-        classpath 'io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE'
-    }
+plugins {
+    id 'com.google.osdetector' version '1.6.2' apply false
 }
 
 allprojects {

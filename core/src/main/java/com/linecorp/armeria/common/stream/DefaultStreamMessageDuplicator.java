@@ -19,10 +19,11 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.CANCELLATION_AND_POOLED_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.math.LongMath;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.ByteBufAccessMode;
@@ -175,8 +177,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 this.maxSignalLength = (int) maxSignalLength;
             }
             signals = new SignalQueue(this.signalLengthGetter);
-            upstream.subscribe(this, executor,
-                               SubscriptionOption.WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION);
+            upstream.subscribe(this, executor, CANCELLATION_AND_POOLED_OPTIONS);
         }
 
         StreamMessage<T> upstream() {
@@ -242,7 +243,12 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 if (dataLength > 0) {
                     final int allowedMaxSignalLength = maxSignalLength - signalLength;
                     if (dataLength > allowedMaxSignalLength) {
-                        final ContentTooLargeException cause = ContentTooLargeException.get();
+                        final long transferred = LongMath.saturatedAdd(signalLength, dataLength);
+                        final ContentTooLargeException cause =
+                                ContentTooLargeException.builder()
+                                                        .maxContentLength(maxSignalLength)
+                                                        .transferred(transferred)
+                                                        .build();
                         StreamMessageUtil.closeOrAbort(obj, cause);
                         upstream.abort(cause);
                         return;
@@ -457,7 +463,8 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
     }
 
-    private static final class ChildStreamMessage<T> implements StreamMessage<T> {
+    @VisibleForTesting
+    static final class ChildStreamMessage<T> implements StreamMessage<T> {
 
         @SuppressWarnings("rawtypes")
         private static final AtomicReferenceFieldUpdater<ChildStreamMessage, DownstreamSubscription>
