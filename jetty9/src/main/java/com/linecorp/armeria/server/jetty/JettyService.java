@@ -34,7 +34,6 @@ import org.eclipse.jetty.http.HttpFields;
 import org.eclipse.jetty.http.HttpURI;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.http.MetaData;
-import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.server.HttpChannel;
 import org.eclipse.jetty.server.HttpInput.Content;
 import org.eclipse.jetty.server.HttpTransport;
@@ -417,14 +416,9 @@ public final class JettyService implements HttpService {
             }
         }
 
-        private void write(HttpObject o) throws EofException {
-            if (!res.tryWrite(o)) {
-                if (!ctx.isTimedOut()) {
-                    throw new EofException("Closed");
-                } else {
-                    // Silently discard the write request in case of timeout to match the behavior of Jetty.
-                }
-            }
+        @SuppressWarnings("ResultOfMethodCallIgnored")
+        private void write(HttpObject o) {
+            res.tryWrite(o);
         }
 
         private static ResponseHeaders toResponseHeaders(MetaData.Response info) {
