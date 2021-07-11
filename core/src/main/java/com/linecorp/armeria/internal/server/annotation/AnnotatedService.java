@@ -310,21 +310,37 @@ public final class AnnotatedService implements HttpService {
             case KOTLIN_COROUTINES:
             case SCALA_FUTURE:
                 final CompletableFuture<?> composedFuture;
+                final CompletableFuture[] upstreamFuture = new CompletableFuture<?>[1];
                 if (useBlockingTaskExecutor) {
-                    composedFuture = f.thenComposeAsync(
-                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor()),
-                            ctx.blockingTaskExecutor());
+                    composedFuture = f.thenComposeAsync(msg -> {
+                        upstreamFuture[0] =
+                                toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor())
+                                        .toCompletableFuture();
+                        return upstreamFuture[0];
+                    }, ctx.blockingTaskExecutor());
                 } else {
-                    composedFuture = f.thenCompose(
-                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop()));
+                    composedFuture = f.thenCompose(msg -> {
+                        upstreamFuture[0] = toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop())
+                                .toCompletableFuture();
+                        return upstreamFuture[0];
+                    });
                 }
-                return composedFuture.handle(
+                final CompletableFuture<HttpResponse> responseFuture = composedFuture.handle(
                         (result, cause) -> {
                             if (cause != null) {
                                 return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
                             }
                             return convertResponse(ctx, req, null, result, HttpHeaders.of());
                         });
+                responseFuture.handle((ignored, cause) -> {
+                    if (responseFuture.isCancelled()) {
+                        if (upstreamFuture[0] != null) {
+                            upstreamFuture[0].cancel(true);
+                        }
+                    }
+                    return null;
+                });
+                return responseFuture;
             default:
                 final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
                         msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg), HttpHeaders.of());

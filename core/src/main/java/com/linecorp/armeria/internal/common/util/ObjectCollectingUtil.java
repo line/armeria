@@ -107,6 +107,12 @@ public final class ObjectCollectingUtil {
 
         @Override
         public void onSubscribe(Subscription s) {
+            future.handle((ignored, t) -> {
+                if (future.isCancelled()) {
+                    s.cancel();
+                }
+                return null;
+            });
             s.request(Integer.MAX_VALUE);
         }
 

@@ -18,11 +18,16 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
 import com.linecorp.armeria.common.stream.DeferredStreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -35,6 +40,9 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
 
     @Nullable
     private final EventExecutor executor;
+
+    @Nullable
+    private CompletionStage<? extends HttpResponse> stage;
 
     DeferredHttpResponse() {
         executor = null;
@@ -49,10 +57,13 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
     }
 
     void delegateWhenComplete(CompletionStage<? extends HttpResponse> stage) {
-        requireNonNull(stage, "stage");
+        this.stage = requireNonNull(stage, "stage");
         stage.handle((delegate, thrown) -> {
             if (thrown != null) {
-                close(Exceptions.peel(thrown));
+                final Throwable cause = Exceptions.peel(thrown);
+                if (!(cause instanceof CancellationException)) {
+                    close(cause);
+                }
             } else if (delegate == null) {
                 close(new NullPointerException("delegate stage produced a null response: " + stage));
             } else {
@@ -68,5 +79,44 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
             return executor;
         }
         return super.defaultSubscriberExecutor();
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        super.subscribe(new Subscriber<HttpObject>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                subscriber.onSubscribe(new Subscription() {
+                    @Override
+                    public void request(long n) {
+                        s.request(n);
+                    }
+
+                    @Override
+                    public void cancel() {
+                        s.cancel();
+                        if (stage != null) {
+                            stage.toCompletableFuture().cancel(true);
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onNext(HttpObject httpObject) {
+                subscriber.onNext(httpObject);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                subscriber.onError(t);
+            }
+
+            @Override
+            public void onComplete() {
+                subscriber.onComplete();
+            }
+        }, executor, options);
     }
 }

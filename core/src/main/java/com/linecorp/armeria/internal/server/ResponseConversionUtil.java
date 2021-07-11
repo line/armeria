@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
 /**
  * A utility class which helps to send a streaming {@link HttpResponse}.
@@ -86,6 +87,12 @@ public final class ResponseConversionUtil {
                                                     ResponseHeaders headers, HttpHeaders trailers,
                                                     Function<Object, HttpData> contentConverter) {
         final HttpResponseWriter writer = HttpResponse.streaming();
+        writer.whenComplete().handle((ignored, cause) -> {
+            if (cause instanceof CancelledSubscriptionException) {
+                future.cancel(true);
+            }
+            return null;
+        });
         future.handle((result, cause) -> {
             if (cause != null) {
                 writer.close(cause);
