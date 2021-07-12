@@ -38,6 +38,9 @@ allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
         maxHeapSize = '512m'
+        if (rootProject.ext.testJavaVersion >= 9) {
+            jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+        }
 
         // Enable leak detection when '-Pleak' option is specified.
         if (rootProject.hasProperty('leak')) {
@@ -87,6 +90,20 @@ configure(projectsWithFlags('java')) {
 
         tasks.withType(JavaCompile) {
             options.errorprone.excludedPaths = '.*/gen-src/.*'
+            // Open up the internal JDK API so that ErrorProne can access it.
+            options.fork = true
+            options.forkOptions.jvmArgs += [
+              '--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
+              '--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED',
+              '--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED',
+              '--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
+              '--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
+              '--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED',
+              '--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED',
+              '--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED',
+              '--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
+              '--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED'
+            ]
         }
     }
 
@@ -203,9 +220,9 @@ allprojects {
     }
 }
 
-// Require to use JDK 15 when releasing.
+// Require to use JDK 16 when releasing.
 tasks.release.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_15) {
-        throw new IllegalStateException("You must release using JDK 15.");
+    if (JavaVersion.current() != JavaVersion.VERSION_16) {
+        throw new IllegalStateException("You must release using JDK 16.");
     }
 }

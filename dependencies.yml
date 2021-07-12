@@ -422,8 +422,18 @@ org.awaitility:
   awaitility: { version: '4.1.0' }
 
 org.bouncycastle:
+  bcpkix-jdk15on:
+    version: &BOUNCYCASTLE_VERSION '1.69'
+    relocations:
+      - from: org.bouncycastle
+        to: com.linecorp.armeria.internal.shaded.bouncycastle
   bcprov-jdk15on:
-    version: '1.69'
+    version: *BOUNCYCASTLE_VERSION
+    relocations:
+    - from: org.bouncycastle
+      to: com.linecorp.armeria.internal.shaded.bouncycastle
+  bcutil-jdk15on:
+    version: *BOUNCYCASTLE_VERSION
     relocations:
     - from: org.bouncycastle
       to: com.linecorp.armeria.internal.shaded.bouncycastle

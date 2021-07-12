@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         on: [ self-hosted, macos-latest, windows-latest ]
-        java: [ 15 ]
+        java: [ 16 ]
         include:
           - java: 8
             on: self-hosted
@@ -28,7 +28,7 @@ jobs:
           - java: 14
             on: self-hosted
             leak: true
-          - java: 15
+          - java: 16
             # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
             on: macos-latest
@@ -38,7 +38,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - id: setup-jre
-      if: ${{ matrix.java != 15 }}
+      if: ${{ matrix.java != 16 }}
       name: Set up JRE ${{ matrix.java }}
       uses: actions/setup-java@v2
       with:
@@ -46,12 +46,12 @@ jobs:
         java-version: ${{ matrix.java }}
         java-package: jre
 
-    - id: setup-jdk-15
-      name: Set up JDK 15
+    - id: setup-jdk-16
+      name: Set up JDK 16
       uses: actions/setup-java@v2
       with:
         distribution: 'adopt'
-        java-version: '15'
+        java-version: '16'
 
     - name: Cache
       uses: actions/cache@v2
@@ -74,9 +74,9 @@ jobs:
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
         -PnoLint \
-        -PbuildJdkVersion=15 \
+        -PbuildJdkVersion=16 \
         -PtestJavaVersion=${{ matrix.java }} \
-        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-15.outputs.path }},${{ steps.setup-jre.outputs.path }}
+        -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-16.outputs.path }},${{ steps.setup-jre.outputs.path }}
       shell: bash
       env:
         FLAKY_TESTS: false
@@ -117,12 +117,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-15
-        name: Set up JDK 15
+      - id: setup-jdk-16
+        name: Set up JDK 16
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '15'
+          java-version: '16'
 
       - name: Restore Gradle Cache
         uses: actions/cache@v2
@@ -157,12 +157,12 @@ jobs:
           sudo yum -y install cargo && cargo install svgbob_cli
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - id: setup-jdk-15
-        name: Set up JDK 15
+      - id: setup-jdk-16
+        name: Set up JDK 16
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '15'
+          java-version: '16'
 
       - name: Restore Gradle Cache
         uses: actions/cache@v2
@@ -192,12 +192,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-15
-        name: Set up JDK 15
+      - id: setup-jdk-16
+        name: Set up JDK 16
         uses: actions/setup-java@v2
         with:
           distribution: 'adopt'
-          java-version: '15'
+          java-version: '16'
 
       - name: Restore Gradle Cache
         uses: actions/cache@v2
