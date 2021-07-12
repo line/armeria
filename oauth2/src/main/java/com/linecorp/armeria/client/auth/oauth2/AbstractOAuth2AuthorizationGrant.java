@@ -22,7 +22,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -94,13 +93,19 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
             @Nullable GrantedOAuth2AccessToken token);
 
     /**
-     * Produces valid OAuth 2.0 Access Token.
-     * Returns cached access token if previously obtained from the token end-point.
-     * Optionally loads access token from longer term storage provided by registered {@link Supplier}.
-     * If access token has not previously obtained, obtains is from the OAuth 2.0 token end-point using
-     * dedicated single-thread {@link ExecutorService} which makes sure all token obtain and refresh requests
-     * executed serially.
-     * Validates access token and refreshes it if necessary.
+     * Issues an {@code OAuth 2.0 Access Token} and cache it in memory and returns the cached one
+     * until the token is considered valid. It automatically refreshes the cached token once it's
+     * considered expired and returns the refreshed one.
+     *
+     * <p>Renewing a token is guaranteed to be atomic even though the method is invoked by multiple threads.
+     *
+     * <p>It optionally tries to load an access token from {@link #fallbackTokenProvider}
+     * which supposedly gets one by querying to a longer term storage, before it makes a request
+     * to the authorization server.
+     *
+     * <p>One may choose to provide {@link #newTokenConsumer} hook, which gets executed
+     * every time a token is issued or refreshed from the authorization server, to store the renewed token
+     * to a longer term storage.
      */
     @Override
     public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
