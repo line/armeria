@@ -18,10 +18,9 @@ package com.linecorp.armeria.internal.client.auth.oauth2;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -44,11 +43,8 @@ public class MockOAuth2ClientCredentialsService extends MockOAuth2Service {
                                        @Header("Authorization") Optional<String> auth,
                                        @Param("grant_type") Optional<String> grantType,
                                        @Param("scope") Optional<String> scope) {
-        final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
         // Intentionally delay execution to test concurrent token update scenario.
-        ctx.eventLoop().schedule(() -> future.complete(handleTokenGet(auth, grantType, scope)),
-                                 100L, TimeUnit.MILLISECONDS);
-        return HttpResponse.from(future);
+        return HttpResponse.delayed(handleTokenGet(auth, grantType, scope), Duration.ofMillis(100));
     }
 
     private HttpResponse handleTokenGet(Optional<String> auth, Optional<String> grantType,
