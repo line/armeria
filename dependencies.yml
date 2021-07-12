@@ -9,7 +9,7 @@ boms:
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
   - io.grpc:grpc-bom:1.38.1
-  - io.micrometer:micrometer-bom:1.7.0
+  - io.micrometer:micrometer-bom:1.7.1
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.65.Final
   - io.zipkin.brave:brave-bom:5.13.3
@@ -33,7 +33,7 @@ com.auth0:
   java-jwt:
     version: '3.16.0'
     javadocs:
-    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.15.0/
+    - https://www.javadoc.io/doc/com.auth0/java-jwt/3.16.0/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -138,7 +138,7 @@ com.netflix.eureka:
 
 # DGS is used only for testing in it:dgs moulde.
 com.netflix.graphql.dgs:
-  graphql-dgs-client: { version: '4.2.0' }
+  graphql-dgs-client: { version: '4.3.1' }
 
 com.pszymczyk.consul:
   embedded-consul: { version: '2.2.1' }
@@ -166,7 +166,7 @@ com.squareup.retrofit2:
   converter-jackson: { version: *RETROFIT2_VERSION }
 
 com.thesamet.scalapb:
-  scalapb-runtime_2.12: { version: &SCALAPB_VERSION '0.11.3' }
+  scalapb-runtime_2.12: { version: &SCALAPB_VERSION '0.11.4' }
   scalapb-runtime_2.13: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.12: { version: *SCALAPB_VERSION }
   scalapb-runtime-grpc_2.13: { version: *SCALAPB_VERSION }
@@ -182,7 +182,7 @@ com.typesafe.akka:
 # Finagle is used only for testing in zookeeper module.
 com.twitter:
   finagle-serversets_2.13:
-    version: '21.5.0'
+    version: '21.6.0'
 
 cz.alenkacz:
   gradle-scalafmt: { version: '1.16.2' }
@@ -343,7 +343,7 @@ net.javacrumbs.json-unit:
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 com.guardsquare:
-  proguard-gradle: { version: '7.1.0-beta1' }
+  proguard-gradle: { version: '7.1.0' }
 
 net.shibboleth.utilities:
   java-support: { version: '7.5.2' }
@@ -559,7 +559,7 @@ org.springframework:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.5.1'
+    version: &SPRING_BOOT_VERSION '2.5.2'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }

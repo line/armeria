@@ -23,7 +23,6 @@ jobs:
         include:
           - java: 8
             on: self-hosted
-            site: true
           - java: 11
             on: self-hosted
           - java: 14
@@ -54,12 +53,6 @@ jobs:
         distribution: 'adopt'
         java-version: '15'
 
-    - name: Install svgbob_cli
-      if: ${{ matrix.site }}
-      run: |
-        sudo yum -y install cargo && cargo install svgbob_cli
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
     - name: Cache
       uses: actions/cache@v2
       with:
@@ -78,7 +71,6 @@ jobs:
         ./gradlew --no-daemon --stacktrace build \
         ${{ (matrix.on == 'self-hosted') && '-Dorg.gradle.jvmargs=-Xmx4g' || '' }} \
         ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
-        ${{ matrix.site && ':site:siteLint :site:site' || '' }} \
         ${{ matrix.coverage && '-Pcoverage' || '' }} \
         ${{ matrix.leak && '-Pleak' || '' }} \
         -PnoLint \
@@ -146,6 +138,46 @@ jobs:
       - name: Linting
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel lint
+
+      - name: Cleanup Gradle Cache
+        run: |
+          rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
+          rm -f ~/.gradle/caches/modules-2/gc.properties || true
+        shell: bash
+
+  site:
+    runs-on: self-hosted
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install svgbob_cli
+        run: |
+          sudo yum -y install cargo && cargo install svgbob_cli
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - id: setup-jdk-15
+        name: Set up JDK 15
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt'
+          java-version: '15'
+
+      - name: Restore Gradle Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/wrapper/dists
+            ~/.gradle/caches/jars-3
+            ~/.gradle/caches/modules-2
+            ~/.gradle/caches/package-lists
+          key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-gradle-
+
+      - name: Building site
+        run: |
+          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel site
 
       - name: Cleanup Gradle Cache
         run: |

@@ -211,10 +211,11 @@ final class WebOperationService implements HttpService {
         }
 
         final MediaType contentType = firstNonNull(ctx.negotiatedResponseMediaType(), MediaType.JSON_UTF_8);
-        final String contentSubType = contentType.subtype();
-
-        if ("json".equals(contentSubType) || contentSubType.endsWith("+json")) {
-            return HttpResponse.of(status, contentType, OBJECT_MAPPER.writeValueAsBytes(body));
+        if (contentType.isJson()) {
+            final ResponseHeaders headers = ResponseHeaders.builder(status)
+                                                           .contentType(contentType)
+                                                           .build();
+            return HttpResponse.ofJson(headers, body);
         }
 
         if (body instanceof CharSequence) {

@@ -7,13 +7,9 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Delete;
@@ -28,8 +24,6 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 
 public final class BlogService {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
-
     private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
 
     /**
@@ -38,24 +32,23 @@ public final class BlogService {
      */
     @Post("/blogs")
     @RequestConverter(BlogPostRequestConverter.class)
-    public HttpResponse createBlogPost(BlogPost blogPost) throws JsonProcessingException {
+    public HttpResponse createBlogPost(BlogPost blogPost) {
         // Use a map to store the blog. In real world, you should use a database.
         blogPosts.put(blogPost.getId(), blogPost);
 
         // Send the created blog post as the response.
         // We can add additional property such as a url of
         // the created blog post.(e.g. "http://tutorial.com/blogs/0") to respect the Rest API.
-        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, mapper.writeValueAsBytes(blogPost));
+        return HttpResponse.ofJson(blogPost);
     }
 
     /**
      * Retrieves a {@link BlogPost} whose {@link BlogPost#getId()} is the {@code :id} in the path parameter.
      */
     @Get("/blogs/:id")
-    public HttpResponse getBlogPost(@Param int id) throws JsonProcessingException {
+    public HttpResponse getBlogPost(@Param int id) {
         final BlogPost blogPost = blogPosts.get(id);
-        final byte[] content = mapper.writeValueAsBytes(blogPost);
-        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, content);
+        return HttpResponse.ofJson(blogPost);
     }
 
     /**
@@ -77,8 +70,7 @@ public final class BlogService {
      * Updates the {@link BlogPost} whose {@link BlogPost#getId()} is the {@code :id} in the path parameter.
      */
     @Put("/blogs/:id")
-    public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost)
-            throws JsonProcessingException {
+    public HttpResponse updateBlogPost(@Param int id, @RequestObject BlogPost blogPost) {
         final BlogPost oldBlogPost = blogPosts.get(id);
         if (oldBlogPost == null) {
             return HttpResponse.of(HttpStatus.NOT_FOUND);
@@ -86,8 +78,7 @@ public final class BlogService {
         final BlogPost newBlogPost = new BlogPost(id, blogPost.getTitle(), blogPost.getContent(),
                                                   oldBlogPost.getCreatedAt(), blogPost.getCreatedAt());
         blogPosts.put(id, newBlogPost);
-        final byte[] bytes = mapper.writeValueAsBytes(newBlogPost);
-        return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, bytes);
+        return HttpResponse.ofJson(newBlogPost);
     }
 
     /**
