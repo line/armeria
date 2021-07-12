@@ -159,7 +159,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
 
     /**
      * An optional {@link Supplier} to acquire an access token before requesting it to the authorization server.
-     * If the provided {@link GrantedOAuth2AccessToken} is valid the client doesn't request a new token.
+     * If the provided {@link GrantedOAuth2AccessToken} is valid, the client doesn't request a new token.
      *
      * <p>This is supposed to be used with {@link #newTokenConsumer(Consumer)} and gets executed
      * in the following cases:
