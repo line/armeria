@@ -29,6 +29,9 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
@@ -42,6 +45,8 @@ import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenReques
  * Implements Access Token loading, storing and refreshing.
  */
 abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractOAuth2AuthorizationGrant.class);
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<
@@ -122,15 +127,24 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
 
         final CompletableFuture<GrantedOAuth2AccessToken> newTokenFuture = future;
         if (token == null && fallbackTokenProvider != null) {
-            fallbackTokenProvider.get().handle((storedToken, unused) -> {
-                if (isValidToken(storedToken)) {
-                    newTokenFuture.complete(storedToken);
+            CompletableFuture<? extends GrantedOAuth2AccessToken> fallbackTokenFuture = null;
+            try {
+                fallbackTokenFuture = requireNonNull(
+                        fallbackTokenProvider.get(), "fallbackTokenProvider.get() returned null");
+            } catch (Exception e) {
+                logger.warn("Unexpected exception from fallbackTokenProvider.get()", e);
+            }
+            if (fallbackTokenFuture != null) {
+                fallbackTokenFuture.handle((storedToken, unused) -> {
+                    if (isValidToken(storedToken)) {
+                        newTokenFuture.complete(storedToken);
+                        return null;
+                    }
+                    issueAccessToken(null, newTokenFuture);
                     return null;
-                }
-                issueAccessToken(null, newTokenFuture);
-                return null;
-            });
-            return newTokenFuture;
+                });
+                return newTokenFuture;
+            }
         }
         if (token != null && token.isRefreshable()) {
             refreshAccessToken(token, newTokenFuture);
@@ -150,9 +164,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
             if (cause != null) {
                 future.completeExceptionally(cause);
             } else {
-                if (newTokenConsumer != null) {
-                    newTokenConsumer.accept(newToken);
-                }
+                tryConsumeNewToken(newToken);
                 future.complete(newToken);
             }
             return null;
@@ -171,11 +183,19 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
                 future.completeExceptionally(cause);
                 return null;
             }
-            if (newTokenConsumer != null) {
-                newTokenConsumer.accept(newToken);
-            }
+            tryConsumeNewToken(newToken);
             future.complete(newToken);
             return null;
         });
+    }
+
+    private void tryConsumeNewToken(GrantedOAuth2AccessToken newToken) {
+        if (newTokenConsumer != null) {
+            try {
+                newTokenConsumer.accept(newToken);
+            } catch (Exception e) {
+                logger.warn("Unexpected exception from newTokenConsumer.accept()", e);
+            }
+        }
     }
 }
