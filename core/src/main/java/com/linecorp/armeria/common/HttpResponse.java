@@ -34,6 +34,8 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
@@ -50,6 +52,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
+import com.linecorp.armeria.internal.server.JacksonUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -417,6 +420,79 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
         return PublisherBasedHttpResponse.from(headers, publisher);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified {@code content} that is converted into JSON using the
+     * default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
+     * @see JacksonModuleProvider
+     */
+    static HttpResponse ofJson(Object content) {
+        return ofJson(HttpStatus.OK, content);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified {@link HttpStatus} and {@code content} that is
+     * converted into JSON using the default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
+     * @see JacksonModuleProvider
+     */
+    static HttpResponse ofJson(HttpStatus status, Object content) {
+        requireNonNull(status, "status");
+        final ResponseHeaders headers = ResponseHeaders.builder(status)
+                                                       .contentType(MediaType.JSON)
+                                                       .build();
+        return ofJson(headers, content);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified {@link MediaType} and {@code content} that is
+     * converted into JSON using the default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
+     *                                  if failed to encode the {@code content} into JSON.
+     * @see JacksonModuleProvider
+     */
+    static HttpResponse ofJson(MediaType contentType, Object content) {
+        requireNonNull(contentType, "contentType");
+        checkArgument(contentType.isJson(),
+                      "contentType: %s (expected: the subtype is 'json' or ends with '+json'.");
+        final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
+                                                       .contentType(contentType)
+                                                       .build();
+        return ofJson(headers, content);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified {@link ResponseHeaders} and {@code content} that is
+     * converted into JSON using the default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
+     * @see JacksonModuleProvider
+     */
+    static HttpResponse ofJson(ResponseHeaders headers, Object content) {
+        requireNonNull(headers, "headers");
+        requireNonNull(content, "content");
+
+        final HttpData httpData;
+        try {
+            httpData = HttpData.wrap(JacksonUtil.writeValueAsBytes(content));
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException(e.toString(), e);
+        }
+
+        final MediaType contentType = headers.contentType();
+        if (contentType != null && contentType.isJson()) {
+            return of(headers, httpData);
+        } else {
+            final ResponseHeaders newHeaders = headers.toBuilder()
+                                                      .contentType(MediaType.JSON)
+                                                      .build();
+            return of(newHeaders, httpData);
+        }
     }
 
     /**

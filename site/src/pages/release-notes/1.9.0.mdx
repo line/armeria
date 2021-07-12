@@ -12,7 +12,7 @@ date: 2021-06-23
       GraphqlService.builder()
                     .schemaFile(schemaFiles)
                     .runtimeWiring(w -> ...)
-                    .configureDataLoaderRegistry(registery -> ...)
+                    .configureDataLoaderRegistry(registry -> ...)
                     ...
                     .build());
   ```
@@ -132,7 +132,7 @@ date: 2021-06-23
         .localPort(9090, SessionProtocol.HTTP, SessionProtocol.HTTPS);
   ```
 - All Jackson modules in the class loader are registered automatically by default via Jackson's
-  [built-in SPI machanism](https://fasterxml.github.io/jackson-databind/javadoc/2.11/com/fasterxml/jackson/databind/cfg/MapperBuilder.html#findAndAddModules--)
+  [built-in SPI mechanism](https://fasterxml.github.io/jackson-databind/javadoc/2.11/com/fasterxml/jackson/databind/cfg/MapperBuilder.html#findAndAddModules--)
   for your convenience.
   - You can override this behavior by registering your <type://JacksonModuleProvider> implementation
     via Java SPI. #3594 #3625
@@ -218,14 +218,12 @@ date: 2021-06-23
 - Dropwizard 2.0.21 → 2.0.23
 - Dropwizard Metrics 4.1.21 → 4.2.2
 - Eureka 1.10.13 → 1.10.15
-- fastutil 8.4.4 → 8.5.4
 - gRPC-Java 1.37.0 → 1.38.1
 - gRPC-Kotlin 1.0.0 → 1.1.0
 - JBoss logging 3.4.1 → 3.4.2
 - Jetty 9.4.39 → 9.4.42
 - Kotlin 1.5.0 → 1.5.10
 - Kotlin Coroutines 1.4.3 → 1.5.0
-- Micrometer 1.3.18 → 1.3.20
 - Netty 4.1.63 → 4.1.65
 - netty-tcnative-boringssl-static 2.0.38 → 2.0.39
 - Prometheus 0.10.0 → 0.11.0
