@@ -177,7 +177,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     }
 
     @Nullable
-    public final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider() {
+    final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider() {
         return fallbackTokenProvider;
     }
 
@@ -194,7 +194,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     }
 
     @Nullable
-    public final Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer() {
+    final Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer() {
         return newTokenConsumer;
     }
 
