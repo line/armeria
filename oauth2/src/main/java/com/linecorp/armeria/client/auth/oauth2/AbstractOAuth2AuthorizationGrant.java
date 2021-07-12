@@ -99,39 +99,45 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      */
     @Override
     public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
-        final CompletableFuture<GrantedOAuth2AccessToken> tokenFuture = this.tokenFuture;
+        CompletableFuture<GrantedOAuth2AccessToken> future;
         GrantedOAuth2AccessToken token = null;
-        if (!tokenFuture.isDone()) {
-            return tokenFuture;
-        }
-        if (!tokenFuture.isCompletedExceptionally()) {
-            token = tokenFuture.join();
-            if (isValidToken(token)) {
+        for (;;) {
+            final CompletableFuture<GrantedOAuth2AccessToken> tokenFuture = this.tokenFuture;
+            if (!tokenFuture.isDone()) {
                 return tokenFuture;
+            }
+            if (!tokenFuture.isCompletedExceptionally()) {
+                token = tokenFuture.join();
+                if (isValidToken(token)) {
+                    return tokenFuture;
+                }
+            }
+
+            // `tokenFuture` got completed with an invalid token; try again.
+            future = new CompletableFuture<>();
+            if (tokenFutureUpdater.compareAndSet(this, tokenFuture, future)) {
+                break;
             }
         }
 
-        final CompletableFuture<GrantedOAuth2AccessToken> future = new CompletableFuture<>();
-        if (!tokenFutureUpdater.compareAndSet(this, tokenFuture, future)) {
-            return this.tokenFuture;
-        }
+        final CompletableFuture<GrantedOAuth2AccessToken> newTokenFuture = future;
         if (token == null && fallbackTokenProvider != null) {
             fallbackTokenProvider.get().handle((storedToken, unused) -> {
                 if (isValidToken(storedToken)) {
-                    future.complete(storedToken);
+                    newTokenFuture.complete(storedToken);
                     return null;
                 }
-                issueAccessToken(null, future);
+                issueAccessToken(null, newTokenFuture);
                 return null;
             });
-            return future;
+            return newTokenFuture;
         }
         if (token != null && token.isRefreshable()) {
-            refreshAccessToken(token, future);
-            return future;
+            refreshAccessToken(token, newTokenFuture);
+            return newTokenFuture;
         }
-        issueAccessToken(token, future);
-        return future;
+        issueAccessToken(token, newTokenFuture);
+        return newTokenFuture;
     }
 
     private boolean isValidToken(@Nullable GrantedOAuth2AccessToken token) {
