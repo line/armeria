@@ -7,7 +7,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.5.10' apply false
     id 'org.jlleitschuh.gradle.ktlint' version '10.1.0' apply false
 
-    id 'net.ltgt.errorprone' version '1.2.1' apply false
+    id 'net.ltgt.errorprone' version '2.0.2' apply false
 }
 
 allprojects {
@@ -90,20 +90,6 @@ configure(projectsWithFlags('java')) {
 
         tasks.withType(JavaCompile) {
             options.errorprone.excludedPaths = '.*/gen-src/.*'
-            // Open up the internal JDK API so that ErrorProne can access it.
-            options.fork = true
-            options.forkOptions.jvmArgs += [
-              '--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED',
-              '--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED',
-              '--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED',
-              '--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED',
-              '--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
-              '--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED',
-              '--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED',
-              '--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED',
-              '--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED',
-              '--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED'
-            ]
         }
     }
 
