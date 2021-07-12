@@ -80,7 +80,7 @@ public final class SelfSignedCertificate {
     // https://github.com/netty/netty/blob/11e6a77fba9ec7184a558d869373d0ce506d7236/handler/src/main/java/io/netty/handler/ssl/util/SelfSignedCertificate.java
     //
     // Changes:
-    // - Always use BouncyCastle instead of JDK so it works on Java 16+.
+    // - Always use shaded BouncyCastle instead of JDK so it works on Java 16+.
     //   See https://github.com/line/armeria/issues/3673 for more information.
 
     private static final Logger logger = LoggerFactory.getLogger(SelfSignedCertificate.class);
