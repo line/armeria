@@ -330,7 +330,7 @@ class JettyServiceTest extends WebAppContainerTest {
 
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("before close");
-        // An EofException should be raised when writing after closing the ServletOutputStream.
+        // An `IOException` should be raised when writing after closing the `ServletOutputStream`.
         await().untilAsserted(() -> assertThat(capturedException).isNotNull());
         final Throwable cause = capturedException.get();
         assertThat(cause).isInstanceOf(IOException.class)
