@@ -214,7 +214,6 @@ class JettyServiceTest extends WebAppContainerTest {
                            } catch (Throwable cause) {
                                capturedException.set(cause);
                            }
-
                        }));
 
             sb.service("/stream/{totalSize}/{chunkSize}",
