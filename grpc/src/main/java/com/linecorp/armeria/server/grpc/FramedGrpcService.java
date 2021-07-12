@@ -197,7 +197,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     return HttpResponse.of(
                             (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    GrpcStatus.fromThrowable(statusFunction, e, metadata), metadata));
+                                    GrpcStatus.fromThrowable(statusFunction, ctx, e, metadata), metadata));
                 }
             }
         }
@@ -251,7 +251,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         } catch (Throwable t) {
             call.setListener(new EmptyListener<>());
             final Metadata metadata = new Metadata();
-            call.close(GrpcStatus.fromThrowable(statusFunction, t, metadata), metadata);
+            call.close(GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata), metadata);
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
                     " - this is likely a bug in the stub implementation.");
