@@ -17,7 +17,6 @@ package com.linecorp.armeria.server.zookeeper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
@@ -39,11 +38,13 @@ import com.linecorp.armeria.client.zookeeper.ZooKeeperDiscoverySpec;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 
 import zookeeperjunit.CloseableZooKeeper;
 
+@FlakyTest
 class ZooKeeperRegistrationTest {
 
     private static final String Z_NODE = "/testEndPoints";
@@ -149,8 +150,6 @@ class ZooKeeperRegistrationTest {
 
     @Test
     void curatorRegistrationSpec() throws Throwable {
-        assumeThat(System.getenv("FLAKY_TESTS")).isNotEqualTo("false");
-
         final List<Server> servers = startServersWithRetry(false);
         // all servers start and with znode created
         await().untilAsserted(() -> {
