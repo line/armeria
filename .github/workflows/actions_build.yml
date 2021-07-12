@@ -87,8 +87,8 @@ jobs:
         rm -fr ~/.gradle/caches/[0-9]* || true
         rm -fr ~/.gradle/caches/journal-* || true
         rm -fr ~/.gradle/caches/transforms-* || true
-        rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
-        rm -f ~/.gradle/caches/modules-2/gc.properties || true
+        rm -f ~/.gradle/caches/*/*.lock || true
+        rm -f ~/.gradle/caches/*/gc.properties || true
       shell: bash
 
     - name: Dump stuck threads
@@ -135,8 +135,8 @@ jobs:
           rm -fr ~/.gradle/caches/[0-9]* || true
           rm -fr ~/.gradle/caches/journal-* || true
           rm -fr ~/.gradle/caches/transforms-* || true
-          rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
-          rm -f ~/.gradle/caches/modules-2/gc.properties || true
+          rm -f ~/.gradle/caches/*/*.lock || true
+          rm -f ~/.gradle/caches/*/gc.properties || true
         shell: bash
 
   site:
@@ -166,8 +166,8 @@ jobs:
           rm -fr ~/.gradle/caches/[0-9]* || true
           rm -fr ~/.gradle/caches/journal-* || true
           rm -fr ~/.gradle/caches/transforms-* || true
-          rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
-          rm -f ~/.gradle/caches/modules-2/gc.properties || true
+          rm -f ~/.gradle/caches/*/*.lock || true
+          rm -f ~/.gradle/caches/*/gc.properties || true
         shell: bash
 
   flaky-tests:
@@ -194,6 +194,6 @@ jobs:
           rm -fr ~/.gradle/caches/[0-9]* || true
           rm -fr ~/.gradle/caches/journal-* || true
           rm -fr ~/.gradle/caches/transforms-* || true
-          rm -f ~/.gradle/caches/modules-2/modules-2.lock || true
-          rm -f ~/.gradle/caches/modules-2/gc.properties || true
+          rm -f ~/.gradle/caches/*/*.lock || true
+          rm -f ~/.gradle/caches/*/gc.properties || true
         shell: bash
