@@ -126,18 +126,6 @@ jobs:
           distribution: 'adopt'
           java-version: '16'
 
-      - if: ${{ matrix.on != 'self-hosted' }}
-        name: Restore the cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: lint-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
-          restore-keys: |
-            lint-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
-            lint-${{ runner.os }}-
-
       - name: Run the linters
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel lint
@@ -169,18 +157,6 @@ jobs:
           distribution: 'adopt'
           java-version: '16'
 
-      - if: ${{ matrix.on != 'self-hosted' }}
-        name: Restore the cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: site-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
-          restore-keys: |
-            site-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
-            site-${{ runner.os }}-
-
       - name: Build the site
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel site
@@ -206,18 +182,6 @@ jobs:
         with:
           distribution: 'adopt'
           java-version: '16'
-
-      - if: ${{ matrix.on != 'self-hosted' }}
-        name: Restore the cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: flaky-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
-          restore-keys: |
-            flaky-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
-            flaky-${{ runner.os }}-
 
       - name: Run flaky tests
         run: |
