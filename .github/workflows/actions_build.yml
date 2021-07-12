@@ -60,10 +60,10 @@ jobs:
         path: |
           ~/.gradle/wrapper
           ~/.gradle/caches
-        key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-build-${{ matrix.java }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
+        key: build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
         restore-keys: |
-          ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-build-${{ matrix.java }}-
-          ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-
+          build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
+          build-${{ matrix.java }}-${{ runner.os }}-
 
     - name: Build with Gradle
       run: |
@@ -133,10 +133,10 @@ jobs:
           path: |
             ~/.gradle/wrapper
             ~/.gradle/caches
-          key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-lint-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
+          key: lint-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
           restore-keys: |
-            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-lint-
-            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-
+            lint-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
+            lint-${{ runner.os }}-
 
       - name: Run the linters
         run: |
@@ -176,10 +176,10 @@ jobs:
           path: |
             ~/.gradle/wrapper
             ~/.gradle/caches
-          key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-site-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
+          key: site-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
           restore-keys: |
-            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-site-
-            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-
+            site-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
+            site-${{ runner.os }}-
 
       - name: Build the site
         run: |
@@ -214,10 +214,10 @@ jobs:
           path: |
             ~/.gradle/wrapper
             ~/.gradle/caches
-          key: ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-flaky-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
+          key: flaky-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
           restore-keys: |
-            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-flaky-
-            ${{ secrets.CACHE_VERSION }}-${{ runner.os }}-
+            flaky-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
+            flaky-${{ runner.os }}-
 
       - name: Run flaky tests
         run: |
