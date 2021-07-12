@@ -102,6 +102,9 @@ configure(projectsWithFlags('java')) {
                 excludeTags 'FLAKY_TEST'
             }
         } else {
+            if (flakyTest != null) {
+                throw new IllegalArgumentException('flakyTest: %s (expected: true, false or null)')
+            }
             useJUnitPlatform()
         }
 
