@@ -593,9 +593,9 @@ public interface HttpRequest extends Request, HttpMessage {
      * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong.");
      * HttpRequest transformed = request.mapError(cause -> {
      *     if (cause instanceof IllegalStateException) {
-     *         return new MyDomainException(ex);
+     *         return new MyDomainException(cause);
      *     } else {
-     *         return ex;
+     *         return cause;
      *     }
      * });
      * }</pre>

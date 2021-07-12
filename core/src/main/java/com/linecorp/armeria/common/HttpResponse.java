@@ -739,11 +739,12 @@ public interface HttpResponse extends Response, HttpMessage {
      * <p>For example:<pre>{@code
      * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong.");
      * HttpResponse transformed = response.mapError(cause -> {
-     * if (cause instanceof IllegalStateException) {
-     *     return new MyDomainException(ex);
-     * } else {
-     *     return ex;
-     * });
+     *     if (cause instanceof IllegalStateException) {
+     *         return new MyDomainException(cause);
+     *     } else {
+     *         return cause;
+     *     });
+     * })
      * }</pre>
      */
     @Override
