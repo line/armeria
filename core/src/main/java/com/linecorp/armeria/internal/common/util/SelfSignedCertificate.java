@@ -35,10 +35,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
@@ -48,6 +50,13 @@ import java.util.Date;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.X509v3CertificateBuilder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,12 +87,17 @@ public final class SelfSignedCertificate {
 
     // Forked from:
     // https://github.com/netty/netty/blob/11e6a77fba9ec7184a558d869373d0ce506d7236/handler/src/main/java/io/netty/handler/ssl/util/SelfSignedCertificate.java
+    // https://github.com/netty/netty/blob/11e6a77fba9ec7184a558d869373d0ce506d7236/handler/src/main/java/io/netty/handler/ssl/util/BouncyCastleSelfSignedCertGenerator.java
     //
     // Changes:
     // - Always use shaded BouncyCastle instead of JDK so it works on Java 16+.
     //   See https://github.com/line/armeria/issues/3673 for more information.
+    // - Accept `Random` instead of `SecureRandom`.
+    // - Inline `BouncyCastleSelfSignedCertGenerator`.
 
     private static final Logger logger = LoggerFactory.getLogger(SelfSignedCertificate.class);
+
+    private static final Provider bouncyCastleProvider = new MinifiedBouncyCastleProvider();
 
     /** Current time minus 1 year, just in case software clock goes back due to time synchronization. */
     private static final Date DEFAULT_NOT_BEFORE = new Date(SystemPropertyUtil.getLong(
@@ -260,7 +274,7 @@ public final class SelfSignedCertificate {
         final String[] paths;
         try {
             // Try Bouncy Castle if the current JVM didn't have sun.security.x509.
-            paths = BouncyCastleSelfSignedCertGenerator.generate(
+            paths = generate(
                     fqdn, keypair, random, notBefore, notAfter, algorithm);
         } catch (Throwable cause) {
             throw new CertificateException(
@@ -326,8 +340,22 @@ public final class SelfSignedCertificate {
         safeDelete(privateKey);
     }
 
-    static String[] newSelfSignedCertificate(String fqdn, PrivateKey key, X509Certificate cert)
-            throws IOException, CertificateEncodingException {
+    private static String[] generate(String fqdn, KeyPair keypair, Random random,
+                                     Date notBefore, Date notAfter, String algorithm) throws Exception {
+
+        final PrivateKey key = keypair.getPrivate();
+
+        // Prepare the information required for generating an X.509 certificate.
+        final X500Name owner = new X500Name("CN=" + fqdn);
+        final X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(
+                owner, new BigInteger(64, random), notBefore, notAfter, owner, keypair.getPublic());
+
+        final ContentSigner signer = new JcaContentSignerBuilder(
+                "EC".equalsIgnoreCase(algorithm) ? "SHA256withECDSA" : "SHA256WithRSAEncryption").build(key);
+        final X509CertificateHolder certHolder = builder.build(signer);
+        final X509Certificate cert =
+                new JcaX509CertificateConverter().setProvider(bouncyCastleProvider).getCertificate(certHolder);
+        cert.verify(keypair.getPublic());
 
         // Encode the private key into a file.
         ByteBuf wrappedBuf = Unpooled.wrappedBuffer(key.getEncoded());
