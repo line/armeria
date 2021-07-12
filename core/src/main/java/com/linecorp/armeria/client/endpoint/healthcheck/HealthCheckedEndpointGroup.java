@@ -85,6 +85,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
     private static final ThreadLocal<Boolean> isRefreshingContexts = new ThreadLocal<>();
+    private static final CompletableFuture<?>[] EMPTY_FUTURES = new CompletableFuture[0];
 
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
@@ -215,7 +216,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
                 if (!willRemove.isEmpty()) {
                     // Remove old endpoints after finishing the initial health check of `newSelectedEndpoints`.
-                    CompletableFuture.allOf(initialFutures.toArray(new CompletableFuture<?>[0]))
+                    CompletableFuture.allOf(initialFutures.toArray(EMPTY_FUTURES))
                                      .handle((unused, ex) -> {
                                          willRemove.forEach(DefaultHealthCheckerContext::destroy);
                                          return null;
