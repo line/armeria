@@ -27,6 +27,6 @@ import org.junit.jupiter.api.Tag;
 @Inherited
 @Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
-@Tag("FLAKY_TEST")
+@Tag("FLAKY_TESTS")
 public @interface FlakyTest {
 }

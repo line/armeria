@@ -92,18 +92,18 @@ configure(projectsWithFlags('java')) {
         testLogging.exceptionFormat = 'full'
 
         // Use JUnit platform.
-        def flakyTest = rootProject.findProperty('flakyTest')
-        if (flakyTest == 'true') {
+        def flakyTests = rootProject.findProperty('flakyTests')
+        if (flakyTests == 'true') {
             useJUnitPlatform {
-                includeTags 'FLAKY_TEST'
+                includeTags 'FLAKY_TESTS'
             }
-        } else if (flakyTest == 'false') {
+        } else if (flakyTests == 'false') {
             useJUnitPlatform {
-                excludeTags 'FLAKY_TEST'
+                excludeTags 'FLAKY_TESTS'
             }
         } else {
-            if (flakyTest != null) {
-                throw new IllegalArgumentException('flakyTest: %s (expected: true, false or null)')
+            if (flakyTests != null) {
+                throw new IllegalArgumentException("flakyTest: $flakyTests (expected: true, false or null)")
             }
             useJUnitPlatform()
         }
