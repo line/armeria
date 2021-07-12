@@ -53,7 +53,8 @@ jobs:
         distribution: 'adopt'
         java-version: '16'
 
-    - name: Restore the cache
+    - if: ${{ matrix.on != 'self-hosted' }}
+      name: Restore the cache
       uses: actions/cache@v2
       with:
         path: |
@@ -125,7 +126,8 @@ jobs:
           distribution: 'adopt'
           java-version: '16'
 
-      - name: Restore the cache
+      - if: ${{ matrix.on != 'self-hosted' }}
+        name: Restore the cache
         uses: actions/cache@v2
         with:
           path: |
@@ -167,7 +169,8 @@ jobs:
           distribution: 'adopt'
           java-version: '16'
 
-      - name: Restore the cache
+      - if: ${{ matrix.on != 'self-hosted' }}
+        name: Restore the cache
         uses: actions/cache@v2
         with:
           path: |
@@ -204,7 +207,8 @@ jobs:
           distribution: 'adopt'
           java-version: '16'
 
-      - name: Restore the cache
+      - if: ${{ matrix.on != 'self-hosted' }}
+        name: Restore the cache
         uses: actions/cache@v2
         with:
           path: |
