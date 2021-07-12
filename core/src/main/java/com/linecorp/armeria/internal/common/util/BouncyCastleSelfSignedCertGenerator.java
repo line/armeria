@@ -36,9 +36,9 @@ import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.PrivateKey;
 import java.security.Provider;
-import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Date;
+import java.util.Random;
 
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.cert.X509CertificateHolder;
@@ -49,17 +49,22 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 
 /**
- * Generates a self-signed certificate using <a href="https://www.bouncycastle.org/">Bouncy Castle</a>.
+ * Generates a self-signed certificate using {@link MinifiedBouncyCastleProvider}. Note that a user doesn't
+ * need to depend on Bouncy Castle because we shade it into our core JAR.
  */
 final class BouncyCastleSelfSignedCertGenerator {
 
     // Forked from:
     // https://github.com/netty/netty/blob/11e6a77fba9ec7184a558d869373d0ce506d7236/handler/src/main/java/io/netty/handler/ssl/util/BouncyCastleSelfSignedCertGenerator.java
+    //
+    // Changes:
+    // - Do not depend on a custom `SecureRandom` implementation.
 
     private static final Provider PROVIDER = new MinifiedBouncyCastleProvider();
 
-    static String[] generate(String fqdn, KeyPair keypair, SecureRandom random, Date notBefore, Date notAfter,
-                             String algorithm) throws Exception {
+    static String[] generate(String fqdn, KeyPair keypair, Random random,
+                             Date notBefore, Date notAfter, String algorithm) throws Exception {
+
         final PrivateKey key = keypair.getPrivate();
 
         // Prepare the information required for generating an X.509 certificate.
