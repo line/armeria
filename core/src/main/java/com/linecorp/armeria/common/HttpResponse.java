@@ -630,9 +630,9 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
-     * Recovers a failed {@link HttpResponse} by switching to a returned fallback {@link StreamMessage}
-     * when any error occurs before an {@link HttpHeaders} is written.
-     * Note that the failed {@link HttpResponse} cannot be recovered from an error if an {@link HttpHeaders}
+     * Recovers a failed {@link HttpResponse} by switching to a returned fallback {@link HttpResponse}
+     * when any error occurs before an {@link ResponseHeaders} is written.
+     * Note that the failed {@link HttpResponse} cannot be recovered from an error if a {@link ResponseHeaders}
      * was written already.
      *
      * <p>Example:<pre>{@code
@@ -647,7 +647,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * response.write(ResponseHeaders.of(HttpStatus.OK));
      * response.write(HttpData.ofUtf8("Hello"));
      * response.close(new IllegalStateException("Oops..."));
-     * HttpResponse notRecovered = response.recover(cause-> HttpResponse.of("Fallback"));
+     * HttpResponse notRecovered = response.recover(cause -> HttpResponse.of("Fallback"));
      * // The IllegalStateException will be raised even though a fallback function was added.
      * notRecovered.aggregate().join();
      * }</pre>

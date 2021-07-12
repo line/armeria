@@ -52,21 +52,21 @@ class RecoverableStreamMessageTest {
     @Test
     void noError() {
         final StreamMessage<Integer> recoverable =
-                StreamMessage.of(1, 2, 3).resume(cause -> StreamMessage.of(4));
+                StreamMessage.of(1, 2, 3).recoverAndResume(cause -> StreamMessage.of(4));
         assertThat(recoverable.collect().join()).contains(1, 2, 3);
     }
 
     @Test
     void failedStream() {
         final StreamMessage<Integer> recoverable = StreamMessage.<Integer>aborted(ClosedStreamException.get())
-                                                                .resume(cause -> StreamMessage.of(1, 2, 3));
+                                                                .recoverAndResume(cause -> StreamMessage.of(1, 2, 3));
         assertThat(recoverable.collect().join()).contains(1, 2, 3);
     }
 
     @Test
     void resumeOnError() {
         final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
-        final StreamMessage<Integer> recoverable = stream.resume(cause -> StreamMessage.of(4, 5, 6));
+        final StreamMessage<Integer> recoverable = stream.recoverAndResume(cause -> StreamMessage.of(4, 5, 6));
         stream.write(1);
         stream.write(2);
         stream.write(3);
@@ -78,7 +78,7 @@ class RecoverableStreamMessageTest {
     @ParameterizedTest
     void shouldNotResumeOnAbortion(boolean abort) {
         final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
-        final StreamMessage<Integer> aborted = stream.resume(cause -> StreamMessage.of(4, 5, 6));
+        final StreamMessage<Integer> aborted = stream.recoverAndResume(cause -> StreamMessage.of(4, 5, 6));
         stream.write(1);
         stream.write(2);
         stream.write(3);
@@ -131,7 +131,7 @@ class RecoverableStreamMessageTest {
     @Test
     void backPressure() {
         final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
-        final StreamMessage<Integer> recoverable = stream.resume(cause -> StreamMessage.of(4, 5, 6));
+        final StreamMessage<Integer> recoverable = stream.recoverAndResume(cause -> StreamMessage.of(4, 5, 6));
         stream.write(1);
         stream.write(2);
         stream.write(3);
@@ -228,15 +228,15 @@ class RecoverableStreamMessageTest {
         final IllegalStateException cause3 = new IllegalStateException("3");
         final StreamMessage<Object> neverFail =
                 StreamMessage.aborted(cause1)
-                             .resume(cause -> {
+                             .recoverAndResume(cause -> {
                                  assertThat(cause).isSameAs(cause1);
                                  return StreamMessage.aborted(cause2);
                              })
-                             .resume(cause -> {
+                             .recoverAndResume(cause -> {
                                  assertThat(cause).isSameAs(cause2);
                                  return StreamMessage.aborted(cause3);
                              })
-                             .resume(cause -> {
+                             .recoverAndResume(cause -> {
                                  assertThat(cause).isSameAs(cause3);
                                  return StreamMessage.of(1, 2, 3);
                              });

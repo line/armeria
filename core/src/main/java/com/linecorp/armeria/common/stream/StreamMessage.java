@@ -529,20 +529,21 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Resumes a failed {@link StreamMessage} by subscribing to a returned fallback {@link StreamMessage}
-     * when any error occurs.
+     * Recovers a failed {@link StreamMessage} and resumes by subscribing to a returned fallback
+     * {@link StreamMessage} when any error occurs.
      *
      * <p>Example:<pre>{@code
      * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
      * stream.write(1);
      * stream.write(2);
      * stream.close(new IllegalStateException("Oops...");
-     * StreamMessage<Integer> resumed = stream.resume(cause -> StreamMessage.of(3, 4));
+     * StreamMessage<Integer> resumed = stream.recoverAndResume(cause -> StreamMessage.of(3, 4));
      *
      * assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
      * }</pre>
      */
-    default StreamMessage<T> resume(Function<? super Throwable, ? extends StreamMessage<T>> function) {
+    default StreamMessage<T> recoverAndResume(
+            Function<? super Throwable, ? extends StreamMessage<T>> function) {
         requireNonNull(function, "function");
         return new RecoverableStreamMessage<>(this, function, /* allowResuming */ true);
     }
