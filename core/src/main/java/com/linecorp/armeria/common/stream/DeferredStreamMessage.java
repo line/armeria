@@ -314,7 +314,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS, null);
+                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
         downstreamSubscriptionUpdater.compareAndSet(this, null, newSubscription);
 
         final StreamMessage<T> upstream = this.upstream;
@@ -368,7 +368,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         final DefaultStreamMessage<?> streamMessage = new DefaultStreamMessage<>();
         streamMessage.close();
         return new SubscriptionImpl(streamMessage, NoopSubscriber.get(), ImmediateEventExecutor.INSTANCE,
-                                    EMPTY_OPTIONS, null);
+                                    EMPTY_OPTIONS);
     }
 
     private final class ForwardingSubscriber implements Subscriber<T> {
