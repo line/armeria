@@ -524,6 +524,15 @@ public interface HttpRequest extends Request, HttpMessage {
     /**
      * Transforms the {@link ResponseHeaders} of this {@link HttpRequest} by applying the specified
      * {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.of(HttpMethod.GET, "/items");
+     * HttpRequest transformed =
+     *     request.mapHeaders(headers -> headers.toBuilder()
+     *                                          .add("TraceId", "1")
+     *                                          .build());
+     * assert transformed.aggregate().join().headers().get("TraceId").equals("1");
+     * }</pre>
      */
     default HttpRequest mapHeaders(Function<? super RequestHeaders, ? extends RequestHeaders> function) {
         requireNonNull(function, "function");
@@ -535,6 +544,15 @@ public interface HttpRequest extends Request, HttpMessage {
     /**
      * Transforms the {@link HttpData}s emitted by this {@link HttpRequest} by applying the specified
      * {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
+     *                                      HttpData.ofUtf8("data1,data2"));
+     * HttpRequest transformed = request.mapData(data -> {
+     *     return HttpData.ofUtf8(data.toStringUtf8().replaceAll(",", "\n"));
+     * });
+     * assert transformed.aggregate().join().contentUtf8().equals("data1\ndata2");
+     * }</pre>
      */
     default HttpRequest mapData(Function<? super HttpData, ? extends HttpData> function) {
         requireNonNull(function, "function");
@@ -546,9 +564,19 @@ public interface HttpRequest extends Request, HttpMessage {
     /**
      * Transforms the {@linkplain HttpHeaders trailers} emitted by this {@link HttpRequest} by applying the
      * specified {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
+     *                                      HttpData.ofUtf8("..."));
+     * HttpRequest transformed = request.mapTrailers(trailers -> {
+     *     return trailers.withMutations(builder -> builder.set("trailer1", "foo"));
+     * });
+     * assert transformed.aggregate().join().trailers().get("trailer1").equals("foo");
+     * }</pre>
      */
     default HttpRequest mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
         requireNonNull(function, "function");
+
         final StreamMessage<HttpObject> stream = map(obj -> {
             if (obj instanceof HttpHeaders) {
                 return function.apply((HttpHeaders) obj);
@@ -556,5 +584,25 @@ public interface HttpRequest extends Request, HttpMessage {
             return obj;
         });
         return of(headers(), stream);
+    }
+
+    /**
+     * Transforms an error emitted by this {@link HttpRequest} by applying the specified {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpRequest transformed = request.mapError(cause -> {
+     *     if (cause instanceof IllegalStateException) {
+     *         return new MyDomainException(ex);
+     *     } else {
+     *         return ex;
+     *     }
+     * });
+     * }</pre>
+     */
+    @Override
+    default HttpRequest mapError(Function<? super Throwable, ? extends Throwable> function) {
+        requireNonNull(function, "function");
+        return of(headers(), HttpMessage.super.mapError(function));
     }
 }
