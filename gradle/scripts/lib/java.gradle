@@ -103,7 +103,7 @@ configure(projectsWithFlags('java')) {
             }
         } else {
             if (flakyTests != null) {
-                throw new IllegalArgumentException("flakyTest: $flakyTests (expected: true, false or null)")
+                throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
             }
             useJUnitPlatform()
         }
