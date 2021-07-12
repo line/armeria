@@ -589,6 +589,17 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Transforms the non-informational {@link ResponseHeaders} emitted by {@link HttpResponse} by applying
      * the specified {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of("OK");
+     * HttpResponse transformed = response.mapHeaders(headers -> {
+     *     return headers.withMutations(builder -> {
+     *         builder.set(HttpHeaderNames.USER_AGENT, "my-server");
+     *     });
+     * });
+     * assert transformed.aggregate().join().headers()
+     *                   .get(HttpHeaderNames.USER_AGENT).equals("my-server");
+     * }</pre>
      */
     default HttpResponse mapHeaders(Function<? super ResponseHeaders, ? extends ResponseHeaders> function) {
         requireNonNull(function, "function");
@@ -607,6 +618,14 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Transforms the {@link HttpData}s emitted by this {@link HttpRequest} by applying the specified
      * {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of("data1,data2");
+     * HttpResponse transformed = response.mapData(data -> {
+     *     return HttpData.ofUtf8(data.toStringUtf8().replaceAll(",", "\n"));
+     * });
+     * assert transformed.aggregate().join().contentUtf8().equals("data1\ndata2");
+     * }</pre>
      */
     default HttpResponse mapData(Function<? super HttpData, ? extends HttpData> function) {
         requireNonNull(function, "function");
@@ -618,6 +637,14 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Transforms the {@linkplain HttpHeaders trailers} emitted by this {@link HttpResponse} by applying the
      * specified {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of("data");
+     * HttpResponse transformed = response.mapTrailers(trailers -> {
+     *     return trailers.withMutations(builder -> builder.add("trailer1", "foo"));
+     * });
+     * assert transformed.aggregate().join().trailers().get("trailer1").equals("foo");
+     * }</pre>
      */
     default HttpResponse mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
         requireNonNull(function, "function");
@@ -632,6 +659,16 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Transforms an error emitted by this {@link HttpResponse} by applying the specified {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpResponse transformed = response.mapError(cause -> {
+     * if (cause instanceof IllegalStateException) {
+     *     return new MyDomainException(ex);
+     * } else {
+     *     return ex;
+     * });
+     * }</pre>
      */
     @Override
     default HttpResponse mapError(Function<? super Throwable, ? extends Throwable> function) {
