@@ -72,10 +72,15 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     public void before(ExtensionContext context) throws Exception {
         try {
             delegate.before();
-            contextCaptor.clear();
         } catch (Throwable t) {
             throw new RuntimeException("Failed to set up before callback", t);
         }
+    }
+
+    @Override
+    public void beforeEach(ExtensionContext context) throws Exception {
+        super.beforeEach(context);
+        contextCaptor.clear();
     }
 
     /**
@@ -290,12 +295,14 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      * Returns the {@link ServiceRequestContextCaptor} that captures all the {@link
      * ServiceRequestContext}s in this {@link Server}.
      */
-    public ServiceRequestContextCaptor requestContextCaptor() {
+    public final ServiceRequestContextCaptor requestContextCaptor() {
         return contextCaptor;
     }
 
     /**
-     * A predicate that determines whether the {@link ServiceRequestContext} should be captured or not.
+     * Determines whether the {@link ServiceRequestContext} should be captured or not.
+     * This method returns {@code true} by default. Override it to capture the contexts
+     * selectively.
      */
     protected boolean shouldCapture(ServiceRequestContext ctx) {
         return true;

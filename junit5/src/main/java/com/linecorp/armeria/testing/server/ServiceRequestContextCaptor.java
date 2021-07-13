@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.testing.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
@@ -60,7 +62,7 @@ public final class ServiceRequestContextCaptor {
     /**
      * Creates a new decorator to capture the {@link ServiceRequestContext}s.
      */
-    public Function<? super HttpService, HttpService> decorator() {
+    public Function<? super HttpService, ? extends HttpService> decorator() {
         return delegate -> new SimpleDecoratingHttpService(delegate) {
             @Override
             public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
@@ -74,8 +76,9 @@ public final class ServiceRequestContextCaptor {
      * Creates a new decorator to capture the {@link ServiceRequestContext}s
      * satisfying the given predicate {@code filter}.
      */
-    public Function<? super HttpService, HttpService>
+    public Function<? super HttpService, ? extends HttpService>
     decorator(Predicate<? super ServiceRequestContext> filter) {
+        requireNonNull(filter, "filter");
         return delegate -> new SimpleDecoratingHttpService(delegate) {
             @Override
             public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
