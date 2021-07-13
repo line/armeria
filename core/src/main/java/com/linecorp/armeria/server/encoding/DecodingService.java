@@ -46,7 +46,8 @@ public final class DecodingService extends SimpleDecoratingHttpService {
      * Creates a new {@link DecodingService} decorator with the default encodings of 'gzip' and 'deflate'.
      */
     public static Function<? super HttpService, DecodingService> newDecorator() {
-        return newDecorator(ImmutableList.of(StreamDecoderFactory.gzip(), StreamDecoderFactory.deflate()));
+        return newDecorator(ImmutableList.of(StreamDecoderFactory.gzip(), StreamDecoderFactory.deflate(),
+                                             StreamDecoderFactory.br()));
     }
 
     /**
