@@ -742,8 +742,8 @@ public interface HttpResponse extends Response, HttpMessage {
      *         return new MyDomainException(cause);
      *     } else {
      *         return cause;
-     *     });
-     * })
+     *     }
+     * });
      * }</pre>
      */
     @Override

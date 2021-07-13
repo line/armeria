@@ -7,7 +7,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.5.10' apply false
     id 'org.jlleitschuh.gradle.ktlint' version '10.1.0' apply false
 
-    id 'net.ltgt.errorprone' version '1.2.1' apply false
+    id 'net.ltgt.errorprone' version '2.0.2' apply false
 }
 
 allprojects {
@@ -38,6 +38,9 @@ allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
         maxHeapSize = '512m'
+        if (rootProject.ext.testJavaVersion >= 9) {
+            jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+        }
 
         // Enable leak detection when '-Pleak' option is specified.
         if (rootProject.hasProperty('leak')) {
@@ -203,9 +206,9 @@ allprojects {
     }
 }
 
-// Require to use JDK 15 when releasing.
+// Require to use JDK 16 when releasing.
 tasks.release.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_15) {
-        throw new IllegalStateException("You must release using JDK 15.");
+    if (JavaVersion.current() != JavaVersion.VERSION_16) {
+        throw new IllegalStateException("You must release using JDK 16.");
     }
 }
