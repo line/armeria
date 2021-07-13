@@ -22,6 +22,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 
 public enum NoopExceptionHandlerFunction implements ExceptionHandlerFunction {
+
     INSTANCE;
 
     @Override

@@ -1367,7 +1367,7 @@ public final class Flags {
         } else if (annotatedServiceVerbosity != null) {
             name = annotatedServiceExceptionVerbosity;
         } else {
-            // The default value
+            // Use the default option
             name = serviceVerbosity;
         }
         final String mode = getNormalized(name, defaultValue,
