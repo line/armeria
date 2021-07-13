@@ -169,25 +169,27 @@ task testStreaming(type: Test,
 tasks.shadedTest.finalizedBy tasks.testStreaming
 tasks.check.dependsOn tasks.testStreaming
 
-// Run the test cases based on reactive-streams-tck
-task testNg(type: Test,
+if (rootProject.findProperty('FLAKY_TESTS') != 'true') {
+    // Run the test cases based on reactive-streams-tck only with non-flaky mode
+    task testNg(type: Test,
             group: 'Verification',
             description: 'Runs the TestNG unit tests.',
             dependsOn: tasks.shadedTestClasses) {
-    useTestNG()
-    include '/com/linecorp/armeria/common/**'
+        useTestNG()
+        include '/com/linecorp/armeria/common/**'
 
-    scanForTestClasses = false
-    testClassesDirs = tasks.shadedTest.testClassesDirs
-    classpath = testClassesDirs
+        scanForTestClasses = false
+        testClassesDirs = tasks.shadedTest.testClassesDirs
+        classpath = testClassesDirs
 
-    // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
-    doFirst {
-        classpath += project.files(configurations.shadedTestRuntime.resolve())
+        // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
+        doFirst {
+            classpath += project.files(configurations.shadedTestRuntime.resolve())
+        }
     }
+    tasks.shadedTest.finalizedBy tasks.testNg
+    tasks.check.dependsOn tasks.testNg
 }
-tasks.shadedTest.finalizedBy tasks.testNg
-tasks.check.dependsOn tasks.testNg
 
 if (tasks.findByName('trimShadedJar')) {
     tasks.trimShadedJar.configure {

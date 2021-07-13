@@ -34,6 +34,8 @@ import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
@@ -51,6 +53,7 @@ import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
+import com.linecorp.armeria.internal.server.JacksonUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -421,6 +424,79 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
+     * Creates a new HTTP response with the specified {@code content} that is converted into JSON using the
+     * default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
+     * @see JacksonModuleProvider
+     */
+    static HttpResponse ofJson(Object content) {
+        return ofJson(HttpStatus.OK, content);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified {@link HttpStatus} and {@code content} that is
+     * converted into JSON using the default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
+     * @see JacksonModuleProvider
+     */
+    static HttpResponse ofJson(HttpStatus status, Object content) {
+        requireNonNull(status, "status");
+        final ResponseHeaders headers = ResponseHeaders.builder(status)
+                                                       .contentType(MediaType.JSON)
+                                                       .build();
+        return ofJson(headers, content);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified {@link MediaType} and {@code content} that is
+     * converted into JSON using the default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
+     *                                  if failed to encode the {@code content} into JSON.
+     * @see JacksonModuleProvider
+     */
+    static HttpResponse ofJson(MediaType contentType, Object content) {
+        requireNonNull(contentType, "contentType");
+        checkArgument(contentType.isJson(),
+                      "contentType: %s (expected: the subtype is 'json' or ends with '+json'.");
+        final ResponseHeaders headers = ResponseHeaders.builder(HttpStatus.OK)
+                                                       .contentType(contentType)
+                                                       .build();
+        return ofJson(headers, content);
+    }
+
+    /**
+     * Creates a new HTTP response with the specified {@link ResponseHeaders} and {@code content} that is
+     * converted into JSON using the default {@link ObjectMapper}.
+     *
+     * @throws IllegalArgumentException if failed to encode the {@code content} into JSON.
+     * @see JacksonModuleProvider
+     */
+    static HttpResponse ofJson(ResponseHeaders headers, Object content) {
+        requireNonNull(headers, "headers");
+        requireNonNull(content, "content");
+
+        final HttpData httpData;
+        try {
+            httpData = HttpData.wrap(JacksonUtil.writeValueAsBytes(content));
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException(e.toString(), e);
+        }
+
+        final MediaType contentType = headers.contentType();
+        if (contentType != null && contentType.isJson()) {
+            return of(headers, httpData);
+        } else {
+            final ResponseHeaders newHeaders = headers.toBuilder()
+                                                      .contentType(MediaType.JSON)
+                                                      .build();
+            return of(newHeaders, httpData);
+        }
+    }
+
+    /**
      * Creates a new HTTP response of the redirect to specific location.
      */
     static HttpResponse ofRedirect(HttpStatus redirectStatus, String location) {
@@ -588,6 +664,17 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Transforms the non-informational {@link ResponseHeaders} emitted by {@link HttpResponse} by applying
      * the specified {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of("OK");
+     * HttpResponse transformed = response.mapHeaders(headers -> {
+     *     return headers.withMutations(builder -> {
+     *         builder.set(HttpHeaderNames.USER_AGENT, "my-server");
+     *     });
+     * });
+     * assert transformed.aggregate().join().headers()
+     *                   .get(HttpHeaderNames.USER_AGENT).equals("my-server");
+     * }</pre>
      */
     default HttpResponse mapHeaders(Function<? super ResponseHeaders, ? extends ResponseHeaders> function) {
         requireNonNull(function, "function");
@@ -606,6 +693,14 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Transforms the {@link HttpData}s emitted by this {@link HttpRequest} by applying the specified
      * {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of("data1,data2");
+     * HttpResponse transformed = response.mapData(data -> {
+     *     return HttpData.ofUtf8(data.toStringUtf8().replaceAll(",", "\n"));
+     * });
+     * assert transformed.aggregate().join().contentUtf8().equals("data1\ndata2");
+     * }</pre>
      */
     default HttpResponse mapData(Function<? super HttpData, ? extends HttpData> function) {
         requireNonNull(function, "function");
@@ -617,6 +712,14 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Transforms the {@linkplain HttpHeaders trailers} emitted by this {@link HttpResponse} by applying the
      * specified {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.of("data");
+     * HttpResponse transformed = response.mapTrailers(trailers -> {
+     *     return trailers.withMutations(builder -> builder.add("trailer1", "foo"));
+     * });
+     * assert transformed.aggregate().join().trailers().get("trailer1").equals("foo");
+     * }</pre>
      */
     default HttpResponse mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
         requireNonNull(function, "function");
@@ -627,6 +730,26 @@ public interface HttpResponse extends Response, HttpMessage {
             return obj;
         });
         return of(stream);
+    }
+
+    /**
+     * Transforms an error emitted by this {@link HttpResponse} by applying the specified {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpResponse transformed = response.mapError(cause -> {
+     *     if (cause instanceof IllegalStateException) {
+     *         return new MyDomainException(cause);
+     *     } else {
+     *         return cause;
+     *     });
+     * })
+     * }</pre>
+     */
+    @Override
+    default HttpResponse mapError(Function<? super Throwable, ? extends Throwable> function) {
+        requireNonNull(function, "function");
+        return of(HttpMessage.super.mapError(function));
     }
 
     /**

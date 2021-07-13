@@ -178,4 +178,64 @@ class FuseableStreamMessageTest {
             assertThat(buf.refCnt()).isZero();
         }
     }
+
+    @Test
+    void mapError() {
+        final IllegalStateException first = new IllegalStateException("1");
+        final IllegalStateException second = new IllegalStateException("2");
+        final IllegalStateException third = new IllegalStateException("3");
+        final StreamMessage<Object> aborted = StreamMessage.aborted(first)
+                                                           .mapError(error -> {
+                                                               assertThat(error).isSameAs(first);
+                                                               return second;
+                                                           })
+                                                           .mapError(error -> {
+                                                               assertThat(error).isSameAs(second);
+                                                               return third;
+                                                           });
+        StepVerifier.create(aborted)
+                    .expectErrorMatches(cause -> cause == third)
+                    .verify();
+
+        final StreamMessage<Integer> fixed =
+                StreamMessage.of(1, 2, 3, 4)
+                             .map(i -> {
+                                 if (i < 3) {
+                                     return i + 1;
+                                 } else {
+                                     throw first;
+                                 }
+                             }).mapError(error -> {
+                                 assertThat(error).isSameAs(first);
+                                 return second;
+                             })
+                             .mapError(error -> {
+                                 assertThat(error).isSameAs(second);
+                                 return third;
+                             });
+        StepVerifier.create(fixed)
+                    .expectNext(2, 3)
+                    .expectErrorMatches(cause -> cause == third)
+                    .verify();
+
+        final DefaultStreamMessage<Integer> defaultStream = new DefaultStreamMessage<>();
+        defaultStream.write(1);
+        defaultStream.write(2);
+        defaultStream.close(first);
+        final StreamMessage<Integer> defaultStream2 =
+                defaultStream.mapError(error -> {
+                                 assertThat(error).isSameAs(first);
+                                 return second;
+                             })
+                             .mapError(error -> {
+                                 assertThat(error).isSameAs(second);
+                                 return third;
+                             })
+                             .map(i -> i + 1)
+                             .map(i -> i + 1);
+        StepVerifier.create(defaultStream2)
+                    .expectNext(3, 4)
+                    .expectErrorMatches(cause -> cause == third)
+                    .verify();
+    }
 }
