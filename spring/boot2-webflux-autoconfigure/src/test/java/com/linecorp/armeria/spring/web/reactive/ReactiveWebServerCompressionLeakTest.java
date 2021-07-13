@@ -114,7 +114,7 @@ class ReactiveWebServerCompressionLeakTest {
         await().untilAsserted(() -> {
             assertThat(data.getNativeBuffer().refCnt()).isZero();
         });
-        assertThat(nettyData.isEmpty()).isTrue();
+        assertThat(nettyData).isEmpty();
     }
 
     private WebClient webClient() {
