@@ -16,9 +16,12 @@
 package com.linecorp.armeria.spring.web.reactive;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedTransferQueue;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
@@ -54,7 +57,7 @@ import reactor.core.publisher.Mono;
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 class ReactiveWebServerCompressionLeakTest {
 
-    private static final List<NettyDataBuffer> nettyData = new ArrayList<>();
+    private static final BlockingQueue<NettyDataBuffer> nettyData = new LinkedTransferQueue<>();
 
     @SpringBootApplication
     @Configuration
@@ -81,7 +84,7 @@ class ReactiveWebServerCompressionLeakTest {
         }
 
         @Component
-        private static final class HttpDataCaptor implements WebFilter {
+        static final class HttpDataCaptor implements WebFilter {
 
             @Override
             public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
@@ -109,8 +112,11 @@ class ReactiveWebServerCompressionLeakTest {
         final WebClient client = webClient();
         final AggregatedHttpResponse response = client.get("/hello").aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("Hello Armeria");
-        assertThat(nettyData.size()).isOne();
-        assertThat(nettyData.get(0).getNativeBuffer().refCnt()).isZero();
+        final NettyDataBuffer data = nettyData.take();
+        await().untilAsserted(() -> {
+            assertThat(data.getNativeBuffer().refCnt()).isZero();
+        });
+        assertThat(nettyData.isEmpty()).isTrue();
     }
 
     private WebClient webClient() {
