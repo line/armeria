@@ -21,7 +21,6 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -58,23 +57,7 @@ public interface ExceptionHandler {
      * Returns the default {@link ExceptionHandler}.
      */
     static ExceptionHandler ofDefault() {
-        return (ctx, cause) -> {
-            // TODO(minwoox): Add more specific conditions such as returning 400 for IllegalArgumentException
-            //                when we reach v2.0.
-            if (cause instanceof HttpStatusException) {
-                return HttpResponse.of(((HttpStatusException) cause).httpStatus());
-            }
-            if (cause instanceof RequestCancellationException) {
-                // A stream has been cancelled. No need to send a response with a status.
-                return HttpResponse.ofFailure(cause);
-            }
-
-            if (cause instanceof RequestTimeoutException) {
-                return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE, cause));
-            }
-
-            return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR, cause));
-        };
+        return DefaultExceptionHandler.INSTANCE;
     }
 
     /**

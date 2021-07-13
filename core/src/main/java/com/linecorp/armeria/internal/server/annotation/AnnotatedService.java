@@ -44,7 +44,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -62,7 +61,6 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
-import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.HttpFileResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.HttpResult;
@@ -143,11 +141,16 @@ public final class AnnotatedService implements HttpService {
                       method.getDeclaringClass().getSimpleName(), method.getName());
         isKotlinSuspendingMethod = KotlinUtil.isSuspendingFunction(method);
         this.resolvers = requireNonNull(resolvers, "resolvers");
-        exceptionHandler =
-                new CompositeExceptionHandlerFunction(object.getClass().getSimpleName(), method.getName(),
-                                                      requireNonNull(exceptionHandlers, "exceptionHandlers"));
+
+        requireNonNull(exceptionHandlers, "exceptionHandlers");
+        if (exceptionHandlers.isEmpty()) {
+            exceptionHandler = NoopExceptionHandlerFunction.INSTANCE;
+        } else {
+            exceptionHandler = new CompositeExceptionHandlerFunction(exceptionHandlers);
+        }
+
         responseConverter = responseConverter(
-                method, requireNonNull(responseConverters, "responseConverters"), exceptionHandler);
+                method, requireNonNull(responseConverters, "responseConverters"));
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.route = requireNonNull(route, "route");
 
@@ -186,8 +189,7 @@ public final class AnnotatedService implements HttpService {
     }
 
     private static ResponseConverterFunction responseConverter(
-            Method method, List<ResponseConverterFunction> responseConverters,
-            ExceptionHandlerFunction exceptionHandler) {
+            Method method, List<ResponseConverterFunction> responseConverters) {
 
         final Type actualType;
         if (HttpResult.class.isAssignableFrom(method.getReturnType())) {
@@ -211,12 +213,12 @@ public final class AnnotatedService implements HttpService {
                         // It is the last converter to try to convert the result object into an HttpResponse
                         // after aggregating the published object from a Publisher or Stream.
                         .add(new AggregatedResponseConverterFunction(
-                                new CompositeResponseConverterFunction(backingConverters), exceptionHandler))
+                                new CompositeResponseConverterFunction(backingConverters)))
                         .build());
 
         for (final ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
             final ResponseConverterFunction func =
-                    provider.createResponseConverterFunction(actualType, responseConverter, exceptionHandler);
+                    provider.createResponseConverterFunction(actualType, responseConverter);
             if (func != null) {
                 return func;
             }
@@ -270,11 +272,17 @@ public final class AnnotatedService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        return HttpResponse.from(serve0(ctx, req)).recover(cause -> {
-            try (SafeCloseable ignored = ctx.push()) {
-                return exceptionHandler.handleException(ctx, req, cause);
-            }
-        });
+        final HttpResponse response = HttpResponse.from(serve0(ctx, req));
+        if (exceptionHandler == NoopExceptionHandlerFunction.INSTANCE) {
+            // If an error occurs, the default ExceptionHandler will handle the error.
+            return response;
+        } else {
+            return response.recover(cause -> {
+                try (SafeCloseable ignored = ctx.push()) {
+                    return exceptionHandler.handleException(ctx, req, cause);
+                }
+            });
+        }
     }
 
     /**
@@ -315,10 +323,10 @@ public final class AnnotatedService implements HttpService {
                             aReq -> toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()));
                 }
                 return composedFuture
-                        .thenApply(result -> convertResponse(ctx, req, null, result, HttpHeaders.of()));
+                        .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
             default:
                 final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
-                        aReq -> convertResponse(ctx, req, null, invoke(ctx, req, aReq), HttpHeaders.of());
+                        aReq -> convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of());
                 if (useBlockingTaskExecutor) {
                     return f.thenApplyAsync(defaultApplyFunction, ctx.blockingTaskExecutor());
                 } else {
@@ -353,9 +361,8 @@ public final class AnnotatedService implements HttpService {
     /**
      * Converts the specified {@code result} to an {@link HttpResponse}.
      */
-    private HttpResponse convertResponse(ServiceRequestContext ctx, HttpRequest req,
-                                         @Nullable HttpHeaders headers, @Nullable Object result,
-                                         HttpHeaders trailers) {
+    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable HttpHeaders headers,
+                                         @Nullable Object result, HttpHeaders trailers) {
         final ResponseHeaders newHeaders;
         final HttpHeaders newTrailers;
         if (result instanceof HttpResult) {
@@ -378,7 +385,7 @@ public final class AnnotatedService implements HttpService {
         }
         if (result instanceof CompletionStage) {
             final CompletionStage<?> future = (CompletionStage<?>) result;
-            return HttpResponse.from(future.thenApply(object -> convertResponse(ctx, req, newHeaders, object,
+            return HttpResponse.from(future.thenApply(object -> convertResponse(ctx, newHeaders, object,
                                                                                 newTrailers)));
         }
 
@@ -432,26 +439,15 @@ public final class AnnotatedService implements HttpService {
      */
     private static final class CompositeExceptionHandlerFunction implements ExceptionHandlerFunction {
 
-        private final String className;
-        private final String methodName;
         private final List<ExceptionHandlerFunction> functions;
 
-        CompositeExceptionHandlerFunction(String className, String methodName,
-                                          List<ExceptionHandlerFunction> functions) {
-            this.className = className;
-            this.methodName = methodName;
+        CompositeExceptionHandlerFunction(List<ExceptionHandlerFunction> functions) {
             this.functions = ImmutableList.copyOf(functions);
         }
 
         @Override
         public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             final Throwable peeledCause = Exceptions.peel(cause);
-
-            if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
-                logger.isWarnEnabled()) {
-                logger.warn("{} Exception raised by method '{}' in '{}':",
-                            ctx, methodName, className, peeledCause);
-            }
 
             for (final ExceptionHandlerFunction func : functions) {
                 try {
@@ -470,7 +466,7 @@ public final class AnnotatedService implements HttpService {
                 }
             }
 
-            return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+            return HttpResponse.ofFailure(peeledCause);
         }
     }
 
@@ -481,12 +477,9 @@ public final class AnnotatedService implements HttpService {
     private static final class AggregatedResponseConverterFunction implements ResponseConverterFunction {
 
         private final ResponseConverterFunction responseConverter;
-        private final ExceptionHandlerFunction exceptionHandler;
 
-        AggregatedResponseConverterFunction(ResponseConverterFunction responseConverter,
-                                            ExceptionHandlerFunction exceptionHandler) {
+        AggregatedResponseConverterFunction(ResponseConverterFunction responseConverter) {
             this.responseConverter = responseConverter;
-            this.exceptionHandler = exceptionHandler;
         }
 
         @Override

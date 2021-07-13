@@ -70,8 +70,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     private final ServerHttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
     private final DefaultServiceRequestContext reqCtx;
-    @Nullable
-    private final Throwable primaryCause;
 
     @Nullable
     private Subscription subscription;
@@ -89,13 +87,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     private WriteDataFutureListener cachedWriteDataListener;
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
-                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
-                           @Nullable Throwable primaryCause) {
+                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
-        this.primaryCause = primaryCause;
     }
 
     private HttpService service() {
@@ -358,9 +354,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
     }
 
     private void endLogRequestAndResponse(Throwable cause) {
-        final Throwable cause0 = firstNonNull(primaryCause, cause);
-        logBuilder().endRequest(cause0);
-        logBuilder().endResponse(cause0);
+        logBuilder().endRequest(cause);
+        logBuilder().endResponse(cause);
     }
 
     private boolean tryComplete() {
@@ -532,13 +527,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
 
             if (endOfStream) {
                 if (tryComplete()) {
-                    if (primaryCause != null) {
-                        logBuilder().endRequest(primaryCause);
-                        logBuilder().endResponse(primaryCause);
-                    } else {
-                        logBuilder().endRequest();
-                        logBuilder().endResponse();
-                    }
+                    logBuilder().endRequest();
+                    logBuilder().endResponse();
                     final ServiceConfig config = reqCtx.config();
                     if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
                         reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);

@@ -13,18 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.server.HttpResponseException;
-import com.linecorp.armeria.server.HttpStatusException;
 
 /**
- * The verbosity of exceptions logged by annotated HTTP services.
- *
- * @deprecated Use {@link com.linecorp.armeria.server.ExceptionVerbosity} instead.
+ * The verbosity of exceptions logged by services.
  */
-@Deprecated
 public enum ExceptionVerbosity {
     /**
      * Log all exceptions.
@@ -34,7 +29,7 @@ public enum ExceptionVerbosity {
      * Log exceptions which are not handled by any {@link ExceptionHandler} specified by a user.
      * However, the following exceptions would not be logged because they are from the well-known cause.
      * <ul>
-     *     <li>{@link IllegalArgumentException}</li>
+     *     <li>{@link IllegalArgumentException} for annotated services</li>
      *     <li>{@link HttpStatusException}</li>
      *     <li>{@link HttpResponseException}</li>
      *     <li>Other expected exceptions as defined in {@link Exceptions#isExpected(Throwable)}</li>

@@ -26,8 +26,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.annotation.Nullable;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -76,14 +74,10 @@ class AnnotatedServiceExceptionHandlerTest {
         }
     };
 
-    @Nullable
-    private static volatile ServiceRequestContext sctx;
-
     private WebClient client;
 
     @BeforeEach
     void setUp() {
-        sctx = null;
         client = WebClient.of(server.httpUri());
     }
 
@@ -260,7 +254,6 @@ class AnnotatedServiceExceptionHandlerTest {
 
         @Get("/bad1")
         public HttpResponse bad1(ServiceRequestContext ctx, HttpRequest req) {
-            sctx = ctx;
             return HttpResponse.from(completeExceptionallyLater(ctx));
         }
 

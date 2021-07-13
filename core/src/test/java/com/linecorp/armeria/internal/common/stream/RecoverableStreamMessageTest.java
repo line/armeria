@@ -58,8 +58,9 @@ class RecoverableStreamMessageTest {
 
     @Test
     void failedStream() {
-        final StreamMessage<Integer> recoverable = StreamMessage.<Integer>aborted(ClosedStreamException.get())
-                                                                .recoverAndResume(cause -> StreamMessage.of(1, 2, 3));
+        final StreamMessage<Integer> recoverable =
+                StreamMessage.<Integer>aborted(ClosedStreamException.get())
+                             .recoverAndResume(cause -> StreamMessage.of(1, 2, 3));
         assertThat(recoverable.collect().join()).contains(1, 2, 3);
     }
 

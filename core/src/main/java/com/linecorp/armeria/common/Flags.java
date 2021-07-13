@@ -59,13 +59,13 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
+import com.linecorp.armeria.server.ExceptionHandler;
+import com.linecorp.armeria.server.ExceptionVerbosity;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientService;
 import com.linecorp.armeria.server.TransientServiceOption;
-import com.linecorp.armeria.server.annotation.ExceptionHandler;
-import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
@@ -397,10 +397,15 @@ public final class Flags {
     private static final String DNS_CACHE_SPEC =
             nonnullCaffeineSpec("dnsCacheSpec", DEFAULT_DNS_CACHE_SPEC);
 
-    private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
-    private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
-            exceptionLoggingMode("annotatedServiceExceptionVerbosity",
-                                 DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
+    private static final String DEFAULT_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
+    private static final com.linecorp.armeria.server.annotation.ExceptionVerbosity
+            ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
+            legacyExceptionLoggingMode("annotatedServiceExceptionVerbosity",
+                                       DEFAULT_SERVICE_EXCEPTION_VERBOSITY);
+
+    private static final ExceptionVerbosity SERVICE_EXCEPTION_VERBOSITY =
+            exceptionLoggingMode("serviceExceptionVerbosity",
+                                 DEFAULT_SERVICE_EXCEPTION_VERBOSITY);
 
     private static final boolean USE_JDK_DNS_RESOLVER = getBoolean("useJdkDnsResolver", false);
 
@@ -1136,22 +1141,51 @@ public final class Flags {
      * Returns the verbosity of exceptions logged by annotated HTTP services. The value of this property
      * is one of the following:
      * <ul>
-     *     <li>{@link ExceptionVerbosity#ALL} - logging all exceptions raised from annotated HTTP services</li>
+     *     <li>{@link com.linecorp.armeria.server.annotation.ExceptionVerbosity#ALL} -
+     *         logging all exceptions raised from annotated HTTP services</li>
+     *     <li>{@link com.linecorp.armeria.server.annotation.ExceptionVerbosity#UNHANDLED} -
+     *         logging exceptions which are not handled by
+     *         {@link com.linecorp.armeria.server.annotation.ExceptionHandler}s provided by
+     *         a user and are not well-known exceptions</li>
+     *     <li>{@link com.linecorp.armeria.server.annotation.ExceptionVerbosity#NONE} -
+     *         no logging exceptions</li>
+     * </ul>
+     * A log message would be written at {@code WARN} level.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_SERVICE_EXCEPTION_VERBOSITY}.
+     * Specify the
+     * {@code -Dcom.linecorp.armeria.annotatedServiceExceptionVerbosity=<all|unhandled|none>} JVM option
+     * to override the default value.
+     *
+     * @see com.linecorp.armeria.server.annotation.ExceptionVerbosity
+     * @deprecated Use {@link #serviceExceptionVerbosity()} instead.
+     */
+    @Deprecated
+    public static com.linecorp.armeria.server.annotation.ExceptionVerbosity
+    annotatedServiceExceptionVerbosity() {
+        return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
+    }
+
+    /**
+     * Returns the verbosity of exceptions logged by services. The value of this property
+     * is one of the following:
+     * <ul>
+     *     <li>{@link ExceptionVerbosity#ALL} - logging all exceptions raised from services</li>
      *     <li>{@link ExceptionVerbosity#UNHANDLED} - logging exceptions which are not handled by
      *     {@link ExceptionHandler}s provided by a user and are not well-known exceptions
      *     <li>{@link ExceptionVerbosity#NONE} - no logging exceptions</li>
      * </ul>
      * A log message would be written at {@code WARN} level.
      *
-     * <p>The default value of this flag is {@value DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY}.
+     * <p>The default value of this flag is {@value DEFAULT_SERVICE_EXCEPTION_VERBOSITY}.
      * Specify the
-     * {@code -Dcom.linecorp.armeria.annotatedServiceExceptionVerbosity=<all|unhandled|none>} JVM option
+     * {@code -Dcom.linecorp.armeria.serviceExceptionVerbosity=<all|unhandled|none>} JVM option
      * to override the default value.
      *
      * @see ExceptionVerbosity
      */
-    public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
-        return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
+    public static ExceptionVerbosity serviceExceptionVerbosity() {
+        return SERVICE_EXCEPTION_VERBOSITY;
     }
 
     /**
@@ -1326,6 +1360,14 @@ public final class Flags {
                                           value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
         return ExceptionVerbosity.valueOf(mode.toUpperCase());
+    }
+
+    private static com.linecorp.armeria.server.annotation.ExceptionVerbosity legacyExceptionLoggingMode(
+            String name, String defaultValue) {
+        final String mode = getNormalized(name, defaultValue,
+                                          value -> Arrays.stream(ExceptionVerbosity.values())
+                                                         .anyMatch(v -> v.name().equalsIgnoreCase(value)));
+        return com.linecorp.armeria.server.annotation.ExceptionVerbosity.valueOf(mode.toUpperCase());
     }
 
     private static boolean getBoolean(String name, boolean defaultValue) {
