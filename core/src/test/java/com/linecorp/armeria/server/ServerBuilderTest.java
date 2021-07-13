@@ -52,7 +52,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.internal.common.util.BouncyCastleKeyFactoryProvider;
+import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -490,7 +490,7 @@ class ServerBuilderTest {
     @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
     void tlsPkcsPrivateKeys(String privateKeyPath) {
         final String resourceRoot =
-                '/' + BouncyCastleKeyFactoryProvider.class.getPackage().getName().replace('.', '/') + '/';
+                '/' + MinifiedBouncyCastleProvider.class.getPackage().getName().replace('.', '/') + '/';
         Server.builder()
               .tls(getClass().getResourceAsStream("/cert.pem"),
                    getClass().getResourceAsStream(privateKeyPath))

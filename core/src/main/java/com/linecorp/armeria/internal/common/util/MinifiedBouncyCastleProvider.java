@@ -22,6 +22,7 @@ import java.security.KeyFactorySpi;
 import java.security.PrivilegedAction;
 import java.security.Provider;
 import java.security.Security;
+import java.security.cert.CertificateFactorySpi;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -29,24 +30,27 @@ import java.util.function.Supplier;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.jcajce.provider.asymmetric.ec.KeyFactorySpi.EC;
+import org.bouncycastle.jcajce.provider.asymmetric.x509.CertificateFactory;
+import org.bouncycastle.jcajce.provider.asymmetric.x509.KeyFactory;
 import org.bouncycastle.jcajce.provider.config.ConfigurableProvider;
 import org.bouncycastle.jcajce.provider.util.AsymmetricKeyInfoConverter;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 /**
- * A downsized version of {@link BouncyCastleProvider} which provides only RSA/DSA/EC {@link KeyFactorySpi}s.
+ * A downsized version of {@link BouncyCastleProvider} which provides only RSA/DSA/EC {@link KeyFactorySpi}s
+ * and X.509 {@link CertificateFactorySpi}.
  */
-public final class BouncyCastleKeyFactoryProvider extends Provider implements ConfigurableProvider {
+public final class MinifiedBouncyCastleProvider extends Provider implements ConfigurableProvider {
 
     private static final long serialVersionUID = -834653615603942658L;
 
-    private static final String PROVIDER_NAME = "ABCKFC";
+    private static final String PROVIDER_NAME = "ArmeriaBC";
 
     private static final Map<ASN1ObjectIdentifier, AsymmetricKeyInfoConverter> keyInfoConverters =
             new HashMap<>();
 
     /**
-     * Invokes the specified {@link Runnable} with {@link BouncyCastleKeyFactoryProvider} enabled temporarily.
+     * Invokes the specified {@link Runnable} with {@link MinifiedBouncyCastleProvider} enabled temporarily.
      */
     public static void call(Runnable task) {
         call(() -> {
@@ -56,19 +60,19 @@ public final class BouncyCastleKeyFactoryProvider extends Provider implements Co
     }
 
     /**
-     * Invokes the specified {@link Supplier} with {@link BouncyCastleKeyFactoryProvider} enabled temporarily.
+     * Invokes the specified {@link Supplier} with {@link MinifiedBouncyCastleProvider} enabled temporarily.
      */
     public static synchronized <T> T call(Supplier<T> task) {
         boolean needToAdd = true;
         for (Provider provider : Security.getProviders()) {
-            if (provider instanceof BouncyCastleKeyFactoryProvider) {
+            if (provider instanceof MinifiedBouncyCastleProvider) {
                 needToAdd = false;
                 break;
             }
         }
 
         if (needToAdd) {
-            Security.addProvider(new BouncyCastleKeyFactoryProvider());
+            Security.addProvider(new MinifiedBouncyCastleProvider());
             try {
                 return task.get();
             } finally {
@@ -80,22 +84,40 @@ public final class BouncyCastleKeyFactoryProvider extends Provider implements Co
     }
 
     @SuppressWarnings("deprecation") // Not deprecated in Java 8.
-    private BouncyCastleKeyFactoryProvider() {
-        super(PROVIDER_NAME, 1.0, "Armeria Bouncy Castle KeyFactory Collection");
+    public MinifiedBouncyCastleProvider() {
+        super(PROVIDER_NAME, 1.0, "Armeria Bouncy Castle Provider");
         AccessController.doPrivileged((PrivilegedAction<?>) () -> {
-            addKeyFactories();
+            addFactories();
             return true;
         });
     }
 
-    private void addKeyFactories() {
+    private void addFactories() {
+        // KeyFactories
         addKeyFactory(org.bouncycastle.jcajce.provider.asymmetric.rsa.KeyFactorySpi.class, "RSA");
         addKeyFactory(org.bouncycastle.jcajce.provider.asymmetric.dsa.KeyFactorySpi.class, "DSA");
         addKeyFactory(EC.class, "EC");
+        addKeyFactory(KeyFactory.class, "X.509", "X509");
+
+        // CertificateFactories
+        addCertificateFactory(CertificateFactory.class, "X.509", "X509");
     }
 
-    private void addKeyFactory(Class<? extends KeyFactorySpi> type, String name) {
-        addAlgorithm("KeyFactory." + name, type.getName());
+    private void addKeyFactory(
+            Class<? extends KeyFactorySpi> factoryType, String name, String... aliases) {
+        addFactory("KeyFactory.", factoryType, name, aliases);
+    }
+
+    private void addCertificateFactory(
+            Class<? extends CertificateFactorySpi> factoryType, String name, String... aliases) {
+        addFactory("CertificateFactory.", factoryType, name, aliases);
+    }
+
+    private void addFactory(String prefix, Class<?> factoryType, String name, String... aliases) {
+        addAlgorithm(prefix + name, factoryType.getName());
+        for (String alias : aliases) {
+            addAlgorithm("Alg.Alias." + prefix + alias, name);
+        }
     }
 
     @Override
