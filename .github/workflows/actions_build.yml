@@ -25,7 +25,7 @@ jobs:
             on: self-hosted
           - java: 11
             on: self-hosted
-          - java: 14
+          - java: 15
             on: self-hosted
             leak: true
           - java: 16
