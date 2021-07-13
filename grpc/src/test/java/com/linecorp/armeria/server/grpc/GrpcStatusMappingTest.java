@@ -105,6 +105,11 @@ class GrpcStatusMappingTest {
                     GrpcService.builder()
                                .addService(new TestServiceImpl())
                                .exceptionMapping((ctx, cause, metadata) -> {
+                                   final String attr = ctx.attr(METHOD_ATTR);
+                                   if (attr != null) {
+                                       metadata.put(METHOD_KEY, attr);
+                                   }
+
                                    if (cause instanceof A3Exception) {
                                        return Status.UNAUTHENTICATED.withDescription("UNAUTHENTICATED");
                                    }
@@ -122,10 +127,6 @@ class GrpcStatusMappingTest {
                                    if (cause instanceof B1Exception) {
                                        metadata.put(TEST_KEY, "B1");
                                        return Status.UNAUTHENTICATED.withDescription("UNAUTHENTICATED");
-                                   }
-                                   final String attr = ctx.attr(METHOD_ATTR);
-                                   if (attr != null) {
-                                       metadata.put(METHOD_KEY, attr);
                                    }
                                    return null;
                                })
