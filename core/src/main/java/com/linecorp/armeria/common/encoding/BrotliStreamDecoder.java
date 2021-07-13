@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,14 +17,13 @@
 package com.linecorp.armeria.common.encoding;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.codec.compression.ZlibCodecFactory;
-import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.handler.codec.compression.BrotliDecoder;
 
 /**
- * A {@link StreamDecoder} that use zlib ('gzip' or 'deflate').
+ * A {@link StreamDecoder} that uncompress data encoded with the brotli format ('br').
  */
-final class ZlibStreamDecoder extends AbstractStreamDecoder {
-    ZlibStreamDecoder(ZlibWrapper zlibWrapper, ByteBufAllocator alloc) {
-        super(ZlibCodecFactory.newZlibDecoder(zlibWrapper), alloc);
+final class BrotliStreamDecoder extends AbstractStreamDecoder {
+    BrotliStreamDecoder(BrotliDecoder brotliDecoder, ByteBufAllocator alloc) {
+        super(brotliDecoder, alloc);
     }
 }
