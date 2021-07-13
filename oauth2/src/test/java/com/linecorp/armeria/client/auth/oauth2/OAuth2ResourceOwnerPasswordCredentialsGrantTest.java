@@ -127,32 +127,6 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
                 .userCredentials(
                         () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
                 .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-        try (Server ignored = resourceServer.start()) {
-            final WebClient client = WebClient.builder(resourceServer.httpUri())
-                                              .decorator(OAuth2Client.newDecorator(grant))
-                                              .build();
-
-            final AggregatedHttpResponse response1 = client.get("/resource-read-write/").aggregate().join();
-            assertThat(response1.status()).isEqualTo(HttpStatus.OK);
-
-            final AggregatedHttpResponse response2 = client.get("/resource-read/").aggregate().join();
-            assertThat(response2.status()).isEqualTo(HttpStatus.OK);
-
-            final AggregatedHttpResponse response3 =
-                    client.get("/resource-read-write-update/").aggregate().join();
-            assertThat(response3.status()).isEqualTo(HttpStatus.FORBIDDEN);
-        }
-    }
-
-    @Test
-    public void testWithAuthorization() throws Exception {
-        final WebClient authClient = WebClient.of(authServer.httpUri());
-
-        final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
-                .builder(authClient, "/token/user/")
-                .userCredentials(
-                        () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
-                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
 
         try (Server ignored = resourceServer.start()) {
             final WebClient client = WebClient.builder(resourceServer.httpUri())
