@@ -19,10 +19,11 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.common.stream.SubscriberUtil.abortedOrLate;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.CANCELLATION_AND_POOLED_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.math.LongMath;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.ByteBufAccessMode;
@@ -53,7 +55,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.EventExecutor;
@@ -176,8 +177,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 this.maxSignalLength = (int) maxSignalLength;
             }
             signals = new SignalQueue(this.signalLengthGetter);
-            upstream.subscribe(this, executor,
-                               SubscriptionOption.WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION);
+            upstream.subscribe(this, executor, CANCELLATION_AND_POOLED_OPTIONS);
         }
 
         StreamMessage<T> upstream() {
@@ -243,7 +243,13 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 if (dataLength > 0) {
                     final int allowedMaxSignalLength = maxSignalLength - signalLength;
                     if (dataLength > allowedMaxSignalLength) {
-                        final ContentTooLargeException cause = ContentTooLargeException.get();
+                        final long transferred = LongMath.saturatedAdd(signalLength, dataLength);
+                        final ContentTooLargeException cause =
+                                ContentTooLargeException.builder()
+                                                        .maxContentLength(maxSignalLength)
+                                                        .transferred(transferred)
+                                                        .build();
+                        StreamMessageUtil.closeOrAbort(obj, cause);
                         upstream.abort(cause);
                         return;
                     }
@@ -255,6 +261,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 final int removedLength = signals.addAndRemoveIfRequested(obj);
                 signalLength -= removedLength;
             } catch (IllegalStateException e) {
+                StreamMessageUtil.closeOrAbort(obj, e);
                 upstream.abort(e);
                 return;
             }
@@ -456,7 +463,8 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
     }
 
-    private static final class ChildStreamMessage<T> implements StreamMessage<T> {
+    @VisibleForTesting
+    static final class ChildStreamMessage<T> implements StreamMessage<T> {
 
         @SuppressWarnings("rawtypes")
         private static final AtomicReferenceFieldUpdater<ChildStreamMessage, DownstreamSubscription>
@@ -757,8 +765,6 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             }
 
             final Object signal = signals.get(offset);
-            assert signal != null : "signal is null. offset: " + offset + ", upstreamOffset: " +
-                                    processor.upstreamOffset + ", signals: " + signals;
 
             if (signal instanceof CloseEvent) {
                 // The stream has reached at its end.
@@ -938,7 +944,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 if (!(o instanceof CloseEvent)) {
                     removedLength += signalLengthGetter.length(o);
                 }
-                PooledObjects.close(o);
+                StreamMessageUtil.closeOrAbort(o);
                 elements[index] = null;
             }
             head = oldHead + numElementsToBeRemoved & bitMask;
@@ -1021,16 +1027,23 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             return size;
         }
 
-        // Removes references to all objects.
+        // Removes references of all objects.
         void clear(@Nullable Throwable cause) {
             final Object[] oldElements = elements;
             if (oldElements == null) {
                 return; // Already cleared.
             }
             elements = null;
-            final int t = tail;
-            for (int i = head; i < t; i++) {
-                StreamMessageUtil.closeOrAbort(oldElements[i], cause);
+
+            int end = tail;
+            if (end < head) {
+                // odd number head wrap-around e.g. [8, N, N, N, N, 5, 6, 7]
+                end += oldElements.length;
+            }
+
+            final int bitMask = oldElements.length - 1;
+            for (int i = head; i < end; i++) {
+                StreamMessageUtil.closeOrAbort(oldElements[i & bitMask], cause);
             }
         }
 

@@ -88,38 +88,49 @@ public final class TransportTypeProvider {
             NioEventLoopGroup.class, NioEventLoop.class, NioEventLoopGroup::new, null);
 
     public static final TransportTypeProvider EPOLL = of(
-            "EPOLL", "io.netty.channel.epoll.Epoll",
-            "io.netty.channel.epoll.EpollServerSocketChannel",
-            "io.netty.channel.epoll.EpollSocketChannel",
-            "io.netty.channel.epoll.EpollDatagramChannel",
-            "io.netty.channel.epoll.EpollEventLoopGroup",
-            "io.netty.channel.epoll.EpollEventLoop");
+            "EPOLL",
+            ChannelUtil.channelPackageName(),
+            ".epoll.Epoll",
+            ".epoll.EpollServerSocketChannel",
+            ".epoll.EpollSocketChannel",
+            ".epoll.EpollDatagramChannel",
+            ".epoll.EpollEventLoopGroup",
+            ".epoll.EpollEventLoop");
 
     public static final TransportTypeProvider IO_URING = of(
-            "IO_URING", "io.netty.incubator.channel.uring.IOUring",
-            "io.netty.incubator.channel.uring.IOUringServerSocketChannel",
-            "io.netty.incubator.channel.uring.IOUringSocketChannel",
-            "io.netty.incubator.channel.uring.IOUringDatagramChannel",
-            "io.netty.incubator.channel.uring.IOUringEventLoopGroup",
-            "io.netty.incubator.channel.uring.IOUringEventLoop");
+            "IO_URING",
+            ChannelUtil.incubatorChannelPackageName(),
+            ".uring.IOUring",
+            ".uring.IOUringServerSocketChannel",
+            ".uring.IOUringSocketChannel",
+            ".uring.IOUringDatagramChannel",
+            ".uring.IOUringEventLoopGroup",
+            ".uring.IOUringEventLoop");
 
     private static TransportTypeProvider of(
-            String name, String entryPointTypeName,
+            String name, @Nullable String channelPackageName, String entryPointTypeName,
             String serverSocketChannelTypeName, String socketChannelTypeName, String datagramChannelTypeName,
             String eventLoopGroupTypeName, String eventLoopTypeName) {
+
+        if (channelPackageName == null) {
+            return new TransportTypeProvider(
+                    name, null, null, null, null, null, null,
+                    new IllegalStateException("Failed to determine the shaded package name"));
+        }
 
         // TODO(trustin): Do not try to load io_uring unless explicitly specified so JVM doesn't crash.
         //                https://github.com/netty/netty-incubator-transport-io_uring/issues/92
         if ("IO_URING".equals(name) && !"io_uring".equals(Ascii.toLowerCase(
                 System.getProperty("com.linecorp.armeria.transportType", "")))) {
-            return new TransportTypeProvider(name, null, null, null, null, null, null,
-                                             new IllegalStateException("io_uring not enabled explicitly"));
+            return new TransportTypeProvider(
+                    name, null, null, null, null, null, null,
+                    new IllegalStateException("io_uring not enabled explicitly"));
         }
 
         try {
             // Make sure the native libraries were loaded.
             final Throwable unavailabilityCause = (Throwable)
-                    findClass(entryPointTypeName)
+                    findClass(channelPackageName, entryPointTypeName)
                             .getMethod("unavailabilityCause")
                             .invoke(null);
 
@@ -129,15 +140,15 @@ public final class TransportTypeProvider {
 
             // Load the required classes and constructors.
             final Class<? extends ServerSocketChannel> ssc =
-                    findClass(serverSocketChannelTypeName);
+                    findClass(channelPackageName, serverSocketChannelTypeName);
             final Class<? extends SocketChannel> sc =
-                    findClass(socketChannelTypeName);
+                    findClass(channelPackageName, socketChannelTypeName);
             final Class<? extends DatagramChannel> dc =
-                    findClass(datagramChannelTypeName);
+                    findClass(channelPackageName, datagramChannelTypeName);
             final Class<? extends EventLoopGroup> elg =
-                    findClass(eventLoopGroupTypeName);
+                    findClass(channelPackageName, eventLoopGroupTypeName);
             final Class<? extends EventLoop> el =
-                    findClass(eventLoopTypeName);
+                    findClass(channelPackageName, eventLoopTypeName);
             final BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> elgc =
                     findEventLoopGroupConstructor(elg);
 
@@ -148,20 +159,27 @@ public final class TransportTypeProvider {
             // TODO(trustin): Remove this block which works around the bug where loading both epoll and
             //                io_uring native libraries may revert the initialization of
             //                io.netty.channel.unix.Socket: https://github.com/netty/netty/issues/10909
+            final String unixSocketClassName = ChannelUtil.channelPackageName() + ".unix.Socket";
             try {
-                final Method initializeMethod = findClass("io.netty.channel.unix.Socket")
+                final Method initializeMethod = findClass(ChannelUtil.channelPackageName(), unixSocketClassName)
                         .getDeclaredMethod("initialize", boolean.class);
                 initializeMethod.setAccessible(true);
                 initializeMethod.invoke(null, NetUtil.isIpV4StackPreferred());
             } catch (Throwable cause) {
-                logger.warn("Failed to force-initialize 'io.netty.channel.unix.Socket':", cause);
+                if (Exceptions.peel(cause) instanceof UnsatisfiedLinkError) {
+                    // Failed to load a native library, which is fine.
+                } else {
+                    logger.debug("Failed to force-initialize '" + ChannelUtil.channelPackageName() +
+                                 ".unix.Socket':", cause);
+                }
             }
         }
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> Class<T> findClass(String className) throws Exception {
-        return (Class<T>) Class.forName(className, false, TransportTypeProvider.class.getClassLoader());
+    private static <T> Class<T> findClass(String channelPackageName, String className) throws Exception {
+        return (Class<T>) Class.forName(channelPackageName + className, false,
+                                        TransportTypeProvider.class.getClassLoader());
     }
 
     private static BiFunction<Integer, ThreadFactory, ? extends EventLoopGroup> findEventLoopGroupConstructor(

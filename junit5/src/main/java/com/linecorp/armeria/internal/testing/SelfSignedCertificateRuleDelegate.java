@@ -30,7 +30,7 @@ import java.util.Date;
 
 import javax.annotation.Nullable;
 
-import io.netty.handler.ssl.util.SelfSignedCertificate;
+import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 
 /**
  * A delegate that has common testing methods of {@link SelfSignedCertificate}.

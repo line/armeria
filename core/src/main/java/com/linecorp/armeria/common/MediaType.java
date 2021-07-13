@@ -121,6 +121,7 @@ public final class MediaType {
     private static final String IMAGE_TYPE = "image";
     private static final String TEXT_TYPE = "text";
     private static final String VIDEO_TYPE = "video";
+    private static final String MULTIPART_TYPE = "multipart";
 
     private static final String WILDCARD = "*";
     private static final String Q = "q";
@@ -161,6 +162,7 @@ public final class MediaType {
     public static final MediaType ANY_AUDIO_TYPE = createConstant(AUDIO_TYPE, WILDCARD);
     public static final MediaType ANY_VIDEO_TYPE = createConstant(VIDEO_TYPE, WILDCARD);
     public static final MediaType ANY_APPLICATION_TYPE = createConstant(APPLICATION_TYPE, WILDCARD);
+    public static final MediaType ANY_MULTIPART_TYPE = createConstant(MULTIPART_TYPE, WILDCARD);
 
     /* text types */
     public static final MediaType CACHE_MANIFEST_UTF_8 =
@@ -390,9 +392,60 @@ public final class MediaType {
             createConstant(APPLICATION_TYPE, "x-www-form-urlencoded");
 
     /**
-     * A {@link MediaType} constant representing {@code multipart/form-data} media type.
+     * A {@link MediaType} constant representing {@code multipart/alternative} media type.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7.2.3">RFC 1521:
+     * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
      */
-    public static final MediaType MULTIPART_FORM_DATA = createConstant("multipart", "form-data");
+    public static final MediaType MULTIPART_ALTERNATIVE = createConstant(MULTIPART_TYPE, "alternative");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/digest} media type.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7.2.4">RFC 1521:
+     * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
+     */
+    public static final MediaType MULTIPART_DIGEST = createConstant(MULTIPART_TYPE, "digest");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/encrypted} media type.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1847#section-2.2">RFC 1847:
+     * Security Multiparts for MIME: Multipart/Signed and Multipart/Encrypted</a>
+     */
+    public static final MediaType MULTIPART_ENCRYPTED = createConstant(MULTIPART_TYPE, "encrypted");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/form-data} media type.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1867">RFC 1867:
+     * Form-based File Upload in HTML</a>
+     */
+    public static final MediaType MULTIPART_FORM_DATA = createConstant(MULTIPART_TYPE, "form-data");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/mixed} media type.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7.2.2">RFC 1521:
+     * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
+     */
+    public static final MediaType MULTIPART_MIXED = createConstant(MULTIPART_TYPE, "mixed");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/parallel} media type.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7.2.5">RFC 1521:
+     * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
+     */
+    public static final MediaType MULTIPART_PARALLEL = createConstant(MULTIPART_TYPE, "parallel");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/related} media type.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc2112">RFC 2112:
+     * The MIME Multipart/Related Content-type</a>
+     */
+    public static final MediaType MULTIPART_RELATED = createConstant(MULTIPART_TYPE, "related");
+
+    /**
+     * A {@link MediaType} constant representing {@code multipart/signed} media type.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1847#section-2.1">RFC 1847:
+     * Security Multiparts for MIME: Multipart/Signed and Multipart/Encrypted</a>
+     */
+    public static final MediaType MULTIPART_SIGNED = createConstant(MULTIPART_TYPE, "signed");
 
     /**
      * As described in <a href="https://www.rsa.com/rsalabs/node.asp?id=2138">PKCS #12: Personal
@@ -460,6 +513,12 @@ public final class MediaType {
      * ({@code application/json-seq}) is used for expressing JSON text sequences.
      */
     public static final MediaType JSON_SEQ = createConstant(APPLICATION_TYPE, "json-seq");
+
+    /**
+     * As described in <a href="https://jsonlines.org/">JSON Lines</a>,
+     * this constant is used for expressing JSON lines.
+     */
+    public static final MediaType JSON_LINES = createConstant(APPLICATION_TYPE, "x-ndjson");
 
     /**
      * The <a href="http://www.w3.org/TR/appmanifest/">Manifest for a web application</a>.
@@ -615,6 +674,11 @@ public final class MediaType {
     public static final MediaType XRD_UTF_8 = createConstantUtf8(APPLICATION_TYPE, "xrd+xml");
 
     public static final MediaType ZIP = createConstant(APPLICATION_TYPE, "zip");
+
+    /**
+     * <a href="https://graphql.org/learn/serving-over-http">GraphQL</a>
+     */
+    public static final MediaType GRAPHQL = createConstant(APPLICATION_TYPE, "graphql");
 
     private static final Charset NO_CHARSET = new Charset("NO_CHARSET", null) {
         @Override
@@ -828,6 +892,15 @@ public final class MediaType {
     }
 
     /**
+     * Returns {@code true} if the type is multipart.
+     * Otherwise {@code false}.
+     * @see #ANY_MULTIPART_TYPE
+     */
+    public boolean isMultipart() {
+        return ANY_MULTIPART_TYPE.type().equals(type());
+    }
+
+    /**
      * Returns {@code true} if this instance falls within the range (as defined by <a
      * href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.1">the HTTP Accept header</a>) given
      * by the argument according to three criteria:
@@ -860,6 +933,21 @@ public final class MediaType {
         return (mediaTypeRange.type.equals(WILDCARD) || mediaTypeRange.type.equals(type)) &&
                (mediaTypeRange.subtype.equals(WILDCARD) || mediaTypeRange.subtype.equals(subtype)) &&
                parameters.entries().containsAll(mediaTypeRange.parameters.entries());
+    }
+
+    /**
+     * Returns {@code true} when the subtype is {@link MediaType#JSON} or ends with {@code +json}.
+     * Otherwise {@code false}.
+     *
+     * <pre>{@code
+     * JSON.isJson() // true
+     * JSON_UTF_8.isJson() // true
+     * PLAIN_TEXT_UTF_8.isJson() // false
+     * MediaType.parse("application/graphql+json").isJson() // true
+     * }</pre>
+     */
+    public boolean isJson() {
+        return is(JSON) || subtype().endsWith("+json");
     }
 
     /**

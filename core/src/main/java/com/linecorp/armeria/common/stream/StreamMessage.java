@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.stream.PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -114,6 +115,17 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Creates a new {@link StreamMessage} that will publish the three {@code obj1}, {@code obj2} and
+     * {@code obj3}.
+     */
+    static <T> StreamMessage<T> of(T obj1, T obj2, T obj3) {
+        requireNonNull(obj1, "obj1");
+        requireNonNull(obj2, "obj2");
+        requireNonNull(obj3, "obj3");
+        return new ThreeElementFixedStreamMessage<>(obj1, obj2, obj3);
+    }
+
+    /**
      * Creates a new {@link StreamMessage} that will publish the given {@code objs}.
      */
     @SafeVarargs
@@ -126,6 +138,8 @@ public interface StreamMessage<T> extends Publisher<T> {
                 return of(objs[0]);
             case 2:
                 return of(objs[0], objs[1]);
+            case 3:
+                return of(objs[0], objs[1], objs[2]);
             default:
                 for (int i = 0; i < objs.length; i++) {
                     if (objs[i] == null) {
@@ -262,6 +276,17 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Returns an aborted {@link StreamMessage} that terminates with the specified {@link Throwable}
+     * via {@link Subscriber#onError(Throwable)} immediately after being subscribed to.
+     */
+    static <T> StreamMessage<T> aborted(Throwable cause) {
+        requireNonNull(cause, "cause");
+        final StreamMessage<T> aborted = of();
+        aborted.abort(cause);
+        return aborted;
+    }
+
+    /**
      * Returns {@code true} if this stream is not closed yet. Note that a stream may not be
      * {@linkplain #whenComplete() complete} even if it's closed; a stream is complete when it's fully
      * consumed by a {@link Subscriber}.
@@ -360,7 +385,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * @param executor the executor to subscribe
      */
-    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor);
+    default void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+        subscribe(subscriber, executor, EMPTY_OPTIONS);
+    }
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
@@ -435,9 +462,59 @@ public interface StreamMessage<T> extends Publisher<T> {
     void abort(Throwable cause);
 
     /**
+     * Collects the elements published by this {@link StreamMessage}.
+     * The returned {@link CompletableFuture} will be notified when the elements are fully consumed.
+     *
+     * <p>Note that if this {@link StreamMessage} was subscribed by other {@link Subscriber} already,
+     * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
+     *
+     * <pre>{@code
+     * StreamMessage<Integer> stream = StreamMessage.of(1, 2, 3);
+     * CompletableFuture<List<Integer>> collected = stream.collect();
+     * assert collected.join().equals(List.of(1, 2, 3));
+     * }</pre>
+     */
+    default CompletableFuture<List<T>> collect() {
+        return collect(EMPTY_OPTIONS);
+    }
+
+    /**
+     * Collects the elements published by this {@link StreamMessage} with the specified
+     * {@link SubscriptionOption}s. The returned {@link CompletableFuture} will be notified when the elements
+     * are fully consumed.
+     *
+     * <p>Note that if this {@link StreamMessage} was subscribed by other {@link Subscriber} already,
+     * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
+     */
+    default CompletableFuture<List<T>> collect(SubscriptionOption... options) {
+        return collect(defaultSubscriberExecutor(), options);
+    }
+
+    /**
+     * Collects the elements published by this {@link StreamMessage} with the specified
+     * {@link EventExecutor} and {@link SubscriptionOption}s. The returned {@link CompletableFuture} will be
+     * notified when the elements are fully consumed.
+     *
+     * <p>Note that if this {@link StreamMessage} was subscribed by other {@link Subscriber} already,
+     * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
+     */
+    default CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+        final StreamMessageCollector<T> collector = new StreamMessageCollector<>(options);
+        subscribe(collector, executor, options);
+        return collector.collect();
+    }
+
+    /**
      * Filters values emitted by this {@link StreamMessage}.
      * If the {@link Predicate} test succeeds, the value is emitted.
      * If the {@link Predicate} test fails, the value is ignored and a request of {@code 1} is made to upstream.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Integer> even = source.filter(x -> x % 2 == 0);
+     * }</pre>
      */
     default StreamMessage<T> filter(Predicate<? super T> predicate) {
         requireNonNull(predicate, "predicate");
@@ -450,6 +527,11 @@ public interface StreamMessage<T> extends Publisher<T> {
      * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
      * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
      * a {@code null} value.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Boolean> isEven = source.map(x -> x % 2 == 0);
+     * }</pre>
      */
     default <U> StreamMessage<U> map(Function<? super T, ? extends U> function) {
         requireNonNull(function, "function");
@@ -460,5 +542,28 @@ public interface StreamMessage<T> extends Publisher<T> {
         }
 
         return FuseableStreamMessage.of(this, function);
+    }
+
+    /**
+     * Transforms an error emitted by this {@link StreamMessage} by applying the specified {@link Function}.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage streamMessage = StreamMessage.aborted(new IllegalStateException("Something went wrong.");
+     * StreamMessage transformed = streamMessage.mapError(ex -> {
+     *     if (ex instanceof IllegalStateException) {
+     *         return new MyDomainException(ex);
+     *     } else {
+     *         return ex;
+     *     }
+     * });
+     * }</pre>
+     */
+    default StreamMessage<T> mapError(Function<? super Throwable, ? extends Throwable> function) {
+        requireNonNull(function, "function");
+        return FuseableStreamMessage.error(this, function);
     }
 }

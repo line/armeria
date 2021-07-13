@@ -229,8 +229,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
     }
 
     static boolean isJson(@Nullable MediaType contentType) {
-        return contentType != null &&
-               (contentType.is(MediaType.JSON) || contentType.subtype().endsWith("+json"));
+        return contentType != null && contentType.isJson();
     }
 
     private static Message.Builder getMessageBuilder(Class<?> clazz) {

@@ -18,10 +18,7 @@ package com.linecorp.armeria.internal.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.RequestContext;
 
@@ -37,9 +34,7 @@ class Java9VersionSpecific extends JavaVersionSpecific {
 
     @Override
     public long currentTimeMicros() {
-        final Instant now = Clock.systemUTC().instant();
-        return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
-                now.getNano());
+        return java9CurrentTimeMicros();
     }
 
     @Override

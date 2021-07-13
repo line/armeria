@@ -28,6 +28,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -154,7 +156,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private final ServerConfig config;
+    private final ServerConfigHolder configHolder;
+    private ServerConfig config;
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
@@ -168,10 +171,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private final ProxiedAddresses proxiedAddresses;
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
+    private final Consumer<ServerConfig> configUpdateListener = this::swapServerConfig;
     private boolean isReading;
     private boolean handledLastRequest;
 
-    HttpServerHandler(ServerConfig config,
+    HttpServerHandler(ServerConfigHolder configHolder,
                       GracefulShutdownSupport gracefulShutdownSupport,
                       @Nullable ServerHttpObjectEncoder responseEncoder,
                       SessionProtocol protocol,
@@ -179,14 +183,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         assert protocol == H1 || protocol == H1C || protocol == H2;
 
-        this.config = requireNonNull(config, "config");
+        this.configHolder = requireNonNull(configHolder, "configHolder");
         this.gracefulShutdownSupport = requireNonNull(gracefulShutdownSupport, "gracefulShutdownSupport");
 
         this.protocol = requireNonNull(protocol, "protocol");
         this.responseEncoder = responseEncoder;
         this.proxiedAddresses = proxiedAddresses;
-
+        config = requireNonNull(configHolder.getConfig(), "config");
         unfinishedRequests = new IdentityHashMap<>();
+        configHolder.addListener(configUpdateListener);
     }
 
     @Override
@@ -223,6 +228,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // endOfStream set.
                 cleanup();
         }
+        // Clean up the listener from ServerConfigHolder once the channel becomes inactive.
+        configHolder.removeListener(configUpdateListener);
     }
 
     private void cleanup() {
@@ -233,9 +240,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (!unfinishedRequests.isEmpty()) {
             final ClosedSessionException cause = ClosedSessionException.get();
             unfinishedRequests.forEach((req, res) -> {
+                // An HTTP2 request is cancelled by Http2RequestDecoder.onRstStreamRead()
+                final boolean cancel = !protocol.isMultiplex();
                 // Mark the request stream as closed due to disconnection.
-                req.close(cause);
-                res.abort(cause);
+                req.abortResponse(cause, cancel);
             });
         }
     }
@@ -284,8 +292,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                                                  Http2ServerConnectionHandler handler) {
         return new ServerHttp2ObjectEncoder(ctx, handler.encoder(), handler.keepAliveHandler(),
                                             config.isDateHeaderEnabled(),
-                                            config.isServerHeaderEnabled()
-        );
+                                            config.isServerHeaderEnabled());
     }
 
     private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {
@@ -556,7 +563,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                   @Nullable Throwable cause) {
         // No need to consume further since the response is ready.
         final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
-        req.close();
+        if (req instanceof HttpRequestWriter) {
+            ((HttpRequestWriter) req).close();
+        }
         final RequestLogBuilder logBuilder = reqCtx.logBuilder();
         if (cause == null) {
             logBuilder.endRequest();
@@ -690,5 +699,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         } else {
             return id;
         }
+    }
+
+    void swapServerConfig(ServerConfig config) {
+        requireNonNull(config, "config");
+        this.config = config;
     }
 }

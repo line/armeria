@@ -1,11 +1,9 @@
 package example.springframework.boot.minimal.kotlin
 
-import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
-import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
 import java.time.Instant
@@ -20,28 +18,17 @@ class ValidationExceptionHandler : ExceptionHandlerFunction {
 
     override fun handleException(ctx: ServiceRequestContext, req: HttpRequest, cause: Throwable): HttpResponse {
         return if (cause is ValidationException) {
-            try {
-                val status = HttpStatus.BAD_REQUEST
-                HttpResponse.of(
-                    status,
-                    MediaType.JSON,
-                    mapper.writeValueAsBytes(
-                        ErrorResponse(
-                            status.reasonPhrase(),
-                            cause.message ?: "empty message",
-                            req.path(),
-                            status.code(),
-                            Instant.now().toString()
-                        )
-                    )
+            val status = HttpStatus.BAD_REQUEST
+            HttpResponse.ofJson(
+                status,
+                ErrorResponse(
+                    status.reasonPhrase(),
+                    cause.message ?: "empty message",
+                    req.path(),
+                    status.code(),
+                    Instant.now().toString()
                 )
-            } catch (e: JsonProcessingException) {
-                HttpResponse.of(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    MediaType.PLAIN_TEXT_UTF_8,
-                    cause.message ?: "empty message"
-                )
-            }
+            )
         } else ExceptionHandlerFunction.fallthrough()
     }
 }

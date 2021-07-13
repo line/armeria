@@ -58,7 +58,6 @@ import org.springframework.core.env.PropertySource;
 import org.springframework.util.SocketUtils;
 import org.springframework.util.StringUtils;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -68,7 +67,6 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -99,8 +97,6 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static final List<String> MEDIA_TYPES =
             ImmutableList.of(ActuatorMediaType.V3_JSON, MediaTypeNames.JSON);
-
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Bean
     @ConditionalOnMissingBean
@@ -198,11 +194,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 final HttpService linksService = (ctx, req) -> {
                     final Map<String, Link> links =
                             new EndpointLinksResolver(endpoints).resolveLinks(req.path());
-                    return HttpResponse.of(
-                            HttpStatus.OK,
-                            ACTUATOR_MEDIA_TYPE,
-                            OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("_links", links))
-                    );
+                    return HttpResponse.ofJson(ACTUATOR_MEDIA_TYPE, ImmutableMap.of("_links", links));
                 };
                 sb.route().addRoute(route).defaultServiceName("LinksService").build(linksService);
                 if (cors != null) {

@@ -43,7 +43,7 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
     private final TestEnvironment env;
 
     protected StreamMessageVerification() {
-        this(new TestEnvironment(1000, 200));
+        this(new TestEnvironment(5000, 1000));
     }
 
     protected StreamMessageVerification(TestEnvironment env) {
@@ -72,23 +72,21 @@ public abstract class StreamMessageVerification<T> extends PublisherVerification
 
             if (stream instanceof PublisherBasedStreamMessage ||
                 stream instanceof SplitHttpResponse ||
-                stream instanceof PathStreamMessage) {
-                // It's impossible for PublisherBasedStreamMessage to tell if the stream is
-                // closed or empty yet because Publisher doesn't have enough information.
+                stream instanceof PathStreamMessage ||
+                "com.linecorp.armeria.common.multipart.MultipartDecoder".equals(stream.getClass().getName())) {
+                // It's impossible for the above StreamMessages to tell if the streams are
+                // closed or empty yet because the data could be created when the first request is made.
             } else {
                 assertThat(stream.isOpen()).isFalse();
                 assertThat(stream.isEmpty()).isTrue();
             }
 
-            if (!(stream instanceof SplitHttpResponse || stream instanceof PathStreamMessage)) {
-                // - SplitHttpResponse could complete early to read HTTP headers from HttpResponse before
-                //   publishing body
-                // - PathStreamMessage immediately completes if a Path size is zero
-                assertThat(stream.whenComplete()).isNotDone();
+            if (!(stream instanceof DefaultStreamMessageDuplicator.ChildStreamMessage)) {
+                await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompleted());
             }
             sub.requestEndOfStream();
-
             await().untilAsserted(() -> assertThat(stream.whenComplete()).isCompleted());
+
             assertThat(stream.isOpen()).isFalse();
             assertThat(stream.isEmpty()).isTrue();
             sub.expectNone();

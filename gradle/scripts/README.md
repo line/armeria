@@ -26,6 +26,7 @@ sensible defaults. By applying them, you can:
 - [Using flags](#using-flags)
     - [Built-in flags](#built-in-flags)
 - [Building Java projects with `java` flag](#building-java-projects-with-java-flag)
+- [Overriding JDK version](#overriding-jdk-version)
 - [Publishing to Maven repository with `publish` flag](#publishing-to-maven-repository-with-publish-flag)
 - [Generating Maven BOM with `bom` flag](#generating-maven-bom-with-bom-flag)
 - [Building shaded JARs with `shade` flag](#building-shaded-jars-with-shade-flag)
@@ -78,14 +79,8 @@ sensible defaults. By applying them, you can:
 3. Add `build.gradle`:
 
    ```groovy
-   buildscript {
-       repositories {
-           mavenCentral()
-       }
-       dependencies {
-           classpath 'com.google.gradle:osdetector-gradle-plugin:1.6.2'
-           classpath 'io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE'
-       }
+   plugins {
+       id 'com.google.osdetector' version '1.6.2' apply false
    }
 
    apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
@@ -137,7 +132,7 @@ com.google.code.findbugs:
 # Slightly more verbose, but useful when an artifact has more than one property:
 com.google.guava:
   guava:
-    version: '23.6-jre'
+    version: '30.1.1-jre'
     exclusions:
       - com.google.code.findbugs:jsr305
       - com.google.errorprone:error_prone_annotations
@@ -147,33 +142,26 @@ com.google.guava:
 # More than one artifact under the same group:
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.2' # Using a YAML anchor
+    version: &JACKSON_VERSION '2.12.2' # Using a YAML anchor
     javadocs:
-      - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
+      - https://fasterxml.github.io/jackson-annotations/javadoc/2.12/
   jackson-core:
     version: *JACKSON_VERSION
     javadocs:
-      - https://fasterxml.github.io/jackson-core/javadoc/2.9/
+      - https://fasterxml.github.io/jackson-core/javadoc/2.12/
   jackson-databind:
     version: *JACKSON_VERSION
     javadocs:
-      - https://fasterxml.github.io/jackson-databind/javadoc/2.9/
+      - https://fasterxml.github.io/jackson-databind/javadoc/2.12/
 ```
 
-`dependencies.yml` will be parsed at project evaluation time and be fed into
-[gradle-dependency-management plugin](https://github.com/spring-gradle-plugins/dependency-management-plugin).
-
-In `build.gradle`, you can specify these dependencies without version numbers:
+Gradle's dependency resolution strategy will be automatically configured as
+specified in `dependencies.yml`, so you don't have to specify version numbers
+in `build.gradle`:
 
 ```groovy
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath "com.google.gradle:osdetector-gradle-plugin:1.6.2"
-        classpath 'io.spring.gradle:dependency-management-plugin:1.0.8.RELEASE'
-    }
+plugins {
+    id 'com.google.osdetector' version '1.6.2' apply false
 }
 
 allprojects {
@@ -216,7 +204,7 @@ applied so you can conveniently check if your dependencies are out of date:
 $ ./gradlew dependencyUpdates
 ...
 The following dependencies have later integration versions:
- - com.google.guava:guava [17.0 -> 24.0-jre]
+ - com.google.guava:guava [17.0 -> 30.1.1-jre]
 ```
 
 ## Built-in properties and functions
@@ -372,7 +360,7 @@ When a project has a `java` flag:
 
   ```yaml
   org.mortbay.jetty.alpn:
-    jetty-alpn-agent: { version: '2.0.6' }
+    jetty-alpn-agent: { version: '2.0.10' }
   ```
 
 - The `package-list` files of the Javadocs specified in `dependencies.yml` will
@@ -382,7 +370,7 @@ When a project has a `java` flag:
   ```yaml
   io.grpc:
     grpc-core:
-      version: &GRPC_VERSION '1.8.0'
+      version: &GRPC_VERSION '1.36.1'
       javadocs:
         - https://grpc.io/grpc-java/javadoc/
         - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -410,7 +398,7 @@ When a project has a `java` flag:
     files.
     - Consider adding dependency tasks to the `generateSources` task to do
       other source generation jobs.
-  - Thrift compiler 0.12 will be used by default. Override `thriftVersion`
+  - Thrift compiler 0.14 will be used by default. Override `thriftVersion`
     property if you prefer 0.9:
 
     ```groovy
@@ -430,6 +418,22 @@ When a project has a `java` flag:
         testThriftIncludeDirs = ["$projectDir/src/test/bar-include"]
     }
     ```
+
+## Overriding JDK version
+
+The scripts use [Toolchains](https://docs.gradle.org/current/userguide/toolchains.html) to build a Java
+project. It uses [AdoptOpenJDK](https://adoptopenjdk.net/) 15 by default. If you want to use a
+different JDK version, you can specify `buildJdkVersion` gradle property:
+
+```
+$ ./gradlew build -PbuildJdkVersion=11
+```
+
+You can also specify a different JRE version to run the tests via `testJavaVersion` gradle property:
+
+```
+$ ./gradlew test -PbuildJdkVersion=15 -PtestJavaVersion=8
+```
 
 ## Publishing to Maven repository with `publish` flag
 

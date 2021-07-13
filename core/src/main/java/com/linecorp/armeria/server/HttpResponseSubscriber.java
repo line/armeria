@@ -452,7 +452,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject> {
                 // This method will be invoked only when `canSchedule()` returns true.
                 assert state != State.DONE;
 
-                failAndRespond(cause, convertException(cause), Http2Error.INTERNAL_ERROR, true);
+                if (cause instanceof ClosedStreamException) {
+                    // A stream or connection was already closed by a client
+                    fail(cause);
+                } else {
+                    failAndRespond(cause, convertException(cause), Http2Error.INTERNAL_ERROR, true);
+                }
             }
         };
     }

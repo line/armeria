@@ -15,24 +15,13 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.HttpService;
 
 public final class ServiceNamingUtil {
 
     public static final String GRPC_SERVICE_NAME = "com.linecorp.armeria.internal.common.grpc.GrpcLogUtil";
-
-    public static String fullTypeRpcServiceName(RpcRequest rpcReq) {
-        final String serviceType = rpcReq.serviceType().getName();
-        if (GRPC_SERVICE_NAME.equals(serviceType)) {
-            // Parse gRPC serviceName and methodName
-            final String fullMethodName = rpcReq.method();
-            return fullMethodName.substring(0, fullMethodName.lastIndexOf('/'));
-        } else {
-            return serviceType;
-        }
-    }
 
     public static String fullTypeHttpServiceName(HttpService service) {
         Unwrappable unwrappable = service;
@@ -42,8 +31,24 @@ public final class ServiceNamingUtil {
                 unwrappable = delegate;
                 continue;
             }
-            return delegate.getClass().getName();
+            if (delegate instanceof AnnotatedService) {
+                return ((AnnotatedService) delegate).serviceName();
+            } else {
+                return delegate.getClass().getName();
+            }
         }
+    }
+
+    public static String trimTrailingDollarSigns(String serviceName) {
+        int lastIndex = serviceName.length() - 1;
+        if (serviceName.charAt(lastIndex) != '$') {
+            return serviceName;
+        }
+
+        do {
+            lastIndex--;
+        } while (lastIndex > 0 && serviceName.charAt(lastIndex) == '$');
+        return serviceName.substring(0, lastIndex + 1);
     }
 
     private ServiceNamingUtil() {}

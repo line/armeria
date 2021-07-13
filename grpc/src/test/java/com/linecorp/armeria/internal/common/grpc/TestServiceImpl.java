@@ -31,10 +31,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
 
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.grpc.testing.Messages;
@@ -533,26 +530,13 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            final HttpResponse res = unwrap().serve(ctx, req);
-            return new FilteredHttpResponse(res) {
-                private boolean headersReceived;
-
-                @Override
-                protected HttpObject filter(HttpObject obj) {
-                    if (obj instanceof HttpHeaders) {
-                        if (!headersReceived) {
-                            headersReceived = true;
-                        } else {
-                            final HttpHeaders trailers = (HttpHeaders) obj;
-                            final String extraHeader = req.headers().get(EXTRA_HEADER_NAME);
-                            if (extraHeader != null) {
-                                return trailers.toBuilder().set(EXTRA_HEADER_NAME, extraHeader).build();
-                            }
-                        }
-                    }
-                    return obj;
+            return unwrap().serve(ctx, req).mapTrailers(trailers -> {
+                final String extraHeader = req.headers().get(EXTRA_HEADER_NAME);
+                if (extraHeader != null) {
+                    return trailers.toBuilder().set(EXTRA_HEADER_NAME, extraHeader).build();
                 }
-            };
+                return trailers;
+            });
         }
     }
 }

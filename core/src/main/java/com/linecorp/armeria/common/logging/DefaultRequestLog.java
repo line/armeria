@@ -52,7 +52,6 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.internal.common.util.ServiceNamingUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceNaming;
@@ -536,12 +535,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
              .thenAccept(log -> {
                  final String serviceName = log.serviceName();
                  final String name = log.name();
-                 if (name != null) {
-                     if (serviceName != null) {
-                         name(serviceName, name);
-                     } else {
-                         name(name);
-                     }
+                 if (serviceName != null) {
+                     name(serviceName, name);
+                 } else {
+                     name(name);
                  }
              });
         child.whenAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME)
@@ -604,6 +601,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             lastChild.whenAvailable(RequestLogProperty.RESPONSE_HEADERS)
                      .thenAccept(log -> responseHeaders(log.responseHeaders()));
+        }
+
+        if (lastChild.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
+            responseTrailers(lastChild.responseTrailers());
+        } else {
+            lastChild.whenAvailable(RequestLogProperty.RESPONSE_TRAILERS)
+                     .thenAccept(log -> responseTrailers(log.responseTrailers()));
         }
 
         if (lastChild.isComplete()) {
@@ -1038,7 +1042,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             // Set the default names from ServiceConfig
             if (ctx instanceof ServiceRequestContext) {
-                sctx = ((ServiceRequestContext) ctx);
+                sctx = (ServiceRequestContext) ctx;
                 config = sctx.config();
                 newServiceName = config.defaultServiceNaming().serviceName(sctx);
                 newName = config.defaultLogName();
@@ -1054,14 +1058,13 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 if (config != null) {
                     newServiceName = ServiceNaming.fullTypeName().serviceName(sctx);
                 } else if (rpcReq != null) {
-                    newServiceName = ServiceNamingUtil.fullTypeRpcServiceName(rpcReq);
+                    newServiceName = rpcReq.serviceName();
                 }
             }
 
             if (newName == null) {
                 if (rpcReq != null) {
                     newName = rpcReq.method();
-                    newName = newName.substring(newName.lastIndexOf('/') + 1);
                 } else {
                     newName = ctx.method().name();
                 }
@@ -1421,54 +1424,56 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             sanitizedTrailers = null;
         }
 
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("{startTime=");
-        TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("{startTime=");
+            TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());
 
-        if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_LENGTH)) {
-            buf.append(", length=");
-            TextFormatter.appendSize(buf, requestLength);
+            if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_LENGTH)) {
+                buf.append(", length=");
+                TextFormatter.appendSize(buf, requestLength);
+            }
+
+            if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_END_TIME)) {
+                buf.append(", duration=");
+                TextFormatter.appendElapsed(buf, requestDurationNanos());
+            }
+
+            if (requestCauseString != null) {
+                buf.append(", cause=").append(requestCauseString);
+            }
+
+            buf.append(", scheme=");
+            if (scheme != null) {
+                buf.append(scheme.uriText());
+            } else {
+                buf.append(SerializationFormat.UNKNOWN.uriText())
+                   .append('+')
+                   .append(sessionProtocol != null ? sessionProtocol.uriText() : "unknown");
+            }
+
+            if (name != null) {
+                buf.append(", name=").append(name);
+            }
+
+            if (sanitizedHeaders != null) {
+                buf.append(", headers=").append(sanitizedHeaders);
+            }
+
+            if (sanitizedContent != null) {
+                buf.append(", content=").append(sanitizedContent);
+            } else if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
+                       requestContentPreview != null) {
+                buf.append(", contentPreview=").append(requestContentPreview);
+            }
+
+            if (sanitizedTrailers != null) {
+                buf.append(", trailers=").append(sanitizedTrailers);
+            }
+            buf.append('}');
+
+            requestStr = buf.toString();
         }
-
-        if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_END_TIME)) {
-            buf.append(", duration=");
-            TextFormatter.appendElapsed(buf, requestDurationNanos());
-        }
-
-        if (requestCauseString != null) {
-            buf.append(", cause=").append(requestCauseString);
-        }
-
-        buf.append(", scheme=");
-        if (scheme != null) {
-            buf.append(scheme.uriText());
-        } else {
-            buf.append(SerializationFormat.UNKNOWN.uriText())
-               .append('+')
-               .append(sessionProtocol != null ? sessionProtocol.uriText() : "unknown");
-        }
-
-        if (name != null) {
-            buf.append(", name=").append(name);
-        }
-
-        if (sanitizedHeaders != null) {
-            buf.append(", headers=").append(sanitizedHeaders);
-        }
-
-        if (sanitizedContent != null) {
-            buf.append(", content=").append(sanitizedContent);
-        } else if (hasInterestedFlags(flags, RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
-                   requestContentPreview != null) {
-            buf.append(", contentPreview=").append(requestContentPreview);
-        }
-
-        if (sanitizedTrailers != null) {
-            buf.append(", trailers=").append(sanitizedTrailers);
-        }
-        buf.append('}');
-
-        requestStr = buf.toString();
         requestStrFlags = flags;
 
         return requestStr;
@@ -1525,50 +1530,52 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             sanitizedTrailers = null;
         }
 
-        final StringBuilder buf = TemporaryThreadLocals.get().stringBuilder();
-        buf.append("{startTime=");
-        TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            buf.append("{startTime=");
+            TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());
 
-        if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_LENGTH)) {
-            buf.append(", length=");
-            TextFormatter.appendSize(buf, responseLength);
-        }
+            if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_LENGTH)) {
+                buf.append(", length=");
+                TextFormatter.appendSize(buf, responseLength);
+            }
 
-        if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_END_TIME)) {
-            buf.append(", duration=");
-            TextFormatter.appendElapsed(buf, responseDurationNanos());
-            buf.append(", totalDuration=");
-            TextFormatter.appendElapsed(buf, totalDurationNanos());
-        }
+            if (hasInterestedFlags(flags, RequestLogProperty.RESPONSE_END_TIME)) {
+                buf.append(", duration=");
+                TextFormatter.appendElapsed(buf, responseDurationNanos());
+                buf.append(", totalDuration=");
+                TextFormatter.appendElapsed(buf, totalDurationNanos());
+            }
 
-        if (responseCauseString != null) {
-            buf.append(", cause=").append(responseCauseString);
-        }
+            if (responseCauseString != null) {
+                buf.append(", cause=").append(responseCauseString);
+            }
 
-        if (sanitizedHeaders != null) {
-            buf.append(", headers=").append(sanitizedHeaders);
-        }
+            if (sanitizedHeaders != null) {
+                buf.append(", headers=").append(sanitizedHeaders);
+            }
 
-        if (sanitizedContent != null) {
-            buf.append(", content=").append(sanitizedContent);
-        } else if (responseContentPreview != null) {
-            buf.append(", contentPreview=").append(responseContentPreview);
-        }
+            if (sanitizedContent != null) {
+                buf.append(", content=").append(sanitizedContent);
+            } else if (responseContentPreview != null) {
+                buf.append(", contentPreview=").append(responseContentPreview);
+            }
 
-        if (sanitizedTrailers != null) {
-            buf.append(", trailers=").append(sanitizedTrailers);
-        }
-        buf.append('}');
-
-        final int numChildren = children != null ? children.size() : 0;
-        if (numChildren > 1) {
-            // Append only when there were retries which the numChildren is greater than 1.
-            buf.append(", {totalAttempts=");
-            buf.append(numChildren);
+            if (sanitizedTrailers != null) {
+                buf.append(", trailers=").append(sanitizedTrailers);
+            }
             buf.append('}');
-        }
 
-        responseStr = buf.toString();
+            final int numChildren = children != null ? children.size() : 0;
+            if (numChildren > 1) {
+                // Append only when there were retries which the numChildren is greater than 1.
+                buf.append(", {totalAttempts=");
+                buf.append(numChildren);
+                buf.append('}');
+            }
+
+            responseStr = buf.toString();
+        }
         responseStrFlags = flags;
 
         return responseStr;

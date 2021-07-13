@@ -11,7 +11,7 @@ String releaseFlagFromVersion(String src) {
     }
 }
 
-def mrJarVersions = [9]
+def mrJarVersions = [9,12]
 
 mrJarVersions.each { version->
     sourceSets {
@@ -41,8 +41,8 @@ mrJarVersions.each { version->
         testClassesDirs = sourceSets."java${version}Test".output.classesDirs
         classpath = sourceSets."java${version}Test".runtimeClasspath
 
-        enabled = (Integer.parseInt(JavaVersion.current().getMajorVersion()) >= version) &&
-                (!System.env.TEST_JAVA_VERSION || Integer.parseInt(System.env.TEST_JAVA_VERSION) >= version)
+        enabled = Integer.parseInt(JavaVersion.current().getMajorVersion()) >= version &&
+                rootProject.ext.testJavaVersion >= version
     }
 
     configurations."java${version}Implementation".extendsFrom configurations.implementation
@@ -54,7 +54,7 @@ mrJarVersions.each { version->
 
 tasks.withType(JavaCompile) {
     def version = releaseFlagFromVersion(sourceCompatibility)
-    options.compilerArgs.addAll(['--release', version])
+    options.release.set(Integer.parseInt(version))
 }
 
 tasks.withType(Jar) {
@@ -130,10 +130,12 @@ dependencies {
     // Do not upgrade to Scala 2.13.x that causes 'java.lang.ClassNotFoundException: scala.Serializable'
     // See https://github.com/scala/bug/issues/11832#issuecomment-568185023
     // If needed, you should consider to add 'armeria-scala' module.
-    optionalImplementation 'org.scala-lang:scala-library:2.12.13'
+    optionalImplementation 'org.scala-lang:scala-library:2.12.14'
 
     // Bouncy Castle
+    implementation 'org.bouncycastle:bcpkix-jdk15on'
     implementation 'org.bouncycastle:bcprov-jdk15on'
+    implementation 'org.bouncycastle:bcutil-jdk15on'
 
     // Jetty, for testing interoperability with other servers.
     testImplementation 'org.eclipse.jetty:jetty-webapp'
@@ -169,25 +171,27 @@ task testStreaming(type: Test,
 tasks.shadedTest.finalizedBy tasks.testStreaming
 tasks.check.dependsOn tasks.testStreaming
 
-// Run the test cases based on reactive-streams-tck
-task testNg(type: Test,
+if (rootProject.findProperty('FLAKY_TESTS') != 'true') {
+    // Run the test cases based on reactive-streams-tck only with non-flaky mode
+    task testNg(type: Test,
             group: 'Verification',
             description: 'Runs the TestNG unit tests.',
             dependsOn: tasks.shadedTestClasses) {
-    useTestNG()
-    include '/com/linecorp/armeria/common/**'
+        useTestNG()
+        include '/com/linecorp/armeria/common/**'
 
-    scanForTestClasses = false
-    testClassesDirs = tasks.shadedTest.testClassesDirs
-    classpath = testClassesDirs
+        scanForTestClasses = false
+        testClassesDirs = tasks.shadedTest.testClassesDirs
+        classpath = testClassesDirs
 
-    // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
-    doFirst {
-        classpath += project.files(configurations.shadedTestRuntime.resolve())
+        // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
+        doFirst {
+            classpath += project.files(configurations.shadedTestRuntime.resolve())
+        }
     }
+    tasks.shadedTest.finalizedBy tasks.testNg
+    tasks.check.dependsOn tasks.testNg
 }
-tasks.shadedTest.finalizedBy tasks.testNg
-tasks.check.dependsOn tasks.testNg
 
 if (tasks.findByName('trimShadedJar')) {
     tasks.trimShadedJar.configure {
@@ -239,5 +243,3 @@ class PublicSuffixesTask extends DefaultTask {
 }
 
 task publicSuffixes(type: PublicSuffixesTask)
-tasks.processResources.dependsOn publicSuffixes
-tasks.classes.dependsOn publicSuffixes

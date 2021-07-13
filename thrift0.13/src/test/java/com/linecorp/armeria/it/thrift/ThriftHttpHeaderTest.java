@@ -30,12 +30,9 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -146,17 +143,10 @@ public class ThriftHttpHeaderTest {
         final Iface client =
                 Clients.builder(server.httpUri(BINARY) + "/hello")
                        .decorator((delegate, ctx, req) -> {
-                           final HttpResponse res = delegate.execute(ctx, req);
-                           return new FilteredHttpResponse(res) {
-                               @Override
-                               protected HttpObject filter(HttpObject obj) {
-                                   if (obj instanceof HttpHeaders) {
-                                       final HttpHeaders headers = (HttpHeaders) obj;
-                                       assertThat(headers.get("foo")).isEqualTo("bar");
-                                   }
-                                   return obj;
-                               }
-                           };
+                           return delegate.execute(ctx, req).mapHeaders(headers -> {
+                               assertThat(headers.get("foo")).isEqualTo("bar");
+                               return headers;
+                           });
                        })
                        .build(Iface.class);
         try (SafeCloseable ignored = Clients.withHeader(AUTHORIZATION, SECRET)) {

@@ -29,8 +29,6 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import com.linecorp.armeria.internal.testing.SelfSignedCertificateRuleDelegate;
 import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
 
-import io.netty.handler.ssl.util.SelfSignedCertificate;
-
 /**
  * An {@link Extension} that provides a temporary self-signed certificate.
  */
@@ -100,7 +98,7 @@ public class SelfSignedCertificateExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Generates a {@link SelfSignedCertificate}.
+     * Generates a self-signed certificate.
      */
     @Override
     public void before(ExtensionContext context) throws Exception {
@@ -112,7 +110,7 @@ public class SelfSignedCertificateExtension extends AbstractAllOrEachExtension {
     }
 
     /**
-     * Deletes the generated {@link SelfSignedCertificate}.
+     * Deletes the generated self-signed certificate.
      */
     @Override
     public void after(ExtensionContext context) throws Exception {

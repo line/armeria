@@ -25,7 +25,7 @@ import com.linecorp.armeria.common.{HttpData, HttpHeaders, HttpResponse, MediaTy
 import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
-import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{defaultJsonPrinter, isJson, isProtobuf}
+import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{defaultJsonPrinter, isProtobuf}
 import com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction.{
   fromObjectMH,
   fromPublisherMH,
@@ -78,7 +78,7 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
       @Nullable result: Any,
       trailers: HttpHeaders): HttpResponse = {
     val contentType = headers.contentType
-    val isJsonType = contentType != null && isJson(contentType)
+    val isJsonType = contentType != null && contentType.isJson
     val isJsonSeq = contentType != null && MediaType.JSON_SEQ.is(contentType)
 
     result match {

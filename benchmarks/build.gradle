@@ -3,12 +3,11 @@ buildscript {
         gradlePluginPortal()
     }
     dependencies {
-        classpath "me.champeau.gradle:jmh-gradle-plugin:${managedVersions['me.champeau.gradle:jmh-gradle-plugin']}"
+        classpath "me.champeau.jmh:jmh-gradle-plugin:${managedVersions['me.champeau.jmh:jmh-gradle-plugin']}"
     }
 }
 
-apply plugin: 'me.champeau.gradle.jmh'
-def jmhInclude = rootProject.findProperty('jmh.include') ?: ''
+apply plugin: 'me.champeau.jmh'
 
 dependencies {
     implementation project(':grpc')
@@ -23,14 +22,17 @@ dependencies {
     implementation 'org.awaitility:awaitility'
 
     jmh "pl.project13.scala:sbt-jmh-extras:${managedVersions['pl.project13.scala:sbt-jmh-extras']}"
+
+    implementation project(':testing-internal')
 }
 
 jmh {
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
     jmhVersion = managedVersions['org.openjdk.jmh:jmh-core']
 
-    if (jmhInclude) {
-        include = jmhInclude
+    def jmhIncludes = rootProject.findProperty('jmh.includes')
+    if (jmhIncludes) {
+        includes = jmhIncludes.split(',') as List
     }
 
     if (rootProject.hasProperty('jmh.fork')) {
@@ -50,7 +52,7 @@ jmh {
     }
 
     if (rootProject.hasProperty('jmh.profilers')) {
-        profilers = String.valueOf(rootProject.findProperty('jmh.profilers')).split(',')
+        profilers = String.valueOf(rootProject.findProperty('jmh.profilers')).split(',').toList()
     }
 
     if (rootProject.hasProperty('jmh.threads')) {

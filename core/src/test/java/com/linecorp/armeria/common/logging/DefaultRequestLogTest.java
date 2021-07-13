@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -33,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -45,8 +45,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceNaming;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -195,9 +194,14 @@ class DefaultRequestLogTest {
         assertThatThrownBy(() -> log.responseFirstBytesTransferredTimeNanos())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
-        final ResponseHeaders bar = ResponseHeaders.of(200);
-        child.responseHeaders(bar);
+        final ResponseHeaders responseHeaders = ResponseHeaders.of(200);
+        child.responseHeaders(responseHeaders);
         assertThatThrownBy(() -> log.responseHeaders())
+                .isExactlyInstanceOf(RequestLogAvailabilityException.class);
+
+        final HttpHeaders responseTrailers = HttpHeaders.of("status", 0);
+        child.responseTrailers(responseTrailers);
+        assertThatThrownBy(() -> log.responseTrailers())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
         log.endResponseWithLastChild();
@@ -205,7 +209,8 @@ class DefaultRequestLogTest {
 
         assertThat(log.responseFirstBytesTransferredTimeNanos())
                 .isEqualTo(child.responseFirstBytesTransferredTimeNanos());
-        assertThat(log.responseHeaders()).isSameAs(bar);
+        assertThat(log.responseHeaders()).isSameAs(responseHeaders);
+        assertThat(log.responseTrailers()).isSameAs(responseTrailers);
 
         final String responseContent = "baz1";
         final String rawResponseContent = "qux1";
@@ -332,18 +337,19 @@ class DefaultRequestLogTest {
 
     @Test
     void logServiceNameWithServiceNaming() {
-        final ServiceRequestContext sctx = mock(ServiceRequestContext.class);
-        when(sctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
-        final Server server = Server.builder().route().path("/")
-                                    .defaultServiceNaming(ServiceNaming.simpleTypeName())
-                                    .build((ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                    .build();
-        final ServiceConfig serviceConfig = server.serviceConfigs().get(0);
-        when(sctx.config()).thenReturn(serviceConfig);
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.simpleTypeName())
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
         log = new DefaultRequestLog(sctx);
 
         assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
-        log.requestContent(RpcRequest.of(DefaultRequestLogTest.class, "test"), null);
+        log.requestContent(rpcRequest, null);
         log.endRequest();
         assertThat(log.name()).isSameAs("test");
         assertThat(log.serviceName()).startsWith(DefaultRequestLogTest.class.getSimpleName());
@@ -351,13 +357,10 @@ class DefaultRequestLogTest {
 
     @Test
     void logServiceNameWithServiceNaming_of() {
-        final ServiceRequestContext sctx = mock(ServiceRequestContext.class);
-        when(sctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
-        final Server server = Server.builder().route().path("/")
-                                    .defaultServiceNaming(ServiceNaming.of("hardCodedServiceName"))
-                                    .build((ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                    .build();
-        when(sctx.config()).thenReturn(server.serviceConfigs().get(0));
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .defaultServiceNaming(ServiceNaming.of("hardCodedServiceName"))
+                                     .build();
         log = new DefaultRequestLog(sctx);
 
         assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
@@ -368,14 +371,51 @@ class DefaultRequestLogTest {
     }
 
     @Test
+    void logServiceNameWithServiceNaming_shorten50() {
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.shorten(50))
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(rpcRequest, null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith("c.l.armeria.common.logging.DefaultRequestLogTest");
+    }
+
+    @Test
+    void logServiceNameWithServiceNaming_shorten() {
+        final HttpService httpService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .service(httpService)
+                                     .defaultServiceNaming(ServiceNaming.shorten())
+                                     .build();
+        final RpcRequest rpcRequest = RpcRequest.of(DefaultRequestLogTest.class, "test");
+        sctx.updateRpcRequest(rpcRequest);
+
+        log = new DefaultRequestLog(sctx);
+
+        assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
+        log.requestContent(rpcRequest, null);
+        log.endRequest();
+        assertThat(log.name()).isSameAs("test");
+        assertThat(log.serviceName()).startsWith("c.l.a.c.l.DefaultRequestLogTest");
+    }
+
+    @Test
     void logServiceNameWithServiceNaming_custom() {
-        final ServiceRequestContext sctx = mock(ServiceRequestContext.class);
-        when(sctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
-        final Server server = Server.builder()
-                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                    .defaultServiceNaming(ctx -> "customServiceName")
-                                    .build();
-        when(sctx.config()).thenReturn(server.serviceConfigs().get(0));
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .defaultServiceNaming(ctx -> "customServiceName")
+                                     .build();
         log = new DefaultRequestLog(sctx);
 
         assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();
@@ -387,13 +427,10 @@ class DefaultRequestLogTest {
 
     @Test
     void logServiceNameWithServiceNaming_null() {
-        final ServiceRequestContext sctx = mock(ServiceRequestContext.class);
-        when(sctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
-        final Server server = Server.builder()
-                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                    .defaultServiceNaming(ctx -> null)
-                                    .build();
-        when(sctx.config()).thenReturn(server.serviceConfigs().get(0));
+        final ServiceRequestContext sctx =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .defaultServiceNaming(ctx -> null)
+                                     .build();
         log = new DefaultRequestLog(sctx);
 
         assertThat(log.isAvailable(RequestLogProperty.NAME)).isFalse();

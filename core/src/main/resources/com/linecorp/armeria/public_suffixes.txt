@@ -28,20 +28,20 @@
 *.dapps.earth
 *.dev.adobeaemcloud.com
 *.devcdnaccesso.com
+*.developer.app
 *.dweb.link
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
 *.er
-*.eu.pythonanywhere.com
 *.ex.futurecms.at
 *.ex.ortsinfo.at
 *.firenet.ch
 *.fk
+*.frusky.de
 *.futurecms.at
 *.gateway.dev
 *.hosting.myjino.ru
 *.hosting.ovh.net
-*.id.forgerock.io
 *.in.futurecms.at
 *.jm
 *.kawasaki.jp
@@ -72,7 +72,6 @@
 *.paywhirl.com
 *.pg
 *.platformsh.site
-*.pythonanywhere.com
 *.quipelements.com
 *.r.appspot.com
 *.s5y.io
@@ -224,6 +223,7 @@ ad
 ad.jp
 adac
 adachi.tokyo.jp
+adimo.co.uk
 adm.br
 adobeaemcloud.com
 adobeaemcloud.net
@@ -450,7 +450,7 @@ apps.lair.io
 appspacehosted.com
 appspaceusercontent.com
 appspot.com
-aprendemas.cl
+appudo.net
 aq
 aq.it
 aquarelle
@@ -597,6 +597,8 @@ austevoll.no
 austin.museum
 australia.museum
 austrheim.no
+authgear-staging.com
+authgearapps.com
 author
 author.aero
 auto
@@ -947,6 +949,7 @@ blogsyte.com
 bloomberg
 bloxcms.com
 blue
+bluebite.io
 bm
 bmd.br
 bmoattachments.org
@@ -1812,6 +1815,7 @@ dclk
 dd-dns.de
 ddns.me
 ddns.net
+ddns5.com
 ddnsfree.com
 ddnsgeek.com
 ddnsking.com
@@ -2311,6 +2315,7 @@ eu.int
 eu.meteorapp.com
 eu.org
 eu.platform.sh
+eu.pythonanywhere.com
 eun.eg
 eurodir.ru
 eurovision
@@ -2790,6 +2795,7 @@ git-pages.rit.edu
 git-repos.de
 gitapp.si
 github.io
+githubpreview.dev
 githubusercontent.com
 gitlab.io
 gitpage.si
@@ -2893,6 +2899,7 @@ gotemba.shizuoka.jp
 goto.nagasaki.jp
 gotpantheon.com
 gotsu.shimane.jp
+goupile.fr
 gouv.bj
 gouv.ci
 gouv.fr
@@ -3389,6 +3396,7 @@ horology.museum
 horonobe.hokkaido.jp
 horse
 horten.no
+hosp.uk
 hospital
 host
 hostedpi.com
@@ -3416,6 +3424,7 @@ hs.run
 hs.zone
 hsbc
 ht
+httpbin.org
 hu
 hu.com
 hu.eu.org
@@ -3462,6 +3471,7 @@ ichinoseki.iwate.jp
 icu
 id
 id.au
+id.forgerock.io
 id.ir
 id.lv
 id.ly
@@ -3893,6 +3903,7 @@ jor.br
 jorpeland.no
 joso.ibaraki.jp
 jot
+jotelulu.cloud
 journal.aero
 journalism.museum
 journalist.aero
@@ -4804,6 +4815,7 @@ me.eu.org
 me.it
 me.ke
 me.so
+me.ss
 me.tc
 me.tz
 me.uk
@@ -4828,6 +4840,8 @@ media.aero
 media.hu
 media.museum
 media.pl
+mediatech.by
+mediatech.dev
 medical.museum
 medicina.bo
 medio-campidano.it
@@ -4994,6 +5008,7 @@ miners.museum
 mini
 mining.museum
 miniserver.com
+minisite.ms
 minnesota.museum
 mino.gifu.jp
 minobu.yamanashi.jp
@@ -5083,6 +5098,7 @@ mobi.tt
 mobi.tz
 mobile
 mochizuki.nagano.jp
+mock.pstmn.io
 mod.gi
 moda
 modalen.no
@@ -5175,8 +5191,6 @@ muika.niigata.jp
 mukawa.hokkaido.jp
 muko.kyoto.jp
 mulhouse.museum
-multibaas.app
-multibaas.com
 munakata.fukuoka.jp
 muncie.museum
 muni.il
@@ -5201,6 +5215,7 @@ museum.om
 museum.tt
 museumcenter.museum
 museumvereniging.museum
+music
 music.museum
 musica.ar
 musica.bo
@@ -5739,6 +5754,7 @@ nombre.bo
 nome.pt
 nomi.ishikawa.jp
 nonoichi.ishikawa.jp
+noop.app
 nord-aurdal.no
 nord-fron.no
 nord-odal.no
@@ -5768,6 +5784,7 @@ notteroy.no
 nov.ru
 nov.su
 novara.it
+novecore.site
 now
 now-dns.net
 now-dns.org
@@ -5970,6 +5987,7 @@ on-the-web.tv
 on-web.fr
 on.ca
 onagawa.miyagi.jp
+onavstack.net
 oncilla.mythic-beasts.com
 ondigitalocean.app
 one
@@ -6462,6 +6480,7 @@ portal.museum
 portland.museum
 portlligat.museum
 post
+postman-echo.com
 posts-and-telecommunications.museum
 potager.org
 potenza.it
@@ -6541,6 +6560,7 @@ psc.br
 psi.br
 psp.gov.pl
 psse.gov.pl
+pstmn.io
 pt
 pt.eu.org
 pt.it
@@ -6566,6 +6586,7 @@ pwc
 py
 pyatigorsk.ru
 pymnt.uk
+pythonanywhere.com
 pz.it
 q-a.eu.org
 q.bg
@@ -6591,7 +6612,6 @@ qvc
 r.bg
 r.cdn77.net
 r.se
-ra-ru.ru
 ra.it
 racing
 rackmaze.com
@@ -7005,6 +7025,7 @@ sch.ng
 sch.qa
 sch.sa
 sch.so
+sch.ss
 sch.zm
 schaeffler
 schlesisches.museum
@@ -7245,6 +7266,7 @@ shonai.fukuoka.jp
 shonai.yamagata.jp
 shoo.okayama.jp
 shop
+shop.brendly.rs
 shop.ht
 shop.hu
 shop.pl
@@ -7477,6 +7499,7 @@ store.nf
 store.ro
 store.st
 store.ve
+storebase.store
 storfjord.no
 storj.farm
 stpetersburg.museum
@@ -9151,7 +9174,6 @@ zoological.museum
 zoology.museum
 zp.gov.pl
 zp.ua
-zsew.ru
 zt.ua
 zuerich
 zushi.kanagawa.jp

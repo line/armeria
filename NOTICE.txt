@@ -123,6 +123,11 @@ This product contains a modified part of OkHttp, distributed by Square, Inc:
   * License: license/LICENSE.okhttp.al20.txt (Apache License v2.0)
   * Homepage: https://square.github.io/okhttp
 
+This product contains a modified part of Logback, distributed by QOS.ch, Inc:
+
+  * License: license/LICENSE.logback.lgpl.txt (GNU Lesser General Public License v2.1)
+  * Homepage: https://logback.qos.ch/
+
 
 Dependencies
 ============
@@ -162,6 +167,11 @@ This product depends on completable-futures, distributed by Spotify AB:
   * License: license/LICENSE.completable-futures.al20.txt (Apache License v2.0)
   * Homepage: https://github.com/spotify/completable-futures
 
+This product depends on dgs-framework, distributed by Netflix:
+
+  * License: licenses/LICENSE.dgs.al20.txt (Apache License v2.0)
+  * Homepage: https://netflix.github.io/dgs/
+
 This product depends on Dropwizard Metrics, distributed by Coda Hale:
 
   * License: licenses/LICENSE.dropwizard.al20.txt (Apache License v2.0)
@@ -181,6 +191,11 @@ This product depends on FindBugs-JSR305, distributed by
 
   * License: licenses/LICENSE.jsr305.bsd.txt (New BSD License)
   * Homepage: http://findbugs.sourceforge.net/
+
+This product depends on graphql-java, distributed by Andreas Marek:
+
+  * License: licenses/LICENSE.graphql-java.mit.txt (MIT License)
+  * Homepage: https://www.graphql-java.com/
 
 This product depends on gRPC, distributed by Google:
 

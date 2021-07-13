@@ -38,6 +38,8 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
     @Nullable
+    private String defaultServiceName;
+    @Nullable
     private ServiceNaming defaultServiceNaming;
     @Nullable
     private String defaultLogName;
@@ -132,11 +134,14 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Override
     public ServiceConfigSetters defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
-        return defaultServiceNaming(ServiceNaming.of(defaultServiceName));
+        this.defaultServiceName = defaultServiceName;
+        defaultServiceNaming = ServiceNaming.of(defaultServiceName);
+        return this;
     }
 
     @Override
     public ServiceConfigSetters defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+        defaultServiceName = null;
         this.defaultServiceNaming = requireNonNull(defaultServiceNaming, "defaultServiceNaming");
         return this;
     }
@@ -163,10 +168,14 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
             annotatedService = null;
         }
 
-        if (defaultServiceNaming != null) {
+        if (defaultServiceName != null) {
+            serviceConfigBuilder.defaultServiceName(defaultServiceName);
+        } else if (defaultServiceNaming != null) {
             serviceConfigBuilder.defaultServiceNaming(defaultServiceNaming);
         } else {
-            if (annotatedService != null) {
+            // Set the default service name only when the service name is set using @ServiceName.
+            // If it's not, the global defaultServiceNaming is used.
+            if (annotatedService != null && annotatedService.serviceNameSetByAnnotation()) {
                 serviceConfigBuilder.defaultServiceName(annotatedService.serviceName());
             }
         }

@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.server.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
 
@@ -50,7 +51,7 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  */
 public final class JacksonResponseConverterFunction implements ResponseConverterFunction {
 
-    private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
+    private static final ObjectMapper defaultObjectMapper = JacksonUtil.newDefaultObjectMapper();
 
     private final ObjectMapper mapper;
 
@@ -77,7 +78,7 @@ public final class JacksonResponseConverterFunction implements ResponseConverter
         if (mediaType != null) {
             // @Produces("application/json") or @ProducesJson is specified.
             // Any MIME type which ends with '+json' such as 'application/json-patch+json' can be also accepted.
-            if (mediaType.is(MediaType.JSON) || mediaType.subtype().endsWith("+json")) {
+            if (mediaType.isJson()) {
                 final Charset charset = mediaType.charset(StandardCharsets.UTF_8);
                 // Convert the object only if the charset supports UTF-8,
                 // because ObjectMapper always writes JSON document as UTF-8.

@@ -136,3 +136,6 @@ typings/
 
 # SDKMAN rc file
 .sdkmanrc
+
+# macOS folder metadata
+.DS_Store

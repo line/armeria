@@ -60,8 +60,8 @@ public final class RequestContextHooks {
 
     private static boolean enabled;
 
-    private static final String FLUX_ERROR_SUPPLIED = "reactor.core.publisher.FluxErrorSupplied";
-    private static final String MONO_ERROR_SUPPLIED = "reactor.core.publisher.MonoErrorSupplied";
+    private static final String FLUX_ERROR_SUPPLIED = Flux.class.getPackage().getName() + ".FluxErrorSupplied";
+    private static final String MONO_ERROR_SUPPLIED = Mono.class.getPackage().getName() + ".MonoErrorSupplied";
 
     /**
      * Enables {@link RequestContext} during Reactor operations.

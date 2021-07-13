@@ -35,6 +35,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.EnumSet;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.Sets;
 
 /**
@@ -98,13 +100,15 @@ public enum HttpMethod {
     TRACE,
 
     /**
-     * The CONNECT method which is used for a proxy that can dynamically switch to being a tunnel.
+     * The CONNECT method which is used for a proxy that can dynamically switch to being a tunnel or for
+     * <a href="https://datatracker.ietf.org/doc/rfc8441/">bootstrapping WebSockets with HTTP/2</a>.
+     * Note that Armeria handles a {@code CONNECT} request only for bootstrapping WebSockets.
      */
     CONNECT,
 
     /**
-     * A special method which represents the client sent a method that is none of the constants defined in
-     * this enum.
+     * A special constant returned by {@link RequestHeaders#method()} to signify that a request has a method
+     * not defined in this enum.
      */
     UNKNOWN;
 
@@ -153,5 +157,43 @@ public enum HttpMethod {
      */
     public static Set<HttpMethod> knownMethods() {
         return knownMethods;
+    }
+
+    /**
+     * Parses the specified {@link String} into an {@link HttpMethod}. This method will return the same
+     * {@link HttpMethod} instance for equal values of {@code method}. Note that this method will not
+     * treat {@code "UNKNOWN"} as a valid value and thus will return {@code null} when {@code "UNKNOWN"}
+     * is given.
+     *
+     * @return {@code null} if there is no such {@link HttpMethod} available
+     */
+    @Nullable
+    public static HttpMethod tryParse(@Nullable String method) {
+        if (method == null) {
+            return null;
+        }
+
+        switch (method) {
+            case "OPTIONS":
+                return OPTIONS;
+            case "GET":
+                return GET;
+            case "HEAD":
+                return HEAD;
+            case "POST":
+                return POST;
+            case "PUT":
+                return PUT;
+            case "PATCH":
+                return PATCH;
+            case "DELETE":
+                return DELETE;
+            case "TRACE":
+                return TRACE;
+            case "CONNECT":
+                return CONNECT;
+            default:
+                return null;
+        }
     }
 }

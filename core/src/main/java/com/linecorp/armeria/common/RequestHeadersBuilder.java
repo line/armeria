@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Locale.LanguageRange;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import com.google.common.collect.ImmutableList;
@@ -152,6 +153,11 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     RequestHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> entries);
 
     @Override
+    default RequestHeadersBuilder add(Map<? extends CharSequence, String> entries) {
+        return (RequestHeadersBuilder) HttpHeadersBuilder.super.add(entries);
+    }
+
+    @Override
     RequestHeadersBuilder addObject(CharSequence name, Object value);
 
     @Override
@@ -189,6 +195,11 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
 
     @Override
     RequestHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> entries);
+
+    @Override
+    default RequestHeadersBuilder set(Map<? extends CharSequence, String> entries) {
+        return (RequestHeadersBuilder) HttpHeadersBuilder.super.set(entries);
+    }
 
     @Override
     RequestHeadersBuilder setIfAbsent(Iterable<? extends Entry<? extends CharSequence, String>> entries);

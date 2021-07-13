@@ -32,8 +32,7 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -101,11 +100,6 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
     @Override
     public CompletableFuture<Void> whenComplete() {
         return sources.get(sources.size() - 1).whenComplete();
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, EMPTY_OPTIONS);
     }
 
     @Override

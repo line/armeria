@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -61,6 +63,7 @@ public final class ServerConfig {
     private final List<ServerPort> ports;
     private final VirtualHost defaultVirtualHost;
     private final List<VirtualHost> virtualHosts;
+    @Nullable
     private final Mapping<String, VirtualHost> virtualHostMapping;
     private final List<ServiceConfig> services;
 
@@ -106,11 +109,14 @@ public final class ServerConfig {
     private final ExceptionHandler exceptionHandler;
 
     @Nullable
+    private final Mapping<String, SslContext> sslContexts;
+
+    @Nullable
     private String strVal;
 
     ServerConfig(
             Iterable<ServerPort> ports,
-            VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
+            VirtualHost defaultVirtualHost, Collection<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis,
             int maxNumRequestsPerConnection, int http2InitialConnectionWindowSize,
@@ -128,7 +134,8 @@ public final class ServerConfig {
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
             Supplier<? extends RequestId> requestIdGenerator,
-            ExceptionHandler exceptionHandler) {
+            ExceptionHandler exceptionHandler,
+            @Nullable Mapping<String, SslContext> sslContexts) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -201,18 +208,22 @@ public final class ServerConfig {
             this.proxyProtocolMaxTlvSize = 0;
         }
 
-        // Set virtual host definitions and initialize their domain name mapping.
-        final DomainMappingBuilder<VirtualHost> mappingBuilder =
-                new DomainMappingBuilder<>(defaultVirtualHost);
         final List<VirtualHost> virtualHostsCopy = new ArrayList<>();
-        for (VirtualHost h : virtualHosts) {
-            if (h == null) {
-                break;
+        if (virtualHosts.isEmpty()) {
+            virtualHostMapping = null;
+        } else {
+            // Set virtual host definitions and initialize their domain name mapping.
+            final DomainMappingBuilder<VirtualHost> mappingBuilder =
+                    new DomainMappingBuilder<>(defaultVirtualHost);
+            for (VirtualHost h : virtualHosts) {
+                if (h == null) {
+                    break;
+                }
+                virtualHostsCopy.add(h);
+                mappingBuilder.add(h.hostnamePattern(), h);
             }
-            virtualHostsCopy.add(h);
-            mappingBuilder.add(h.hostnamePattern(), h);
+            virtualHostMapping = mappingBuilder.build();
         }
-        virtualHostMapping = mappingBuilder.build();
 
         // Add the default VirtualHost to the virtualHosts so that a user can retrieve all VirtualHosts
         // via virtualHosts(). i.e. no need to check defaultVirtualHost().
@@ -241,6 +252,7 @@ public final class ServerConfig {
                 (Supplier<RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
         this.requestIdGenerator = castRequestIdGenerator;
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+        this.sslContexts = sslContexts;
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -335,6 +347,9 @@ public final class ServerConfig {
      * {@link #defaultVirtualHost()} is returned.
      */
     public VirtualHost findVirtualHost(String hostname) {
+        if (virtualHostMapping == null) {
+            return defaultVirtualHost;
+        }
         return virtualHostMapping.map(hostname);
     }
 
@@ -609,6 +624,14 @@ public final class ServerConfig {
      */
     public ExceptionHandler exceptionHandler() {
         return exceptionHandler;
+    }
+
+    /**
+     * Returns a map of SslContexts {@link SslContext}.
+     */
+    @Nullable
+    Mapping<String, SslContext> sslContextMapping() {
+        return sslContexts;
     }
 
     @Override

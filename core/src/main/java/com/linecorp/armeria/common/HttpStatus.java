@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.common.util.StringUtil;
+
 /**
  * HTTP response code and its description.
  */
@@ -431,7 +433,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
         }
 
         code = statusCode;
-        codeAsText = Integer.toString(statusCode);
+        codeAsText = StringUtil.toString(statusCode);
         codeClass = HttpStatusClass.valueOf(statusCode);
         this.reasonPhrase = reasonPhrase;
 

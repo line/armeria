@@ -11,12 +11,9 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -131,17 +128,8 @@ public final class ProxyService extends AbstractHttpService {
     }
 
     private static HttpResponse addViaHeader(HttpResponse res) {
-        return new FilteredHttpResponse(res) {
-            @Override
-            protected HttpObject filter(HttpObject obj) {
-                // You can remove or add specific headers to a response.
-                if (obj instanceof ResponseHeaders) {
-                    return ((ResponseHeaders) obj).toBuilder()
-                                                  .add(HttpHeaderNames.VIA, viaHeaderValue)
-                                                  .build();
-                }
-                return obj;
-            }
-        };
+        return res.mapHeaders(headers -> headers.toBuilder()
+                                                .add(HttpHeaderNames.VIA, viaHeaderValue)
+                                                .build());
     }
 }

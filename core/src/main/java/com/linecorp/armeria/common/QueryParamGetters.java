@@ -59,6 +59,28 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
     String get(String name, String defaultValue);
 
     /**
+     * Returns the value of a parameter with the specified {@code name}. If there are more than one value for
+     * the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the last parameter value if found, or {@code null} if there is no such parameter
+     */
+    @Override
+    @Nullable
+    String getLast(String name);
+
+    /**
+     * Returns the value of a parameter with the specified {@code name}. If there are more than one value for
+     * the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @param defaultValue the default value
+     * @return the last parameter value, or {@code defaultValue} if there is no such parameter
+     */
+    @Override
+    String getLast(String name, String defaultValue);
+
+    /**
      * Returns all values for the parameter with the specified name. The returned {@link List} can't be
      * modified.
      *
@@ -67,6 +89,54 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      */
     @Override
     List<String> getAll(String name);
+
+    /**
+     * Returns the {@code boolean} value of a parameter with the specified {@code name}. If there are more
+     * than one value for the specified {@code name}, the first value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the {@code boolean} value of the first value in insertion order or {@code null}
+     *         if there is no such parameter or it can't be converted to {@code boolean}.
+     */
+    @Override
+    @Nullable
+    Boolean getBoolean(String name);
+
+    /**
+     * Returns the {@code boolean} value of a parameter with the specified {@code name}. If there are more
+     * than one value for the specified {@code name}, the first value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @param defaultValue the default value
+     * @return the {@code boolean} value of the first value in insertion order or {@code defaultValue}
+     *         if there is no such parameter or it can't be converted to {@code boolean}.
+     */
+    @Override
+    boolean getBoolean(String name, boolean defaultValue);
+
+    /**
+     * Returns the {@code boolean} value of a parameter with the specified {@code name}. If there are more
+     * than one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the {@code boolean} value of the last value in insertion order or {@code null}
+     *         if there is no such parameter or it can't be converted to {@code boolean}.
+     */
+    @Override
+    @Nullable
+    Boolean getLastBoolean(String name);
+
+    /**
+     * Returns the {@code boolean} value of a parameter with the specified {@code name}. If there are more
+     * than one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @param defaultValue the default value
+     * @return the {@code boolean} value of the last value in insertion order or {@code defaultValue}
+     *         if there is no such parameter or it can't be converted to {@code boolean}.
+     */
+    @Override
+    boolean getLastBoolean(String name, boolean defaultValue);
 
     /**
      * Returns the {@code int} value of a parameter with the specified {@code name}. If there are more than one
@@ -93,6 +163,30 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
     int getInt(String name, int defaultValue);
 
     /**
+     * Returns the {@code int} value of a parameter with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the {@code int} value of the last value in insertion order or {@code null} if there is no such
+     *         parameter or it can't be converted to {@code int}.
+     */
+    @Override
+    @Nullable
+    Integer getLastInt(String name);
+
+    /**
+     * Returns the {@code int} value of a parameter with the specified {@code name}. If there are more than one
+     * value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @param defaultValue the default value
+     * @return the {@code int} value of the last value in insertion order or {@code defaultValue} if there is
+     *         no such parameter or it can't be converted to {@code int}.
+     */
+    @Override
+    int getLastInt(String name, int defaultValue);
+
+    /**
      * Returns the {@code long} value of a parameter with the specified {@code name}. If there are more than
      * one value for the specified {@code name}, the first value in insertion order is returned.
      *
@@ -115,6 +209,30 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      */
     @Override
     long getLong(String name, long defaultValue);
+
+    /**
+     * Returns the {@code long} value of a parameter with the specified {@code name}. If there are more than
+     * one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the {@code long} value of the last value in insertion order or {@code null} if there is no such
+     *         parameter or it can't be converted to {@code long}.
+     */
+    @Override
+    @Nullable
+    Long getLastLong(String name);
+
+    /**
+     * Returns the {@code long} value of a parameter with the specified {@code name}. If there are more than
+     * one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @param defaultValue the default value
+     * @return the {@code long} value of the last value in insertion order or {@code defaultValue} if there is
+     *         no such parameter or it can't be converted to {@code long}.
+     */
+    @Override
+    long getLastLong(String name, long defaultValue);
 
     /**
      * Returns the {@code float} value of a parameter with the specified {@code name}. If there are more than
@@ -141,6 +259,30 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
     float getFloat(String name, float defaultValue);
 
     /**
+     * Returns the {@code float} value of a parameter with the specified {@code name}. If there are more than
+     * one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the {@code float} value of the last value in insertion order or {@code null} if there is no
+     *         such parameter or it can't be converted to {@code float}.
+     */
+    @Override
+    @Nullable
+    Float getLastFloat(String name);
+
+    /**
+     * Returns the {@code float} value of a parameter with the specified {@code name}. If there are more than
+     * one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @param defaultValue the default value
+     * @return the {@code float} value of the last value in insertion order or {@code defaultValue} if there
+     *         is no such parameter or it can't be converted to {@code float}.
+     */
+    @Override
+    float getLastFloat(String name, float defaultValue);
+
+    /**
      * Returns the {@code double} value of a parameter with the specified {@code name}. If there are more than
      * one value for the specified {@code name}, the first value in insertion order is returned.
      *
@@ -165,6 +307,30 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
     double getDouble(String name, double defaultValue);
 
     /**
+     * Returns the {@code double} value of a parameter with the specified {@code name}. If there are more than
+     * one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the {@code double} value of the last value in insertion order or {@code null} if there is no
+     *         such parameter or it can't be converted to {@code double}.
+     */
+    @Override
+    @Nullable
+    Double getLastDouble(String name);
+
+    /**
+     * Returns the {@code double} value of a parameter with the specified {@code name}. If there are more than
+     * one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @param defaultValue the default value
+     * @return the {@code double} value of the last value in insertion order or {@code defaultValue} if there
+     *         is no such parameter or it can't be converted to {@code double}.
+     */
+    @Override
+    double getLastDouble(String name, double defaultValue);
+
+    /**
      * Returns the value of a parameter with the specified {@code name} in milliseconds. If there are more than
      * one value for the specified {@code name}, the first value in insertion order is returned.
      *
@@ -187,6 +353,30 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      */
     @Override
     long getTimeMillis(String name, long defaultValue);
+
+    /**
+     * Returns the value of a parameter with the specified {@code name} in milliseconds. If there are more than
+     * one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the milliseconds value of the last value in insertion order or {@code null} if there is no such
+     *         parameter or it can't be converted to milliseconds.
+     */
+    @Override
+    @Nullable
+    Long getLastTimeMillis(String name);
+
+    /**
+     * Returns the value of a parameter with the specified {@code name} in milliseconds. If there are more than
+     * one value for the specified {@code name}, the last value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @param defaultValue the default value
+     * @return the milliseconds value of the last value in insertion order or {@code defaultValue} if there is
+     *         no such parameter or it can't be converted to milliseconds.
+     */
+    @Override
+    long getLastTimeMillis(String name, long defaultValue);
 
     /**
      * Returns {@code true} if a parameter with the {@code name} exists, {@code false} otherwise.
@@ -214,6 +404,16 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      */
     @Override
     boolean containsObject(String name, Object value);
+
+    /**
+     * Returns {@code true} if a parameter with the {@code name} and {@code value} exists.
+     *
+     * @param name the parameter name
+     * @param value the parameter value
+     * @return {@code true} if the parameter exists. {@code false} otherwise
+     */
+    @Override
+    boolean containsBoolean(String name, boolean value);
 
     /**
      * Returns {@code true} if a parameter with the {@code name} and {@code value} exists.
@@ -332,9 +532,10 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      * @return the encoded query string.
      */
     default String toQueryString() {
-        final TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.get();
-        final StringBuilder buf = tempThreadLocals.stringBuilder();
-        return appendQueryString(buf).toString();
+        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tempThreadLocals.stringBuilder();
+            return appendQueryString(buf).toString();
+        }
     }
 
     /**

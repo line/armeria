@@ -17,21 +17,13 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-
-import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 class DefaultWebClientTest {
 
@@ -39,63 +31,34 @@ class DefaultWebClientTest {
     void testConcatenateRequestPath() throws Exception {
         final String clientUriPath = "http://127.0.0.1/hello";
         final String requestPath = "world/test?q1=foo";
+        final WebClient client = WebClient.of(clientUriPath);
 
-        final HttpClient mockClientDelegate = mock(HttpClient.class);
-        final DefaultWebClient defaultWebClient = createDefaultWebClient(clientUriPath, mockClientDelegate
-        );
-
-        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
-
-        final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-        verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());
-
-        final String concatPath = argCaptor.getValue().path();
-        assertThat(concatPath).isEqualTo("/hello/world/test?q1=foo");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath))).aggregate();
+            assertThat(captor.get().request().path()).isEqualTo("/hello/world/test?q1=foo");
+        }
     }
 
     @Test
     void testRequestParamsUndefinedEndPoint() throws Exception {
         final String path = "http://127.0.0.1/helloWorld/test?q1=foo";
-        final HttpClient mockClientDelegate = mock(HttpClient.class);
-        final DefaultWebClient defaultWebClient =
-                createDefaultWebClient(AbstractWebClientBuilder.UNDEFINED_URI, mockClientDelegate);
+        final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
 
-        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path)));
-
-        final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-        verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());
-
-        final String concatPath = argCaptor.getValue().path();
-        assertThat(concatPath).isEqualTo("/helloWorld/test?q1=foo");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path))).aggregate();
+            assertThat(captor.get().request().path()).isEqualTo("/helloWorld/test?q1=foo");
+        }
     }
 
     @Test
     void testWithoutRequestParamsUndefinedEndPoint() throws Exception {
         final String path = "http://127.0.0.1/helloWorld/test";
-        final HttpClient mockClientDelegate = mock(HttpClient.class);
-        final DefaultWebClient defaultWebClient =
-                createDefaultWebClient(AbstractWebClientBuilder.UNDEFINED_URI, mockClientDelegate);
+        final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
 
-        defaultWebClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path)));
-
-        final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-        verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());
-
-        final String concatPath = argCaptor.getValue().path();
-        assertThat(concatPath).isEqualTo("/helloWorld/test");
-    }
-
-    private static DefaultWebClient createDefaultWebClient(
-            String clientUriPath, HttpClient mockClientDelegate) throws URISyntaxException {
-        return createDefaultWebClient(new URI(clientUriPath), mockClientDelegate);
-    }
-
-    private static DefaultWebClient createDefaultWebClient(
-            URI clientUriPath, HttpClient mockClientDelegate) throws URISyntaxException {
-        final ClientBuilderParams clientBuilderParams = ClientBuilderParams.of(
-                clientUriPath, WebClient.class, ClientOptions.of());
-        return new DefaultWebClient(
-                clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get());
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path))).aggregate();
+            assertThat(captor.get().request().path()).isEqualTo("/helloWorld/test");
+        }
     }
 
     @Test

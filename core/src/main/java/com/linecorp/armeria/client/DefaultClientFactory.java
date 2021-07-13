@@ -149,6 +149,11 @@ final class DefaultClientFactory implements ClientFactory {
     }
 
     @Override
+    public int numConnections() {
+        return httpClientFactory.numConnections();
+    }
+
+    @Override
     public ClientFactoryOptions options() {
         return httpClientFactory.options();
     }
