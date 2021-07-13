@@ -60,18 +60,12 @@ public final class OAuth2Client extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final CompletionStage<HttpResponse> future = withAuthorization(req).thenApply(newReq -> {
+        final CompletionStage<HttpResponse> future = authorizationGrant.getAccessToken().thenApply(token -> {
+            final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().set(
+                    HttpHeaderNames.AUTHORIZATION, token.authorization()).build());
             ctx.updateRequest(newReq);
             return executeWithFallback(unwrap(), ctx, (context, cause) -> HttpResponse.ofFailure(cause));
         });
         return HttpResponse.from(future);
-    }
-
-    private CompletionStage<HttpRequest> withAuthorization(HttpRequest req) {
-        return authorizationGrant.getAccessToken().thenApply(accessToken -> {
-            // Create a new request with an additional 'Authorization' header
-            return req.withHeaders(req.headers().toBuilder().set(
-                    HttpHeaderNames.AUTHORIZATION, accessToken.authorization()).build());
-        });
     }
 }
