@@ -404,8 +404,7 @@ public final class Flags {
                                        DEFAULT_SERVICE_EXCEPTION_VERBOSITY);
 
     private static final ExceptionVerbosity SERVICE_EXCEPTION_VERBOSITY =
-            exceptionLoggingMode("serviceExceptionVerbosity",
-                                 DEFAULT_SERVICE_EXCEPTION_VERBOSITY);
+            exceptionLoggingMode(DEFAULT_SERVICE_EXCEPTION_VERBOSITY);
 
     private static final boolean USE_JDK_DNS_RESOLVER = getBoolean("useJdkDnsResolver", false);
 
@@ -1355,7 +1354,22 @@ public final class Flags {
         throw new Error();
     }
 
-    private static ExceptionVerbosity exceptionLoggingMode(String name, String defaultValue) {
+    private static ExceptionVerbosity exceptionLoggingMode(String defaultValue) {
+        final String annotatedServiceExceptionVerbosity = "annotatedServiceExceptionVerbosity";
+        final String serviceExceptionVerbosity = "serviceExceptionVerbosity";
+        final String annotatedServiceVerbosity =
+                System.getProperty(PREFIX + annotatedServiceExceptionVerbosity);
+        final String serviceVerbosity =
+                System.getProperty(PREFIX + serviceExceptionVerbosity);
+        final String name;
+        if (serviceVerbosity != null) {
+            name = serviceVerbosity;
+        } else if (annotatedServiceVerbosity != null) {
+            name = annotatedServiceExceptionVerbosity;
+        } else {
+            // The default value
+            name = serviceVerbosity;
+        }
         final String mode = getNormalized(name, defaultValue,
                                           value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
