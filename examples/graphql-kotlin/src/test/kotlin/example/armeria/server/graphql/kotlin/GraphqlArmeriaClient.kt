@@ -23,27 +23,29 @@ class GraphqlArmeriaClient(
         request: GraphQLClientRequest<T>,
         requestCustomizer: HttpRequestBuilder.() -> Unit
     ): GraphQLClientResponse<T> {
-        val response = client.execute(HttpRequest.builder()
-                                                 .apply(requestCustomizer)
-                                                 .path(url.toString())
-                                                 .method(HttpMethod.POST)
-                                                 .content(MediaType.JSON_UTF_8, serializer.serialize(request))
-                                                 .build())
-                             .aggregate().join()
-        return serializer.deserialize(response.contentUtf8(), request.responseType());
+        val response = client.execute(
+            HttpRequest.builder()
+                .apply(requestCustomizer)
+                .path(url.toString())
+                .method(HttpMethod.POST)
+                .content(MediaType.JSON_UTF_8, serializer.serialize(request))
+                .build()
+        ).aggregate().join()
+        return serializer.deserialize(response.contentUtf8(), request.responseType())
     }
 
     override suspend fun execute(
         requests: List<GraphQLClientRequest<*>>,
         requestCustomizer: HttpRequestBuilder.() -> Unit
     ): List<GraphQLClientResponse<*>> {
-        val response = client.execute(HttpRequest.builder()
-                                                 .apply(requestCustomizer)
-                                                 .path(url.toString())
-                                                 .method(HttpMethod.POST)
-                                                 .content(MediaType.JSON_UTF_8, serializer.serialize(requests))
-                                                 .build())
-                             .aggregate().join()
+        val response = client.execute(
+            HttpRequest.builder()
+                .apply(requestCustomizer)
+                .path(url.toString())
+                .method(HttpMethod.POST)
+                .content(MediaType.JSON_UTF_8, serializer.serialize(requests))
+                .build()
+        ).aggregate().join()
         return serializer.deserialize(response.contentUtf8(), requests.map { it.responseType() })
     }
 
