@@ -35,8 +35,6 @@ import io.netty.handler.codec.compression.Brotli;
  */
 final class HttpEncoders {
 
-    private HttpEncoders() {}
-
     @Nullable
     static HttpEncodingType getWrapperForRequest(HttpRequest request) {
         final String acceptEncoding = request.headers().get(HttpHeaderNames.ACCEPT_ENCODING);
@@ -120,4 +118,6 @@ final class HttpEncoders {
         }
         return null;
     }
+
+    private HttpEncoders() {}
 }
