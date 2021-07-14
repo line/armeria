@@ -20,6 +20,11 @@ fun main() {
     server.start().join()
 }
 
+/**
+ * Returns a new {@link Server} instance configured with GraphQL HTTP services.
+ *
+ * @param port the port that the server is to be bound to
+ */
 private fun newServer(port: Int): Server {
     val sb = Server.builder()
     sb.http(port)
