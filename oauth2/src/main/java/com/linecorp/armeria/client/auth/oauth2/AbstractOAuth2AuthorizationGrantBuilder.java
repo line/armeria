@@ -164,8 +164,8 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * <p>This is supposed to be used with {@link #newTokenConsumer(Consumer)} and gets executed
      * in the following cases:
      * <ul>
-     *     <li>Before the first attempt to acquire an access token.
-     *     <li>Before a subsequent attempt after token issue or refresh failure.
+     *     <li>Before the first attempt to acquire an access token.</li>
+     *     <li>Before a subsequent attempt after token issue or refresh failure.</li>
      * </ul>
      * @see #newTokenConsumer(Consumer)
      */
@@ -185,7 +185,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      * An optional hook which gets executed whenever a new token is issued.
      *
      * <p>This can be used in combination with {@link #fallbackTokenProvider(Supplier)} to store a newly issued
-     * access token which will then be retrieved by invoking {@link #fallbackTokenProvider}.
+     * access token which will then be retrieved by invoking the fallback token provider.
      */
     @SuppressWarnings("unchecked")
     public final T newTokenConsumer(Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {

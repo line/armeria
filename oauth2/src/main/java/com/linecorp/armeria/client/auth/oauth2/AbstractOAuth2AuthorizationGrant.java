@@ -99,13 +99,16 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      *
      * <p>Renewing a token is guaranteed to be atomic even though the method is invoked by multiple threads.
      *
-     * <p>It optionally tries to load an access token from {@link #fallbackTokenProvider}
+     * <p>It optionally tries to load an access token from
+     * {@link OAuth2ClientCredentialsGrantBuilder#fallbackTokenProvider(Supplier)} or
+     * {@link OAuth2ResourceOwnerPasswordCredentialsGrantBuilder#fallbackTokenProvider(Supplier)}
      * which supposedly gets one by querying to a longer term storage, before it makes a request
      * to the authorization server.
      *
-     * <p>One may choose to provide {@link #newTokenConsumer} hook, which gets executed
-     * every time a token is issued or refreshed from the authorization server, to store the renewed token
-     * to a longer term storage.
+     * <p>One may choose to provide a hook which gets executed every time a token is issued or refreshed
+     * from the authorization server to store the renewed token to a longer term storage via
+     * {@link OAuth2ClientCredentialsGrantBuilder#newTokenConsumer(Consumer)} or
+     * {@link OAuth2ResourceOwnerPasswordCredentialsGrantBuilder#newTokenConsumer(Consumer)}.
      */
     @Override
     public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
