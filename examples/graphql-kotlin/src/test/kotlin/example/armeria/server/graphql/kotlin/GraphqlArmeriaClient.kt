@@ -10,11 +10,12 @@ import com.linecorp.armeria.common.HttpMethod
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpRequestBuilder
 import com.linecorp.armeria.common.MediaType
+import kotlinx.coroutines.future.await
 import java.io.Closeable
-import java.net.URL
+import java.net.URI
 
 class GraphqlArmeriaClient(
-    private val url: URL,
+    private val uri: URI,
     private val client: WebClient = WebClient.of(),
     private val serializer: GraphQLClientSerializer = defaultGraphQLSerializer()
 ) : GraphQLClient<HttpRequestBuilder>, Closeable {
@@ -26,11 +27,11 @@ class GraphqlArmeriaClient(
         val response = client.execute(
             HttpRequest.builder()
                 .apply(requestCustomizer)
-                .path(url.toString())
+                .path(uri.toString())
                 .method(HttpMethod.POST)
                 .content(MediaType.JSON_UTF_8, serializer.serialize(request))
                 .build()
-        ).aggregate().join()
+        ).aggregate().await()
         return serializer.deserialize(response.contentUtf8(), request.responseType())
     }
 
@@ -41,11 +42,11 @@ class GraphqlArmeriaClient(
         val response = client.execute(
             HttpRequest.builder()
                 .apply(requestCustomizer)
-                .path(url.toString())
+                .path(uri.toString())
                 .method(HttpMethod.POST)
                 .content(MediaType.JSON_UTF_8, serializer.serialize(requests))
                 .build()
-        ).aggregate().join()
+        ).aggregate().await()
         return serializer.deserialize(response.contentUtf8(), requests.map { it.responseType() })
     }
 

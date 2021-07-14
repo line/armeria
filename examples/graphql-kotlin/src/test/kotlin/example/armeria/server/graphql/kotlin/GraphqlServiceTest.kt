@@ -9,7 +9,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import java.net.URL
 import kotlin.reflect.KClass
 
 class GraphqlServiceTest {
@@ -27,7 +26,7 @@ class GraphqlServiceTest {
 
         private fun client(): GraphqlArmeriaClient {
             return GraphqlArmeriaClient(
-                    url = URL("http://localhost:${server.server().activeLocalPort()}/graphql"),
+                    uri = server.httpUri().resolve("/graphql"),
                     serializer = GraphQLClientJacksonSerializer())
         }
     }

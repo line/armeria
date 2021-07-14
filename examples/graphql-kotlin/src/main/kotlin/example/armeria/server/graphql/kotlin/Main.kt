@@ -48,6 +48,12 @@ class UserQuery {
             3 to User(3, "droid")
     )
 
+    /**
+     * Retrieves a [User] associated with the specified ID. This method is automatically mapped by
+     * [com.expediagroup.graphql.generator.execution.FunctionDataFetcher].
+     * See [Fetching Data][https://opensource.expediagroup.com/graphql-kotlin/docs/schema-generator/execution/fetching-data/]
+     * for details.
+     */
     fun userById(id: Int): User? {
         return data[id]
     }
