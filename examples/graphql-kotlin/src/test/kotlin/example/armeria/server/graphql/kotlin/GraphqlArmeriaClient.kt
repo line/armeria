@@ -11,14 +11,13 @@ import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpRequestBuilder
 import com.linecorp.armeria.common.MediaType
 import kotlinx.coroutines.future.await
-import java.io.Closeable
 import java.net.URI
 
 class GraphqlArmeriaClient(
     private val uri: URI,
     private val client: WebClient = WebClient.of(),
     private val serializer: GraphQLClientSerializer = defaultGraphQLSerializer()
-) : GraphQLClient<HttpRequestBuilder>, Closeable {
+) : GraphQLClient<HttpRequestBuilder> {
 
     override suspend fun <T : Any> execute(
         request: GraphQLClientRequest<T>,
@@ -49,6 +48,4 @@ class GraphqlArmeriaClient(
         ).aggregate().await()
         return serializer.deserialize(response.contentUtf8(), requests.map { it.responseType() })
     }
-
-    override fun close() {}
 }
