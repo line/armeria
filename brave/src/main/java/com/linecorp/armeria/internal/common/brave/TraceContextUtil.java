@@ -35,6 +35,9 @@ public final class TraceContextUtil {
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
             AttributeKey.valueOf(TraceContextUtil.class, "TRACE_CONTEXT");
 
+    private static final AttributeKey<RequestContextCurrentTraceContext> CURRENT_TRACE_CONTEXT_KEY =
+            AttributeKey.valueOf(TraceContextUtil.class, "CURRENT_TRACE_CONTEXT_KEY");
+
     @Nullable
     public static TraceContext traceContext(RequestContext ctx) {
         return ctx.attr(TRACE_CONTEXT_KEY);
@@ -42,6 +45,16 @@ public final class TraceContextUtil {
 
     public static void setTraceContext(RequestContext ctx, TraceContext traceContext) {
         ctx.setAttr(TRACE_CONTEXT_KEY, traceContext);
+    }
+
+    @Nullable
+    public static RequestContextCurrentTraceContext currentTraceContext(RequestContext ctx) {
+        return ctx.attr(CURRENT_TRACE_CONTEXT_KEY);
+    }
+
+    public static void setCurrentTraceContext(RequestContext ctx,
+                                              RequestContextCurrentTraceContext currentTraceContext) {
+        ctx.setAttr(CURRENT_TRACE_CONTEXT_KEY, currentTraceContext);
     }
 
     /**

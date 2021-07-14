@@ -28,7 +28,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -56,7 +55,6 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -89,11 +87,6 @@ public final class DefaultClientRequestContext
             whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, CompletableFuture.class, "whenInitialized");
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, Supplier>
-            contextHookUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DefaultClientRequestContext.class, Supplier.class, "contextHook");
-
     private static final short STR_CHANNEL_AVAILABILITY = 1;
     private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
 
@@ -119,8 +112,6 @@ public final class DefaultClientRequestContext
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
     private volatile HttpHeaders additionalRequestHeaders;
-    @Nullable // Updated via `contextHookUpdater`
-    private volatile Supplier<SafeCloseable> contextHook;
 
     @Nullable
     private String strVal;
@@ -525,37 +516,6 @@ public final class DefaultClientRequestContext
     public ByteBufAllocator alloc() {
         final Channel channel = channel();
         return channel != null ? channel.alloc() : PooledByteBufAllocator.DEFAULT;
-    }
-
-    @Override
-    public void hook(Supplier<? extends SafeCloseable> contextHook) {
-        requireNonNull(contextHook, "contextHook");
-        for (;;) {
-            final Supplier<? extends SafeCloseable> oldContextHook = this.contextHook;
-
-            final Supplier<? extends SafeCloseable> newContextHook;
-            if (oldContextHook == null) {
-                newContextHook = contextHook;
-            } else {
-                newContextHook = () -> {
-                    final SafeCloseable closeable1 = oldContextHook.get();
-                    final SafeCloseable closeable2 = contextHook.get();
-                    return () -> {
-                        closeable1.close();
-                        closeable2.close();
-                    };
-                };
-            }
-
-            if (contextHookUpdater.compareAndSet(this, oldContextHook, newContextHook)) {
-                break;
-            }
-        }
-    }
-
-    @Override
-    public Supplier<SafeCloseable> hook() {
-        return contextHook;
     }
 
     @Nullable

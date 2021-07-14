@@ -218,11 +218,11 @@ public interface ServiceRequestContext extends RequestContext {
         }
 
         if (oldCtx == null) {
-            return RequestContextUtil.invokeHookAndPop(this, null);
+            return () -> RequestContextUtil.pop(this, null);
         }
 
         if (oldCtx.root() == this) {
-            return RequestContextUtil.invokeHookAndPop(this, oldCtx);
+            return () -> RequestContextUtil.pop(this, oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.

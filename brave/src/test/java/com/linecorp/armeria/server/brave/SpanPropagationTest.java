@@ -85,6 +85,7 @@ class SpanPropagationTest {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.prepare().get("/trace").execute().aggregate();
             final ClientRequestContext cctx = captor.get();
+
             cctx.log().whenComplete()
                 .thenAcceptAsync(log -> {
                     clientMdcContextRef.set(MDC.getCopyOfContextMap());

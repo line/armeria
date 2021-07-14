@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -39,6 +38,8 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
+import com.linecorp.armeria.common.RequestContextStorageHook;
+import com.linecorp.armeria.common.RequestContextStorageHookProvider;
 import com.linecorp.armeria.common.RequestContextStorageProvider;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -67,6 +68,7 @@ public final class RequestContextUtil {
         final List<RequestContextStorageProvider> providers = ImmutableList.copyOf(
                 ServiceLoader.load(RequestContextStorageProvider.class));
         final String providerFqcn = Flags.requestContextStorageProvider();
+        RequestContextStorage tempRequestContextStorage;
         if (!providers.isEmpty()) {
 
             RequestContextStorageProvider provider = null;
@@ -105,13 +107,31 @@ public final class RequestContextUtil {
             }
 
             try {
-                requestContextStorage = provider.newStorage();
+                tempRequestContextStorage = requireNonNull(provider.newStorage(),
+                                                           "provider.newStorage() returned null");
             } catch (Throwable t) {
                 throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
             }
         } else {
-            requestContextStorage = RequestContextStorage.threadLocal();
+            tempRequestContextStorage = RequestContextStorage.threadLocal();
         }
+
+        final List<RequestContextStorageHookProvider> hookProviders = ImmutableList.copyOf(
+                ServiceLoader.load(RequestContextStorageHookProvider.class));
+        if (!hookProviders.isEmpty()) {
+            for (RequestContextStorageHookProvider hookProvider : hookProviders) {
+                try {
+                    final RequestContextStorageHook hook = hookProvider.newStorageHook();
+                    requireNonNull(hook, "hookProvider.newStorageHook() returned null");
+                    tempRequestContextStorage = hook.apply(tempRequestContextStorage);
+                    requireNonNull(tempRequestContextStorage, "hook.apply() returned null");
+                } catch (Throwable t) {
+                    throw new IllegalStateException(
+                            "Failed to create context storage hook. provider: " + hookProvider, t);
+                }
+            }
+        }
+        requestContextStorage = tempRequestContextStorage;
     }
 
     /**
@@ -214,47 +234,6 @@ public final class RequestContextUtil {
     public static void pop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
         requestContextStorage.pop(current, toRestore);
-    }
-
-    /**
-     * Invokes {@link RequestContext#hook()} and returns {@link SafeCloseable} which
-     * pops the current {@link RequestContext} in the storage and pushes back the specified {@code toRestore}.
-     */
-    public static SafeCloseable invokeHookAndPop(RequestContext current, @Nullable RequestContext toRestore) {
-        requireNonNull(current, "current");
-
-        final SafeCloseable closeable = invokeHook(current);
-        if (closeable == null) {
-            return () -> requestContextStorage.pop(current, toRestore);
-        } else {
-            return () -> {
-                closeable.close();
-                requestContextStorage.pop(current, toRestore);
-            };
-        }
-    }
-
-    @Nullable
-    private static SafeCloseable invokeHook(RequestContext ctx) {
-        final Supplier<? extends SafeCloseable> hook = ctx.hook();
-        if (hook == null) {
-            return null;
-        }
-
-        final SafeCloseable closeable;
-        try {
-            closeable = hook.get();
-        } catch (Throwable t) {
-            logger.warn("Unexpected exception while executing RequestContext.hook().get(). ctx: {}", ctx, t);
-            return null;
-        }
-
-        if (closeable == null) {
-            logger.warn("RequestContext.hook().get() returned null. ctx: {}", ctx);
-            return null;
-        }
-
-        return closeable;
     }
 
     private RequestContextUtil() {}

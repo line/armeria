@@ -128,7 +128,7 @@ class RequestContextStorageCustomizingTest {
         }
     }
 
-    private static ServiceRequestContext newCtx() {
+    static ServiceRequestContext newCtx() {
         return ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                     .build();
     }

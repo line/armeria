@@ -456,33 +456,6 @@ public interface RequestContext {
     SafeCloseable push();
 
     /**
-     * Adds a hook which is invoked whenever this {@link RequestContext} is pushed to the thread-local stack.
-     * The {@link SafeCloseable} returned by {@code onPush} will be called whenever this
-     * {@link RequestContext} is popped from the thread-local stack.
-     * This method is useful when you need to propagate a custom context in this {@link RequestContext}'s scope.
-     * For example:
-     * <pre>{@code
-     * ctx.hook(() -> {
-     *     MDC.put("transactionId", "1234567890");
-     *     // Should clean up the thread local resources when closing.
-     *     return () -> MDC.remove("transactionId");
-     * });
-     *
-     * <p>Note that this operation is highly performance-sensitive operation, and thus
-     * it's not a good idea to run a time-consuming task.
-     * }</pre>
-     */
-    void hook(Supplier<? extends SafeCloseable> contextHook);
-
-    /**
-     * Returns the hook which is invoked whenever this {@link RequestContext} is pushed to the thread-local
-     * stack. The {@link SafeCloseable} returned by the {@link Supplier} will be called whenever this
-     * {@link RequestContext} is popped from the thread-local stack.
-     */
-    @Nullable
-    Supplier<SafeCloseable> hook();
-
-    /**
      * Immediately run a given {@link Runnable} with this context.
      */
     default void run(Runnable runnable) {
