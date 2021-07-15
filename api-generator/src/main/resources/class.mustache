@@ -1,0 +1,25 @@
+/*
+ * OAS Version: {{comment.version}}
+ * Application Name: {{comment.applicationName}}
+ * OpenAPI document Version: {{comment.docVersion}}
+ *
+ */
+// package <write_your_pacakge>;
+
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.server.ServiceRequestContext;
+{{#import}}import com.linecorp.armeria.server.annotation.{{.}};
+{{/import}}
+
+public class {{className}} {
+   {{#methods}}
+
+   @{{httpMethod}}("{{path}}")
+    public HttpResponse {{methodName}}(ServiceRequestContext ctx, HttpRequest req) {
+        // Use the context and request inside a method.
+        return HttpResponse.of(HttpStatus.OK);
+    }
+   {{/methods}}
+}
