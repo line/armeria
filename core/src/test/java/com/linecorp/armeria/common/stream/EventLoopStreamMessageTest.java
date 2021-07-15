@@ -515,6 +515,7 @@ class EventLoopStreamMessageTest {
         } else {
             assertThat(byteBuf.refCnt()).isEqualTo(1);
             assertThat(taken).isSameAs(httpData);
+            byteBuf.release();
         }
 
         assertThat(queue).isEmpty();
@@ -546,6 +547,7 @@ class EventLoopStreamMessageTest {
             assertThat(byteBuf.refCnt()).isEqualTo(0);
         } else {
             assertThat(byteBuf.refCnt()).isEqualTo(1);
+            byteBuf.release();
         }
 
         assertThat(queue).isEmpty();
