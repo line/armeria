@@ -39,7 +39,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.internal.common.StreamCallbacks;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.channel.EventLoop;

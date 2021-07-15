@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -42,6 +41,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.EventLoopHttpResponse;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

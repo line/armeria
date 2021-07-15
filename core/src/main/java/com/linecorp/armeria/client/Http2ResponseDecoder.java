@@ -30,13 +30,13 @@ import com.google.common.math.LongMath;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
+import com.linecorp.armeria.internal.common.TrafficAwareHttpResponse;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;

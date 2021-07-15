@@ -20,9 +20,9 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.TrafficAwareHttpResponse;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;

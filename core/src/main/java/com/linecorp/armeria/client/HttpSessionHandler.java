@@ -39,13 +39,13 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.TrafficAwareHttpResponse;
 
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;

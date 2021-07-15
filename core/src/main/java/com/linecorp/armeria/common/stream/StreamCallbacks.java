@@ -14,25 +14,25 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.stream;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.StreamWriter;
-import com.linecorp.armeria.internal.common.InboundTrafficController;
+import org.reactivestreams.Subscriber;
 
 /**
  * TBU.
  */
-@UnstableApi
-public interface TrafficAwareHttpResponse extends StreamWriter<HttpObject>, HttpResponse {
+public interface StreamCallbacks<T> {
 
     /**
-     * TBU.
+     * Invoked after an element is removed from the {@link StreamMessage} and before
+     * {@link Subscriber#onNext(Object)} is invoked.
+     *
+     * @param t the removed element
      */
-    void init(InboundTrafficController inboundTrafficController);
+    default void onRemoval(T t) {}
 
     /**
-     * TBU.
+     * Invoked whenever a new demand is requested.
      */
-    long writtenBytes();
+    default void onRequest(long n) {}
 }

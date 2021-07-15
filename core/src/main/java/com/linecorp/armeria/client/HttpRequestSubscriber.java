@@ -38,12 +38,12 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;

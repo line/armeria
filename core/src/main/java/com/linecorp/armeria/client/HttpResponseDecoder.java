@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
@@ -42,6 +41,7 @@ import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
