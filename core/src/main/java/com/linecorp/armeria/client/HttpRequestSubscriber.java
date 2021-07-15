@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -65,7 +66,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private final ClientHttpObjectEncoder encoder;
     private final HttpResponseDecoder responseDecoder;
     private final HttpRequest request;
-    private final DecodedHttpResponse originalRes;
+    private final TrafficAwareHttpResponse originalRes;
     private final ClientRequestContext ctx;
     private final RequestLogBuilder logBuilder;
     private final long timeoutMillis;
@@ -84,7 +85,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     private boolean loggedRequestFirstBytesTransferred;
 
     HttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
-                          HttpRequest request, DecodedHttpResponse originalRes,
+                          HttpRequest request, TrafficAwareHttpResponse originalRes,
                           ClientRequestContext ctx, long timeoutMillis) {
         this.ch = ch;
         this.encoder = encoder;

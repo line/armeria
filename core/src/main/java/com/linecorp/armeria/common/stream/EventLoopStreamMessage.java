@@ -36,8 +36,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.internal.common.StreamCallbacks;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.channel.EventLoop;
@@ -52,7 +54,8 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  *
  * <p>This class is originally intended for internal use.
  */
-class EventLoopStreamMessage<T> implements StreamMessageAndWriter<T>, Subscription {
+@UnstableApi
+public class EventLoopStreamMessage<T> implements StreamMessageAndWriter<T>, Subscription, StreamCallbacks<T> {
     private static final Logger logger = LoggerFactory.getLogger(EventLoopStreamMessage.class);
 
     private enum State {
@@ -93,7 +96,10 @@ class EventLoopStreamMessage<T> implements StreamMessageAndWriter<T>, Subscripti
     private boolean withPooledObjects;
     private boolean notifyCancellation;
 
-    EventLoopStreamMessage(EventLoop eventLoop) {
+    /**
+     * TBU.
+     */
+    public EventLoopStreamMessage(EventLoop eventLoop) {
         this.eventLoop = eventLoop;
         queue = new ArrayDeque<>();
         completionFuture = new EventLoopCheckingFuture<>();
@@ -447,8 +453,6 @@ class EventLoopStreamMessage<T> implements StreamMessageAndWriter<T>, Subscripti
                         subscriber, composite);
         }
     }
-
-    void onRemoval(T obj) { }
 
     private static class CloseEvent {
         @Nullable

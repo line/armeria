@@ -21,6 +21,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.Channel;
@@ -62,7 +63,7 @@ interface HttpSession {
 
         @Override
         public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
-                           HttpRequest req, DecodedHttpResponse res) {
+                           HttpRequest req, TrafficAwareHttpResponse res) {
             res.close(ClosedSessionException.get());
         }
 
@@ -105,7 +106,7 @@ interface HttpSession {
     boolean incrementNumUnfinishedResponses();
 
     void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
-                HttpRequest req, DecodedHttpResponse res);
+                HttpRequest req, TrafficAwareHttpResponse res);
 
     void retryWithH1C();
 

@@ -338,7 +338,7 @@ class StreamMessageCollectingTest {
         final AtomicInteger removed = new AtomicInteger();
         final DefaultStreamMessage<Integer> streamMessage = new DefaultStreamMessage<Integer>() {
             @Override
-            protected void onRemoval(Integer obj) {
+            public void onRemoval(Integer obj) {
                 removed.addAndGet(obj);
             }
         };

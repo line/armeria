@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ProtocolViolationException;
+import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -74,7 +75,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     @Override
     HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx, EventLoop eventLoop,
+            int id, TrafficAwareHttpResponse res, @Nullable ClientRequestContext ctx, EventLoop eventLoop,
             long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper resWrapper =

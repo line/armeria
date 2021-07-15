@@ -125,7 +125,7 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
     }
 
     @Override
-    protected void onRemoval(HttpObject obj) {
+    public void onRemoval(HttpObject obj) {
         if (obj instanceof HttpData) {
             final int length = ((HttpData) obj).length();
             inboundTrafficController.dec(length);

@@ -558,7 +558,7 @@ class EventLoopStreamMessageTest {
         final EventLoopStreamMessage<Integer> streamMessage =
                 new EventLoopStreamMessage<Integer>(eventLoop.get()) {
             @Override
-            protected void onRemoval(Integer obj) {
+            public void onRemoval(Integer obj) {
                 onRemovalQueue.add(obj);
             }
         };
@@ -588,7 +588,7 @@ class EventLoopStreamMessageTest {
         final EventLoopStreamMessage<Integer> streamMessage =
                 new EventLoopStreamMessage<Integer>(eventLoop.get()) {
                     @Override
-                    protected void onRemoval(Integer obj) {
+                    public void onRemoval(Integer obj) {
                         onRemovalQueue.add(obj);
                     }
                 };

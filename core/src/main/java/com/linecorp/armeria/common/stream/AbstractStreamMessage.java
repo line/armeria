@@ -37,11 +37,12 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.internal.common.StreamCallbacks;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
-abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
+abstract class AbstractStreamMessage<T> implements StreamMessage<T>, StreamCallbacks<T> {
 
     static final Logger logger = LoggerFactory.getLogger(AbstractStreamMessage.class);
 
@@ -94,14 +95,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
      * Callback invoked by {@link Subscription#cancel()} to cancel the stream.
      */
     abstract void cancel();
-
-    /**
-     * Invoked after an element is removed from the {@link StreamMessage} and before
-     * {@link Subscriber#onNext(Object)} is invoked.
-     *
-     * @param obj the removed element
-     */
-    protected void onRemoval(T obj) {}
 
     static void failLateSubscriber(SubscriptionImpl actualSubscription, SubscriptionImpl lateSubscription) {
         final Subscriber<?> actualSubscriber = actualSubscription.subscriber();

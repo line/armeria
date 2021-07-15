@@ -39,6 +39,7 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -167,7 +168,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
-                       HttpRequest req, DecodedHttpResponse res) {
+                       HttpRequest req, TrafficAwareHttpResponse res) {
         if (handleEarlyCancellation(ctx, req, res)) {
             pooledChannel.release();
             return;
@@ -210,7 +211,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     private boolean handleEarlyCancellation(ClientRequestContext ctx, HttpRequest req,
-                                            DecodedHttpResponse res) {
+                                            TrafficAwareHttpResponse res) {
         if (res.isOpen()) {
             return false;
         }

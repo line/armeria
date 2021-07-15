@@ -30,6 +30,7 @@ import com.google.common.math.LongMath;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
@@ -75,7 +76,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
+            int id, TrafficAwareHttpResponse res, @Nullable ClientRequestContext ctx,
             EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper resWrapper =
