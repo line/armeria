@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,28 +14,25 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.common;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.internal.common.DefaultHttpResponse;
-import com.linecorp.armeria.internal.common.InboundTrafficController;
-import com.linecorp.armeria.internal.common.TrafficAwareHttpResponse;
+import com.linecorp.armeria.common.stream.EventLoopStreamMessage;
 
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.EventExecutor;
 
-final class DecodedHttpResponse extends DefaultHttpResponse implements TrafficAwareHttpResponse {
+public class EventLoopHttpResponse extends EventLoopStreamMessage<HttpObject>
+        implements TrafficAwareHttpResponse {
 
-    private final EventLoop eventLoop;
     @Nullable
     private InboundTrafficController inboundTrafficController;
     private long writtenBytes;
 
-    DecodedHttpResponse(EventLoop eventLoop) {
-        this.eventLoop = eventLoop;
+    public EventLoopHttpResponse(EventLoop eventLoop) {
+        super(eventLoop);
     }
 
     @Override
@@ -46,11 +43,6 @@ final class DecodedHttpResponse extends DefaultHttpResponse implements TrafficAw
     @Override
     public long writtenBytes() {
         return writtenBytes;
-    }
-
-    @Override
-    public EventExecutor defaultSubscriberExecutor() {
-        return eventLoop;
     }
 
     @Override

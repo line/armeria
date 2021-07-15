@@ -166,11 +166,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      */
     protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {}
 
-    /**
-     * Invoked whenever a new demand is requested.
-     */
-    protected void onRequest(long n) {}
-
     @Override
     public final void abort() {
         abort0(AbortedStreamException.get());

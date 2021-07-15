@@ -32,13 +32,16 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.EventLoopHttpResponse;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -88,7 +91,11 @@ final class HttpClientDelegate implements HttpClient {
 
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
-        final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
+
+        final MediaType contentType = req.contentType();
+        final TrafficAwareHttpResponse res =
+                contentType != null && contentType.isGrpc() ? new EventLoopHttpResponse(eventLoop)
+                                                            : new DecodedHttpResponse(eventLoop);
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
@@ -116,7 +123,7 @@ final class HttpClientDelegate implements HttpClient {
 
     private void finishResolve(ClientRequestContext ctx, Endpoint endpointWithPort,
                                Future<InetSocketAddress> resolveFuture, HttpRequest req,
-                               DecodedHttpResponse res, ClientConnectionTimingsBuilder timingsBuilder) {
+                               TrafficAwareHttpResponse res, ClientConnectionTimingsBuilder timingsBuilder) {
         timingsBuilder.dnsResolutionEnd();
         if (resolveFuture.isSuccess()) {
             final String ipAddr = resolveFuture.getNow().getAddress().getHostAddress();
@@ -130,7 +137,7 @@ final class HttpClientDelegate implements HttpClient {
     }
 
     private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpointWithPort,
-                                             String ipAddr, HttpRequest req, DecodedHttpResponse res,
+                                             String ipAddr, HttpRequest req, TrafficAwareHttpResponse res,
                                              ClientConnectionTimingsBuilder timingsBuilder) {
         final EventLoop eventLoop = ctx.eventLoop();
         if (!eventLoop.inEventLoop()) {
@@ -269,7 +276,7 @@ final class HttpClientDelegate implements HttpClient {
     }
 
     private static void doExecute(PooledChannel pooledChannel, ClientRequestContext ctx,
-                                  HttpRequest req, DecodedHttpResponse res) {
+                                  HttpRequest req, TrafficAwareHttpResponse res) {
         final Channel channel = pooledChannel.get();
         final HttpSession session = HttpSession.get(channel);
         res.init(session.inboundTrafficController());

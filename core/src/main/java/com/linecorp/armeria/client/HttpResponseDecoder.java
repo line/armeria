@@ -41,6 +41,7 @@ import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.TrafficAwareHttpResponse;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.Channel;
@@ -73,7 +74,7 @@ abstract class HttpResponseDecoder {
     }
 
     HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
+            int id, TrafficAwareHttpResponse res, @Nullable ClientRequestContext ctx,
             EventLoop eventLoop, long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper newRes =
@@ -154,7 +155,7 @@ abstract class HttpResponseDecoder {
             DONE
         }
 
-        private final DecodedHttpResponse delegate;
+        private final TrafficAwareHttpResponse delegate;
         @Nullable
         private final ClientRequestContext ctx;
 
@@ -167,7 +168,7 @@ abstract class HttpResponseDecoder {
         @Nullable
         private ResponseHeaders headers;
 
-        HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
+        HttpResponseWrapper(TrafficAwareHttpResponse delegate, @Nullable ClientRequestContext ctx,
                             long responseTimeoutMillis, long maxContentLength) {
             this.delegate = delegate;
             this.ctx = ctx;

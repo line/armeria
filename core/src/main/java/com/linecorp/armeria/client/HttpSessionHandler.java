@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.common.TrafficAwareHttpResponse;
 
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
@@ -167,7 +168,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
-                       HttpRequest req, DecodedHttpResponse res) {
+                       HttpRequest req, TrafficAwareHttpResponse res) {
         if (handleEarlyCancellation(ctx, req, res)) {
             pooledChannel.release();
             return;
@@ -210,7 +211,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     private boolean handleEarlyCancellation(ClientRequestContext ctx, HttpRequest req,
-                                            DecodedHttpResponse res) {
+                                            TrafficAwareHttpResponse res) {
         if (res.isOpen()) {
             return false;
         }

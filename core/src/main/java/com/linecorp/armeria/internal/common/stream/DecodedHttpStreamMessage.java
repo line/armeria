@@ -144,7 +144,7 @@ public final class DecodedHttpStreamMessage<T> extends DefaultStreamMessage<T> i
     }
 
     @Override
-    protected void onRequest(long n) {
+    public void onRequest(long n) {
         // Fetch from upstream only when this deframer is initialized and the given demand is valid.
         if (initialized && n > 0) {
             if (requestHeaders != null) {
