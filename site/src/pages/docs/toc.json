@@ -1,7 +1,7 @@
 {
   "root": {
-    "User manual": "index",
-    "Setting up a project": "Setting up a project",
+    "User manual":  "/docs",
+    "Setting up a project": "/docs/setup",
     "Tutorials": "/tutorials"
   },
   "References": {
