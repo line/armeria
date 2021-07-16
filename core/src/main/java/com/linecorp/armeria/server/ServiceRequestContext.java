@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -543,4 +544,17 @@ public interface ServiceRequestContext extends RequestContext {
      * Returns the proxied addresses of the current {@link Request}.
      */
     ProxiedAddresses proxiedAddresses();
+
+    /**
+     * Initiates connection shutdown.
+     *
+     * For HTTP/2 sends a GOAWAY frame with stream ID 2^31-1 and NO_ERROR code. This signals to the
+     * client that a shutdown is imminent and that initiating further requests is prohibited.
+     *
+     * Currently no-op for HTTP/1.
+     *
+     * @return {@link CompletableFuture} that completes when channel is closed.
+     */
+    @UnstableApi
+    CompletableFuture<Void> initiateConnectionShutdown();
 }

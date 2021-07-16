@@ -219,4 +219,9 @@ public class ServiceRequestContextWrapper
     public ProxiedAddresses proxiedAddresses() {
         return delegate().proxiedAddresses();
     }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        return delegate().initiateConnectionShutdown();
+    }
 }

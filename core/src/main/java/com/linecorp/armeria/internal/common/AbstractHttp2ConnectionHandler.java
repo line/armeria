@@ -149,6 +149,10 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         return remote.isValidStreamId(streamId) && streamId > remote.lastStreamKnownByPeer();
     }
 
+    /**
+     * Send a {@code GO_AWAY} frame to initiate connection shutdown. No-op if channel isn't active.
+     * Does <strong>not</strong> flush immediately, this is the responsibility of the caller.
+     */
     @Override
     public final ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
                                       ByteBuf debugData, ChannelPromise promise) {

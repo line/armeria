@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -60,6 +61,8 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.AttributeKey;
 
 /**
@@ -424,6 +427,31 @@ public final class DefaultServiceRequestContext
     @Override
     public ProxiedAddresses proxiedAddresses() {
         return proxiedAddresses;
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        final Channel ch = channel();
+        final Http2ServerConnectionHandler h2handler =
+                ch.pipeline().get(Http2ServerConnectionHandler.class);
+        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        if (h2handler != null) {
+            final ChannelHandlerContext ctx = ch.pipeline().context(h2handler);
+            h2handler.goAway(
+                    ctx, Integer.MAX_VALUE, Http2Error.NO_ERROR.code(), EMPTY_BUFFER, ctx.newPromise());
+            ctx.flush();
+            ctx.channel().closeFuture().addListener(f -> {
+                if (f.cause() == null) {
+                    completableFuture.complete(null);
+                } else {
+                    completableFuture.completeExceptionally(f.cause());
+                }
+            });
+        } else {
+            completableFuture.completeExceptionally(new UnsupportedOperationException(
+                    "initiateConnectionShutdown does not support HTTP/1 yet"));
+        }
+        return completableFuture;
     }
 
     @Override
