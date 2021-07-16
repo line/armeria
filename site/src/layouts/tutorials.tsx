@@ -25,6 +25,7 @@ const TutorialLayout: React.FC<TutorialLayoutProps> = (props) => {
             ... on File {
               sourceInstanceName
               name
+              relativeDirectory
             }
           }
           frontmatter {

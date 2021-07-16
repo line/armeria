@@ -19,9 +19,9 @@ In this step, you'll write a service method for creating a blog post. By complet
 
 You must have the following files ready for creating a blog post. You can always [download](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
 
-- Main.java from [Step 1. Create a server](/tutorials/tutorial-blog-rest-create-server)
-- BlogPost.java from [Step 2. Prepare a data object](/tutorials/tutorial-blog-rest-prepare-data-object)
-- BlogService.java from [Step 3. Add services to a server](/tutorials/tutorial-blog-rest-add-services-to-server)
+- Main.java from [Step 1. Create a server](/tutorials/rest/blog/tutorial-blog-rest-create-server)
+- BlogPost.java from [Step 2. Prepare a data object](/tutorials/rest/blog/tutorial-blog-rest-prepare-data-object)
+- BlogService.java from [Step 3. Add services to a server](/tutorials/rest/blog/tutorial-blog-rest-add-services-to-server)
 
 ## 1. Map HTTP method
 
@@ -171,7 +171,7 @@ Let's return a response for blog post creation:
 
 ## 5. Test creating a blog post
 
-1. Run the server like we did in [Step 1. Create a server](/tutorials/tutorial-blog-rest-create-server) by running the 
+1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/tutorial-blog-rest-create-server) by running the 
    `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing the service method.
 2. Call the service method for creating a blog post. Here, we'll use cURL.
 
@@ -187,13 +187,13 @@ Let's return a response for blog post creation:
   {"id":0,"title":"My first blog","content":"Hello Armeria!","createdAt":...,"modifiedAt":...}
   ```
 
-You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/tutorial-blog-rest-add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
+You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/tutorial-blog-rest-add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
 
 ## Next step
 
 In this step, we've written a method to implement a CREATE operation and used Armeria's annotations; <type://@Post> and <type://@RequestConverter>.
 
-Next, at [Step 5. Implement READ](/tutorials/tutorial-blog-rest-read), we'll implement a READ operation to read a 
+Next, at [Step 5. Implement READ](/tutorials/rest/blog/tutorial-blog-rest-read), we'll implement a READ operation to read a 
 single post and also multiple posts.
 
 <TutorialSteps current={4} />

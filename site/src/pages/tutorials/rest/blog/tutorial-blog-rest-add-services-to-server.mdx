@@ -10,7 +10,7 @@ level: basic
 
 # Adding services to a server
 
-In this step, we'll add an empty blog service to the server we created in [Step 1. Create a server](/tutorials/tutorial-blog-rest-create-server). Also, we'll add Armeria's [Documentation service](/docs/server-docservice) for testing our blog service.
+In this step, we'll add an empty blog service to the server we created in [Step 1. Create a server](/tutorials/rest/blog/tutorial-blog-rest-create-server). Also, we'll add Armeria's [Documentation service](/docs/server-docservice) for testing our blog service.
 
 <TutorialSteps current={3} />
 
@@ -35,7 +35,7 @@ public final class BlogService {
 
 ## 2. Add a blog service to server
 
-In [Step 1. Create a server](/tutorials/tutorial-blog-rest-create-server), we added a dummy service just to check that a server is launched. Now, let's remove the dummy service and add an empty blog service, instead.
+In [Step 1. Create a server](/tutorials/rest/blog/tutorial-blog-rest-create-server), we added a dummy service just to check that a server is launched. Now, let's remove the dummy service and add an empty blog service, instead.
 
 1. From Main.java, remove the dummy service at line 4.
   ```java filename=Main.java highlight=4 showlineno=true
@@ -59,7 +59,7 @@ In [Step 1. Create a server](/tutorials/tutorial-blog-rest-create-server), we ad
 
 This time, we'll add Armeria's [Documentation service](/docs/server-docservice):
 
-1. In the `newServer()` method, add a <type://DocService> and a request example for [creating blog posts](/tutorials/tutorial-blog-rest-create), 
+1. In the `newServer()` method, add a <type://DocService> and a request example for [creating blog posts](/tutorials/rest/blog/tutorial-blog-rest-create), 
    using <type://DocServiceBuilder#exampleRequests(Class,String,Iterable)>. Feel free to add more examples for other service methods.
 
   ```java filename=Main.java highlight=1,6-13
@@ -88,7 +88,7 @@ This time, we'll add Armeria's [Documentation service](/docs/server-docservice):
   }
   ```
 
-3. (Optional) To access the Documentation service result easily, edit the log message we added in [Step 1. Create a server](/tutorials/tutorial-blog-rest-create-server) to the one specified below.
+3. (Optional) To access the Documentation service result easily, edit the log message we added in [Step 1. Create a server](/tutorials/rest/blog/tutorial-blog-rest-create-server) to the one specified below.
 
   ```java filename=Main.java highlight=2
   public static void main(String[] args) throws Exception {
@@ -99,7 +99,7 @@ This time, we'll add Armeria's [Documentation service](/docs/server-docservice):
 
 ## 4. Run the server and services
 
-Like we did in _Step 1. Create a server_, [build and run](/tutorials/tutorial-blog-rest-create-server#3-run-the-server-and-service) the service by running the `main()` method or using Gradle.
+Like we did in _Step 1. Create a server_, [build and run](/tutorials/rest/blog/tutorial-blog-rest-create-server#3-run-the-server-and-service) the service by running the `main()` method or using Gradle.
 
 The server and services are launched successfully if you see this message.
 
@@ -114,19 +114,19 @@ Let's test and call our service operations, using Armeria's Documentation servic
 Click the URL `http://127.0.0.1:8080/docs` from the log message or open the URL on a web browser. If you see the Document service page, you've launched the <type://DocService> and server successfully. We're seeing no services on the 
 page because we're to implement service methods.
 
-  ![](../../images/tutorial_blogservice_docservice_start.png)
+  ![](../../../../images/tutorial_blogservice_docservice_start.png)
 
 ### Using DocService after adding service methods
 
 When you add service methods through later steps, you'll see a result similar to this.
 
-![](../../images/tutorial_blogservice_docservice_end.png)
+![](../../../../images/tutorial_blogservice_docservice_end.png)
 
 To test your service methods with the [Documentation service](/docs/server-docservice):
 
 1. Click the **createBlogPost()** method link in the left panel. You can make calls to the creation method from the page opened.
 
-  ![](../../images/tutorial_blogservice_reqex.png)
+  ![](../../../../images/tutorial_blogservice_reqex.png)
 
   Note that in the **REQUEST BODY** section that the values specified for the <type://DocServiceBuilder> are automatically entered on the page.
 
@@ -144,13 +144,13 @@ To test your service methods with the [Documentation service](/docs/server-docse
 
 2. Click the **SUBMIT** button, and you'll see the blog post information returned in the right panel.
 
-  ![](../../images/tutorial_blogservice_return.png)
+  ![](../../../../images/tutorial_blogservice_return.png)
 
 ## What's next?
 
 In this step, we've added an empty blog service and the Documentation service to a server.
 
-Next, at [Step 4. Implement CREATE](/tutorials/tutorial-blog-rest-create), we'll finally implement a CREATE 
+Next, at [Step 4. Implement CREATE](/tutorials/rest/blog/tutorial-blog-rest-create), we'll finally implement a CREATE 
 operation to create blog posts.
 
 <TutorialSteps current={3} />
