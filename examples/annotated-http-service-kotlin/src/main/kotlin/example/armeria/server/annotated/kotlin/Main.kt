@@ -59,7 +59,7 @@ private fun AnnotatedServiceBindingBuilder.applyCommonDecorator(): AnnotatedServ
                 .requestLogLevel(LogLevel.INFO)
                 .successfulResponseLogLevel(LogLevel.INFO)
                 .newDecorator()
-        );
+        )
 }
 
 private val log = LoggerFactory.getLogger("Main")
