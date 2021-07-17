@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.brave;
 import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.currentTraceContext;
 import static com.linecorp.armeria.internal.common.brave.TraceContextUtil.traceContext;
 
+import java.util.ArrayDeque;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -29,6 +31,8 @@ import com.linecorp.armeria.common.RequestContextStorageWrapper;
 import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.InternalThreadLocalMap;
 
 enum RequestContextCurrentTraceContextHook implements RequestContextStorageHook {
 
@@ -37,7 +41,9 @@ enum RequestContextCurrentTraceContextHook implements RequestContextStorageHook 
     private static final AttributeKey<Scope> SCOPE_KEY =
             AttributeKey.valueOf(RequestContextCurrentTraceContextHook.class, "SCOPE_KEY");
 
-    private static final Scope REQUEST_CONTEXT_SCOPE = new Scope() {
+    private final FastThreadLocal<ArrayDeque<Scope>> scopes = new FastThreadLocal<>();
+
+    private static final Scope CONTEXT_SCOPE = new Scope() {
         @Override
         public void close() {}
 
@@ -54,22 +60,36 @@ enum RequestContextCurrentTraceContextHook implements RequestContextStorageHook 
             @Nullable
             @Override
             public <T extends RequestContext> T push(RequestContext toPush) {
+                final T oldCtx = super.push(toPush);
+                final ThreadLocal<ArrayDeque> local =
+                        ThreadLocal.withInitial(() -> new ArrayDeque());
+
                 final RequestContextCurrentTraceContext currentTraceContext = currentTraceContext(toPush);
                 if (currentTraceContext != null) {
                     final TraceContext traceContext = traceContext(toPush);
                     if (traceContext != null) {
-                        final Scope scope =
-                                currentTraceContext.decorateScope(traceContext, REQUEST_CONTEXT_SCOPE);
-                        toPush.setAttr(SCOPE_KEY, scope);
+                        // TODO(ikhoon): Provide a way to pass an attachment to
+                        final InternalThreadLocalMap map = InternalThreadLocalMap.get();
+                        ArrayDeque<Scope> stack = scopes.get(map);
+                        if (stack == null) {
+                            stack = new ArrayDeque<>();
+                        }
+
+                        final Scope scope = currentTraceContext.decorateScope(traceContext, CONTEXT_SCOPE);
+                        stack.push(scope);
+                        scopes.set(map, stack);
                     }
                 }
-                return super.push(toPush);
+
+                return oldCtx;
             }
 
             @Override
             public void pop(RequestContext current, @Nullable RequestContext toRestore) {
-                final Scope scope = current.setAttr(SCOPE_KEY, null);
-                if (scope != null) {
+                final InternalThreadLocalMap map = InternalThreadLocalMap.get();
+                final ArrayDeque<Scope> stack = scopes.get(map);
+                if (stack != null && !stack.isEmpty()) {
+                    final Scope scope = stack.pop();
                     scope.close();
                 }
                 super.pop(current, toRestore);
