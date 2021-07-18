@@ -54,7 +54,6 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         final QueryParams queryString = QueryParams.fromQueryString(ctx.query());
         final String query = queryString.get("query");
         if (Strings.isNullOrEmpty(query)) {
-            // TODO(ikhoon): Serve GraphQL playgraound if a query parameter is empty.
             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
         }
         final String operationName = queryString.get("operationName");

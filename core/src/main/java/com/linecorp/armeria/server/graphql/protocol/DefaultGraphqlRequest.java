@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-class DefaultGraphqlRequest implements GraphqlRequest {
+final class DefaultGraphqlRequest implements GraphqlRequest {
 
     private final String query;
 

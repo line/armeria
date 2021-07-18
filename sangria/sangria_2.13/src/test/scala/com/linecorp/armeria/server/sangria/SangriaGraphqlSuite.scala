@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.sangria
 
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server.ServerBuilder
-import com.linecorp.armeria.server.file.HttpFile
 import com.linecorp.armeria.server.sangria.GraphqlTestUtil.executeQuery
 import munit.FunSuite
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
@@ -36,8 +35,7 @@ class SangriaGraphqlSuite extends FunSuite with ServerSuite {
     )
   }
 
-  // Forked from https://github
-  // .com/sangria-graphql/sangria-playground/blob/24e36833bd3b784db57dc57cf5523c504e97f8ff/test/SchemaSpec.scala
+  // Forked from https://github.com/sangria-graphql/sangria-playground/blob/24e36833bd3b784db57dc57cf5523c504e97f8ff/test/SchemaSpec.scala
 
   test("correctly identify R2-D2 as the hero of the Star Wars Saga") {
     val query =

@@ -56,7 +56,7 @@ public interface GraphqlRequest {
 
     /**
      * Returns the
-     * <a href="https://spec.graphql.org/June2018/#sec-Named-Operation-Definitions>operation name</a>
+     * <a href="https://spec.graphql.org/June2018/#sec-Named-Operation-Definitions">operation name</a>
      * of the {@link #query()}. If not specified, {@code null} is returned.
      */
     @Nullable
