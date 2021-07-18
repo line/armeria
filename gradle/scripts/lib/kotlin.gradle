@@ -31,5 +31,7 @@ configure(projectsWithFlags('kotlin')) {
 
     // A workaround for 'runKtlintCheckOverMainSourceSet' uses this output of task ':generateProto' without
     // declaring an explicit or implicit dependency.
-    tasks.runKtlintCheckOverMainSourceSet.dependsOn(project.ext.getGenerateSourcesTask())
+    afterEvaluate {
+        tasks.runKtlintCheckOverMainSourceSet.dependsOn(project.ext.getGenerateSourcesTask())
+    }
 }
