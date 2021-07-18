@@ -31,6 +31,7 @@ import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -310,37 +311,40 @@ public final class AnnotatedService implements HttpService {
             case KOTLIN_COROUTINES:
             case SCALA_FUTURE:
                 final CompletableFuture<?> composedFuture;
-                final CompletableFuture[] upstreamFuture = new CompletableFuture<?>[1];
+                final AtomicReference<CompletionStage<?>> upstreamStage = new AtomicReference<>();
                 if (useBlockingTaskExecutor) {
                     composedFuture = f.thenComposeAsync(msg -> {
-                        upstreamFuture[0] =
-                                toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor())
-                                        .toCompletableFuture();
-                        return upstreamFuture[0];
+                        final CompletionStage<?> result =
+                                toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor());
+                        upstreamStage.set(result);
+                        return result;
                     }, ctx.blockingTaskExecutor());
                 } else {
                     composedFuture = f.thenCompose(msg -> {
-                        upstreamFuture[0] = toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop())
-                                .toCompletableFuture();
-                        return upstreamFuture[0];
+                        final CompletionStage<?> result =
+                                toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop());
+                        upstreamStage.set(result);
+                        return result;
                     });
                 }
-                final CompletableFuture<HttpResponse> responseFuture = composedFuture.handle(
-                        (result, cause) -> {
-                            if (cause != null) {
-                                return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
-                            }
-                            return convertResponse(ctx, req, null, result, HttpHeaders.of());
-                        });
-                responseFuture.handle((ignored, cause) -> {
-                    if (responseFuture.isCancelled()) {
-                        if (upstreamFuture[0] != null) {
-                            upstreamFuture[0].cancel(true);
+
+                final CompletableFuture<HttpResponse> resFuture = composedFuture.handle((result, cause) -> {
+                    if (cause != null) {
+                        return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
+                    }
+                    return convertResponse(ctx, req, null, result, HttpHeaders.of());
+                });
+                // Propagate cancellation to the upstream.
+                resFuture.handle((ignored, cause) -> {
+                    if (cause != null) {
+                        final CompletionStage<?> upstream = upstreamStage.get();
+                        if (upstream != null) {
+                            upstream.toCompletableFuture().completeExceptionally(cause);
                         }
                     }
                     return null;
                 });
-                return responseFuture;
+                return resFuture;
             default:
                 final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
                         msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg), HttpHeaders.of());

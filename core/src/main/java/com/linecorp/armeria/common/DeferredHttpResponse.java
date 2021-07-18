@@ -19,15 +19,13 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
-
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DeferredStreamMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -38,11 +36,27 @@ import io.netty.util.concurrent.EventExecutor;
  */
 final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
 
+    /**
+     * The {@link Class} instance of {@code reactor.core.publisher.MonoToCompletableFuture} of
+     * <a href="https://projectreactor.io/">Project Reactor</a>.
+     */
     @Nullable
-    private final EventExecutor executor;
+    private static final Class<?> MONO_TO_FUTURE_CLASS;
+
+    static {
+        Class<?> monoToFuture = null;
+        try {
+            monoToFuture = Class.forName("reactor.core.publisher.MonoToCompletableFuture",
+                                         true, DeferredHttpResponse.class.getClassLoader());
+        } catch (ClassNotFoundException e) {
+            // Do nothing.
+        } finally {
+            MONO_TO_FUTURE_CLASS = monoToFuture;
+        }
+    }
 
     @Nullable
-    private CompletionStage<? extends HttpResponse> stage;
+    private final EventExecutor executor;
 
     DeferredHttpResponse() {
         executor = null;
@@ -57,13 +71,30 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
     }
 
     void delegateWhenComplete(CompletionStage<? extends HttpResponse> stage) {
-        this.stage = requireNonNull(stage, "stage");
+        requireNonNull(stage, "stage");
+
+        // Propagate exception to the upstream future.
+        whenComplete().handle((unused, cause) -> {
+            final CompletableFuture<? extends HttpResponse> future = stage.toCompletableFuture();
+            if (cause != null && !future.isDone()) {
+                if (MONO_TO_FUTURE_CLASS != null && MONO_TO_FUTURE_CLASS.isAssignableFrom(future.getClass())) {
+                    // A workaround for 'MonoToCompletableFuture' not propagating cancellation to the upstream
+                    // publisher when it completes exceptionally.
+                    future.cancel(true);
+                } else {
+                    future.completeExceptionally(cause);
+                }
+            }
+            return null;
+        });
         stage.handle((delegate, thrown) -> {
             if (thrown != null) {
                 final Throwable cause = Exceptions.peel(thrown);
-                if (!(cause instanceof CancellationException)) {
-                    close(cause);
+                // Ignore exceptions caused by downstream cancellation.
+                if (cause instanceof CancelledSubscriptionException || cause instanceof CancellationException) {
+                    return null;
                 }
+                close(cause);
             } else if (delegate == null) {
                 close(new NullPointerException("delegate stage produced a null response: " + stage));
             } else {
@@ -79,44 +110,5 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
             return executor;
         }
         return super.defaultSubscriberExecutor();
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
-        super.subscribe(new Subscriber<HttpObject>() {
-            @Override
-            public void onSubscribe(Subscription s) {
-                subscriber.onSubscribe(new Subscription() {
-                    @Override
-                    public void request(long n) {
-                        s.request(n);
-                    }
-
-                    @Override
-                    public void cancel() {
-                        s.cancel();
-                        if (stage != null) {
-                            stage.toCompletableFuture().cancel(true);
-                        }
-                    }
-                });
-            }
-
-            @Override
-            public void onNext(HttpObject httpObject) {
-                subscriber.onNext(httpObject);
-            }
-
-            @Override
-            public void onError(Throwable t) {
-                subscriber.onError(t);
-            }
-
-            @Override
-            public void onComplete() {
-                subscriber.onComplete();
-            }
-        }, executor, options);
     }
 }

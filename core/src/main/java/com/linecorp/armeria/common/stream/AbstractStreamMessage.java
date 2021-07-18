@@ -57,8 +57,8 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
-                          SubscriptionOption... options) {
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                                SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");

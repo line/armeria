@@ -250,6 +250,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             }
         } else {
             cancelPending = true;
+            abort(CancelledSubscriptionException.get());
         }
     }
 
