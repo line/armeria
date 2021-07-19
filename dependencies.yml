@@ -35,6 +35,13 @@ com.auth0:
     javadocs:
     - https://www.javadoc.io/doc/com.auth0/java-jwt/3.16.0/
 
+# This is only used for examples/graphql-kotlin
+com.expediagroup:
+  graphql-kotlin-client: { version: &GRAPHQL_KOTLIN_VERSION '4.1.1' }
+  graphql-kotlin-client-jackson: { version: *GRAPHQL_KOTLIN_VERSION }
+  graphql-kotlin-client-serialization: { version: *GRAPHQL_KOTLIN_VERSION }
+  graphql-kotlin-schema-generator: { version: *GRAPHQL_KOTLIN_VERSION }
+
 com.fasterxml.jackson.core:
   jackson-annotations:
     javadocs:

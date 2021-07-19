@@ -197,6 +197,11 @@ This product depends on graphql-java, distributed by Andreas Marek:
   * License: licenses/LICENSE.graphql-java.mit.txt (MIT License)
   * Homepage: https://www.graphql-java.com/
 
+This product depends on graphql-kotlin, distributed by ExpediaGroup:
+
+  * License: licenses/LICENSE.graphql-kotlin.al20.txt (Apache License v2.0)
+  * Homepage: https://opensource.expediagroup.com/graphql-kotlin/
+
 This product depends on gRPC, distributed by Google:
 
   * License: licenses/LICENSE.grpc.bsd.txt (New BSD License)
