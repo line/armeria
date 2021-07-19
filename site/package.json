@@ -73,6 +73,7 @@
     "gatsby-remark-copy-linked-files": "^2.10.0",
     "gatsby-remark-draw": "^1.0.16",
     "gatsby-remark-images": "^3.11.1",
+    "gatsby-remark-plantuml-lite": "^0.0.5",
     "gatsby-source-filesystem": "^2.11.1",
     "gatsby-transformer-sharp": "^2.12.1",
     "jsonp": "^0.2.1",

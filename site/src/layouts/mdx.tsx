@@ -20,6 +20,7 @@ import Mailchimp from '../components/mailchimp';
 import MaxWidth from '../components/max-width';
 import NoWrap from '../components/nowrap';
 import RequiredDependencies from '../components/required-dependencies';
+import TutorialSteps from '../components/steps';
 import BaseLayout from './base';
 import pagePath from './page-path';
 import styles from './mdx.module.less';
@@ -36,6 +37,7 @@ interface MdxLayoutProps extends RouteComponentProps {
   pageTitleSuffix: string;
   showPrevNextButton?: boolean;
   noEdit?: boolean;
+  menuTitle?: boolean;
 }
 
 const pathPrefix = withPrefix('/');
@@ -87,7 +89,14 @@ const mdxComponents: any = {
     const language =
       props.children.props.className?.replace(/language-/, '') || 'none';
     return (
-      <CodeBlock language={language}>{props.children.props.children}</CodeBlock>
+      <CodeBlock
+        language={language}
+        filename={props.children.props.filename}
+        highlight={props.children.props.highlight}
+        showlineno={props.children.props.showlineno}
+      >
+        {props.children.props.children}
+      </CodeBlock>
     );
   },
   h1: (props: any) => <Title level={1} {...props} />,
@@ -127,6 +136,7 @@ const mdxComponents: any = {
   MaxWidth,
   NoWrap,
   RequiredDependencies,
+  TutorialSteps,
   Tabs: (props: any) => {
     return <AntdTabs animated={{ inkBar: true, tabPane: false }} {...props} />;
   },
@@ -180,9 +190,12 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     ) {
       /* eslint-disable no-param-reassign */
       mdxNode.isBookmark = false;
-      mdxNode.href = `/${props.prefix}${
-        mdxNode.parent.name === 'index' ? '' : `/${mdxNode.parent.name}`
-      }`;
+      if (mdxNode.parent.name === 'index') mdxNode.href = `/${props.prefix}`;
+      else if (typeof mdxNode.parent.relativeDirectory === 'undefined')
+        mdxNode.href = `/${props.prefix}/${mdxNode.parent.name}`;
+      else {
+        mdxNode.href = `/${props.prefix}/${mdxNode.parent.relativeDirectory}/${mdxNode.parent.name}`;
+      }
       /* eslint-enable no-param-reassign */
       nameToMdxNode[mdxNode.parent.name] = mdxNode;
     }
@@ -316,6 +329,19 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
     return undefined;
   }
 
+  function getMenuName(mdxNode: any, tocItem: any): string {
+    if (props.menuTitle && mdxNode.frontmatter !== undefined) {
+      if (mdxNode.frontmatter.menuTitle !== null) {
+        if (mdxNode.frontmatter.order !== null) {
+          return `${mdxNode.frontmatter.order}. ${mdxNode.frontmatter.menuTitle}`;
+        }
+        return `${mdxNode.frontmatter.menuTitle}`;
+      }
+    }
+
+    return tocItem.title;
+  }
+
   const globalToc = (
     <ol>
       {Object.entries(groupToMdxNodes).map(([group, groupedMdxNodes]) => {
@@ -324,7 +350,7 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
             return mdxNode.tableOfContents.items.map(
               (tocItem: any, i: number) => {
                 const href = `${mdxNode.href}${i !== 0 ? tocItem.url : ''}`;
-
+                const menuName = getMenuName(mdxNode, tocItem);
                 return (
                   <li
                     key={href}
@@ -339,8 +365,8 @@ const MdxLayout: React.FC<MdxLayoutProps> = (props) => {
                         {tocItem.title}
                       </OutboundLink>
                     ) : (
-                      <Link to={href} title={tocItem.title}>
-                        {tocItem.title}
+                      <Link to={href} title={menuName}>
+                        {menuName}
                       </Link>
                     )}
                   </li>
