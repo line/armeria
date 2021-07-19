@@ -621,7 +621,7 @@ public final class AnnotatedService implements HttpService {
             }
 
             assert f != null;
-            return HttpResponse.from(f.handle((aggregated, cause) -> {
+            final CompletableFuture<HttpResponse> resFuture = f.handle((aggregated, cause) -> {
                 if (cause != null) {
                     return handleExceptionWithContext(exceptionHandler, ctx, ctx.request(), cause);
                 }
@@ -630,7 +630,14 @@ public final class AnnotatedService implements HttpService {
                 } catch (Exception e) {
                     return handleExceptionWithContext(exceptionHandler, ctx, ctx.request(), e);
                 }
-            }));
+            });
+            resFuture.handle((ignored, cause) -> {
+                if (cause != null) {
+                    f.completeExceptionally(cause);
+                }
+                return null;
+            });
+            return HttpResponse.from(resFuture);
         }
     }
 
