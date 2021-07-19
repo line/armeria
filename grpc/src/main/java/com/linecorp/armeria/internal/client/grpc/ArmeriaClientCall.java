@@ -238,7 +238,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .asRuntimeException()));
 
         final HttpStreamDeframer deframer =
-                new HttpStreamDeframer(decompressorRegistry, this, null, maxInboundMessageSizeBytes);
+                new HttpStreamDeframer(decompressorRegistry, ctx, this, null, maxInboundMessageSizeBytes);
         final ByteBufAllocator alloc = ctx.alloc();
         final StreamMessage<DeframedMessage> deframed =
                 res.decode(deframer, alloc, byteBufConverter(alloc, grpcWebText));

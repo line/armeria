@@ -26,7 +26,9 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
@@ -34,6 +36,7 @@ import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
@@ -53,8 +56,9 @@ class HttpStreamDeframerTest {
     @BeforeEach
     void setUp() {
         statusRef = new AtomicReference<>();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final TransportStatusListener statusListener = (status, metadata) -> statusRef.set(status);
-        deframer = new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), statusListener,
+        deframer = new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), ctx, statusListener,
                                           null, Integer.MAX_VALUE);
     }
 

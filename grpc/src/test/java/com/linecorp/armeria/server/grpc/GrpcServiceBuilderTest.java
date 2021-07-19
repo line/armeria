@@ -28,10 +28,13 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.grpc.testing.MetricsServiceGrpc.MetricsServiceImplBase;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A1Exception;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A2Exception;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A3Exception;
@@ -56,16 +59,20 @@ class GrpcServiceBuilderTest {
     private static final Metadata.Key<String> TEST_KEY2 =
             Metadata.Key.of("test_key2", Metadata.ASCII_STRING_MARSHALLER);
 
+    private final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
     @Test
     void mixExceptionMappingAndGrpcStatusFunction() {
         assertThatThrownBy(() -> GrpcService.builder()
                                             .addExceptionMapping(A1Exception.class, Status.RESOURCE_EXHAUSTED)
-                                            .exceptionMapping((cause, metadata) -> Status.PERMISSION_DENIED))
+                                            .exceptionMapping(
+                                                    (ctx, cause, metadata) -> Status.PERMISSION_DENIED))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("exceptionMapping() and addExceptionMapping() are mutually exclusive.");
 
         assertThatThrownBy(() -> GrpcService.builder()
-                                            .exceptionMapping((cause, metadata) -> Status.PERMISSION_DENIED)
+                                            .exceptionMapping(
+                                                    (ctx, cause, metadata) -> Status.PERMISSION_DENIED)
                                             .addExceptionMapping(A1Exception.class, Status.RESOURCE_EXHAUSTED))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("addExceptionMapping() and exceptionMapping() are mutually exclusive.");
@@ -76,17 +83,17 @@ class GrpcServiceBuilderTest {
         final LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings =
                 new LinkedList<>();
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class,
-                                               (throwable, metadata) -> Status.RESOURCE_EXHAUSTED);
+                                               (ctx, throwable, metadata) -> Status.RESOURCE_EXHAUSTED);
 
         assertThatThrownBy(() -> {
             GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class,
-                                                   (throwable, metadata) -> Status.UNIMPLEMENTED);
+                                                   (ctx, throwable, metadata) -> Status.UNIMPLEMENTED);
         }).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("is already added with");
 
         assertThatThrownBy(() -> {
             GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class,
-                                                   (throwable, metadata) -> Status.UNIMPLEMENTED);
+                                                   (ctx, throwable, metadata) -> Status.UNIMPLEMENTED);
         }).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("is already added with");
     }
@@ -96,22 +103,22 @@ class GrpcServiceBuilderTest {
         final LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings =
                 new LinkedList<>();
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A1Exception.class,
-                                               (throwable, metadata) -> Status.RESOURCE_EXHAUSTED);
+                                               (ctx, throwable, metadata) -> Status.RESOURCE_EXHAUSTED);
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A2Exception.class,
-                                               (throwable, metadata) -> Status.UNIMPLEMENTED);
+                                               (ctx, throwable, metadata) -> Status.UNIMPLEMENTED);
 
         assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A2Exception.class, A1Exception.class);
 
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, B1Exception.class,
-                                               (throwable, metadata) -> Status.UNAUTHENTICATED);
+                                               (ctx, throwable, metadata) -> Status.UNAUTHENTICATED);
         assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A2Exception.class,
                                  A1Exception.class,
                                  B1Exception.class);
 
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A3Exception.class,
-                                               (throwable, metadata) -> Status.UNAUTHENTICATED
+                                               (ctx, throwable, metadata) -> Status.UNAUTHENTICATED
         );
         assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A3Exception.class,
@@ -120,7 +127,7 @@ class GrpcServiceBuilderTest {
                                  B1Exception.class);
 
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, B2Exception.class,
-                                               (throwable, metadata) -> Status.NOT_FOUND);
+                                               (ctx, throwable, metadata) -> Status.NOT_FOUND);
         assertThat(exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A3Exception.class,
                                  A2Exception.class,
@@ -130,19 +137,19 @@ class GrpcServiceBuilderTest {
 
         final GrpcStatusFunction statusFunction = toGrpcStatusFunction(exceptionMappings);
 
-        Status status = GrpcStatus.fromThrowable(statusFunction, new A3Exception(), new Metadata());
+        Status status = GrpcStatus.fromThrowable(statusFunction, ctx, new A3Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.UNAUTHENTICATED);
 
-        status = GrpcStatus.fromThrowable(statusFunction, new A2Exception(), new Metadata());
+        status = GrpcStatus.fromThrowable(statusFunction, ctx, new A2Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.UNIMPLEMENTED);
 
-        status = GrpcStatus.fromThrowable(statusFunction, new A1Exception(), new Metadata());
+        status = GrpcStatus.fromThrowable(statusFunction, ctx, new A1Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
 
-        status = GrpcStatus.fromThrowable(statusFunction, new B2Exception(), new Metadata());
+        status = GrpcStatus.fromThrowable(statusFunction, ctx, new B2Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.NOT_FOUND);
 
-        status = GrpcStatus.fromThrowable(statusFunction, new B1Exception(), new Metadata());
+        status = GrpcStatus.fromThrowable(statusFunction, ctx, new B1Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.UNAUTHENTICATED);
     }
 
@@ -151,13 +158,13 @@ class GrpcServiceBuilderTest {
         final LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings =
                 new LinkedList<>();
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, A2Exception.class,
-                                               (throwable, metadata) -> Status.PERMISSION_DENIED);
+                                               (ctx, throwable, metadata) -> Status.PERMISSION_DENIED);
         final GrpcStatusFunction statusFunction = toGrpcStatusFunction(exceptionMappings);
 
         for (Throwable ex : ImmutableList.of(new A2Exception(), new A3Exception())) {
             final Status status = Status.UNKNOWN.withCause(ex);
             final Metadata metadata = new Metadata();
-            final Status newStatus = GrpcStatus.fromStatusFunction(statusFunction, status, metadata);
+            final Status newStatus = GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata);
             assertThat(newStatus.getCode()).isEqualTo(Code.PERMISSION_DENIED);
             assertThat(newStatus.getCause()).isEqualTo(ex);
             assertThat(metadata.keys()).isEmpty();
@@ -165,7 +172,7 @@ class GrpcServiceBuilderTest {
 
         final Status status = Status.DEADLINE_EXCEEDED.withCause(new A1Exception());
         final Metadata metadata = new Metadata();
-        final Status newStatus = GrpcStatus.fromStatusFunction(statusFunction, status, metadata);
+        final Status newStatus = GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata);
         assertThat(newStatus).isSameAs(status);
         assertThat(metadata.keys()).isEmpty();
     }
@@ -175,7 +182,7 @@ class GrpcServiceBuilderTest {
         final LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings =
                 new LinkedList<>();
         GrpcServiceBuilder.addExceptionMapping(exceptionMappings, B1Exception.class,
-                                               (throwable, metadata) -> {
+                                               (ctx, throwable, metadata) -> {
                                                    metadata.put(TEST_KEY, throwable.getClass().getSimpleName());
                                                    return Status.ABORTED;
                                                });
@@ -184,14 +191,14 @@ class GrpcServiceBuilderTest {
         final Status status = Status.UNKNOWN.withCause(new B1Exception());
 
         final Metadata metadata1 = new Metadata();
-        final Status newStatus1 = GrpcStatus.fromStatusFunction(statusFunction, status, metadata1);
+        final Status newStatus1 = GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata1);
         assertThat(newStatus1.getCode()).isEqualTo(Code.ABORTED);
         assertThat(metadata1.get(TEST_KEY)).isEqualTo("B1Exception");
         assertThat(metadata1.keys()).containsOnly(TEST_KEY.name());
 
         final Metadata metadata2 = new Metadata();
         metadata2.put(TEST_KEY2, "test");
-        final Status newStatus2 = GrpcStatus.fromStatusFunction(statusFunction, status, metadata2);
+        final Status newStatus2 = GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata2);
         assertThat(newStatus2.getCode()).isEqualTo(Code.ABORTED);
         assertThat(metadata2.get(TEST_KEY)).isEqualTo("B1Exception");
         assertThat(metadata2.keys()).containsOnly(TEST_KEY.name(), TEST_KEY2.name());

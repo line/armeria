@@ -60,7 +60,7 @@ class HelloServiceTest {
         final HttpServiceWithRoutes grpcService =
                 GrpcService.builder()
                            .addService(new HelloServiceImpl())
-                           .exceptionMapping((throwable, metadata) -> {
+                           .exceptionMapping((ctx, throwable, metadata) -> {
                                if (throwable instanceof AuthError) {
                                    return Status.UNAUTHENTICATED.withDescription(throwable.getMessage())
                                                                 .withCause(throwable);

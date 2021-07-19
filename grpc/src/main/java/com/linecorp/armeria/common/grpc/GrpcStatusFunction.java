@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.common.grpc;
 
-import java.util.function.BiFunction;
-
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.grpc.Metadata;
@@ -30,7 +29,7 @@ import io.grpc.Status;
  */
 @UnstableApi
 @FunctionalInterface
-public interface GrpcStatusFunction extends BiFunction<Throwable, Metadata, Status> {
+public interface GrpcStatusFunction {
 
     /**
      * Maps the specified {@link Throwable} to a gRPC {@link Status},
@@ -38,6 +37,5 @@ public interface GrpcStatusFunction extends BiFunction<Throwable, Metadata, Stat
      * If {@code null} is returned, the built-in mapping rule is used by default.
      */
     @Nullable
-    @Override
-    Status apply(Throwable throwable, Metadata metadata);
+    Status apply(RequestContext ctx, Throwable throwable, Metadata metadata);
 }

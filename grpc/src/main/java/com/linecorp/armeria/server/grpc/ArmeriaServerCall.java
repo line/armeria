@@ -180,7 +180,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final RequestHeaders clientHeaders = req.headers();
         final ByteBufAllocator alloc = ctx.alloc();
         final HttpStreamDeframer requestDeframer =
-                new HttpStreamDeframer(decompressorRegistry, this, statusFunction,
+                new HttpStreamDeframer(decompressorRegistry, ctx, this, statusFunction,
                                        maxInboundMessageSizeBytes)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         deframedRequest = req.decode(requestDeframer, alloc, byteBufConverter(alloc, grpcWebText));
@@ -339,20 +339,20 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @Override
     public void close(Status status, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromStatusFunction(statusFunction, status, metadata), metadata);
+            doClose(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromStatusFunction(statusFunction, status, metadata), metadata);
+                doClose(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata);
             });
         }
     }
 
     private void close(Throwable exception, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(GrpcStatus.fromThrowable(statusFunction, exception, metadata), metadata);
+            doClose(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(GrpcStatus.fromThrowable(statusFunction, exception, metadata), metadata);
+                doClose(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata);
             });
         }
     }
