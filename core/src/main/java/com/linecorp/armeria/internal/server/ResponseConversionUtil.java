@@ -87,7 +87,9 @@ public final class ResponseConversionUtil {
                                                     Function<Object, HttpData> contentConverter) {
         final HttpResponseWriter writer = HttpResponse.streaming();
         writer.whenComplete().handle((ignored, cause) -> {
-            future.completeExceptionally(cause);
+            if (cause != null) {
+                future.completeExceptionally(cause);
+            }
             return null;
         });
         future.handle((result, cause) -> {
