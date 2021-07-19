@@ -1132,7 +1132,7 @@ class AnnotatedServiceTest {
     }
 
     @Test
-    void testCancellation() {
+    void testCancellationPropagation() {
         final WebClient client = WebClient.of(server.httpUri());
         AggregatedHttpResponse res;
 
