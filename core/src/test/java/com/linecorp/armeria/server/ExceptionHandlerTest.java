@@ -58,19 +58,19 @@ class ExceptionHandlerTest {
             });
             sb.exceptionHandler((ctx, cause) -> {
                 if (cause instanceof RequestTimeoutException) {
-                    return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.GATEWAY_TIMEOUT),
-                                                     HttpData.ofUtf8("timeout!"),
-                                                     HttpHeaders.of("trailer-exists", true));
+                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.GATEWAY_TIMEOUT),
+                                           HttpData.ofUtf8("timeout!"),
+                                           HttpHeaders.of("trailer-exists", true));
                 }
                 if (cause instanceof IllegalArgumentException) {
-                    return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.BAD_REQUEST),
-                                                     HttpData.ofUtf8(cause.getMessage()),
-                                                     HttpHeaders.of("trailer-exists", true));
+                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.BAD_REQUEST),
+                                           HttpData.ofUtf8(cause.getMessage()),
+                                           HttpHeaders.of("trailer-exists", true));
                 }
                 if (cause instanceof UnsupportedOperationException) {
-                    return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.NOT_IMPLEMENTED),
-                                                     HttpData.ofUtf8(cause.getMessage()),
-                                                     HttpHeaders.of("trailer-exists", true));
+                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.NOT_IMPLEMENTED),
+                                           HttpData.ofUtf8(cause.getMessage()),
+                                           HttpHeaders.of("trailer-exists", true));
                 }
                 return null;
             });
@@ -101,18 +101,20 @@ class ExceptionHandlerTest {
         final ExceptionHandler handler = new ExceptionHandler() {
             @Nullable
             @Override
-            public AggregatedHttpResponse convert(ServiceRequestContext context, Throwable cause) {
+            public HttpResponse convert(ServiceRequestContext context, Throwable cause) {
                 if (cause instanceof AnticipatedException) {
-                    return AggregatedHttpResponse.of(200);
+                    return HttpResponse.of(200);
                 }
                 return null;
             }
         };
 
-        final ExceptionHandler orElse = handler.orElse((ctx, cause) -> AggregatedHttpResponse.of(400));
+        final ExceptionHandler orElse = handler.orElse((ctx, cause) -> HttpResponse.of(400));
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        assertThat(orElse.convert(ctx, new AnticipatedException()).status()).isSameAs(HttpStatus.OK);
-        assertThat(orElse.convert(ctx, new IllegalStateException()).status()).isSameAs(HttpStatus.BAD_REQUEST);
+        assertThat(orElse.convert(ctx, new AnticipatedException()).aggregate().join().status())
+                .isSameAs(HttpStatus.OK);
+        assertThat(orElse.convert(ctx, new IllegalStateException()).aggregate().join().status())
+                .isSameAs(HttpStatus.BAD_REQUEST);
     }
 }

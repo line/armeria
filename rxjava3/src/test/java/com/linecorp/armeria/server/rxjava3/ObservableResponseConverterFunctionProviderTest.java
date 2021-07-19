@@ -61,9 +61,7 @@ class ObservableResponseConverterFunctionProviderTest {
         final Type returnType = Sample.class.getMethod("unsupported")
                                             .getGenericReturnType();
         assertThatThrownBy(
-                () -> provider.createResponseConverterFunction(returnType,
-                                                               new DummyResponseConverter(),
-                                                               new DummyExceptionHandler()))
+                () -> provider.createResponseConverterFunction(returnType, new DummyResponseConverter()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
                         "Disallowed type exists in the generic type arguments of the return type " +

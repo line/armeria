@@ -1674,6 +1674,11 @@ public final class ServerBuilder {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
+        ExceptionHandler exceptionHandler = this.exceptionHandler;
+        if (exceptionHandler != ExceptionHandler.ofDefault()) {
+            exceptionHandler = exceptionHandler.orElse(ExceptionHandler.ofDefault());
+        }
+
         return new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,

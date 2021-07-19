@@ -235,9 +235,10 @@ class HttpServerRequestTimeoutTest {
 
     @Test
     void cancel() {
-        final AggregatedHttpResponse response =
-                withoutTimeoutServerClient.get("/cancel").aggregate().join();
-        assertThat(response.status().code()).isEqualTo(503);
+        assertThatThrownBy(() -> withoutTimeoutServerClient.get("/cancel").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasRootCauseInstanceOf(ClosedStreamException.class)
+                .hasRootCauseMessage("received a RST_STREAM frame: CANCEL");
     }
 
     @Test

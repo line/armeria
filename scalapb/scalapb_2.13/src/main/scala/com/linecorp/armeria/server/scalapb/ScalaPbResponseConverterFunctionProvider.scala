@@ -39,8 +39,7 @@ final class ScalaPbResponseConverterFunctionProvider extends ResponseConverterFu
   @Nullable
   override def createResponseConverterFunction(
       returnType: Type,
-      responseConverter: ResponseConverterFunction,
-      exceptionHandler: ExceptionHandlerFunction): ResponseConverterFunction =
+      responseConverter: ResponseConverterFunction): ResponseConverterFunction =
     if (toResultType(returnType) != ResultType.UNKNOWN || isSupportedGenericType(returnType))
       new ScalaPbResponseConverterFunction()
     else

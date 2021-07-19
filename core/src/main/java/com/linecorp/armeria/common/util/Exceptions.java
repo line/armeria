@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.server.RequestCancellationException;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
@@ -192,6 +193,7 @@ public final class Exceptions {
 
         return cause instanceof ClosedStreamException ||
                cause instanceof CancelledSubscriptionException ||
+               cause instanceof RequestCancellationException ||
                cause instanceof WriteTimeoutException ||
                cause instanceof AbortedStreamException ||
                (cause instanceof Http2Exception.StreamException &&

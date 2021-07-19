@@ -13,17 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
+package com.linecorp.armeria.internal.server.annotation;
 
-final class ExceptionHandlerUtil {
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 
-    static final AggregatedHttpResponse internalServerErrorResponse =
-            AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-    static final AggregatedHttpResponse serviceUnavailableResponse =
-            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+public enum NoopExceptionHandlerFunction implements ExceptionHandlerFunction {
 
-    private ExceptionHandlerUtil() {}
+    INSTANCE;
+
+    @Override
+    public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
+        return ExceptionHandlerFunction.fallthrough();
+    }
 }

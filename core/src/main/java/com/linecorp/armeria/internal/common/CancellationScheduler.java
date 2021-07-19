@@ -299,6 +299,9 @@ public final class CancellationScheduler {
     }
 
     public void finishNow(@Nullable Throwable cause) {
+        if (isFinishing()) {
+            return;
+        }
         if (isInitialized()) {
             if (eventLoop.inEventLoop()) {
                 finishNow0(cause);

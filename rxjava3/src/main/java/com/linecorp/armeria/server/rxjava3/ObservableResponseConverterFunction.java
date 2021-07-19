@@ -25,6 +25,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.internal.server.annotation.NoopExceptionHandlerFunction;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -54,11 +55,25 @@ public final class ObservableResponseConverterFunction implements ResponseConver
      *                          {@link ResponseConverterFunction}
      * @param exceptionHandler the function which converts a {@link Throwable} with the configured
      *                         {@link ExceptionHandlerFunction}
+     * @deprecated The registered {@link ExceptionHandlerFunction}s will be applied automatically.
+     *             Use {@link #ObservableResponseConverterFunction(ResponseConverterFunction)} instead.
      */
+    @Deprecated
     public ObservableResponseConverterFunction(ResponseConverterFunction responseConverter,
                                                ExceptionHandlerFunction exceptionHandler) {
         this.responseConverter = requireNonNull(responseConverter, "responseConverter");
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+    }
+
+    /**
+     * Creates a new {@link ResponseConverterFunction} instance.
+     *
+     * @param responseConverter the function which converts an object with the configured
+     *                          {@link ResponseConverterFunction}
+     */
+    public ObservableResponseConverterFunction(ResponseConverterFunction responseConverter) {
+        this.responseConverter = requireNonNull(responseConverter, "responseConverter");
+        exceptionHandler = NoopExceptionHandlerFunction.INSTANCE;
     }
 
     @Override
@@ -103,7 +118,12 @@ public final class ObservableResponseConverterFunction implements ResponseConver
     }
 
     private HttpResponse onError(ServiceRequestContext ctx, Throwable cause) {
-        return exceptionHandler.handleException(ctx, ctx.request(), cause);
+        if (exceptionHandler == NoopExceptionHandlerFunction.INSTANCE) {
+            return HttpResponse.ofFailure(cause);
+        } else {
+            // TODO(ikhoon): Remove this line once the deprecated exceptionHandler has been removed.
+            return exceptionHandler.handleException(ctx, ctx.request(), cause);
+        }
     }
 
     private BiFunction<Object, Throwable, HttpResponse> handleResult(

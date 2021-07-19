@@ -37,8 +37,8 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -386,41 +386,32 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
+            final ExceptionHandler exceptionHandler = config.exceptionHandler();
             HttpResponse serviceResponse;
-            Throwable raisedException = null;
             try {
                 req.init(reqCtx);
                 serviceResponse = service.serve(reqCtx, req);
             } catch (Throwable cause) {
-                if (cause instanceof HttpResponseException) {
-                    serviceResponse = ((HttpResponseException) cause).httpResponse();
-                } else {
-                    final AggregatedHttpResponse convertedResponse =
-                            config.exceptionHandler().convert(reqCtx, cause);
-                    if (convertedResponse != null) {
-                        serviceResponse = convertedResponse.toHttpResponse();
-                    } else {
-                        final AggregatedHttpResponse defaultResponse =
-                                ExceptionHandler.ofDefault().convert(reqCtx, cause);
-                        assert defaultResponse != null;
-                        serviceResponse = defaultResponse.toHttpResponse();
-                    }
-                    if (!(cause instanceof HttpStatusException)) {
-                        // Do not set HttpStatusException to the raisedException because we don't want to log it
-                        // as a cause.
-                        raisedException = cause;
-                    }
-                }
-
                 // No need to consume further since the response is ready.
-                if (raisedException != null) {
-                    req.close(raisedException);
-                } else {
+                if (cause instanceof HttpResponseException || cause instanceof HttpStatusException) {
                     req.close();
+                } else {
+                    req.close(cause);
                 }
+                serviceResponse = HttpResponse.ofFailure(cause);
             }
+
+            serviceResponse = serviceResponse.recover(cause -> {
+                warnIfNeeded(reqCtx, cause);
+                // Recover a failed response with the default exception handler.
+                if (cause instanceof HttpResponseException) {
+                    final HttpResponse httpResponse = ((HttpResponseException) cause).httpResponse();
+                    return httpResponse.recover(cause0 -> exceptionHandler.convert(reqCtx, cause));
+                } else {
+                    return exceptionHandler.convert(reqCtx, cause);
+                }
+            });
             final HttpResponse res = serviceResponse;
-            final Throwable primaryCause = raisedException;
             final EventLoop eventLoop = channel.eventLoop();
 
             // Keep track of the number of unfinished requests and
@@ -457,9 +448,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             res.whenComplete().handleAsync((ret, cause) -> {
                 try {
-                    if (primaryCause != null) {
-                        req.abort(primaryCause);
-                    } else if (cause == null) {
+                    if (cause == null) {
                         req.abort();
                     } else {
                         req.abort(cause);
@@ -484,8 +473,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             assert responseEncoder != null;
             final HttpResponseSubscriber resSubscriber =
-                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, primaryCause);
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
             res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
+        }
+    }
+
+    private static void warnIfNeeded(ServiceRequestContext context, Throwable cause) {
+        if (Flags.serviceExceptionVerbosity() == ExceptionVerbosity.ALL &&
+            logger.isWarnEnabled()) {
+            logger.warn("{} Exception raised by a service:", context, cause);
         }
     }
 
