@@ -42,7 +42,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
 
     /**
      * Should not use {@link JacksonUtil#newDefaultObjectMapper()} that will convert a JSON object into
-     * `scala.Map` if `jackson-module-scala` module is registered.
+     * `scala.Map` if a `jackson-module-scala` module is registered.
      */
     private static final ObjectMapper mapper = new ObjectMapper();
 

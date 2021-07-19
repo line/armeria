@@ -28,9 +28,11 @@ configure(scala212 + scala213) {
         }
     }
 
-    // Run `scalafmt` to automatically format scala code from source sets
-    // https://github.com/alenkacz/gradle-scalafmt#tasks
-    project.ext.getLintTask().dependsOn tasks.checkScalafmt
+    if (!rootProject.hasProperty('noLint')) {
+        // Run `scalafmt` to automatically format scala code from source sets
+        // https://github.com/alenkacz/gradle-scalafmt#tasks
+        project.ext.getLintTask().dependsOn tasks.checkScalafmt
+    }
 
     if (project.hasFlags('publish')) {
         task aggregatedScaladocs(
