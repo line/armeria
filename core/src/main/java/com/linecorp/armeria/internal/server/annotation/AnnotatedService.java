@@ -31,6 +31,7 @@ import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -310,21 +311,40 @@ public final class AnnotatedService implements HttpService {
             case KOTLIN_COROUTINES:
             case SCALA_FUTURE:
                 final CompletableFuture<?> composedFuture;
+                final AtomicReference<CompletionStage<?>> upstreamStage = new AtomicReference<>();
                 if (useBlockingTaskExecutor) {
-                    composedFuture = f.thenComposeAsync(
-                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor()),
-                            ctx.blockingTaskExecutor());
+                    composedFuture = f.thenComposeAsync(msg -> {
+                        final CompletionStage<?> result =
+                                toCompletionStage(invoke(ctx, req, msg), ctx.blockingTaskExecutor());
+                        upstreamStage.set(result);
+                        return result;
+                    }, ctx.blockingTaskExecutor());
                 } else {
-                    composedFuture = f.thenCompose(
-                            msg -> toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop()));
+                    composedFuture = f.thenCompose(msg -> {
+                        final CompletionStage<?> result =
+                                toCompletionStage(invoke(ctx, req, msg), ctx.eventLoop());
+                        upstreamStage.set(result);
+                        return result;
+                    });
                 }
-                return composedFuture.handle(
-                        (result, cause) -> {
-                            if (cause != null) {
-                                return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
-                            }
-                            return convertResponse(ctx, req, null, result, HttpHeaders.of());
-                        });
+
+                final CompletableFuture<HttpResponse> resFuture = composedFuture.handle((result, cause) -> {
+                    if (cause != null) {
+                        return handleExceptionWithContext(exceptionHandler, ctx, req, cause);
+                    }
+                    return convertResponse(ctx, req, null, result, HttpHeaders.of());
+                });
+                // Propagate cancellation to the upstream.
+                resFuture.handle((ignored, cause) -> {
+                    if (cause != null) {
+                        final CompletionStage<?> upstream = upstreamStage.get();
+                        if (upstream != null) {
+                            upstream.toCompletableFuture().completeExceptionally(cause);
+                        }
+                    }
+                    return null;
+                });
+                return resFuture;
             default:
                 final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
                         msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg), HttpHeaders.of());
@@ -601,7 +621,7 @@ public final class AnnotatedService implements HttpService {
             }
 
             assert f != null;
-            return HttpResponse.from(f.handle((aggregated, cause) -> {
+            final CompletableFuture<HttpResponse> resFuture = f.handle((aggregated, cause) -> {
                 if (cause != null) {
                     return handleExceptionWithContext(exceptionHandler, ctx, ctx.request(), cause);
                 }
@@ -610,7 +630,14 @@ public final class AnnotatedService implements HttpService {
                 } catch (Exception e) {
                     return handleExceptionWithContext(exceptionHandler, ctx, ctx.request(), e);
                 }
-            }));
+            });
+            resFuture.handle((ignored, cause) -> {
+                if (cause != null) {
+                    f.completeExceptionally(cause);
+                }
+                return null;
+            });
+            return HttpResponse.from(resFuture);
         }
     }
 

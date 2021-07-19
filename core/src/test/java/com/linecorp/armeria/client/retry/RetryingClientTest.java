@@ -672,7 +672,7 @@ class RetryingClientTest {
                     public void onComplete() {}
                 });
 
-        await().untilAsserted(() -> assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(3));
+        await().untilAsserted(() -> assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(1));
     }
 
     @Test
