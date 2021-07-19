@@ -107,8 +107,8 @@ public final class ObjectCollectingUtil {
 
         @Override
         public void onSubscribe(Subscription s) {
-            future.handle((ignored, t) -> {
-                if (t != null) {
+            future.handle((ignored, cause) -> {
+                if (cause != null) {
                     s.cancel();
                 }
                 return null;
