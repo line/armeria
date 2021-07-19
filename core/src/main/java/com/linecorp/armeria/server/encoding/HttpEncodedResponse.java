@@ -20,8 +20,8 @@ import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.function.Predicate;
-import java.util.zip.DeflaterOutputStream;
 
 import javax.annotation.Nullable;
 
@@ -56,7 +56,7 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
     private ByteArrayOutputStream encodedStream;
 
     @Nullable
-    private DeflaterOutputStream encodingStream;
+    private OutputStream encodingStream;
 
     private boolean headersSent;
 
@@ -105,6 +105,9 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
                     break;
                 case DEFLATE:
                     mutable.set(HttpHeaderNames.CONTENT_ENCODING, "deflate");
+                    break;
+                case BR:
+                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "br");
                     break;
             }
             mutable.set(HttpHeaderNames.VARY, HttpHeaderNames.ACCEPT_ENCODING.toString());

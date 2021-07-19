@@ -23,8 +23,12 @@ import java.util.zip.GZIPOutputStream;
 
 import javax.annotation.Nullable;
 
+import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
+
+import io.netty.handler.codec.compression.Brotli;
 
 /**
  * Support utilities for dealing with HTTP encoding (e.g., gzip).
@@ -40,7 +44,7 @@ final class HttpEncoders {
         return determineEncoding(acceptEncoding);
     }
 
-    static DeflaterOutputStream getEncodingOutputStream(HttpEncodingType encodingType, OutputStream out) {
+    static OutputStream getEncodingOutputStream(HttpEncodingType encodingType, OutputStream out) {
         switch (encodingType) {
             case GZIP:
                 try {
@@ -51,6 +55,13 @@ final class HttpEncoders {
                 }
             case DEFLATE:
                 return new DeflaterOutputStream(out, true);
+            case BR:
+                try {
+                    return new BrotliOutputStream(out);
+                } catch (IOException e) {
+                    throw new IllegalStateException(
+                            "Error writing brotli header. This should not happen with byte arrays.", e);
+                }
             default:
                 throw new IllegalArgumentException("Unexpected zlib type, this is a programming bug.");
         }
@@ -61,6 +72,7 @@ final class HttpEncoders {
     @SuppressWarnings("FloatingPointEquality")
     private static HttpEncodingType determineEncoding(String acceptEncoding) {
         float starQ = -1.0f;
+        float brQ = -1.0f;
         float gzipQ = -1.0f;
         float deflateQ = -1.0f;
         for (String encoding : acceptEncoding.split(",")) {
@@ -76,20 +88,27 @@ final class HttpEncoders {
             }
             if (encoding.contains("*")) {
                 starQ = q;
+            } else if (encoding.contains("br") && q > brQ) {
+                brQ = q;
             } else if (encoding.contains("gzip") && q > gzipQ) {
                 gzipQ = q;
             } else if (encoding.contains("deflate") && q > deflateQ) {
                 deflateQ = q;
             }
         }
-        if (gzipQ > 0.0f || deflateQ > 0.0f) {
-            if (gzipQ >= deflateQ) {
+        if (brQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
+            if (brQ != -1.0f && brQ >= gzipQ) {
+                return Brotli.isAvailable() ? HttpEncodingType.BR : null;
+            } else if (gzipQ != -1.0f && gzipQ >= deflateQ) {
                 return HttpEncodingType.GZIP;
             } else {
                 return HttpEncodingType.DEFLATE;
             }
         }
         if (starQ > 0.0f) {
+            if (brQ == -1.0f) {
+                return Brotli.isAvailable() ? HttpEncodingType.BR : null;
+            }
             if (gzipQ == -1.0f) {
                 return HttpEncodingType.GZIP;
             }

@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.zip.GZIPInputStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,6 +34,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.aayushatharva.brotli4j.decoder.BrotliInputStream;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.WebClient;
@@ -105,13 +105,13 @@ class ContentPreviewingServiceTest {
 
         private Function<? super HttpService, ContentPreviewingService> decodingContentPreviewDecorator() {
             final BiPredicate<? super RequestContext, ? super HttpHeaders> previewerPredicate =
-                    (requestContext, headers) -> "gzip".equals(headers.get(HttpHeaderNames.CONTENT_ENCODING));
+                    (requestContext, headers) -> "br".equals(headers.get(HttpHeaderNames.CONTENT_ENCODING));
 
             final BiFunction<HttpHeaders, ByteBuf, String> producer = (headers, data) -> {
                 final byte[] bytes = new byte[data.readableBytes()];
                 data.getBytes(0, bytes);
                 final byte[] decoded;
-                try (GZIPInputStream unzipper = new GZIPInputStream(new ByteArrayInputStream(bytes))) {
+                try (BrotliInputStream unzipper = new BrotliInputStream(new ByteArrayInputStream(bytes))) {
                     decoded = ByteStreams.toByteArray(unzipper);
                 } catch (Exception e) {
                     throw new IllegalArgumentException(e);
@@ -160,7 +160,7 @@ class ContentPreviewingServiceTest {
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
         final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
 
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");

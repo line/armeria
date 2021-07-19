@@ -27,6 +27,8 @@ import java.util.zip.GZIPOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
+
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -39,6 +41,8 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import io.netty.handler.codec.compression.Brotli;
 
 class DecodingServiceTest {
 
@@ -96,5 +100,24 @@ class DecodingServiceTest {
 
         assertThat(client.execute(headers, HttpData.wrap(encodedStream.toByteArray())).aggregate().join()
                          .contentUtf8()).isEqualTo("Hello Armeria Deflated Test!");
+    }
+
+    @Test
+    void decodingBrotliCompressedPayloadFromClient() throws Throwable {
+
+        final WebClient client = WebClient.builder(server.httpUri()).build();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/decodeTest",
+                                                         HttpHeaderNames.CONTENT_ENCODING, "br");
+        Brotli.ensureAvailability();
+
+        final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
+        final BrotliOutputStream encodingStream = new BrotliOutputStream(encodedStream);
+
+        final byte[] testByteArray = "Armeria Brotli Test".getBytes(StandardCharsets.UTF_8);
+        encodingStream.write(testByteArray);
+        encodingStream.flush();
+
+        assertThat(client.execute(headers, HttpData.wrap(encodedStream.toByteArray())).aggregate().join()
+                         .contentUtf8()).isEqualTo("Hello Armeria Brotli Test!");
     }
 }

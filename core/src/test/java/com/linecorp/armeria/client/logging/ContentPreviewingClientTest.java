@@ -23,11 +23,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.zip.GZIPInputStream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.aayushatharva.brotli4j.decoder.BrotliInputStream;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -89,7 +89,7 @@ class ContentPreviewingClientTest {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
             assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-            assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
+            assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
             context = captor.get();
         }
 
@@ -116,7 +116,7 @@ class ContentPreviewingClientTest {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
             assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-            assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
+            assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
             context = captor.get();
         }
 
@@ -127,12 +127,12 @@ class ContentPreviewingClientTest {
 
     private static Function<? super HttpClient, ContentPreviewingClient> decodingContentPreviewDecorator() {
         final BiPredicate<? super RequestContext, ? super HttpHeaders> previewerPredicate =
-                (requestContext, headers) -> "gzip".equals(headers.get(HttpHeaderNames.CONTENT_ENCODING));
+                (requestContext, headers) -> "br".equals(headers.get(HttpHeaderNames.CONTENT_ENCODING));
         final BiFunction<HttpHeaders, ByteBuf, String> producer = (headers, data) -> {
             final byte[] bytes = new byte[data.readableBytes()];
             data.getBytes(0, bytes);
             final byte[] decoded;
-            try (GZIPInputStream unzipper = new GZIPInputStream(new ByteArrayInputStream(bytes))) {
+            try (BrotliInputStream unzipper = new BrotliInputStream(new ByteArrayInputStream(bytes))) {
                 decoded = ByteStreams.toByteArray(unzipper);
             } catch (Exception e) {
                 throw new IllegalArgumentException(e);
