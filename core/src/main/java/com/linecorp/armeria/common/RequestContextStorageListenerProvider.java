@@ -16,9 +16,17 @@
 
 package com.linecorp.armeria.common;
 
-public final class UserIdRequestContextStorageHookProvider implements RequestContextStorageHookProvider {
-    @Override
-    public RequestContextStorageHook newStorageHook() {
-        return UserIdRequestContextStorageHook.INSTANCE;
-    }
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
+/**
+ * Creates a new {@link RequestContextStorageListener} dynamically via Java SPI (Service Provider Interface).
+ */
+@UnstableApi
+@FunctionalInterface
+public interface RequestContextStorageListenerProvider {
+
+     /**
+      * Creates a new {@link RequestContextStorageListener}.
+      */
+     RequestContextStorageListener newStorageListener();
 }

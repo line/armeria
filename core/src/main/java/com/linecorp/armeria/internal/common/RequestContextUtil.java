@@ -38,8 +38,8 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
-import com.linecorp.armeria.common.RequestContextStorageHook;
-import com.linecorp.armeria.common.RequestContextStorageHookProvider;
+import com.linecorp.armeria.common.RequestContextStorageListener;
+import com.linecorp.armeria.common.RequestContextStorageListenerProvider;
 import com.linecorp.armeria.common.RequestContextStorageProvider;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -63,6 +63,7 @@ public final class RequestContextUtil {
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
 
     private static RequestContextStorage requestContextStorage;
+    private static List<RequestContextStorageListener> requestContextStorageListeners;
 
     static {
         final List<RequestContextStorageProvider> providers = ImmutableList.copyOf(
@@ -115,23 +116,27 @@ public final class RequestContextUtil {
         } else {
             tempRequestContextStorage = RequestContextStorage.threadLocal();
         }
+        requestContextStorage = tempRequestContextStorage;
 
-        final List<RequestContextStorageHookProvider> hookProviders = ImmutableList.copyOf(
-                ServiceLoader.load(RequestContextStorageHookProvider.class));
-        if (!hookProviders.isEmpty()) {
-            for (RequestContextStorageHookProvider hookProvider : hookProviders) {
+        final List<RequestContextStorageListenerProvider> listenerProviders = ImmutableList.copyOf(
+                ServiceLoader.load(RequestContextStorageListenerProvider.class));
+        if (!listenerProviders.isEmpty()) {
+            final ImmutableList.Builder<RequestContextStorageListener> listenersBuilder =
+                    ImmutableList.builderWithExpectedSize(listenerProviders.size());
+            for (RequestContextStorageListenerProvider listenerProvider : listenerProviders) {
                 try {
-                    final RequestContextStorageHook hook = hookProvider.newStorageHook();
-                    requireNonNull(hook, "hookProvider.newStorageHook() returned null");
-                    tempRequestContextStorage = hook.apply(tempRequestContextStorage);
-                    requireNonNull(tempRequestContextStorage, "hook.apply() returned null");
+                    final RequestContextStorageListener listener = listenerProvider.newStorageListener();
+                    requireNonNull(listener, "hookProvider.newStorageHook() returned null");
+                    listenersBuilder.add(listener);
                 } catch (Throwable t) {
                     throw new IllegalStateException(
-                            "Failed to create context storage hook. provider: " + hookProvider, t);
+                            "Failed to create context storage listener. provider: " + listenerProvider, t);
                 }
             }
+            requestContextStorageListeners = listenersBuilder.build();
+        } else {
+            requestContextStorageListeners = ImmutableList.of();
         }
-        requestContextStorage = tempRequestContextStorage;
     }
 
     /**
@@ -234,6 +239,62 @@ public final class RequestContextUtil {
     public static void pop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
         requestContextStorage.pop(current, toRestore);
+    }
+
+    /**
+     * Invokes {@link RequestContextStorageListener#onPush(RequestContext)} and returns {@link SafeCloseable}
+     * which pops the current {@link RequestContext} in the storage and pushes back the specified {@code toRestore}.
+     */
+    public static SafeCloseable invokeListenerAndPop(RequestContext current,
+                                                     @Nullable RequestContext toRestore) {
+        requireNonNull(current, "current");
+
+        final SafeCloseable closeable = invokeListener(current);
+        if (closeable == null) {
+            return () -> requestContextStorage.pop(current, toRestore);
+        } else {
+            return () -> {
+                closeable.close();
+                requestContextStorage.pop(current, toRestore);
+            };
+        }
+    }
+
+    @Nullable
+    private static SafeCloseable invokeListener(RequestContext ctx) {
+        switch (requestContextStorageListeners.size()) {
+            case 0:
+                return null;
+            case 1:
+                return invokeListener(requestContextStorageListeners.get(0), ctx);
+            default:
+                SafeCloseable closeable = null;
+                for (RequestContextStorageListener listener : requestContextStorageListeners) {
+                    final SafeCloseable closeable0 = invokeListener(listener, ctx);
+                    if (closeable0 == null) {
+                        continue;
+                    }
+                    if (closeable == null) {
+                        closeable = closeable0;
+                    } else {
+                        final SafeCloseable finalCloseable = closeable;
+                        closeable = () -> {
+                            finalCloseable.close();
+                            closeable0.close();
+                        };
+                    }
+                }
+                return closeable;
+        }
+    }
+
+    private static SafeCloseable invokeListener(RequestContextStorageListener listener, RequestContext ctx) {
+        try {
+            return listener.onPush(ctx);
+        } catch (Throwable t) {
+            logger.warn("Unexpected exception while executing RequestContext.hook().get(). ctx: {}", ctx, t);
+            return null;
+        }
     }
 
     private RequestContextUtil() {}

@@ -26,20 +26,20 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AttributeKey;
 
-class RequestContextStorageHookTest {
+class RequestContextStorageListenerTest {
 
     static final AttributeKey<String> USER_ID_ATTR =
-            AttributeKey.valueOf(RequestContextStorageHookTest.class, "USER_ID");
+            AttributeKey.valueOf(RequestContextStorageListenerTest.class, "USER_ID");
 
     @Test
     void propagateAttribute() {
         final ServiceRequestContext ctx = newCtx();
         ctx.setAttr(USER_ID_ATTR, "Kim Meri");
-        assertThat(UserIdRequestContextStorageHook.userId()).isNull();
+        assertThat(UserIdRequestContextStorageListener.userId()).isNull();
 
         try (SafeCloseable ignored = ctx.push()) {
-            assertThat(UserIdRequestContextStorageHook.userId()).isEqualTo("Kim Meri");
+            assertThat(UserIdRequestContextStorageListener.userId()).isEqualTo("Kim Meri");
         }
-        assertThat(UserIdRequestContextStorageHook.userId()).isNull();
+        assertThat(UserIdRequestContextStorageListener.userId()).isNull();
     }
 }

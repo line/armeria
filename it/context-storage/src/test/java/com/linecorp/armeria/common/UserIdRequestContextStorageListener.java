@@ -16,14 +16,24 @@
 
 package com.linecorp.armeria.common;
 
-/**
- * Creates a new {@link RequestContextStorageHook} dynamically via Java SPI (Service Provider Interface).
- */
-@FunctionalInterface
-public interface RequestContextStorageHookProvider {
+import static com.linecorp.armeria.common.RequestContextStorageListenerTest.USER_ID_ATTR;
 
-     /**
-      * Creates a new {@link RequestContextStorageHook}.
-      */
-     RequestContextStorageHook newStorageHook();
+import com.linecorp.armeria.common.util.SafeCloseable;
+
+public enum UserIdRequestContextStorageListener implements RequestContextStorageListener {
+
+    INSTANCE;
+
+    private static final ThreadLocal<String> userId = new ThreadLocal<>();
+
+    static String
+    userId() {
+        return userId.get();
+    }
+
+    @Override
+    public SafeCloseable onPush(RequestContext context) {
+        userId.set(context.attr(USER_ID_ATTR));
+        return userId::remove;
+    }
 }

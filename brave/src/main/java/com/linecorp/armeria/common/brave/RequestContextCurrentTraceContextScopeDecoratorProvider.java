@@ -17,21 +17,26 @@
 package com.linecorp.armeria.common.brave;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContextStorageHook;
-import com.linecorp.armeria.common.RequestContextStorageHookProvider;
+import com.linecorp.armeria.common.RequestContextStorage;
+import com.linecorp.armeria.common.RequestContextStorageListener;
+import com.linecorp.armeria.common.RequestContextStorageListenerProvider;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.propagation.TraceContext;
 
 /**
- * Creates a new {@link RequestContextStorageHook} that decorates the current {@link TraceContext} with
- * {@link ScopeDecorator}s when a {@link RequestContext} is pushed into the thread local.
+ * Creates a new {@link RequestContextStorageListener} that decorates the current {@link TraceContext} with
+ * {@link ScopeDecorator}s when a {@link RequestContext} is pushed into the {@link RequestContextStorage}.
  * The applied {@link ScopeDecorator}s will be removed when a {@link RequestContext} is popped from the
- * thread local.
+ * {@link RequestContextStorage}.
  */
-public class RequestContextCurrentTraceContextHookProvider implements RequestContextStorageHookProvider {
+@UnstableApi
+public class RequestContextCurrentTraceContextScopeDecoratorProvider
+        implements RequestContextStorageListenerProvider {
+
     @Override
-    public RequestContextStorageHook newStorageHook() {
-        return RequestContextCurrentTraceContextHook.INSTANCE;
+    public RequestContextStorageListener newStorageListener() {
+        return RequestContextCurrentTraceContextScopeDecorator.INSTANCE;
     }
 }

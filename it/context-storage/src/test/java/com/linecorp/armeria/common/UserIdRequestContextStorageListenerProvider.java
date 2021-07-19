@@ -16,19 +16,9 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.function.Function;
-
-/**
- * Customizes the current {@link RequestContextStorage} by applying this {@link RequestContextStorageHook} to
- * it. This hook is useful when you need to perform an additional operation when a {@link RequestContext}
- * is pushed or popped.
- */
-@FunctionalInterface
-public interface RequestContextStorageHook extends Function<RequestContextStorage, RequestContextStorage> {
-
-    /**
-     * Customizes the specified {@link RequestContextStorage} by applying the method to it.
-     */
+public final class UserIdRequestContextStorageListenerProvider implements RequestContextStorageListenerProvider {
     @Override
-    RequestContextStorage apply(RequestContextStorage contextStorage);
+    public RequestContextStorageListener newStorageListener() {
+        return UserIdRequestContextStorageListener.INSTANCE;
+    }
 }
