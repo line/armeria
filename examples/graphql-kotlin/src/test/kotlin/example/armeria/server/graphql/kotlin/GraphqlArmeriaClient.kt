@@ -26,8 +26,7 @@ class GraphqlArmeriaClient(
         val response = client.execute(
             HttpRequest.builder()
                 .apply(requestCustomizer)
-                .path(uri.toString())
-                .method(HttpMethod.POST)
+                .post(uri.toString())
                 .content(MediaType.JSON_UTF_8, serializer.serialize(request))
                 .build()
         ).aggregate().await()
