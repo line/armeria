@@ -33,22 +33,21 @@ class GraphqlServiceSuite extends FunSuite {
     """{user(id: "3") {name}}""" -> "droid"
   )
 
-  queries.foreach {
-    case (query, result) =>
-      test(s"should fetch user data by $query") {
-        val client = WebClient
-          .builder(server.httpUri())
-          .decorator(LoggingClient.newDecorator())
-          .build()
-        val request = HttpRequest
-          .builder()
-          .post("/graphql")
-          .content(MediaType.GRAPHQL, query)
-          .build()
-        val response = client.execute(request).aggregate.join()
+  queries.foreach { case (query, result) =>
+    test(s"should fetch user data by $query") {
+      val client = WebClient
+        .builder(server.httpUri())
+        .decorator(LoggingClient.newDecorator())
+        .build()
+      val request = HttpRequest
+        .builder()
+        .post("/graphql")
+        .content(MediaType.GRAPHQL, query)
+        .build()
+      val response = client.execute(request).aggregate.join()
 
-        assertEquals(response.status, HttpStatus.OK)
-        assertThatJson(response.contentUtf8).node("data.user.name").isEqualTo(result)
-      }
+      assertEquals(response.status, HttpStatus.OK)
+      assertThatJson(response.contentUtf8).node("data.user.name").isEqualTo(result)
+    }
   }
 }

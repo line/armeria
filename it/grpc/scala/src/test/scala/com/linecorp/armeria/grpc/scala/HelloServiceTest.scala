@@ -48,10 +48,13 @@ class HelloServiceTest {
   def exceptionMapping(serializationFormat: SerializationFormat): Unit = {
     val helloService = newClient[HelloServiceStub](serializationFormat)
     assertThatThrownBy(() => Await.result(helloService.helloError(HelloRequest("Armeria")), Duration.Inf))
-      .isInstanceOfSatisfying[StatusRuntimeException](classOf[StatusRuntimeException], e => {
-        assertThat(e.getStatus.getCode.value()).isEqualTo(Code.UNAUTHENTICATED.value())
-        assertThat(e.getMessage).isEqualTo("UNAUTHENTICATED: Armeria is unauthenticated")
-      })
+      .isInstanceOfSatisfying[StatusRuntimeException](
+        classOf[StatusRuntimeException],
+        e => {
+          assertThat(e.getStatus.getCode.value()).isEqualTo(Code.UNAUTHENTICATED.value())
+          assertThat(e.getMessage).isEqualTo("UNAUTHENTICATED: Armeria is unauthenticated")
+        }
+      )
   }
 }
 
