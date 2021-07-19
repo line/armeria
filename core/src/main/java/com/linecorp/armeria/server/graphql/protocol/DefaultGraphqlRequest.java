@@ -30,7 +30,7 @@ final class DefaultGraphqlRequest implements GraphqlRequest {
     @Nullable
     private final String operationName;
 
-    private Map<String, Object> variables;
+    private final Map<String, Object> variables;
 
     DefaultGraphqlRequest(String query, @Nullable String operationName, Map<String, Object> variables) {
         this.query = query;

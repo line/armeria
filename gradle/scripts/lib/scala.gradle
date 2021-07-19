@@ -69,6 +69,5 @@ configure(scala213) {
         implementation 'org.scala-lang:scala-library'
         testImplementation 'org.scalameta:munit_2.13'
     }
-
 }
 
