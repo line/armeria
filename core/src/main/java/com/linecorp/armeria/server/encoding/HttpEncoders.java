@@ -88,7 +88,7 @@ final class HttpEncoders {
             }
             if (encoding.contains("*")) {
                 starQ = q;
-            } else if (encoding.contains("br") && q > brQ) {
+            } else if (encoding.contains("br") && q > brQ && Brotli.isAvailable()) {
                 brQ = q;
             } else if (encoding.contains("gzip") && q > gzipQ) {
                 gzipQ = q;
@@ -97,8 +97,8 @@ final class HttpEncoders {
             }
         }
         if (brQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
-            if (brQ != -1.0f && brQ >= gzipQ) {
-                return Brotli.isAvailable() ? HttpEncodingType.BR : null;
+            if (brQ != -1.0f && brQ >= gzipQ && brQ >= deflateQ) {
+                return HttpEncodingType.BR;
             } else if (gzipQ != -1.0f && gzipQ >= deflateQ) {
                 return HttpEncodingType.GZIP;
             } else {
@@ -106,8 +106,8 @@ final class HttpEncoders {
             }
         }
         if (starQ > 0.0f) {
-            if (brQ == -1.0f) {
-                return Brotli.isAvailable() ? HttpEncodingType.BR : null;
+            if (brQ == -1.0f && Brotli.isAvailable()) {
+                return HttpEncodingType.BR;
             }
             if (gzipQ == -1.0f) {
                 return HttpEncodingType.GZIP;

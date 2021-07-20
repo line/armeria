@@ -83,4 +83,12 @@ public class HttpEncodersTest {
                                                              HttpHeaderNames.ACCEPT_ENCODING, "piedpiper"));
         assertThat(HttpEncoders.getWrapperForRequest(request)).isNull();
     }
+
+    @Test
+    public void acceptEncodingWithQualityValues() {
+        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
+                                                             HttpHeaderNames.ACCEPT_ENCODING,
+                                                             "deflate, br;q=0.8, gzip;q=0.7, *;q=0.1"));
+        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.DEFLATE);
+    }
 }
