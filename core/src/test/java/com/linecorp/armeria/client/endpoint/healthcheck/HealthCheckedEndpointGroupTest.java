@@ -24,7 +24,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -155,6 +157,56 @@ class HealthCheckedEndpointGroupTest {
             assertThatThrownBy(() -> ctx.executor().execute(() -> {}))
                     .isInstanceOf(RejectedExecutionException.class)
                     .hasMessageContaining("destroyed");
+        }
+    }
+
+    @Test
+    void disappearEndpointAfterPopulateNewEndpoint() {
+        final Endpoint endpoint1 = Endpoint.of("foo");
+        final Endpoint endpoint2 = Endpoint.of("bar");
+        // Start with an endpoint group that has healthy 'foo'.
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(endpoint1);
+        final Map<Endpoint, HealthCheckerContext> ctxCapture = new ConcurrentHashMap<>();
+
+        try (HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
+                    ctxCapture.put(ctx.endpoint(), ctx);
+                    // Only 'foo' makes healthy immediately.
+                    if (ctx.endpoint() == endpoint1) {
+                        ctx.updateHealth(1);
+                    }
+                    return AsyncCloseableSupport.of();
+                };
+            }
+        }.build()) {
+
+            // Check the initial state.
+            final HealthCheckerContext ctx = ctxCapture.get(endpoint1);
+            assertThat(ctx).isNotNull();
+            assertThat(ctx.endpoint()).isEqualTo(endpoint1);
+            ctx.updateHealth(1);
+
+            // 'foo' did not disappear yet, so the task must be accepted and run.
+            final AtomicBoolean taskRun = new AtomicBoolean();
+            ctx.executor().execute(() -> taskRun.set(true));
+            await().untilTrue(taskRun);
+
+            // Make 'foo' disappear and populate new endpoint ('bar').
+            delegate.set(endpoint2);
+            final HealthCheckerContext ctx2 = ctxCapture.get(endpoint2);
+            assertThat(ctx2).isNotNull();
+            assertThat(ctx2.endpoint()).isEqualTo(endpoint2);
+
+            // 'foo' should be still healthy.
+            assertThat(group.endpoints()).containsOnly(endpoint1);
+
+            // 'foo' should not be healthy after `bar` become healthy.
+            ctx2.updateHealth(1);
+            assertThat(group.endpoints()).containsOnly(endpoint2);
+            assertThat(group.healthyEndpoints).containsOnly(endpoint2);
         }
     }
 
