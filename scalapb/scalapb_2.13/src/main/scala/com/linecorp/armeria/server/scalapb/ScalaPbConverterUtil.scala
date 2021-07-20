@@ -88,9 +88,9 @@ private[scalapb] object ScalaPbConverterUtil {
         typeArguments.length == 1 &&
         isProtobufMessage(firstType) &&
         (classOf[Future[_]].isAssignableFrom(rawType) ||
-        classOf[java.util.concurrent.CompletionStage[_]].isAssignableFrom(rawType) ||
-        classOf[Publisher[_]].isAssignableFrom(rawType) ||
-        classOf[java.util.stream.Stream[_]].isAssignableFrom(rawType))
+          classOf[java.util.concurrent.CompletionStage[_]].isAssignableFrom(rawType) ||
+          classOf[Publisher[_]].isAssignableFrom(rawType) ||
+          classOf[java.util.stream.Stream[_]].isAssignableFrom(rawType))
       case _ => false
     }
 

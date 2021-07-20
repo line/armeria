@@ -19,7 +19,11 @@ package example.armeria.grpc.scala
 import java.util.concurrent.{ScheduledExecutorService, TimeUnit}
 
 import com.linecorp.armeria.server.ServiceRequestContext
-import example.armeria.grpc.scala.HelloServiceImpl.{blockingContextAwareExecutionContext, contextAwareScheduler, toMessage}
+import example.armeria.grpc.scala.HelloServiceImpl.{
+  blockingContextAwareExecutionContext,
+  contextAwareScheduler,
+  toMessage
+}
 import example.armeria.grpc.scala.hello.{HelloReply, HelloRequest, HelloServiceGrpc}
 import io.grpc.stub.StreamObserver
 import monix.execution
@@ -59,23 +63,28 @@ class HelloServiceImpl extends HelloServiceGrpc.HelloService {
   }
 
   override def lotsOfReplies(request: HelloRequest, responseObserver: StreamObserver[HelloReply]): Unit = {
-    Observable.interval(1.second)
-              .take(5)
-              .map(index => {
-                ServiceRequestContext.current()
-                s"Hello, ${ request.name }! (sequence: ${ index + 1 })"
-              })
-              .subscribe(message => {
-                ServiceRequestContext.current()
-                responseObserver.onNext(HelloReply(message))
-                Continue
-              }, cause => {
-                ServiceRequestContext.current()
-                responseObserver.onError(cause)
-              }, () => {
-                ServiceRequestContext.current()
-                responseObserver.onCompleted()
-              })
+    Observable
+      .interval(1.second)
+      .take(5)
+      .map(index => {
+        ServiceRequestContext.current()
+        s"Hello, ${request.name}! (sequence: ${index + 1})"
+      })
+      .subscribe(
+        message => {
+          ServiceRequestContext.current()
+          responseObserver.onNext(HelloReply(message))
+          Continue
+        },
+        cause => {
+          ServiceRequestContext.current()
+          responseObserver.onError(cause)
+        },
+        () => {
+          ServiceRequestContext.current()
+          responseObserver.onCompleted()
+        }
+      )
   }
 
   override def lotsOfGreetings(responseObserver: StreamObserver[HelloReply]): StreamObserver[HelloRequest] = {

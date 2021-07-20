@@ -2,6 +2,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 plugins {
     id 'com.google.osdetector' version '1.6.2' apply false
+    id 'cz.alenkacz.gradle.scalafmt' version '1.16.2' apply false
     // If you want to change `org.jetbrains.kotlin.jvm` version,
     // you also need to change `org.jetbrains.kotlin:kotlin-allopen` version in `dependencies.yml`.
     id 'org.jetbrains.kotlin.jvm' version '1.5.10' apply false

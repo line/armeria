@@ -1,6 +1,5 @@
 plugins {
     id 'application'
-    id 'scala'
 }
 
 dependencies {
@@ -21,16 +20,6 @@ dependencies {
 
 application {
     mainClass.set('example.armeria.grpc.scala.Main')
-}
-
-compileScala.targetCompatibility = 1.8
-ScalaCompileOptions.metaClass.useAnt = false
-
-tasks.withType(ScalaCompile) {
-    scalaCompileOptions.with {
-        // Disable incremental compilation to avoid intermittent compile errors.
-        force = true
-    }
 }
 
 sourceSets {
