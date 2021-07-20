@@ -33,6 +33,7 @@
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
 *.er
+*.eu.pythonanywhere.com
 *.ex.futurecms.at
 *.ex.ortsinfo.at
 *.firenet.ch
@@ -72,6 +73,7 @@
 *.paywhirl.com
 *.pg
 *.platformsh.site
+*.pythonanywhere.com
 *.quipelements.com
 *.r.appspot.com
 *.s5y.io
