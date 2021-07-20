@@ -1,45 +1,34 @@
 package example.armeria.thrift;
 
+import static example.armeria.thrift.Main.configureServices;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.TimeUnit;
 
 import org.apache.thrift.TException;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class HelloServiceTest {
 
-    private static Server server;
-    private static HelloService.AsyncIface helloService;
-
-    @BeforeAll
-    static void beforeClass() throws Exception {
-        server = Main.newServer(0, 0);
-        server.start().join();
-        helloService = Clients.newClient(uri(), HelloService.AsyncIface.class);
-    }
-
-    @AfterAll
-    static void afterClass() {
-        if (server != null) {
-            server.stop().join();
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            configureServices(sb);
         }
-    }
-
-    private static String uri() {
-        return "tbinary+http://127.0.0.1:" + server.activeLocalPort() + '/';
-    }
+    };
 
     @Test
     void getReply() throws TException {
         final ThriftFuture<HelloReply> future = new ThriftFuture<>();
-        helloService.hello(new HelloRequest("Armeria"), future);
+        helloService().hello(new HelloRequest("Armeria"), future);
         assertThat(future.join().getMessage()).isEqualTo("Hello, Armeria!");
     }
 
@@ -53,7 +42,7 @@ class HelloServiceTest {
     @Test
     void getReplyWithDelay() throws TException {
         final ThriftFuture<HelloReply> future = new ThriftFuture<>();
-        helloService.lazyHello(new HelloRequest("Armeria"), future);
+        helloService().lazyHello(new HelloRequest("Armeria"), future);
         assertThat(future.join().getMessage()).isEqualTo("Hello, Armeria!");
     }
 
@@ -61,9 +50,17 @@ class HelloServiceTest {
     void getReplyFromServerSideBlockingCall() throws TException {
         final ThriftFuture<HelloReply> future = new ThriftFuture<>();
         final long startTime = System.nanoTime();
-        helloService.blockingHello(new HelloRequest("Armeria"), future);
+        helloService().blockingHello(new HelloRequest("Armeria"), future);
 
         assertThat(future.join().getMessage()).isEqualTo("Hello, Armeria!");
         assertThat(TimeUnit.NANOSECONDS.toSeconds(System.nanoTime() - startTime)).isGreaterThanOrEqualTo(3);
+    }
+
+    private static HelloService.AsyncIface helloService() {
+        return Clients.newClient(uri(), HelloService.AsyncIface.class);
+    }
+
+    private static String uri() {
+        return server.httpUri(ThriftSerializationFormats.BINARY).toString();
     }
 }

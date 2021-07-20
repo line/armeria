@@ -1,23 +1,9 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
-buildscript {
-    val managedVersions = extra["managedVersions"] as Map<*, *>
-    repositories {
-        gradlePluginPortal()
-    }
-    dependencies {
-        classpath("org.jlleitschuh.gradle:ktlint-gradle:${managedVersions["org.jlleitschuh.gradle:ktlint-gradle"]}")
-    }
-}
-
 plugins {
     application
-    id("org.jetbrains.kotlin.jvm")
-    id("org.jlleitschuh.gradle.ktlint") version "9.2.1"
 }
 
 application {
-    mainClassName = "example.armeria.grpc.kotlin.MainKt"
+    mainClass.set("example.armeria.grpc.kotlin.MainKt")
 }
 
 dependencies {
@@ -33,15 +19,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("io.grpc:grpc-kotlin-stub")
 
+    testImplementation(project(":junit5"))
     testImplementation("javax.annotation:javax.annotation-api")
     testImplementation("net.javacrumbs.json-unit:json-unit-fluent")
     testImplementation("org.assertj:assertj-core")
     testImplementation("org.awaitility:awaitility")
     testImplementation("org.junit.jupiter:junit-jupiter-api")
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xjsr305=strict", "-java-parameters")
-    }
 }

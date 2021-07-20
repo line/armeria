@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.common.stream;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -39,6 +43,11 @@ public class EmptyFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     final void cleanupObjects(@Nullable Throwable cause) {
         // Empty streams have no objects to clean.
+    }
+
+    @Override
+    final List<T> drainAll(boolean withPooledObjects) {
+        return ImmutableList.of();
     }
 
     @Override

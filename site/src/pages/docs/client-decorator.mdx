@@ -169,6 +169,128 @@ preview because <type://ContentPreviewingClient> is evaluated first for the HTTP
 For <type://RetryingClient>, please check out 
 [`RetryingClient` with logging](/docs/client-retry#retryingclient-with-logging).
 
+## Modifying responses
+
+We can modify the responses in a decorator via the <type://HttpResponse#mapHeaders(Function)>,
+<type://HttpResponse#mapData(Function)>, <type://HttpResponse#mapInformational(Function)>
+or <type://HttpResponse.mapTrailers(Function)> methods, or, if more advanced/stateful
+processing is necessary, by wrapping the <type://HttpResponse> in a <type://FilteredHttpResponse>.
+
+### Using transforming methods
+
+```java
+
+import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.HttpData;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+ClientBuilder cb = Clients.builder("http");
+cb.decorator((delegate, ctx, req) -> {
+    final AtomicBoolean initialHttpData = new AtomicBoolean(true);
+    return delegate
+        .execute(ctx, req)
+        .mapHeaders(headers -> headers.toBuilder().add("x-foo", "foobar").build())
+        .mapTrailers(trailers -> ...)
+        .mapInformational(informationalHeader -> ...)
+        .mapData((httpData) -> {
+            HttpData result = httpData;
+            if (initialHttpData.get()) {
+                initialHttpData.set(false);
+                byte[] ascii = "{\"foo\": \"foobar\",".getBytes(StandardCharsets.US_ASCII);
+                byte[] combined = Arrays.copyOf(ascii, ascii.length + httpData.length() - 1);
+                System.arraycopy(httpData.array(), 1, combined, ascii.length, httpData.length());
+                result = HttpData.wrap(combined);
+            }
+            return result;
+        });
+});
+```
+
+### Using <type://FilteredHttpResponse>:
+
+A couple of caveats to note here.
+* Informational response headers may occur zero or more times.
+* <type://HttpData> will almost always just be a part of the whole response data
+  unless the response has been passed through <type://HttpResponse#aggregate()>.
+
+```java
+import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.FilteredHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ResponseHeaders;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
+ClientBuilder cb = Clients.builder(...);
+cb.decorator((delegate, ctx, req) -> {
+    HttpResponse response = delegate.execute(ctx, req);
+    return new FilteredHttpResponse(response) {
+        boolean initialHttpData = true;
+        protected HttpObject filter(HttpObject obj) {
+            if (obj instanceof ResponseHeaders) {
+                // Can receive multiple ResponseHeaders whose status is informational.
+                ResponseHeaders responseHeaders = (ResponseHeaders) obj;
+                if (responseHeaders.status().isInformational()) {
+                    return obj;
+                }
+                // Add a "x-foo" header into the response.
+                return responseHeaders.toBuilder()
+                                      .add("x-foo", "foobar")
+                                      .build();
+            } else if (obj instanceof HttpData) {
+                HttpData httpData = (HttpData) obj;
+                // Example of how to insert attribute into json payload.
+                // initial '{' in response is assumed to be first byte
+                if (initialHttpData) {
+                    initialHttpData = false;
+                    byte[] ascii = "{\"foo\": \"foobar\",".getBytes(StandardCharsets.US_ASCII);
+                    byte[] combined = Arrays.copyOf(ascii, ascii.length +  httpData.length() - 1);
+                    System.arraycopy(httpData.array(), 1, combined, ascii.length, httpData.length());
+                    return HttpData.wrap(combined);
+                }
+            } else {
+                // Http trailers.
+                assert obj instanceof HttpHeaders;
+            }
+            return obj;
+        }
+    };
+});
+```
+
+## Reacting to or logging responses
+
+If modification is not required, e.g. when handling quota responses from the service, and it doesn't need to
+look at the <type://HttpData>, it can be achieved in a more performant way via 
+`ClientRequestContext.log().whenAvailable(RequestLogProperty).thenAccept(...)`. Accessing the
+<type://ClientRequestContext> can be done via either wrapping in a decorator (and using the ctx or by using
+<type://ClientRequestContextCaptor>:
+
+```java
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
+
+HttpResponse res;
+try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+    res = webClient.get(path);
+    captor.get().log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS)
+          .thenAccept(log -> {
+              System.err.println(log.responseHeaders());
+          });
+}
+```
+
+See [Structured Logging](/docs/advanced-structued-logging) to learn more about the properties
+you can retrieve.
+
 ## See also
 
 - [Decorating a service](/docs/server-decorator)

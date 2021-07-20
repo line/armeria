@@ -457,8 +457,7 @@ class AnnotatedDocServiceTest {
 
         @Get("/bean")
         public HttpResponse bean(CompositeBean compositeBean) throws JsonProcessingException {
-            final ObjectMapper mapper = new ObjectMapper();
-            return HttpResponse.of(mapper.writeValueAsString(compositeBean));
+            return HttpResponse.ofJson(compositeBean);
         }
 
         @Get("/exclude1")

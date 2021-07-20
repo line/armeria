@@ -1,14 +1,13 @@
 package example.armeria.server.annotated;
 
-import static example.armeria.server.annotated.Main.newServer;
+import static example.armeria.server.annotated.Main.configureServices;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
 
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -17,32 +16,22 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class AnnotatedServiceTest {
 
-    private static Server server;
-    private static WebClient client;
-
-    @BeforeAll
-    static void beforeClass() {
-        server = newServer(0);
-        server.start().join();
-        client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
-    }
-
-    @AfterAll
-    static void afterClass() {
-        if (server != null) {
-            server.stop().join();
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            configureServices(sb);
         }
-        if (client != null) {
-            client.options().factory().close();
-        }
-    }
+    };
 
     @Test
     void testPathPatternService() {
+        final WebClient client = client();
         AggregatedHttpResponse res;
 
         res = client.get("/pathPattern/path/armeria").aggregate().join();
@@ -60,6 +49,7 @@ class AnnotatedServiceTest {
 
     @Test
     void testInjectionService() {
+        final WebClient client = client();
         AggregatedHttpResponse res;
 
         res = client.get("/injection/param/armeria/1?gender=male").aggregate().join();
@@ -88,6 +78,7 @@ class AnnotatedServiceTest {
 
     @Test
     void testMessageConverterService() {
+        final WebClient client = client();
         AggregatedHttpResponse res;
         String body;
 
@@ -119,6 +110,7 @@ class AnnotatedServiceTest {
 
     @Test
     void testExceptionHandlerService() {
+        final WebClient client = client();
         AggregatedHttpResponse res;
 
         res = client.get("/exception/locallySpecific").aggregate().join();
@@ -139,5 +131,9 @@ class AnnotatedServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         res = client.get("/exception/default/409").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    private static WebClient client() {
+        return WebClient.of(server.httpUri());
     }
 }

@@ -3,7 +3,7 @@
 Sometimes, the default timeouts used by the Armeria clients do not suit a particular scenario well.
 In these cases, you might want to override the timeout settings.
 
-## Using `ClientBuilder`
+## Using <type://ClientBuilder>
 
 ```java
 import java.time.Duration;
@@ -18,6 +18,43 @@ HelloService.Iface client =
            .responseTimeout(Duration.ofSeconds(responseTimeout))
            .writeTimeout(Duration.ofSeconds(writeTimeout))
            .build(HelloService.Iface.class);
+```
+
+## Using <type://WebClientRequestPreparation>
+
+You can override the properties defined in <type://RequestOptions> at request level
+using <type://WebClient#prepare()>.
+
+```java
+import com.linecopr.armeria.client.WebClient;
+
+WebClient client = WebClient.of("http://example.com"); 
+client.prepare()
+      .get("/hello")
+      .responseTimeout(Duration.ofSeconds(30))
+      .writeTimeout(Duration.ofSeconds(10)
+      .maxResponseLength(1024)
+      .execute();
+```
+
+## Using <type://RequestOptions>
+
+You can also create a <type://RequestOptions> to override the properties at request level. The
+created <type://RequestOptions> could be passed to <type://WebClient#execute(HttpRequest,RequestOptions)?full>
+with an <type://HttpRequest>.
+
+```java
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.common.HttpRequest;
+
+HttpRequest req = HttpRequest.of(HttpMethod.GET, "/hello");
+RequestOptions options = 
+    RequestOptions.builder()
+                  .responseTimeout(Duration.ofSeconds(30))
+                  .writeTimeout(Duration.ofSeconds(10)
+                  .maxResponseLength(1024)
+                  .build();
+client.execute(req, options);
 ```
 
 <Tip>

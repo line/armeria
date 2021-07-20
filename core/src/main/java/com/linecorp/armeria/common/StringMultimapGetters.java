@@ -47,6 +47,16 @@ interface StringMultimapGetters<IN_NAME extends CharSequence, NAME extends IN_NA
     List<String> getAll(IN_NAME name);
 
     @Nullable
+    Boolean getBoolean(IN_NAME name);
+
+    boolean getBoolean(IN_NAME name, boolean defaultValue);
+
+    @Nullable
+    Boolean getLastBoolean(IN_NAME name);
+
+    boolean getLastBoolean(IN_NAME name, boolean defaultValue);
+
+    @Nullable
     Integer getInt(IN_NAME name);
 
     int getInt(IN_NAME name, int defaultValue);
@@ -101,6 +111,8 @@ interface StringMultimapGetters<IN_NAME extends CharSequence, NAME extends IN_NA
     boolean contains(IN_NAME name, String value);
 
     boolean containsObject(IN_NAME name, Object value);
+
+    boolean containsBoolean(IN_NAME name, boolean value);
 
     boolean containsInt(IN_NAME name, int value);
 

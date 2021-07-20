@@ -354,13 +354,27 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString CONTENT_BASE = create("Content-Base");
     /**
-     * The HTTP {@code "Content-Disposition"} header field name.
+     * The HTTP/MIME {@code "Content-Description"} header field name.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-6.2">RFC 1521:
+     * MIME Part One: Optional Content-Description Header Field</a>
+     */
+    public static final AsciiString CONTENT_DESCRIPTION = create("Content-Description");
+    /**
+     * The HTTP/MIME {@code "Content-Disposition"} header field name.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc2183">RFC 2183:
+     * Communicating Presentation Information in Internet Messages: The Content-Disposition Header Field</a>
      */
     public static final AsciiString CONTENT_DISPOSITION = create("Content-Disposition");
     /**
      * The HTTP {@code "Content-Encoding"} header field name.
      */
     public static final AsciiString CONTENT_ENCODING = create("Content-Encoding");
+    /**
+     * The HTTP/MIME {@code "Content-ID"} header field name.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-6.1">RFC 1521:
+     * MIME Part One: Optional Content-ID Header Field</a>
+     */
+    public static final AsciiString CONTENT_ID = create("Content-ID");
     /**
      * The HTTP {@code "Content-Language"} header field name.
      */
@@ -388,6 +402,12 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString CONTENT_SECURITY_POLICY_REPORT_ONLY =
             create("Content-Security-Policy-Report-Only");
+    /**
+     * The HTTP/MIME {@code "Content-Transfer-Encoding"} header field name.
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-5">RFC 1521:
+     * MIME Part One: The Content-Transfer-Encoding Header Field</a>
+     */
+    public static final AsciiString CONTENT_TRANSFER_ENCODING = create("Content-Transfer-Encoding");
     /**
      * The HTTP {@code "ETag"} header field name.
      */

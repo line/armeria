@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
 
+import io.grpc.BindableService;
 import io.grpc.Channel;
 import io.grpc.ServiceDescriptor;
 
@@ -62,8 +63,8 @@ public final class KotlinGrpcClientStubFactory implements GrpcClientStubFactory 
     private static Annotation stubForAnnotation(Class<?> clientType) {
         try {
             @SuppressWarnings("unchecked")
-            final Class<Annotation> annotationClass =
-                    (Class<Annotation>) Class.forName("io.grpc.kotlin.StubFor");
+            final Class<Annotation> annotationClass = (Class<Annotation>) Class.forName(
+                    BindableService.class.getPackage().getName() + ".kotlin.StubFor");
             final Annotation annotation = clientType.getAnnotation(annotationClass);
             if (annotation == null) {
                 throw new IllegalStateException(

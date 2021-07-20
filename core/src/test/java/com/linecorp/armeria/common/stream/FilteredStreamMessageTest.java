@@ -107,7 +107,8 @@ class FilteredStreamMessageTest {
 
     @Test
     void notifyCancellation() {
-        final HttpData data = HttpData.wrap(newPooledBuffer()).withEndOfStream();
+        final ByteBuf buf = newPooledBuffer();
+        final HttpData data = HttpData.wrap(buf).withEndOfStream();
         final DefaultStreamMessage<HttpData> stream = new DefaultStreamMessage<>();
         stream.write(data);
         stream.close();
@@ -119,7 +120,7 @@ class FilteredStreamMessageTest {
                         return obj;
                     }
                 };
-        SubscriptionOptionTest.notifyCancellation(filtered);
+        SubscriptionOptionTest.notifyCancellation(buf, filtered);
     }
 
     @Test

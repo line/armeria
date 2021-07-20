@@ -1,14 +1,13 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 import java.util.concurrent.atomic.AtomicBoolean
 
 plugins {
     id 'com.google.osdetector' version '1.6.2' apply false
     // If you want to change `org.jetbrains.kotlin.jvm` version,
     // you also need to change `org.jetbrains.kotlin:kotlin-allopen` version in `dependencies.yml`.
-    id 'org.jetbrains.kotlin.jvm' version '1.5.0' apply false
+    id 'org.jetbrains.kotlin.jvm' version '1.5.10' apply false
+    id 'org.jlleitschuh.gradle.ktlint' version '10.1.0' apply false
 
-    id 'net.ltgt.errorprone' version '1.2.1' apply false
+    id 'net.ltgt.errorprone' version '2.0.2' apply false
 }
 
 allprojects {
@@ -39,6 +38,9 @@ allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
         maxHeapSize = '512m'
+        if (rootProject.ext.testJavaVersion >= 9) {
+            jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+        }
 
         // Enable leak detection when '-Pleak' option is specified.
         if (rootProject.hasProperty('leak')) {
@@ -109,7 +111,8 @@ configure(projectsWithFlags('java')) {
         testImplementation 'com.google.errorprone:error_prone_annotations'
 
         // FastUtil
-        implementation 'it.unimi.dsi:fastutil'
+        implementation 'it.unimi.dsi:fastutil-core'
+        implementation 'it.unimi.dsi:fastutil-extra'
 
         // Guava
         implementation 'com.google.guava:guava'
@@ -157,21 +160,36 @@ configure(projectsWithFlags('java')) {
         testImplementation 'org.hamcrest:hamcrest-library'
     }
 
-    // Target Java 8.
-    tasks.withType(JavaCompile) {
-        options.compilerArgs += ['--release', '8']
+    tasks.withType(JavaCompile) { task ->
+        if (task.path.startsWith(':examples:')) {
+            // Target Java 11 for examples.
+            options.release.set(11)
+        } else {
+            // Target Java 8 for the rest of them.
+            options.release.set(8)
+        }
     }
 
-    tasks.withType(KotlinCompile) {
-        kotlinOptions {
-            jvmTarget = "1.8"
-            freeCompilerArgs = ["-Xjsr305=strict"]
-        }
+    // Configure the default DuplicatesStrategy for such as:
+    // - c.l.armeria.versions.properties
+    // - thrift/cassandra.json
+    // - and so on
+    tasks.sourcesJar.duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    tasks.withType(Copy) {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 }
 
-// Configure the Javadoc tasks of all projects.
 allprojects {
+
+    tasks.all { task ->
+        // Disables all tasks in examples when we use a JDK version under 11.
+        if (rootProject.ext.testJavaVersion < 11 && task.path.startsWith(':examples:')) {
+            task.enabled = false
+        }
+    }
+
+    // Configure the Javadoc tasks of all projects.
     tasks.withType(Javadoc) {
         options {
             // Groups
@@ -188,9 +206,9 @@ allprojects {
     }
 }
 
-// Require to use JDK 15 when releasing.
+// Require to use JDK 16 when releasing.
 tasks.release.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_15) {
-        throw new IllegalStateException("You must release using JDK 15.");
+    if (JavaVersion.current() != JavaVersion.VERSION_16) {
+        throw new IllegalStateException("You must release using JDK 16.");
     }
 }

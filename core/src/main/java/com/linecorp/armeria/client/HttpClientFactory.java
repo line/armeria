@@ -368,6 +368,11 @@ final class HttpClientFactory implements ClientFactory {
         }
     }
 
+    @Override
+    public int numConnections() {
+        return pools.values().stream().mapToInt(HttpChannelPool::numConnections).sum();
+    }
+
     HttpChannelPool pool(EventLoop eventLoop) {
         final HttpChannelPool pool = pools.get(eventLoop);
         if (pool != null) {

@@ -48,9 +48,17 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+/**
+ * A helper class for testing with an embedded Consul.
+ * Unfortunately, an embedded Consul frequently fails to start in CI environment.
+ * See https://github.com/line/armeria/issues/3514 for details.
+ * Selectively disable Consul tests to suppress the stressful flakiness.
+ */
+@FlakyTest
 public abstract class ConsulTestBase {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsulTestBase.class);

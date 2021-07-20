@@ -36,3 +36,38 @@ ctx.attrs().forEachRemaining(e -> {
     System.err.println(e.getKey() + ": " + e.getValue());
 });
 ```
+
+## Setting attributes using <type://WebClientRequestPreparation>
+
+You can set attributes when building a request using <type://WebClient#prepare()>.
+
+```java
+import com.linecorp.armeria.client.WebClient;
+
+static final AttributeKey<Integer> USER_ID = AttributeKey.valueOf(MyAttributeKeys.class, "USER_ID");
+static final AttributeKey<String> USER_SECRET = AttributeKey.valueOf(MyAttributeKeys.class, "USER_SECRET");
+
+WebClient client = WebClient.of("http://example.com"); 
+client.prepare()
+      .get("/my-service")
+      .attr(USER_ID, userId)
+      .attr(USER_SECRET, secret)
+      .execute();
+```
+
+## Setting attributes using <type://RequestOptions>
+
+You can also create a <type://RequestOptions> and pass it
+to <type://WebClient#execute(HttpRequest,RequestOptions)?full> with an <type://HttpRequest>.
+
+```java
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.common.HttpRequest;
+
+HttpRequest req = HttpRequest.of(HttpMethod.GET, "/my-service");
+RequestOptions options = RequestOptions.builder()
+                                       .attr(USER_ID, userId)
+                                       .attr(USER_SECRET, secret)
+                                       .build();
+client.execute(req, options);
+```

@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.common.stream.StreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Queue;
@@ -80,6 +80,8 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     private static final AtomicReferenceFieldUpdater<DefaultStreamMessage, State> stateUpdater =
             AtomicReferenceFieldUpdater.newUpdater(DefaultStreamMessage.class, State.class, "state");
 
+    private static final int INITIAL_CAPACITY = 32;
+
     private final Queue<Object> queue;
 
     @Nullable
@@ -103,7 +105,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
      * Creates a new instance.
      */
     public DefaultStreamMessage() {
-        queue = new MpscChunkedArrayQueue<>(32, 1 << 30);
+        queue = new MpscChunkedArrayQueue<>(INITIAL_CAPACITY, 1 << 30);
     }
 
     @Override
@@ -411,7 +413,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         T o = (T) queue.remove();
         inOnNext = true;
         try {
-            o = prepareObjectForNotification(subscription, o);
+            o = prepareObjectForNotification(o, subscription.withPooledObjects());
             subscriber.onNext(o);
         } catch (Throwable t) {
             if (setState(State.OPEN, State.CLEANUP) || setState(State.CLOSED, State.CLEANUP)) {

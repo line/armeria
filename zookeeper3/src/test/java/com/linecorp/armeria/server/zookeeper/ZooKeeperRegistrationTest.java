@@ -38,11 +38,13 @@ import com.linecorp.armeria.client.zookeeper.ZooKeeperDiscoverySpec;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListener;
 
 import zookeeperjunit.CloseableZooKeeper;
 
+@FlakyTest
 class ZooKeeperRegistrationTest {
 
     private static final String Z_NODE = "/testEndPoints";

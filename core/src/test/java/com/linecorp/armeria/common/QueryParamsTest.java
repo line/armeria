@@ -231,8 +231,10 @@ class QueryParamsTest {
             assertThat(actual).isEqualTo(expected);
 
             // Off-by-one check
-            actual = decodeComponent(TemporaryThreadLocals.get(), ' ' + src + ' ', 1, src.length() + 1);
-            assertThat(actual).isEqualTo(expected);
+            try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
+                actual = decodeComponent(tempThreadLocals, ' ' + src + ' ', 1, src.length() + 1);
+                assertThat(actual).isEqualTo(expected);
+            }
         }
     }
 

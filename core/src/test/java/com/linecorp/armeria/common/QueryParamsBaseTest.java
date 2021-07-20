@@ -89,6 +89,35 @@ class QueryParamsBaseTest {
         assertThat(params.getLast("Foo")).isEqualTo("2");
     }
 
+    @Test
+    void testGetBooleanOperation() {
+        final QueryParamsBase params = newEmptyParams();
+        params.add("foo", "100");
+        assertThat(params.getBoolean("foo")).isNull();
+        assertThat(params.getBoolean("foo", true)).isTrue();
+
+        params.add("foo_true", "1");
+        assertThat(params.getBoolean("foo_true")).isTrue();
+        assertThat(params.containsBoolean("foo_true", true)).isTrue();
+        assertThat(params.containsBoolean("foo_true", false)).isFalse();
+
+        params.add("foo_false", "0");
+        assertThat(params.getBoolean("foo_false")).isFalse();
+        assertThat(params.containsBoolean("foo_false", false)).isTrue();
+        assertThat(params.containsBoolean("foo_false", true)).isFalse();
+
+        params.add("bar", "true");
+        params.add("bar", "false");
+        assertThat(params.getBoolean("bar")).isTrue();
+        assertThat(params.getLastBoolean("bar")).isFalse();
+        assertThat(params.getLastBoolean("baz", false)).isFalse();
+        assertThat(params.containsBoolean("baz", true)).isFalse();
+
+        params.add("baz", "false");
+        assertThat(params.containsBoolean("baz", false)).isTrue();
+        assertThat(params.containsBoolean("baz", true)).isFalse();
+    }
+
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
 
     @Test
