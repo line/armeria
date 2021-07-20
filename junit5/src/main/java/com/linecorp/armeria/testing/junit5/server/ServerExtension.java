@@ -29,12 +29,16 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.ServerRuleDelegate;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
+import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 /**
  * An {@link Extension} that allows easy set-up and tear-down of a {@link Server}.
  */
 public abstract class ServerExtension extends AbstractAllOrEachExtension {
+    private final ServiceRequestContextCaptor contextCaptor;
+
     private final ServerRuleDelegate delegate;
 
     /**
@@ -51,9 +55,11 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      *                  {@code false} if the {@link Server} should start when a user calls {@link #start()}.
      */
     protected ServerExtension(boolean autoStart) {
+        contextCaptor = new ServiceRequestContextCaptor();
         delegate = new ServerRuleDelegate(autoStart) {
             @Override
             public void configure(ServerBuilder sb) throws Exception {
+                sb.decorator(contextCaptor.decorator(ServerExtension.this::shouldCapture));
                 ServerExtension.this.configure(sb);
             }
         };
@@ -69,6 +75,12 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
         } catch (Throwable t) {
             throw new RuntimeException("Failed to set up before callback", t);
         }
+    }
+
+    @Override
+    public void beforeEach(ExtensionContext context) throws Exception {
+        super.beforeEach(context);
+        contextCaptor.clear();
     }
 
     /**
@@ -277,5 +289,22 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      */
     public InetSocketAddress httpsSocketAddress() {
         return delegate.httpsSocketAddress();
+    }
+
+    /**
+     * Returns the {@link ServiceRequestContextCaptor} that captures all the {@link
+     * ServiceRequestContext}s in this {@link Server}.
+     */
+    public final ServiceRequestContextCaptor requestContextCaptor() {
+        return contextCaptor;
+    }
+
+    /**
+     * Determines whether the {@link ServiceRequestContext} should be captured or not.
+     * This method returns {@code true} by default. Override it to capture the contexts
+     * selectively.
+     */
+    protected boolean shouldCapture(ServiceRequestContext ctx) {
+        return true;
     }
 }
