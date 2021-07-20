@@ -16,7 +16,9 @@
 
 package com.linecorp.armeria.common;
 
-public final class UserIdRequestContextStorageListenerProvider implements RequestContextStorageListenerProvider {
+public final class UserIdRequestContextStorageListenerProvider
+        implements RequestContextStorageListenerProvider {
+
     @Override
     public RequestContextStorageListener newStorageListener() {
         return UserIdRequestContextStorageListener.INSTANCE;

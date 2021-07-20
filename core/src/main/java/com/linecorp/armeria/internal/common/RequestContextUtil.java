@@ -63,15 +63,13 @@ public final class RequestContextUtil {
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
 
     private static RequestContextStorage requestContextStorage;
-    private static List<RequestContextStorageListener> requestContextStorageListeners;
+    private static final List<RequestContextStorageListener> requestContextStorageListeners;
 
     static {
         final List<RequestContextStorageProvider> providers = ImmutableList.copyOf(
                 ServiceLoader.load(RequestContextStorageProvider.class));
         final String providerFqcn = Flags.requestContextStorageProvider();
-        RequestContextStorage tempRequestContextStorage;
         if (!providers.isEmpty()) {
-
             RequestContextStorageProvider provider = null;
             if (providers.size() > 1) {
                 if (providerFqcn == null) {
@@ -108,15 +106,14 @@ public final class RequestContextUtil {
             }
 
             try {
-                tempRequestContextStorage = requireNonNull(provider.newStorage(),
-                                                           "provider.newStorage() returned null");
+                requestContextStorage = requireNonNull(provider.newStorage(),
+                                                       "provider.newStorage() returned null");
             } catch (Throwable t) {
                 throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
             }
         } else {
-            tempRequestContextStorage = RequestContextStorage.threadLocal();
+            requestContextStorage = RequestContextStorage.threadLocal();
         }
-        requestContextStorage = tempRequestContextStorage;
 
         final List<RequestContextStorageListenerProvider> listenerProviders = ImmutableList.copyOf(
                 ServiceLoader.load(RequestContextStorageListenerProvider.class));
@@ -126,7 +123,7 @@ public final class RequestContextUtil {
             for (RequestContextStorageListenerProvider listenerProvider : listenerProviders) {
                 try {
                     final RequestContextStorageListener listener = listenerProvider.newStorageListener();
-                    requireNonNull(listener, "hookProvider.newStorageHook() returned null");
+                    requireNonNull(listener, "listener.newStorageListener() returned null");
                     listenersBuilder.add(listener);
                 } catch (Throwable t) {
                     throw new IllegalStateException(
@@ -243,10 +240,11 @@ public final class RequestContextUtil {
 
     /**
      * Invokes {@link RequestContextStorageListener#onPush(RequestContext)} and returns {@link SafeCloseable}
-     * which pops the current {@link RequestContext} in the storage and pushes back the specified {@code toRestore}.
+     * which pops the current {@link RequestContext} in the storage and pushes back
+     * the specified {@code toRestore}.
      */
-    public static SafeCloseable invokeListenerAndPop(RequestContext current,
-                                                     @Nullable RequestContext toRestore) {
+    public static SafeCloseable invokeListenerAndPopLater(RequestContext current,
+                                                          @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
 
         final SafeCloseable closeable = invokeListener(current);
