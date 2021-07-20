@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.limit;
 
 import static com.linecorp.armeria.client.limit.ConcurrencyLimitingClient.newDecorator;
+import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -24,7 +25,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -33,6 +37,7 @@ import org.mockito.Mock;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -45,9 +50,37 @@ class ConcurrencyLimitingClientTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
+    static final BiConsumer<AggregatedHttpResponse, Throwable> NO_OP = (response, throwable) -> {
+
+    };
 
     @Mock
     private HttpClient delegate;
+
+    private static ClientRequestContext newContext() {
+        return ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                   .eventLoop(eventLoop.get())
+                                   .build();
+    }
+
+    /**
+     * Closes the response returned by the delegate and consumes everything from it, so that its close future
+     * is completed.
+     */
+    private static void closeAndDrain(HttpResponseWriter actualRes, HttpResponse deferredRes) {
+        actualRes.close();
+        deferredRes.subscribe(NoopSubscriber.get());
+        deferredRes.whenComplete().join();
+        waitForEventLoop();
+    }
+
+    private static void waitForEventLoop() {
+        eventLoop.get().submit(() -> { /* no-op */ }).syncUninterruptibly();
+    }
+
+    private static HttpRequest newReq() {
+        return HttpRequest.of(HttpMethod.GET, "/dummy");
+    }
 
     /**
      * Tests the request pattern  that does not exceed maxConcurrency.
@@ -216,28 +249,88 @@ class ConcurrencyLimitingClientTest {
         await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
     }
 
-    private static ClientRequestContext newContext() {
-        return ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                                   .eventLoop(eventLoop.get())
-                                   .build();
+    @Test
+    void configuresClientWithConcurrencyLimit() {
+        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
+                                                                  .timeout(Duration.of(10, SECONDS))
+                                                                  .predicate(requestContext -> true)
+                                                                  .build();
+        final ConcurrencyLimitingClient client = newDecorator(concurrencyLimit).apply(delegate);
+        assertThat(client.concurrencyLimit()).isEqualTo(concurrencyLimit);
     }
 
-    /**
-     * Closes the response returned by the delegate and consumes everything from it, so that its close future
-     * is completed.
-     */
-    private static void closeAndDrain(HttpResponseWriter actualRes, HttpResponse deferredRes) {
-        actualRes.close();
-        deferredRes.subscribe(NoopSubscriber.get());
-        deferredRes.whenComplete().join();
-        waitForEventLoop();
+    @Test
+    void skipsConcurrencyBasedOnRequestContext() throws Exception {
+        final ClientRequestContext ctx1 = newContext();
+        final ClientRequestContext ctx2 = newContext();
+        final HttpRequest req1 = newReq();
+        final HttpRequest req2 = newReq();
+        final HttpResponseWriter actualRes1 = HttpResponse.streaming();
+        final HttpResponseWriter actualRes2 = HttpResponse.streaming();
+
+        when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
+        when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
+
+        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
+                                                                  .predicate(requestContext -> false)
+                                                                  .build();
+
+        final ConcurrencyLimitingClient client =
+                newDecorator(concurrencyLimit).apply(delegate);
+
+        // both requests should be delegated immediately, creating no deferred response.
+        final HttpResponse res1 = client.execute(ctx1, req1);
+        final HttpResponse res2 = client.execute(ctx2, req2);
+
+        verify(delegate).execute(ctx1, req1);
+        assertThat(res1.isOpen()).isTrue();
+        assertThat(client.numActiveRequests()).isEqualTo(2);
+
+        verify(delegate).execute(ctx2, req2);
+        assertThat(res2.isOpen()).isTrue();
+        assertThat(client.numActiveRequests()).isEqualTo(2);
+
+        // Complete the response, leaving no active requests.
+        closeAndDrain(actualRes1, res1);
+        closeAndDrain(actualRes2, res2);
+        await().untilAsserted(() -> assertThat(client.numActiveRequests()).isZero());
     }
 
-    private static void waitForEventLoop() {
-        eventLoop.get().submit(() -> { /* no-op */ }).syncUninterruptibly();
-    }
+    @Test
+    void enforcesConcurrencyControlOnMultipleClients() throws Exception {
+        final ClientRequestContext ctx1 = newContext();
+        final ClientRequestContext ctx2 = newContext();
+        final HttpRequest req1 = newReq();
+        final HttpRequest req2 = newReq();
+        final HttpResponseWriter actualRes1 = HttpResponse.streaming();
+        final HttpResponseWriter actualRes2 = HttpResponse.streaming();
 
-    private static HttpRequest newReq() {
-        return HttpRequest.of(HttpMethod.GET, "/dummy");
+        when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
+
+        final ConcurrencyLimit concurrencyLimit = ConcurrencyLimit.builder(1)
+                                                                  .timeoutMillis(500)
+                                                                  .predicate(requestContext -> true)
+                                                                  .build();
+
+        final ConcurrencyLimitingClient clientOne =
+                newDecorator(concurrencyLimit).apply(delegate);
+
+        final ConcurrencyLimitingClient clientTwo =
+                newDecorator(concurrencyLimit).apply(delegate);
+
+        // Send two requests, where only the first one is delegated.
+        final CompletableFuture<AggregatedHttpResponse> res1 = clientOne.execute(ctx1, req1).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> res2 = clientTwo.execute(ctx2, req2).aggregate();
+
+        await().untilAsserted(() -> {
+            assertThatThrownBy(() -> res2.whenComplete(NO_OP).join())
+                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                    .hasRootCauseInstanceOf(RequestTimeoutException.class);
+            assertThat(res1.whenComplete(NO_OP)).isNotDone();
+        });
+
+
+        actualRes1.close();
+        await().untilAsserted(() -> assertThat(clientOne.numActiveRequests()).isZero());
     }
 }

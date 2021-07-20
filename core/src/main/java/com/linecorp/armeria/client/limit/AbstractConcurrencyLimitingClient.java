@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.limit;
 
-import static java.util.Objects.requireNonNull;
+import static com.linecorp.armeria.client.limit.ConcurrencyLimitBuilder.DEFAULT_TIMEOUT_MILLIS;
 
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
+import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -54,17 +56,14 @@ import io.netty.util.concurrent.ScheduledFuture;
 public abstract class AbstractConcurrencyLimitingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private static final long DEFAULT_TIMEOUT_MILLIS = 10000L;
-
-    private final int maxConcurrency;
-    private final long timeoutMillis;
-    private final AtomicInteger numActiveRequests = new AtomicInteger();
     private final Queue<PendingTask> pendingRequests = new ConcurrentLinkedQueue<>();
+    private final ConcurrencyLimit concurrencyLimit;
+    private final AtomicInteger numActiveRequests;
 
     /**
      * Creates a new instance that decorates the specified {@code delegate} to limit the concurrent number of
-     * active requests to {@code maxConcurrency}, with the default timeout of {@value #DEFAULT_TIMEOUT_MILLIS}
-     * milliseconds.
+     * active requests to {@code maxConcurrency}, with the default timeout of
+     * {@value ConcurrencyLimitBuilder#DEFAULT_TIMEOUT_MILLIS} milliseconds.
      *
      * @param delegate the delegate {@link Client}
      * @param maxConcurrency the maximum number of concurrent active requests. {@code 0} to disable the limit.
@@ -84,30 +83,22 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      */
     protected AbstractConcurrencyLimitingClient(Client<I, O> delegate,
                                                 int maxConcurrency, long timeout, TimeUnit unit) {
+        this(delegate, ConcurrencyLimit.builder(maxConcurrency)
+                                       .timeoutMillis(unit.toMillis(timeout))
+                                       .build());
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@code delegate} to limit the concurrent number of
+     * active requests to {@code maxConcurrency}.
+     *
+     * @param delegate the delegate {@link Client}
+     * @param concurrencyLimit the concurrency limit config
+     */
+    protected AbstractConcurrencyLimitingClient(Client<I, O> delegate, ConcurrencyLimit concurrencyLimit) {
         super(delegate);
-
-        validateAll(maxConcurrency, timeout, unit);
-
-        if (maxConcurrency == Integer.MAX_VALUE) {
-            this.maxConcurrency = 0;
-        } else {
-            this.maxConcurrency = maxConcurrency;
-        }
-        timeoutMillis = unit.toMillis(timeout);
-    }
-
-    static void validateAll(int maxConcurrency, long timeout, TimeUnit unit) {
-        validateMaxConcurrency(maxConcurrency);
-        if (timeout < 0) {
-            throw new IllegalArgumentException("timeout: " + timeout + " (expected: >= 0)");
-        }
-        requireNonNull(unit, "unit");
-    }
-
-    static void validateMaxConcurrency(int maxConcurrency) {
-        if (maxConcurrency < 0) {
-            throw new IllegalArgumentException("maxConcurrency: " + maxConcurrency + " (expected: >= 0)");
-        }
+        this.concurrencyLimit = concurrencyLimit;
+        numActiveRequests = concurrencyLimit.numActiveRequests();
     }
 
     /**
@@ -119,8 +110,8 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        return maxConcurrency == 0 ? unlimitedExecute(ctx, req)
-                                   : limitedExecute(ctx, req);
+        return concurrencyLimit.shouldLimit(ctx) ? limitedExecute(ctx, req)
+                                                 : unlimitedExecute(ctx, req);
     }
 
     private O limitedExecute(ClientRequestContext ctx, I req) throws Exception {
@@ -131,6 +122,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
         pendingRequests.add(currentTask);
         drain();
 
+        final long timeoutMillis = concurrencyLimit.timeoutMillis();
         if (!currentTask.isRun() && timeoutMillis != 0) {
             // Current request was not delegated. Schedule a timeout.
             final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
@@ -162,6 +154,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
     }
 
     final void drain() {
+        final int maxConcurrency = concurrencyLimit.maxConcurrency();
         while (!pendingRequests.isEmpty()) {
             final int currentActiveRequests = numActiveRequests.get();
             if (currentActiveRequests >= maxConcurrency) {
@@ -199,6 +192,11 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
      */
     protected abstract O newDeferredResponse(ClientRequestContext ctx,
                                              CompletionStage<O> resFuture) throws Exception;
+
+    @VisibleForTesting
+    ConcurrencyLimit concurrencyLimit() {
+        return concurrencyLimit;
+    }
 
     private final class PendingTask extends AtomicReference<ScheduledFuture<?>> implements Runnable {
 
