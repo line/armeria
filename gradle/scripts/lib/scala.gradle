@@ -4,7 +4,6 @@ def scala213 = projectsWithFlags('scala_2.13')
 configure(scala212 + scala213) {
 
     apply plugin: 'scala'
-    apply plugin: 'cz.alenkacz.gradle.scalafmt'
 
     compileScala.targetCompatibility = 1.8
     ScalaCompileOptions.metaClass.useAnt = false
@@ -29,6 +28,7 @@ configure(scala212 + scala213) {
     }
 
     if (!rootProject.hasProperty('noLint')) {
+        apply plugin: 'cz.alenkacz.gradle.scalafmt'
         // Run `scalafmt` to automatically format scala code from source sets
         // https://github.com/alenkacz/gradle-scalafmt#tasks
         project.ext.getLintTask().dependsOn tasks.checkScalafmt

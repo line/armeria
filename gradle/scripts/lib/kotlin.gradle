@@ -1,7 +1,6 @@
 configure(projectsWithFlags('kotlin')) {
 
     apply plugin: 'kotlin'
-    apply plugin: "org.jlleitschuh.gradle.ktlint"
 
     def target = "1.8"
     def compilerArgs = ["-Xjsr305=strict", "-java-parameters"]
@@ -14,24 +13,29 @@ configure(projectsWithFlags('kotlin')) {
         kotlinOptions.freeCompilerArgs = compilerArgs
     }
 
-    ktlint {
-        // https://github.com/pinterest/ktlint/issues/764
-        version.set("0.36.0")
-        verbose.set(true)
-        reporters {
-            reporter "html"
-        }
-        // https://github.com/pinterest/ktlint/issues/527
-        disabledRules = ["import-ordering"]
+    if (!rootProject.hasProperty('noLint')) {
+        apply plugin: "org.jlleitschuh.gradle.ktlint"
 
-        filter {
-            exclude("**/gen-src/**")
-        }
-    }
+        ktlint {
+            // https://github.com/pinterest/ktlint/issues/764
+            version.set("0.36.0")
+            verbose.set(true)
+            reporters {
+                reporter "html"
+            }
+            // https://github.com/pinterest/ktlint/issues/527
+            disabledRules = ["import-ordering"]
 
-    // A workaround for 'runKtlintCheckOverMainSourceSet' uses this output of task ':generateProto' without
-    // declaring an explicit or implicit dependency.
-    afterEvaluate {
-        tasks.runKtlintCheckOverMainSourceSet.dependsOn(project.ext.getGenerateSourcesTask())
+            filter {
+                exclude("**/gen-src/**")
+            }
+        }
+
+        afterEvaluate {
+            // A workaround for 'runKtlintCheckOverMainSourceSet' uses this output of task ':generateProto' without
+            // declaring an explicit or implicit dependency.
+            tasks.runKtlintCheckOverMainSourceSet.dependsOn(project.ext.getGenerateSourcesTask())
+            project.ext.getLintTask().dependsOn(tasks.ktlintCheck)
+        }
     }
 }
