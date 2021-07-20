@@ -285,14 +285,23 @@ final class HttpClientFactory implements ClientFactory {
         final Class<?> clientType = params.clientType();
         validateClientType(clientType);
 
-        final HttpClient delegate = params.options().decoration().decorate(clientDelegate);
+        final ClientOptions options = params.options();
+        final HttpClient delegate = options.decoration().decorate(clientDelegate);
 
         if (clientType == HttpClient.class) {
             return delegate;
         }
 
         if (clientType == WebClient.class) {
-            return new DefaultWebClient(params, delegate, meterRegistry);
+            final RedirectConfig redirectConfig = options.redirectConfig();
+            final HttpClient delegate0;
+            if (redirectConfig == RedirectConfig.disabled()) {
+                delegate0 = delegate;
+            } else {
+                delegate0 = new RedirectingClient(delegate, redirectConfig,
+                                                  !Clients.isUndefinedUri(params.uri()));
+            }
+            return new DefaultWebClient(params, delegate0, meterRegistry);
         } else {
             throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
         }

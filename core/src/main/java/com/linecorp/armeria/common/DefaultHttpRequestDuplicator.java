@@ -42,6 +42,11 @@ final class DefaultHttpRequestDuplicator
     }
 
     @Override
+    public RequestHeaders headers() {
+        return headers;
+    }
+
+    @Override
     public HttpRequest duplicate() {
         return duplicate(headers);
     }

@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
@@ -238,26 +239,29 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
         final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
-        doExecute0(ctx, reqDuplicator, req, res, responseFuture);
+        doExecute0(ctx, reqDuplicator, responseFuture, res.whenComplete());
         return res;
     }
 
     private void doExecute0(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
-                            HttpRequest originalReq, HttpResponse returnedRes,
-                            CompletableFuture<HttpResponse> future) {
+                            CompletableFuture<HttpResponse> future,
+                            CompletableFuture<Void> returnedResWhenComplete) {
         final int totalAttempts = getTotalAttempts(ctx);
         final boolean initialAttempt = totalAttempts <= 1;
-        // The request or response has been aborted by the client before it receives a response,
-        // so stop retrying.
-        if (originalReq.whenComplete().isCompletedExceptionally()) {
-            originalReq.whenComplete().handle((unused, cause) -> {
+
+        // Check if the request or response has been aborted by the client before it receives a response.
+        final HttpRequest originalReq = getOriginalRequest(ctx);
+        assert originalReq != null;
+        final CompletableFuture<Void> originalReqWhenComplete = originalReq.whenComplete();
+        if (originalReqWhenComplete.isCompletedExceptionally()) {
+            originalReqWhenComplete.handle((unused, cause) -> {
                 handleException(ctx, rootReqDuplicator, future, cause, initialAttempt);
                 return null;
             });
             return;
         }
-        if (returnedRes.isComplete()) {
-            returnedRes.whenComplete().handle((result, cause) -> {
+        if (returnedResWhenComplete.isDone()) {
+            returnedResWhenComplete.handle((result, cause) -> {
                 final Throwable abortCause = firstNonNull(cause, AbortedStreamException.get());
                 handleException(ctx, rootReqDuplicator, future, abortCause, initialAttempt);
                 return null;
@@ -274,36 +278,44 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         if (initialAttempt) {
             duplicateReq = rootReqDuplicator.duplicate();
         } else {
-            final RequestHeadersBuilder newHeaders = originalReq.headers().toBuilder();
+            final RequestHeadersBuilder newHeaders = rootReqDuplicator.headers().toBuilder();
             newHeaders.setInt(ARMERIA_RETRY_COUNT, totalAttempts - 1);
             duplicateReq = rootReqDuplicator.duplicate(newHeaders.build());
         }
 
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(),
-                                                                  initialAttempt);
-        ctx.logBuilder().addChild(derivedCtx.log());
+        final ClientRequestContext derivedCtx;
+        try {
+            derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
+        } catch (Throwable t) {
+            handleException(ctx, rootReqDuplicator, future, t, initialAttempt);
+            return;
+        }
 
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 
-        final RetryConfig<HttpResponse> config = mapping().get(ctx, originalReq);
+        final RetryConfig<HttpResponse> config = mapping().get(ctx, duplicateReq);
         if (config.requiresResponseTrailers()) {
             response.aggregate().handle((aggregated, cause) -> {
-                handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
-                               cause != null ? HttpResponse.ofFailure(cause) : aggregated.toHttpResponse());
+                final HttpResponse response0 = cause != null ? HttpResponse.ofFailure(cause) : null;
+                assert response0 != null || aggregated != null;
+                handleResponse(config, ctx, rootReqDuplicator, future, returnedResWhenComplete, derivedCtx,
+                               response0, aggregated);
                 return null;
             });
         } else {
-            handleResponse(
-                    config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx, response);
+            handleResponse(config, ctx, rootReqDuplicator, future, returnedResWhenComplete,
+                           derivedCtx, response, null);
         }
     }
 
     private void handleResponse(RetryConfig<HttpResponse> retryConfig, ClientRequestContext ctx,
                                 HttpRequestDuplicator rootReqDuplicator,
-                                HttpRequest originalReq, HttpResponse returnedRes,
-                                CompletableFuture<HttpResponse> future, ClientRequestContext derivedCtx,
-                                HttpResponse response) {
+                                CompletableFuture<HttpResponse> future,
+                                CompletableFuture<Void> returnedResWhenComplete,
+                                ClientRequestContext derivedCtx,
+                                @Nullable HttpResponse response,
+                                @Nullable AggregatedHttpResponse aggregatedRes) {
 
         final RequestLogProperty logProperty =
                 retryConfig.requiresResponseTrailers() ?
@@ -313,6 +325,22 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             final Throwable responseCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             if (retryConfig.needsContentInRule() && responseCause == null) {
+                final RetryRuleWithContent<HttpResponse> ruleWithContent = retryConfig.retryRuleWithContent();
+                assert ruleWithContent != null;
+                if (aggregatedRes != null) {
+                    try {
+                        ruleWithContent.shouldRetry(derivedCtx, aggregatedRes.toHttpResponse(), null)
+                                       .handle((decision, cause) -> handleRetryDecision(
+                                               ctx, derivedCtx, rootReqDuplicator, future,
+                                               returnedResWhenComplete, aggregatedRes.toHttpResponse())
+                                               .apply(decision, cause));
+                    } catch (Throwable cause) {
+                        handleException(ctx, rootReqDuplicator, future, cause, false);
+                    }
+                    return;
+                }
+                assert response != null;
+
                 final HttpResponseDuplicator duplicator =
                         response.toDuplicator(derivedCtx.eventLoop().withoutContext(),
                                               derivedCtx.maxResponseLength());
@@ -320,16 +348,15 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     final TruncatingHttpResponse truncatingHttpResponse =
                             new TruncatingHttpResponse(duplicator.duplicate(), retryConfig.maxContentLength());
                     final HttpResponse duplicated = duplicator.duplicate();
-                    retryConfig.retryRuleWithContent()
-                               .shouldRetry(derivedCtx, truncatingHttpResponse, null)
-                               .handle((decision, cause) -> {
-                                   truncatingHttpResponse.abort();
-                                   return handleBackoff(
-                                           ctx, derivedCtx, rootReqDuplicator, originalReq, returnedRes,
-                                           future, duplicated, duplicator::abort)
-                                           .apply(decision, cause);
-                               });
                     duplicator.close();
+                    ruleWithContent.shouldRetry(derivedCtx, truncatingHttpResponse, null)
+                                   .handle((decision, cause) -> {
+                                       truncatingHttpResponse.abort();
+                                       return handleRetryDecision(
+                                               ctx, derivedCtx, rootReqDuplicator, future,
+                                               returnedResWhenComplete, duplicated)
+                                               .apply(decision, cause);
+                                   });
                 } catch (Throwable cause) {
                     duplicator.abort(cause);
                     handleException(ctx, rootReqDuplicator, future, cause, false);
@@ -342,18 +369,18 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     } else {
                         retryRule = retryConfig.retryRule();
                     }
+                    assert retryRule != null;
 
+                    final HttpResponse response0 = aggregatedRes != null ? aggregatedRes.toHttpResponse()
+                                                                         : response;
+                    assert response0 != null;
                     final CompletionStage<RetryDecision> f = retryRule.shouldRetry(derivedCtx, responseCause);
-
-                    final Runnable originalResClosingTask =
-                            responseCause == null ? response::abort
-                                                  : () -> response.abort(responseCause);
-
-                    f.handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
-                                           originalReq, returnedRes, future, response,
-                                           originalResClosingTask));
+                    f.handle(handleRetryDecision(ctx, derivedCtx, rootReqDuplicator,
+                                                 future, returnedResWhenComplete, response0));
                 } catch (Throwable cause) {
-                    response.abort(cause);
+                    if (response != null) {
+                        response.abort(cause);
+                    }
                     handleException(ctx, rootReqDuplicator, future, cause, false);
                 }
             }
@@ -371,25 +398,21 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         ctx.logBuilder().endResponse(cause);
     }
 
-    private BiFunction<RetryDecision, Throwable, Void> handleBackoff(
+    private BiFunction<RetryDecision, Throwable, Void> handleRetryDecision(
             ClientRequestContext ctx, ClientRequestContext derivedCtx, HttpRequestDuplicator rootReqDuplicator,
-            HttpRequest originalReq, HttpResponse returnedRes, CompletableFuture<HttpResponse> future,
-            HttpResponse originalRes, Runnable originalResClosingTask) {
+            CompletableFuture<HttpResponse> future, CompletableFuture<Void> returnedResWhenComplete,
+            HttpResponse originalRes) {
         return (decision, unused) -> {
             final Backoff backoff = decision != null ? decision.backoff() : null;
             if (backoff != null) {
-                // Set response content with null to make sure that the log is complete.
-                final RequestLogBuilder logBuilder = derivedCtx.logBuilder();
-                logBuilder.responseContent(null, null);
-                logBuilder.responseContentPreview(null);
-
                 final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
                 final long nextDelay = getNextDelay(ctx, backoff, millisAfter);
+
                 if (nextDelay >= 0) {
-                    originalResClosingTask.run();
+                    abortResponse(originalRes, derivedCtx, null);
                     scheduleNextRetry(
                             ctx, cause -> handleException(ctx, rootReqDuplicator, future, cause, false),
-                            () -> doExecute0(ctx, rootReqDuplicator, originalReq, returnedRes, future),
+                            () -> doExecute0(ctx, rootReqDuplicator, future, returnedResWhenComplete),
                             nextDelay);
                     return null;
                 }
@@ -433,5 +456,31 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
 
         return -1;
+    }
+
+    private static void abortResponse(HttpResponse originalRes, ClientRequestContext derivedCtx,
+                                      @Nullable Exception cause) {
+        // Set response content with null to make sure that the log is complete.
+        final RequestLogBuilder logBuilder = derivedCtx.logBuilder();
+        logBuilder.responseContent(null, null);
+        logBuilder.responseContentPreview(null);
+
+        if (cause != null) {
+            originalRes.abort(cause);
+            return;
+        }
+
+        final RequestLogAccess log = derivedCtx.log();
+        if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+            final Throwable responseCause = log.ensureAvailable(RequestLogProperty.RESPONSE_CAUSE)
+                                               .responseCause();
+            if (responseCause != null) {
+                originalRes.abort(responseCause);
+            } else {
+                originalRes.abort();
+            }
+        } else {
+            originalRes.abort();
+        }
     }
 }

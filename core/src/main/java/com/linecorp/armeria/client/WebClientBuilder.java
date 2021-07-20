@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ClientOptions.REDIRECT_CONFIG;
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map.Entry;
@@ -61,6 +64,21 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
      */
     WebClientBuilder(SessionProtocol sessionProtocol, EndpointGroup endpointGroup, @Nullable String path) {
         super(sessionProtocol, endpointGroup, path);
+    }
+
+    /**
+     * Enables <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
+     */
+    public WebClientBuilder enableRedirect() {
+        return option(REDIRECT_CONFIG, RedirectConfig.of());
+    }
+
+    /**
+     * Sets the {@link RedirectConfig} to enable
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
+     */
+    public WebClientBuilder redirectConfig(RedirectConfig redirectConfig) {
+        return option(REDIRECT_CONFIG, requireNonNull(redirectConfig, "redirectConfig"));
     }
 
     /**
