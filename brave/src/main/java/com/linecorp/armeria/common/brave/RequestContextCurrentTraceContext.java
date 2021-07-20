@@ -160,14 +160,21 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
         final RequestContext ctx = getRequestContextOrWarnOnce();
 
-        if (ctx != null && ctx.eventLoop().inEventLoop()) {
+        if (ctx != null) {
+            // If a RequestContext is available from the current thread, the currentSpan is stored to the
+            // RequestContextStorage.
             return createScopeForRequestThread(ctx, currentSpan);
         } else {
             // The RequestContext is the canonical thread-local storage for the thread processing the request.
-            // However, when creating spans on other threads (e.g., a thread-pool), we must use separate
-            // thread-local storage to prevent threads from replacing the same trace context.
+            // If the RequestContext is not available, we must use separate thread-local storage to prevent
+            // threads from replacing the same trace context.
             return createScopeForNonRequestThread(currentSpan);
         }
+    }
+
+    @Override
+    public Scope decorateScope(TraceContext context, Scope scope) {
+        return super.decorateScope(context, scope);
     }
 
     private Scope createScopeForRequestThread(RequestContext ctx, @Nullable TraceContext currentSpan) {

@@ -221,12 +221,12 @@ public interface ClientRequestContext extends RequestContext {
         }
 
         if (oldCtx == null) {
-            return () -> RequestContextUtil.pop(this, null);
+            return RequestContextUtil.invokeListenerAndPopLater(this, null);
         }
 
         final ServiceRequestContext root = root();
         if (oldCtx.root() == root) {
-            return () -> RequestContextUtil.pop(this, oldCtx);
+            return RequestContextUtil.invokeListenerAndPopLater(this, oldCtx);
         }
 
         // Put the oldCtx back before throwing an exception.

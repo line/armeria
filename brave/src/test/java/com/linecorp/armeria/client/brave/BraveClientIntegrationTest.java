@@ -159,15 +159,15 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
             final ClientRequestContext ctx = ctxCaptor.get();
             res.aggregate().handle((response, cause) -> {
                 try (SafeCloseable ignored = ctx.push()) {
-                    if (cause == null) {
-                        callback.accept(response.status().code(), null);
-                    } else {
-                        callback.accept(null, cause);
-                    }
+            if (cause == null) {
+                callback.accept(response.status().code(), null);
+            } else {
+                callback.accept(null, cause);
+            }
                 }
-                return null;
-            });
-        }
+            return null;
+        });
+    }
     }
 
     @Override
