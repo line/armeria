@@ -32,7 +32,7 @@ import com.linecorp.armeria.server.ServiceConfig;
  * Generates the {@link ServiceSpecification}s of the supported {@link Service}s.
  */
 @UnstableApi
-public interface DocServicePlugin {
+public interface DocServicePlugin extends Comparable<DocServicePlugin> {
 
     /**
      * Returns the name of this plugin.
@@ -128,5 +128,19 @@ public interface DocServicePlugin {
     default String serializeExampleRequest(
             String serviceName, String methodName, Object exampleRequest) {
         return null;
+    }
+
+    /**
+     * Returns the evaluation order of {@link DocServicePlugin}. The method with the smallest order
+     * would be selected at first. The value could be specified between {@value Integer#MIN_VALUE} and
+     * {@value Integer#MAX_VALUE}. The default order is 0.
+     */
+    default int order() {
+        return 0;
+    }
+
+    @Override
+    default int compareTo(DocServicePlugin o) {
+        return Integer.compare(order(), o.order());
     }
 }

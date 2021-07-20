@@ -255,11 +255,19 @@ public class ArmeriaAutoConfigurationTest {
     public void testHttpService() throws Exception {
         final WebClient client = WebClient.of(newUrl("h1c"));
 
-        final HttpResponse response = client.get("/ok");
+        HttpResponse response = client.get("/ok");
 
-        final AggregatedHttpResponse res = response.aggregate().get();
+        AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("ok");
+
+        final WebClient webClient = WebClient.of(newUrl("h1c"));
+        response = webClient.get("/internal/docs/specification.json");
+
+        res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(res.contentUtf8()).node("services[2].name").isStringEqualTo(
+                "com.linecorp.armeria.spring.ArmeriaOkServiceConfiguration$OkService");
     }
 
     @Test
@@ -289,14 +297,14 @@ public class ArmeriaAutoConfigurationTest {
 
         res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(res.contentUtf8()).node("services[0].name").isStringEqualTo(
+        assertThatJson(res.contentUtf8()).node("services[1].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest$AnnotatedService");
         assertThatJson(res.contentUtf8())
-                .node("services[0].methods[3].exampleRequests[0]").isStringEqualTo("{\"foo\":\"bar\"}");
+                .node("services[1].methods[3].exampleRequests[0]").isStringEqualTo("{\"foo\":\"bar\"}");
         assertThatJson(res.contentUtf8())
-                .node("services[0].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+                .node("services[1].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
-                .node("services[0].methods[0].exampleHeaders[0].x-additional-header")
+                .node("services[1].methods[0].exampleHeaders[0].x-additional-header")
                 .isStringEqualTo("headerVal");
     }
 
@@ -311,12 +319,12 @@ public class ArmeriaAutoConfigurationTest {
 
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(res.contentUtf8()).node("services[2].name").isStringEqualTo(
+        assertThatJson(res.contentUtf8()).node("services[4].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.test.thrift.main.HelloService");
         assertThatJson(res.contentUtf8())
-                .node("services[2].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+                .node("services[4].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
-                .node("services[0].methods[0].exampleHeaders[0].x-additional-header")
+                .node("services[4].methods[0].exampleHeaders[0].x-additional-header")
                 .isStringEqualTo("headerVal");
     }
 
@@ -334,12 +342,12 @@ public class ArmeriaAutoConfigurationTest {
 
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(res.contentUtf8()).node("services[1].name").isStringEqualTo(
+        assertThatJson(res.contentUtf8()).node("services[3].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.test.grpc.main.HelloService");
         assertThatJson(res.contentUtf8())
-                .node("services[1].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+                .node("services[3].exampleHeaders[0].x-additional-header").isStringEqualTo("headerVal");
         assertThatJson(res.contentUtf8())
-                .node("services[1].methods[0].exampleHeaders[0].x-additional-header")
+                .node("services[3].methods[0].exampleHeaders[0].x-additional-header")
                 .isStringEqualTo("headerVal");
     }
 

@@ -50,12 +50,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.server.JacksonUtil;
-import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
+import com.linecorp.armeria.internal.server.docs.AbstractDocServicePlugin;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.Header;
@@ -64,7 +62,6 @@ import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldInfoBuilder;
@@ -80,7 +77,7 @@ import com.linecorp.armeria.server.docs.TypeSignature;
 /**
  * A {@link DocServicePlugin} implementation that supports the {@link AnnotatedService}.
  */
-public final class AnnotatedDocServicePlugin implements DocServicePlugin {
+public final class AnnotatedDocServicePlugin extends AbstractDocServicePlugin {
 
     @VisibleForTesting
     static final TypeSignature VOID = TypeSignature.ofBase("void");
@@ -165,67 +162,6 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                                     .findDescription(method));
                     methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
                 });
-    }
-
-    @VisibleForTesting
-    static EndpointInfo endpointInfo(Route route, String hostnamePattern) {
-        final EndpointInfoBuilder builder;
-        final RoutePathType pathType = route.pathType();
-        final List<String> paths = route.paths();
-        switch (pathType) {
-            case EXACT:
-                builder = EndpointInfo.builder(hostnamePattern, RouteUtil.EXACT + paths.get(0));
-                break;
-            case PREFIX:
-                builder = EndpointInfo.builder(hostnamePattern, RouteUtil.PREFIX + paths.get(0));
-                break;
-            case PARAMETERIZED:
-                builder = EndpointInfo.builder(hostnamePattern, normalizeParameterized(route));
-                break;
-            case REGEX:
-                builder = EndpointInfo.builder(hostnamePattern, RouteUtil.REGEX + paths.get(0));
-                break;
-            case REGEX_WITH_PREFIX:
-                builder = EndpointInfo.builder(hostnamePattern, RouteUtil.REGEX + paths.get(0));
-                builder.regexPathPrefix(RouteUtil.PREFIX + paths.get(1));
-                break;
-            default:
-                // Should never reach here.
-                throw new Error();
-        }
-
-        builder.availableMimeTypes(availableMimeTypes(route));
-        return builder.build();
-    }
-
-    private static String normalizeParameterized(Route route) {
-        final String path = route.paths().get(0);
-        int beginIndex = 0;
-
-        final StringBuilder sb = new StringBuilder();
-        for (String paramName : route.paramNames()) {
-            final int colonIndex = path.indexOf(':', beginIndex);
-            assert colonIndex != -1;
-            sb.append(path, beginIndex, colonIndex);
-            sb.append('{');
-            sb.append(paramName);
-            sb.append('}');
-            beginIndex = colonIndex + 1;
-        }
-        if (beginIndex < path.length()) {
-            sb.append(path, beginIndex, path.length());
-        }
-        return sb.toString();
-    }
-
-    private static Set<MediaType> availableMimeTypes(Route route) {
-        final ImmutableSet.Builder<MediaType> builder = ImmutableSet.builder();
-        final Set<MediaType> consumeTypes = route.consumes();
-        builder.addAll(consumeTypes);
-        if (!consumeTypes.contains(MediaType.JSON_UTF_8)) {
-            builder.add(MediaType.JSON_UTF_8);
-        }
-        return builder.build();
     }
 
     private static List<FieldInfo> fieldInfos(List<AnnotatedValueResolver> resolvers) {

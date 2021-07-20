@@ -17,8 +17,8 @@
 package com.linecorp.armeria.server.docs;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -43,6 +44,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Streams;
@@ -56,6 +58,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ServerCacheControl;
 import com.linecorp.armeria.common.util.Version;
+import com.linecorp.armeria.internal.server.docs.NoopDocServicePlugin;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
@@ -93,10 +96,12 @@ public final class DocService extends SimpleDecoratingHttpService {
     private static final ObjectMapper jsonMapper = new ObjectMapper()
             .setSerializationInclusion(Include.NON_ABSENT);
 
-    static final List<DocServicePlugin> plugins = ImmutableList.copyOf(ServiceLoader.load(
-            DocServicePlugin.class, DocService.class.getClassLoader()));
+    static final List<DocServicePlugin> plugins;
 
     static {
+        plugins = Streams.stream(ServiceLoader.load(DocServicePlugin.class, DocService.class.getClassLoader()))
+                         .sorted()
+                         .collect(toImmutableList());
         logger.debug("Available {}s: {}", DocServicePlugin.class.getSimpleName(), plugins);
     }
 
@@ -175,10 +180,12 @@ public final class DocService extends SimpleDecoratingHttpService {
                 final ServerConfig config = server.config();
                 final List<VirtualHost> virtualHosts = config.findVirtualHosts(DocService.this);
 
-                final List<ServiceConfig> services =
+                final ListMultimap<DocServicePlugin, ServiceConfig> services =
                         config.serviceConfigs().stream()
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
-                              .collect(toImmutableList());
+                              .filter(se -> se.service().as(DocService.class) == null)
+                              .collect(toImmutableListMultimap(DocService::bestDocServicePlugin,
+                                                               Function.identity()));
 
                 ServiceSpecification spec = generate(services, filter);
 
@@ -196,20 +203,43 @@ public final class DocService extends SimpleDecoratingHttpService {
         });
     }
 
-    private static ServiceSpecification generate(List<ServiceConfig> services, DocServiceFilter filter) {
+    private static ServiceSpecification generate(ListMultimap<DocServicePlugin, ServiceConfig> services,
+                                                 DocServiceFilter filter) {
         return ServiceSpecification.merge(
-                plugins.stream()
-                       .map(plugin -> plugin.generateSpecification(
-                               findSupportedServices(plugin, services), filter))
-                       .collect(toImmutableList()));
+                services.asMap().entrySet().stream()
+                        .map(entry -> {
+                            final DocServicePlugin plugin = entry.getKey();
+                            final Set<ServiceConfig> serviceCfgs = ImmutableSet.copyOf(entry.getValue());
+                            logger.debug("plugin={}, serviceCfgs={}", plugin, serviceCfgs);
+                            return plugin.generateSpecification(serviceCfgs, filter);
+                        })
+                        .collect(toImmutableList())
+        );
     }
 
-    private static ServiceSpecification addDocStrings(ServiceSpecification spec, List<ServiceConfig> services) {
+    private static DocServicePlugin bestDocServicePlugin(ServiceConfig serviceConfig) {
+        return plugins.stream()
+                      .filter(p -> isSupported(serviceConfig, p.supportedServiceTypes()))
+                      .findFirst()
+                      .orElse(NoopDocServicePlugin.get());
+    }
+
+    private static boolean isSupported(
+            ServiceConfig serviceCfg, Set<Class<? extends Service<?, ?>>> supportedServiceTypes) {
+        return supportedServiceTypes.stream().anyMatch(type -> serviceCfg.service().as(type) != null);
+    }
+
+    private static ServiceSpecification addDocStrings(ServiceSpecification spec,
+                                                      ListMultimap<DocServicePlugin, ServiceConfig> services) {
         final Map<String, String> docStrings =
-                plugins.stream()
-                       .flatMap(plugin -> plugin.loadDocStrings(findSupportedServices(plugin, services))
-                                                .entrySet().stream())
-                       .collect(toImmutableMap(Entry::getKey, Entry::getValue, (a, b) -> a));
+                services.asMap().entrySet().stream()
+                        .flatMap(entry -> {
+                            final DocServicePlugin plugin = entry.getKey();
+                            final Set<ServiceConfig> serviceCfgs = ImmutableSet.copyOf(entry.getValue());
+                            return plugin.loadDocStrings(serviceCfgs)
+                                         .entrySet().stream();
+                        })
+                        .collect(toImmutableMap(Entry::getKey, Entry::getValue, (a, b) -> a));
 
         return new ServiceSpecification(
                 spec.services().stream()
@@ -357,19 +387,6 @@ public final class DocService extends SimpleDecoratingHttpService {
 
     private DocServiceVfs vfs() {
         return (DocServiceVfs) ((FileService) unwrap()).config().vfs();
-    }
-
-    private static Set<ServiceConfig> findSupportedServices(
-            DocServicePlugin plugin, List<ServiceConfig> services) {
-        final Set<Class<? extends Service<?, ?>>> supportedServiceTypes = plugin.supportedServiceTypes();
-        return services.stream()
-                       .filter(serviceCfg -> isSupported(serviceCfg, supportedServiceTypes))
-                       .collect(toImmutableSet());
-    }
-
-    private static boolean isSupported(
-            ServiceConfig serviceCfg, Set<Class<? extends Service<?, ?>>> supportedServiceTypes) {
-        return supportedServiceTypes.stream().anyMatch(type -> serviceCfg.service().as(type) != null);
     }
 
     @Override
