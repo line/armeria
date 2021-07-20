@@ -108,7 +108,7 @@ class DecodingClientTest {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(DecodingClient.newDecorator(
                                                   com.linecorp.armeria.common.encoding.StreamDecoderFactory
-                                                          .br()))
+                                                          .brotli()))
                                           .build();
 
         final AggregatedHttpResponse response =

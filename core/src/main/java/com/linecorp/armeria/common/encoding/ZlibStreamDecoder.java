@@ -21,7 +21,7 @@ import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 /**
- * A {@link StreamDecoder} that use zlib ('gzip' or 'deflate').
+ * A {@link StreamDecoder} that uses zlib ('gzip' or 'deflate').
  */
 final class ZlibStreamDecoder extends AbstractStreamDecoder {
     ZlibStreamDecoder(ZlibWrapper zlibWrapper, ByteBufAllocator alloc) {

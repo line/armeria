@@ -47,7 +47,7 @@ public final class DecodingService extends SimpleDecoratingHttpService {
      */
     public static Function<? super HttpService, DecodingService> newDecorator() {
         return newDecorator(ImmutableList.of(StreamDecoderFactory.gzip(), StreamDecoderFactory.deflate(),
-                                             StreamDecoderFactory.br()));
+                                             StreamDecoderFactory.brotli()));
     }
 
     /**

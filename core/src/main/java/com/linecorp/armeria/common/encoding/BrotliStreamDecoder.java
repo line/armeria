@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.compression.BrotliDecoder;
 
 /**
- * A {@link StreamDecoder} that uncompress data encoded with the brotli format ('br').
+ * A {@link StreamDecoder} that decompresses data encoded with the brotli format ('br').
  */
 final class BrotliStreamDecoder extends AbstractStreamDecoder {
     BrotliStreamDecoder(BrotliDecoder brotliDecoder, ByteBufAllocator alloc) {

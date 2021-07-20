@@ -27,7 +27,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
  * Skeletal {@link StreamDecoder} implementation. Netty implementation used to allow
  * for incremental decoding using an {@link EmbeddedChannel}.
  */
-public class AbstractStreamDecoder implements StreamDecoder {
+class AbstractStreamDecoder implements StreamDecoder {
 
     private final EmbeddedChannel decoder;
 

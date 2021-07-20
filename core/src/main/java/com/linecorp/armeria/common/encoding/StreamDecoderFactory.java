@@ -43,8 +43,8 @@ public interface StreamDecoderFactory extends com.linecorp.armeria.client.encodi
     /**
      * Returns the {@link StreamDecoderFactory} for {@code "br"} content encoding.
      */
-    static StreamDecoderFactory br() {
-        return StreamDecoderFactories.BR;
+    static StreamDecoderFactory brotli() {
+        return StreamDecoderFactories.BROTLI;
     }
 
     /**

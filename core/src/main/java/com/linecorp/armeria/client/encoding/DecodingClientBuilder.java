@@ -37,7 +37,7 @@ public final class DecodingClientBuilder {
 
     private List<StreamDecoderFactory> decoderFactories = ImmutableList.of(StreamDecoderFactory.gzip(),
                                                                            StreamDecoderFactory.deflate(),
-                                                                           StreamDecoderFactory.br());
+                                                                           StreamDecoderFactory.brotli());
 
     private boolean autoFillAcceptEncoding = true;
     private boolean strictContentEncoding;
@@ -47,7 +47,7 @@ public final class DecodingClientBuilder {
     /**
      * Sets the specified {@link StreamDecoderFactory}s.
      * If not specified, {@link StreamDecoderFactory#gzip()}, {@link StreamDecoderFactory#deflate()} and
-     * {@link StreamDecoderFactory#br()} are used by default.
+     * {@link StreamDecoderFactory#brotli()} are used by default.
      */
     public DecodingClientBuilder decoderFactories(StreamDecoderFactory... decoderFactories) {
         requireNonNull(decoderFactories, "decoderFactories");
@@ -57,7 +57,7 @@ public final class DecodingClientBuilder {
     /**
      * Sets the specified {@link StreamDecoderFactory}s.
      * If not specified, {@link StreamDecoderFactory#gzip()}, {@link StreamDecoderFactory#deflate()} and
-     * {@link StreamDecoderFactory#br()} are used by default.
+     * {@link StreamDecoderFactory#brotli()} are used by default.
      */
     public DecodingClientBuilder decoderFactories(Iterable<? extends StreamDecoderFactory> decoderFactories) {
         requireNonNull(decoderFactories, "decoderFactories");

@@ -43,7 +43,7 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
             return new ZlibStreamDecoder(ZlibWrapper.GZIP, alloc);
         }
     },
-    BR {
+    BROTLI {
         @Override
         public String encodingHeaderValue() {
             return "br";
