@@ -58,7 +58,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
     private static final String GRACEFUL_SHUTDOWN = "graceful";
 
     /**
-     * Create a started {@link Server} bean.
+     * Creates a started {@link Server} bean.
      */
     @Bean
     @ConditionalOnMissingBean(Server.class)

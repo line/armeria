@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2021 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,27 +16,28 @@
 
 package com.linecorp.armeria.spring;
 
-import org.springframework.beans.factory.BeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.client.ClientFactory;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
- * Spring Boot {@link Configuration} that provides Armeria integration.
+ * An auto-configuration for {@link ClientFactory} metrics.
  */
 @Configuration
-@ConditionalOnBean(Server.class)
-public class ArmeriaSpringBoot1BeanPostProcessorConfiguration {
+@ConditionalOnClass(MeterRegistry.class)
+public class ClientFactoryMetricsAutoConfiguration {
 
     /**
-     * Creates an {@link ArmeriaSpringBoot1BeanPostProcessor} bean.
+     * Creates a {@link ClientFactoryConfigurator} bean that applies the {@link MeterRegistry}.
      */
+    @ConditionalOnBean(MeterRegistry.class)
     @Bean
-    @ConditionalOnMissingBean(ArmeriaSpringBoot1BeanPostProcessor.class)
-    public ArmeriaSpringBoot1BeanPostProcessor armeriaSpringBoot1BeanPostProcessor(BeanFactory beanFactory) {
-        return new ArmeriaSpringBoot1BeanPostProcessor(beanFactory);
+    public ClientFactoryConfigurator meterRegistryConfigurator(MeterRegistry meterRegistry) {
+        return builder -> builder.meterRegistry(meterRegistry);
     }
 }

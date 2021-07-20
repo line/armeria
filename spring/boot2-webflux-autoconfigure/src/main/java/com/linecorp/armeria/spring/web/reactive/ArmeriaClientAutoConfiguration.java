@@ -28,6 +28,8 @@ import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
 
+import com.linecorp.armeria.spring.WebClientConfigurator;
+
 /**
  * An auto-configuration for Armeria-based {@link WebClient}.
  */
@@ -43,7 +45,7 @@ public class ArmeriaClientAutoConfiguration {
      */
     @Bean
     public ClientHttpConnector clientHttpConnector(
-            List<ArmeriaClientConfigurator> customizer,
+            List<WebClientConfigurator> customizer,
             DataBufferFactoryWrapper<?> factoryWrapper) {
         return new ArmeriaClientHttpConnector(customizer, factoryWrapper);
     }

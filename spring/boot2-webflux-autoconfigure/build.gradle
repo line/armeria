@@ -42,15 +42,18 @@ task generateSources(type: Copy) {
     include '**/*ExampleHeaders.java'
     include '**/*ExampleRequest.java'
     include '**/*RegistrationBean.java'
+    include '**/*MeterIdPrefixFunctionFactory.java'
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
+    include '**/ClientFactory*.java'
     include '**/DocServiceConfigurator.java'
     include '**/HealthCheckServiceConfigurator.java'
     include '**/MetricCollectingServiceConfigurator.java'
     include '**/LocalArmeriaPort.java'
     include '**/LocalArmeriaPorts.java'
-    include '**/*MeterIdPrefixFunctionFactory.java'
     include '**/Ssl.java'
+    include '**/WebClientAutoConfiguration.java'
+    include '**/WebClientConfigurator.java'
 }
 
 tasks.compileJava.dependsOn(generateSources)

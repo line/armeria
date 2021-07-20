@@ -28,6 +28,7 @@ import org.springframework.validation.annotation.Validated;
 import com.codahale.metrics.json.MetricsModule;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -309,7 +310,7 @@ public class ArmeriaSettings {
     private long gracefulShutdownTimeoutMillis = 40000;
 
     /**
-     * Whether to decorate all services with {@link MetricCollectingService}.
+     * Whether to decorate all services with {@link MetricCollectingService} and {@link MetricCollectingClient}.
      * The default is {@code true}.
      */
     private boolean enableMetrics = true;
