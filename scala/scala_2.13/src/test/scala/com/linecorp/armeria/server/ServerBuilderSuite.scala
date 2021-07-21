@@ -62,9 +62,7 @@ class ServerBuilderSuite extends FunSuite {
 
     Server
       .builder()
-      .service(
-        serviceWithRoutes,
-        LoggingService.newDecorator())
+      .service(serviceWithRoutes, LoggingService.newDecorator())
       .build()
   }
 

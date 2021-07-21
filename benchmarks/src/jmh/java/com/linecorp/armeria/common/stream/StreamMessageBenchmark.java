@@ -39,7 +39,8 @@ import io.netty.channel.EventLoop;
 /**
  * Microbenchmarks of {@link StreamMessage Stream Messages}.
  */
-@Fork(jvmArgsAppend = { EventLoopJmhExecutor.JVM_ARG_1, EventLoopJmhExecutor.JVM_ARG_2 })
+@Fork(jvmArgsAppend = { EventLoopJmhExecutor.JVM_ARG_1, EventLoopJmhExecutor.JVM_ARG_2,
+                        "-Dcom.linecorp.armeria.reportBlockedEventLoop=false"})
 @State(Scope.Benchmark)
 public class StreamMessageBenchmark {
 
@@ -107,7 +108,7 @@ public class StreamMessageBenchmark {
             return computedSum;
         }
 
-        private void writeAllValues(StreamMessage<Integer> stream) {
+        void writeAllValues(StreamMessage<Integer> stream) {
             if (stream instanceof StreamWriter) {
                 @SuppressWarnings("unchecked")
                 final StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
@@ -157,7 +158,7 @@ public class StreamMessageBenchmark {
         return streamObjects.computedSum(stream);
     }
 
-    private static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
+    static StreamMessage<Integer> newStream(StreamObjects streamObjects) {
         switch (streamObjects.streamType) {
             case DEFAULT_STREAM_MESSAGE:
                 return new DefaultStreamMessage<>();

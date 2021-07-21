@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.FormatMethod;
@@ -43,9 +44,8 @@ import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.HttpDecoder;
+import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
@@ -263,12 +263,19 @@ public interface HttpRequest extends Request, HttpMessage {
 
     /**
      * Creates a new instance from an existing {@link RequestHeaders} and {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpObject}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
      */
     static HttpRequest of(RequestHeaders headers, Publisher<? extends HttpObject> publisher) {
         requireNonNull(headers, "headers");
         requireNonNull(publisher, "publisher");
         if (publisher instanceof HttpRequest) {
             return ((HttpRequest) publisher).withHeaders(headers);
+        } else if (publisher instanceof StreamMessage) {
+            //noinspection unchecked
+            return new StreamMessageBasedHttpRequest(headers, (StreamMessage<? extends HttpObject>) publisher);
         } else {
             return new PublisherBasedHttpRequest(headers, publisher);
         }
@@ -458,10 +465,7 @@ public interface HttpRequest extends Request, HttpMessage {
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         requireNonNull(executor, "executor");
-        final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingFuture<>();
-        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
-        subscribe(aggregator, executor);
-        return future;
+        return HttpMessageAggregator.aggregateRequest(this, executor, null);
     }
 
     /**
@@ -487,10 +491,7 @@ public interface HttpRequest extends Request, HttpMessage {
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpRequest> future = new EventLoopCheckingFuture<>();
-        final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
-        subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
-        return future;
+        return HttpMessageAggregator.aggregateRequest(this, executor, alloc);
     }
 
     @Override
@@ -518,5 +519,90 @@ public interface HttpRequest extends Request, HttpMessage {
     default <T> StreamMessage<T> decode(HttpDecoder<T> decoder, ByteBufAllocator alloc,
                                         Function<? super HttpData, ? extends ByteBuf> byteBufConverter) {
         return new DecodedHttpStreamMessage<>(this, decoder, alloc, byteBufConverter);
+    }
+
+    /**
+     * Transforms the {@link ResponseHeaders} of this {@link HttpRequest} by applying the specified
+     * {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.of(HttpMethod.GET, "/items");
+     * HttpRequest transformed =
+     *     request.mapHeaders(headers -> headers.toBuilder()
+     *                                          .add("TraceId", "1")
+     *                                          .build());
+     * assert transformed.aggregate().join().headers().get("TraceId").equals("1");
+     * }</pre>
+     */
+    default HttpRequest mapHeaders(Function<? super RequestHeaders, ? extends RequestHeaders> function) {
+        requireNonNull(function, "function");
+        final RequestHeaders transformed = function.apply(headers());
+        requireNonNull(transformed, "function.apply() returned null");
+        return withHeaders(transformed);
+    }
+
+    /**
+     * Transforms the {@link HttpData}s emitted by this {@link HttpRequest} by applying the specified
+     * {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
+     *                                      HttpData.ofUtf8("data1,data2"));
+     * HttpRequest transformed = request.mapData(data -> {
+     *     return HttpData.ofUtf8(data.toStringUtf8().replaceAll(",", "\n"));
+     * });
+     * assert transformed.aggregate().join().contentUtf8().equals("data1\ndata2");
+     * }</pre>
+     */
+    default HttpRequest mapData(Function<? super HttpData, ? extends HttpData> function) {
+        requireNonNull(function, "function");
+        final StreamMessage<HttpObject> stream =
+                map(obj -> obj instanceof HttpData ? function.apply((HttpData) obj) : obj);
+        return of(headers(), stream);
+    }
+
+    /**
+     * Transforms the {@linkplain HttpHeaders trailers} emitted by this {@link HttpRequest} by applying the
+     * specified {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/items"),
+     *                                      HttpData.ofUtf8("..."));
+     * HttpRequest transformed = request.mapTrailers(trailers -> {
+     *     return trailers.withMutations(builder -> builder.set("trailer1", "foo"));
+     * });
+     * assert transformed.aggregate().join().trailers().get("trailer1").equals("foo");
+     * }</pre>
+     */
+    default HttpRequest mapTrailers(Function<? super HttpHeaders, ? extends HttpHeaders> function) {
+        requireNonNull(function, "function");
+
+        final StreamMessage<HttpObject> stream = map(obj -> {
+            if (obj instanceof HttpHeaders) {
+                return function.apply((HttpHeaders) obj);
+            }
+            return obj;
+        });
+        return of(headers(), stream);
+    }
+
+    /**
+     * Transforms an error emitted by this {@link HttpRequest} by applying the specified {@link Function}.
+     *
+     * <p>For example:<pre>{@code
+     * HttpRequest request = HttpRequest.ofFailure(new IllegalStateException("Something went wrong.");
+     * HttpRequest transformed = request.mapError(cause -> {
+     *     if (cause instanceof IllegalStateException) {
+     *         return new MyDomainException(cause);
+     *     } else {
+     *         return cause;
+     *     }
+     * });
+     * }</pre>
+     */
+    @Override
+    default HttpRequest mapError(Function<? super Throwable, ? extends Throwable> function) {
+        requireNonNull(function, "function");
+        return of(headers(), HttpMessage.super.mapError(function));
     }
 }

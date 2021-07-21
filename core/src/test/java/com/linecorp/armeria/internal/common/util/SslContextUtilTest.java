@@ -86,7 +86,7 @@ class SslContextUtilTest {
     private static String getBadCipher() {
         for (String cipher : BAD_HTTP2_CIPHERS) {
             try {
-                final SslContext sslCtx = BouncyCastleKeyFactoryProvider.call(() -> {
+                final SslContext sslCtx = MinifiedBouncyCastleProvider.call(() -> {
                     final SslContextBuilder builder = SslContextBuilder.forClient();
                     final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
                     builder.sslProvider(provider);

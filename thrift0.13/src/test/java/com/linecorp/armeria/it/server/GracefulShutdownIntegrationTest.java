@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -48,6 +49,7 @@ import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService.AsyncIface;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@FlakyTest
 class GracefulShutdownIntegrationTest {
 
     private static final Logger logger = LoggerFactory.getLogger(GracefulShutdownIntegrationTest.class);

@@ -36,9 +36,6 @@ private[scalapb] object ScalaPbConverterUtil {
   val X_PROTOBUF: MediaType = MediaType.create("application", "x-protobuf")
   val defaultJsonPrinter: Printer = new Printer().includingDefaultValueFields
 
-  def isJson(contentType: MediaType): Boolean =
-    contentType.is(MediaType.JSON) || contentType.subtype.endsWith("+json")
-
   def isProtobuf(contentType: MediaType): Boolean =
     contentType.is(MediaType.PROTOBUF) || contentType.is(X_PROTOBUF) || contentType.is(MediaType.OCTET_STREAM)
 

@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 buildscript {
     val managedVersions = extra["managedVersions"] as Map<*, *>
     repositories {
@@ -7,20 +5,16 @@ buildscript {
     }
     dependencies {
         classpath("org.jetbrains.kotlin:kotlin-allopen:${managedVersions["org.jetbrains.kotlin:kotlin-allopen"]}")
-        classpath("org.jlleitschuh.gradle:ktlint-gradle:${managedVersions["org.jlleitschuh.gradle:ktlint-gradle"]}")
         classpath("org.springframework.boot:spring-boot-gradle-plugin:${managedVersions["org.springframework.boot:spring-boot-gradle-plugin"]}")
     }
 }
 
 plugins {
-    id("org.jetbrains.kotlin.jvm")
-
     // required if you want to use preprocessors
     kotlin("kapt") apply true
 }
 
 apply(plugin = "org.jetbrains.kotlin.plugin.spring")
-apply(plugin = "org.jlleitschuh.gradle.ktlint")
 apply(plugin = "org.springframework.boot")
 
 dependencies {
@@ -45,11 +39,4 @@ dependencies {
 
 kapt {
     annotationProcessor("com.linecorp.armeria.server.annotation.processor.DocumentationProcessor")
-}
-
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs = listOf("-Xjsr305=strict")
-        jvmTarget = "1.8"
-    }
 }

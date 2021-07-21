@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -118,6 +119,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public void abort(Throwable cause) {
         delegate.abort(cause);
+    }
+
+    @Override
+    public CompletableFuture<List<HttpObject>> collect(EventExecutor executor, SubscriptionOption... options) {
+        return delegate.collect(executor, options);
     }
 
     @Override

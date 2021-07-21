@@ -409,6 +409,8 @@ abstract class AbstractBindingBuilder {
     /**
      * Adds a {@code pathPattern} that is supposed to be excluded from the {@link Route}s built by this
      * {@link AbstractBindingBuilder}.
+     * Please refer to <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
+     * to learn more about path pattern syntax.
      */
     public AbstractBindingBuilder exclude(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
@@ -475,4 +477,3 @@ abstract class AbstractBindingBuilder {
         return builder.build();
     }
 }
-

@@ -15,10 +15,13 @@
  */
 package com.linecorp.armeria.common.multipart;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.multipart.DefaultMultipart.randomBoundary;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+
+import javax.annotation.Nullable;
 
 import org.reactivestreams.Publisher;
 
@@ -28,8 +31,11 @@ import com.google.errorprone.annotations.CheckReturnValue;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -122,14 +128,10 @@ public interface Multipart {
     static Multipart from(HttpRequest request) {
         requireNonNull(request, "request");
         final RequestHeaders headers = request.headers();
+        @Nullable
         final MediaType mediaType = headers.contentType();
-        String boundary = null;
-        if (mediaType != null) {
-            boundary = Iterables.getFirst(mediaType.parameters().get("boundary"), null);
-        }
-        if (boundary == null) {
-            throw new IllegalStateException("boundary header is missing");
-        }
+        checkState(mediaType != null, "Content-Type header is missing");
+        final String boundary = Multiparts.getBoundary(mediaType);
 
         @SuppressWarnings("unchecked")
         final StreamMessage<HttpData> cast =
@@ -140,6 +142,22 @@ public interface Multipart {
     /**
      * Returns a decoded {@link Multipart} from the the specified {@code boundary} and
      * {@link Publisher} of {@link HttpData}.
+     * For instance, {@link Multipart} could be decoded from the specified {@link HttpResponse}
+     * in the following way:
+     * <pre>{@code
+     * HttpResponse response = ...;
+     * SplitHttpResponse splitResponse = response.split();
+     * ResponseHeaders responseHeaders = splitResponse.headers().join();
+     * StreamMessage<HttpData> responseContents = splitResponse.body();
+     * MediaType contentType = responseHeaders.contentType();
+     * if (contentType != null && contentType.isMultipart()) {
+     *     String boundary = Multiparts.getBoundary(contentType);
+     *     Multipart multipart = Multipart.from(boundary, responseContents);
+     *     ...
+     * } else {
+     *     handleNonMultipartResponse(responseHeaders, responseContents);
+     * }
+     * }</pre>
      */
     static Multipart from(String boundary, Publisher<? extends HttpData> contents) {
         return from(boundary, contents, ByteBufAllocator.DEFAULT);
@@ -192,12 +210,56 @@ public interface Multipart {
      *                             .content(fileData)
      *                             .build();
      *
-     * RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.POST, "/upload");
+     * RequestHeaders requestHeaders = RequestHeaders.builder(HttpMethod.POST, "/upload")
+     *                                               .contentType(MediaType.MULTIPART_RELATED)
+     *                                               .build();
      * HttpRequest request = Multipart.of(filePart).toHttpRequest(requestHeaders);
      * CompletableFuture<AggregatedHttpResponse> response = client.execute(request).aggregate();
      * }</pre>
      */
     HttpRequest toHttpRequest(RequestHeaders requestHeaders);
+
+    /**
+     * Converts this {@link Multipart} into a new complete {@link HttpResponse}.
+     * This method is commonly used to send a multipart response with the specified {@link HttpStatus}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_DISPOSITION,
+     *                                      ContentDisposition.of("form-data", "file", "test.txt"));
+     * byte[] fileData = ...;
+     * BodyPart filePart = BodyPart.builder()
+     *                             .headers(headers)
+     *                             .content(fileData)
+     *                             .build();
+     *
+     * HttpResponse response = Multipart.of(filePart).toHttpResponse(HttpStatus.OK);
+     * }</pre>
+     */
+    HttpResponse toHttpResponse(HttpStatus status);
+
+    /**
+     * Converts this {@link Multipart} into a new complete {@link HttpResponse} with the specified
+     * {@link ResponseHeaders}.
+     * This method is commonly used to send a multipart response using the specified {@link ResponseHeaders}.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_DISPOSITION,
+     *                                      ContentDisposition.of("form-data", "file", "test.txt"));
+     * byte[] fileData = ...;
+     * BodyPart filePart = BodyPart.builder()
+     *                             .headers(headers)
+     *                             .content(fileData)
+     *                             .build();
+     *
+     * ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
+     *                                                  .contentType(MediaType.MULTIPART_RELATED)
+     *                                                  .build();
+     * HttpResponse response = Multipart.of(filePart).toHttpResponse(responseHeaders);
+     * }</pre>
+     */
+    HttpResponse toHttpResponse(ResponseHeaders responseHeaders);
 
     /**
      * Returns a {@link StreamMessage} that emits the {{@link #bodyParts()}} as a stream of {@link HttpData}.

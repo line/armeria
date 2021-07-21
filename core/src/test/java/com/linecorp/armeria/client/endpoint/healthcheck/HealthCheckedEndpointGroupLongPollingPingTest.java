@@ -33,9 +33,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
@@ -217,21 +215,10 @@ class HealthCheckedEndpointGroupLongPollingPingTest {
 
                 // Record all the received headers as well.
                 ctx.setAttr(RECEIVED_INFORMATIONALS, new LinkedBlockingQueue<>());
-                return new FilteredHttpResponse(delegate.execute(ctx, req)) {
-                    @Override
-                    protected HttpObject filter(HttpObject obj) {
-                        if (!(obj instanceof ResponseHeaders)) {
-                            return obj;
-                        }
-
-                        // Record the received pings.
-                        final ResponseHeaders headers = (ResponseHeaders) obj;
-                        if (headers.status().isInformational()) {
-                            ctx.attr(RECEIVED_INFORMATIONALS).add(headers);
-                        }
-                        return obj;
-                    }
-                };
+                return delegate.execute(ctx, req).mapInformational(headers -> {
+                    ctx.attr(RECEIVED_INFORMATIONALS).add(headers);
+                    return headers;
+                });
             });
             return b;
         });

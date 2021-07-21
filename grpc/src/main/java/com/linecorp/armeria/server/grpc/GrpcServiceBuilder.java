@@ -88,7 +88,9 @@ public final class GrpcServiceBuilder {
 
     static {
         boolean useCoroutineContextInterceptor;
-        final String className = "io.grpc.kotlin.CoroutineContextServerInterceptor";
+        final String className =
+                BindableService.class.getPackage().getName() +
+                ".kotlin.CoroutineContextServerInterceptor";
         try {
             Class.forName(className, false, GrpcServiceBuilder.class.getClassLoader());
             useCoroutineContextInterceptor = true;
