@@ -292,7 +292,6 @@ public final class DefaultServiceRequestContext
      *
      * <p>Note that this operation is highly performance-sensitive operation, and thus
      * it's not a good idea to run a time-consuming task.
-     * }</pre>
      */
     public void hook(Supplier<? extends SafeCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
