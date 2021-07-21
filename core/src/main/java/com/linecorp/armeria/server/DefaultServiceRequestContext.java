@@ -46,6 +46,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -282,7 +284,23 @@ public final class DefaultServiceRequestContext
         return ch.alloc();
     }
 
-    @Override
+    /**
+     * Adds a hook which is invoked whenever this {@link DefaultServiceRequestContext} is pushed to the
+     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by {@code contextHook} will be called
+     * whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     * This method is useful when you need to propagate a custom context in this {@link RequestContext}'s scope.
+     * For example:
+     * <pre>{@code
+     * ctx.hook(() -> {
+     *     MDC.put("transactionId", "1234567890");
+     *     // Should clean up the thread local resources when closing.
+     *     return () -> MDC.remove("transactionId");
+     * });
+     *
+     * <p>Note that this operation is highly performance-sensitive operation, and thus
+     * it's not a good idea to run a time-consuming task.
+     * }</pre>
+     */
     public void hook(Supplier<? extends SafeCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
         for (;;) {
@@ -308,7 +326,11 @@ public final class DefaultServiceRequestContext
         }
     }
 
-    @Override
+    /**
+     * Returns the hook which is invoked whenever this {@link DefaultServiceRequestContext} is pushed to the
+     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by the {@link Supplier} will be
+     * called whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     */
     public Supplier<SafeCloseable> hook() {
         return contextHook;
     }

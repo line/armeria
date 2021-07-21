@@ -162,8 +162,9 @@ configure(projectsWithFlags('java')) {
 
     tasks.withType(JavaCompile) { task ->
         if (task.path.startsWith(':examples:')) {
-            // Target Java 11 for examples.
             options.release.set(11)
+            sourceCompatibility = '11'
+            targetCompatibility = '11'
         } else {
             // Target Java 8 for the rest of them.
             options.release.set(8)

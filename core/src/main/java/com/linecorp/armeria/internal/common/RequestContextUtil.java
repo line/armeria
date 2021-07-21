@@ -35,12 +35,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.MustBeClosed;
 
+import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestContextStorageProvider;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.DefaultServiceRequestContext;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -236,7 +238,15 @@ public final class RequestContextUtil {
 
     @Nullable
     private static SafeCloseable invokeHook(RequestContext ctx) {
-        final Supplier<? extends SafeCloseable> hook = ctx.hook();
+        final Supplier<? extends SafeCloseable> hook;
+        if (ctx instanceof DefaultServiceRequestContext) {
+            hook = ((DefaultServiceRequestContext) ctx).hook();
+        } else if (ctx instanceof DefaultClientRequestContext) {
+            hook = ((DefaultClientRequestContext) ctx).hook();
+        } else {
+            hook = null;
+        }
+
         if (hook == null) {
             return null;
         }

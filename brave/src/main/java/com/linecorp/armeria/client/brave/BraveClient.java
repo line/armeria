@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
@@ -132,10 +133,11 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
 
-        if (currentTraceContext != null) {
+        if (currentTraceContext != null && ctx instanceof DefaultClientRequestContext) {
+            final DefaultClientRequestContext defaultCtx = (DefaultClientRequestContext) ctx;
             // Run the scope decorators when the ctx is pushed to the thread local.
-            ctx.hook(() -> currentTraceContext.decorateScope(span.context(),
-                                                             CLIENT_REQUEST_DECORATING_SCOPE)::close);
+            defaultCtx.hook(() -> currentTraceContext.decorateScope(span.context(),
+                                                                    CLIENT_REQUEST_DECORATING_SCOPE)::close);
         }
 
         // For no-op spans, we only need to inject into headers and don't set any other attributes.

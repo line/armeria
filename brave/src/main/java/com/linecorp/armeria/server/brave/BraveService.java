@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
+import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -99,9 +100,12 @@ public final class BraveService extends SimpleDecoratingHttpService {
         final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         final Span span = handler.handleReceive(braveReq);
 
-        // Run the scope decorators when the ctx is pushed to the thread local.
-        ctx.hook(() -> currentTraceContext.decorateScope(span.context(),
-                                                         SERVICE_REQUEST_DECORATING_SCOPE)::close);
+        if (ctx instanceof DefaultServiceRequestContext) {
+            final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;
+            // Run the scope decorators when the ctx is pushed to the thread local.
+            defaultCtx.hook(() -> currentTraceContext.decorateScope(span.context(),
+                                                                    SERVICE_REQUEST_DECORATING_SCOPE)::close);
+        }
 
         // For no-op spans, nothing special to do.
         if (span.isNoop()) {

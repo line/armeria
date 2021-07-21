@@ -21,14 +21,12 @@ import static java.util.Objects.requireNonNull;
 import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -110,16 +108,6 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     @Override
     public RpcRequest rpcRequest() {
         return delegate().rpcRequest();
-    }
-
-    @Override
-    public void hook(Supplier<? extends SafeCloseable> contextHook) {
-        delegate().hook(contextHook);
-    }
-
-    @Override
-    public Supplier<SafeCloseable> hook() {
-        return delegate().hook();
     }
 
     @Override
