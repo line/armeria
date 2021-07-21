@@ -133,18 +133,23 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
 
-        if (currentTraceContext != null && ctx instanceof DefaultClientRequestContext) {
+        if (!span.isNoop() && currentTraceContext != null && ctx instanceof DefaultClientRequestContext) {
             final DefaultClientRequestContext defaultCtx = (DefaultClientRequestContext) ctx;
             // Run the scope decorators when the ctx is pushed to the thread local.
             defaultCtx.hook(() -> currentTraceContext.decorateScope(span.context(),
                                                                     CLIENT_REQUEST_DECORATING_SCOPE)::close);
         }
 
-        // For no-op spans, we only need to inject into headers and don't set any other attributes.
+        maybeAddTagsToSpan(ctx, braveReq, span);
+        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
+            return unwrap().execute(ctx, req);
+        }
+    }
+
+    private void maybeAddTagsToSpan(ClientRequestContext ctx, HttpClientRequest braveReq, Span span) {
         if (span.isNoop()) {
-            try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-                return unwrap().execute(ctx, req);
-            }
+            // For no-op spans, we only need to inject into headers and don't set any other attributes.
+            return;
         }
 
         ctx.log().whenComplete().thenAccept(log -> {
@@ -192,10 +197,6 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             final HttpClientResponse braveRes = ClientRequestContextAdapter.asHttpClientResponse(log, braveReq);
             handler.handleReceive(braveRes, span);
         });
-
-        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-            return unwrap().execute(ctx, req);
-        }
     }
 
     private static void logTiming(Span span, String startName, String endName, long startTimeMicros,

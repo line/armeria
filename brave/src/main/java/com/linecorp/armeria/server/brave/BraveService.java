@@ -100,18 +100,23 @@ public final class BraveService extends SimpleDecoratingHttpService {
         final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         final Span span = handler.handleReceive(braveReq);
 
-        if (ctx instanceof DefaultServiceRequestContext) {
+        if (!span.isNoop() && ctx instanceof DefaultServiceRequestContext) {
             final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;
             // Run the scope decorators when the ctx is pushed to the thread local.
             defaultCtx.hook(() -> currentTraceContext.decorateScope(span.context(),
                                                                     SERVICE_REQUEST_DECORATING_SCOPE)::close);
         }
 
-        // For no-op spans, nothing special to do.
+        maybeAddTagsToSpan(ctx, braveReq, span);
+        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
+            return unwrap().serve(ctx, req);
+        }
+    }
+
+    private void maybeAddTagsToSpan(ServiceRequestContext ctx, HttpServerRequest braveReq, Span span) {
         if (span.isNoop()) {
-            try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-                return unwrap().serve(ctx, req);
-            }
+            // For no-op spans, nothing special to do.
+            return;
         }
 
         ctx.log().whenComplete().thenAccept(log -> {
@@ -132,9 +137,5 @@ public final class BraveService extends SimpleDecoratingHttpService {
                     ServiceRequestContextAdapter.asHttpServerResponse(log, braveReq);
             handler.handleSend(braveRes, span);
         });
-
-        try (SpanInScope ignored = tracer.withSpanInScope(span)) {
-            return unwrap().serve(ctx, req);
-        }
     }
 }
