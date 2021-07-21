@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Endpoint;
