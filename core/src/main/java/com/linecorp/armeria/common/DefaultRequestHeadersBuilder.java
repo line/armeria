@@ -19,11 +19,9 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -133,18 +131,9 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     public RequestHeadersBuilder acceptLanguages(Iterable<LanguageRange> acceptLanguages) {
         requireNonNull(acceptLanguages, "acceptLanguages");
-        final Collection<LanguageRange> languageRangeCollection;
-        if (acceptLanguages instanceof Collection) {
-            languageRangeCollection = (Collection<LanguageRange>) acceptLanguages;
-        } else {
-            languageRangeCollection = ImmutableList.copyOf(acceptLanguages);
-        }
+        final List<LanguageRange> languageRangeCollection = ImmutableList.copyOf(acceptLanguages);
         Preconditions.checkArgument(!languageRangeCollection.isEmpty(), "acceptLanguages cannot be empty");
-        final String acceptLanguagesValue = languageRangeCollection
-                .stream()
-                .map(it -> (it.getWeight() == 1.0d) ? it.getRange() : it.getRange() + ";q=" + it.getWeight())
-                .collect(Collectors.joining(", "));
-        set(HttpHeaderNames.ACCEPT_LANGUAGE, acceptLanguagesValue);
+        setters().acceptLanguages(languageRangeCollection);
         return self();
     }
 
@@ -173,18 +162,13 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     public RequestHeadersBuilder cookies(Iterable<? extends Cookie> cookies) {
         requireNonNull(cookies, "cookie");
-        final ImmutableSet.Builder<Cookie> builder = ImmutableSet.builder();
-        for (String cookieHeader : getAll(HttpHeaderNames.COOKIE)) {
-            builder.addAll(Cookie.fromCookieHeader(cookieHeader));
-        }
-        builder.addAll(cookies);
-        set(HttpHeaderNames.COOKIE, Cookie.toCookieHeader(builder.build()));
+        setters().cookie(ImmutableSet.copyOf(cookies));
         return this;
     }
 
     @Override
     public RequestHeadersBuilder cookies(Cookie... cookies) {
         requireNonNull(cookies, "cookie");
-        return cookies(ImmutableList.copyOf(cookies));
+        return cookies(ImmutableSet.copyOf(cookies));
     }
 }

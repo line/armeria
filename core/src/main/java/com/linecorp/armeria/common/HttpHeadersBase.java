@@ -43,10 +43,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.math.IntMath;
 
 import io.netty.util.AsciiString;
@@ -79,6 +82,23 @@ class HttpHeadersBase
         PROHIBITED_VALUE_CHAR_NAMES['\r'] = "<CR>";
     }
 
+    // Cached values
+    @Nullable
+    private HttpMethod method;
+    @Nullable
+    private HttpStatus status;
+    @Nullable
+    private MediaType contentType;
+    @Nullable
+    private ContentDisposition contentDisposition;
+    @Nullable
+    private List<LanguageRange> acceptLanguages;
+    @Nullable
+    private Cookies cookies;
+    @Nullable
+    private Cookies setCookie;
+    private boolean isMutating;
+
     private boolean endOfStream;
 
     HttpHeadersBase(int sizeHint) {
@@ -91,6 +111,7 @@ class HttpHeadersBase
     HttpHeadersBase(HttpHeadersBase parent, boolean shallowCopy) {
         super(parent, shallowCopy);
         endOfStream = parent.endOfStream;
+        copyCachedValues(parent);
     }
 
     /**
@@ -100,6 +121,52 @@ class HttpHeadersBase
         super(parent);
         assert !(parent instanceof HttpHeadersBase);
         endOfStream = parent.isEndOfStream();
+    }
+
+    private void copyCachedValues(HttpHeadersBase parant) {
+        method = parant.method;
+        status = parant.status;
+        contentType = parant.contentType;
+        contentDisposition = parant.contentDisposition;
+        acceptLanguages = parant.acceptLanguages;
+        cookies = parant.cookies;
+        setCookie = parant.setCookie;
+    }
+
+    @Override
+    void onChange(@Nullable AsciiString name) {
+        if (isMutating) {
+            // The cached value was update by the shortcut methods itself.
+            return;
+        }
+
+        if (name == null) {
+            // Invalidate all cached values
+            method = null;
+            status = null;
+            contentType = null;
+            contentDisposition = null;
+            acceptLanguages = null;
+            cookies = null;
+            setCookie = null;
+            return;
+        }
+
+        if (HttpHeaderNames.METHOD.equals(name)) {
+            method = null;
+        } else if (HttpHeaderNames.STATUS.equals(name)) {
+            status = null;
+        } else if (HttpHeaderNames.CONTENT_TYPE.equals(name)) {
+            contentType = null;
+        } else if (HttpHeaderNames.CONTENT_DISPOSITION.equals(name)) {
+            contentDisposition = null;
+        } else if (HttpHeaderNames.ACCEPT_LANGUAGE.equals(name)) {
+            acceptLanguages = null;
+        } else if (HttpHeaderNames.COOKIE.equals(name)) {
+            cookies = null;
+        } else if (HttpHeaderNames.SET_COOKIE.equals(name)) {
+            setCookie = null;
+        }
     }
 
     @Override
@@ -181,23 +248,78 @@ class HttpHeadersBase
         }
     }
 
-    Cookies cookie() {
-        final List<String> cookieStrings = getAll(HttpHeaderNames.COOKIE);
-        if (cookieStrings.isEmpty()) {
-            return Cookies.of();
+    /**
+     * Adds the specified {@code cookies} with {@link HttpHeaderNames#COOKIE}.
+     */
+    final void cookie(Set<? extends Cookie> cookies) {
+        if (this.cookies == null) {
+            this.cookies = mergeCookies(cookie(), cookies);
+        } else {
+            this.cookies = mergeCookies(this.cookies, cookies);
         }
-        return Cookie.fromCookieHeaders(cookieStrings);
+
+        isMutating = true;
+        set(HttpHeaderNames.COOKIE, Cookie.toCookieHeader(this.cookies));
+        isMutating = false;
+    }
+
+    Cookies cookie() {
+        if (cookies != null) {
+            return cookies;
+        }
+        return cookies = Cookie.fromCookieHeaders(getAll(HttpHeaderNames.COOKIE));
+    }
+
+    /**
+     * Adds the specified {@code setCookies} with {@link HttpHeaderNames#SET_COOKIE}.
+     */
+    final void setCookie(Set<? extends Cookie> setCookie) {
+        if (this.setCookie == null) {
+            this.setCookie = mergeCookies(setCookie(), setCookie);
+        } else {
+            this.setCookie = mergeCookies(this.setCookie, setCookie);
+        }
+        isMutating = true;
+        add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(setCookie));
+        isMutating = false;
     }
 
     Cookies setCookie() {
-        final List<String> cookieHeaders = getAll(HttpHeaderNames.SET_COOKIE);
-        return Cookie.fromSetCookieHeaders(cookieHeaders);
+        if (setCookie != null) {
+            return setCookie;
+        }
+        return setCookie = Cookie.fromSetCookieHeaders(getAll(HttpHeaderNames.SET_COOKIE));
+    }
+
+    private static Cookies mergeCookies(Set<? extends Cookie> first, Set<? extends Cookie> second) {
+        final ImmutableSet<Cookie> merged =
+                ImmutableSet.<Cookie>builderWithExpectedSize(first.size() + second.size())
+                            .addAll(first)
+                            .addAll(second)
+                            .build();
+        return Cookies.of(merged);
+    }
+
+    final void acceptLanguages(List<LanguageRange> acceptLanguages) {
+        this.acceptLanguages = acceptLanguages;
+        final String acceptLanguagesValue = acceptLanguages
+                .stream()
+                .map(it -> (it.getWeight() == 1.0d) ? it.getRange() : it.getRange() + ";q=" + it.getWeight())
+                .collect(Collectors.joining(", "));
+        isMutating = true;
+        set(HttpHeaderNames.ACCEPT_LANGUAGE, acceptLanguagesValue);
+        isMutating = false;
     }
 
     @Nullable
     List<LanguageRange> acceptLanguages() {
+        if (acceptLanguages != null) {
+            return acceptLanguages;
+        }
+
         final List<String> acceptHeaders = getAll(HttpHeaderNames.ACCEPT_LANGUAGE);
         if (acceptHeaders.isEmpty()) {
+            // TODO(ikhoon): Return an empty list if no accept-language exists in Armeria 2.0
             return null;
         }
 
@@ -208,7 +330,7 @@ class HttpHeadersBase
             }
             acceptLanguages.sort(comparingDouble(LanguageRange::getWeight).reversed());
 
-            return ImmutableList.copyOf(acceptLanguages);
+            return this.acceptLanguages = ImmutableList.copyOf(acceptLanguages);
         } catch (IllegalArgumentException e) {
             // If any port of any of the headers is ill-formed
             return null;
@@ -239,15 +361,22 @@ class HttpHeadersBase
     }
 
     HttpMethod method() {
+        if (method != null) {
+            return method;
+        }
+
         final String methodStr = get(HttpHeaderNames.METHOD);
         checkState(methodStr != null, ":method header does not exist.");
-        return HttpMethod.isSupported(methodStr) ? HttpMethod.valueOf(methodStr)
-                                                 : HttpMethod.UNKNOWN;
+        return method = HttpMethod.isSupported(methodStr) ? HttpMethod.valueOf(methodStr)
+                                                          : HttpMethod.UNKNOWN;
     }
 
     final void method(HttpMethod method) {
         requireNonNull(method, "method");
+        this.method = method;
+        isMutating = true;
         set(HttpHeaderNames.METHOD, method.name());
+        isMutating = false;
     }
 
     @Nullable
@@ -283,9 +412,13 @@ class HttpHeadersBase
     }
 
     HttpStatus status() {
+        if (status != null) {
+            return status;
+        }
+
         final String statusStr = get(HttpHeaderNames.STATUS);
         checkState(statusStr != null, ":status header does not exist.");
-        return HttpStatus.valueOf(statusStr);
+        return status = HttpStatus.valueOf(statusStr);
     }
 
     final void status(int statusCode) {
@@ -294,19 +427,26 @@ class HttpHeadersBase
 
     final void status(HttpStatus status) {
         requireNonNull(status, "status");
+        this.status = status;
+        isMutating = true;
         set(HttpHeaderNames.STATUS, status.codeAsText());
+        isMutating = false;
     }
 
     @Nullable
     @Override
     public MediaType contentType() {
+        if (contentType != null) {
+            return contentType;
+        }
+
         final String contentTypeString = get(HttpHeaderNames.CONTENT_TYPE);
         if (contentTypeString == null) {
             return null;
         }
 
         try {
-            return MediaType.parse(contentTypeString);
+            return contentType = MediaType.parse(contentTypeString);
         } catch (IllegalArgumentException unused) {
             // Invalid media type
             return null;
@@ -315,19 +455,26 @@ class HttpHeadersBase
 
     final void contentType(MediaType contentType) {
         requireNonNull(contentType, "contentType");
+        this.contentType = contentType;
+        isMutating = true;
         set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+        isMutating = false;
     }
 
     @Override
     @Nullable
     public ContentDisposition contentDisposition() {
+        if (contentDisposition != null) {
+            return contentDisposition;
+        }
+
         final String contentDispositionString = get(HttpHeaderNames.CONTENT_DISPOSITION);
         if (contentDispositionString == null) {
             return null;
         }
 
         try {
-            return ContentDisposition.parse(contentDispositionString);
+            return contentDisposition = ContentDisposition.parse(contentDispositionString);
         } catch (IllegalArgumentException ex) {
             return null;
         }
@@ -335,7 +482,10 @@ class HttpHeadersBase
 
     final void contentDisposition(ContentDisposition contentDisposition) {
         requireNonNull(contentDisposition, "contentDisposition");
+        this.contentDisposition = contentDisposition;
+        isMutating = true;
         set(HttpHeaderNames.CONTENT_DISPOSITION, contentDisposition.asHeaderValue());
+        isMutating = false;
     }
 
     // Getters

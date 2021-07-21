@@ -18,6 +18,8 @@ package com.linecorp.armeria.common;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableSet;
+
 final class DefaultResponseHeadersBuilder
         extends AbstractHttpHeadersBuilder<ResponseHeadersBuilder>
         implements ResponseHeadersBuilder {
@@ -54,7 +56,7 @@ final class DefaultResponseHeadersBuilder
     @Override
     public ResponseHeadersBuilder cookie(Cookie cookie) {
         requireNonNull(cookie, "cookie");
-        add(HttpHeaderNames.SET_COOKIE, cookie.toCookieHeader());
+        setters().setCookie(ImmutableSet.of(cookie));
         return this;
     }
 
@@ -70,15 +72,14 @@ final class DefaultResponseHeadersBuilder
     @Override
     public ResponseHeadersBuilder cookies(Iterable<? extends Cookie> cookies) {
         requireNonNull(cookies, "cookie");
-        add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(cookies));
+        setters().setCookie(ImmutableSet.copyOf(cookies));
         return this;
     }
 
     @Override
     public ResponseHeadersBuilder cookies(Cookie... cookies) {
         requireNonNull(cookies, "cookie");
-        add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(cookies));
-        return this;
+        return cookies(ImmutableSet.copyOf(cookies));
     }
 
     @Override
