@@ -533,13 +533,6 @@ public final class DefaultClientRequestContext
      * {@link RequestContextStorage}. The {@link SafeCloseable} returned by {@code contextHook} will be called
      * whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
      * This method is useful when you need to propagate a custom context in this {@link RequestContext}'s scope.
-     * For example:
-     * <pre>{@code
-     * ctx.hook(() -> {
-     *     MDC.put("transactionId", "1234567890");
-     *     // Should clean up the thread local resources when closing.
-     *     return () -> MDC.remove("transactionId");
-     * });
      *
      * <p>Note that this operation is highly performance-sensitive operation, and thus
      * it's not a good idea to run a time-consuming task.
