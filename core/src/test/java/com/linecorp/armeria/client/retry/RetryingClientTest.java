@@ -21,7 +21,6 @@ import static com.linecorp.armeria.common.util.Exceptions.peel;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -653,7 +652,7 @@ class RetryingClientTest {
     }
 
     @Test
-    void retryDoNotStopUntilGetResponseWhenSubscriberCancel() {
+    void doNotRetryWhenSubscriberIsCancelled() throws Exception {
         final WebClient client = client(retryAlways);
         client.get("/subscriber-cancel").subscribe(
                 new Subscriber<HttpObject>() {
@@ -672,7 +671,8 @@ class RetryingClientTest {
                     public void onComplete() {}
                 });
 
-        await().untilAsserted(() -> assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(1));
+        TimeUnit.SECONDS.sleep(1L); // Sleep to check if there's a retry.
+        assertThat(subscriberCancelServiceCallCounter.get()).isEqualTo(1);
     }
 
     @Test
