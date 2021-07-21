@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpResponse;
@@ -135,7 +134,7 @@ public abstract class AbstractConcurrencyLimitingClient<I extends Request, O ext
             // Current request was not delegated. Schedule a timeout.
             final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
                     () -> resFuture.completeExceptionally(
-                            UnprocessedRequestException.of(ResponseTimeoutException.get())),
+                            UnprocessedRequestException.of(ConcurrencyLimitTimeoutException.get())),
                     timeoutMillis, TimeUnit.MILLISECONDS);
             currentTask.set(timeoutFuture);
         }
