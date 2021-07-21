@@ -166,6 +166,7 @@ configure(projectsWithFlags('java')) {
             options.release.set(11)
             // IntelliJ fails to compile example projects with IntelliJ compiler because of a wrong target
             // bytecode version which is marked as Java 8 without the following options.
+            // See https://github.com/line/armeria/pull/3712
             sourceCompatibility = '11'
             targetCompatibility = '11'
         } else {
