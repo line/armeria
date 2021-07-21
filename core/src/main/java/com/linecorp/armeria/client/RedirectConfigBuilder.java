@@ -42,20 +42,11 @@ public final class RedirectConfigBuilder {
         return endpoint.host().contains(domain);
     };
 
-    private RedirectRule redirectRule = RedirectRule.of();
-    private int maxRedirects = Integer.MAX_VALUE;
+    private int maxRedirects = 19; // Widely used default value. https://stackoverflow.com/a/36041063/1736581
     @Nullable
     private BiPredicate<ClientRequestContext, String> predicate;
 
     RedirectConfigBuilder() {}
-
-    /**
-     * Sets the {@link RedirectRule}.
-     */
-    public RedirectConfigBuilder redirectRule(RedirectRule redirectRule) {
-        this.redirectRule = requireNonNull(redirectRule, "redirectRule");
-        return this;
-    }
 
     /**
      * Sets the maximum number of automatic redirection that the client executes.
@@ -82,8 +73,8 @@ public final class RedirectConfigBuilder {
      * automatic redirection for all domains by default. If the {@link WebClient} is created with a base URI,
      * automatic redirection is executed for the domain of the base URI by default.
      */
-    public RedirectConfigBuilder allow(String... domains) {
-        return allow(ImmutableList.copyOf(requireNonNull(domains, "domains")));
+    public RedirectConfigBuilder allowDomains(String... domains) {
+        return allowDomains(ImmutableList.copyOf(requireNonNull(domains, "domains")));
     }
 
     /**
@@ -92,7 +83,7 @@ public final class RedirectConfigBuilder {
      * automatic redirection for all domains by default. If the {@link WebClient} is created with a base URI,
      * automatic redirection is executed for the domain of the base URI by default.
      */
-    public RedirectConfigBuilder allow(Iterable<String> domains) {
+    public RedirectConfigBuilder allowDomains(Iterable<String> domains) {
         final List<String> domains0 = ImmutableList.copyOf(requireNonNull(domains, "domains"));
         return allow((ctx, domain) -> {
             for (String d : domains0) {
@@ -125,6 +116,6 @@ public final class RedirectConfigBuilder {
      * Returns a newly-created {@link RedirectConfig} based on the properties set so far.
      */
     public RedirectConfig build() {
-        return new RedirectConfig(redirectRule, maxRedirects, predicate);
+        return new RedirectConfig(predicate, maxRedirects);
     }
 }

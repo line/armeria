@@ -33,7 +33,7 @@ public final class RedirectConfig {
     private static final RedirectConfig defaultRedirectConfig = builder().build();
 
     private static final RedirectConfig disabledRedirectConfig = new RedirectConfig(
-            RedirectRule.of(), -1, (ctx, path) -> false);
+            (ctx, path) -> false, -1);
 
     /**
      * Returns the default {@link RedirectConfig}.
@@ -56,29 +56,19 @@ public final class RedirectConfig {
         return new RedirectConfigBuilder();
     }
 
-    private final RedirectRule redirectRule;
     private final int maxRedirects;
     @Nullable
     private final BiPredicate<ClientRequestContext, String> predicate;
 
-    RedirectConfig(RedirectRule redirectRule, int maxRedirects,
-                   @Nullable BiPredicate<ClientRequestContext, String> predicate) {
-        this.redirectRule = redirectRule;
+    RedirectConfig(@Nullable BiPredicate<ClientRequestContext, String> predicate, int maxRedirects) {
         this.maxRedirects = maxRedirects;
         this.predicate = predicate;
     }
 
     /**
-     * Returns the {@link RedirectRule}.
-     */
-    public RedirectRule redirectRule() {
-        return redirectRule;
-    }
-
-    /**
      * Returns the maximum number of automatic redirection that the client executes.
      */
-    public int maxRedirects() {
+    int maxRedirects() {
         return maxRedirects;
     }
 
@@ -87,14 +77,13 @@ public final class RedirectConfig {
      * domain or not.
      */
     @Nullable
-    public BiPredicate<ClientRequestContext, String> domainFilter() {
+    BiPredicate<ClientRequestContext, String> domainFilter() {
         return predicate;
     }
 
     @Override
     public String toString() {
-        return toStringHelper(this).add("redirectRule", redirectRule)
-                                   .add("maxRedirects", maxRedirects)
+        return toStringHelper(this).add("maxRedirects", maxRedirects)
                                    .add("predicate", predicate)
                                    .toString();
     }

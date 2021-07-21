@@ -101,7 +101,7 @@ class RedirectingClientTest {
     void httpsRedirect() {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(ClientFactory.insecure())
-                                          .enableRedirect()
+                                          .followRedirects()
                                           .build();
         final AggregatedHttpResponse join = client.get("/https").aggregate().join();
         assertThat(join.contentUtf8()).isEqualTo("httpsRedirection");
@@ -110,7 +110,7 @@ class RedirectingClientTest {
     @Test
     void seeOtherHttpMethodChangedToGet() {
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .enableRedirect()
+                                          .followRedirects()
                                           .build();
         final AggregatedHttpResponse join = client.post("/seeOther", "hello!").aggregate().join();
         assertThat(join.contentUtf8()).isEqualTo("seeOtherRedirection");
@@ -120,7 +120,7 @@ class RedirectingClientTest {
     void webClientCreatedWithBaseUri_doesNotAllowRedirectionToOtherDomain() {
         WebClient client = WebClient.builder(server.httpUri())
                                     .factory(mockClientFactory())
-                                    .enableRedirect()
+                                    .followRedirects()
                                     .build();
         AggregatedHttpResponse join = client.get("/anotherDomain").aggregate().join();
         assertThat(join.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
@@ -128,7 +128,7 @@ class RedirectingClientTest {
 
         client = WebClient.builder(server.httpUri())
                           .factory(mockClientFactory())
-                          .redirectConfig(RedirectConfig.builder().allow("foo.com").build())
+                          .redirectConfig(RedirectConfig.builder().allowDomains("foo.com").build())
                           .build();
 
         join = client.get("/anotherDomain").aggregate().join();
@@ -139,7 +139,7 @@ class RedirectingClientTest {
     void webClientCreatedWithoutBaseUri_allowRedirectionToOtherDomain() {
         final WebClient client = WebClient.builder()
                                           .factory(mockClientFactory())
-                                          .enableRedirect()
+                                          .followRedirects()
                                           .build();
         final AggregatedHttpResponse join = client.get(server.httpUri() + "/anotherDomain").aggregate().join();
         assertThat(join.contentUtf8()).isEqualTo("anotherDomainRedirection");
@@ -151,7 +151,7 @@ class RedirectingClientTest {
         // See https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.4
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(ClientFactory.insecure())
-                                          .enableRedirect()
+                                          .followRedirects()
                                           .build();
         final AggregatedHttpResponse join = client.get("/removeDotSegments/foo").aggregate().join();
         assertThat(join.contentUtf8()).isEqualTo("removeDotSegmentsRedirection");
@@ -160,7 +160,7 @@ class RedirectingClientTest {
     @Test
     void redirectLoopsException() {
         final WebClient client = WebClient.builder(server.httpUri())
-                                          .enableRedirect()
+                                          .followRedirects()
                                           .build();
         assertThatThrownBy(() -> client.get("/loop").aggregate().join()).hasMessageContainingAll(
                 "The initial request path: /loop, redirect paths:", "/loop1", "/loop2");

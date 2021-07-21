@@ -69,7 +69,7 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     /**
      * Enables <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
      */
-    public WebClientBuilder enableRedirect() {
+    public WebClientBuilder followRedirects() {
         return option(REDIRECT_CONFIG, RedirectConfig.of());
     }
 

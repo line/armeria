@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import java.util.Set;
-
 import com.google.common.base.Joiner;
 
 import com.linecorp.armeria.common.Flags;
@@ -35,7 +33,7 @@ public final class RedirectLoopsException extends RuntimeException {
         super("The request path: " + originalPath);
     }
 
-    RedirectLoopsException(String originalPath, Set<String> paths) {
+    RedirectLoopsException(String originalPath, Iterable<String> paths) {
         super("The initial request path: " + originalPath + ", redirect paths: " + joiner.join(paths));
     }
 
