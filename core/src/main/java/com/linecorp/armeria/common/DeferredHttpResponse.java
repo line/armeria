@@ -18,13 +18,11 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DeferredStreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -89,12 +87,11 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
         });
         stage.handle((delegate, thrown) -> {
             if (thrown != null) {
-                final Throwable cause = Exceptions.peel(thrown);
-                // Ignore exceptions caused by downstream cancellation.
-                if (cause instanceof CancelledSubscriptionException || cause instanceof CancellationException) {
+                if (!whenComplete().isDone()) {
+                    close(Exceptions.peel(thrown));
+                } else {
                     return null;
                 }
-                close(cause);
             } else if (delegate == null) {
                 close(new NullPointerException("delegate stage produced a null response: " + stage));
             } else {
