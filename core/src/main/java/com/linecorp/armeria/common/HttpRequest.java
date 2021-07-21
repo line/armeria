@@ -48,7 +48,10 @@ import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.stream.DecodedHttpStreamMessage;
+import com.linecorp.armeria.internal.server.JacksonUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
+
+import com.fasterxml.jackson.core.JsonProcessingException;  
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -278,6 +281,21 @@ public interface HttpRequest extends Request, HttpMessage {
             return new StreamMessageBasedHttpRequest(headers, (StreamMessage<? extends HttpObject>) publisher);
         } else {
             return new PublisherBasedHttpRequest(headers, publisher);
+        }
+    }
+
+    /**
+     * Creates a new HTTP request and closes the stream. The {@code content} will be encoded in a JSON object.
+     *
+     * @param method the HTTP method of the request
+     * @param path the path of the request
+     * @param content the content of the request
+     */
+    static HttpRequest ofJson(HttpMethod method, String path, Object content) {
+        try {
+            return of(method, path, MediaType.JSON_UTF_8, JacksonUtil.writeValueAsBytes(content));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Unexpected exception while encoding the content of the request", e);
         }
     }
 

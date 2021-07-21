@@ -19,7 +19,11 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 class HttpResponseTest {
 
@@ -149,5 +153,54 @@ class HttpResponseTest {
         assertThatThrownBy(() -> HttpResponse.ofRedirect(HttpStatus.MOVED_PERMANENTLY, "locationFor : %s",
             null))
             .isInstanceOf(NullPointerException.class).hasMessageContaining("args");
+    }
+
+    @Test
+    void aggregateAs() {
+        // aggregate as class type
+        Content content = HttpResponse.of(MediaType.JSON_UTF_8, "{\"id\":1}")
+                .aggregateAs(Content.class)
+                .join();
+        assertThat(content.id).isEqualTo(1);
+
+        // aggregate as type reference
+        WrapperContent<Content> wrapperContent = HttpResponse.of(MediaType.JSON_UTF_8,
+                "{\"id\":1,\"name\":\"name\",\"list\":[{\"id\":1},{\"id\":2},{\"id\":3}]}")
+                .aggregateAs(new TypeReference<WrapperContent<Content>>(){})
+                .join();
+        assertThat(wrapperContent.id).isEqualTo(1);
+        assertThat(wrapperContent.name).isEqualTo("name");
+        assertThat(wrapperContent.list.stream().map(item -> item.id)).isEqualTo(ImmutableList.of(1, 2, 3));
+
+        assertThatThrownBy(() ->
+                HttpResponse.of(MediaType.JSON_UTF_8, "{\"UnknownField\":1}")
+                        .aggregateAs(Content.class)
+                        .join());
+    }
+
+    static class WrapperContent<T> {
+        public Integer id;
+        public String name;
+        public List<T> list;
+
+        public WrapperContent() {
+        }
+
+        public WrapperContent(Integer id, String name, List<T> list) {
+            this.id = id;
+            this.name = name;
+            this.list = list;
+        }
+    }
+
+    static class Content {
+        public Integer id;
+
+        public Content() {
+        }
+
+        public Content(Integer id) {
+            this.id = id;
+        }
     }
 }

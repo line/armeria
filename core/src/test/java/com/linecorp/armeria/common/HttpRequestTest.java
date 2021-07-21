@@ -18,8 +18,11 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import com.google.common.collect.ImmutableList;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
@@ -40,6 +43,18 @@ class HttpRequestTest {
                     .expectNext(HttpData.ofUtf8("c"))
                     .expectComplete()
                     .verify();
+    }
+
+    @Test
+    void createWithObject() {
+        final RequestContent requestContent = new RequestContent(1, "name", ImmutableList.of("a", "b", "c"));
+        final HttpRequest request = HttpRequest.ofJson(HttpMethod.POST, "/receiveContent", requestContent);
+
+        assertThat(request.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        StepVerifier.create(request)
+                .expectNext(HttpData.ofUtf8("{\"id\":1,\"name\":\"name\",\"list\":[\"a\",\"b\",\"c\"]}"))
+                .expectComplete()
+                .verify();
     }
 
     @Test
@@ -105,5 +120,20 @@ class HttpRequestTest {
                        data,
                        HttpHeaders.of("some-trailer", "value"));
         assertThat(data.refCnt()).isZero();
+    }
+
+    static class RequestContent {
+        public Integer id;
+        public String name;
+        public List<String> list;
+
+        public RequestContent() {
+        }
+
+        public RequestContent(Integer id, String name, List<String> list) {
+            this.id = id;
+            this.name = name;
+            this.list = list;
+        }
     }
 }
