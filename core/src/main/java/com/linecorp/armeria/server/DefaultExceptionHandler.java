@@ -42,6 +42,9 @@ enum DefaultExceptionHandler implements ExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultExceptionHandler.class);
 
+    private static final HttpStatusException BAD_REQUEST_EXCEPTION =
+            HttpStatusException.of(HttpStatus.BAD_REQUEST);
+
     @Nullable
     @Override
     public HttpResponse convert(ServiceRequestContext context, Throwable cause) {
@@ -53,12 +56,14 @@ enum DefaultExceptionHandler implements ExceptionHandler {
                 if (needsToWarn()) {
                     logger.warn("{} Failed processing a request:", context, cause);
                 }
-                return HttpResponse.of(HttpStatus.BAD_REQUEST);
+                return HttpResponse.ofFailure(BAD_REQUEST_EXCEPTION);
             }
         }
         if (cause instanceof HttpStatusException) {
-            return HttpResponse.of(((HttpStatusException) cause).httpStatus());
+            // Use HttpStatusException itself so that a log completes deferred values.
+            return HttpResponse.ofFailure(cause);
         }
+
         if (cause instanceof RequestCancellationException) {
             // A stream has been cancelled. No need to send a response with a status.
             return HttpResponse.ofFailure(cause);
