@@ -20,6 +20,7 @@ import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageU
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -40,6 +41,10 @@ import io.netty.util.concurrent.EventExecutor;
 
 public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<RecoverableStreamMessage> subscribedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(RecoverableStreamMessage.class, "subscribed");
+
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     private final StreamMessage<T> upstream;
@@ -49,7 +54,8 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
     @Nullable
     private volatile StreamMessage<T> fallbackStream;
     @Nullable
-    private volatile Throwable abortCause;
+    private volatile EventExecutor executor;
+    private volatile int subscribed;
 
     public RecoverableStreamMessage(StreamMessage<T> upstream,
                                     Function<? super Throwable, ? extends StreamMessage<T>> errorFunction,
@@ -109,8 +115,23 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
-        // A late subscriber will be checked by the upstream.
+
+        if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
+            if (executor.inEventLoop()) {
+                abortLateSubscriber(subscriber);
+            } else {
+                executor.execute(() -> abortLateSubscriber(subscriber));
+            }
+            return;
+        }
+
+        this.executor = executor;
         upstream.subscribe(new RecoverableSubscriber(subscriber, executor, options), executor, options);
+    }
+
+    private void abortLateSubscriber(Subscriber<? super T> subscriber) {
+        subscriber.onSubscribe(NoopSubscription.get());
+        subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
     }
 
     @Override
@@ -121,7 +142,15 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
-        abortCause = cause;
+        final EventExecutor executor = this.executor;
+        if (executor == null || executor.inEventLoop()) {
+            abort0(cause);
+        } else {
+            executor.execute(() -> abort0(cause));
+        }
+    }
+
+    private void abort0(Throwable cause) {
         final StreamMessage<T> fallbackStream = this.fallbackStream;
         if (fallbackStream != null) {
             fallbackStream.abort(cause);
@@ -201,12 +230,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
                 final StreamMessage<T> fallback = errorFunction.apply(cause);
                 requireNonNull(fallback, "errorFunction.apply() returned null");
                 fallbackStream = fallback;
-                final Throwable abortCause = RecoverableStreamMessage.this.abortCause;
-                if (abortCause != null) {
-                    fallback.abort(abortCause);
-                } else {
-                    fallback.subscribe(this, executor, options);
-                }
+                fallback.subscribe(this, executor, options);
             } catch (Throwable t) {
                 onError0(new CompositeException(t, cause));
             }
