@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import java.time.Duration;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -26,24 +28,18 @@ import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
-import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2Stream;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
 
-    private static final ByteBuf MAX_CONNECTION_AGE_DEBUG = Unpooled.wrappedBuffer("max-age".getBytes());
 
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-
-    private boolean isGoAwaySent;
 
     ServerHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
                              KeepAliveHandler keepAliveHandler,
@@ -66,11 +62,8 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             return newFailedFuture(ClosedStreamException.get());
         }
 
-        if (!isGoAwaySent && keepAliveHandler.needToCloseConnection()) {
-            final int lastStreamId = encoder().connection().remote().lastStreamCreated();
-            encoder().writeGoAway(ctx(), lastStreamId, Http2Error.NO_ERROR.code(),
-                                  MAX_CONNECTION_AGE_DEBUG.retain(), ctx().newPromise());
-            isGoAwaySent = true;
+        if (keepAliveHandler.needToCloseConnection()) {
+            keepAliveHandler.initiateConnectionShutdown(ctx(), Duration.ZERO);
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);

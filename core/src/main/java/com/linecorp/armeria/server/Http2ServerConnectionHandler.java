@@ -53,7 +53,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
         if (needsKeepAliveHandler) {
             keepAliveHandler = new Http2ServerKeepAliveHandler(
-                    channel, encoder().frameWriter(), keepAliveTimer,
+                    channel, encoder(), keepAliveTimer,
                     idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
         } else {
             keepAliveHandler = NoopKeepAliveHandler.INSTANCE;

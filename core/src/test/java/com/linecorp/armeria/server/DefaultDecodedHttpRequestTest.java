@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import reactor.test.StepVerifier;
@@ -112,6 +113,7 @@ public class DefaultDecodedHttpRequestTest {
                                                                 ServiceRequestContext sctx) {
         final DefaultDecodedHttpRequest
                 request = new DefaultDecodedHttpRequest(sctx.eventLoop(), 1, 1, headers, true,
+                                                        NoopKeepAliveHandler.INSTANCE,
                                                         InboundTrafficController.disabled(),
                                                         sctx.maxRequestLength());
         request.init(sctx);

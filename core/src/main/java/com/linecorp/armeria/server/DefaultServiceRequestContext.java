@@ -84,6 +84,7 @@ public final class DefaultServiceRequestContext
 
     private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
 
+    private final ChannelHandlerContext ctx;
     private final Channel ch;
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
@@ -136,18 +137,18 @@ public final class DefaultServiceRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            ServiceConfig cfg, ChannelHandlerContext ctx, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
             long requestStartTimeNanos, long requestStartTimeMicros, KeepAliveHandler keepAliveHandler) {
 
-        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
+        this(cfg, ctx, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
              sslSession, proxiedAddresses, clientAddress, /* requestCancellationScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros, keepAliveHandler, HttpHeaders.of(), HttpHeaders.of());
     }
 
     DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            ServiceConfig cfg, ChannelHandlerContext ctx, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
             @Nullable CancellationScheduler requestCancellationScheduler,
@@ -159,6 +160,7 @@ public final class DefaultServiceRequestContext
               requireNonNull(routingResult, "routingResult").query(),
               requireNonNull(req, "req"), null, null);
 
+        this.ctx = requireNonNull(ctx, "ctx");
         this.ch = requireNonNull(ch, "ch");
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
@@ -434,17 +436,8 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public CompletableFuture<Void> initiateConnectionShutdown() {
-        keepAliveHandler.destroy();
-        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
-        channel().closeFuture().addListener(f -> {
-            if (f.cause() == null) {
-                completableFuture.complete(null);
-            } else {
-                completableFuture.completeExceptionally(f.cause());
-            }
-        });
-        return completableFuture;
+    public CompletableFuture<Void> initiateConnectionShutdown(Duration gracePeriod) {
+        return keepAliveHandler.initiateConnectionShutdown(ctx, gracePeriod);
     }
 
     @Override

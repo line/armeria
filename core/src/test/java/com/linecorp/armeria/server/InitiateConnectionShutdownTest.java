@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
@@ -90,7 +91,26 @@ public class InitiateConnectionShutdownTest {
             sb.annotatedService(new Object() {
                 @Get("/goaway_async")
                 public CompletableFuture<HttpResponse> goAway(ServiceRequestContext ctx) {
-                    ctx.initiateConnectionShutdown();
+                    ctx.initiateConnectionShutdown(Duration.ZERO);
+                    final CompletableFuture<HttpResponse> cf = new CompletableFuture<>();
+                    // Respond with some delay, GOAWAY frame should not be blocked and shoudl be sent before
+                    // the response.
+                    ctx.eventLoop()
+                       .schedule(() -> HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!"),
+                                 100, TimeUnit.MILLISECONDS)
+                       .addListener(f -> {
+                           if (f.cause() != null) {
+                               cf.completeExceptionally(f.cause());
+                           } else {
+                               cf.complete((HttpResponse) f.getNow());
+                           }
+                       });
+                    return cf;
+                }
+
+                @Get("/goaway_delayed_async")
+                public CompletableFuture<HttpResponse> goAwayDelayed(ServiceRequestContext ctx) {
+                    ctx.initiateConnectionShutdown(Duration.ofMillis(1));
                     final CompletableFuture<HttpResponse> cf = new CompletableFuture<>();
                     // Respond with some delay, GOAWAY frame should not be blocked and shoudl be sent before
                     // the response.
@@ -110,7 +130,18 @@ public class InitiateConnectionShutdownTest {
                 @Blocking
                 @Get("/goaway_blocking")
                 public HttpResponse goAwayBlocking(ServiceRequestContext ctx) throws InterruptedException {
-                    ctx.initiateConnectionShutdown();
+                    ctx.initiateConnectionShutdown(Duration.ZERO);
+                    // Respond with some delay, GOAWAY frame should not be blocked and shoudl be sent before
+                    // the response.
+                    Thread.sleep(100);
+                    return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!");
+                }
+
+                @Blocking
+                @Get("/goaway_delayed_blocking")
+                public HttpResponse goAwayDelayedBlocking(ServiceRequestContext ctx)
+                        throws InterruptedException {
+                    ctx.initiateConnectionShutdown(Duration.ofMillis(1));
                     // Respond with some delay, GOAWAY frame should not be blocked and shoudl be sent before
                     // the response.
                     Thread.sleep(100);
@@ -174,9 +205,38 @@ public class InitiateConnectionShutdownTest {
                 });
         await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
         final InOrder inOrder = inOrder(clientListener);
+        inOrder.verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class),
+                                                             eq(Integer.MAX_VALUE),
+                                                             eq(Http2Error.NO_ERROR.code()),
+                                                             any(ByteBuf.class));
+        inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
+                                                    eq(Http2Error.NO_ERROR.code()), any(ByteBuf.class));
+        inOrder.verify(clientListener).onDataRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
+                                                  any(ByteBuf.class), anyInt(), eq(true));
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "/goaway_delayed_async", "/goaway_delayed_blocking" })
+    void initiateConnectionShutdownDelayedHttp2Async(String path) throws Exception {
+        final AtomicBoolean finished = new AtomicBoolean();
+        clientChannel.eventLoop().execute(() -> {
+            final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
+            final Http2Headers headers = getHeaders(path);
+            http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
+            http2Client.flush(ctx);
+        });
+        when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
+                invocation -> {
+                    finished.set(true);
+                    return 0;
+                });
+        await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
+        final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
                                                     eq(Http2Error.NO_ERROR.code()), any(ByteBuf.class));
-        inOrder.verify(clientListener).onDataRead(any(ChannelHandlerContext.class), eq(3),
+        inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
+                                                    eq(Http2Error.NO_ERROR.code()), any(ByteBuf.class));
+        inOrder.verify(clientListener).onDataRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
                                                   any(ByteBuf.class), anyInt(), eq(true));
     }
 }

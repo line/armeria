@@ -547,12 +547,10 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Initiates connection shutdown.
-     * For HTTP/2 sends a GOAWAY frame with stream ID 2^31-1 and NO_ERROR code. This signals to the
-     * client that a shutdown is imminent and that initiating further requests is prohibited.
-     * Currently no-op for HTTP/1.
-     *
-     * @return {@link CompletableFuture} that completes when channel is closed.
+     * Initiates connection shutdown with a given grace period. New requests are still accepted during the
+     * grace period. If grace period is zero or negative - initiates connection shutdown immediately.
+     * Returns {@link CompletableFuture} that completes when the channel is closed.
      */
     @UnstableApi
-    CompletableFuture<Void> initiateConnectionShutdown();
+    CompletableFuture<Void> initiateConnectionShutdown(Duration gracePeriod);
 }

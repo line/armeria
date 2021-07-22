@@ -335,7 +335,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final String originalPath = headers.path();
         if (originalPath.isEmpty() || originalPath.charAt(0) != '/') {
             final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
+                    newEarlyRespondingRequestContext(ctx, channel, req, hostname, virtualHost,
                                                      proxiedAddresses, clientAddress, null);
             if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
                 handleOptions(ctx, reqCtx);
@@ -349,7 +349,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final PathAndQuery pathAndQuery = PathAndQuery.parse(originalPath);
         if (pathAndQuery == null) {
             final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
+                    newEarlyRespondingRequestContext(ctx, channel, req, hostname, virtualHost,
                                                      proxiedAddresses, clientAddress, null);
             rejectInvalidPath(ctx, reqCtx);
             return;
@@ -365,7 +365,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         } catch (Throwable cause) {
             logger.warn("{} Unexpected exception: {}", ctx.channel(), req, cause);
             final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, hostname, virtualHost,
+                    newEarlyRespondingRequestContext(ctx, channel, req, hostname, virtualHost,
                                                      proxiedAddresses, clientAddress, routingCtx);
             respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, HttpData.empty(), cause);
             return;
@@ -379,7 +379,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final HttpService service = serviceCfg.service();
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, config.meterRegistry(), protocol,
+                serviceCfg, ctx, channel, config.meterRegistry(), protocol,
                 nextRequestId(), routingCtx, routingResult,
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros(), req.keepAliveHandler());
@@ -667,7 +667,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private ServiceRequestContext newEarlyRespondingRequestContext(
-            Channel channel, DecodedHttpRequest req,
+            ChannelHandlerContext ctx, Channel channel, DecodedHttpRequest req,
             String hostname, VirtualHost virtualHost,
             ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
             @Nullable RoutingContext routingCtx) {
@@ -682,7 +682,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                                          .build();
         return new DefaultServiceRequestContext(
                 virtualHost.fallbackServiceConfig(),
-                channel, NoopMeterRegistry.get(), protocol(),
+                ctx, channel, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(), routingCtx, routingResult,
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros(), req.keepAliveHandler());
