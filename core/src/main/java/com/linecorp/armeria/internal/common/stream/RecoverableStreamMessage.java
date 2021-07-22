@@ -68,8 +68,13 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
                 return true;
             }
             return fallbackStream.isOpen();
+        } else {
+            final StreamMessage<T> fallbackStream = this.fallbackStream;
+            if (fallbackStream == null) {
+                return false;
+            }
+            return fallbackStream.isOpen();
         }
-        return false;
     }
 
     @Override
@@ -105,15 +110,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
         this.executor = executor;
-        if (executor.inEventLoop()) {
-            subscribe0(subscriber, executor, options);
-        } else {
-            executor.execute(() -> subscribe0(subscriber, executor, options));
-        }
-    }
-
-    private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
-                            SubscriptionOption[] options) {
+        // A late subscriber will be checked by the upstream.
         upstream.subscribe(new RecoverableSubscriber(subscriber, executor, options), executor, options);
     }
 

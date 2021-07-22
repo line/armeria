@@ -1357,18 +1357,18 @@ public final class Flags {
     private static ExceptionVerbosity exceptionLoggingMode(String defaultValue) {
         final String annotatedServiceExceptionVerbosity = "annotatedServiceExceptionVerbosity";
         final String serviceExceptionVerbosity = "serviceExceptionVerbosity";
-        final String annotatedServiceVerbosity =
+        final String annotatedServiceVerbosityLevel =
                 System.getProperty(PREFIX + annotatedServiceExceptionVerbosity);
-        final String serviceVerbosity =
+        final String serviceVerbosityLevel =
                 System.getProperty(PREFIX + serviceExceptionVerbosity);
         final String name;
-        if (serviceVerbosity != null) {
-            name = serviceVerbosity;
-        } else if (annotatedServiceVerbosity != null) {
+        if (serviceVerbosityLevel != null) {
+            name = serviceExceptionVerbosity;
+        } else if (annotatedServiceVerbosityLevel != null) {
             name = annotatedServiceExceptionVerbosity;
         } else {
             // Use the default option
-            name = serviceVerbosity;
+            name = serviceExceptionVerbosity;
         }
         final String mode = getNormalized(name, defaultValue,
                                           value -> Arrays.stream(ExceptionVerbosity.values())
@@ -1381,7 +1381,7 @@ public final class Flags {
         final String mode = getNormalized(name, defaultValue,
                                           value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
-        return com.linecorp.armeria.server.annotation.ExceptionVerbosity.valueOf(mode.toUpperCase());
+        return com.linecorp.armeria.server.annotation.ExceptionVerbosity.valueOf(Ascii.toUpperCase(mode));
     }
 
     private static boolean getBoolean(String name, boolean defaultValue) {

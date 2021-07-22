@@ -27,7 +27,8 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 
 /**
- * A default exception handler is used when a user does not specify an {@link ExceptionHandler}. It returns:
+ * A default exception handler that is used when a user does not specify an {@link ExceptionHandler}.
+ * It returns:
  * <ul>
  *     <li>an {@link HttpResponse} with {@code 400 Bad Request} status code when the cause is an
  *     {@link IllegalArgumentException} only for annotated service, or</li>

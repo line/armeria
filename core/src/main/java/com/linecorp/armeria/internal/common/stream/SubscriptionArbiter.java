@@ -126,7 +126,7 @@ public class SubscriptionArbiter implements Subscription {
         final NoopSubscription noopSubscription = NoopSubscription.get();
         if (newSubscription == null) {
             newSubscription = noopSubscription;
-        } else if (newSubscription != NoopSubscription.get()) {
+        } else if (newSubscription != noopSubscription) {
             // Swap newSubscription with NoopSubscription and call cancel() on any previous Subscription held.
             final Subscription oldSubscription = newSubscription;
             newSubscription = noopSubscription;
@@ -175,15 +175,12 @@ public class SubscriptionArbiter implements Subscription {
         Subscription requestFrom = null;
 
         do {
-            // Get snapshots from volatile values and initialize them
+            // Get snapshots from values and initialize them
             final long newReq = newRequested;
-            if (newReq != 0L) {
-                newRequested = 0;
-            }
+            newRequested = 0;
             final long newProd = newProduced;
-            if (newProd != 0L) {
-                newProduced = 0;
-            }
+            newProduced = 0;
+
             final Subscription next = newSubscription;
             final boolean isCancelled = next == NoopSubscription.get();
             if (next != null) {

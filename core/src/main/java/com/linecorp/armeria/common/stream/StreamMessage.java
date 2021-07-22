@@ -575,7 +575,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
      * stream.write(1);
      * stream.write(2);
-     * stream.close(new IllegalStateException("Oops...");
+     * stream.close(new IllegalStateException("Oops..."));
      * StreamMessage<Integer> resumed = stream.recoverAndResume(cause -> StreamMessage.of(3, 4));
      *
      * assert resumed.collect().join().equals(List.of(1, 2, 3, 4));

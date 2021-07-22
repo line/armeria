@@ -296,7 +296,7 @@ abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
 
         abortCause = cause;
         if (executor == null) {
-            // abortCause will be propagated when subscribed
+            // 'abortCause' will be propagated and 'completed' will be set to true when subscribed
             completionFuture.completeExceptionally(cause);
         } else {
             // Subscribed already

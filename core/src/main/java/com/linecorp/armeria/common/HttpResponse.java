@@ -754,7 +754,7 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Recovers a failed {@link HttpResponse} by switching to a returned fallback {@link HttpResponse}
-     * when any error occurs before an {@link ResponseHeaders} is written.
+     * when any error occurs before a {@link ResponseHeaders} is written.
      * Note that the failed {@link HttpResponse} cannot be recovered from an error if a {@link ResponseHeaders}
      * was written already.
      *
