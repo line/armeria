@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
@@ -39,6 +40,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private final int id;
     private final int streamId;
     private final boolean keepAlive;
+    private final KeepAliveHandler keepAliveHandler;
     @Nullable
     private ServiceRequestContext ctx;
 
@@ -47,12 +49,14 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private boolean isResponseAborted;
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
-                                   boolean keepAlive) {
+                                   boolean keepAlive,
+                                   KeepAliveHandler keepAliveHandler) {
         delegate = HttpRequest.of(headers);
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
         this.keepAlive = keepAlive;
+        this.keepAliveHandler = keepAliveHandler;
     }
 
     @Override
@@ -74,6 +78,9 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     public boolean isKeepAlive() {
         return keepAlive;
     }
+
+    @Override
+    public KeepAliveHandler keepAliveHandler() { return keepAliveHandler; }
 
     @Override
     public boolean isOpen() {

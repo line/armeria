@@ -382,7 +382,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceCfg, channel, config.meterRegistry(), protocol,
                 nextRequestId(), routingCtx, routingResult,
                 req, sslSession, proxiedAddresses, clientAddress,
-                System.nanoTime(), SystemInfo.currentTimeMicros());
+                System.nanoTime(), SystemInfo.currentTimeMicros(), req.keepAliveHandler());
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
@@ -667,7 +667,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private ServiceRequestContext newEarlyRespondingRequestContext(
-            Channel channel, HttpRequest req,
+            Channel channel, DecodedHttpRequest req,
             String hostname, VirtualHost virtualHost,
             ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
             @Nullable RoutingContext routingCtx) {
@@ -685,7 +685,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 channel, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(), routingCtx, routingResult,
                 req, sslSession, proxiedAddresses, clientAddress,
-                System.nanoTime(), SystemInfo.currentTimeMicros());
+                System.nanoTime(), SystemInfo.currentTimeMicros(), req.keepAliveHandler());
     }
 
     private RequestId nextRequestId() {

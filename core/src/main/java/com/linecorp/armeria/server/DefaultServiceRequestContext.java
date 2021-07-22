@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -94,6 +95,8 @@ public final class DefaultServiceRequestContext
     private final ProxiedAddresses proxiedAddresses;
 
     private final InetAddress clientAddress;
+
+    private final KeepAliveHandler keepAliveHandler;
 
     private final RequestLogBuilder log;
 
@@ -136,11 +139,11 @@ public final class DefaultServiceRequestContext
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
-            long requestStartTimeNanos, long requestStartTimeMicros) {
+            long requestStartTimeNanos, long requestStartTimeMicros, KeepAliveHandler keepAliveHandler) {
 
         this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
              sslSession, proxiedAddresses, clientAddress, /* requestCancellationScheduler */ null,
-             requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
+             requestStartTimeNanos, requestStartTimeMicros, keepAliveHandler, HttpHeaders.of(), HttpHeaders.of());
     }
 
     DefaultServiceRequestContext(
@@ -148,7 +151,7 @@ public final class DefaultServiceRequestContext
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
             @Nullable CancellationScheduler requestCancellationScheduler,
-            long requestStartTimeNanos, long requestStartTimeMicros,
+            long requestStartTimeNanos, long requestStartTimeMicros, KeepAliveHandler keepAliveHandler,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
         super(meterRegistry, sessionProtocol, id,
@@ -169,6 +172,7 @@ public final class DefaultServiceRequestContext
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
+        this.keepAliveHandler = keepAliveHandler;
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
@@ -431,26 +435,15 @@ public final class DefaultServiceRequestContext
 
     @Override
     public CompletableFuture<Void> initiateConnectionShutdown() {
-        final Channel ch = channel();
-        final Http2ServerConnectionHandler h2handler =
-                ch.pipeline().get(Http2ServerConnectionHandler.class);
+        keepAliveHandler.destroy();
         final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
-        if (h2handler != null) {
-            final ChannelHandlerContext ctx = ch.pipeline().context(h2handler);
-            h2handler.goAway(
-                    ctx, Integer.MAX_VALUE, Http2Error.NO_ERROR.code(), EMPTY_BUFFER, ctx.newPromise());
-            ctx.flush();
-            ctx.channel().closeFuture().addListener(f -> {
-                if (f.cause() == null) {
-                    completableFuture.complete(null);
-                } else {
-                    completableFuture.completeExceptionally(f.cause());
-                }
-            });
-        } else {
-            completableFuture.completeExceptionally(new UnsupportedOperationException(
-                    "initiateConnectionShutdown does not support HTTP/1 yet"));
-        }
+        channel().closeFuture().addListener(f -> {
+            if (f.cause() == null) {
+                completableFuture.complete(null);
+            } else {
+                completableFuture.completeExceptionally(f.cause());
+            }
+        });
         return completableFuture;
     }
 

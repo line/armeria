@@ -210,10 +210,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     if (contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq)) {
                         this.req = req = new EmptyContentDecodedHttpRequest(
-                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive);
+                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive, keepAliveHandler);
                     } else {
                         this.req = req = new DefaultDecodedHttpRequest(
-                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive, inboundTrafficController,
+                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive, keepAliveHandler,
+                                inboundTrafficController,
                                 // FIXME(trustin): Use a different maxRequestLength for a different virtual
                                 //                 host.
                                 cfg.defaultVirtualHost().maxRequestLength());

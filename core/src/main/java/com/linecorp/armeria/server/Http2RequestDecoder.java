@@ -148,9 +148,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             final int id = ++nextId;
             if (endOfStream) {
                 // Close the request early when it is sure that there will be neither content nor trailers.
-                req = new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true);
+                req = new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true, keepAliveHandler);
             } else {
-                req = new DefaultDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true,
+                req = new DefaultDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true, keepAliveHandler,
                                                     inboundTrafficController,
                                                     // FIXME(trustin): Use a different maxRequestLength for
                                                     //                 a different host.

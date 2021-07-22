@@ -42,6 +42,8 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -104,6 +106,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     private RoutingResult routingResult;
     @Nullable
     private ProxiedAddresses proxiedAddresses;
+    private KeepAliveHandler keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
 
     ServiceRequestContextBuilder(HttpRequest request) {
         super(true, request);
@@ -173,6 +176,15 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      */
     public ServiceRequestContextBuilder proxiedAddresses(ProxiedAddresses proxiedAddresses) {
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
+        return this;
+    }
+
+    /**
+     * Sets the {@link KeepAliveHandler} of the request.
+     * If not set, {@link ServiceRequestContext} will be built with {@link NoopKeepAliveHandler}.
+     */
+    public ServiceRequestContextBuilder keepAliverHandler(KeepAliveHandler keepAliveHandler) {
+        this.keepAliveHandler = requireNonNull(keepAliveHandler, "keepAliveHandler");
         return this;
     }
 
@@ -269,7 +281,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                 requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
-                HttpHeaders.of(), HttpHeaders.of());
+                keepAliveHandler, HttpHeaders.of(), HttpHeaders.of());
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {
