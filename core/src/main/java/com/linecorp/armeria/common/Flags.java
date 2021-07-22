@@ -1373,7 +1373,7 @@ public final class Flags {
         final String mode = getNormalized(name, defaultValue,
                                           value -> Arrays.stream(ExceptionVerbosity.values())
                                                          .anyMatch(v -> v.name().equalsIgnoreCase(value)));
-        return ExceptionVerbosity.valueOf(mode.toUpperCase());
+        return ExceptionVerbosity.valueOf(Ascii.toUpperCase(mode));
     }
 
     private static com.linecorp.armeria.server.annotation.ExceptionVerbosity legacyExceptionLoggingMode(

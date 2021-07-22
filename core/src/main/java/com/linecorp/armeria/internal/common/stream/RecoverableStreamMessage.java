@@ -48,6 +48,8 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
     @Nullable
     private volatile StreamMessage<T> fallbackStream;
+    @Nullable
+    private volatile Throwable abortCause;
 
     public RecoverableStreamMessage(StreamMessage<T> upstream,
                                     Function<? super Throwable, ? extends StreamMessage<T>> errorFunction,
@@ -119,6 +121,7 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
+        abortCause = cause;
         final StreamMessage<T> fallbackStream = this.fallbackStream;
         if (fallbackStream != null) {
             fallbackStream.abort(cause);
@@ -198,7 +201,12 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
                 final StreamMessage<T> fallback = errorFunction.apply(cause);
                 requireNonNull(fallback, "errorFunction.apply() returned null");
                 fallbackStream = fallback;
-                fallback.subscribe(this, executor, options);
+                final Throwable abortCause = RecoverableStreamMessage.this.abortCause;
+                if (abortCause != null) {
+                    fallback.abort(abortCause);
+                } else {
+                    fallback.subscribe(this, executor, options);
+                }
             } catch (Throwable t) {
                 onError0(new CompositeException(t, cause));
             }
