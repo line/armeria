@@ -491,28 +491,27 @@ public final class DefaultClientRequestContext
             if (!path().equals(newPath)) {
                 // path is changed.
 
-                if (isAbsoluteUri(newPath)) {
-                    final URI uri;
-                    try {
-                        uri = URI.create(req.path());
-                    } catch (Throwable t) {
-                        throw new IllegalArgumentException("failed to create a URI: " + req.path(), t);
-                    }
-                    final SessionProtocol protocol;
-                    try {
-                        protocol = Scheme.parse(uri.getScheme()).sessionProtocol();
-                    } catch (Exception e) {
-                        throw new IllegalArgumentException("failed to parse a scheme: " + uri.getScheme(), e);
-                    }
-                    final Endpoint newEndpoint = Endpoint.parse(uri.getAuthority());
-                    final String rawQuery = uri.getRawQuery();
-                    final String pathWithQuery = pathWithQuery(uri, rawQuery);
-                    final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(pathWithQuery));
-                    return newDerivedContext(id, newReq, rpcReq, newHeaders, protocol,
-                                             newEndpoint, pathWithQuery);
-                } else {
+                if (!isAbsoluteUri(newPath)) {
                     return newDerivedContext(id, req, rpcReq, newHeaders, sessionProtocol(), endpoint, newPath);
                 }
+                final URI uri;
+                try {
+                    uri = URI.create(req.path());
+                } catch (Throwable t) {
+                    throw new IllegalArgumentException("failed to create a URI: " + req.path(), t);
+                }
+                final SessionProtocol protocol;
+                try {
+                    protocol = Scheme.parse(uri.getScheme()).sessionProtocol();
+                } catch (Exception e) {
+                    throw new IllegalArgumentException("failed to parse a scheme: " + uri.getScheme(), e);
+                }
+                final Endpoint newEndpoint = Endpoint.parse(uri.getAuthority());
+                final String rawQuery = uri.getRawQuery();
+                final String pathWithQuery = pathWithQuery(uri, rawQuery);
+                final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().path(pathWithQuery));
+                return newDerivedContext(id, newReq, rpcReq, newHeaders, protocol,
+                                         newEndpoint, pathWithQuery);
             }
         }
 
