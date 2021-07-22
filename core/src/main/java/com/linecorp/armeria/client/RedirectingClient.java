@@ -104,70 +104,76 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
-            if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
-                final Throwable cause = log.responseCause();
-                if (cause != null) {
-                    abortResponse(response, derivedCtx, cause);
-                    handleException(ctx, reqDuplicator, responseFuture, cause, false);
+            try {
+
+                if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                    final Throwable cause = log.responseCause();
+                    if (cause != null) {
+                        abortResponse(response, derivedCtx, cause);
+                        handleException(ctx, reqDuplicator, responseFuture, cause, false);
+                        return;
+                    }
+                }
+                final ResponseHeaders responseHeaders = log.responseHeaders();
+                final HttpStatus status = responseHeaders.status();
+                if (status.codeClass() != HttpStatusClass.REDIRECTION ||
+                    status == HttpStatus.NOT_MODIFIED ||
+                    status == HttpStatus.USE_PROXY) {
+                    endRedirect(ctx, reqDuplicator, responseFuture, response);
                     return;
                 }
-            }
-            final ResponseHeaders responseHeaders = log.responseHeaders();
-            final HttpStatus status = responseHeaders.status();
-            if (status.codeClass() != HttpStatusClass.REDIRECTION ||
-                status == HttpStatus.NOT_MODIFIED ||
-                status == HttpStatus.USE_PROXY) {
-                endRedirect(ctx, reqDuplicator, responseFuture, response);
-                return;
-            }
-            final String location = responseHeaders.get(HttpHeaderNames.LOCATION);
-            if (isNullOrEmpty(location)) {
-                endRedirect(ctx, reqDuplicator, responseFuture, response);
-                return;
-            }
+                final String location = responseHeaders.get(HttpHeaderNames.LOCATION);
+                if (isNullOrEmpty(location)) {
+                    endRedirect(ctx, reqDuplicator, responseFuture, response);
+                    return;
+                }
 
-            final RequestHeaders requestHeaders = log.requestHeaders();
-            final URI redirectUri = URI.create(requestHeaders.path()).resolve(location);
-            if (redirectUri.isAbsolute()) {
-                final BiPredicate<ClientRequestContext, String> domainFilter = redirectConfig.domainFilter();
-                if (domainFilter != null) {
-                    if (!domainFilter.test(ctx, redirectUri.getHost())) {
+                final RequestHeaders requestHeaders = log.requestHeaders();
+                final URI redirectUri = URI.create(requestHeaders.path()).resolve(location);
+                if (redirectUri.isAbsolute()) {
+                    final BiPredicate<ClientRequestContext, String> domainFilter = redirectConfig.domainFilter();
+                    if (domainFilter != null) {
+                        if (!domainFilter.test(ctx, redirectUri.getHost())) {
+                            logger.info("Stopping redirection because the domain is not allowed to redirect: {}",
+                                        redirectUri.getHost());
+                            endRedirect(ctx, reqDuplicator, responseFuture, response);
+                            return;
+                        }
+                    } else if (withBaseUri && !allowSameDomain.test(ctx, redirectUri.getHost())) {
                         logger.info("Stopping redirection because the domain is not allowed to redirect: {}",
                                     redirectUri.getHost());
                         endRedirect(ctx, reqDuplicator, responseFuture, response);
                         return;
                     }
-                } else if (withBaseUri && !allowSameDomain.test(ctx, redirectUri.getHost())) {
-                    logger.info("Stopping redirection because the domain is not allowed to redirect: {}",
-                                redirectUri.getHost());
-                    endRedirect(ctx, reqDuplicator, responseFuture, response);
+                }
+
+                final String newUriString = redirectUri.toString();
+                final URI newUri = URI.create(newUriString);
+
+                final HttpRequestDuplicator newReqDuplicator =
+                        newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, newUriString);
+                if (isRedirectLoops(ctx, redirectCtx, newUri, newReqDuplicator.headers())) {
+                    final RedirectLoopsException exception = redirectLoopsException(redirectCtx);
+                    abortResponse(response, derivedCtx, exception);
+                    handleException(ctx, newReqDuplicator, responseFuture, exception, false);
                     return;
                 }
+
+                final Multimap<HttpMethod, String> redirectPaths = redirectCtx.redirectPaths();
+                assert redirectPaths != null;
+                if (redirectPaths.size() > redirectConfig.maxRedirects()) {
+                    logger.info("Stopping redirection because the number of redirection exceeds the limit: {}",
+                                 redirectConfig.maxRedirects());
+                    endRedirect(ctx, newReqDuplicator, responseFuture, response);
+                    return;
+                }
+
+                abortResponse(response, derivedCtx, null);
+                ctx.eventLoop().execute(() -> execute0(ctx, redirectCtx, newReqDuplicator, false));
+            } catch (Throwable t) {
+                abortResponse(response, derivedCtx, t);
+                handleException(ctx, reqDuplicator, responseFuture, t, false);
             }
-
-            final String newUriString = redirectUri.toString();
-            final URI newUri = URI.create(newUriString);
-
-            final HttpRequestDuplicator newReqDuplicator =
-                    newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, newUriString);
-            if (isRedirectLoops(ctx, redirectCtx, newUri, newReqDuplicator.headers())) {
-                final RedirectLoopsException exception = redirectLoopsException(redirectCtx);
-                abortResponse(response, derivedCtx, exception);
-                handleException(ctx, newReqDuplicator, responseFuture, exception, false);
-                return;
-            }
-
-            final Multimap<HttpMethod, String> redirectPaths = redirectCtx.redirectPaths();
-            assert redirectPaths != null;
-            if (redirectPaths.size() > redirectConfig.maxRedirects()) {
-                logger.info("Stopping redirection because the number of redirection exceeds the limit: {}",
-                             redirectConfig.maxRedirects());
-                endRedirect(ctx, newReqDuplicator, responseFuture, response);
-                return;
-            }
-
-            abortResponse(response, derivedCtx, null);
-            ctx.eventLoop().execute(() -> execute0(ctx, redirectCtx, newReqDuplicator, false));
         });
     }
 
