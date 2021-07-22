@@ -60,7 +60,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     public static final AsciiString ARMERIA_RETRY_COUNT = HttpHeaderNames.of("armeria-retry-count");
 
-    private static final AttributeKey<State<?>> STATE =
+    private static final AttributeKey<State> STATE =
             AttributeKey.valueOf(AbstractRetryingClient.class, "STATE");
 
     private final RetryConfigMapping<O> mapping;
@@ -83,9 +83,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final RetryConfig<O> config = mapping.get(ctx, req);
         requireNonNull(config, "mapping.get() returned null");
 
-        final State<I> state = new State<>(config.maxTotalAttempts(),
-                                           config.responseTimeoutMillisForEachAttempt(),
-                                           ctx.responseTimeoutMillis(), req);
+        final State state = new State(
+                config.maxTotalAttempts(),
+                config.responseTimeoutMillisForEachAttempt(),
+                ctx.responseTimeoutMillis());
         ctx.setAttr(STATE, state);
         return doExecute(ctx, req);
     }
@@ -210,8 +211,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
         requireNonNull(ctx, "ctx");
         requireNonNull(backoff, "backoff");
-        //noinspection unchecked
-        final State<I> state = (State<I>) ctx.attr(STATE);
+        final State state = ctx.attr(STATE);
         final int currentAttemptNo = state.currentAttemptNoWith(backoff);
 
         if (currentAttemptNo < 0) {
@@ -238,26 +238,12 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * Returns the total number of attempts of the current request represented by the specified
      * {@link ClientRequestContext}.
      */
-    protected static <I> int getTotalAttempts(ClientRequestContext ctx) {
-        //noinspection unchecked
-        final State<I> state = (State<I>) ctx.attr(STATE);
+    protected static int getTotalAttempts(ClientRequestContext ctx) {
+        final State state = ctx.attr(STATE);
         if (state == null) {
             return 0;
         }
         return state.totalAttemptNo;
-    }
-
-    /**
-     * Returns the original request.
-     */
-    @Nullable
-    protected I getOriginalRequest(ClientRequestContext ctx) {
-        //noinspection unchecked
-        final State<I> state = (State<I>) ctx.attr(STATE);
-        if (state == null) {
-            return null;
-        }
-        return state.originalReq;
     }
 
     /**
@@ -271,11 +257,10 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         return ClientUtil.newDerivedContext(ctx, req, rpcReq, initialAttempt);
     }
 
-    private static final class State<I> {
+    private static final class State {
 
         private final int maxTotalAttempts;
         private final long responseTimeoutMillisForEachAttempt;
-        private final I originalReq;
         private final long deadlineNanos;
         private final boolean isTimeoutEnabled;
 
@@ -284,11 +269,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         private int currentAttemptNoWithLastBackoff;
         private int totalAttemptNo;
 
-        State(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt,
-              long responseTimeoutMillis, I originalReq) {
+        State(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt, long responseTimeoutMillis) {
             this.maxTotalAttempts = maxTotalAttempts;
             this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
-            this.originalReq = originalReq;
 
             if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
                 deadlineNanos = 0;
