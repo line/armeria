@@ -106,9 +106,11 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         derivedCtx.log().whenAvailable(RequestLogProperty.RESPONSE_HEADERS).thenAccept(log -> {
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
                 final Throwable cause = log.responseCause();
-                assert cause != null;
-                handleException(ctx, reqDuplicator, responseFuture, cause, false);
-                return;
+                if (cause != null) {
+                    abortResponse(response, derivedCtx, cause);
+                    handleException(ctx, reqDuplicator, responseFuture, cause, false);
+                    return;
+                }
             }
             final ResponseHeaders responseHeaders = log.responseHeaders();
             final HttpStatus status = responseHeaders.status();
@@ -237,7 +239,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
     }
 
     private static void abortResponse(HttpResponse originalRes, ClientRequestContext derivedCtx,
-                                      @Nullable Exception cause) {
+                                      @Nullable Throwable cause) {
         // Set response content with null to make sure that the log is complete.
         final RequestLogBuilder logBuilder = derivedCtx.logBuilder();
         logBuilder.responseContent(null, null);

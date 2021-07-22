@@ -184,7 +184,7 @@ class RedirectingClientTest {
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             assertThat(client.post("/differentHttpMethod", HttpData.empty()).aggregate().join().contentUtf8())
                     .isEqualTo("differentHttpMethod");
-            assertThat(captor.get().log().ensureComplete().children().size()).isEqualTo(2);
+            assertThat(captor.get().log().whenComplete().join().children().size()).isEqualTo(2);
         }
     }
 
