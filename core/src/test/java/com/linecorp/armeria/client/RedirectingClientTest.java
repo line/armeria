@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -72,6 +73,15 @@ class RedirectingClientTest {
             sb.service("/loop", (ctx, req) -> HttpResponse.ofRedirect("loop1"))
               .service("/loop1", (ctx, req) -> HttpResponse.ofRedirect("loop2"))
               .service("/loop2", (ctx, req) -> HttpResponse.ofRedirect("loop"));
+
+            sb.service("/differentHttpMethod", (ctx, req) -> {
+                if (ctx.method() == HttpMethod.GET) {
+                    return HttpResponse.of("differentHttpMethod");
+                } else {
+                    assertThat(ctx.method()).isSameAs(HttpMethod.POST);
+                    return HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, "/differentHttpMethod");
+                }
+            });
         }
     };
 
@@ -164,6 +174,18 @@ class RedirectingClientTest {
                                           .build();
         assertThatThrownBy(() -> client.get("/loop").aggregate().join()).hasMessageContainingAll(
                 "The initial request path: /loop, redirect paths:", "/loop1", "/loop2");
+    }
+
+    @Test
+    void notRedirectLoopsWhenHttpMethodDiffers() {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .followRedirects()
+                                          .build();
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.post("/differentHttpMethod", HttpData.empty()).aggregate().join().contentUtf8())
+                    .isEqualTo("differentHttpMethod");
+            assertThat(captor.get().log().ensureComplete().children().size()).isEqualTo(2);
+        }
     }
 
     private static ClientFactory mockClientFactory() {

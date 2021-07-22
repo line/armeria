@@ -148,10 +148,10 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
             final HttpRequestDuplicator newReqDuplicator =
                     newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, newUriString);
-            if (isRedirectLoops(ctx, redirectCtx, newUri, reqDuplicator.headers())) {
+            if (isRedirectLoops(ctx, redirectCtx, newUri, newReqDuplicator.headers())) {
                 final RedirectLoopsException exception = redirectLoopsException(redirectCtx);
                 abortResponse(response, derivedCtx, exception);
-                handleException(ctx, reqDuplicator, responseFuture, exception, false);
+                handleException(ctx, newReqDuplicator, responseFuture, exception, false);
                 return;
             }
 
@@ -160,7 +160,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             if (redirectPaths.size() > redirectConfig.maxRedirects()) {
                 logger.info("Stopping redirection because the number of redirection exceeds the limit: {}",
                              redirectConfig.maxRedirects());
-                endRedirect(ctx, reqDuplicator, responseFuture, response);
+                endRedirect(ctx, newReqDuplicator, responseFuture, response);
                 return;
             }
 
