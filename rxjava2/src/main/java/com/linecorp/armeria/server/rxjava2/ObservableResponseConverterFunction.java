@@ -24,7 +24,6 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.server.annotation.NoopExceptionHandlerFunction;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -46,6 +45,7 @@ import io.reactivex.disposables.Disposable;
 public final class ObservableResponseConverterFunction implements ResponseConverterFunction {
 
     private final ResponseConverterFunction responseConverter;
+    @Nullable
     private final ExceptionHandlerFunction exceptionHandler;
 
     /**
@@ -73,7 +73,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
      */
     public ObservableResponseConverterFunction(ResponseConverterFunction responseConverter) {
         this.responseConverter = requireNonNull(responseConverter, "responseConverter");
-        exceptionHandler = NoopExceptionHandlerFunction.INSTANCE;
+        exceptionHandler = null;
     }
 
     @Override
@@ -126,7 +126,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
     }
 
     private HttpResponse onError(ServiceRequestContext ctx, Throwable cause) {
-        if (exceptionHandler == NoopExceptionHandlerFunction.INSTANCE) {
+        if (exceptionHandler == null) {
             return HttpResponse.ofFailure(cause);
         } else {
             // TODO(ikhoon): Remove this line once the deprecated exceptionHandler has been removed.

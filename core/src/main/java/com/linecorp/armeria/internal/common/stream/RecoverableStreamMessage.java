@@ -48,8 +48,6 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
     @Nullable
     private volatile StreamMessage<T> fallbackStream;
-    @Nullable
-    private volatile EventExecutor executor;
 
     public RecoverableStreamMessage(StreamMessage<T> upstream,
                                     Function<? super Throwable, ? extends StreamMessage<T>> errorFunction,
@@ -109,7 +107,6 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
-        this.executor = executor;
         // A late subscriber will be checked by the upstream.
         upstream.subscribe(new RecoverableSubscriber(subscriber, executor, options), executor, options);
     }
@@ -122,16 +119,6 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
-
-        final EventExecutor executor = this.executor;
-        if (executor == null || executor.inEventLoop()) {
-            abort0(cause);
-        } else {
-            executor.execute(() -> abort0(cause));
-        }
-    }
-
-    private void abort0(Throwable cause) {
         final StreamMessage<T> fallbackStream = this.fallbackStream;
         if (fallbackStream != null) {
             fallbackStream.abort(cause);

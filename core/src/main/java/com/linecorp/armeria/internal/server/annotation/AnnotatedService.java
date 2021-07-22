@@ -115,6 +115,7 @@ public final class AnnotatedService implements HttpService {
     private final List<AnnotatedValueResolver> resolvers;
 
     private final AggregationStrategy aggregationStrategy;
+    @Nullable
     private final ExceptionHandlerFunction exceptionHandler;
     private final ResponseConverterFunction responseConverter;
 
@@ -144,7 +145,7 @@ public final class AnnotatedService implements HttpService {
 
         requireNonNull(exceptionHandlers, "exceptionHandlers");
         if (exceptionHandlers.isEmpty()) {
-            exceptionHandler = NoopExceptionHandlerFunction.INSTANCE;
+            exceptionHandler = null;
         } else {
             exceptionHandler = new CompositeExceptionHandlerFunction(exceptionHandlers);
         }
@@ -273,7 +274,7 @@ public final class AnnotatedService implements HttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final HttpResponse response = HttpResponse.from(serve0(ctx, req));
-        if (exceptionHandler == NoopExceptionHandlerFunction.INSTANCE) {
+        if (exceptionHandler == null) {
             // If an error occurs, the default ExceptionHandler will handle the error.
             return response;
         } else {
