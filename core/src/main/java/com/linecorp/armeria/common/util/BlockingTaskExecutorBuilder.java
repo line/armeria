@@ -135,8 +135,8 @@ public final class BlockingTaskExecutorBuilder {
                                                            .build();
         final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(
                 numThreads, threadFactory);
-        scheduledThreadPoolExecutor.setKeepAliveTime(keepAliveTimeMillis, TimeUnit.MILLISECONDS);
         if (keepAliveTimeMillis > 0) {
+            scheduledThreadPoolExecutor.setKeepAliveTime(keepAliveTimeMillis, TimeUnit.MILLISECONDS);
             scheduledThreadPoolExecutor.allowCoreThreadTimeOut(true);
         }
         return new DefaultBlockingTaskExecutor(scheduledThreadPoolExecutor);
