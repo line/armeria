@@ -111,6 +111,7 @@ configure(projectsWithFlags('java')) {
         testImplementation 'com.google.errorprone:error_prone_annotations'
 
         // FastUtil
+        implementation 'it.unimi.dsi:fastutil'
         implementation 'it.unimi.dsi:fastutil-core'
         implementation 'it.unimi.dsi:fastutil-extra'
 

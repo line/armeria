@@ -297,8 +297,13 @@ io.zipkin.brave:
     - https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/5.6.3/
 
 it.unimi.dsi:
-  fastutil-core:
+  fastutil:
     version: &FAST_UTIL_VERSION '8.5.4'
+    relocations:
+      - from: it.unimi.dsi.fastutil
+        to: com.linecorp.armeria.internal.shaded.fastutil
+  fastutil-core:
+    version: *FAST_UTIL_VERSION
     relocations:
       - from: it.unimi.dsi.fastutil
         to: com.linecorp.armeria.internal.shaded.fastutil
