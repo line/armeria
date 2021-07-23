@@ -821,6 +821,7 @@ birdart.museum
 birkenes.no
 birthplace.museum
 bitbridge.net
+bitbucket.io
 biz
 biz.at
 biz.az
@@ -1231,6 +1232,7 @@ cci.fr
 cd
 cd.eu.org
 cdn-edges.net
+cdn.prod.atlassian-dev.net
 cdn77-ssl.net
 ce.gov.br
 ce.it
@@ -1965,6 +1967,7 @@ draydns.de
 dreamhosters.com
 drive
 drobak.no
+drr.ac
 drud.io
 drud.us
 dscloud.biz
@@ -3796,6 +3799,7 @@ itami.hyogo.jp
 itano.tokushima.jp
 itau
 itayanagi.aomori.jp
+itcouldbewor.se
 ito.shizuoka.jp
 itoigawa.niigata.jp
 itoman.okinawa.jp
@@ -3921,6 +3925,7 @@ jprs
 js.cn
 js.org
 js.wpenginepowered.com
+ju.mp
 judaica.museum
 judygarland.museum
 juedisches.museum
@@ -5699,6 +5704,7 @@ noda.chiba.jp
 noda.iwate.jp
 nodum.co
 nodum.io
+nog.community
 nogata.fukuoka.jp
 nogi.tochigi.jp
 noheji.aomori.jp
@@ -6794,6 +6800,7 @@ royrvik.no
 rr.gov.br
 rr.leg.br
 rs
+rs.ba
 rs.gov.br
 rs.leg.br
 rsc.cdn77.org
@@ -7104,6 +7111,7 @@ selfip.net
 selfip.org
 selje.no
 seljord.no
+sellfy.store
 sells-for-less.com
 sells-for-u.com
 sells-it.net
@@ -8026,6 +8034,7 @@ tt.im
 tube
 tui
 tula.su
+tuleap-partners.com
 tunes
 tunk.org
 tur.ar
@@ -8209,7 +8218,6 @@ uvic.museum
 uw.gov.pl
 uwajima.ehime.jp
 uwu.ai
-uwu.nu
 uy
 uy.com
 uz
