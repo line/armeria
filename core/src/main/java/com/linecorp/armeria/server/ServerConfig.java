@@ -186,7 +186,7 @@ public final class ServerConfig {
         ExecutorServiceMetrics.monitor(meterRegistry, ((BlockingTaskExecutor) blockingTaskExecutor).unwrap(),
                                        "blockingTaskExecutor", "armeria");
         blockingTaskExecutor = new TimedScheduledExecutorService(meterRegistry, blockingTaskExecutor,
-                                                                 "blockingTaskExecutor", "armeria",
+                                                                 "blockingTaskExecutor", "armeria.",
                                                                  ImmutableList.of());
         this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
 
