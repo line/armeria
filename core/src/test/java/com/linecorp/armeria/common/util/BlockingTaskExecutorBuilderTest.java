@@ -22,7 +22,7 @@ class BlockingTaskExecutorBuilderTest {
 
     @Test
     void testOverride() {
-        final long keepAliveTime = 0;
+        final long keepAliveTime = 42 * 1000;
         final int numThreads = 42;
 
         final ScheduledThreadPoolExecutor pool =
@@ -33,7 +33,7 @@ class BlockingTaskExecutorBuilderTest {
                         .build()
                         .unwrap();
 
-        assertThat(pool.allowsCoreThreadTimeOut()).isFalse();
+        assertThat(pool.allowsCoreThreadTimeOut()).isTrue();
         assertThat(pool.getKeepAliveTime(TimeUnit.MILLISECONDS)).isEqualTo(keepAliveTime);
         assertThat(pool.getCorePoolSize()).isEqualTo(numThreads);
     }

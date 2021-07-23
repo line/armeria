@@ -28,9 +28,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -186,9 +184,9 @@ public final class ServerConfig {
         }
 
         new ExecutorServiceMetrics(
-            unwrappedBlockingTaskExecutor,
-            "blockingTaskExecutor", "armeria", ImmutableList.of())
-            .bindTo(meterRegistry);
+                unwrappedBlockingTaskExecutor,
+                "blockingTaskExecutor", "armeria", ImmutableList.of())
+                .bindTo(meterRegistry);
         blockingTaskExecutor = new TimedScheduledExecutorService(meterRegistry, blockingTaskExecutor,
                                                                  "blockingTaskExecutor", "armeria.",
                                                                  ImmutableList.of());
