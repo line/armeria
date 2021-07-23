@@ -128,31 +128,35 @@ class RedirectingClientTest {
 
     @Test
     void webClientCreatedWithBaseUri_doesNotAllowRedirectionToOtherDomain() {
-        WebClient client = WebClient.builder(server.httpUri())
-                                    .factory(mockClientFactory())
-                                    .followRedirects()
-                                    .build();
-        AggregatedHttpResponse join = client.get("/anotherDomain").aggregate().join();
-        assertThat(join.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
-        assertThat(join.headers().get(HttpHeaderNames.LOCATION)).contains("/anotherDomainRedirect");
+        try (ClientFactory factory = mockClientFactory()) {
+            WebClient client = WebClient.builder(server.httpUri())
+                                        .factory(factory)
+                                        .followRedirects()
+                                        .build();
+            AggregatedHttpResponse join = client.get("/anotherDomain").aggregate().join();
+            assertThat(join.status()).isSameAs(HttpStatus.TEMPORARY_REDIRECT);
+            assertThat(join.headers().get(HttpHeaderNames.LOCATION)).contains("/anotherDomainRedirect");
 
-        client = WebClient.builder(server.httpUri())
-                          .factory(mockClientFactory())
-                          .redirectConfig(RedirectConfig.builder().allowDomains("foo.com").build())
-                          .build();
+            client = WebClient.builder(server.httpUri())
+                              .factory(factory)
+                              .redirectConfig(RedirectConfig.builder().allowDomains("foo.com").build())
+                              .build();
 
-        join = client.get("/anotherDomain").aggregate().join();
-        assertThat(join.contentUtf8()).isEqualTo("anotherDomainRedirection");
+            join = client.get("/anotherDomain").aggregate().join();
+            assertThat(join.contentUtf8()).isEqualTo("anotherDomainRedirection");
+        }
     }
 
     @Test
     void webClientCreatedWithoutBaseUri_allowRedirectionToOtherDomain() {
-        final WebClient client = WebClient.builder()
-                                          .factory(mockClientFactory())
-                                          .followRedirects()
-                                          .build();
-        final AggregatedHttpResponse join = client.get(server.httpUri() + "/anotherDomain").aggregate().join();
-        assertThat(join.contentUtf8()).isEqualTo("anotherDomainRedirection");
+        try (ClientFactory factory = mockClientFactory()) {
+            final WebClient client = WebClient.builder()
+                                              .factory(factory)
+                                              .followRedirects()
+                                              .build();
+            final AggregatedHttpResponse join = client.get(server.httpUri() + "/anotherDomain").aggregate().join();
+            assertThat(join.contentUtf8()).isEqualTo("anotherDomainRedirection");
+        }
     }
 
     @Test
