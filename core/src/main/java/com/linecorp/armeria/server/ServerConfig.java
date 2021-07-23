@@ -28,18 +28,24 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -53,6 +59,8 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  * {@link Server} configuration.
  */
 public final class ServerConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(ServerConfig.class);
 
     /**
      * Initialized later by {@link Server} via {@link #setServer(Server)}.
@@ -169,6 +177,13 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        if (blockingTaskExecutor instanceof BlockingTaskExecutor) {
+            blockingTaskExecutor = ((BlockingTaskExecutor) blockingTaskExecutor).unwrap();
+        }
+        if (!(blockingTaskExecutor instanceof ThreadPoolExecutor
+              || blockingTaskExecutor instanceof ForkJoinPool)) {
+            logger.warn("Cannot use metric because it is not instance of ThreadPoolExecutor or ForkJoinPool");
+        }
         blockingTaskExecutor =
                 ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
                                                "blockingTaskExecutor", "armeria");
