@@ -45,6 +45,12 @@ enum DefaultExceptionHandler implements ExceptionHandler {
     private static final HttpStatusException BAD_REQUEST_EXCEPTION =
             HttpStatusException.of(HttpStatus.BAD_REQUEST);
 
+    /**
+     *
+     * @param context
+     * @param cause
+     * @return
+     */
     @Nullable
     @Override
     public HttpResponse convert(ServiceRequestContext context, Throwable cause) {
