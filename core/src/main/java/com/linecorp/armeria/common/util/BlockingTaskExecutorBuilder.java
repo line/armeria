@@ -42,7 +42,6 @@ public final class BlockingTaskExecutorBuilder {
     private long keepAliveTimeMillis = 60 * 1000;
     private boolean daemon = true;
     private int priority = Thread.NORM_PRIORITY;
-    private boolean allowThreadTimeOut = true;
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
 
     BlockingTaskExecutorBuilder() {}
@@ -105,14 +104,6 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Configure if idle threads should be terminated after timeout.
-     */
-    public BlockingTaskExecutorBuilder allowThreadTimeOut(boolean value) {
-        allowThreadTimeOut = value;
-        return this;
-    }
-
-    /**
      * Sets the task function for new threads. Use this method to set additional work before or after
      * the {@link Runnable} is run. For example:
      * <pre>{@code
@@ -145,7 +136,9 @@ public final class BlockingTaskExecutorBuilder {
         final ScheduledThreadPoolExecutor scheduledThreadPoolExecutor = new ScheduledThreadPoolExecutor(
                 numThreads, threadFactory);
         scheduledThreadPoolExecutor.setKeepAliveTime(keepAliveTimeMillis, TimeUnit.MILLISECONDS);
-        scheduledThreadPoolExecutor.allowCoreThreadTimeOut(allowThreadTimeOut);
+        if (keepAliveTimeMillis > 0) {
+            scheduledThreadPoolExecutor.allowCoreThreadTimeOut(true);
+        }
         return new DefaultBlockingTaskExecutor(scheduledThreadPoolExecutor);
     }
 }

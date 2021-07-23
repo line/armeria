@@ -22,13 +22,12 @@ class BlockingTaskExecutorBuilderTest {
 
     @Test
     void testOverride() {
-        final long keepAliveTime = 30 * 1000;
+        final long keepAliveTime = 0;
         final int numThreads = Flags.numCommonBlockingTaskThreads();
 
         final ScheduledThreadPoolExecutor pool =
                 (ScheduledThreadPoolExecutor) BlockingTaskExecutor
                         .builder()
-                        .allowThreadTimeOut(false)
                         .keepAliveTimeMillis(keepAliveTime)
                         .numThreads(numThreads)
                         .build()
