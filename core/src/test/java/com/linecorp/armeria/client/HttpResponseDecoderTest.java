@@ -21,7 +21,6 @@ import java.nio.channels.Channel;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -67,7 +66,7 @@ class HttpResponseDecoderTest {
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
     void confirmResponseStartAndEndInTheSameThread(SessionProtocol protocol)
             throws InterruptedException {
-        final AtomicBoolean failed = new AtomicBoolean();
+        final AtomicReference<Exception> failed = new AtomicReference<>();
         final RetryRule strategy = (ctx, cause) ->
                 CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
 
@@ -91,9 +90,10 @@ class HttpResponseDecoderTest {
             ctx.log().whenComplete().thenAccept(log -> {
                 final Thread thread = responseStartedThread.get();
                 if (thread != null && thread != Thread.currentThread()) {
+                    final RuntimeException runtimeException = new RuntimeException();
                     logger.error("{} Response ended in another thread: {} != {}",
-                                 log, thread, Thread.currentThread(), new RuntimeException());
-                    failed.set(true);
+                                 log, thread, Thread.currentThread(), runtimeException);
+                    failed.set(runtimeException);
                 }
             });
             return delegate.execute(ctx, req);
@@ -112,7 +112,7 @@ class HttpResponseDecoderTest {
         }
 
         latch.await(System.getenv("CI") != null ? 60 : 10, TimeUnit.SECONDS);
-        assertThat(failed.get()).isFalse();
+        assertThat(failed.get()).isNull();
     }
 
     @ParameterizedTest
