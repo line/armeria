@@ -20,9 +20,9 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 
@@ -46,10 +46,21 @@ enum DefaultExceptionHandler implements ExceptionHandler {
             HttpStatusException.of(HttpStatus.BAD_REQUEST);
 
     /**
+     * Converts the specified {@link Throwable} to an {@link HttpResponse}.
      *
-     * @param context
-     * @param cause
-     * @return
+     * <p>Implementation note:
+     * A failed {@link HttpResponse} should be returned in order to let {@link RequestLog} complete deferred
+     * values. The given cause could be raised before setting deferred values.
+     * See https://github.com/line/armeria/issues/3719.
+     *
+     * <p>For example:<pre>{@code
+     * // Bad - Deferred values will not be completed.
+     * HttpResponse.of(HttpStatus.BAD_REQUEST);
+     * // Good - A LoggingService will not log any exception and complete deferred values.
+     * HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.BAD_REQUEST));
+     * // Good - A LoggingService will log the IllegalStatusException and complete deferred values.
+     * HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.BAD_REQUEST, new IllegalStateException(...)));
+     * }</pre>
      */
     @Nullable
     @Override
@@ -59,7 +70,7 @@ enum DefaultExceptionHandler implements ExceptionHandler {
         //                annotated services.
         if (context.config().service().as(AnnotatedService.class) != null) {
             if (cause instanceof IllegalArgumentException) {
-                if (needsToWarn()) {
+                if (needsToWarn(context)) {
                     logger.warn("{} Failed processing a request:", context, cause);
                 }
                 return HttpResponse.ofFailure(BAD_REQUEST_EXCEPTION);
@@ -79,15 +90,15 @@ enum DefaultExceptionHandler implements ExceptionHandler {
             return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE, cause));
         }
 
-        if (needsToWarn() && !Exceptions.isExpected(cause)) {
+        if (needsToWarn(context) && !Exceptions.isExpected(cause)) {
             logger.warn("{} Unhandled exception from an service:", context, cause);
         }
 
         return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR, cause));
     }
 
-    private static boolean needsToWarn() {
-        return Flags.serviceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
+    private static boolean needsToWarn(ServiceRequestContext ctx) {
+        return ctx.config().server().config().exceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
                logger.isWarnEnabled();
     }
 }

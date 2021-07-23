@@ -193,6 +193,7 @@ public final class ServerBuilder {
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
+    private ExceptionVerbosity exceptionVerbosity = Flags.serviceExceptionVerbosity();
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -1406,6 +1407,26 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the verbosity of exceptions logged by services. The value of this property
+     * is one of the following:
+     * <ul>
+     *     <li>{@link ExceptionVerbosity#ALL} - logging all exceptions raised from services</li>
+     *     <li>{@link ExceptionVerbosity#UNHANDLED} - logging exceptions which are not handled by
+     *     {@link ExceptionHandler}s provided by a user and are not well-known exceptions
+     *     <li>{@link ExceptionVerbosity#NONE} - no logging exceptions</li>
+     * </ul>
+     * A log message would be written at {@code WARN} level.
+     *
+     * <p>The default value of this option is {@link ExceptionVerbosity#NONE}.
+     *
+     * @see ExceptionVerbosity
+     */
+    public ServerBuilder exceptionVerbosity(ExceptionVerbosity exceptionVerbosity) {
+        this.exceptionVerbosity = requireNonNull(exceptionVerbosity, "exceptionVerbosity");
+        return this;
+    }
+
+    /**
      * Sets a list of {@link ClientAddressSource}s which are used to determine where to look for the
      * client address, in the order of preference. {@code Forwarded} header, {@code X-Forwarded-For} header
      * and the source address of a PROXY protocol header will be used by default.
@@ -1690,7 +1711,8 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, exceptionVerbosity,
+                sslContexts);
     }
 
     /**

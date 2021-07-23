@@ -397,12 +397,13 @@ public final class Flags {
     private static final String DNS_CACHE_SPEC =
             nonnullCaffeineSpec("dnsCacheSpec", DEFAULT_DNS_CACHE_SPEC);
 
-    private static final String DEFAULT_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
+    private static final String DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY = "unhandled";
     private static final com.linecorp.armeria.server.annotation.ExceptionVerbosity
             ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
             legacyExceptionLoggingMode("annotatedServiceExceptionVerbosity",
-                                       DEFAULT_SERVICE_EXCEPTION_VERBOSITY);
+                                       DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
+    private static final String DEFAULT_SERVICE_EXCEPTION_VERBOSITY = "none";
     private static final ExceptionVerbosity SERVICE_EXCEPTION_VERBOSITY =
             exceptionLoggingMode(DEFAULT_SERVICE_EXCEPTION_VERBOSITY);
 

@@ -38,7 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -478,8 +477,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private static void warnIfNeeded(ServiceRequestContext context, Throwable cause) {
-        if (Flags.serviceExceptionVerbosity() == ExceptionVerbosity.ALL &&
+    private void warnIfNeeded(ServiceRequestContext context, Throwable cause) {
+        if (config.exceptionVerbosity() == ExceptionVerbosity.ALL &&
             logger.isWarnEnabled()) {
             logger.warn("{} Exception raised by a service:", context, cause);
         }
