@@ -14,7 +14,7 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.common.grpc.protocol;
+package com.linecorp.armeria.internal.common.grpc.protocol;
 
 import static java.util.Objects.requireNonNull;
 

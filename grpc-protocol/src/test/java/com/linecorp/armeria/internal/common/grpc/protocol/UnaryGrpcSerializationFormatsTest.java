@@ -14,11 +14,11 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.common.grpc.protocol;
+package com.linecorp.armeria.internal.common.grpc.protocol;
 
-import static com.linecorp.armeria.common.grpc.protocol.UnaryGrpcSerializationFormats.PROTO;
-import static com.linecorp.armeria.common.grpc.protocol.UnaryGrpcSerializationFormats.PROTO_WEB;
-import static com.linecorp.armeria.common.grpc.protocol.UnaryGrpcSerializationFormats.PROTO_WEB_TEXT;
+import static com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats.PROTO;
+import static com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats.PROTO_WEB;
+import static com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats.PROTO_WEB_TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
