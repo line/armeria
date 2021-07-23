@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
+import io.micrometer.core.instrument.internal.TimedScheduledExecutorService;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
@@ -177,18 +178,18 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        if (blockingTaskExecutor instanceof BlockingTaskExecutor) {
-            blockingTaskExecutor = ((BlockingTaskExecutor) blockingTaskExecutor).unwrap();
-        }
-        if (!(blockingTaskExecutor instanceof ThreadPoolExecutor
-              || blockingTaskExecutor instanceof ForkJoinPool)) {
+        if (!(blockingTaskExecutor instanceof ThreadPoolExecutor ||
+              blockingTaskExecutor instanceof ForkJoinPool)) {
             logger.warn("Cannot record metrics with {}. (expected: ThreadPoolExecutor or ForkJoinPool)",
                         blockingTaskExecutor);
         }
-        blockingTaskExecutor =
-                ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
-                                               "blockingTaskExecutor", "armeria");
+        ExecutorServiceMetrics.monitor(meterRegistry, ((BlockingTaskExecutor) blockingTaskExecutor).unwrap(),
+                                       "blockingTaskExecutor", "armeria");
+        blockingTaskExecutor = new TimedScheduledExecutorService(meterRegistry, blockingTaskExecutor,
+                                                                 "blockingTaskExecutor", "armeria",
+                                                                 ImmutableList.of());
         this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
+
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
