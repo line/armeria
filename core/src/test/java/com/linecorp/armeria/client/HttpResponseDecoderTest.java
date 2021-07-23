@@ -92,7 +92,7 @@ class HttpResponseDecoderTest {
                 final Thread thread = responseStartedThread.get();
                 if (thread != null && thread != Thread.currentThread()) {
                     logger.error("{} Response ended in another thread: {} != {}",
-                                 ctx, thread, Thread.currentThread());
+                                 log, thread, Thread.currentThread());
                     failed.set(true);
                 }
             });
