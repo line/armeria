@@ -105,7 +105,7 @@ public final class BlockingTaskExecutorBuilder {
     }
 
     /**
-     * Sets the allowThreadTimeOut status.
+     * Configure if idle threads should be terminated after timeout.
      */
     public BlockingTaskExecutorBuilder allowThreadTimeOut(boolean value) {
         allowThreadTimeOut = value;
