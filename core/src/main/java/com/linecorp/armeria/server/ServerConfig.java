@@ -178,13 +178,17 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        if (!(blockingTaskExecutor instanceof ThreadPoolExecutor ||
-              blockingTaskExecutor instanceof ForkJoinPool)) {
-            logger.warn("Cannot record metrics with {}. (expected: ThreadPoolExecutor or ForkJoinPool)",
-                        blockingTaskExecutor);
+        final ScheduledExecutorService unwrappedBlockingTaskExecutor;
+        if (blockingTaskExecutor instanceof BlockingTaskExecutor) {
+            unwrappedBlockingTaskExecutor = ((BlockingTaskExecutor) blockingTaskExecutor).unwrap();
+        } else {
+            unwrappedBlockingTaskExecutor = blockingTaskExecutor;
         }
-        ExecutorServiceMetrics.monitor(meterRegistry, ((BlockingTaskExecutor) blockingTaskExecutor).unwrap(),
-                                       "blockingTaskExecutor", "armeria");
+
+        new ExecutorServiceMetrics(
+            unwrappedBlockingTaskExecutor,
+            "blockingTaskExecutor", "armeria", ImmutableList.of())
+            .bindTo(meterRegistry);
         blockingTaskExecutor = new TimedScheduledExecutorService(meterRegistry, blockingTaskExecutor,
                                                                  "blockingTaskExecutor", "armeria.",
                                                                  ImmutableList.of());
