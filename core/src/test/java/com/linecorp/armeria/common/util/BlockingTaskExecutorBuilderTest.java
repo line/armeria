@@ -23,7 +23,7 @@ class BlockingTaskExecutorBuilderTest {
     @Test
     void testOverride() {
         final long keepAliveTime = 0;
-        final int numThreads = Flags.numCommonBlockingTaskThreads();
+        final int numThreads = 42;
 
         final ScheduledThreadPoolExecutor pool =
                 (ScheduledThreadPoolExecutor) BlockingTaskExecutor
