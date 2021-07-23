@@ -40,4 +40,8 @@ public interface BlockingTaskExecutor extends ScheduledExecutorService {
     static BlockingTaskExecutorBuilder builder() {
         return new BlockingTaskExecutorBuilder();
     }
+
+    default ScheduledExecutorService unwrap() {
+        return this;
+    }
 }
