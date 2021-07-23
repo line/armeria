@@ -2,7 +2,6 @@ package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-import java.time.Duration;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
