@@ -18,12 +18,15 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.BiPredicate;
 
 import javax.annotation.Nullable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -33,7 +36,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public final class RedirectConfigBuilder {
 
-    private static final BiPredicate<ClientRequestContext, String> allowAllDomains = (ctx, domain) -> true;
+    @VisibleForTesting
+    static final BiPredicate<ClientRequestContext, String> allowAllDomains = (ctx, domain) -> true;
+
     static final BiPredicate<ClientRequestContext, String> allowSameDomain = (ctx, domain) -> {
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {
@@ -43,6 +48,10 @@ public final class RedirectConfigBuilder {
     };
 
     private int maxRedirects = 19; // Widely used default value. https://stackoverflow.com/a/36041063/1736581
+
+    private boolean isAllowingAllDomains;
+    @Nullable
+    private Set<String> allowedDomains;
     @Nullable
     private BiPredicate<ClientRequestContext, String> predicate;
 
@@ -64,7 +73,8 @@ public final class RedirectConfigBuilder {
      * automatic redirection is executed for the domain of the base URI by default.
      */
     public RedirectConfigBuilder allowAllDomains() {
-        return allow(allowAllDomains);
+        isAllowingAllDomains = true;
+        return this;
     }
 
     /**
@@ -84,15 +94,12 @@ public final class RedirectConfigBuilder {
      * automatic redirection is executed for the domain of the base URI by default.
      */
     public RedirectConfigBuilder allowDomains(Iterable<String> domains) {
-        final List<String> domains0 = ImmutableList.copyOf(requireNonNull(domains, "domains"));
-        return allow((ctx, domain) -> {
-            for (String d : domains0) {
-                if (domain.contains(d)) {
-                    return true;
-                }
-            }
-            return false;
-        });
+        requireNonNull(domains, "domains");
+        if (allowedDomains == null) {
+            allowedDomains = new HashSet<>();
+        }
+        allowedDomains.addAll(ImmutableList.copyOf(domains));
+        return this;
     }
 
     /**
@@ -116,6 +123,37 @@ public final class RedirectConfigBuilder {
      * Returns a newly-created {@link RedirectConfig} based on the properties set so far.
      */
     public RedirectConfig build() {
+        BiPredicate<ClientRequestContext, String> predicate;
+        if (isAllowingAllDomains) {
+            predicate = allowAllDomains;
+        } else {
+            final BiPredicate<ClientRequestContext, String> allowedDomains = allowedDomains();
+            if (allowedDomains != null) {
+                predicate = allowedDomains;
+                if (this.predicate != null) {
+                    predicate = predicate.or(this.predicate);
+                }
+            } else {
+                predicate = this.predicate;
+            }
+        }
+
         return new RedirectConfig(predicate, maxRedirects);
+    }
+
+    @Nullable
+    private BiPredicate<ClientRequestContext, String> allowedDomains() {
+        if (allowedDomains != null) {
+            final Set<String> allowedDomains0 = ImmutableSet.copyOf(allowedDomains);
+            return (ctx, domain) -> {
+                for (String d : allowedDomains0) {
+                    if (domain.contains(d)) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+        }
+        return null;
     }
 }

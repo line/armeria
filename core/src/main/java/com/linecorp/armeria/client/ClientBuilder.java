@@ -249,4 +249,14 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     public ClientBuilder auth(OAuth2Token token) {
         return (ClientBuilder) super.auth(token);
     }
+
+    @Override
+    public ClientBuilder followRedirects() {
+        return (ClientBuilder) super.followRedirects();
+    }
+
+    @Override
+    public ClientBuilder redirectConfig(RedirectConfig redirectConfig) {
+        return (ClientBuilder) super.redirectConfig(redirectConfig);
+    }
 }

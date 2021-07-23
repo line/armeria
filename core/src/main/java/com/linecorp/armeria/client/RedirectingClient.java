@@ -156,7 +156,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             final HttpRequestDuplicator newReqDuplicator =
                     newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, redirectUri.toString());
             if (isRedirectLoops(ctx, redirectCtx, redirectUri, newReqDuplicator.headers())) {
-                final RedirectLoopsException exception = redirectLoopsException(redirectCtx);
+                final CycleRedirectsException exception = redirectLoopsException(redirectCtx);
                 abortResponse(response, derivedCtx, exception);
                 handleException(ctx, newReqDuplicator, responseFuture, exception, false);
                 return;
@@ -212,14 +212,14 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         return !redirectCtx.addRedirectPath(newUri.toString(), newHeaders.method());
     }
 
-    private static RedirectLoopsException redirectLoopsException(RedirectContext redirectCtx) {
+    private static CycleRedirectsException redirectLoopsException(RedirectContext redirectCtx) {
         final String originalPath = redirectCtx.request.path();
         final Multimap<HttpMethod, String> redirectPaths = redirectCtx.redirectPaths();
-        final RedirectLoopsException exception;
+        final CycleRedirectsException exception;
         if (redirectPaths == null) {
-            exception = new RedirectLoopsException(originalPath);
+            exception = new CycleRedirectsException(originalPath);
         } else {
-            exception = new RedirectLoopsException(originalPath, redirectPaths.values());
+            exception = new CycleRedirectsException(originalPath, redirectPaths.values());
         }
         return exception;
     }

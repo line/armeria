@@ -175,9 +175,9 @@ class RedirectingClientTest {
 
     @Test
     void redirectLoopsException() {
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .followRedirects()
-                                          .build();
+        final WebClient client = Clients.builder(server.httpUri())
+                                        .followRedirects()
+                                        .build(WebClient.class);
         assertThatThrownBy(() -> client.get("/loop").aggregate().join()).hasMessageContainingAll(
                 "The initial request path: /loop, redirect paths:", "/loop1", "/loop2");
     }

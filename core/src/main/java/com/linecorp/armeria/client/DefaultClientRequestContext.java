@@ -498,14 +498,13 @@ public final class DefaultClientRequestContext
                 try {
                     uri = URI.create(req.path());
                 } catch (Throwable t) {
-                    throw new IllegalArgumentException("failed to create a URI: " + req.path(), t);
+                    throw new IllegalArgumentException("failed to parse a request URI: " + req.path(), t);
                 }
-                final SessionProtocol protocol;
-                try {
-                    protocol = Scheme.parse(uri.getScheme()).sessionProtocol();
-                } catch (Exception e) {
-                    throw new IllegalArgumentException("failed to parse a scheme: " + uri.getScheme(), e);
+                final Scheme scheme = Scheme.tryParse(uri.getScheme());
+                if (scheme == null) {
+                    throw new IllegalArgumentException("failed to parse a scheme: " + uri.getScheme());
                 }
+                final SessionProtocol protocol = scheme.sessionProtocol();
                 final Endpoint newEndpoint = Endpoint.parse(uri.getAuthority());
                 final String rawQuery = uri.getRawQuery();
                 final String pathWithQuery = pathWithQuery(uri, rawQuery);

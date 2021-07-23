@@ -20,20 +20,20 @@ import com.google.common.base.Joiner;
 import com.linecorp.armeria.common.Flags;
 
 /**
- * An exception indicating that a client detects cyclical redirections.
+ * An exception indicating that a client detected cyclical redirections.
  * See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">cyclical redirections</a>
  * for more information.
  */
-public final class RedirectLoopsException extends RuntimeException {
+public final class CycleRedirectsException extends RuntimeException {
     private static final long serialVersionUID = -2969770339558298361L;
 
     private static final Joiner joiner = Joiner.on(';');
 
-    RedirectLoopsException(String originalPath) {
+    CycleRedirectsException(String originalPath) {
         super("The request path: " + originalPath);
     }
 
-    RedirectLoopsException(String originalPath, Iterable<String> paths) {
+    CycleRedirectsException(String originalPath, Iterable<String> paths) {
         super("The initial request path: " + originalPath + ", redirect paths: " + joiner.join(paths));
     }
 
