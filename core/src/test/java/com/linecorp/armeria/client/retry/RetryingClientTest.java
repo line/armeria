@@ -26,9 +26,11 @@ import static org.awaitility.Awaitility.await;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -440,17 +442,17 @@ class RetryingClientTest {
 
     @Test
     void retryWithContentOnResponseTimeout() {
-        final AtomicInteger counter = new AtomicInteger();
+        final Queue<Integer> queue = new ConcurrentLinkedQueue<>();
         final Backoff backoff = Backoff.fixed(100);
         final RetryRuleWithContent<HttpResponse> strategy =
                 RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
-                    counter.incrementAndGet();
+                    queue.add(1);
                     return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRuleWithContent.onResponse((unused, response) -> {
-                    counter.incrementAndGet();
+                    queue.add(2);
                     return response.aggregate().thenApply(unused0 -> false);
                 })).orElse(RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
-                    counter.incrementAndGet();
+                    queue.add(3);
                     return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRule.builder()
                                    .onException(ResponseTimeoutException.class)
@@ -459,7 +461,7 @@ class RetryingClientTest {
         final AggregatedHttpResponse res = client.get("/1sleep-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         // Make sure that all customized RetryRuleWithContents are called.
-        assertThat(counter.get()).isEqualTo(3);
+        assertThat(queue).containsExactly(1, 2, 3);
     }
 
     @Test
