@@ -154,7 +154,9 @@ class RedirectingClientTest {
                                               .factory(factory)
                                               .followRedirects()
                                               .build();
-            final AggregatedHttpResponse join = client.get(server.httpUri() + "/anotherDomain").aggregate().join();
+            final AggregatedHttpResponse join = client.get(server.httpUri() + "/anotherDomain")
+                                                      .aggregate()
+                                                      .join();
             assertThat(join.contentUtf8()).isEqualTo("anotherDomainRedirection");
         }
     }
