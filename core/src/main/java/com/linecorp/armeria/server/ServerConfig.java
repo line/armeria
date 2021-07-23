@@ -182,7 +182,8 @@ public final class ServerConfig {
         }
         if (!(blockingTaskExecutor instanceof ThreadPoolExecutor
               || blockingTaskExecutor instanceof ForkJoinPool)) {
-            logger.warn("Cannot use metric because it is not instance of ThreadPoolExecutor or ForkJoinPool");
+            logger.warn("Cannot record metrics with {}. (expected: ThreadPoolExecutor or ForkJoinPool)",
+                        blockingTaskExecutor);
         }
         blockingTaskExecutor =
                 ExecutorServiceMetrics.monitor(meterRegistry, blockingTaskExecutor,
