@@ -71,7 +71,10 @@ class HttpResponseDecoderTest {
         final RetryRule strategy = (ctx, cause) ->
                 CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
 
-        final WebClientBuilder builder = WebClient.builder(server.uri(protocol));
+        final WebClientBuilder builder = WebClient.builder(server.uri(protocol))
+                                                  // Disable response timeout so that the client retries
+                                                  // at least one time.
+                                                  .responseTimeoutMillis(0);
         // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,
         // which means that we have more chance to reproduce the bug if two threads are racing
         // for notifying RESPONSE_END to listeners.
