@@ -22,7 +22,7 @@ class BlockingTaskExecutorBuilderTest {
     }
 
     @Test
-    void testSetting() {
+    void testOverride() {
         final long keepAliveTime = 30 * 1000;
         final int numThreads = Flags.numCommonBlockingTaskThreads();
 
