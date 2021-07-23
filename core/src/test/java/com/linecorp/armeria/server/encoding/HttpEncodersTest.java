@@ -67,7 +67,7 @@ public class HttpEncodersTest {
         when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
                                                              HttpHeaderNames.ACCEPT_ENCODING,
                                                              "gzip, deflate, br"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.BR);
+        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.GZIP);
     }
 
     @Test
@@ -88,7 +88,23 @@ public class HttpEncodersTest {
     public void acceptEncodingWithQualityValues() {
         when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
                                                              HttpHeaderNames.ACCEPT_ENCODING,
-                                                             "deflate, br;q=0.8, gzip;q=0.7, *;q=0.1"));
+                                                             "br;q=0.8, deflate, gzip;q=0.7, *;q=0.1"));
+        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.DEFLATE);
+    }
+
+    @Test
+    public void acceptEncodingOrder() {
+        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
+                                                             HttpHeaderNames.ACCEPT_ENCODING,
+                                                             "deflate;q=0.5, gzip;q=0.9, br;q=0.9"));
+        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.GZIP);
+    }
+
+    @Test
+    public void acceptEncodingWithZeroValues() {
+        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
+                                                             HttpHeaderNames.ACCEPT_ENCODING,
+                                                             "gzip;q=0.0, br;q=0.0, *;q=0.1"));
         assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.DEFLATE);
     }
 }
