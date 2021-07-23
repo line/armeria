@@ -440,13 +440,17 @@ class RetryingClientTest {
 
     @Test
     void retryWithContentOnResponseTimeout() {
+        final AtomicInteger counter = new AtomicInteger();
         final Backoff backoff = Backoff.fixed(100);
         final RetryRuleWithContent<HttpResponse> strategy =
                 RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    counter.incrementAndGet();
                     return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRuleWithContent.onResponse((unused, response) -> {
+                    counter.incrementAndGet();
                     return response.aggregate().thenApply(unused0 -> false);
                 })).orElse(RetryRuleWithContent.<HttpResponse>onResponse((unused, response) -> {
+                    counter.incrementAndGet();
                     return response.aggregate().thenApply(unused0 -> false);
                 }).orElse(RetryRule.builder()
                                    .onException(ResponseTimeoutException.class)
@@ -454,6 +458,8 @@ class RetryingClientTest {
         final WebClient client = client(strategy, 0, 500, 100);
         final AggregatedHttpResponse res = client.get("/1sleep-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+        // Make sure that all customized RetryRuleWithContents are called.
+        assertThat(counter.get()).isEqualTo(3);
     }
 
     @Test
