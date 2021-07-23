@@ -21,6 +21,7 @@ import java.nio.channels.Channel;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -30,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
-import com.linecorp.armeria.client.logging.ContentPreviewingClient;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryDecision;
 import com.linecorp.armeria.client.retry.RetryRule;
@@ -66,18 +66,11 @@ class HttpResponseDecoderTest {
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
     void confirmResponseStartAndEndInTheSameThread(SessionProtocol protocol)
             throws InterruptedException {
-        final AtomicReference<Exception> failed = new AtomicReference<>();
+        final AtomicBoolean failed = new AtomicBoolean();
         final RetryRule strategy = (ctx, cause) ->
                 CompletableFuture.completedFuture(RetryDecision.retry(Backoff.withoutDelay()));
 
-        final WebClientBuilder builder = WebClient.builder(server.uri(protocol))
-                                                  // Disable response timeout so that the client retries
-                                                  // at least one time.
-                                                  .responseTimeoutMillis(0);
-        // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,
-        // which means that we have more chance to reproduce the bug if two threads are racing
-        // for notifying RESPONSE_END to listeners.
-        builder.decorator(ContentPreviewingClient.newDecorator(100));
+        final WebClientBuilder builder = WebClient.builder(server.uri(protocol));
         // In order to use a different thread to subscribe to the response.
         builder.decorator(RetryingClient.builder(strategy)
                                         .maxTotalAttempts(2)
@@ -90,10 +83,9 @@ class HttpResponseDecoderTest {
             ctx.log().whenComplete().thenAccept(log -> {
                 final Thread thread = responseStartedThread.get();
                 if (thread != null && thread != Thread.currentThread()) {
-                    final RuntimeException runtimeException = new RuntimeException();
                     logger.error("{} Response ended in another thread: {} != {}",
-                                 log, thread, Thread.currentThread(), runtimeException);
-                    failed.set(runtimeException);
+                                 ctx, thread, Thread.currentThread(), new RuntimeException());
+                    failed.set(true);
                 }
             });
             return delegate.execute(ctx, req);
@@ -112,7 +104,7 @@ class HttpResponseDecoderTest {
         }
 
         latch.await(System.getenv("CI") != null ? 60 : 10, TimeUnit.SECONDS);
-        assertThat(failed.get()).isNull();
+        assertThat(failed.get()).isFalse();
     }
 
     @ParameterizedTest
