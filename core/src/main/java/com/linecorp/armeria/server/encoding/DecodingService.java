@@ -43,7 +43,8 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 public final class DecodingService extends SimpleDecoratingHttpService {
 
     /**
-     * Creates a new {@link DecodingService} decorator with the default encodings of 'gzip', 'deflate' and 'brotli'.
+     * Creates a new {@link DecodingService} decorator with the default encodings of 'gzip', 'deflate'
+     * and 'brotli'.
      */
     public static Function<? super HttpService, DecodingService> newDecorator() {
         return newDecorator(ImmutableList.of(StreamDecoderFactory.gzip(), StreamDecoderFactory.deflate(),
