@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-
 import io.netty.channel.ChannelHandlerContext;
 
 public enum NoopKeepAliveHandler implements KeepAliveHandler {
@@ -55,12 +52,6 @@ public enum NoopKeepAliveHandler implements KeepAliveHandler {
     @Override
     public boolean needToCloseConnection() {
         return false;
-    }
-
-    @Override
-    public CompletableFuture<Void> initiateConnectionShutdown(ChannelHandlerContext ctx,
-                                                              Duration gracePeriod) {
-        throw new UnsupportedOperationException();
     }
 
     @Override

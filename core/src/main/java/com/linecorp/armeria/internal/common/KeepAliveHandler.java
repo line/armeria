@@ -16,9 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-
 import io.netty.channel.ChannelHandlerContext;
 
 /**
@@ -66,13 +63,6 @@ public interface KeepAliveHandler {
      * Returns whether a connection managed by this {@link KeepAliveHandler} reaches its lifespan.
      */
     boolean needToCloseConnection();
-
-    /**
-     * Initiates connection shutdown with a given grace period. New requests are still accepted during the
-     * grace period. If grace period is zero or negative - initiates connection shutdown immediately.
-     * Returns {@link CompletableFuture} that completes when the channel is closed.
-     */
-    CompletableFuture<Void> initiateConnectionShutdown(ChannelHandlerContext ctx, Duration gracePeriod);
 
     /**
      * Increases the number of requests received or sent.

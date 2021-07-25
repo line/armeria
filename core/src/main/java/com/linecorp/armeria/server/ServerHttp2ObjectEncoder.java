@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import java.time.Duration;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -35,7 +33,6 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2Stream;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
-
 
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
@@ -63,7 +60,8 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
         }
 
         if (keepAliveHandler.needToCloseConnection()) {
-            keepAliveHandler.initiateConnectionShutdown(ctx(), Duration.ZERO);
+            // Initiates channel close, connection will be closed after all streams are closed.
+            ctx().channel().close();
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);

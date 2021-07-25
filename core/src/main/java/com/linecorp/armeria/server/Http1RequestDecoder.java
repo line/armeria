@@ -36,7 +36,9 @@ import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.GracefulConnectionShutdownHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
@@ -88,6 +90,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private final AsciiString scheme;
     private final InboundTrafficController inboundTrafficController;
     private final ServerHttp1ObjectEncoder writer;
+    private final Http1GracefulConnectionShutdownHandler gracefulConnectionShutdownHandler;
 
     /** The request being decoded currently. */
     @Nullable
@@ -100,6 +103,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         this.cfg = cfg;
         this.scheme = scheme;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
+        gracefulConnectionShutdownHandler = new Http1GracefulConnectionShutdownHandler();
         this.writer = writer;
     }
 
@@ -111,7 +115,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
+        cancelScheduledTasks();
         super.handlerRemoved(ctx);
     }
 
@@ -128,13 +132,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // Ignored if the stream has already been closed.
             ((HttpRequestWriter) req).close(ClosedSessionException.get());
         }
-
-        destroyKeepAliveHandler();
+        cancelScheduledTasks();
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
+        cancelScheduledTasks();
         super.channelInactive(ctx);
     }
 
@@ -210,11 +213,10 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     if (contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq)) {
                         this.req = req = new EmptyContentDecodedHttpRequest(
-                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive, keepAliveHandler);
+                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive);
                     } else {
                         this.req = req = new DefaultDecodedHttpRequest(
-                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive, keepAliveHandler,
-                                inboundTrafficController,
+                                eventLoop, id, 1, armeriaRequestHeaders, keepAlive, inboundTrafficController,
                                 // FIXME(trustin): Use a different maxRequestLength for a different virtual
                                 //                 host.
                                 cfg.defaultVirtualHost().maxRequestLength());
@@ -331,7 +333,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
         // Destroy keepAlive handler before writing headers so that ServerHttp1ObjectEncoder sets
         // "Connection: close" to the response headers
-        destroyKeepAliveHandler();
+        cancelScheduledTasks();
 
         final HttpData data = content != null ? content : HttpData.ofUtf8(status.toString());
         final ResponseHeaders headers =
@@ -370,6 +372,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             channelReadComplete(ctx);
             return;
         }
+        if (evt instanceof InitiateConnectionShutdown) {
+            gracefulConnectionShutdownHandler.setup(ctx, ((InitiateConnectionShutdown) evt).gracePeriod());
+        }
 
         ctx.fireUserEventTriggered(evt);
     }
@@ -382,7 +387,20 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
     }
 
-    private void destroyKeepAliveHandler() {
+    private void cancelScheduledTasks() {
+        gracefulConnectionShutdownHandler.cancel();
         writer.keepAliveHandler().destroy();
+    }
+
+    private class Http1GracefulConnectionShutdownHandler extends GracefulConnectionShutdownHandler {
+        // No-op for HTTP/1.
+        @Override
+        public void onGracePeriodStart(ChannelHandlerContext ctx) {}
+
+        // Destroys KeepAliveHandler which causes response to have "Connection: close" header.
+        @Override
+        public void onGracePeriodEnd(ChannelHandlerContext ctx) {
+            writer.keepAliveHandler().destroy();
+        }
     }
 }

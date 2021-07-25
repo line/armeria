@@ -546,7 +546,6 @@ public interface ServiceRequestContext extends RequestContext {
     ProxiedAddresses proxiedAddresses();
 
     /**
-     * Initiates connection shutdown.
      * Initiates connection shutdown with a given grace period. New requests are still accepted during the
      * grace period. If grace period is zero or negative - initiates connection shutdown immediately.
      * Returns {@link CompletableFuture} that completes when the channel is closed.

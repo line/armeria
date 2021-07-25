@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -56,14 +55,12 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.AttributeKey;
 
 /**
@@ -84,7 +81,6 @@ public final class DefaultServiceRequestContext
 
     private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
 
-    private final ChannelHandlerContext ctx;
     private final Channel ch;
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
@@ -96,8 +92,6 @@ public final class DefaultServiceRequestContext
     private final ProxiedAddresses proxiedAddresses;
 
     private final InetAddress clientAddress;
-
-    private final KeepAliveHandler keepAliveHandler;
 
     private final RequestLogBuilder log;
 
@@ -137,22 +131,22 @@ public final class DefaultServiceRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultServiceRequestContext(
-            ServiceConfig cfg, ChannelHandlerContext ctx, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
-            long requestStartTimeNanos, long requestStartTimeMicros, KeepAliveHandler keepAliveHandler) {
+            long requestStartTimeNanos, long requestStartTimeMicros) {
 
-        this(cfg, ctx, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
+        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
              sslSession, proxiedAddresses, clientAddress, /* requestCancellationScheduler */ null,
-             requestStartTimeNanos, requestStartTimeMicros, keepAliveHandler, HttpHeaders.of(), HttpHeaders.of());
+             requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
     }
 
     DefaultServiceRequestContext(
-            ServiceConfig cfg, ChannelHandlerContext ctx, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
             @Nullable CancellationScheduler requestCancellationScheduler,
-            long requestStartTimeNanos, long requestStartTimeMicros, KeepAliveHandler keepAliveHandler,
+            long requestStartTimeNanos, long requestStartTimeMicros,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
         super(meterRegistry, sessionProtocol, id,
@@ -160,7 +154,6 @@ public final class DefaultServiceRequestContext
               requireNonNull(routingResult, "routingResult").query(),
               requireNonNull(req, "req"), null, null);
 
-        this.ctx = requireNonNull(ctx, "ctx");
         this.ch = requireNonNull(ch, "ch");
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
@@ -174,7 +167,6 @@ public final class DefaultServiceRequestContext
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
-        this.keepAliveHandler = keepAliveHandler;
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
@@ -437,7 +429,16 @@ public final class DefaultServiceRequestContext
 
     @Override
     public CompletableFuture<Void> initiateConnectionShutdown(Duration gracePeriod) {
-        return keepAliveHandler.initiateConnectionShutdown(ctx, gracePeriod);
+        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        ch.closeFuture().addListener(f -> {
+            if (f.cause() == null) {
+                completableFuture.complete(null);
+            } else {
+                completableFuture.completeExceptionally(f.cause());
+            }
+        });
+        ch.pipeline().fireUserEventTriggered(new InitiateConnectionShutdown(gracePeriod));
+        return completableFuture;
     }
 
     @Override

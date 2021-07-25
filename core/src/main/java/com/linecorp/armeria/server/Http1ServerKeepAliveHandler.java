@@ -16,11 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 
-import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler;
 import com.linecorp.armeria.internal.common.Http1KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
@@ -49,31 +46,8 @@ final class Http1ServerKeepAliveHandler extends Http1KeepAliveHandler {
 
     @Override
     protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
+        @Nullable
         final HttpServer server = HttpServer.get(ctx);
         return server != null && server.unfinishedRequests() != 0;
     }
-
-    /**
-     * Calls {@link AbstractKeepAliveHandler#destroy()} which results in "Connection: close" to be sent
-     * to the client. If provided grace period is greater than zero - schedules
-     * {@link AbstractKeepAliveHandler#destroy()} to happen after the grace period.
-     */
-    @Override
-    public CompletableFuture<Void> initiateConnectionShutdown(ChannelHandlerContext ctx, Duration gracePeriod) {
-        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
-        ctx.channel().closeFuture().addListener(f -> {
-            if (f.cause() == null) {
-                completableFuture.complete(null);
-            } else {
-                completableFuture.completeExceptionally(f.cause());
-            }
-        });
-        if (gracePeriod.compareTo(Duration.ZERO) > 0) {
-            ctx.channel().eventLoop().schedule(this::destroy, gracePeriod.toNanos(), TimeUnit.NANOSECONDS);
-        } else {
-            destroy();
-        }
-        return completableFuture;
-    }
-
 }

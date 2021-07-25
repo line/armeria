@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
 import io.netty.channel.EventLoop;
 
@@ -35,7 +34,6 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
     private final int id;
     private final int streamId;
     private final boolean keepAlive;
-    private final KeepAliveHandler keepAliveHandler;
     private final InboundTrafficController inboundTrafficController;
     private final long maxRequestLength;
     @Nullable
@@ -47,15 +45,14 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
     private boolean isResponseAborted;
 
     DefaultDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
-                              boolean keepAlive, KeepAliveHandler keepAliveHandler,
-                              InboundTrafficController inboundTrafficController, long maxRequestLength) {
+                              boolean keepAlive, InboundTrafficController inboundTrafficController,
+                              long maxRequestLength) {
         super(headers);
 
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
         this.keepAlive = keepAlive;
-        this.keepAliveHandler = keepAliveHandler;
         this.inboundTrafficController = inboundTrafficController;
         this.maxRequestLength = maxRequestLength;
     }
@@ -79,9 +76,6 @@ final class DefaultDecodedHttpRequest extends DefaultHttpRequest implements Deco
     public boolean isKeepAlive() {
         return keepAlive;
     }
-
-    @Override
-    public KeepAliveHandler keepAliveHandler() { return keepAliveHandler; }
 
     long maxRequestLength() {
         return ctx != null ? ctx.maxRequestLength() : maxRequestLength;

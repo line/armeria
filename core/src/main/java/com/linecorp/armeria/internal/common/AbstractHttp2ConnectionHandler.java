@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.common;
 
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
+import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 
 import java.util.regex.Matcher;
@@ -34,6 +35,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -42,6 +44,7 @@ import io.netty.handler.codec.http2.Http2Connection.Endpoint;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
+import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2Stream.State;
@@ -71,6 +74,8 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     private boolean closing;
     private boolean handlingConnectionError;
 
+    // Debug data that will be sent in the GOAWAY frame.
+    protected ByteBuf goAwayDebugData = Unpooled.EMPTY_BUFFER;
     /**
      * Creates a new instance.
      */
@@ -166,8 +171,16 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         return super.goAway(ctx, lastStreamId, errorCode, debugData, promise);
     }
 
+    protected final void setGoAwayDebugMessage(String debugMessage) {
+        goAwayDebugData = Unpooled.copiedBuffer(debugMessage.getBytes()).asReadOnly();
+    }
+
+    protected final ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId) {
+        return goAway(ctx, lastStreamId, NO_ERROR.code(), goAwayDebugData.retain(), ctx.newPromise());
+    }
+
     @Override
-    public final void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (!closing) {
             closing = true;
 
@@ -176,7 +189,15 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
             }
         }
 
-        super.close(ctx, promise);
+        // Send final GOAWAY frame with the latest stream ID.
+        goAway(ctx, connection().remote().lastStreamCreated()).addListener(future -> {
+            final Throwable cause = future.cause();
+            if (cause != null) {
+                logger.warn("{} final GOAWAY frame write completed exceptionally: {}", ctx.channel(), cause);
+            }
+            super.close(ctx, promise);
+        });
+        ctx.flush();
     }
 
     /**

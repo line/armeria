@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -206,12 +204,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     public final boolean needToCloseConnection() {
         return isMaxConnectionAgeExceeded || (currentNumRequests > 0 && currentNumRequests >=
                                                                         maxNumRequestsPerConnection);
-    }
-
-    @Override
-    public CompletableFuture<Void> initiateConnectionShutdown(ChannelHandlerContext ctx,
-                                                              Duration gracePeriod) {
-        throw new UnsupportedOperationException();
     }
 
     @Override

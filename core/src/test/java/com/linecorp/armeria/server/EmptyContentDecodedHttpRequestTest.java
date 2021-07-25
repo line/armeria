@@ -23,7 +23,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import reactor.test.StepVerifier;
@@ -37,8 +36,7 @@ class EmptyContentDecodedHttpRequestTest {
     void emptyContent() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final EmptyContentDecodedHttpRequest req =
-                new EmptyContentDecodedHttpRequest(eventLoop.get(), 1, 3, headers, true,
-                                                   NoopKeepAliveHandler.INSTANCE);
+                new EmptyContentDecodedHttpRequest(eventLoop.get(), 1, 3, headers, true);
 
         StepVerifier.create(req)
                     .expectComplete()

@@ -42,22 +42,10 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -116,7 +104,6 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     private RoutingResult routingResult;
     @Nullable
     private ProxiedAddresses proxiedAddresses;
-    private KeepAliveHandler keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
 
     ServiceRequestContextBuilder(HttpRequest request) {
         super(true, request);
@@ -186,15 +173,6 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      */
     public ServiceRequestContextBuilder proxiedAddresses(ProxiedAddresses proxiedAddresses) {
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
-        return this;
-    }
-
-    /**
-     * Sets the {@link KeepAliveHandler} of the request.
-     * If not set, {@link ServiceRequestContext} will be built with {@link NoopKeepAliveHandler}.
-     */
-    public ServiceRequestContextBuilder keepAliverHandler(KeepAliveHandler keepAliveHandler) {
-        this.keepAliveHandler = requireNonNull(keepAliveHandler, "keepAliveHandler");
         return this;
     }
 
@@ -284,15 +262,14 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             }
         }
 
-        final ChannelHandlerContext fakeContext = new FakeChannelHandlerContext(fakeChannel());
         // Build the context with the properties set by a user and the fake objects.
         return new DefaultServiceRequestContext(
-                serviceCfg, fakeContext, fakeContext.channel(), meterRegistry(), sessionProtocol(), id(),
-                routingCtx, routingResult, req, sslSession(), proxiedAddresses, clientAddress,
+                serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
+                routingResult, req, sslSession(), proxiedAddresses, clientAddress,
                 requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
-                keepAliveHandler, HttpHeaders.of(), HttpHeaders.of());
+                HttpHeaders.of(), HttpHeaders.of());
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {
@@ -363,220 +340,5 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     @Override
     public ServiceRequestContextBuilder timedOut(boolean timedOut) {
         return (ServiceRequestContextBuilder) super.timedOut(timedOut);
-    }
-
-    private static final class FakeChannelHandlerContext implements ChannelHandlerContext {
-
-        private final Channel channel;
-
-        FakeChannelHandlerContext(Channel channel) {
-            this.channel = channel;
-        }
-
-        @Override
-        public Channel channel() {
-            return channel;
-        }
-
-        @Override
-        public EventExecutor executor() {
-            return channel.eventLoop();
-        }
-
-        @Override
-        public String name() {
-            return "FakeChannelHandlerContext";
-        }
-
-        @Override
-        public ChannelHandler handler() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isRemoved() {
-            return false;
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelRegistered() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelUnregistered() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelActive() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelInactive() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireUserEventTriggered(Object evt) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelRead(Object msg) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelReadComplete() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext fireChannelWritabilityChanged() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture bind(SocketAddress localAddress) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture disconnect() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture close() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture deregister() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress,
-                                     ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture disconnect(ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture close(ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture deregister(ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext read() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture write(Object msg) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture write(Object msg, ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelHandlerContext flush() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture writeAndFlush(Object msg) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelPromise newPromise() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelProgressivePromise newProgressivePromise() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture newSucceededFuture() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelFuture newFailedFuture(Throwable cause) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelPromise voidPromise() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ChannelPipeline pipeline() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ByteBufAllocator alloc() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> Attribute<T> attr(AttributeKey<T> key) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> boolean hasAttr(AttributeKey<T> key) {
-            throw new UnsupportedOperationException();
-        }
     }
 }

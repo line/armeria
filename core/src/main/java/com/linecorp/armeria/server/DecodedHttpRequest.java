@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
 import io.netty.channel.ChannelHandlerContext;
 
@@ -32,11 +31,6 @@ interface DecodedHttpRequest extends HttpRequest {
      * Returns whether to keep the connection alive after this request is handled.
      */
     boolean isKeepAlive();
-
-    /**
-     * Returns {@link KeepAliveHandler} associated with this request.
-     */
-    KeepAliveHandler keepAliveHandler();
 
     void init(ServiceRequestContext ctx);
 
