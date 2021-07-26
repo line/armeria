@@ -128,7 +128,7 @@ class RedirectingClientTest {
 
     @Test
     void webClientCreatedWithBaseUri_doesNotAllowRedirectionToOtherDomain() {
-        try (ClientFactory factory = mockClientFactory()) {
+        try (ClientFactory factory = localhostAccessingClientFactory()) {
             WebClient client = WebClient.builder(server.httpUri())
                                         .factory(factory)
                                         .followRedirects()
@@ -149,7 +149,7 @@ class RedirectingClientTest {
 
     @Test
     void webClientCreatedWithoutBaseUri_allowRedirectionToOtherDomain() {
-        try (ClientFactory factory = mockClientFactory()) {
+        try (ClientFactory factory = localhostAccessingClientFactory()) {
             final WebClient client = WebClient.builder()
                                               .factory(factory)
                                               .followRedirects()
@@ -194,7 +194,7 @@ class RedirectingClientTest {
         }
     }
 
-    private static ClientFactory mockClientFactory() {
+    private static ClientFactory localhostAccessingClientFactory() {
         return ClientFactory.builder().addressResolverGroupFactory(
                 eventLoopGroup -> MockAddressResolverGroup.localhost()).build();
     }
