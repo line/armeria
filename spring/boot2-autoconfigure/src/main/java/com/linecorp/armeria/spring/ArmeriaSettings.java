@@ -26,6 +26,8 @@ import org.springframework.validation.annotation.Validated;
 import com.codahale.metrics.json.MetricsModule;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.netty.channel.EventLoopGroup;
 
 /**
  * Settings for armeria servers. For example:
@@ -327,6 +330,142 @@ public class ArmeriaSettings {
     private Compression compression;
 
     /**
+     * The number of threads for {@link EventLoopGroup} that the {@link Server} uses. If {@code 0}, the
+     * {@link Server} uses the common worker group using {@link CommonPools#workerGroup()}.
+     * The default is {@code 0}.
+     */
+    @Nullable
+    private Integer workerGroup;
+
+    /**
+     * The number of threads dedicated to the execution of blocking tasks or invocations. If {@code 0}, the
+     * {@link Server} uses the common blocking task executor using {@link CommonPools#blockingTaskExecutor()}.
+     * The default is {@code 0}.
+     */
+    @Nullable
+    private Integer blockingTaskExecutor;
+
+    /**
+     * The maximum allowed number of open connections.
+     * The default is {@code com.linecorp.armeria.maxNumConnections} flag. Please refer to
+     * {@link Flags#maxNumConnections()}.
+     */
+    @Nullable
+    private Integer maxNumConnections;
+
+    /**
+     * @see ServerBuilder#idleTimeoutMillis(long)
+     */
+    @Nullable
+    private Long idleTimeoutMillis;
+
+    /**
+     * @see ServerBuilder#pingIntervalMillis(long)
+     */
+    @Nullable
+    private Long pingIntervalMillis;
+
+    /**
+     * @see ServerBuilder#maxConnectionAgeMillis(long)
+     */
+    @Nullable
+    private Long maxConnectionAgeMillis;
+
+    /**
+     * @see ServerBuilder#maxNumRequestsPerConnection(int)
+     */
+    @Nullable
+    private Integer maxNumRequestsPerConnection;
+
+    /**
+     * @see ServerBuilder#http2InitialConnectionWindowSize(int)
+     */
+    @Nullable
+    private Integer http2InitialConnectionWindowSize;
+
+    /**
+     * @see ServerBuilder#http2InitialStreamWindowSize(int)
+     */
+    @Nullable
+    private Integer http2InitialStreamWindowSize;
+
+    /**
+     * @see ServerBuilder#http2MaxStreamsPerConnection(long)
+     */
+    @Nullable
+    private Long http2MaxStreamsPerConnection;
+
+    /**
+     * @see ServerBuilder#http2MaxFrameSize(int)
+     */
+    @Nullable
+    private Integer http2MaxFrameSize;
+
+    /**
+     * @see ServerBuilder#http2MaxHeaderListSize(long)
+     */
+    @Nullable
+    private Long http2MaxHeaderListSize;
+
+    /**
+     * @see ServerBuilder#http1MaxInitialLineLength(int)
+     */
+    @Nullable
+    private Integer http1MaxInitialLineLength;
+
+    /**
+     * @see ServerBuilder#http1MaxHeaderSize(int)
+     */
+    @Nullable
+    private Integer http1MaxHeaderSize;
+
+    /**
+     * @see ServerBuilder#http1MaxChunkSize(int)
+     */
+    @Nullable
+    private Integer http1MaxChunkSize;
+
+    /**
+     * @see ServerBuilder#accessLogFormat(String)
+     */
+    @Nullable
+    private String accessLogFormat;
+
+    /**
+     * @see ServerBuilder#accessLogger(String)
+     */
+    @Nullable
+    private String accessLogger;
+
+    /**
+     * @see ServerBuilder#disableServerHeader
+     */
+    private boolean disableServerHeader;
+
+    /**
+     * @see ServerBuilder#disableDateHeader
+     */
+    private boolean disableDateHeader;
+
+    /**
+     * @see ServerBuilder#requestTimeoutMillis(long)
+     */
+    @Nullable
+    private Long requestTimeoutMillis;
+
+    /**
+     * @see ServerBuilder#maxRequestLength(long)
+     */
+    @Nullable
+    private Long maxRequestLength;
+
+    /**
+     * @see ServerBuilder#verboseResponses(boolean)
+     */
+    @Nullable
+    private Boolean verboseResponses;
+
+    /**
      * Returns the {@link Port}s of the {@link Server}.
      */
     public List<Port> getPorts() {
@@ -473,5 +612,201 @@ public class ArmeriaSettings {
      */
     public void setCompression(Compression compression) {
         this.compression = compression;
+    }
+
+    @Nullable
+    public Integer getWorkerGroup() {
+        return workerGroup;
+    }
+
+    public void setWorkerGroup(@Nullable Integer workerGroup) {
+        this.workerGroup = workerGroup;
+    }
+
+    @Nullable
+    public Integer getBlockingTaskExecutor() {
+        return blockingTaskExecutor;
+    }
+
+    public void setBlockingTaskExecutor(@Nullable Integer blockingTaskExecutor) {
+        this.blockingTaskExecutor = blockingTaskExecutor;
+    }
+
+    @Nullable
+    public Integer getMaxNumConnections() {
+        return maxNumConnections;
+    }
+
+    public void setMaxNumConnections(@Nullable Integer maxNumConnections) {
+        this.maxNumConnections = maxNumConnections;
+    }
+
+    @Nullable
+    public Long getIdleTimeoutMillis() {
+        return idleTimeoutMillis;
+    }
+
+    public void setIdleTimeoutMillis(@Nullable Long idleTimeoutMillis) {
+        this.idleTimeoutMillis = idleTimeoutMillis;
+    }
+
+    @Nullable
+    public Long getPingIntervalMillis() {
+        return pingIntervalMillis;
+    }
+
+    public void setPingIntervalMillis(@Nullable Long pingIntervalMillis) {
+        this.pingIntervalMillis = pingIntervalMillis;
+    }
+
+    @Nullable
+    public Long getMaxConnectionAgeMillis() {
+        return maxConnectionAgeMillis;
+    }
+
+    public void setMaxConnectionAgeMillis(@Nullable Long maxConnectionAgeMillis) {
+        this.maxConnectionAgeMillis = maxConnectionAgeMillis;
+    }
+
+    @Nullable
+    public Integer getMaxNumRequestsPerConnection() {
+        return maxNumRequestsPerConnection;
+    }
+
+    public void setMaxNumRequestsPerConnection(@Nullable Integer maxNumRequestsPerConnection) {
+        this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
+    }
+
+    @Nullable
+    public Integer getHttp2InitialConnectionWindowSize() {
+        return http2InitialConnectionWindowSize;
+    }
+
+    public void setHttp2InitialConnectionWindowSize(@Nullable Integer http2InitialConnectionWindowSize) {
+        this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
+    }
+
+    @Nullable
+    public Integer getHttp2InitialStreamWindowSize() {
+        return http2InitialStreamWindowSize;
+    }
+
+    public void setHttp2InitialStreamWindowSize(@Nullable Integer http2InitialStreamWindowSize) {
+        this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
+    }
+
+    @Nullable
+    public Long getHttp2MaxStreamsPerConnection() {
+        return http2MaxStreamsPerConnection;
+    }
+
+    public void setHttp2MaxStreamsPerConnection(@Nullable Long http2MaxStreamsPerConnection) {
+        this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
+    }
+
+    @Nullable
+    public Integer getHttp2MaxFrameSize() {
+        return http2MaxFrameSize;
+    }
+
+    public void setHttp2MaxFrameSize(@Nullable Integer http2MaxFrameSize) {
+        this.http2MaxFrameSize = http2MaxFrameSize;
+    }
+
+    @Nullable
+    public Long getHttp2MaxHeaderListSize() {
+        return http2MaxHeaderListSize;
+    }
+
+    public void setHttp2MaxHeaderListSize(@Nullable Long http2MaxHeaderListSize) {
+        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
+    }
+
+    @Nullable
+    public Integer getHttp1MaxInitialLineLength() {
+        return http1MaxInitialLineLength;
+    }
+
+    public void setHttp1MaxInitialLineLength(@Nullable Integer http1MaxInitialLineLength) {
+        this.http1MaxInitialLineLength = http1MaxInitialLineLength;
+    }
+
+    @Nullable
+    public Integer getHttp1MaxHeaderSize() {
+        return http1MaxHeaderSize;
+    }
+
+    public void setHttp1MaxHeaderSize(@Nullable Integer http1MaxHeaderSize) {
+        this.http1MaxHeaderSize = http1MaxHeaderSize;
+    }
+
+    @Nullable
+    public Integer getHttp1MaxChunkSize() {
+        return http1MaxChunkSize;
+    }
+
+    public void setHttp1MaxChunkSize(@Nullable Integer http1MaxChunkSize) {
+        this.http1MaxChunkSize = http1MaxChunkSize;
+    }
+
+    @Nullable
+    public String getAccessLogFormat() {
+        return accessLogFormat;
+    }
+
+    public void setAccessLogFormat(@Nullable String accessLogFormat) {
+        this.accessLogFormat = accessLogFormat;
+    }
+
+    @Nullable
+    public String getAccessLogger() {
+        return accessLogger;
+    }
+
+    public void setAccessLogger(@Nullable String accessLogger) {
+        this.accessLogger = accessLogger;
+    }
+
+    public boolean isDisableServerHeader() {
+        return disableServerHeader;
+    }
+
+    public void setDisableServerHeader(boolean disableServerHeader) {
+        this.disableServerHeader = disableServerHeader;
+    }
+
+    public boolean isDisableDateHeader() {
+        return disableDateHeader;
+    }
+
+    public void setDisableDateHeader(boolean disableDateHeader) {
+        this.disableDateHeader = disableDateHeader;
+    }
+
+    @Nullable
+    public Long getRequestTimeoutMillis() {
+        return requestTimeoutMillis;
+    }
+
+    public void setRequestTimeoutMillis(@Nullable Long requestTimeoutMillis) {
+        this.requestTimeoutMillis = requestTimeoutMillis;
+    }
+
+    @Nullable
+    public Long getMaxRequestLength() {
+        return maxRequestLength;
+    }
+
+    public void setMaxRequestLength(@Nullable Long maxRequestLength) {
+        this.maxRequestLength = maxRequestLength;
+    }
+
+    @Nullable
+    public Boolean getVerboseResponses() {
+        return verboseResponses;
+    }
+
+    public void setVerboseResponses(@Nullable Boolean verboseResponses) {
+        this.verboseResponses = verboseResponses;
     }
 }
