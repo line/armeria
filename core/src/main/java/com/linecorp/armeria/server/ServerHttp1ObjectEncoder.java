@@ -72,7 +72,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         lastResponseHeadersId = id;
 
         if (keepAliveHandler.needToCloseConnection()) {
-            converted.headers().set(HttpHeaderNames.CONNECTION, "close");
+            converted.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
             sentConnectionCloseHeader = true;
         }
         return writeNonInformationalHeaders(id, converted, endStream);

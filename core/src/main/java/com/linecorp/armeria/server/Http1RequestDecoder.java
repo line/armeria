@@ -47,6 +47,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -104,6 +105,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         this.scheme = scheme;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
         gracefulConnectionShutdownHandler = new Http1GracefulConnectionShutdownHandler();
+        gracefulConnectionShutdownHandler.updateGracePeriod(cfg.connectionShutdownGracePeriod());
         this.writer = writer;
     }
 
@@ -373,7 +375,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             return;
         }
         if (evt instanceof InitiateConnectionShutdown) {
-            gracefulConnectionShutdownHandler.setup(ctx, ((InitiateConnectionShutdown) evt).gracePeriod());
+            gracefulConnectionShutdownHandler.updateGracePeriod(((InitiateConnectionShutdown) evt).gracePeriod());
+            gracefulConnectionShutdownHandler.start(ctx, ctx.newPromise());
         }
 
         ctx.fireUserEventTriggered(evt);
@@ -399,7 +402,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
         // Destroys KeepAliveHandler which causes response to have "Connection: close" header.
         @Override
-        public void onGracePeriodEnd(ChannelHandlerContext ctx) {
+        public void onGracePeriodEnd(ChannelHandlerContext ctx, ChannelPromise promise) {
             writer.keepAliveHandler().destroy();
         }
     }

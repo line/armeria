@@ -169,6 +169,8 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
+    private Duration connectionShutdownGracePeriod = Duration.ofMillis(
+            Flags.defaultServerConnectionShutdownGracePeriodMillis());
     private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
@@ -568,6 +570,17 @@ public final class ServerBuilder {
      */
     public ServerBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
+    }
+
+    /**
+     * Sets the grace period for connection shutdown. During this period server may signal clients that
+     * connection shutdown is imminent but still accept in flight requests.
+     *
+     * @param gracePeriod the grace period. {@code 0} or negative value disables the grace period.
+     */
+    public ServerBuilder connectionShutdownGracePeriod(Duration gracePeriod) {
+        connectionShutdownGracePeriod = gracePeriod;
+        return this;
     }
 
     /**
@@ -1678,7 +1691,7 @@ public final class ServerBuilder {
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
-                http2InitialConnectionWindowSize,
+                connectionShutdownGracePeriod, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,

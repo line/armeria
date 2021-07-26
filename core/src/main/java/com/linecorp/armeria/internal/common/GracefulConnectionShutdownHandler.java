@@ -6,44 +6,90 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 
+/**
+ * Abstract class that's used implement protocol-specific graceful connection shutdown logic.
+ */
 public abstract class GracefulConnectionShutdownHandler {
+    private static final Logger logger = LoggerFactory.getLogger(GracefulConnectionShutdownHandler.class);
 
-    boolean gracePeriodStarted;
     @Nullable
-    private ScheduledFuture<?> future;
+    ChannelPromise promise;
+    Duration gracePeriod = Duration.ZERO;
+    boolean started;
+    @Nullable
+    private ScheduledFuture<?> gracePeriodFuture;
 
     /**
-     * Code executed on grace period start. Guaranteed to be executed at most once.
+     * Code executed on grace period start. Executed at most once.
      */
     public abstract void onGracePeriodStart(ChannelHandlerContext ctx);
     /**
-     * Code executed on grace period end.
+     * Code executed on grace period end. Executed at most once.
      */
-    public abstract void onGracePeriodEnd(ChannelHandlerContext ctx);
+    public abstract void onGracePeriodEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
-    public void setup(ChannelHandlerContext ctx, Duration gracePeriod) {
-        if (future != null &&
-            future.getDelay(TimeUnit.NANOSECONDS) > gracePeriod.toNanos()) {
-            future.cancel(false);
+    public void start(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        if (this.promise == null) {
+            this.promise = promise;
+        } else {
+            // Chain promises in case start is called multiple times.
+            this.promise.addListener((ChannelFutureListener) future -> {
+                if (future.cause() != null) {
+                    promise.setFailure(future.cause());
+                } else {
+                    promise.setSuccess();
+                }
+            });
+        }
+        if (gracePeriodFuture != null) {
+            if (gracePeriodFuture.getDelay(TimeUnit.NANOSECONDS) > gracePeriod.toNanos()) {
+                // Maybe reschedule below.
+                gracePeriodFuture.cancel(false);
+                gracePeriodFuture = null;
+            } else {
+                // Grace period is already scheduled to finish earlier.
+                return;
+            }
         }
         if (gracePeriod.compareTo(Duration.ZERO) > 0) {
-            if (!gracePeriodStarted) {
+            if (!started) {
                 onGracePeriodStart(ctx);
-                gracePeriodStarted = true;
             }
-            future = ctx.executor().schedule(() -> onGracePeriodEnd(ctx),
-                                             gracePeriod.toNanos(), TimeUnit.NANOSECONDS);
+            gracePeriodFuture = ctx.executor().schedule(() -> finish(ctx, this.promise),
+                                                        gracePeriod.toNanos(), TimeUnit.NANOSECONDS);
         } else {
-            onGracePeriodEnd(ctx);
+            finish(ctx, this.promise);
+        }
+        started = true;
+    }
+
+    private void finish(ChannelHandlerContext ctx, ChannelPromise promise) {
+        try {
+            onGracePeriodEnd(ctx, promise);
+        } catch (Exception e) {
+            logger.warn("Unexpected exception:", e);
         }
     }
 
     public void cancel() {
-        if (future != null) {
-            future.cancel(false);
-            future = null;
+        if (gracePeriodFuture != null) {
+            gracePeriodFuture.cancel(false);
+            gracePeriodFuture = null;
+        }
+    }
+
+    public void updateGracePeriod(Duration gracePeriod) {
+        if (gracePeriod.compareTo(Duration.ZERO) > 0) {
+            this.gracePeriod = gracePeriod;
+        } else {
+            this.gracePeriod = Duration.ZERO;
         }
     }
 }

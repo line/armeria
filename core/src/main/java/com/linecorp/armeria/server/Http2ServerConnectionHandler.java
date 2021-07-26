@@ -63,6 +63,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
             keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
         }
         gracefulConnectionShutdownHandler = new Http2GracefulConnectionShutdownHandler();
+        gracefulConnectionShutdownHandler.updateGracePeriod(config.connectionShutdownGracePeriod());
 
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAliveHandler);
         connection().addListener(requestDecoder);
@@ -136,7 +137,8 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof InitiateConnectionShutdown) {
             setGoAwayDebugMessage("app-requested");
-            gracefulConnectionShutdownHandler.setup(ctx, ((InitiateConnectionShutdown) evt).gracePeriod());
+            gracefulConnectionShutdownHandler.updateGracePeriod(((InitiateConnectionShutdown) evt).gracePeriod());
+            ctx.channel().close();
         }
         super.userEventTriggered(ctx, evt);
     }
@@ -147,9 +149,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
             // Connection timed out or exceeded maximum number of requests.
             setGoAwayDebugMessage("max-age");
         }
-        super.close(ctx, promise);
-        // Cancel scheduled tasks after call to super class to avoid triggering needsImmediateDisconnection.
-        cancelScheduledTasks();
+        gracefulConnectionShutdownHandler.start(ctx, promise);
     }
 
     private class Http2GracefulConnectionShutdownHandler extends GracefulConnectionShutdownHandler {
@@ -166,8 +166,8 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
          * Start channel shutdown. Will send final GOAWAY with latest created stream ID.
          */
         @Override
-        public void onGracePeriodEnd(ChannelHandlerContext ctx) {
-            ctx.channel().close();
+        public void onGracePeriodEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            Http2ServerConnectionHandler.super.close(ctx, promise);
         }
     }
 }

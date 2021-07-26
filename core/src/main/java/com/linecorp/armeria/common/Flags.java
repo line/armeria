@@ -288,6 +288,12 @@ public final class Flags {
                     DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
                     value -> value >= 0);
 
+    private static final long DEFAULT_DEFAULT_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS = 0; // Disabled
+    private static final long DEFAULT_SERVER_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS =
+            getLong("defaultServerConnectionShutdownGracePeriodMillis",
+                    DEFAULT_DEFAULT_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS,
+                    value -> value >= 0);
+
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     private static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
             getInt("defaultHttp2InitialConnectionWindowSize",
@@ -933,6 +939,21 @@ public final class Flags {
      */
     public static long defaultMaxClientConnectionAgeMillis() {
         return DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS;
+    }
+
+    /**
+     * Returns the default server-side graceful connection shutdown period in milliseconds.
+     * If the value of this flag is greater than {@code 0}, a connection shutdown will have a grace period
+     * when client will be notified about the shutdown, but in flight requests will still be accepted.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionShutdownGracePeriodMillis=<integer>}
+     * JVM option to override the default value.
+     *
+     * @see ServerBuilder#connectionShutdownGracePeriod(Duration)
+     */
+    public static long defaultServerConnectionShutdownGracePeriodMillis() {
+        return DEFAULT_SERVER_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS;
     }
 
     /**
