@@ -14,7 +14,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
 /**
- * Abstract class that's used implement protocol-specific graceful connection shutdown logic.
+ * Abstract class that's used to implement protocol-specific graceful connection shutdown logic.
  */
 public abstract class GracefulConnectionShutdownHandler {
     private static final Logger logger = LoggerFactory.getLogger(GracefulConnectionShutdownHandler.class);
@@ -30,6 +30,7 @@ public abstract class GracefulConnectionShutdownHandler {
      * Code executed on grace period start. Executed at most once.
      */
     public abstract void onGracePeriodStart(ChannelHandlerContext ctx);
+
     /**
      * Code executed on grace period end. Executed at most once.
      */
