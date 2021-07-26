@@ -35,9 +35,6 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -58,8 +55,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  * {@link Server} configuration.
  */
 public final class ServerConfig {
-
-    private static final Logger logger = LoggerFactory.getLogger(ServerConfig.class);
 
     /**
      * Initialized later by {@link Server} via {@link #setServer(Server)}.
@@ -176,21 +171,7 @@ public final class ServerConfig {
                                    gracefulShutdownQuietPeriod, "gracefulShutdownQuietPeriod");
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        final ScheduledExecutorService unwrappedBlockingTaskExecutor;
-        if (blockingTaskExecutor instanceof BlockingTaskExecutor) {
-            unwrappedBlockingTaskExecutor = ((BlockingTaskExecutor) blockingTaskExecutor).unwrap();
-        } else {
-            unwrappedBlockingTaskExecutor = blockingTaskExecutor;
-        }
-
-        new ExecutorServiceMetrics(
-                unwrappedBlockingTaskExecutor,
-                "blockingTaskExecutor", "armeria", ImmutableList.of())
-                .bindTo(meterRegistry);
-        blockingTaskExecutor = new TimedScheduledExecutorService(meterRegistry, blockingTaskExecutor,
-                                                                 "blockingTaskExecutor", "armeria.",
-                                                                 ImmutableList.of());
-        this.blockingTaskExecutor = UnstoppableScheduledExecutorService.from(blockingTaskExecutor);
+        this.blockingTaskExecutor = monitorBlockingTaskExecutor(blockingTaskExecutor, meterRegistry);
 
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
@@ -272,6 +253,25 @@ public final class ServerConfig {
         this.requestIdGenerator = castRequestIdGenerator;
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
         this.sslContexts = sslContexts;
+    }
+
+    private static ScheduledExecutorService monitorBlockingTaskExecutor(ScheduledExecutorService executor,
+                                                                        MeterRegistry meterRegistry) {
+        final ScheduledExecutorService unwrappedExecutor;
+        if (executor instanceof BlockingTaskExecutor) {
+            unwrappedExecutor = ((BlockingTaskExecutor) executor).unwrap();
+        } else {
+            unwrappedExecutor = executor;
+        }
+
+        new ExecutorServiceMetrics(
+                unwrappedExecutor,
+                "blockingTaskExecutor", "armeria", ImmutableList.of())
+                .bindTo(meterRegistry);
+        executor = new TimedScheduledExecutorService(meterRegistry, executor,
+                                                     "blockingTaskExecutor", "armeria.",
+                                                     ImmutableList.of());
+        return UnstoppableScheduledExecutorService.from(executor);
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
