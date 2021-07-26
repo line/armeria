@@ -157,8 +157,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
-        return of(RequestHeaders.builder(method, path)
-                                .contentType(mediaType).build(),
+        return of(RequestHeaders.builder(method, path).contentType(mediaType).build(),
                   content, trailers);
     }
 

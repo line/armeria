@@ -539,8 +539,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         respond(ctx, reqCtx,
-                ResponseHeaders.builder(status)
-                               .addObject(HttpHeaderNames.CONTENT_TYPE, ERROR_CONTENT_TYPE),
+                ResponseHeaders.builder(status).contentType(ERROR_CONTENT_TYPE),
                 resContent, cause);
     }
 

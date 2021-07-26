@@ -44,7 +44,7 @@ public interface RequestHeaders extends HttpHeaders, RequestHeaderGetters {
     static RequestHeadersBuilder builder(HttpMethod method, String path) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
-        return builder().add(HttpHeaderNames.METHOD, method.name())
+        return builder().method(method)
                         .add(HttpHeaderNames.PATH, path);
     }
 

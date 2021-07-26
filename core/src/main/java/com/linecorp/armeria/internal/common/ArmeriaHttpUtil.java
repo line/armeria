@@ -615,7 +615,7 @@ public final class ArmeriaHttpUtil {
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final ResponseHeadersBuilder out = ResponseHeaders.builder();
         out.sizeHint(inHeaders.size());
-        out.add(HttpHeaderNames.STATUS, HttpStatus.valueOf(in.status().code()).codeAsText());
+        out.status(HttpStatus.valueOf(in.status().code()));
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
         return out.build();

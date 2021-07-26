@@ -124,8 +124,10 @@ public abstract class TomcatService implements HttpService {
     }
 
     private static final ResponseHeaders INVALID_AUTHORITY_HEADERS =
-            ResponseHeaders.of(HttpStatus.BAD_REQUEST,
-                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+            ResponseHeaders.builder(HttpStatus.BAD_REQUEST)
+                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                           .build();
+
     private static final HttpData INVALID_AUTHORITY_DATA =
             HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nInvalid authority");
 
