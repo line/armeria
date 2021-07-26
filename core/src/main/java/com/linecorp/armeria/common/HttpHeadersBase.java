@@ -39,6 +39,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
@@ -82,25 +83,7 @@ class HttpHeadersBase
         PROHIBITED_VALUE_CHAR_NAMES['\r'] = "<CR>";
     }
 
-    // Cached values for RequestHeaders
-    @Nullable
-    private HttpMethod method;
-    @Nullable
-    private Cookies cookies;
-    @Nullable
-    private List<LanguageRange> acceptLanguages;
-
-    // Cached values for ResponseHeaders
-    @Nullable
-    private HttpStatus status;
-    @Nullable
-    private Cookies setCookie;
-
-    // Cached values for HttpHeaders
-    @Nullable
-    private MediaType contentType;
-    @Nullable
-    private ContentDisposition contentDisposition;
+    private Map<AsciiString, Object> cache;
 
     private boolean isMutating;
     private boolean endOfStream;
@@ -115,7 +98,7 @@ class HttpHeadersBase
     HttpHeadersBase(HttpHeadersBase parent, boolean shallowCopy) {
         super(parent, shallowCopy);
         endOfStream = parent.endOfStream;
-        copyCachedValues(parent);
+        cache = parent.cache;
     }
 
     /**
@@ -127,51 +110,19 @@ class HttpHeadersBase
         endOfStream = parent.isEndOfStream();
     }
 
-    private void copyCachedValues(HttpHeadersBase parent) {
-        method = parent.method;
-        cookies = parent.cookies;
-        acceptLanguages = parent.acceptLanguages;
-        status = parent.status;
-        setCookie = parent.setCookie;
-        contentType = parent.contentType;
-        contentDisposition = parent.contentDisposition;
-    }
-
     @Override
     void onChange(@Nullable AsciiString name) {
-        if (isMutating) {
-            // The cached value was update by a shortcut method itself.
+        if (cache == null) {
             return;
         }
 
         if (name == null) {
             // Invalidate all cached values
-            method = null;
-            cookies = null;
-            acceptLanguages = null;
-            status = null;
-            setCookie = null;
-            contentType = null;
-            contentDisposition = null;
+            cache.clear();
             return;
         }
 
-        // TODO(ikhoon): Condiser a Map for caching if we have to cache more values.
-        if (HttpHeaderNames.METHOD.equals(name)) {
-            method = null;
-        } else if (HttpHeaderNames.STATUS.equals(name)) {
-            status = null;
-        } else if (HttpHeaderNames.CONTENT_TYPE.equals(name)) {
-            contentType = null;
-        } else if (HttpHeaderNames.CONTENT_DISPOSITION.equals(name)) {
-            contentDisposition = null;
-        } else if (HttpHeaderNames.ACCEPT_LANGUAGE.equals(name)) {
-            acceptLanguages = null;
-        } else if (HttpHeaderNames.COOKIE.equals(name)) {
-            cookies = null;
-        } else if (HttpHeaderNames.SET_COOKIE.equals(name)) {
-            setCookie = null;
-        }
+        cache.remove(name);
     }
 
     @Override
@@ -263,9 +214,7 @@ class HttpHeadersBase
             this.cookies = mergeCookies(this.cookies, cookies);
         }
 
-        isMutating = true;
-        set(HttpHeaderNames.COOKIE, Cookie.toCookieHeader(this.cookies));
-        isMutating = false;
+        set(HttpHeaderNames.COOKIE, Cookie.toCookieHeader(this.cookies), false);
     }
 
     Cookies cookie() {
@@ -284,9 +233,7 @@ class HttpHeadersBase
         } else {
             this.setCookie = mergeCookies(this.setCookie, setCookie);
         }
-        isMutating = true;
-        add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(setCookie));
-        isMutating = false;
+        add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(setCookie), false);
     }
 
     Cookies setCookie() {
@@ -306,22 +253,15 @@ class HttpHeadersBase
     }
 
     final void acceptLanguages(List<LanguageRange> acceptLanguages) {
-        this.acceptLanguages = acceptLanguages;
         final String acceptLanguagesValue = acceptLanguages
                 .stream()
                 .map(it -> (it.getWeight() == 1.0d) ? it.getRange() : it.getRange() + ";q=" + it.getWeight())
                 .collect(Collectors.joining(", "));
-        isMutating = true;
         set(HttpHeaderNames.ACCEPT_LANGUAGE, acceptLanguagesValue);
-        isMutating = false;
     }
 
     @Nullable
     List<LanguageRange> acceptLanguages() {
-        if (acceptLanguages != null) {
-            return acceptLanguages;
-        }
-
         final List<String> acceptHeaders = getAll(HttpHeaderNames.ACCEPT_LANGUAGE);
         if (acceptHeaders.isEmpty()) {
             // TODO(ikhoon): Return an empty list if no accept-language exists in Armeria 2.0
@@ -335,7 +275,7 @@ class HttpHeadersBase
             }
             acceptLanguages.sort(comparingDouble(LanguageRange::getWeight).reversed());
 
-            return this.acceptLanguages = ImmutableList.copyOf(acceptLanguages);
+            return Collections.unmodifiableList(acceptLanguages);
         } catch (IllegalArgumentException e) {
             // If any port of any of the headers is ill-formed
             return null;
@@ -469,17 +409,13 @@ class HttpHeadersBase
     @Override
     @Nullable
     public ContentDisposition contentDisposition() {
-        if (contentDisposition != null) {
-            return contentDisposition;
-        }
-
         final String contentDispositionString = get(HttpHeaderNames.CONTENT_DISPOSITION);
         if (contentDispositionString == null) {
             return null;
         }
 
         try {
-            return contentDisposition = ContentDisposition.parse(contentDispositionString);
+            return ContentDisposition.parse(contentDispositionString);
         } catch (IllegalArgumentException ex) {
             return null;
         }
@@ -487,10 +423,7 @@ class HttpHeadersBase
 
     final void contentDisposition(ContentDisposition contentDisposition) {
         requireNonNull(contentDisposition, "contentDisposition");
-        this.contentDisposition = contentDisposition;
-        isMutating = true;
         set(HttpHeaderNames.CONTENT_DISPOSITION, contentDisposition.asHeaderValue());
-        isMutating = false;
     }
 
     // Getters

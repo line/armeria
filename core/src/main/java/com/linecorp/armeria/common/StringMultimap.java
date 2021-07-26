@@ -633,6 +633,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     }
 
     final void add(IN_NAME name, Iterable<String> values) {
+        add(name, values, true);
+    }
+
+    final void add(IN_NAME name, Iterable<String> values, boolean notifyChange) {
         final NAME normalizedName = normalizeName(name);
         requireNonNull(values, "values");
         final int h = hashName(normalizedName);
@@ -641,8 +645,11 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             requireNonNullElement(values, v);
             add0(h, i, normalizedName, v, false);
         }
-        onChange(normalizedName);
+        if (notifyChange) {
+            onChange(normalizedName);
+        }
     }
+
 
     final void add(IN_NAME name, String... values) {
         final NAME normalizedName = normalizeName(name);
@@ -720,11 +727,17 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
     }
 
     final void set(IN_NAME name, String value) {
+        set(name, value, true);
+    }
+
+    final void set(IN_NAME name, String value, boolean notifyChange) {
         final NAME normalizedName = normalizeName(name);
         requireNonNull(value, "value");
         final int h = hashName(normalizedName);
         final int i = index(h);
-        remove0(h, i, normalizedName, true);
+        if (notifyChange) {
+            remove0(h, i, normalizedName, notifyChange);
+        }
         add0(h, i, normalizedName, value, false);
     }
 

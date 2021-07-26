@@ -45,7 +45,7 @@ public interface RequestHeaders extends HttpHeaders, RequestHeaderGetters {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         return builder().method(method)
-                        .add(HttpHeaderNames.PATH, path);
+                        .path(path);
     }
 
     /**
