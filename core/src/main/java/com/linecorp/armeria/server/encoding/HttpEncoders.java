@@ -62,6 +62,8 @@ final class HttpEncoders {
                 return new DeflaterOutputStream(out, true);
             case BR:
                 try {
+                    // We use 4 as the default level because it would save more bytes
+                    // than GZIP's default setting and compress data faster.
                     final Encoder.Parameters parameters = new Encoder.Parameters();
                     return new BrotliOutputStream(out, parameters.setQuality(4));
                 } catch (IOException e) {
