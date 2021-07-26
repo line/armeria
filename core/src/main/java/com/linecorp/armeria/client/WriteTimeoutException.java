@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * A {@link TimeoutException} raised when a client failed to send a request to the wire within timeout.
@@ -29,7 +30,8 @@ public final class WriteTimeoutException extends TimeoutException {
     private static final WriteTimeoutException INSTANCE = new WriteTimeoutException(false);
 
     /**
-     * Returns a singleton {@link WriteTimeoutException}.
+     * Returns a singleton {@link WriteTimeoutException} or newly-created exception depending on
+     * the result of {@link Sampler#isSampled(Object)} of {@link Flags#verboseExceptionSampler()}.
      */
     public static WriteTimeoutException get() {
         return Flags.verboseExceptionSampler().isSampled(WriteTimeoutException.class) ?

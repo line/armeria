@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * A {@link TimeoutException} raised when a response has not been received from a server within timeout.
@@ -29,7 +30,8 @@ public final class ResponseTimeoutException extends TimeoutException {
     private static final ResponseTimeoutException INSTANCE = new ResponseTimeoutException(false);
 
     /**
-     * Returns a singleton {@link ResponseTimeoutException}.
+     * Returns a singleton {@link ResponseTimeoutException} or newly-created exception depending on
+     * the result of {@link Sampler#isSampled(Object)} of {@link Flags#verboseExceptionSampler()}.
      */
     public static ResponseTimeoutException get() {
         return Flags.verboseExceptionSampler().isSampled(ResponseTimeoutException.class) ?
