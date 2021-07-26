@@ -82,23 +82,27 @@ class HttpHeadersBase
         PROHIBITED_VALUE_CHAR_NAMES['\r'] = "<CR>";
     }
 
-    // Cached values
+    // Cached values for RequestHeaders
     @Nullable
     private HttpMethod method;
     @Nullable
+    private Cookies cookies;
+    @Nullable
+    private List<LanguageRange> acceptLanguages;
+
+    // Cached values for ResponseHeaders
+    @Nullable
     private HttpStatus status;
+    @Nullable
+    private Cookies setCookie;
+
+    // Cached values for HttpHeaders
     @Nullable
     private MediaType contentType;
     @Nullable
     private ContentDisposition contentDisposition;
-    @Nullable
-    private List<LanguageRange> acceptLanguages;
-    @Nullable
-    private Cookies cookies;
-    @Nullable
-    private Cookies setCookie;
-    private boolean isMutating;
 
+    private boolean isMutating;
     private boolean endOfStream;
 
     HttpHeadersBase(int sizeHint) {
@@ -123,32 +127,32 @@ class HttpHeadersBase
         endOfStream = parent.isEndOfStream();
     }
 
-    private void copyCachedValues(HttpHeadersBase parant) {
-        method = parant.method;
-        status = parant.status;
-        contentType = parant.contentType;
-        contentDisposition = parant.contentDisposition;
-        acceptLanguages = parant.acceptLanguages;
-        cookies = parant.cookies;
-        setCookie = parant.setCookie;
+    private void copyCachedValues(HttpHeadersBase parent) {
+        method = parent.method;
+        cookies = parent.cookies;
+        acceptLanguages = parent.acceptLanguages;
+        status = parent.status;
+        setCookie = parent.setCookie;
+        contentType = parent.contentType;
+        contentDisposition = parent.contentDisposition;
     }
 
     @Override
     void onChange(@Nullable AsciiString name) {
         if (isMutating) {
-            // The cached value was update by the shortcut methods itself.
+            // The cached value was update by a shortcut method itself.
             return;
         }
 
         if (name == null) {
             // Invalidate all cached values
             method = null;
+            cookies = null;
+            acceptLanguages = null;
             status = null;
+            setCookie = null;
             contentType = null;
             contentDisposition = null;
-            acceptLanguages = null;
-            cookies = null;
-            setCookie = null;
             return;
         }
 
