@@ -169,6 +169,9 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         @Override
         public void onGracePeriodEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             Http2ServerConnectionHandler.super.close(ctx, promise);
+            // Cancel scheduled tasks after the call to the super class above to avoid triggering
+            // needsImmediateDisconnection.
+            cancelScheduledTasks();
         }
     }
 }
