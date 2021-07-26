@@ -156,6 +156,7 @@ class HttpHeadersBase
             return;
         }
 
+        // TODO(ikhoon): Condiser a Map for caching if we have to cache more values.
         if (HttpHeaderNames.METHOD.equals(name)) {
             method = null;
         } else if (HttpHeaderNames.STATUS.equals(name)) {
