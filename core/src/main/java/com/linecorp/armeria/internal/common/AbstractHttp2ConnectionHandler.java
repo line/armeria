@@ -20,6 +20,7 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -74,7 +75,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     private boolean handlingConnectionError;
 
     // Debug data that will be sent in the GOAWAY frame.
-    protected ByteBuf goAwayDebugData = Unpooled.EMPTY_BUFFER;
+    private ByteBuf goAwayDebugData = Unpooled.unreleasableBuffer(Unpooled.EMPTY_BUFFER);
 
     /**
      * Creates a new instance.
@@ -171,12 +172,13 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         return super.goAway(ctx, lastStreamId, errorCode, debugData, promise);
     }
 
-    protected final void setGoAwayDebugMessage(String debugMessage) {
-        goAwayDebugData = Unpooled.copiedBuffer(debugMessage.getBytes()).asReadOnly();
+    protected final ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId) {
+        return goAway(ctx, lastStreamId, NO_ERROR.code(), goAwayDebugData, ctx.newPromise());
     }
 
-    protected final ChannelFuture goAway(ChannelHandlerContext ctx, int lastStreamId) {
-        return goAway(ctx, lastStreamId, NO_ERROR.code(), goAwayDebugData.retain(), ctx.newPromise());
+    protected final void setGoAwayDebugMessage(String debugMessage) {
+        goAwayDebugData = Unpooled.unreleasableBuffer(
+                Unpooled.copiedBuffer(debugMessage, StandardCharsets.UTF_8));
     }
 
     @Override

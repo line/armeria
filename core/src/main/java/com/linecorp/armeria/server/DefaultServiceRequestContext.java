@@ -446,6 +446,7 @@ public final class DefaultServiceRequestContext
         return completableFuture;
     }
 
+    @Override
     public RequestLogAccess log() {
         return log;
     }

@@ -478,10 +478,17 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the connection shutdown grace period.
+     * Returns the connection shutdown grace period duration.
      */
     public Duration connectionShutdownGracePeriod() {
         return connectionShutdownGracePeriod;
+    }
+
+    /**
+     * Returns the connection shutdown grace period in millis.
+     */
+    public long connectionShutdownGracePeriodMillis() {
+        return connectionShutdownGracePeriod.toMillis();
     }
 
     /**

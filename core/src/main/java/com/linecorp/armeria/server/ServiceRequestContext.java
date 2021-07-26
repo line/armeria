@@ -547,12 +547,27 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Initiates connection shutdown with a given grace period.
-     * New requests are still accepted during the grace period. If grace period is zero or negative - initiates
-     * connection shutdown and stops accepting incoming requests immediately.
+     *
+     * <p>
+     * At the beginning of the grace period server signals the clients that the connection shutdown is imminent
+     * but still accepts in flight requests.
+     * After the grace period end server stops accepting new requests.
+     * </p>
+     *
+     * <p>
      * If graceful shutdown is already triggered and given grace period is smaller than the wait time before
      * the grace period end - reschedules grace period end to happen faster. Otherwise, grace period will
      * end as it was previously scheduled.
+     * </p>
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support a grace period as described here, so for HTTP/1 grace period millis
+     * is always {@code 0}.
+     * </p>
+     *
+     * <p>
      * Returns {@link CompletableFuture} that completes when the channel is closed.
+     * </p>
      */
     @UnstableApi
     CompletableFuture<Void> initiateConnectionShutdown(Duration gracePeriod);
@@ -560,7 +575,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Initiates connection shutdown without overriding current configuration of the grace period.
      * See {@link ServiceRequestContext#initiateConnectionShutdown(Duration)} for a version that
-     * takes grace period as an input.
+     * takes grace period as an input and more details.
      * Returns {@link CompletableFuture} that completes when the channel is closed.
      */
     @UnstableApi

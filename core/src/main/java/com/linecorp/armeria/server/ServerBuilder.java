@@ -573,10 +573,37 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the grace period for connection shutdown. During this period server may signal clients that
-     * connection shutdown is imminent but still accept in flight requests.
+     * Sets the grace period for the connection shutdown in millis.
+     * At the beginning of the grace period server signals the clients that the connection shutdown is imminent
+     * but still accepts in flight requests.
+     * After the grace period end server stops accepting new requests.
+     * Also, see {@link ServerBuilder#connectionShutdownGracePeriod(Duration)}.
      *
-     * @param gracePeriod the grace period. {@code 0} or negative value disables the grace period.
+     * <p>
+     * Note that HTTP/1 doesn't support a grace period as described here, so for HTTP/1 grace period duration
+     * is always {@code 0}.
+     * </p>
+     *
+     * @param gracePeriodMillis the grace period. {@code 0} or negative value disables the grace period.
+     */
+    public ServerBuilder connectionShutdownGracePeriodMillis(long gracePeriodMillis) {
+        connectionShutdownGracePeriod = Duration.ofMillis(gracePeriodMillis);
+        return this;
+    }
+
+    /**
+     * Sets the grace period duration for the connection shutdown.
+     * At the beginning of the grace period server signals the clients that the connection shutdown is imminent
+     * but still accepts in flight requests.
+     * After the grace period end server stops accepting new requests.
+     * Also, see {@link ServerBuilder#connectionShutdownGracePeriodMillis(long)}.
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support a grace period as described here, so for HTTP/1 grace period duration
+     * is always {@code 0}.
+     * </p>
+     *
+     * @param gracePeriod the grace period. {@code Duration.ZERO} or negative value disables the grace period.
      */
     public ServerBuilder connectionShutdownGracePeriod(Duration gracePeriod) {
         connectionShutdownGracePeriod = gracePeriod;

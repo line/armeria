@@ -950,7 +950,19 @@ public final class Flags {
      * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionShutdownGracePeriodMillis=<integer>}
      * JVM option to override the default value.
      *
+     * <p>
+     * At the beginning of the grace period server signals the clients that the connection shutdown is imminent
+     * but still accepts in flight requests.
+     * After the grace period end server stops accepting new requests.
+     * </p>
+     *
+     * <p>
+     * Note that HTTP/1 doesn't support a grace period as described here, so for HTTP/1 grace period millis
+     * is always {@code 0}.
+     * </p>
+     *
      * @see ServerBuilder#connectionShutdownGracePeriod(Duration)
+     * @see ServerBuilder#connectionShutdownGracePeriodMillis(long)
      */
     public static long defaultServerConnectionShutdownGracePeriodMillis() {
         return DEFAULT_SERVER_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS;
