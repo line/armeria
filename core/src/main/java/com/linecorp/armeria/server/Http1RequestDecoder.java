@@ -375,7 +375,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             return;
         }
         if (evt instanceof InitiateConnectionShutdown) {
-            gracefulConnectionShutdownHandler.updateGracePeriod(((InitiateConnectionShutdown) evt).gracePeriod());
+            gracefulConnectionShutdownHandler.updateGracePeriod(
+                    ((InitiateConnectionShutdown) evt).gracePeriod());
             gracefulConnectionShutdownHandler.start(ctx, ctx.newPromise());
         }
 

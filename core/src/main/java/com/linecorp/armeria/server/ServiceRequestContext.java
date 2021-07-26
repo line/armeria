@@ -546,10 +546,23 @@ public interface ServiceRequestContext extends RequestContext {
     ProxiedAddresses proxiedAddresses();
 
     /**
-     * Initiates connection shutdown with a given grace period. New requests are still accepted during the
-     * grace period. If grace period is zero or negative - initiates connection shutdown immediately.
+     * Initiates connection shutdown with a given grace period.
+     * New requests are still accepted during the grace period. If grace period is zero or negative - initiates
+     * connection shutdown and stops accepting incoming requests immediately.
+     * If graceful shutdown is already triggered and given grace period is smaller than the wait time before
+     * the grace period end - reschedules grace period end to happen faster. Otherwise, grace period will
+     * end as it was previously scheduled.
      * Returns {@link CompletableFuture} that completes when the channel is closed.
      */
     @UnstableApi
     CompletableFuture<Void> initiateConnectionShutdown(Duration gracePeriod);
+
+    /**
+     * Initiates connection shutdown without overriding current configuration of the grace period.
+     * See {@link ServiceRequestContext#initiateConnectionShutdown(Duration)} for a version that
+     * takes grace period as an input.
+     * Returns {@link CompletableFuture} that completes when the channel is closed.
+     */
+    @UnstableApi
+    CompletableFuture<Void> initiateConnectionShutdown();
 }

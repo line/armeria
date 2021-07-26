@@ -428,7 +428,12 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public CompletableFuture<Void> initiateConnectionShutdown(Duration gracePeriod) {
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        return initiateConnectionShutdown(null);
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown(@Nullable Duration gracePeriod) {
         final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         ch.closeFuture().addListener(f -> {
             if (f.cause() == null) {
@@ -441,7 +446,6 @@ public final class DefaultServiceRequestContext
         return completableFuture;
     }
 
-    @Override
     public RequestLogAccess log() {
         return log;
     }

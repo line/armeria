@@ -137,7 +137,8 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof InitiateConnectionShutdown) {
             setGoAwayDebugMessage("app-requested");
-            gracefulConnectionShutdownHandler.updateGracePeriod(((InitiateConnectionShutdown) evt).gracePeriod());
+            gracefulConnectionShutdownHandler.updateGracePeriod(
+                    ((InitiateConnectionShutdown) evt).gracePeriod());
             ctx.channel().close();
         }
         super.userEventTriggered(ctx, evt);

@@ -85,7 +85,10 @@ public abstract class GracefulConnectionShutdownHandler {
         }
     }
 
-    public void updateGracePeriod(Duration gracePeriod) {
+    public void updateGracePeriod(@Nullable Duration gracePeriod) {
+        if (gracePeriod == null){
+            return;
+        }
         if (gracePeriod.compareTo(Duration.ZERO) > 0) {
             this.gracePeriod = gracePeriod;
         } else {
