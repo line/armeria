@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceNaming;
@@ -1031,8 +1032,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
         this.requestEndTimeNanos = requestEndTimeNanos;
 
-        if (requestCause instanceof HttpStatusException) {
-            // Log the responseCause only when an HttpStatusException was created with a cause.
+        if (requestCause instanceof HttpStatusException || requestCause instanceof HttpResponseException) {
+            // Log the requestCause only when an Http{Status,Response}Exception was created with a cause.
             this.requestCause = requestCause.getCause();
         } else {
             this.requestCause = requestCause;
@@ -1346,8 +1347,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             responseHeaders = DUMMY_RESPONSE_HEADERS;
         }
         if (this.responseCause == null) {
-            if (responseCause instanceof HttpStatusException) {
-                // Log the responseCause only when an HttpStatusException was created with a cause.
+            if (responseCause instanceof HttpStatusException ||
+                responseCause instanceof HttpResponseException) {
+                // Log the responseCause only when an Http{Status,Response}Exception was created with a cause.
                 this.responseCause = responseCause.getCause();
             } else {
                 this.responseCause = responseCause;

@@ -49,8 +49,8 @@ enum DefaultExceptionHandler implements ExceptionHandler {
      * Converts the specified {@link Throwable} to an {@link HttpResponse}.
      *
      * <p>Implementation note:
-     * A failed {@link HttpResponse} should be returned in order to let {@link RequestLog} complete deferred
-     * values. The given cause could be raised before setting deferred values.
+     * A failed {@link HttpResponse} should be returned in order to let a {@link RequestLog} complete deferred
+     * values. The given cause could be raised before setting deferred values of a {@link RequestLog}.
      * See https://github.com/line/armeria/issues/3719.
      *
      * <p>For example:<pre>{@code
@@ -76,8 +76,10 @@ enum DefaultExceptionHandler implements ExceptionHandler {
                 return HttpResponse.ofFailure(BAD_REQUEST_EXCEPTION);
             }
         }
-        if (cause instanceof HttpStatusException) {
-            // Use HttpStatusException itself so that a log completes deferred values.
+        if (cause instanceof HttpStatusException ||
+            cause instanceof HttpResponseException) {
+            // Use HttpStatusException or HttpResponseException itself because it already contains a status
+            // or response.
             return HttpResponse.ofFailure(cause);
         }
 
