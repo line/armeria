@@ -64,6 +64,7 @@ final class HttpEncoders {
                 try {
                     // We use 4 as the default level because it would save more bytes
                     // than GZIP's default setting and compress data faster.
+                    // See: https://blogs.akamai.com/2016/02/understanding-brotlis-potential.html
                     final Encoder.Parameters parameters = new Encoder.Parameters();
                     return new BrotliOutputStream(out, parameters.setQuality(4));
                 } catch (IOException e) {
