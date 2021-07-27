@@ -52,4 +52,18 @@ class BlockingTaskExecutorBuilderTest {
         assertThat(pool.getKeepAliveTime(TimeUnit.MILLISECONDS)).isEqualTo(keepAliveTime);
         assertThat(pool.getCorePoolSize()).isEqualTo(numThreads);
     }
+
+    @Test
+    void testTurnOffThreadTimeOut() {
+        final long keepAliveTime = 0;
+
+        final ScheduledThreadPoolExecutor pool =
+                (ScheduledThreadPoolExecutor) BlockingTaskExecutor
+                        .builder()
+                        .keepAliveTimeMillis(keepAliveTime)
+                        .build()
+                        .unwrap();
+
+        assertThat(pool.allowsCoreThreadTimeOut()).isFalse();
+    }
 }
