@@ -947,7 +947,7 @@ public final class Flags {
      * when client will be notified about the shutdown, but in flight requests will still be accepted.
      *
      * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS}.
-     * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionDrainDurationMicros=<integer>}
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionDrainDurationMicros=<long>}
      * JVM option to override the default value.
      *
      * <p>

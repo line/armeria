@@ -428,6 +428,9 @@ public final class DefaultServiceRequestContext
     }
 
     private CompletableFuture<Void> initiateConnectionShutdown(InitiateConnectionShutdown event) {
+        if (!ch.isActive()) {
+            return UnmodifiableFuture.completedFuture(null);
+        } 
         final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         ch.closeFuture().addListener(f -> {
             if (f.cause() == null) {
@@ -447,6 +450,7 @@ public final class DefaultServiceRequestContext
 
     @Override
     public CompletableFuture<Void> initiateConnectionShutdown(Duration drainDuration) {
+        requireNonNull(drainDuration, "drainDuration");
         return initiateConnectionShutdown(TimeUnit.NANOSECONDS.toMicros(drainDuration.toNanos()));
     }
 

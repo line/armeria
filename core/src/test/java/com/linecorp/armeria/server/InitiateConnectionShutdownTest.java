@@ -105,20 +105,9 @@ public class InitiateConnectionShutdownTest {
                     } else {
                         ctx.initiateConnectionShutdown();
                     }
-                    final CompletableFuture<HttpResponse> cf = new CompletableFuture<>();
-                    // Respond with some delay, GOAWAY frame should not be blocked and shoudl be sent before
-                    // the response.
-                    ctx.eventLoop()
-                       .schedule(() -> HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!"),
-                                 100, TimeUnit.MILLISECONDS)
-                       .addListener(f -> {
-                           if (f.cause() != null) {
-                               cf.completeExceptionally(f.cause());
-                           } else {
-                               cf.complete((HttpResponse) f.getNow());
-                           }
-                       });
-                    return cf;
+                    return HttpResponse.delayed(HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!"),
+                                                Duration.ofMillis(100));
+
                 }
 
                 @Blocking

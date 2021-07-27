@@ -609,6 +609,7 @@ public final class ServerBuilder {
      * @param duration the drain period. {@code Duration.ZERO} or negative value disables the drain period.
      */
     public ServerBuilder connectionDrainDuration(Duration duration) {
+        requireNonNull(duration, "duration");
         return connectionDrainDurationMicros(TimeUnit.NANOSECONDS.toMicros(duration.toNanos()));
     }
 
