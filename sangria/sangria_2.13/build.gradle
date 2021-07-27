@@ -6,6 +6,4 @@ dependencies {
     implementation project(':scala_2.13')
     implementation 'com.fasterxml.jackson.module:jackson-module-scala_2.13'
     implementation 'org.scala-lang.modules:scala-java8-compat_2.13'
-
-    testImplementation 'org.scalameta:munit_2.13'
 }

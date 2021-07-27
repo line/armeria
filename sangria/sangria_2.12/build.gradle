@@ -6,8 +6,6 @@ dependencies {
     implementation project(':scala_2.12')
     implementation 'com.fasterxml.jackson.module:jackson-module-scala_2.12'
     implementation 'org.scala-lang.modules:scala-java8-compat_2.12'
-
-    testImplementation 'org.scalameta:munit_2.12'
 }
 
 // Use the sources from ':sangria_2.13'.
