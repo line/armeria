@@ -107,9 +107,7 @@ public class SubscriptionArbiter implements Subscription {
     }
 
     private void request0(long n) {
-        if (newRequested < Long.MAX_VALUE) {
-            newRequested = LongMath.saturatedAdd(newRequested, n);
-        }
+        newRequested = LongMath.saturatedAdd(newRequested, n);
         drain();
     }
 
@@ -118,7 +116,7 @@ public class SubscriptionArbiter implements Subscription {
         if (executor.inEventLoop()) {
             doCancel();
         } else {
-            executor.execute(this::cancel);
+            executor.execute(this::doCancel);
         }
     }
 

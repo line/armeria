@@ -107,7 +107,6 @@ public final class ServerConfig {
     private final boolean enableDateHeader;
     private final Supplier<RequestId> requestIdGenerator;
     private final ExceptionHandler exceptionHandler;
-    private final ExceptionVerbosity exceptionVerbosity;
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -136,7 +135,6 @@ public final class ServerConfig {
             boolean enableServerHeader, boolean enableDateHeader,
             Supplier<? extends RequestId> requestIdGenerator,
             ExceptionHandler exceptionHandler,
-            ExceptionVerbosity exceptionVerbosity,
             @Nullable Mapping<String, SslContext> sslContexts) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -254,7 +252,6 @@ public final class ServerConfig {
                 (Supplier<RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
         this.requestIdGenerator = castRequestIdGenerator;
         this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
-        this.exceptionVerbosity = requireNonNull(exceptionVerbosity, "exceptionVerbosity");
         this.sslContexts = sslContexts;
     }
 
@@ -627,21 +624,6 @@ public final class ServerConfig {
      */
     public ExceptionHandler exceptionHandler() {
         return exceptionHandler;
-    }
-
-    /**
-     * Returns the {@link ExceptionVerbosity} logged by services. The value of this property
-     * is one of the following:
-     * <ul>
-     *     <li>{@link ExceptionVerbosity#ALL} - logging all exceptions raised from services</li>
-     *     <li>{@link ExceptionVerbosity#UNHANDLED} - logging exceptions which are not handled by
-     *     {@link ExceptionHandler}s provided by a user and are not well-known exceptions
-     *     <li>{@link ExceptionVerbosity#NONE} - no logging exceptions</li>
-     * </ul>
-     * A log message would be written at {@code WARN} level.
-     */
-    public ExceptionVerbosity exceptionVerbosity() {
-        return exceptionVerbosity;
     }
 
     /**

@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -63,6 +64,8 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -473,7 +476,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private void warnIfNeeded(ServiceRequestContext context, Throwable cause) {
-        if (config.exceptionVerbosity() == ExceptionVerbosity.ALL &&
+        if (context.config().service().as(AnnotatedService.class) != null &&
+            Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
             logger.isWarnEnabled()) {
             logger.warn("{} Exception raised by a service:", context, cause);
         }

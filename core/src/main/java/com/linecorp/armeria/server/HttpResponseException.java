@@ -35,6 +35,7 @@ public final class HttpResponseException extends RuntimeException {
 
     /**
      * Returns a new {@link HttpResponseException} instance with the specified HTTP status code.
+     *
      * @deprecated Use {@link HttpStatusException#of(int)} instead.
      */
     @Deprecated
@@ -44,6 +45,7 @@ public final class HttpResponseException extends RuntimeException {
 
     /**
      * Returns a new {@link HttpResponseException} instance with the specified {@link HttpStatus}.
+     *
      * @deprecated Use {@link HttpStatusException#of(HttpStatus)} instead.
      */
     @Deprecated
@@ -63,7 +65,8 @@ public final class HttpResponseException extends RuntimeException {
      * Returns a new {@link HttpResponseException} instance with the specified {@link AggregatedHttpResponse}
      * and {@link Throwable}.
      */
-    public static HttpResponseException of(AggregatedHttpResponse aggregatedResponse, Throwable cause) {
+    public static HttpResponseException of(AggregatedHttpResponse aggregatedResponse,
+                                           @Nullable Throwable cause) {
         return of(requireNonNull(aggregatedResponse, "aggregatedResponse").toHttpResponse(), cause);
     }
 
@@ -78,7 +81,7 @@ public final class HttpResponseException extends RuntimeException {
      * Returns a new {@link HttpResponseException} instance with the specified {@link HttpResponse} and
      * {@link Throwable}.
      */
-    public static HttpResponseException of(HttpResponse httpResponse, Throwable cause) {
+    public static HttpResponseException of(HttpResponse httpResponse, @Nullable Throwable cause) {
         return new HttpResponseException(httpResponse, cause);
     }
 

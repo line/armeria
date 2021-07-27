@@ -20,11 +20,13 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
 /**
  * A default exception handler that is used when a user does not specify an {@link ExceptionHandler}.
@@ -58,7 +60,7 @@ enum DefaultExceptionHandler implements ExceptionHandler {
      * HttpResponse.of(HttpStatus.BAD_REQUEST);
      * // Good - A LoggingService will not log any exception and complete deferred values.
      * HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.BAD_REQUEST));
-     * // Good - A LoggingService will log the IllegalStatusException and complete deferred values.
+     * // Good - A LoggingService will log the IllegalStateException and complete deferred values.
      * HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.BAD_REQUEST, new IllegalStateException(...)));
      * }</pre>
      */
@@ -68,14 +70,16 @@ enum DefaultExceptionHandler implements ExceptionHandler {
         // TODO(minwoox): Add more specific conditions such as returning 400 for IllegalArgumentException
         //                when we reach v2.0. Currently, an IllegalArgumentException is handled only for
         //                annotated services.
-        if (context.config().service().as(AnnotatedService.class) != null) {
+        final boolean isAnnotatedService = context.config().service().as(AnnotatedService.class) != null;
+        if (isAnnotatedService) {
             if (cause instanceof IllegalArgumentException) {
-                if (needsToWarn(context)) {
+                if (needsToWarn()) {
                     logger.warn("{} Failed processing a request:", context, cause);
                 }
                 return HttpResponse.ofFailure(BAD_REQUEST_EXCEPTION);
             }
         }
+
         if (cause instanceof HttpStatusException ||
             cause instanceof HttpResponseException) {
             // Use HttpStatusException or HttpResponseException itself because it already contains a status
@@ -92,15 +96,15 @@ enum DefaultExceptionHandler implements ExceptionHandler {
             return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.SERVICE_UNAVAILABLE, cause));
         }
 
-        if (needsToWarn(context) && !Exceptions.isExpected(cause)) {
+        if (isAnnotatedService && needsToWarn() && !Exceptions.isExpected(cause)) {
             logger.warn("{} Unhandled exception from an service:", context, cause);
         }
 
         return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR, cause));
     }
 
-    private static boolean needsToWarn(ServiceRequestContext ctx) {
-        return ctx.config().server().config().exceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
+    private static boolean needsToWarn() {
+        return Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
                logger.isWarnEnabled();
     }
 }
