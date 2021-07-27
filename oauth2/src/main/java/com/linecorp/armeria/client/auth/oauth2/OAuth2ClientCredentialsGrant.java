@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -38,7 +37,7 @@ import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenReques
  * Implements Access Token loading, storing, obtaining and refreshing.
  */
 @UnstableApi
-public final class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGrant {
+public class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGrant {
 
     /**
      * Creates a new builder for {@link OAuth2ClientCredentialsGrant}.
@@ -53,12 +52,12 @@ public final class OAuth2ClientCredentialsGrant extends AbstractOAuth2Authorizat
 
     private final ClientCredentialsTokenRequest obtainRequest;
 
-    OAuth2ClientCredentialsGrant(ClientCredentialsTokenRequest obtainRequest,
-                                 RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
-                                 @Nullable Supplier<? extends GrantedOAuth2AccessToken> tokenSupplier,
-                                 @Nullable Consumer<? super GrantedOAuth2AccessToken> tokenConsumer,
-                                 @Nullable Executor executor) {
-        super(refreshRequest, refreshBefore, tokenSupplier, tokenConsumer, executor);
+    OAuth2ClientCredentialsGrant(
+            ClientCredentialsTokenRequest obtainRequest,
+            RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
+            @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider,
+            @Nullable Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {
+        super(refreshRequest, refreshBefore, fallbackTokenProvider, newTokenConsumer);
         this.obtainRequest = requireNonNull(obtainRequest);
     }
 
