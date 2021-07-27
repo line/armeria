@@ -293,6 +293,7 @@ public final class DefaultServiceRequestContext
      * <p>Note that this operation is highly performance-sensitive operation, and thus
      * it's not a good idea to run a time-consuming task.
      */
+    @UnstableApi
     public void hook(Supplier<? extends SafeCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
         for (;;) {
@@ -303,11 +304,11 @@ public final class DefaultServiceRequestContext
                 newContextHook = contextHook;
             } else {
                 newContextHook = () -> {
-                    final SafeCloseable closeable1 = oldContextHook.get();
-                    final SafeCloseable closeable2 = contextHook.get();
+                    final SafeCloseable oldHook = oldContextHook.get();
+                    final SafeCloseable newHook = contextHook.get();
                     return () -> {
-                        closeable1.close();
-                        closeable2.close();
+                        oldHook.close();
+                        newHook.close();
                     };
                 };
             }
@@ -323,6 +324,7 @@ public final class DefaultServiceRequestContext
      * {@link RequestContextStorage}. The {@link SafeCloseable} returned by the {@link Supplier} will be
      * called whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
      */
+    @UnstableApi
     public Supplier<SafeCloseable> hook() {
         return contextHook;
     }
