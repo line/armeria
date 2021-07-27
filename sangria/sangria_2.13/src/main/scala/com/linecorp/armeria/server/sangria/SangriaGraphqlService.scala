@@ -140,9 +140,9 @@ object SangriaGraphqlService {
    * }}}
    */
   def builder[Ctx, Val](
-    schema: Schema[Ctx, Val],
-    userContext: Ctx = (),
-    rootValue: Val = ()): SangriaGraphqlServiceBuilder[Ctx, Val] = {
+      schema: Schema[Ctx, Val],
+      userContext: Ctx = (),
+      rootValue: Val = ()): SangriaGraphqlServiceBuilder[Ctx, Val] = {
     new SangriaGraphqlServiceBuilder(schema, userContext, rootValue)
   }
 
@@ -161,10 +161,9 @@ object SangriaGraphqlService {
    * }}}
    */
   def apply[Ctx, Val](
-    schema: Schema[Ctx, Val],
-    userContext: Ctx = (),
-    rootValue: Val = ()): SangriaGraphqlService[Ctx, Val] = {
+      schema: Schema[Ctx, Val],
+      userContext: Ctx = (),
+      rootValue: Val = ()): SangriaGraphqlService[Ctx, Val] = {
     builder(schema, userContext, rootValue).build()
   }
 }
-
