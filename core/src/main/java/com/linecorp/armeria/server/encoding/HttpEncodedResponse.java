@@ -106,7 +106,7 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
                 case DEFLATE:
                     mutable.set(HttpHeaderNames.CONTENT_ENCODING, "deflate");
                     break;
-                case BR:
+                case BROTLI:
                     mutable.set(HttpHeaderNames.CONTENT_ENCODING, "br");
                     break;
             }

@@ -59,7 +59,7 @@ public class HttpEncodersTest {
     public void acceptEncodingBrotli() {
         when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
                                                              HttpHeaderNames.ACCEPT_ENCODING, "br"));
-        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.BR);
+        assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.BROTLI);
     }
 
     @Test

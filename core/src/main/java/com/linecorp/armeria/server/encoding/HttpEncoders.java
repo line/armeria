@@ -60,13 +60,12 @@ final class HttpEncoders {
                 }
             case DEFLATE:
                 return new DeflaterOutputStream(out, true);
-            case BR:
+            case BROTLI:
                 try {
                     // We use 4 as the default level because it would save more bytes
                     // than GZIP's default setting and compress data faster.
                     // See: https://blogs.akamai.com/2016/02/understanding-brotlis-potential.html
-                    final Encoder.Parameters parameters = new Encoder.Parameters();
-                    return new BrotliOutputStream(out, parameters.setQuality(4));
+                    return new BrotliOutputStream(out, new Encoder.Parameters().setQuality(4));
                 } catch (IOException e) {
                     throw new IllegalStateException(
                             "Error writing brotli header. This should not happen with byte arrays.", e);
@@ -96,7 +95,7 @@ final class HttpEncoders {
             if (encoding.contains("*")) {
                 starQ = q;
             } else if (encoding.contains("br") && Brotli.isAvailable()) {
-                encodings.put(HttpEncodingType.BR, q);
+                encodings.put(HttpEncodingType.BROTLI, q);
             } else if (encoding.contains("gzip")) {
                 encodings.put(HttpEncodingType.GZIP, q);
             } else if (encoding.contains("deflate")) {
@@ -112,8 +111,8 @@ final class HttpEncoders {
             }
         }
         if (starQ > 0.0f) {
-            if (!encodings.containsKey(HttpEncodingType.BR) && Brotli.isAvailable()) {
-                return HttpEncodingType.BR;
+            if (!encodings.containsKey(HttpEncodingType.BROTLI) && Brotli.isAvailable()) {
+                return HttpEncodingType.BROTLI;
             }
             if (!encodings.containsKey(HttpEncodingType.GZIP)) {
                 return HttpEncodingType.GZIP;
