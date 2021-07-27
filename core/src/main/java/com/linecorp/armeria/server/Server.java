@@ -746,7 +746,8 @@ public final class Server implements ListenableAsyncCloseable {
         private final Iterator<ServerPort> it;
         private final CompletableFuture<Void> future;
 
-        NextServerPortStartListener(ServerStartStopSupport startStopSupport, Iterator<ServerPort> it, CompletableFuture<Void> future) {
+        NextServerPortStartListener(ServerStartStopSupport startStopSupport,
+                                    Iterator<ServerPort> it, CompletableFuture<Void> future) {
             this.startStopSupport = startStopSupport;
             this.it = it;
             this.future = future;
