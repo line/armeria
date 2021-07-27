@@ -25,9 +25,12 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A <a href="https://spec.graphql.org/June2018/">GraphQL</a> request.
  */
+@UnstableApi
 public interface GraphqlRequest {
 
     /**

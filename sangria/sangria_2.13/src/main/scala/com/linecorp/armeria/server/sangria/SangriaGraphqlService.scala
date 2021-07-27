@@ -19,13 +19,14 @@ package com.linecorp.armeria.server.sangria
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.linecorp.armeria.common.HttpStatus.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
 import com.linecorp.armeria.common.annotation.UnstableApi
-import com.linecorp.armeria.common.{HttpHeaders, HttpResponse}
+import com.linecorp.armeria.common.{HttpHeaderNames, HttpHeaders, HttpResponse}
 import com.linecorp.armeria.internal.server.JacksonUtil
 import com.linecorp.armeria.scala.implicits._
+import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.graphql.protocol.{AbstractGraphqlService, GraphqlRequest}
-import com.linecorp.armeria.server.sangria.SangriaGraphqlService.mapper
+import com.linecorp.armeria.server.sangria.SangriaGraphqlService.{ApolloTracing, mapper}
 import com.linecorp.armeria.server.sangria.SangriaJackson._
-import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
+import io.netty.util.AsciiString
 import sangria.execution._
 import sangria.execution.deferred.DeferredResolver
 import sangria.parser.{QueryParser, SyntaxError}
@@ -35,7 +36,11 @@ import sangria.validation.QueryValidator
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
-private final class SangriaGraphqlService[Ctx, Val](
+/**
+ * A [[https://sangria-graphql.github.io/ Sangria GraphQL]] service.
+ */
+@UnstableApi
+final class SangriaGraphqlService[Ctx, Val] private[sangria] (
     schema: Schema[Ctx, Val],
     userContext: Ctx,
     rootValue: Val,
@@ -103,7 +108,7 @@ private final class SangriaGraphqlService[Ctx, Val](
   }
 
   private def isTracingEnabled(headers: HttpHeaders): Boolean = {
-    enableTracing && headers.contains("X-Apollo-Tracing")
+    enableTracing && headers.contains(ApolloTracing)
   }
 }
 
@@ -114,10 +119,12 @@ private final class SangriaGraphqlService[Ctx, Val](
 object SangriaGraphqlService {
 
   private val mapper: ObjectMapper = JacksonUtil.newDefaultObjectMapper()
+  private val ApolloTracing: AsciiString = HttpHeaderNames.of("X-Apollo-Tracing")
 
   /**
    * Returns a newly-created [[com.linecorp.armeria.server.sangria.SangriaGraphqlServiceBuilder]] that builds
    * a Sangria GraphQL service.
+   *
    * @param schema the GraphQL schema
    * @param userContext the user context of the specified `schema`
    * @param rootValue the root value of the specified `schema`
@@ -126,21 +133,22 @@ object SangriaGraphqlService {
    * {{{
    * val schema: Schema[CharacterRepo, Unit] = Schema(Query)
    * Server.builder()
-   *       .service("/graphql, SangriaGraphqlService.builder(schema, new CharacterRepo)
-   *                                                .enableTracing(true)
-   *                                                .maxQueryDepth(10)
-   *                                                .build())
+   *       .service("/graphql", SangriaGraphqlService.builder(schema, new CharacterRepo)
+   *                                                 .enableTracing(true)
+   *                                                 .maxQueryDepth(10)
+   *                                                 .build())
    * }}}
    */
   def builder[Ctx, Val](
-      schema: Schema[Ctx, Val],
-      userContext: Ctx = (),
-      rootValue: Val = ()): SangriaGraphqlServiceBuilder[Ctx, Val] = {
+    schema: Schema[Ctx, Val],
+    userContext: Ctx = (),
+    rootValue: Val = ()): SangriaGraphqlServiceBuilder[Ctx, Val] = {
     new SangriaGraphqlServiceBuilder(schema, userContext, rootValue)
   }
 
   /**
    * Returns a newly-created Sangria GraphQL service.
+   *
    * @param schema the GraphQL schema
    * @param userContext the user context of the specified `schema`
    * @param rootValue the root value of the specified `schema`
@@ -149,10 +157,14 @@ object SangriaGraphqlService {
    * {{{
    * val schema: Schema[CharacterRepo, Unit] = Schema(Query)
    * Server.builder()
-   *       .service("/graphql, SangriaGraphqlService(schema, new CharacterRepo))
+   *       .service("/graphql", SangriaGraphqlService(schema, new CharacterRepo))
    * }}}
    */
-  def apply[Ctx, Val](schema: Schema[Ctx, Val], userContext: Ctx = (), rootValue: Val = ()): HttpService = {
+  def apply[Ctx, Val](
+    schema: Schema[Ctx, Val],
+    userContext: Ctx = (),
+    rootValue: Val = ()): SangriaGraphqlService[Ctx, Val] = {
     builder(schema, userContext, rootValue).build()
   }
 }
+

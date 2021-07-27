@@ -143,7 +143,7 @@ final class SangriaGraphqlServiceBuilder[Ctx, Val] private[sangria] (
   /**
    * Returns a newly-created Sangria GraphQL service with the properties set so far.
    */
-  def build(): HttpService = {
+  def build(): SangriaGraphqlService[Ctx, Val] = {
     new SangriaGraphqlService(
       schema = schema,
       userContext = userContext,

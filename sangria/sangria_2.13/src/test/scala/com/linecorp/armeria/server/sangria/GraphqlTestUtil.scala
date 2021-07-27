@@ -43,6 +43,5 @@ object GraphqlTestUtil {
       .execute()
       .aggregate()
       .join()
-
   }
 }
