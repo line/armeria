@@ -90,7 +90,6 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
 
     @Nullable
     private static SerializationFormat resolveSerializationFormat(HttpRequest req) {
-        @Nullable
         final MediaType contentType = req.contentType();
         if (contentType == null) {
             return null;
@@ -107,7 +106,6 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
     protected final HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
         final CompletableFuture<ByteBuf> deframed = new CompletableFuture<>();
         final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(Integer.MAX_VALUE);
-        @Nullable
         final SerializationFormat serializationFormat = resolveSerializationFormat(req);
         if (serializationFormat == null) {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
