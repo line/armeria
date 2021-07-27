@@ -55,12 +55,7 @@ public final class ContentTooLargeExceptionBuilder {
      */
     public ContentTooLargeExceptionBuilder contentLength(HttpHeaders headers) {
         requireNonNull(headers, "headers");
-        final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1);
-        if (contentLength >= 0) {
-            this.contentLength = contentLength;
-        } else {
-            this.contentLength = -1;
-        }
+        contentLength = headers.contentLength();
         return this;
     }
 

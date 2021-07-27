@@ -1070,7 +1070,7 @@ public final class ArmeriaHttpUtil {
 
         if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH) || !content.isEmpty()) {
             return headers.toBuilder()
-                          .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length())
+                          .contentLength(content.length())
                           .build();
         }
 

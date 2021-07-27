@@ -19,7 +19,6 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.Locale.LanguageRange;
 
 import org.junit.jupiter.api.Test;
 
@@ -65,12 +64,12 @@ class HttpHeaderCachedValuesTest {
         // Mutate with the non-shortcut method
         builder.set(HttpHeaderNames.STATUS, "400");
         assertThat(builder.get(HttpHeaderNames.STATUS)).isEqualTo("400");
-        // Make sure that the the cached value is invalidated
+        // Make sure that the cached value is invalidated
         assertThat(builder.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Mutate with the shortcut method
         builder.status(HttpStatus.INTERNAL_SERVER_ERROR);
-        // Make sure that the the container value is updated
+        // Make sure that the container value is updated
         assertThat(builder.get(HttpHeaderNames.STATUS)).isEqualTo("500");
         assertThat(builder.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
@@ -94,12 +93,12 @@ class HttpHeaderCachedValuesTest {
         // Mutate with the non-shortcut method
         builder.set(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON.toString());
         assertThat(builder.get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(MediaType.JSON.toString());
-        // Make sure that the the cached value is invalidated
+        // Make sure that the cached value is invalidated
         assertThat(builder.contentType()).isEqualTo(MediaType.JSON);
 
         // Mutate with the shortcut method
         builder.contentType(MediaType.PROTOBUF);
-        // Make sure that the the container value is updated
+        // Make sure that the container value is updated
         assertThat(builder.get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(MediaType.PROTOBUF.toString());
         assertThat(builder.contentType()).isEqualTo(MediaType.PROTOBUF);
 
@@ -114,76 +113,42 @@ class HttpHeaderCachedValuesTest {
     }
 
     @Test
-    void contentDisposition() {
+    void contentLength() {
         // Initialize with the shortcut method
-        final ContentDisposition fooContentDisposition = ContentDisposition.of("foo");
         final HttpHeadersBuilder builder = HttpHeaders.builder()
-                                                      .contentDisposition(fooContentDisposition);
-        assertThat(builder.get(HttpHeaderNames.CONTENT_DISPOSITION))
-                .isEqualTo(fooContentDisposition.asHeaderValue());
-        assertThat(builder.contentDisposition()).isSameAs(fooContentDisposition);
+                                                      .contentLength(1000);
+        assertThat(builder.get(HttpHeaderNames.CONTENT_LENGTH))
+                .isEqualTo("1000");
+        assertThat(builder.contentLength()).isEqualTo(1000);
 
         // Mutate with the non-shortcut method
-        final ContentDisposition fooContentDisposition2 = ContentDisposition.of("foo");
-        builder.setObject(HttpHeaderNames.CONTENT_DISPOSITION, fooContentDisposition2);
-        assertThat(builder.get(HttpHeaderNames.CONTENT_DISPOSITION))
-                .isEqualTo(fooContentDisposition2.asHeaderValue());
-        // Make sure that the the cached value is invalidated
-        assertThat(builder.contentDisposition()).isEqualTo(fooContentDisposition2);
-        assertThat(builder.contentDisposition()).isNotSameAs(fooContentDisposition2);
+        builder.setLong(HttpHeaderNames.CONTENT_LENGTH, 2000);
+        assertThat(builder.get(HttpHeaderNames.CONTENT_LENGTH))
+                .isEqualTo("2000");
+        // Make sure that the cached value is invalidated
+        assertThat(builder.contentLength()).isEqualTo(2000);
 
         // Remove a value with the non-shortcut method
-        builder.remove(HttpHeaderNames.CONTENT_DISPOSITION);
-        assertThat(builder.contentDisposition()).isNull();
+        builder.remove(HttpHeaderNames.CONTENT_LENGTH);
+        assertThat(builder.contentLength()).isEqualTo(-1);
 
         // Mutate with the shortcut method
-        final ContentDisposition bazContentDisposition = ContentDisposition.of("baz");
-        builder.contentDisposition(bazContentDisposition);
-        // Make sure that the the container value is updated
-        assertThat(builder.get(HttpHeaderNames.CONTENT_DISPOSITION))
-                .isEqualTo(bazContentDisposition.asHeaderValue());
-        assertThat(builder.contentDisposition()).isSameAs(bazContentDisposition);
+        builder.contentLength(3000);
+        // Make sure that the container value is updated
+        assertThat(builder.get(HttpHeaderNames.CONTENT_LENGTH))
+                .isEqualTo("3000");
+        assertThat(builder.contentLength()).isEqualTo(3000);
 
         final HttpHeaders headers = builder.build();
-        assertThat(headers.contentDisposition()).isSameAs(bazContentDisposition);
+        assertThat(headers.contentLength()).isEqualTo(3000);
 
-        final ContentDisposition quxContentDisposition = ContentDisposition.of("qux");
         final HttpHeaders headers2 =
                 headers.toBuilder()
-                       .setObject(HttpHeaderNames.CONTENT_DISPOSITION, quxContentDisposition)
+                       .setObject(HttpHeaderNames.CONTENT_LENGTH, 4000)
                        .build();
-        assertThat(headers2.contentDisposition()).isEqualTo(quxContentDisposition);
-        // The original value is not changed.
-        assertThat(headers.contentDisposition()).isSameAs(bazContentDisposition);
-    }
-
-    @Test
-    void acceptLanguages() {
-        // Initialize with the shortcut method
-        final RequestHeadersBuilder builder = RequestHeaders.builder(HttpMethod.GET, "/foo");
-        final ImmutableList<LanguageRange> languages =
-                ImmutableList.of(new LanguageRange("zh-TW", 0.8),
-                                 new LanguageRange("de-us", 0.5));
-        builder.acceptLanguages(languages);
-        assertThat(builder.acceptLanguages()).isEqualTo(languages);
-
-        // Mutate with the non-shortcut method
-        builder.set(HttpHeaderNames.ACCEPT_LANGUAGE, "zh-tw;q=1.0, de-us;q=0.5");
-        assertThat(builder.get(HttpHeaderNames.ACCEPT_LANGUAGE)).isEqualTo("zh-tw;q=1.0, de-us;q=0.5");
-        // Make sure that the cached value is invalidated
-        assertThat(builder.acceptLanguages()).containsExactly(new LanguageRange("zh-TW", 1.0),
-                                                              new LanguageRange("de-us", 0.5));
-
-        // Mutate with the shortcut method
-        final LanguageRange englishUS = new LanguageRange("en-US", 0.9);
-        builder.acceptLanguages(englishUS);
-        // Make sure that the container value is updated
-        assertThat(builder.get(HttpHeaderNames.ACCEPT_LANGUAGE)).isEqualTo("en-us;q=0.9");
-        assertThat(builder.acceptLanguages()).hasSize(1);
-        assertThat(builder.acceptLanguages().get(0)).isSameAs(englishUS);
-
-        final RequestHeaders headers = builder.build();
-        assertThat(headers.acceptLanguages().get(0)).isSameAs(englishUS);
+        assertThat(headers2.contentLength()).isEqualTo(4000);
+        // Make sure that the original value is not changed.
+        assertThat(headers.contentLength()).isEqualTo(3000);
     }
 
     @Test

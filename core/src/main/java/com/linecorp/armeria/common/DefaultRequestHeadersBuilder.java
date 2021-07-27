@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -25,9 +26,8 @@ import java.util.Locale.LanguageRange;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<RequestHeadersBuilder>
         implements RequestHeadersBuilder {
@@ -131,9 +131,8 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     public RequestHeadersBuilder acceptLanguages(Iterable<LanguageRange> acceptLanguages) {
         requireNonNull(acceptLanguages, "acceptLanguages");
-        final List<LanguageRange> languageRangeCollection = ImmutableList.copyOf(acceptLanguages);
-        Preconditions.checkArgument(!languageRangeCollection.isEmpty(), "acceptLanguages cannot be empty");
-        setters().acceptLanguages(languageRangeCollection);
+        checkArgument(!Iterables.isEmpty(acceptLanguages), "acceptLanguages cannot be empty");
+        setters().acceptLanguages(acceptLanguages);
         return self();
     }
 
@@ -147,7 +146,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     public RequestHeadersBuilder cookie(Cookie cookie) {
         requireNonNull(cookie, "cookie");
-        return cookies(ImmutableList.of(cookie));
+        return cookies(ImmutableSet.of(cookie));
     }
 
     @Override
@@ -162,7 +161,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     public RequestHeadersBuilder cookies(Iterable<? extends Cookie> cookies) {
         requireNonNull(cookies, "cookie");
-        setters().cookie(ImmutableSet.copyOf(cookies));
+        setters().cookie(cookies);
         return this;
     }
 

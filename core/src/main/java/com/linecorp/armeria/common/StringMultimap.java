@@ -650,7 +650,6 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         }
     }
 
-
     final void add(IN_NAME name, String... values) {
         final NAME normalizedName = normalizeName(name);
         requireNonNull(values, "values");
@@ -735,9 +734,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
         requireNonNull(value, "value");
         final int h = hashName(normalizedName);
         final int i = index(h);
-        if (notifyChange) {
-            remove0(h, i, normalizedName, notifyChange);
-        }
+        remove0(h, i, normalizedName, notifyChange);
         add0(h, i, normalizedName, value, false);
     }
 

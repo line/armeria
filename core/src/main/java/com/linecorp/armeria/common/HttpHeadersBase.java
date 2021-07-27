@@ -29,6 +29,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Comparator.comparingDouble;
@@ -40,18 +41,22 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.StringJoiner;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.math.IntMath;
+
+import com.linecorp.armeria.internal.common.util.StringUtil;
 
 import io.netty.util.AsciiString;
 
@@ -83,13 +88,13 @@ class HttpHeadersBase
         PROHIBITED_VALUE_CHAR_NAMES['\r'] = "<CR>";
     }
 
-    private Map<AsciiString, Object> cache;
+    private final Map<AsciiString, Object> cache;
 
-    private boolean isMutating;
     private boolean endOfStream;
 
     HttpHeadersBase(int sizeHint) {
         super(sizeHint);
+        cache = new HashMap<>(4);
     }
 
     /**
@@ -98,7 +103,7 @@ class HttpHeadersBase
     HttpHeadersBase(HttpHeadersBase parent, boolean shallowCopy) {
         super(parent, shallowCopy);
         endOfStream = parent.endOfStream;
-        cache = parent.cache;
+        cache = new HashMap<>(parent.cache);
     }
 
     /**
@@ -108,11 +113,13 @@ class HttpHeadersBase
         super(parent);
         assert !(parent instanceof HttpHeadersBase);
         endOfStream = parent.isEndOfStream();
+        cache = new HashMap<>(4);
     }
 
     @Override
     void onChange(@Nullable AsciiString name) {
-        if (cache == null) {
+        // This method could be called before the 'cache' field is initialized.
+        if (cache == null || cache.isEmpty()) {
             return;
         }
 
@@ -207,57 +214,105 @@ class HttpHeadersBase
     /**
      * Adds the specified {@code cookies} with {@link HttpHeaderNames#COOKIE}.
      */
-    final void cookie(Set<? extends Cookie> cookies) {
-        if (this.cookies == null) {
-            this.cookies = mergeCookies(cookie(), cookies);
-        } else {
-            this.cookies = mergeCookies(this.cookies, cookies);
-        }
-
-        set(HttpHeaderNames.COOKIE, Cookie.toCookieHeader(this.cookies), false);
+    final void cookie(Iterable<? extends Cookie> cookies) {
+        addCookies(cookies, HttpHeaderNames.COOKIE, Cookie::toCookieHeader);
     }
 
     Cookies cookie() {
-        if (cookies != null) {
-            return cookies;
-        }
-        return cookies = Cookie.fromCookieHeaders(getAll(HttpHeaderNames.COOKIE));
+        return getCookie(HttpHeaderNames.COOKIE, Cookie::fromCookieHeaders);
     }
 
     /**
      * Adds the specified {@code setCookies} with {@link HttpHeaderNames#SET_COOKIE}.
      */
-    final void setCookie(Set<? extends Cookie> setCookie) {
-        if (this.setCookie == null) {
-            this.setCookie = mergeCookies(setCookie(), setCookie);
-        } else {
-            this.setCookie = mergeCookies(this.setCookie, setCookie);
-        }
-        add(HttpHeaderNames.SET_COOKIE, Cookie.toSetCookieHeaders(setCookie), false);
+    final void setCookie(Iterable<? extends Cookie> setCookie) {
+        addCookies(setCookie, HttpHeaderNames.SET_COOKIE, Cookie::toSetCookieHeaders);
     }
 
     Cookies setCookie() {
-        if (setCookie != null) {
-            return setCookie;
+        return getCookie(HttpHeaderNames.SET_COOKIE, Cookie::fromSetCookieHeaders);
+    }
+
+    private Cookies getCookie(AsciiString cookieHeaderName, Function<List<String>, Cookies> cookiesParser) {
+        @SuppressWarnings("unchecked")
+        final Set<Cookie> cookies = (Set<Cookie>) cache.get(cookieHeaderName);
+        if (cookies == null) {
+            // Cache miss. Check the container values.
+            final List<String> cookiesString = getAll(cookieHeaderName);
+            if (cookiesString.isEmpty()) {
+                return Cookies.of();
+            } else {
+                final Cookies parsedCookies = cookiesParser.apply(cookiesString);
+                cache.put(cookieHeaderName, parsedCookies);
+                return parsedCookies;
+            }
         }
-        return setCookie = Cookie.fromSetCookieHeaders(getAll(HttpHeaderNames.SET_COOKIE));
+
+        if (cookies instanceof Cookies) {
+            return (Cookies) cookies;
+        } else {
+            final Cookies immutableCookie = Cookies.of(cookies);
+            // Make the cached cookies immutable.
+            cache.put(cookieHeaderName, immutableCookie);
+            return immutableCookie;
+        }
     }
 
-    private static Cookies mergeCookies(Set<? extends Cookie> first, Set<? extends Cookie> second) {
-        final ImmutableSet<Cookie> merged =
-                ImmutableSet.<Cookie>builderWithExpectedSize(first.size() + second.size())
-                            .addAll(first)
-                            .addAll(second)
-                            .build();
-        return Cookies.of(merged);
+    private void addCookies(Iterable<? extends Cookie> newCookies, AsciiString cookieHeaderName,
+                            Function<Iterable<? extends Cookie>, Object> toCookiesString) {
+        @SuppressWarnings("unchecked")
+        Set<Cookie> cachedCookies = (Set<Cookie>) cache.get(cookieHeaderName);
+        if (cachedCookies == null) {
+            if (newCookies instanceof Cookies) {
+                //noinspection unchecked
+                cachedCookies = (Set<Cookie>) newCookies;
+            } else {
+                cachedCookies = new LinkedHashSet<>(4);
+                for (Cookie cookie : newCookies) {
+                    cachedCookies.add(cookie);
+                }
+            }
+        } else {
+            if (cachedCookies instanceof Cookies) {
+                // Make cached Cookies mutable
+                cachedCookies = new LinkedHashSet<>(cachedCookies);
+            }
+            assert cachedCookies instanceof LinkedHashSet;
+            for (Cookie cookie : newCookies) {
+                cachedCookies.add(cookie);
+            }
+        }
+        // Cache mutable cookies for efficiency. The mutable cookies will be changed into (immutable) Cookies
+        // when cookie() is called.
+        cache.put(cookieHeaderName, cachedCookies);
+
+        if (HttpHeaderNames.COOKIE.equals(cookieHeaderName)) {
+            // Stringify all cookies
+            final Object cookiesString = toCookiesString.apply(cachedCookies);
+            assert cookiesString instanceof String;
+            assert cookieHeaderName.equals(HttpHeaderNames.COOKIE);
+            set(cookieHeaderName, (String) cookiesString, false);
+        } else if (HttpHeaderNames.SET_COOKIE.equals(cookieHeaderName)) {
+            // Only stringify new cookies
+            final Object cookiesString = toCookiesString.apply(newCookies);
+            assert cookiesString instanceof Iterable;
+            //noinspection unchecked
+            add(cookieHeaderName, (Iterable<String>) cookiesString, false);
+        } else {
+            throw new Error(); // Should never reach here.
+        }
     }
 
-    final void acceptLanguages(List<LanguageRange> acceptLanguages) {
-        final String acceptLanguagesValue = acceptLanguages
-                .stream()
-                .map(it -> (it.getWeight() == 1.0d) ? it.getRange() : it.getRange() + ";q=" + it.getWeight())
-                .collect(Collectors.joining(", "));
-        set(HttpHeaderNames.ACCEPT_LANGUAGE, acceptLanguagesValue);
+    final void acceptLanguages(Iterable<LanguageRange> acceptLanguages) {
+        final StringJoiner joiner = new StringJoiner(", ");
+        for (LanguageRange range : acceptLanguages) {
+            if (range.getWeight() == 1.0d) {
+                joiner.add(range.getRange());
+            } else {
+                joiner.add(range.getRange() + ";q=" + range.getWeight());
+            }
+        }
+        set(HttpHeaderNames.ACCEPT_LANGUAGE, joiner.toString());
     }
 
     @Nullable
@@ -306,22 +361,23 @@ class HttpHeadersBase
     }
 
     HttpMethod method() {
+        final HttpMethod method = (HttpMethod) cache.get(HttpHeaderNames.METHOD);
         if (method != null) {
             return method;
         }
 
         final String methodStr = get(HttpHeaderNames.METHOD);
         checkState(methodStr != null, ":method header does not exist.");
-        return method = HttpMethod.isSupported(methodStr) ? HttpMethod.valueOf(methodStr)
-                                                          : HttpMethod.UNKNOWN;
+        final HttpMethod parsed = HttpMethod.isSupported(methodStr) ? HttpMethod.valueOf(methodStr)
+                                                                    : HttpMethod.UNKNOWN;
+        cache.put(HttpHeaderNames.METHOD, parsed);
+        return parsed;
     }
 
     final void method(HttpMethod method) {
         requireNonNull(method, "method");
-        this.method = method;
-        isMutating = true;
-        set(HttpHeaderNames.METHOD, method.name());
-        isMutating = false;
+        cache.put(HttpHeaderNames.METHOD, method);
+        set(HttpHeaderNames.METHOD, method.name(), false);
     }
 
     @Nullable
@@ -357,13 +413,16 @@ class HttpHeadersBase
     }
 
     HttpStatus status() {
+        final HttpStatus status = (HttpStatus) cache.get(HttpHeaderNames.STATUS);
         if (status != null) {
             return status;
         }
 
         final String statusStr = get(HttpHeaderNames.STATUS);
         checkState(statusStr != null, ":status header does not exist.");
-        return status = HttpStatus.valueOf(statusStr);
+        final HttpStatus parsed = HttpStatus.valueOf(statusStr);
+        cache.put(HttpHeaderNames.STATUS, parsed);
+        return parsed;
     }
 
     final void status(int statusCode) {
@@ -372,15 +431,43 @@ class HttpHeadersBase
 
     final void status(HttpStatus status) {
         requireNonNull(status, "status");
-        this.status = status;
-        isMutating = true;
-        set(HttpHeaderNames.STATUS, status.codeAsText());
-        isMutating = false;
+        cache.put(HttpHeaderNames.STATUS, status);
+        set(HttpHeaderNames.STATUS, status.codeAsText(), false);
+    }
+
+    final void contentLength(long contentLength) {
+        checkArgument(contentLength >= 0, "contentLength: %s (expected: >= 0)", contentLength);
+        cache.put(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+        final String contentLengthString;
+        if (contentLength <= 1000) {
+            contentLengthString = StringUtil.toString((int) contentLength);
+        } else {
+            contentLengthString = Long.toString(contentLength);
+        }
+        set(HttpHeaderNames.CONTENT_LENGTH, contentLengthString, false);
+    }
+
+    @Override
+    public long contentLength() {
+        final Long contentLength = (Long) cache.get(HttpHeaderNames.CONTENT_LENGTH);
+        if (contentLength != null) {
+            return contentLength;
+        }
+
+        final String contentLengthString = get(HttpHeaderNames.CONTENT_LENGTH);
+        if (contentLengthString != null) {
+            final long parsed = Long.parseLong(contentLengthString);
+            cache.put(HttpHeaderNames.CONTENT_LENGTH, parsed);
+            return parsed;
+        } else {
+            return -1;
+        }
     }
 
     @Nullable
     @Override
     public MediaType contentType() {
+        final MediaType contentType = (MediaType) cache.get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType != null) {
             return contentType;
         }
@@ -391,7 +478,9 @@ class HttpHeadersBase
         }
 
         try {
-            return contentType = MediaType.parse(contentTypeString);
+            final MediaType parsed = MediaType.parse(contentTypeString);
+            cache.put(HttpHeaderNames.CONTENT_TYPE, parsed);
+            return parsed;
         } catch (IllegalArgumentException unused) {
             // Invalid media type
             return null;
@@ -400,10 +489,8 @@ class HttpHeadersBase
 
     final void contentType(MediaType contentType) {
         requireNonNull(contentType, "contentType");
-        this.contentType = contentType;
-        isMutating = true;
-        set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
-        isMutating = false;
+        cache.put(HttpHeaderNames.CONTENT_TYPE, contentType);
+        set(HttpHeaderNames.CONTENT_TYPE, contentType.toString(), false);
     }
 
     @Override

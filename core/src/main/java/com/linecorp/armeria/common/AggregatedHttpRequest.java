@@ -199,7 +199,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
         if (content.isEmpty()) {
             builder.remove(CONTENT_LENGTH);
         } else {
-            builder.setInt(CONTENT_LENGTH, content.length());
+            builder.contentLength(content.length());
         }
         headers = builder.build();
         return new DefaultAggregatedHttpRequest(headers, content, trailers);

@@ -72,7 +72,7 @@ final class DefaultResponseHeadersBuilder
     @Override
     public ResponseHeadersBuilder cookies(Iterable<? extends Cookie> cookies) {
         requireNonNull(cookies, "cookie");
-        setters().setCookie(ImmutableSet.copyOf(cookies));
+        setters().setCookie(cookies);
         return this;
     }
 
