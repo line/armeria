@@ -391,7 +391,17 @@ public final class ServerBuilder {
      * }</pre>
      */
     public ServerBuilder localPort(int port, Iterable<SessionProtocol> protocols) {
-        return port(new InetSocketAddress(NetUtil.LOCALHOST, port), protocols);
+        final boolean isEphemeralLocalPort = port == 0;
+
+        port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST4, port),
+                            protocols, isEphemeralLocalPort));
+
+        if (!NetUtil.isIpV4StackPreferred()) {
+            port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST6, port),
+                                protocols, isEphemeralLocalPort));
+        }
+
+        return this;
     }
 
     /**

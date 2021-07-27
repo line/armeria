@@ -44,6 +44,7 @@ public final class ServerPort implements Comparable<ServerPort> {
     private final InetSocketAddress localAddress;
     private final String comparisonStr;
     private final Set<SessionProtocol> protocols;
+    private boolean isEphemeralLocalPort;
     private int hashCode;
 
     @Nullable
@@ -78,6 +79,18 @@ public final class ServerPort implements Comparable<ServerPort> {
      * {@link SessionProtocol}s.
      */
     public ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols) {
+        this(localAddress, protocols, false);
+    }
+
+    /**
+     * Creates a new {@link ServerPort} that listens to the specified {@code localAddress} using the specified
+     * {@link SessionProtocol}s.
+     *
+     * @param isEphemeralLocalPort whether this {@link ServerPort} is created by
+     *                             {@link ServerBuilder#localPort(int, Iterable)} with port number {@code 0}.
+     */
+    ServerPort(InetSocketAddress localAddress, Iterable<SessionProtocol> protocols,
+               boolean isEphemeralLocalPort) {
         // Try to resolve the localAddress if not resolved yet.
         if (requireNonNull(localAddress, "localAddress").isUnresolved()) {
             try {
@@ -89,9 +102,9 @@ public final class ServerPort implements Comparable<ServerPort> {
             }
         }
 
-        requireNonNull(protocols, "protocols");
         this.localAddress = localAddress;
-        this.protocols = Sets.immutableEnumSet(protocols);
+        this.protocols = Sets.immutableEnumSet(requireNonNull(protocols, "protocols"));
+        this.isEphemeralLocalPort = isEphemeralLocalPort;
 
         checkArgument(!this.protocols.isEmpty(),
                       "protocols: %s (must not be empty)", this.protocols);
@@ -166,6 +179,14 @@ public final class ServerPort implements Comparable<ServerPort> {
 
     private boolean hasExactProtocol(SessionProtocol protocol) {
         return protocols.contains(requireNonNull(protocol, "protocol"));
+    }
+
+    /**
+     * Returns whether this {@link ServerPort} is created by {@link ServerBuilder#localPort(int, Iterable)}
+     * with port number {@code 0}.
+     */
+    boolean isEphemeralLocalPort() {
+        return isEphemeralLocalPort;
     }
 
     @Override

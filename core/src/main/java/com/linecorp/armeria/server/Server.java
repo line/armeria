@@ -79,6 +79,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
 import io.netty.util.concurrent.FastThreadLocalThread;
@@ -443,23 +444,7 @@ public final class Server implements ListenableAsyncCloseable {
 
             final ServerPort primary = it.next();
             doStart(primary).addListener(new ServerPortStartListener(primary))
-                            .addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture f) throws Exception {
-                                    if (!f.isSuccess()) {
-                                        future.completeExceptionally(f.cause());
-                                        return;
-                                    }
-                                    if (!it.hasNext()) {
-                                        future.complete(null);
-                                        return;
-                                    }
-
-                                    final ServerPort next = it.next();
-                                    doStart(next).addListener(new ServerPortStartListener(next))
-                                                 .addListener(this);
-                                }
-                            });
+                            .addListener(new NextServerPortStartListener(this, it, future));
 
             setupServerMetrics();
             return future;
@@ -489,9 +474,9 @@ public final class Server implements ListenableAsyncCloseable {
             b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
             pipelineConfigurator = new HttpServerPipelineConfigurator(
-                                       config,
-                                       port, sslContexts,
-                                       gracefulShutdownSupport);
+                    config,
+                    port, sslContexts,
+                    gracefulShutdownSupport);
 
             b.childHandler(pipelineConfigurator);
             return b.bind(port.localAddress());
@@ -709,6 +694,9 @@ public final class Server implements ListenableAsyncCloseable {
         }
     }
 
+    /**
+     * Collects the {@link ServerSocketChannel} and {@link ServerPort} on a successful bind operation.
+     */
     private final class ServerPortStartListener implements ChannelFutureListener {
 
         private final ServerPort port;
@@ -725,7 +713,8 @@ public final class Server implements ListenableAsyncCloseable {
 
             if (f.isSuccess()) {
                 final InetSocketAddress localAddress = (InetSocketAddress) ch.localAddress();
-                final ServerPort actualPort = new ServerPort(localAddress, port.protocols());
+                final ServerPort actualPort =
+                        new ServerPort(localAddress, port.protocols(), port.isEphemeralLocalPort());
 
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
@@ -745,6 +734,67 @@ public final class Server implements ListenableAsyncCloseable {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Initiates the next bind operation if the previous bind attempt was successful.
+     */
+    private final class NextServerPortStartListener implements ChannelFutureListener {
+
+        private final ServerStartStopSupport startStopSupport;
+        private final Iterator<ServerPort> it;
+        private final CompletableFuture<Void> future;
+
+        NextServerPortStartListener(ServerStartStopSupport startStopSupport, Iterator<ServerPort> it, CompletableFuture<Void> future) {
+            this.startStopSupport = startStopSupport;
+            this.it = it;
+            this.future = future;
+        }
+
+        @Override
+        public void operationComplete(ChannelFuture f) throws Exception {
+            if (!f.isSuccess()) {
+                future.completeExceptionally(f.cause());
+                return;
+            }
+            if (!it.hasNext()) {
+                future.complete(null);
+                return;
+            }
+
+            final ServerPort next = it.next();
+            final ServerPort actualNext;
+
+            // Try to use the same port number if a user specified two loopback addresses with ephemeral ports.
+            // See: https://github.com/line/armeria/issues/3725
+            if (next.isEphemeralLocalPort()) {
+                int previousPort = 0;
+                synchronized (activePorts) {
+                    for (ServerPort activePort : activePorts.values()) {
+                        if (activePort.isEphemeralLocalPort()) {
+                            previousPort = activePort.localAddress().getPort();
+                            break;
+                        }
+                    }
+                }
+
+                if (previousPort > 0) {
+                    // Use the previously bound ephemeral local port.
+                    actualNext = new ServerPort(
+                            new InetSocketAddress(next.localAddress().getAddress(), previousPort),
+                            next.protocols(), true);
+                } else {
+                    // `next` is the first ephemeral local port.
+                    actualNext = next;
+                }
+            } else {
+                actualNext = next;
+            }
+
+            startStopSupport.doStart(actualNext)
+                            .addListener(new ServerPortStartListener(actualNext))
+                            .addListener(this);
         }
     }
 
