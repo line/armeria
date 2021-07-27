@@ -16,23 +16,41 @@
 
 package com.linecorp.armeria.internal.common;
 
+/**
+ * Event used to initiate graceful connection shutdown using user-facing APIs.
+ */
 public final class InitiateConnectionShutdown {
     private final long drainDurationMicros;
 
-    public InitiateConnectionShutdown() {
+    /**
+     * Singleton instance that's used to initiate connection shutdown with fallback to the currently configured
+     * drain duration.
+     */
+    public static final InitiateConnectionShutdown DEFAULT =
+            new InitiateConnectionShutdown();
+
+    private InitiateConnectionShutdown() {
         // Negative value means that drain duration wasn't provided by the caller.
-        // Fallback to the currently configured drain duration.
+        // Falls back to the currently configured drain duration.
         drainDurationMicros = -1;
     }
 
+    /**
+     * Creates event with custom drain duration in microseconds.
+     * Negative values are valid input - negative duration may be passed as a result of the time arithmetics,
+     * in that case drain duration will be set to 0.
+     */
     public InitiateConnectionShutdown(long drainDurationMicros) {
-        // Clamp drain duration to 0, negative values are reserved for fallback to the default.
-        // Users can still pass results of the duration arithmetics directly, if duration is negative
-        // it just means graceful drain should be skipped.
+        // Clamp drain duration to 0. Negative values are used internally to fallback to the currently
+        // configured drain duration.
         this.drainDurationMicros = Math.max(drainDurationMicros, 0);
     }
 
     public long drainDurationMicros() {
         return drainDurationMicros;
+    }
+
+    public boolean hasCustomDrainDuration() {
+        return drainDurationMicros >= 0;
     }
 }

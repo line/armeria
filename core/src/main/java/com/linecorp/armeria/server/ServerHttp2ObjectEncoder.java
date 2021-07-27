@@ -37,6 +37,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
+    private boolean hasCalledChannelClose;
 
     ServerHttp2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder,
                              KeepAliveHandler keepAliveHandler,
@@ -59,9 +60,11 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             return newFailedFuture(ClosedStreamException.get());
         }
 
-        if (keepAliveHandler.needToCloseConnection()) {
+        // TODO(alexc-db): decouple this from headers write and do it from inside the KeepAliveHandler.
+        if (!hasCalledChannelClose && keepAliveHandler.needToCloseConnection()) {
             // Initiates channel close, connection will be closed after all streams are closed.
             ctx().channel().close();
+            hasCalledChannelClose = true;
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);

@@ -28,8 +28,6 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.http.Header;
@@ -98,16 +96,18 @@ public class InitiateConnectionShutdownTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService(new Object() {
                 @Get("/goaway_async")
-                public CompletableFuture<HttpResponse> goAway(
+                public HttpResponse goAway(
                         ServiceRequestContext ctx, @Param("duration") Optional<Long> durationMillis) {
                     if (durationMillis.isPresent()) {
                         ctx.initiateConnectionShutdown(Duration.ofMillis(durationMillis.get()));
                     } else {
                         ctx.initiateConnectionShutdown();
                     }
-                    return HttpResponse.delayed(HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!"),
-                                                Duration.ofMillis(100));
-
+                    // Respond with some delay, GOAWAY frame should not be blocked and should be sent before
+                    // the response.
+                    return HttpResponse.delayed(
+                            HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!"),
+                            Duration.ofMillis(100));
                 }
 
                 @Blocking

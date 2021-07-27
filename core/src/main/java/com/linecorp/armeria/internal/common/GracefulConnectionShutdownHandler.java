@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -40,10 +42,20 @@ public abstract class GracefulConnectionShutdownHandler {
 
     @Nullable
     private ChannelPromise promise;
+    // Drain duration in microseconds used during the graceful connection shutdown start.
     private long drainDurationMicros;
-    private boolean started;
+    private boolean canCallOnDrainStart = true;
     @Nullable
     private ScheduledFuture<?> drainFuture;
+
+    protected GracefulConnectionShutdownHandler(long drainDurationMicros) {
+        setDrainDurationMicros(drainDurationMicros);
+    }
+
+    private void setDrainDurationMicros(long drainDurationMicros) {
+        checkArgument(drainDurationMicros >= 0, "count: %s (expected: >= 0", drainDurationMicros);
+        this.drainDurationMicros = drainDurationMicros;
+    }
 
     /**
      * Code executed on the connection drain start. Executed at most once.
@@ -56,7 +68,7 @@ public abstract class GracefulConnectionShutdownHandler {
      */
     public abstract void onDrainEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
-    public void start(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void start(ChannelHandlerContext ctx, ChannelPromise promise) {
         if (this.promise == null) {
             this.promise = promise;
         } else {
@@ -69,6 +81,10 @@ public abstract class GracefulConnectionShutdownHandler {
                 }
             });
         }
+        run(ctx, this.promise);
+    }
+
+    private void run(ChannelHandlerContext ctx, ChannelPromise promise) {
         if (drainFuture != null) {
             if (drainFuture.getDelay(TimeUnit.MICROSECONDS) > drainDurationMicros) {
                 // Maybe reschedule below.
@@ -80,15 +96,15 @@ public abstract class GracefulConnectionShutdownHandler {
             }
         }
         if (drainDurationMicros > 0) {
-            if (!started) {
+            if (canCallOnDrainStart) {
                 onDrainStart(ctx);
             }
-            drainFuture = ctx.executor().schedule(() -> finish(ctx, this.promise),
+            drainFuture = ctx.executor().schedule(() -> finish(ctx, promise),
                                                   drainDurationMicros, TimeUnit.MICROSECONDS);
         } else {
-            finish(ctx, this.promise);
+            finish(ctx, promise);
         }
-        started = true;
+        canCallOnDrainStart = false;
     }
 
     private void finish(ChannelHandlerContext ctx, ChannelPromise promise) {
@@ -106,11 +122,18 @@ public abstract class GracefulConnectionShutdownHandler {
         }
     }
 
-    public void updateDrainDuration(long drainDuration) {
-        if (drainDuration < 0) {
-            // Fallback to the default duration.
+    public void handleInitiateConnectionShutdown(ChannelHandlerContext ctx, InitiateConnectionShutdown event) {
+        // If the given duration is negative - fallback to the default duration set in the constructor.
+        if (event.hasCustomDrainDuration()) {
+            // This value will be used during the graceful connection shutdown start.
+            setDrainDurationMicros(event.drainDurationMicros());
+        }
+        if (promise == null) {
+            // Shutdown not started yet, close the channel to start.
+            ctx.channel().close();
             return;
         }
-        this.drainDurationMicros = Math.max(drainDuration, 0);
+        // Maybe reschedule drain end.
+        run(ctx, promise);
     }
 }

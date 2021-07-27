@@ -1713,8 +1713,6 @@ public final class ServerBuilder {
             }
         }
 
-        connectionDrainDurationMicros = Math.max(connectionDrainDurationMicros, 0);
-
         final Map<ChannelOption<?>, Object> newChildChannelOptions =
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);

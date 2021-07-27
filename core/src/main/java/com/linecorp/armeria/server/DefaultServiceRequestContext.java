@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -430,7 +431,7 @@ public final class DefaultServiceRequestContext
     private CompletableFuture<Void> initiateConnectionShutdown(InitiateConnectionShutdown event) {
         if (!ch.isActive()) {
             return UnmodifiableFuture.completedFuture(null);
-        } 
+        }
         final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         ch.closeFuture().addListener(f -> {
             if (f.cause() == null) {
@@ -456,7 +457,7 @@ public final class DefaultServiceRequestContext
 
     @Override
     public CompletableFuture<Void> initiateConnectionShutdown() {
-        return initiateConnectionShutdown(new InitiateConnectionShutdown());
+        return initiateConnectionShutdown(InitiateConnectionShutdown.DEFAULT);
     }
 
     @Override

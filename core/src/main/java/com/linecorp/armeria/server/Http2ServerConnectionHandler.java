@@ -62,8 +62,8 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         } else {
             keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
         }
-        gracefulConnectionShutdownHandler = new Http2GracefulConnectionShutdownHandler();
-        gracefulConnectionShutdownHandler.updateDrainDuration(config.connectionDrainDurationMicros());
+        gracefulConnectionShutdownHandler = new Http2GracefulConnectionShutdownHandler(
+                config.connectionDrainDurationMicros());
 
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAliveHandler);
         connection().addListener(requestDecoder);
@@ -137,9 +137,9 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof InitiateConnectionShutdown) {
             setGoAwayDebugMessage("app-requested");
-            gracefulConnectionShutdownHandler.updateDrainDuration(
-                    ((InitiateConnectionShutdown) evt).drainDurationMicros());
-            ctx.channel().close();
+            gracefulConnectionShutdownHandler.handleInitiateConnectionShutdown(
+                    ctx, (InitiateConnectionShutdown) evt);
+            return;
         }
         super.userEventTriggered(ctx, evt);
     }
@@ -154,6 +154,10 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     }
 
     private class Http2GracefulConnectionShutdownHandler extends GracefulConnectionShutdownHandler {
+        protected Http2GracefulConnectionShutdownHandler(long drainDurationMicros) {
+            super(drainDurationMicros);
+        }
+
         /**
          * Send GOAWAY frame with stream ID 2^31-1 to signal clients that shutdown is imminent,
          * but still accept in flight streams.

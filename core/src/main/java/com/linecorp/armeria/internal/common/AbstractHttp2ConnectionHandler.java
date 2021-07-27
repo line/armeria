@@ -192,13 +192,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
         }
 
         // Send final GOAWAY frame with the latest stream ID.
-        goAway(ctx, connection().remote().lastStreamCreated()).addListener(future -> {
-            final Throwable cause = future.cause();
-            if (cause != null) {
-                logger.warn("{} final GOAWAY frame write completed exceptionally", ctx.channel(), cause);
-            }
-            super.close(ctx, promise);
-        });
+        goAway(ctx, connection().remote().lastStreamCreated()).addListener(future -> super.close(ctx, promise));
         ctx.flush();
     }
 
