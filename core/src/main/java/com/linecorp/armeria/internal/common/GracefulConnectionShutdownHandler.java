@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import java.time.Duration;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -40,21 +39,22 @@ public abstract class GracefulConnectionShutdownHandler {
     private static final Logger logger = LoggerFactory.getLogger(GracefulConnectionShutdownHandler.class);
 
     @Nullable
-    ChannelPromise promise;
-    Duration gracePeriod = Duration.ZERO;
-    boolean started;
+    private ChannelPromise promise;
+    private long drainDurationMicros;
+    private boolean started;
     @Nullable
-    private ScheduledFuture<?> gracePeriodFuture;
+    private ScheduledFuture<?> drainFuture;
 
     /**
-     * Code executed on grace period start. Executed at most once.
+     * Code executed on the connection drain start. Executed at most once.
+     * Not executed if the drain duration is {@code 0}.
      */
-    public abstract void onGracePeriodStart(ChannelHandlerContext ctx);
+    public abstract void onDrainStart(ChannelHandlerContext ctx);
 
     /**
-     * Code executed on grace period end. Executed at most once.
+     * Code executed on the connection drain end. Executed at most once.
      */
-    public abstract void onGracePeriodEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    public abstract void onDrainEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
 
     public void start(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (this.promise == null) {
@@ -69,22 +69,22 @@ public abstract class GracefulConnectionShutdownHandler {
                 }
             });
         }
-        if (gracePeriodFuture != null) {
-            if (gracePeriodFuture.getDelay(TimeUnit.NANOSECONDS) > gracePeriod.toNanos()) {
+        if (drainFuture != null) {
+            if (drainFuture.getDelay(TimeUnit.MICROSECONDS) > drainDurationMicros) {
                 // Maybe reschedule below.
-                gracePeriodFuture.cancel(false);
-                gracePeriodFuture = null;
+                drainFuture.cancel(false);
+                drainFuture = null;
             } else {
-                // Grace period is already scheduled to finish earlier.
+                // Drain is already scheduled to finish earlier.
                 return;
             }
         }
-        if (gracePeriod.compareTo(Duration.ZERO) > 0) {
+        if (drainDurationMicros > 0) {
             if (!started) {
-                onGracePeriodStart(ctx);
+                onDrainStart(ctx);
             }
-            gracePeriodFuture = ctx.executor().schedule(() -> finish(ctx, this.promise),
-                                                        gracePeriod.toNanos(), TimeUnit.NANOSECONDS);
+            drainFuture = ctx.executor().schedule(() -> finish(ctx, this.promise),
+                                                  drainDurationMicros, TimeUnit.MICROSECONDS);
         } else {
             finish(ctx, this.promise);
         }
@@ -93,27 +93,24 @@ public abstract class GracefulConnectionShutdownHandler {
 
     private void finish(ChannelHandlerContext ctx, ChannelPromise promise) {
         try {
-            onGracePeriodEnd(ctx, promise);
+            onDrainEnd(ctx, promise);
         } catch (Exception e) {
             logger.warn("Unexpected exception:", e);
         }
     }
 
     public void cancel() {
-        if (gracePeriodFuture != null) {
-            gracePeriodFuture.cancel(false);
-            gracePeriodFuture = null;
+        if (drainFuture != null) {
+            drainFuture.cancel(false);
+            drainFuture = null;
         }
     }
 
-    public void updateGracePeriod(@Nullable Duration gracePeriod) {
-        if (gracePeriod == null) {
+    public void updateDrainDuration(long drainDuration) {
+        if (drainDuration < 0) {
+            // Fallback to the default duration.
             return;
         }
-        if (gracePeriod.compareTo(Duration.ZERO) > 0) {
-            this.gracePeriod = gracePeriod;
-        } else {
-            this.gracePeriod = Duration.ZERO;
-        }
+        this.drainDurationMicros = Math.max(drainDuration, 0);
     }
 }

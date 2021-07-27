@@ -427,13 +427,7 @@ public final class DefaultServiceRequestContext
         return proxiedAddresses;
     }
 
-    @Override
-    public CompletableFuture<Void> initiateConnectionShutdown() {
-        return initiateConnectionShutdown(null);
-    }
-
-    @Override
-    public CompletableFuture<Void> initiateConnectionShutdown(@Nullable Duration gracePeriod) {
+    private CompletableFuture<Void> initiateConnectionShutdown(InitiateConnectionShutdown event) {
         final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         ch.closeFuture().addListener(f -> {
             if (f.cause() == null) {
@@ -442,8 +436,23 @@ public final class DefaultServiceRequestContext
                 completableFuture.completeExceptionally(f.cause());
             }
         });
-        ch.pipeline().fireUserEventTriggered(new InitiateConnectionShutdown(gracePeriod));
+        ch.pipeline().fireUserEventTriggered(event);
         return completableFuture;
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
+        return initiateConnectionShutdown(new InitiateConnectionShutdown(drainDurationMicros));
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown(Duration drainDuration) {
+        return initiateConnectionShutdown(TimeUnit.NANOSECONDS.toMicros(drainDuration.toNanos()));
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        return initiateConnectionShutdown(new InitiateConnectionShutdown());
     }
 
     @Override

@@ -63,7 +63,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
             keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
         }
         gracefulConnectionShutdownHandler = new Http2GracefulConnectionShutdownHandler();
-        gracefulConnectionShutdownHandler.updateGracePeriod(config.connectionShutdownGracePeriod());
+        gracefulConnectionShutdownHandler.updateDrainDuration(config.connectionDrainDurationMicros());
 
         requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme, keepAliveHandler);
         connection().addListener(requestDecoder);
@@ -137,8 +137,8 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof InitiateConnectionShutdown) {
             setGoAwayDebugMessage("app-requested");
-            gracefulConnectionShutdownHandler.updateGracePeriod(
-                    ((InitiateConnectionShutdown) evt).gracePeriod());
+            gracefulConnectionShutdownHandler.updateDrainDuration(
+                    ((InitiateConnectionShutdown) evt).drainDurationMicros());
             ctx.channel().close();
         }
         super.userEventTriggered(ctx, evt);
@@ -159,7 +159,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
          * but still accept in flight streams.
          */
         @Override
-        public void onGracePeriodStart(ChannelHandlerContext ctx) {
+        public void onDrainStart(ChannelHandlerContext ctx) {
             goAway(ctx, Integer.MAX_VALUE);
         }
 
@@ -167,7 +167,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
          * Start channel shutdown. Will send final GOAWAY with latest created stream ID.
          */
         @Override
-        public void onGracePeriodEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void onDrainEnd(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             Http2ServerConnectionHandler.super.close(ctx, promise);
             // Cancel scheduled tasks after the call to the super class above to avoid triggering
             // needsImmediateDisconnection.

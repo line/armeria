@@ -16,20 +16,23 @@
 
 package com.linecorp.armeria.internal.common;
 
-import java.time.Duration;
-
-import javax.annotation.Nullable;
-
 public final class InitiateConnectionShutdown {
-    @Nullable
-    private final Duration gracePeriod;
+    private final long drainDurationMicros;
 
-    public InitiateConnectionShutdown(@Nullable Duration gracePeriod) {
-        this.gracePeriod = gracePeriod;
+    public InitiateConnectionShutdown() {
+        // Negative value means that drain duration wasn't provided by the caller.
+        // Fallback to the currently configured drain duration.
+        drainDurationMicros = -1;
     }
 
-    @Nullable
-    public Duration gracePeriod() {
-        return gracePeriod;
+    public InitiateConnectionShutdown(long drainDurationMicros) {
+        // Clamp drain duration to 0, negative values are reserved for fallback to the default.
+        // Users can still pass results of the duration arithmetics directly, if duration is negative
+        // it just means graceful drain should be skipped.
+        this.drainDurationMicros = Math.max(drainDurationMicros, 0);
+    }
+
+    public long drainDurationMicros() {
+        return drainDurationMicros;
     }
 }

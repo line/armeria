@@ -77,7 +77,7 @@ public final class ServerConfig {
     private final long idleTimeoutMillis;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
-    private final Duration connectionShutdownGracePeriod;
+    private final long connectionDrainDurationMicros;
     private final int maxNumRequestsPerConnection;
 
     private final int http2InitialConnectionWindowSize;
@@ -122,7 +122,7 @@ public final class ServerConfig {
             VirtualHost defaultVirtualHost, Collection<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis,
-            int maxNumRequestsPerConnection, Duration connectionShutdownGracePeriod,
+            int maxNumRequestsPerConnection, long connectionDrainDurationMicros,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
             long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
@@ -153,8 +153,8 @@ public final class ServerConfig {
         this.maxNumRequestsPerConnection =
                 validateNonNegative(maxNumRequestsPerConnection, "maxNumRequestsPerConnection");
         this.maxConnectionAgeMillis = maxConnectionAgeMillis;
-        this.connectionShutdownGracePeriod = validateNonNegative(connectionShutdownGracePeriod,
-                                                                 "connectionShutdownGracePeriod");
+        this.connectionDrainDurationMicros = validateNonNegative(connectionDrainDurationMicros,
+                                                                 "connectionDrainDurationMicros");
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
@@ -478,17 +478,10 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the connection shutdown grace period duration.
+     * Returns the graceful connection shutdown drain duration.
      */
-    public Duration connectionShutdownGracePeriod() {
-        return connectionShutdownGracePeriod;
-    }
-
-    /**
-     * Returns the connection shutdown grace period in millis.
-     */
-    public long connectionShutdownGracePeriodMillis() {
-        return connectionShutdownGracePeriod.toMillis();
+    public long connectionDrainDurationMicros() {
+        return connectionDrainDurationMicros;
     }
 
     /**

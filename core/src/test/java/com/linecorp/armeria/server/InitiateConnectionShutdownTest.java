@@ -186,7 +186,7 @@ public class InitiateConnectionShutdownTest {
             "/goaway_blocking?duration=-1",
             "/goaway_blocking?duration=0",
     })
-    void initiateConnectionShutdownWihtoutGracePeriodHttp2(String path) throws Exception {
+    void initiateConnectionShutdownWithoutDrainHttp2(String path) throws Exception {
         final AtomicBoolean finished = new AtomicBoolean();
         clientChannel.eventLoop().execute(() -> {
             final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
@@ -216,7 +216,7 @@ public class InitiateConnectionShutdownTest {
             "/goaway_async?duration=1",
             "/goaway_blocking?duration=1",
     })
-    void initiateConnectionShutdownDelayedHttp2(String path) throws Exception {
+    void initiateConnectionShutdownWithDrainHttp2(String path) throws Exception {
         final AtomicBoolean finished = new AtomicBoolean();
         clientChannel.eventLoop().execute(() -> {
             final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();
@@ -244,7 +244,7 @@ public class InitiateConnectionShutdownTest {
             "/goaway_async?duration=200",
             "/goaway_blocking?duration=200",
     })
-    void initiateConnectionShutdownOnlyGracePeriodHttp2(String path) throws Exception {
+    void initiateConnectionShutdownCloseBeforeDrainEndHttp2(String path) throws Exception {
         final AtomicBoolean finished = new AtomicBoolean();
         clientChannel.eventLoop().execute(() -> {
             final ChannelHandlerContext ctx = clientChannel.pipeline().firstContext();

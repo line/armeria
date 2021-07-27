@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -169,8 +170,7 @@ public final class ServerBuilder {
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
-    private Duration connectionShutdownGracePeriod = Duration.ofMillis(
-            Flags.defaultServerConnectionShutdownGracePeriodMillis());
+    private long connectionDrainDurationMicros = Flags.defaultServerConnectionDrainDurationMicros();
     private int maxNumRequestsPerConnection = Flags.defaultMaxServerNumRequestsPerConnection();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
@@ -573,41 +573,43 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the grace period for the connection shutdown in millis.
-     * At the beginning of the grace period server signals the clients that the connection shutdown is imminent
-     * but still accepts in flight requests.
-     * After the grace period end server stops accepting new requests.
-     * Also, see {@link ServerBuilder#connectionShutdownGracePeriod(Duration)}.
+     * Sets the connection drain duration in micros for the connection shutdown.
+     * At the beginning of the connection drain server signals the clients that the connection shutdown is
+     * imminent but still accepts in flight requests.
+     * After the connection drain end server stops accepting new requests.
+     * Also, see {@link ServerBuilder#connectionDrainDuration(Duration)}.
      *
      * <p>
-     * Note that HTTP/1 doesn't support a grace period as described here, so for HTTP/1 grace period duration
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain duration
      * is always {@code 0}.
      * </p>
      *
-     * @param gracePeriodMillis the grace period. {@code 0} or negative value disables the grace period.
+     * @param durationMicros the drain duration. {@code 0} or negative value disables the drain.
      */
-    public ServerBuilder connectionShutdownGracePeriodMillis(long gracePeriodMillis) {
-        connectionShutdownGracePeriod = Duration.ofMillis(gracePeriodMillis);
+    public ServerBuilder connectionDrainDurationMicros(long durationMicros) {
+        checkArgument(connectionDrainDurationMicros >= 0,
+                      "connectionDrainDurationMicros: %s (expected: >= 0)",
+                      connectionDrainDurationMicros);
+        connectionDrainDurationMicros = durationMicros;
         return this;
     }
 
     /**
-     * Sets the grace period duration for the connection shutdown.
-     * At the beginning of the grace period server signals the clients that the connection shutdown is imminent
-     * but still accepts in flight requests.
-     * After the grace period end server stops accepting new requests.
-     * Also, see {@link ServerBuilder#connectionShutdownGracePeriodMillis(long)}.
+     * Sets the connection drain duration in micros for the connection shutdown.
+     * At the beginning of the connection drain server signals the clients that the connection shutdown is
+     * imminent but still accepts in flight requests.
+     * After the connection drain end server stops accepting new requests.
+     * Also, see {@link ServerBuilder#connectionDrainDurationMicros(long)}.
      *
      * <p>
-     * Note that HTTP/1 doesn't support a grace period as described here, so for HTTP/1 grace period duration
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain duration
      * is always {@code 0}.
      * </p>
      *
-     * @param gracePeriod the grace period. {@code Duration.ZERO} or negative value disables the grace period.
+     * @param duration the drain period. {@code Duration.ZERO} or negative value disables the drain period.
      */
-    public ServerBuilder connectionShutdownGracePeriod(Duration gracePeriod) {
-        connectionShutdownGracePeriod = gracePeriod;
-        return this;
+    public ServerBuilder connectionDrainDuration(Duration duration) {
+        return connectionDrainDurationMicros(TimeUnit.NANOSECONDS.toMicros(duration.toNanos()));
     }
 
     /**
@@ -1710,6 +1712,8 @@ public final class ServerBuilder {
             }
         }
 
+        connectionDrainDurationMicros = Math.max(connectionDrainDurationMicros, 0);
+
         final Map<ChannelOption<?>, Object> newChildChannelOptions =
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
@@ -1718,7 +1722,7 @@ public final class ServerBuilder {
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
-                connectionShutdownGracePeriod, http2InitialConnectionWindowSize,
+                connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,

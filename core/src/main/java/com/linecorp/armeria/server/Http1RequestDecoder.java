@@ -370,8 +370,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             return;
         }
         if (evt instanceof InitiateConnectionShutdown) {
-            // HTTP/1 doesn't support grace period that signals clients about connection shutdown but still
-            // accepts in flight requests. So we simply destroy KeepAliveHandler which causes next response
+            // HTTP/1 doesn't support draining that signals clients about connection shutdown but still
+            // accepts in flight requests. Simply destroy KeepAliveHandler which causes next response
             // to have a "Connection: close" header and connection to be closed after the next response.
             writer.keepAliveHandler().destroy();
         }

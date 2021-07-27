@@ -288,10 +288,10 @@ public final class Flags {
                     DEFAULT_DEFAULT_MAX_CONNECTION_AGE_MILLIS,
                     value -> value >= 0);
 
-    private static final long DEFAULT_DEFAULT_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS = 0; // Disabled
-    private static final long DEFAULT_SERVER_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS =
-            getLong("defaultServerConnectionShutdownGracePeriodMillis",
-                    DEFAULT_DEFAULT_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS,
+    private static final long DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS = 0; // Disabled
+    private static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS =
+            getLong("defaultServerConnectionDrainDurationMicros",
+                    DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS,
                     value -> value >= 0);
 
     private static final int DEFAULT_DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
@@ -942,30 +942,30 @@ public final class Flags {
     }
 
     /**
-     * Returns the default server-side graceful connection shutdown period in milliseconds.
-     * If the value of this flag is greater than {@code 0}, a connection shutdown will have a grace period
+     * Returns the default server-side graceful connection shutdown drain duration in microseconds.
+     * If the value of this flag is greater than {@code 0}, a connection shutdown will have a drain period
      * when client will be notified about the shutdown, but in flight requests will still be accepted.
      *
-     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS}.
-     * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionShutdownGracePeriodMillis=<integer>}
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_CONNECTION_DRAIN_DURATION_MICROS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerConnectionDrainDurationMicros=<integer>}
      * JVM option to override the default value.
      *
      * <p>
-     * At the beginning of the grace period server signals the clients that the connection shutdown is imminent
+     * At the beginning of the drain period server signals the clients that the connection shutdown is imminent
      * but still accepts in flight requests.
-     * After the grace period end server stops accepting new requests.
+     * After the drain period end server stops accepting new requests.
      * </p>
      *
      * <p>
-     * Note that HTTP/1 doesn't support a grace period as described here, so for HTTP/1 grace period millis
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain period millis
      * is always {@code 0}.
      * </p>
      *
-     * @see ServerBuilder#connectionShutdownGracePeriod(Duration)
-     * @see ServerBuilder#connectionShutdownGracePeriodMillis(long)
+     * @see ServerBuilder#connectionDrainDuration(Duration)
+     * @see ServerBuilder#connectionDrainDurationMicros(long)
      */
-    public static long defaultServerConnectionShutdownGracePeriodMillis() {
-        return DEFAULT_SERVER_CONNECTION_SHUTDOWN_GRACE_PERIOD_MILLIS;
+    public static long defaultServerConnectionDrainDurationMicros() {
+        return DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS;
     }
 
     /**

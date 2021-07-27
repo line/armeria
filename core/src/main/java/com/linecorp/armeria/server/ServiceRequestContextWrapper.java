@@ -221,12 +221,17 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public CompletableFuture<Void> initiateConnectionShutdown() {
-        return delegate().initiateConnectionShutdown();
+    public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
+        return delegate().initiateConnectionShutdown(drainDurationMicros);
     }
 
     @Override
-    public CompletableFuture<Void> initiateConnectionShutdown(Duration gracePeriod) {
-        return delegate().initiateConnectionShutdown(gracePeriod);
+    public CompletableFuture<Void> initiateConnectionShutdown(Duration drainDuration) {
+        return delegate().initiateConnectionShutdown(drainDuration);
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        return delegate().initiateConnectionShutdown();
     }
 }

@@ -546,22 +546,22 @@ public interface ServiceRequestContext extends RequestContext {
     ProxiedAddresses proxiedAddresses();
 
     /**
-     * Initiates connection shutdown with a given grace period.
+     * Initiates graceful connection shutdown with a given drain duration in microseconds.
      *
      * <p>
-     * At the beginning of the grace period server signals the clients that the connection shutdown is imminent
+     * At the connection drain server signals the clients that the connection shutdown is imminent
      * but still accepts in flight requests.
-     * After the grace period end server stops accepting new requests.
+     * At the connection drain end server stops accepting new requests.
      * </p>
      *
      * <p>
-     * If graceful shutdown is already triggered and given grace period is smaller than the wait time before
-     * the grace period end - reschedules grace period end to happen faster. Otherwise, grace period will
-     * end as it was previously scheduled.
+     * If graceful shutdown is already triggered and the given connection drain duration is smaller than
+     * the wait time before the connection drain end - reschedules the drain end to happen faster.
+     * Otherwise, drain will end as it was previously scheduled.
      * </p>
      *
      * <p>
-     * Note that HTTP/1 doesn't support a grace period as described here, so for HTTP/1 grace period millis
+     * Note that HTTP/1 doesn't support draining as described here, so for HTTP/1 drain duration
      * is always {@code 0}.
      * </p>
      *
@@ -570,12 +570,21 @@ public interface ServiceRequestContext extends RequestContext {
      * </p>
      */
     @UnstableApi
-    CompletableFuture<Void> initiateConnectionShutdown(Duration gracePeriod);
+    CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros);
 
     /**
-     * Initiates connection shutdown without overriding current configuration of the grace period.
-     * See {@link ServiceRequestContext#initiateConnectionShutdown(Duration)} for a version that
-     * takes grace period as an input and more details.
+     * Initiates graceful connection shutdown with a given drain duration.
+     * See {@link ServiceRequestContext#initiateConnectionShutdown(long)} for more details.
+     * Returns {@link CompletableFuture} that completes when the channel is closed.
+     */
+    @UnstableApi
+    CompletableFuture<Void> initiateConnectionShutdown(Duration drainDuration);
+
+    /**
+     * Initiates connection shutdown without overriding current configuration of the drain duration.
+     * See {@link ServiceRequestContext#initiateConnectionShutdown(long)} and
+     * {@link ServiceRequestContext#initiateConnectionShutdown(Duration)} for versions that take a
+     * drain duration as an input and more details.
      * Returns {@link CompletableFuture} that completes when the channel is closed.
      */
     @UnstableApi
