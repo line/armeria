@@ -21,11 +21,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,6 +45,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.stubbing.Answer;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpResponse;
@@ -56,6 +60,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -76,6 +81,8 @@ public class InitiateConnectionShutdownTest {
 
     private static final int STREAM_ID = 3;
     private static final int PADDING = 0;
+    private static final ByteBuf DEBUG_DATA = Unpooled.unreleasableBuffer(
+            Unpooled.copiedBuffer("app-requested", StandardCharsets.UTF_8));
 
     @Mock
     private Http2FrameListener clientListener;
@@ -183,6 +190,13 @@ public class InitiateConnectionShutdownTest {
             http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
             http2Client.flush(ctx);
         });
+        doAnswer((Answer<Void>) invocation -> {
+            // Retain buffer for comparison in tests.
+            final ByteBuf buf = invocation.getArgument(3);
+            buf.retain();
+            return null;
+        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                                             any(ByteBuf.class));
         when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
                 invocation -> {
                     finished.set(true);
@@ -195,7 +209,7 @@ public class InitiateConnectionShutdownTest {
                                                              eq(Http2Error.NO_ERROR.code()),
                                                              any(ByteBuf.class));
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
-                                                    eq(Http2Error.NO_ERROR.code()), any(ByteBuf.class));
+                                                    eq(Http2Error.NO_ERROR.code()), eq(DEBUG_DATA));
         inOrder.verify(clientListener).onDataRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
                                                   any(ByteBuf.class), anyInt(), eq(true));
     }
@@ -213,6 +227,13 @@ public class InitiateConnectionShutdownTest {
             http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
             http2Client.flush(ctx);
         });
+        doAnswer((Answer<Void>) invocation -> {
+            // Retain buffer for comparison in tests.
+            final ByteBuf buf = invocation.getArgument(3);
+            buf.retain();
+            return null;
+        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                                             any(ByteBuf.class));
         when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
                 invocation -> {
                     finished.set(true);
@@ -221,9 +242,9 @@ public class InitiateConnectionShutdownTest {
         await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
-                                                    eq(Http2Error.NO_ERROR.code()), any(ByteBuf.class));
+                                                    eq(Http2Error.NO_ERROR.code()), eq(DEBUG_DATA));
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
-                                                    eq(Http2Error.NO_ERROR.code()), any(ByteBuf.class));
+                                                    eq(Http2Error.NO_ERROR.code()), eq(DEBUG_DATA));
         inOrder.verify(clientListener).onDataRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
                                                   any(ByteBuf.class), anyInt(), eq(true));
     }
@@ -241,6 +262,13 @@ public class InitiateConnectionShutdownTest {
             http2Client.encoder().writeHeaders(ctx, STREAM_ID, headers, PADDING, false, ctx.newPromise());
             http2Client.flush(ctx);
         });
+        doAnswer((Answer<Void>) invocation -> {
+            // Retain buffer for comparison in tests.
+            final ByteBuf buf = invocation.getArgument(3);
+            buf.retain();
+            return null;
+        }).when(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
+                                             any(ByteBuf.class));
         when(clientListener.onDataRead(any(), anyInt(), any(), anyInt(), anyBoolean())).thenAnswer(
                 invocation -> {
                     finished.set(true);
@@ -249,7 +277,7 @@ public class InitiateConnectionShutdownTest {
         await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
-                                                    eq(Http2Error.NO_ERROR.code()), any(ByteBuf.class));
+                                                    eq(Http2Error.NO_ERROR.code()), eq(DEBUG_DATA));
         inOrder.verify(clientListener).onDataRead(any(ChannelHandlerContext.class), eq(STREAM_ID),
                                                   any(ByteBuf.class), anyInt(), eq(true));
     }
