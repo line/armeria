@@ -30,7 +30,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.util.NetUtil;
 
-@DisabledIf("io.netty.util.NetUtil#isIpV4StackPreferred")
+@DisabledIf(value = "io.netty.util.NetUtil#isIpV4StackPreferred", disabledReason = "IPv6 disabled")
 class ServerEphemeralLocalPortTest {
 
     @RegisterExtension
