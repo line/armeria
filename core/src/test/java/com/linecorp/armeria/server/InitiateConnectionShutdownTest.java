@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.http.Header;
@@ -83,6 +84,7 @@ class InitiateConnectionShutdownTest {
     private static final int PADDING = 0;
     private static final ByteBuf DEBUG_DATA = Unpooled.unreleasableBuffer(
             Unpooled.copiedBuffer("app-requested", StandardCharsets.UTF_8));
+    private static final AtomicBoolean connectionClosed = new AtomicBoolean();
 
     @Mock
     private Http2FrameListener clientListener;
@@ -105,16 +107,18 @@ class InitiateConnectionShutdownTest {
                 @Get("/goaway_async")
                 public HttpResponse goAway(
                         ServiceRequestContext ctx, @Param("duration") Optional<Long> durationMillis) {
+                    final CompletableFuture<Void> future;
                     if (durationMillis.isPresent()) {
-                        ctx.initiateConnectionShutdown(Duration.ofMillis(durationMillis.get()));
+                        future = ctx.initiateConnectionShutdown(Duration.ofMillis(durationMillis.get()));
                     } else {
-                        ctx.initiateConnectionShutdown();
+                        future = ctx.initiateConnectionShutdown();
                     }
+                    future.thenAccept(f -> connectionClosed.set(true));
                     // Respond with some delay, GOAWAY frame should not be blocked and should be sent before
                     // the response.
                     return HttpResponse.delayed(
                             HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!"),
-                            Duration.ofMillis(100));
+                            Duration.ofMillis(10));
                 }
 
                 @Blocking
@@ -122,22 +126,27 @@ class InitiateConnectionShutdownTest {
                 public HttpResponse goAwayBlocking(ServiceRequestContext ctx,
                                                    @Param("duration") Optional<Long> durationMillis)
                         throws InterruptedException {
+                    final CompletableFuture<Void> future;
                     if (durationMillis.isPresent()) {
-                        ctx.initiateConnectionShutdown(Duration.ofMillis(durationMillis.get()));
+                        future = ctx.initiateConnectionShutdown(Duration.ofMillis(durationMillis.get()));
                     } else {
-                        ctx.initiateConnectionShutdown();
+                        future = ctx.initiateConnectionShutdown();
                     }
+                    future.thenAccept(f -> connectionClosed.set(true));
+                    // Respond with some delay, GOAWAY frame should not be blocked and should be sent before
                     // Respond with some delay, GOAWAY frame should not be blocked and should be sent before
                     // the response.
-                    Thread.sleep(100);
+                    Thread.sleep(10);
                     return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Go away!");
                 }
             });
+            sb.idleTimeoutMillis(100);
         }
     };
 
     @BeforeEach
     void setUp() throws Exception {
+        connectionClosed.set(false);
         final AtomicBoolean clientSetupFinished = new AtomicBoolean();
         final Bootstrap clientBootstrap = new Bootstrap();
         clientBootstrap.group(CommonPools.workerGroup());
@@ -157,8 +166,8 @@ class InitiateConnectionShutdownTest {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent) {
+                            ctx.pipeline().remove(ctx.handler());
                             clientSetupFinished.set(true);
-                            ctx.pipeline().remove(this);
                         }
                     }
                 });
@@ -203,6 +212,7 @@ class InitiateConnectionShutdownTest {
             http2Client.flush(ctx);
         });
         await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
+        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener, never()).onGoAwayRead(any(ChannelHandlerContext.class),
                                                              eq(Integer.MAX_VALUE),
@@ -240,6 +250,7 @@ class InitiateConnectionShutdownTest {
             http2Client.flush(ctx);
         });
         await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
+        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
                                                     eq(Http2Error.NO_ERROR.code()), eq(DEBUG_DATA));
@@ -275,6 +286,7 @@ class InitiateConnectionShutdownTest {
             http2Client.flush(ctx);
         });
         await().timeout(Duration.ofSeconds(2)).untilTrue(finished);
+        await().timeout(Duration.ofSeconds(2)).untilTrue(connectionClosed);
         final InOrder inOrder = inOrder(clientListener);
         inOrder.verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(Integer.MAX_VALUE),
                                                     eq(Http2Error.NO_ERROR.code()), eq(DEBUG_DATA));

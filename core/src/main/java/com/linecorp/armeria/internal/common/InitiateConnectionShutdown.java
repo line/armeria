@@ -20,14 +20,12 @@ package com.linecorp.armeria.internal.common;
  * Event used to initiate graceful connection shutdown using user-facing APIs.
  */
 public final class InitiateConnectionShutdown {
-    private final long drainDurationMicros;
-
     /**
      * Singleton instance that's used to initiate connection shutdown with fallback to the currently configured
      * drain duration.
      */
-    public static final InitiateConnectionShutdown DEFAULT =
-            new InitiateConnectionShutdown();
+    public static final InitiateConnectionShutdown DEFAULT = new InitiateConnectionShutdown();
+    private final long drainDurationMicros;
 
     private InitiateConnectionShutdown() {
         // Negative value means that drain duration wasn't provided by the caller.

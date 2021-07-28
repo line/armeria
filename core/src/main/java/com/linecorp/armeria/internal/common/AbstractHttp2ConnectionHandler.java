@@ -75,7 +75,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     private boolean handlingConnectionError;
 
     // Debug data that will be sent in the GOAWAY frame.
-    private ByteBuf goAwayDebugData = Unpooled.unreleasableBuffer(Unpooled.EMPTY_BUFFER);
+    private ByteBuf goAwayDebugData = Unpooled.EMPTY_BUFFER;
 
     /**
      * Creates a new instance.

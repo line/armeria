@@ -546,7 +546,8 @@ public interface ServiceRequestContext extends RequestContext {
     ProxiedAddresses proxiedAddresses();
 
     /**
-     * Initiates graceful connection shutdown with a given drain duration in microseconds.
+     * Initiates graceful connection shutdown with a given drain duration in microseconds and returns
+     * {@link CompletableFuture} that completes when the channel is closed..
      *
      * <p>
      * At the connection drain server signals the clients that the connection shutdown is imminent
@@ -566,27 +567,28 @@ public interface ServiceRequestContext extends RequestContext {
      * at the end of the current response.
      * </p>
      *
-     * <p>
-     * Returns {@link CompletableFuture} that completes when the channel is closed.
-     * </p>
+     * @see #initiateConnectionShutdown()
+     * @see #initiateConnectionShutdown(Duration)
      */
     @UnstableApi
     CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros);
 
     /**
-     * Initiates graceful connection shutdown with a given drain duration.
-     * See {@link ServiceRequestContext#initiateConnectionShutdown(long)} for more details.
-     * Returns {@link CompletableFuture} that completes when the channel is closed.
+     * Initiates graceful connection shutdown with a given drain duration and returns {@link CompletableFuture}
+     * that completes when the channel is closed.
+     *
+     * @see #initiateConnectionShutdown()
+     * @see #initiateConnectionShutdown(long)
      */
     @UnstableApi
     CompletableFuture<Void> initiateConnectionShutdown(Duration drainDuration);
 
     /**
-     * Initiates connection shutdown without overriding current configuration of the drain duration.
-     * See {@link ServiceRequestContext#initiateConnectionShutdown(long)} and
-     * {@link ServiceRequestContext#initiateConnectionShutdown(Duration)} for versions that take a
-     * drain duration as an input and more details.
-     * Returns {@link CompletableFuture} that completes when the channel is closed.
+     * Initiates connection shutdown without overriding current configuration of the drain duration and returns
+     * {@link CompletableFuture} that completes when the channel is closed.
+     *
+     * @see #initiateConnectionShutdown(long)
+     * @see #initiateConnectionShutdown(Duration)
      */
     @UnstableApi
     CompletableFuture<Void> initiateConnectionShutdown();
